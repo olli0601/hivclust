@@ -30,12 +30,11 @@ if(any(args=='--args'))
 	args<- args[-(1:match("--args", args)) ]
 
 CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
+#CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
 INST		<<- paste(CODE.HOME,"inst",sep='/')
-#CODE.HOME	<<- "/home/koelle/or7/utils/abc.n/pkg"
-#CODE.HOME	<<- "/work/or105/libs/abc.n/pkg"
 HOME		<<- "/Users/Oliver/workspace_sandbox/hivclust"
 #HOME		<<- "/home/koelle/or7/phylody"
-#HOME		<<- "/work/or105/phylody"
+#HOME		<<- "/work/or105/hivclust"
 DATA		<<- paste(HOME,"data",sep='/')
 NABC.DEBUG	<<- 0
 LIB.LOC		<<- NULL
