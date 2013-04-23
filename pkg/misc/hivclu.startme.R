@@ -30,6 +30,7 @@ if(any(args=='--args'))
 	args<- args[-(1:match("--args", args)) ]
 
 CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
+INST		<<- paste(CODE.HOME,"inst",sep='/')
 #CODE.HOME	<<- "/home/koelle/or7/utils/abc.n/pkg"
 #CODE.HOME	<<- "/work/or105/libs/abc.n/pkg"
 HOME		<<- "/Users/Oliver/workspace_sandbox/hivclust"
@@ -40,6 +41,7 @@ NABC.DEBUG	<<- 0
 LIB.LOC		<<- NULL
 #LIB.LOC		<<- paste(CODE.HOME,"../",sep='')
 EPS			<<- 1e-12
+
 default.fun	<- "my.make.documentation"
 default.fun	<- "project.hivc.clustalo"
 ###############################################################################
@@ -54,6 +56,11 @@ default.fun	<- "project.hivc.clustalo"
 function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$", all.files = FALSE,
 		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'))
 sapply(function.list,function(x) source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE))
+###############################################################################
+if(1)
+{
+	PR.CLUSTALO<<- paste(INST,PR.CLUSTALO,sep='/')	
+}
 ###############################################################################
 my.mkdir<-function(root,data.name)
 {

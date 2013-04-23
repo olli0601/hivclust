@@ -13,7 +13,8 @@
 \f0\fs24 \cf0 \cb1 \
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural
 \cf0 cd argtable2-13\
-./configure\
+./configure  --prefix=$HOME\
+./configure  --prefix/work/or105/libs/hivclust/pkg/inst\
 make \
 make install\
 cd ..\
@@ -25,7 +26,8 @@ rm -r argtable2-13\
 cd clustal-omega-1.1.0\
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural
 
-\f0\fs24 \cf0 \cb1 ./configure\
+\f0\fs24 \cf0 \cb1 ./configure  CFLAGS='-I/home/or105/include' LDFLAGS='-L/home/or105/lib'  --prefix=/home/or105\
+./configure  CFLAGS='-I/work/or105/libs/hivclust/pkg/inst/include' LDFLAGS='-L/work/or105/libs/hivclust/pkg/inst/lib'  --prefix=/work/or105/libs/hivclust/pkg/inst\
 make \
 make install\
 cd ..\

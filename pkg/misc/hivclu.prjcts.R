@@ -75,7 +75,8 @@ project.hivc.clustalo<- function()
 		cmd		<- hiv.cmd.clustalo(indir, infiles, signat=signat, outdir=outdir)
 		cmd		<- hiv.cmd.hpcwrapper(cmd)
 		
-		#cat(cmd)
+		cat(cmd)
+		stop()
 		lapply(cmd,function(x)
 				{
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')

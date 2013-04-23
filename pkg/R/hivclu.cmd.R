@@ -35,7 +35,7 @@ hiv.cmd.hpcwrapper<- function(cmd, hpc.sys=HPC.SYS, hpc.walltime=24, hpc.select=
 {
 	wrap<- "#!/bin/sh"
 	if(hpc.sys=="CX1")
-	{
+	{				
 		tmp	<- paste("#PBS -l walltime=",hpc.walltime,":59:59,pcput=",hpc.walltime,":45:00",sep='')
 		wrap<- paste(wrap, tmp, sep='\n')
 		tmp	<- paste("#PBS -l select=",hpc.select,sep='')
