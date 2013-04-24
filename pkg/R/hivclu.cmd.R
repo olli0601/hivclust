@@ -10,9 +10,9 @@ hiv.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split='
 			{
 				cat(paste("\nprocess",x,"\n"))				
 				#verbose stuff
-				cmd<- "\t\t\t\t\t\t#######################################################
-					   # run clustalo
-					   #######################################################"
+				cmd<- "#######################################################
+# run clustalo
+#######################################################"
 				cmd<- paste(cmd,paste("\necho \'run ",PR.CLUSTALO,"\'\n",sep=''))
 				
 				#default commands

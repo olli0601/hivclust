@@ -31,10 +31,10 @@ if(any(args=='--args'))
 
 CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
-INST		<<- paste(CODE.HOME,"inst",sep='/')
-HOME		<<- "/Users/Oliver/workspace_sandbox/hivclust"
+INST		<<- paste(CODE.HOME,"inst/bin",sep='/')
+HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
 #HOME		<<- "/home/koelle/or7/phylody"
-#HOME		<<- "/work/or105/hivclust"
+#HOME		<<- "/work/or105/ATHENA_2013"
 DATA		<<- paste(HOME,"data",sep='/')
 NABC.DEBUG	<<- 0
 LIB.LOC		<<- NULL

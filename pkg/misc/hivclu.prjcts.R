@@ -1,7 +1,5 @@
-project.hivc.clustalo<- function()
-{	
-	min.seq.len	<- 21
-	dir.name	<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
+project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
+{		
 	if(0)
 	{
 		#read csv data file and preprocess		
@@ -75,7 +73,7 @@ project.hivc.clustalo<- function()
 		cmd		<- hiv.cmd.clustalo(indir, infiles, signat=signat, outdir=outdir)
 		cmd		<- hiv.cmd.hpcwrapper(cmd)
 		
-		cat(cmd)
+		lapply(cmd, cat)
 		stop()
 		lapply(cmd,function(x)
 				{
