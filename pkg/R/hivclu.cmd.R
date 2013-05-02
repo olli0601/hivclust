@@ -87,7 +87,9 @@ hivc.cmd.hpcwrapper<- function(cmd, hpc.sys=HPC.SYS, hpc.walltime=24, hpc.select
 	else
 		stop(paste("unknown hpc.sys",hpc.sys))
 	
-	cmd<- lapply(seq_along(cmd),function(i){	paste(wrap,cmd[[i]],sep='\n')	}) 
+	cmd<- lapply(seq_along(cmd),function(i){	paste(wrap,cmd[[i]],sep='\n')	})
+	if(length(cmd)==1)
+		cmd<- unlist(cmd)
 	cmd	
 }
 

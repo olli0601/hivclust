@@ -47,7 +47,7 @@ EPS			<<- 1e-12
 default.fun	<- "my.make.documentation"
 default.fun	<- "project.hivc.clustalo"
 #default.fun <- "hivc.prog.get.geneticdist"
-#default.fun <- "hivc.proj.pipeline"
+default.fun <- "hivc.proj.pipeline"
 #default.fun	<- "project.hivc.test"
 #default.fun	<- "project.hivc.getdf"
 #default.fun	<- "project.hivc.check"

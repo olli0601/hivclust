@@ -752,15 +752,17 @@ hivc.proj.pipeline<- function()
 	outdir	<- paste(dir.name,"tmp",sep='/')
 	signat	<- "May__1_17/08/15_2013"
 
-	cmd		<- hivc.cmd.get.geneticdist(indir, signat, outdir=outdir)	
-	#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph")
+	cmd		<- hivc.cmd.get.geneticdist(indir, signat, outdir=outdir)
 	
-	cat(cmd)
-	#lapply(cmd, cat)
-	stop()
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 	outfile	<- paste("pipeline",signat,"qsub",sep='.')					
-	hivc.cmd.hpccaller(outdir, outfile, cmd)							
+	lapply(cmd, function(x)
+			{
+				print(x)
+				cat(x)
+				x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
+				#hivc.cmd.hpccaller(outdir, outfile, x)
+			})							
 }
 
 
