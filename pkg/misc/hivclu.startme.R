@@ -29,9 +29,12 @@ if(!any(args=='--args'))
 if(any(args=='--args'))
 	args<- args[-(1:match("--args", args)) ]
 
+require(hivclust)
+
+
 CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
-INST		<<- paste(CODE.HOME,"inst/bin",sep='/')
+INST		<<- paste(CODE.HOME,"inst",sep='/')
 HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
 #HOME		<<- "/home/koelle/or7/phylody"
 #HOME		<<- "/work/or105/ATHENA_2013"
@@ -43,6 +46,13 @@ EPS			<<- 1e-12
 
 default.fun	<- "my.make.documentation"
 default.fun	<- "project.hivc.clustalo"
+#default.fun <- "hivc.prog.get.geneticdist"
+#default.fun <- "hivc.proj.pipeline"
+#default.fun	<- "project.hivc.test"
+#default.fun	<- "project.hivc.getdf"
+#default.fun	<- "project.hivc.check"
+#default.fun	<- "project.hivc.gettimelines"
+#default.fun	<- "project.hivc.get.geneticdist.from.sdc"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -56,7 +66,7 @@ function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$",
 		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'))
 sapply(function.list,function(x) source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE))
 ###############################################################################
-if(1)
+if(0)
 {
 	PR.CLUSTALO<<- paste(INST,PR.CLUSTALO,sep='/')	
 }
@@ -212,10 +222,11 @@ if(length(args))
 					}))
 	if(length(tmp)!=0)
 	{
-		if(length(tmp)>1) stop("abc-n.startme.R: duplicate -exe")
+		if(length(tmp)>1) stop("hivclu.startme.R: duplicate -exe")
 		else default.fun<- switch(tmp[1],
-					MAKE.DOCUMENTATION		 = "my.make.documentation",
-					MALIGN					 = "project.hivc.clustalo"					
+					MAKE.DOCUMENTATION		= "my.make.documentation",
+					MALIGN					= "project.hivc.clustalo",
+					GENDISTMAT				= "hivc.prog.get.geneticdist"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)
@@ -230,6 +241,6 @@ if(length(args))
 ###############################################################################
 if(NABC.DEBUG)	options(error= my.dumpframes)	
 require(abc.n)
-cat(paste("\nhivclu.startme.R: ",ifelse(NABC.DEBUG,"debug",""),"call",default.fun))
+cat(paste("\nhivclu.startme.R: ",ifelse(NABC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	
-cat("\nabc-n: ",ifelse(NABC.DEBUG,"debug","")," end\n")
+cat("\nhivclu: ",ifelse(NABC.DEBUG,"debug","")," end\n")

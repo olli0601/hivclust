@@ -1,10 +1,30 @@
-PR.CLUSTALO	<<- "clustalo"
-HPC.NPROC	<<- 1
-HPC.SYS		<<- "CX1"
-HPC.LOAD	<<- "module load intel-suite/10.0 R/2.13.0"
+if(!exists("HIVC.CODE.HOME"))	
+{	
+	HIVC.CODE.HOME	<- getwd()
+	INST			<- paste(HIVC.CODE.HOME,"inst",sep='/')
+}
+
+#' @export
+PR.CLUSTALO		<- "clustalo"
+
+#' @export
+PR.CLUSTALO.HMM	<- paste(INST,"align_HIV-1_pol_DNA.hmm",sep='/')
+
+#' @export
+PR.GENDISTMAT	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeGENDISTMAT",sep='/')
+
+#' @export
+HPC.NPROC		<- 1
+
+#' @export
+HPC.SYS			<- "CX1"
+
+#' @export
+HPC.LOAD		<- "module load intel-suite/10.0 R/2.13.0"
 
 #generate clustalo command
-hiv.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''), outdir=indir, prog= PR.CLUSTALO, nproc=HPC.NPROC)
+#' @export
+hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''), outdir=indir, prog= PR.CLUSTALO, hmm=PR.CLUSTALO.HMM, nproc=HPC.NPROC)
 {
 	lapply(infiles,function(x)
 			{
@@ -17,11 +37,14 @@ hiv.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split='
 				
 				#default commands
 				cmd<- paste(cmd,PR.CLUSTALO,sep=" ")								
-				cmd<- paste(cmd, " --infmt=fa --outfmt=fa --force --threads=",nproc," ", sep='' )
+				cmd<- paste(cmd, " --infmt=fa --outfmt=fa --force", sep='')
+				cmd<- paste(cmd, " --threads=",nproc," ", sep='' )
+				#cmd<- paste(cmd, " --hmm-in=",hmm," ", sep='' )		not supported in clustalo v1.1.0
+				
 				#file in/out
 				tmp<- paste(indir,x,sep='/')
 				cmd<- paste(cmd, paste("--in",tmp,sep=' ') )				
-				tmp<- paste(outdir,paste(x,signat,"clustalo",sep='.'),sep='/')
+				tmp<- paste(outdir,paste(x,ifelse(nchar(signat),'.',''),signat,".clustalo",sep=''),sep='/')
 				cmd<- paste(cmd, paste("--out",tmp,sep=' ') )
 				
 				#verbose stuff
@@ -30,8 +53,23 @@ hiv.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split='
 			})
 }
 
+hivc.cmd.get.geneticdist<- function(indir, signat, outdir=indir, prog= PR.GENDISTMAT)
+{
+	cmd<- "#######################################################
+# run geneticdist
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",PR.GENDISTMAT,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,PR.GENDISTMAT,"-v=1 -resume=1",sep=" ")
+	cmd<- paste(cmd," -indir=",indir," -outdir=",outdir," -signat=",signat,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",PR.GENDISTMAT,"\'\n\n",sep=''))
+	cmd
+}
+	
 #add additional high performance computing information 
-hiv.cmd.hpcwrapper<- function(cmd, hpc.sys=HPC.SYS, hpc.walltime=24, hpc.select= "1:ncpus=1:mem=400mb", hpc.q=NA)
+#' @export
+hivc.cmd.hpcwrapper<- function(cmd, hpc.sys=HPC.SYS, hpc.walltime=24, hpc.select= "1:ncpus=1:mem=400mb", hpc.q=NA)
 {
 	wrap<- "#!/bin/sh"
 	if(hpc.sys=="CX1")
@@ -54,10 +92,11 @@ hiv.cmd.hpcwrapper<- function(cmd, hpc.sys=HPC.SYS, hpc.walltime=24, hpc.select=
 }
 
 #create high performance computing qsub file and submit
-hiv.cmd.hpccaller<- function(outdir, outfile, cmd)
+#' @export
+hivc.cmd.hpccaller<- function(outdir, outfile, cmd)
 {
 	file<- paste(outdir,outfile,sep='/')
-	cat(paste("\nwrite cmd to",file))
+	cat(paste("\nwrite cmd to",file,"\n"))
 	cat(cmd,file=file)
 	cmd<- paste("qsub",file)
 	cat( cmd )

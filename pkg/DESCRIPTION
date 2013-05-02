@@ -1,0 +1,14 @@
+Package: hivclust
+Version: 1.0-0
+Date: 2013/05/02
+Title: hivclust
+Author: {Oliver Ratmann}
+Maintainer: Oliver Ratmann <o.ratmann@imperial.ac.uk>
+Depends:
+    R (>= 2.10)
+Description: tools for HIV sequence analysis
+License: GPL (>=2)
+LazyLoad: yes
+Collate:
+    'hivclu.cmd.R'
+    'hivclu.fun.R'
