@@ -722,7 +722,7 @@ hivc.prog.get.geneticdist<- function()
 		if(verbose)	cat(paste("\nread",file))
 		load(file)
 				
-		tmp					<- tmp[1:10,]
+		#tmp				<- tmp[1:10,]
 		gd.bigmat			<- hivc.seq.dist(  tmp )		
 		file				<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat),".gdm",sep='')
 		if(verbose) cat(paste("\nwrite to",file))
