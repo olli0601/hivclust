@@ -717,13 +717,13 @@ hivc.prog.get.geneticdist<- function()
 
 	if(!resume || !length(file))	
 	{		
-		if(verbose)	cat(paste("\ncreate",file))
+		if(verbose)	cat(paste("\ncreate gdm file"))
 		file				<- paste(indir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat),".R",sep='')
 		if(verbose)	cat(paste("\nread",file))
 		load(file)
-				
+		str(seq.PROT.RT)		
 		#tmp				<- tmp[1:10,]
-		gd.bigmat			<- hivc.seq.dist(  tmp )		
+		gd.bigmat			<- hivc.seq.dist(  seq.PROT.RT )		
 		file				<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat),".gdm",sep='')
 		if(verbose) cat(paste("\nwrite to",file))
 		write.big.matrix(gd.bigmat, file, row.names= 1, col.names=0, sep=',')		
@@ -750,7 +750,7 @@ hivc.proj.pipeline<- function()
 	#generate clustalo command		 
 	indir	<- paste(dir.name,"derived",sep='/')
 	outdir	<- paste(dir.name,"tmp",sep='/')
-	signat	<- "May__1_17/08/15_2013"
+	signat	<- "Wed_May__1_17/08/15_2013"
 
 	cmd		<- hivc.cmd.get.geneticdist(indir, signat, outdir=outdir)
 	
