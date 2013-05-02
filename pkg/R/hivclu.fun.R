@@ -1,5 +1,4 @@
 #' this file contains all R functions of the hivclust package
-#' @import ape, bigmemory
 #' @useDynLib hivc
 
 #' @export
