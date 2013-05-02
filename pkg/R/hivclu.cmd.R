@@ -53,6 +53,7 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 			})
 }
 
+#' @export
 hivc.cmd.get.geneticdist<- function(indir, signat, outdir=indir, prog= PR.GENDISTMAT)
 {
 	cmd<- "#######################################################
