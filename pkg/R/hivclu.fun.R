@@ -198,6 +198,7 @@ hivc.seq.dist<- function(seq.DNAbin.matrix, verbose=1)
 			tmp												<- round(tmp*1e3,d=0)			
 			tmp[tmp>big.matrix.charmax]						<- big.matrix.charmax
 			ans[i1, seq.int(i1+1,nrow(seq.DNAbin.matrix))]	<- tmp
+			stop()
 		}		
 	}
 	ans

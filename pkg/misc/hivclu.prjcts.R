@@ -834,22 +834,23 @@ hivc.proj.pipeline<- function()
 	signat.in	<- "Wed_May__1_17/08/15_2013"
 	signat.out	<- "Wed_May__1_17/08/15_2013"		
 	
-	if(1)	#extract first sequences for each patient as available
+	if(0)	#extract first sequences for each patient as available
 	{
 		indir		<- paste(dir.name,"tmp",sep='/')
 		infile		<- "ATHENA_2013_03_SeqMaster.R"		
 		outdir		<- paste(dir.name,"derived",sep='/')
 		cmd			<- hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir)
 	}
-	if(1)	#compute genetic distances
+	if(0)	#compute genetic distances
 	{				 
 		indir	<- paste(dir.name,"derived",sep='/')
 		outdir	<- paste(dir.name,"tmp",sep='/')
 		cmd		<- paste(cmd,hivc.cmd.get.geneticdist(indir, signat.out, outdir=outdir),sep='')
 	}	
-	if(0)	#compute ExaML tree
+	if(1)	#compute ExaML tree
 	{		
 		indir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
 		outdir	<- paste(dir.name,"tmp",sep='/')
 		cmd		<- hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1)
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
