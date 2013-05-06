@@ -593,7 +593,7 @@ hivc.prog.get.firstseq<- function()
 									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) verbose<- tmp[1]
 	}
-	if(0)
+	if(1)
 	{
 		print(indir)
 		print(outdir)
@@ -639,16 +639,16 @@ hivc.prog.get.firstseq<- function()
 		file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".R",sep='')
 		if(verbose) cat(paste("\nwrite to",file))
 		save(seq.PROT.RT, file=file)	
-		
-		#create phylip file; need this for ExaML
-		print("DEBUG in FirstAliSequences")
-		seq.PROT.RT	<- seq.PROT.RT[1:500,]
-		file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".phylip",sep='')
-		if(verbose) cat(paste("\nwrite to ",file))
-		hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)		
 	}
-	else if(verbose)	
-		cat(paste("\nresumed: FirstAliSequences_PROTRT file"))
+	else
+	{
+		if(verbose)	cat(paste("\nload",file))
+		load(file)
+	}
+	#create phylip file; need this for ExaML
+	file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".phylip",sep='')
+	if(verbose) cat(paste("\nwrite to ",file))
+	hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)
 }
 
 project.hivc.examl<- function(dir.name= DATA)
@@ -769,18 +769,24 @@ hivc.prog.get.geneticdist<- function()
 	library(bigmemory)
 	library(ape)
 	
-	indir<- outdir<- paste(DATA,"tmp",sep='/')
-	resume<- verbose <- 0
-	signat 	<- ''
+	indir	<- outdir<- paste(DATA,"tmp",sep='/')
+	infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
+	resume	<- verbose <- 1	
+	signat 	<- "Wed_May__1_17/08/15_2013"
+	gd.max	<- 0.045 
 	if(exists("argv"))
 	{
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,6),
 									indir= return(substr(arg,8,nchar(arg))),NA)	}))
-		if(length(tmp)>0) indir<- tmp[1]
+		if(length(tmp)>0) indir<- tmp[1]		
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,7),
-									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))		
 		if(length(tmp)>0) outdir<- tmp[1]
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,7),
@@ -794,38 +800,77 @@ hivc.prog.get.geneticdist<- function()
 						{	switch(substr(arg,2,2),
 									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) verbose<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									maxgd= return(as.numeric(substr(arg,8,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) gd.max<- tmp[1]
 	}
-		
-	pattern 	<- gsub('/',':',paste(signat,".gdm$",sep=''))
+	if(1)
+	{
+		print(indir)
+		print(infile)
+		print(outdir)
+		print(signat)
+		print(resume)
+		print(gd.max)
+	}	
+	pattern 	<- paste("Gd",gd.max*1000,"Sequences_PROTRT_",gsub('/',':',signat),".R",sep='')
 	file		<- list.files(path=outdir, pattern=pattern, full.names=1)
-
-	if(!resume || !length(file))	
-	{		
-		if(verbose)	cat(paste("\ncreate gdm file"))
-		file				<- paste(indir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat),".R",sep='')
-		if(verbose)	cat(paste("\nread",file))
+	if(!resume || !length(file))
+	{
+		#extract sequences and store as phylip
+		#see if gdm file is already there
+		pattern 	<- gsub('/',':',paste(signat,".gdm$",sep=''))		
+		file		<- list.files(path=outdir, pattern=pattern, full.names=1)		
+		if(!resume || !length(file))	
+		{		
+			stop()
+			if(verbose)	cat(paste("\ncreate gdm file"))
+			file				<- paste(indir,"/",infile,"_",gsub('/',':',signat),".R",sep='')
+			if(verbose)	cat(paste("\nload",file))
+			load(file)
+			str(seq.PROT.RT)		
+			#tmp				<- tmp[1:10,]
+			gd.bigmat			<- hivc.seq.dist(  seq.PROT.RT )		
+			file				<- paste(outdir,"/",infile,"_",gsub('/',':',signat),".gdm",sep='')
+			if(verbose) cat(paste("\nwrite to",file))
+			write.big.matrix(gd.bigmat, file, row.names= 1, col.names=0, sep=',')		
+			#gd.bigmat.d 		<- describe( gd.bigmat )
+			#file				<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat),".gdm",sep='')		
+			#dput(gd.bigmat.d, file=file)
+		}
+		else 
+		{
+			if(verbose)	cat(paste("\nloading",file))
+			gd.bigmat			<- read.big.matrix(file, has.row.names=1, sep=',', type="char")
+		}
+		#now have pairwise genetic distances in gd.bigmat
+		gd.bigmat.min	<- sapply(seq.int(1,nrow(gd.bigmat)-1),function(i)
+								{
+									tmp<- which.min(gd.bigmat[i,])
+									c(i,tmp, gd.bigmat[i,tmp])
+								})
+		rownames(gd.bigmat.min)<- c("seq.idx1","seq.idx2","gd")
+		gd.bigmat.seq.i	<- which( gd.bigmat.min["gd",] < (gd.max * 1e3) )
+		gd.seqs			<- gd.bigmat.min[c("seq.idx1","seq.idx2"),gd.bigmat.seq.i]
+		gd.seqs			<- sort(unique(as.vector(gd.seqs)))
+		if(verbose) cat(paste("\ncomputed sequences sth at least one pair with less than ",gd.max*100,"% genetic distance, n=",length(gd.seqs)))		
+		file			<- paste(indir,"/",infile,"_",gsub('/',':',signat),".R",sep='')
+		if(verbose)	cat(paste("\nload",file))
 		load(file)
-		str(seq.PROT.RT)		
-		#tmp				<- tmp[1:10,]
-		gd.bigmat			<- hivc.seq.dist(  seq.PROT.RT )		
-		file				<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat),".gdm",sep='')
-		if(verbose) cat(paste("\nwrite to",file))
-		write.big.matrix(gd.bigmat, file, row.names= 1, col.names=0, sep=',')		
-		#gd.bigmat.d 		<- describe( gd.bigmat )
-		#file				<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat),".gdm",sep='')		
-		#dput(gd.bigmat.d, file=file)
+		seq.PROT.RT.gd	<- seq.PROT.RT[ rownames(gd.bigmat)[gd.seqs], ]
+		file			<- paste(outdir,"/ATHENA_2013_03_Gd",gd.max*1000,"Sequences_PROTRT_",gsub('/',':',signat),".R",sep='')
+		save(seq.PROT.RT.gd, file=file)
 	}
-	else 
+	else
 	{
 		if(verbose)	cat(paste("\nloading",file))
-		gd.bigmat	<- read.big.matrix(file, has.row.names=1, sep=',', type="char")
-		#gd.bigmat.d <- dget(file)
-		#gd.bigmat	<- attach.big.matrix( gd.bigmat.d )		
+		load(file)
 	}
-	
-	print(gd.bigmat)
-	stop()
-	
+	#now have seq.PROT.RT.gd
+	file			<- paste(outdir,"/ATHENA_2013_03_Gd",gd.max*1000,"Sequences_PROTRT_",gsub('/',':',signat),".phylip",sep='')
+	if(verbose) cat(paste("\nwrite to ",file))
+	hivc.seq.write.dna.phylip(seq.PROT.RT.gd, file=file)								
 }
 
 hivc.proj.pipeline<- function()
@@ -843,10 +888,12 @@ hivc.proj.pipeline<- function()
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
 	if(0)	#compute genetic distances
-	{				 
+	{				
+		gd.max	<- 0.045
 		indir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
 		outdir	<- paste(dir.name,"tmp",sep='/')
-		cmd		<- paste(cmd,hivc.cmd.get.geneticdist(indir, signat.out, outdir=outdir),sep='')
+		cmd		<- paste(cmd,hivc.cmd.get.geneticdist(indir, infile, signat.out, gd.max, outdir=outdir),sep='')
 	}	
 	if(1)	#compute ExaML tree
 	{		

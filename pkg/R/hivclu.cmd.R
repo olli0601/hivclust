@@ -38,7 +38,7 @@ HPC.CX1.IMPERIAL<- "cx1.hpc.ic.ac.uk"		#this is set to system('domainname',inter
 HPC.MEM			<- "3600mb"
 
 #' @export
-HPC.LOAD		<- "module load intel-suite/10.0 mpi R/2.13.0"
+HPC.LOAD		<- "module load intel-suite mpi R/2.13.0"
 
 #generate clustalo command
 #' @export
@@ -72,7 +72,7 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 }
 
 #' @export
-hivc.cmd.get.geneticdist<- function(indir, signat, outdir=indir, prog= PR.GENDISTMAT, resume=1, verbose=1)
+hivc.cmd.get.geneticdist<- function(indir, infile, signat, gd.max, outdir=indir, prog= PR.GENDISTMAT, resume=1, verbose=1)
 {
 	cmd<- "#######################################################
 # compute geneticdist
@@ -80,7 +80,7 @@ hivc.cmd.get.geneticdist<- function(indir, signat, outdir=indir, prog= PR.GENDIS
 	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
 	#default commands
 	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
-	cmd<- paste(cmd," -indir=",indir," -outdir=",outdir," -signat=",signat,sep='')
+	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir," -signat=",signat," -maxgd=",gd.max,sep='')
 	#verbose stuff
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
 	cmd
