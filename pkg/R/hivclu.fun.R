@@ -252,3 +252,11 @@ hivc.clu.geneticdist.cutoff<- function(dir.name= DATA, plot=1, verbose=1, level.
 	
 	list(gd.cutoff= gd.cutoff, gd.specificity=gd.specificity)	
 }
+
+hivc.get.hpcsys<- function()
+{
+	tmp<- system('domainname',intern=T)
+	if(!nchar(tmp))	tmp<- "debug"
+	tmp
+}
+

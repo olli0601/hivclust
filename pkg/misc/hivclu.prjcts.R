@@ -642,7 +642,7 @@ hivc.prog.get.firstseq<- function()
 		
 		#create phylip file; need this for ExaML
 		print("DEBUG in FirstAliSequences")
-		seq.PROT.RT	<- seq.PROT.RT[1:10,]
+		seq.PROT.RT	<- seq.PROT.RT[1:500,]
 		file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".phylip",sep='')
 		if(verbose) cat(paste("\nwrite to ",file))
 		hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)		
@@ -833,17 +833,18 @@ hivc.proj.pipeline<- function()
 	dir.name<- DATA		 
 	signat.in	<- "Wed_May__1_17/08/15_2013"
 	signat.out	<- "Wed_May__1_17/08/15_2013"		
-	
-	if(0)	#extract first sequences for each patient as available
+	cmd			<- ''
+
+	if(1)	#extract first sequences for each patient as available
 	{
 		indir		<- paste(dir.name,"tmp",sep='/')
 		infile		<- "ATHENA_2013_03_SeqMaster.R"		
-		outdir		<- paste(dir.name,"derived",sep='/')
-		cmd			<- hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir)
+		outdir		<- paste(dir.name,"tmp",sep='/')
+		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
 	if(0)	#compute genetic distances
 	{				 
-		indir	<- paste(dir.name,"derived",sep='/')
+		indir	<- paste(dir.name,"tmp",sep='/')
 		outdir	<- paste(dir.name,"tmp",sep='/')
 		cmd		<- paste(cmd,hivc.cmd.get.geneticdist(indir, signat.out, outdir=outdir),sep='')
 	}	
@@ -852,7 +853,7 @@ hivc.proj.pipeline<- function()
 		indir	<- paste(dir.name,"tmp",sep='/')
 		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
 		outdir	<- paste(dir.name,"tmp",sep='/')
-		cmd		<- hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1)
+		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
 	
@@ -863,7 +864,7 @@ hivc.proj.pipeline<- function()
 			{				
 				x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
 				cat(x)
-				hivc.cmd.hpccaller(outdir, outfile, x)
+				#hivc.cmd.hpccaller(outdir, outfile, x)
 			})							
 }
 

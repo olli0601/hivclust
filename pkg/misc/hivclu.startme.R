@@ -65,7 +65,7 @@ default.fun <- "hivc.proj.pipeline"
 ###############################################################################
 function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$", all.files = FALSE,
 		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'))
-sapply(function.list,function(x) source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE))
+sapply(function.list,function(x){ print(x); source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE) })
 ###############################################################################
 if(0)
 {

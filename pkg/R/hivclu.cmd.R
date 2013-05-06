@@ -26,16 +26,16 @@ PR.EXAML.STARTTREE	<- "ExaML-parsimonator"
 PR.EXAML.EXAML	<- "ExaML-examl"
 
 #' @export
-HPC.NPROC		<- 1
+HPC.NPROC		<- {tmp<- c(1,6); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
 
 #' @export
-HPC.MPIRUN		<- "mpirun"
+HPC.MPIRUN		<- {tmp<- c("mpirun","mpiexec"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
 
 #' @export
-HPC.SYS			<- "CX1"
+HPC.CX1.IMPERIAL<- "cx1.hpc.ic.ac.uk"		#this is set to system('domainname',intern=T) for the hpc cluster of choice
 
 #' @export
-HPC.BIN			<- "/home/or105/bin"
+HPC.MEM			<- "3600mb"
 
 #' @export
 HPC.LOAD		<- "module load intel-suite/10.0 mpi R/2.13.0"
@@ -102,14 +102,14 @@ hivc.cmd.get.firstseq<- function(indir, infile, signat.in, signat.out, outdir=in
 }
 
 #' @export
-hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, args.starttree="-p 12345", prog.examl= PR.EXAML.EXAML, args.examl="-m GAMMA -B 20 -D",nproc=HPC.NPROC, resume=1, verbose=1)
+hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, args.starttree="-p 12345", prog.examl= PR.EXAML.EXAML, args.examl="-m GAMMA -B 20 -D", resume=1, verbose=1)
 {
 	cmd<- "#######################################################
 # compute ExaML tree
 #######################################################"
 	cmd<- paste(cmd,paste("\necho \'run ",prog.parser,"\'\n",sep=''))
 	#default commands for parser	
-	
+				
 	curr.dir	<- getwd()
 	cmd			<- paste(cmd,"cd ",outdir,'\n',sep='')
 	tmp			<- paste(indir,paste(infile,'_',signat.in,".phylip",sep=''),sep='/')
@@ -130,7 +130,11 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 	
 	cmd			<- paste(cmd,paste("\necho \'run ",prog.examl,"\'\n",sep=''))
 	#default commands for parser
-	cmd			<- paste(cmd,HPC.MPIRUN," -np ",nproc,' ',prog.examl,' ',args.examl,sep='')
+	tmp			<- hivc.get.hpcsys()	
+	cmd			<- switch(	tmp,
+							"debug"			= paste(cmd,HPC.MPIRUN[tmp]," -np ",HPC.NPROC[tmp],' ',prog.examl,' ',args.examl,sep=''),
+							HPC.CX1.IMPERIAL= paste(cmd,HPC.MPIRUN[tmp],' ',prog.examl,' ',args.examl,sep='')
+							)		
 	tmp			<- paste(infile,'_',signat.out,".phylip.examl.binary",sep='')
 	cmd			<- paste(cmd," -s ",tmp,sep='')
 	tmp			<- paste("RAxML_parsimonyTree.",infile,'_',signat.out,".examlstarttree.0",sep='')
@@ -163,25 +167,27 @@ hivc.cmd.examl.cleanup<- function(outdir, prog= PR.EXAML.EXAML)
 
 #add additional high performance computing information 
 #' @export
-hivc.cmd.hpcwrapper<- function(cmd, hpc.sys=HPC.SYS, hpc.walltime=24, hpc.select= "1:ncpus=1:mem=400mb", hpc.q=NA)
+hivc.cmd.hpcwrapper<- function(cmd, domain.name= hivc.get.hpcsys(), hpc.walltime=24, hpc.mem=HPC.MEM, hpc.nproc=HPC.NPROC[domain.name], hpc.q=NA)
 {
-	wrap<- "#!/bin/sh"
-	if(hpc.sys=="CX1")
+	wrap<- "#!/bin/sh"	
+	if(1 || domain.name==HPC.CX1.IMPERIAL)
 	{				
 		tmp	<- paste("#PBS -l walltime=",hpc.walltime,":59:59,pcput=",hpc.walltime,":45:00",sep='')
-		wrap<- paste(wrap, tmp, sep='\n')
-		tmp	<- paste("#PBS -l select=",hpc.select,sep='')
+		wrap<- paste(wrap, tmp, sep='\n')		
+		tmp	<- paste("#PBS -l select=1:ncpus=",hpc.nproc,":mem=",hpc.mem,sep='')
 		wrap<- paste(wrap, tmp, sep='\n')
 		wrap<- paste(wrap, "#PBS -j oe", sep='\n')
 		if(!is.na(hpc.q))
 			wrap<- paste(wrap, paste("#PBS -q",hpc.q), sep='\n\n')
 		wrap<- paste(wrap, HPC.LOAD, sep='\n')
-		tmp	<- paste("export PATH=$PATH:",HPC.BIN,sep='')
-		wrap<- paste(wrap, tmp, sep='\n')
+		#tmp	<- paste("export PATH=$PATH:",HPC.BIN,sep='')
+		#wrap<- paste(wrap, tmp, sep='\n')
 
 	}
+	else if(tmp=='')
+		cat(paste("\ndetected no HPC system and no hpcwrapper generated, domain name is",tmp))
 	else
-		stop(paste("unknown hpc.sys",hpc.sys))
+		stop(paste("unknown hpc system with domain name",tmp))
 	
 	cmd<- lapply(seq_along(cmd),function(i){	paste(wrap,cmd[[i]],sep='\n')	})
 	if(length(cmd)==1)
