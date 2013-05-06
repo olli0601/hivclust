@@ -35,7 +35,7 @@ HPC.MPIRUN		<- "mpirun"
 HPC.SYS			<- "CX1"
 
 #' @export
-HPC.LOAD		<- "module load intel-suite/10.0 R/2.13.0"
+HPC.LOAD		<- "module load intel-suite/10.0 mpi R/2.13.0"
 
 #generate clustalo command
 #' @export
@@ -127,7 +127,6 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 	
 	cmd			<- paste(cmd,paste("\necho \'run ",prog.examl,"\'\n",sep=''))
 	#default commands for parser
-	nproc<- 2
 	cmd			<- paste(cmd,HPC.MPIRUN," -np ",nproc,' ',prog.examl,' ',args.examl,sep='')
 	tmp			<- paste(infile,'_',signat.out,".phylip.examl.binary",sep='')
 	cmd			<- paste(cmd," -s ",tmp,sep='')

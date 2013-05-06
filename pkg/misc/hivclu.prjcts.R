@@ -863,7 +863,7 @@ hivc.proj.pipeline<- function()
 			{
 				cat(x)
 				x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
-				#hivc.cmd.hpccaller(outdir, outfile, x)
+				hivc.cmd.hpccaller(outdir, outfile, x)
 			})							
 }
 
