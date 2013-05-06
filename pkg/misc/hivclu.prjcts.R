@@ -552,39 +552,129 @@ project.hivc.getdf<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 }
 
 #create PROT+RT data set of first sequences from all patients
-project.hivc.clustalo.get.firstseq<- function(dir.name, signat.in, signat.out=paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''), verbose=1)
+hivc.prog.get.firstseq<- function()
 {	
-	file		<- paste(dir.name,"derived/ATHENA_2013_03_SeqMaster.R",sep='/')
-	load(file)
-	#str(df.all)
+	library(ape)
+	library(data.table)
 	
-	#get correct order of sequence SampleCodes corresponding to first seq of Patient
-	seq.PROT.nam<- as.character( df.all[,SeqPROT] )
-	seq.PROT.nam[ which(is.na(seq.PROT.nam)) ]	<- "NA"
-	seq.RT.nam	<- as.character( df.all[,SeqRT] )
-	seq.RT.nam[ which(is.na(seq.RT.nam)) ]		<- "NA"
+	indir		<- outdir		<- paste(DATA,"tmp",sep='/')
+	infile		<- "ATHENA_2013_03_SeqMaster.R"
+	signat.out	<- signat.in	<- "Wed_May__1_17/08/15_2013"
+	verbose		<- resume		<- 1
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) signat.in<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									outsignat= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) signat.out<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+	}
+	if(0)
+	{
+		print(indir)
+		print(outdir)
+		print(infile)
+		print(signat.in)
+		print(signat.out)
+		print(verbose)
+		print(resume)
+	}
+	pattern 	<- gsub('/',':',paste("FirstAliSequences_PROTRT_",signat.in,".R$",sep=''))
+	file		<- list.files(path=outdir, pattern=pattern, full.names=1)
+	if(!resume || !length(file))	
+	{		
+		if(verbose)	cat(paste("\ncreate FirstAliSequences_PROTRT file"))			
+		file		<- paste(indir,infile,sep='/')
+		if(verbose)	cat(paste("\nload",file,"\n"))
+		load(file)
+		#str(df.all)
 		
-	indir		<- paste(dir.name,"tmp",sep='/')
-	pattern 	<- gsub('/',':',paste(signat.in,".clustalo$",sep=''))
-	files		<- list.files(path=indir, pattern=pattern, full.names=1)
-	#read all sequences and add a missing one with name "NA" 		
-	seq.PROT	<- read.dna( files[ grep("PROT",files) ], format="fa", as.matrix=1 )
-	tmp			<- as.DNAbin( matrix(rep('-',ncol(seq.PROT)),1,ncol(seq.PROT), dimnames=list(c("NA"),c())) )
-	seq.PROT	<- rbind(seq.PROT,tmp)
-	seq.RT		<- read.dna( files[ grep("RT",files) ], format="fa", as.matrix=1 )						 				
-	tmp			<- as.DNAbin( matrix(rep('-',ncol(seq.RT)),1,ncol(seq.RT), dimnames=list(c("NA"),c())) )
-	seq.RT		<- rbind(seq.RT,tmp)
+		#get correct order of sequence SampleCodes corresponding to first seq of Patient
+		seq.PROT.nam<- as.character( df.all[,SeqPROT] )
+		seq.PROT.nam[ which(is.na(seq.PROT.nam)) ]	<- "NA"
+		seq.RT.nam	<- as.character( df.all[,SeqRT] )
+		seq.RT.nam[ which(is.na(seq.RT.nam)) ]		<- "NA"
+					
+		pattern 	<- gsub('/',':',paste(signat.in,".clustalo$",sep=''))
+		files		<- list.files(path=indir, pattern=pattern, full.names=1)
+		#read all sequences and add a missing one with name "NA" 		
+		seq.PROT	<- read.dna( files[ grep("PROT",files) ], format="fa", as.matrix=1 )
+		tmp			<- as.DNAbin( matrix(rep('-',ncol(seq.PROT)),1,ncol(seq.PROT), dimnames=list(c("NA"),c())) )
+		seq.PROT	<- rbind(seq.PROT,tmp)
+		seq.RT		<- read.dna( files[ grep("RT",files) ], format="fa", as.matrix=1 )						 				
+		tmp			<- as.DNAbin( matrix(rep('-',ncol(seq.RT)),1,ncol(seq.RT), dimnames=list(c("NA"),c())) )
+		seq.RT		<- rbind(seq.RT,tmp)
+		
+		seq.PROT	<- seq.PROT[seq.PROT.nam,]
+		seq.RT		<- seq.RT[seq.RT.nam,]
+		rownames(seq.PROT)<- as.character( df.all[,Patient] )
+		rownames(seq.RT)<- as.character( df.all[,Patient] )
+		
+		seq.PROT.RT	<- cbind(seq.PROT,seq.RT)
+		if(verbose) print(seq.PROT.RT)
+		file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".R",sep='')
+		if(verbose) cat(paste("\nwrite to",file))
+		save(seq.PROT.RT, file=file)	
+		
+		#create phylip file; need this for ExaML
+		print("DEBUG in FirstAliSequences")
+		seq.PROT.RT	<- seq.PROT.RT[1:10,]
+		file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".phylip",sep='')
+		if(verbose) cat(paste("\nwrite to ",file))
+		hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)		
+	}
+	else if(verbose)	
+		cat(paste("\nresumed: FirstAliSequences_PROTRT file"))
+}
+
+project.hivc.examl<- function(dir.name= DATA)
+{
+	require(ape)
 	
-	seq.PROT	<- seq.PROT[seq.PROT.nam,]
-	seq.RT		<- seq.RT[seq.RT.nam,]
-	rownames(seq.PROT)<- as.character( df.all[,Patient] )
-	rownames(seq.RT)<- as.character( df.all[,Patient] )
+	indir		<- paste(DATA,"derived",sep='/')
+	outdir		<- paste(DATA,"tmp",sep='/')
+	signat.out	<- signat.in	<- "Wed_May__1_17/08/15_2013"
+	verbose		<- resume		<- 1
+	infile		<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
+	file		<- paste(indir,'/',infile,"_",gsub('/',':',signat.in),".R",sep='')
+	if(verbose) cat(paste("\nload ",file))
+	load(file)
+	str(seq.PROT.RT)
 	
-	seq.PROT.RT	<- cbind(seq.PROT,seq.RT)
-	if(verbose) print(seq.PROT.RT)
-	file		<- paste(dir.name,"/derived/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".R",sep='')
-	if(verbose) cat(paste("\nwrite to",file))
-	save(seq.PROT.RT, file=file)	
+	#debug	
+	
+	
+	cat(cmd)
+	stop()
+	#create ExaML binary file from phylip
+	#create Parsimonator starting tree
+	#run ExaML starting tree
+	#delete phylip file
+	
 }
 
 project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
@@ -649,12 +739,6 @@ project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 					cat(paste("\nwrite to",file))
 					write.dna(tmp, file, format= "fasta" )
 				})		
-	}
-	if(1)	
-	{
-		signat.in<- "Wed_May__1_17/08/15_2013"
-		signat.out<- "Wed_May__1_17/08/15_2013"
-		project.hivc.clustalo.get.firstseq(DATA, signat.in, signat.out=signat.out, verbose=1)	
 	}	
 	if(0)
 	{
@@ -746,15 +830,33 @@ hivc.prog.get.geneticdist<- function()
 
 hivc.proj.pipeline<- function()
 {
-	dir.name<- DATA
-	#generate clustalo command		 
-	indir	<- paste(dir.name,"derived",sep='/')
-	outdir	<- paste(dir.name,"tmp",sep='/')
-	signat	<- "Wed_May__1_17/08/15_2013"
-
-	cmd		<- hivc.cmd.get.geneticdist(indir, signat, outdir=outdir)
+	dir.name<- DATA		 
+	signat.in	<- "Wed_May__1_17/08/15_2013"
+	signat.out	<- "Wed_May__1_17/08/15_2013"		
+	
+	if(1)	#extract first sequences for each patient as available
+	{
+		indir		<- paste(dir.name,"tmp",sep='/')
+		infile		<- "ATHENA_2013_03_SeqMaster.R"		
+		outdir		<- paste(dir.name,"derived",sep='/')
+		cmd			<- hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir)
+	}
+	if(1)	#compute genetic distances
+	{				 
+		indir	<- paste(dir.name,"derived",sep='/')
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		cmd		<- paste(cmd,hivc.cmd.get.geneticdist(indir, signat.out, outdir=outdir),sep='')
+	}	
+	if(0)	#compute ExaML tree
+	{		
+		indir	<- paste(dir.name,"tmp",sep='/')
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		cmd		<- hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1)
+		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
+	}
 	
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+	outdir	<- paste(dir.name,"tmp",sep='/')
 	outfile	<- paste("pipeline",signat,"qsub",sep='.')					
 	lapply(cmd, function(x)
 			{

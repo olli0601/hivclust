@@ -46,6 +46,7 @@ EPS			<<- 1e-12
 
 default.fun	<- "my.make.documentation"
 default.fun	<- "project.hivc.clustalo"
+default.fun	<- "project.hivc.examl"
 #default.fun <- "hivc.prog.get.geneticdist"
 default.fun <- "hivc.proj.pipeline"
 #default.fun	<- "project.hivc.test"
@@ -226,6 +227,7 @@ if(length(args))
 		else default.fun<- switch(tmp[1],
 					MAKE.DOCUMENTATION		= "my.make.documentation",
 					MALIGN					= "project.hivc.clustalo",
+					FIRSTSEQ				= "hivc.prog.get.firstseq",
 					GENDISTMAT				= "hivc.prog.get.geneticdist"
 					)
 	}

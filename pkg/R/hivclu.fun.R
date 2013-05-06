@@ -160,7 +160,17 @@ hivc.seq.create.referencepairs<- function(dir.name= DATA)
 }
 
 #' @export
-hivc.seq.dist<- function(seq.DNAbin.matrix)
+hivc.seq.write.dna.phylip<- function(seq.DNAbin.mat, file)
+{		
+	tmp<- cbind( rownames(seq.DNAbin.mat), apply( as.character( seq.DNAbin.mat ), 1, function(x) paste(x,sep='',collapse='')  ) )
+	tmp<- paste(t(tmp),collapse='\n',sep='')	
+	tmp<- paste( paste(c(nrow(seq.DNAbin.mat),ncol(seq.DNAbin.mat)),sep='',collapse=' '),'\n',tmp,'\n',collapse='',sep='' )
+	cat(tmp, file=file)
+}
+
+
+#' @export
+hivc.seq.dist<- function(seq.DNAbin.matrix, verbose=1)
 {
 	if(0)
 	{
@@ -179,12 +189,15 @@ hivc.seq.dist<- function(seq.DNAbin.matrix)
 		ans[1,1:6]<- NA
 								
 		for(i1 in seq.int(1,nrow(seq.DNAbin.matrix)-1))
-		{
+		{			
 			seq1<- seq.DNAbin.matrix[i1,]
-			tmp	<- 1 - sapply(seq.int(i1+1,nrow(seq.DNAbin.matrix)),function(i2){		.C("hivc_dist_ambiguous_dna", seq1, seq.DNAbin.matrix[i2,], ncol(seq1), dummy )[[4]]			})
+			time<- system.time	(
+							tmp	<- 1 - sapply(seq.int(i1+1,nrow(seq.DNAbin.matrix)),function(i2){		.C("hivc_dist_ambiguous_dna", seq1, seq.DNAbin.matrix[i2,], ncol(seq1), dummy )[[4]]			})
+						)[3]
+			if(verbose)	cat(paste("\ncompute distance of row",i1,"entries",nrow(seq.DNAbin.matrix)-i1,"took",time))			
 			tmp												<- round(tmp*1e3,d=0)			
 			tmp[tmp>big.matrix.charmax]						<- big.matrix.charmax
-			ans[i1, seq.int(i1+1,nrow(seq.DNAbin.matrix))]	<- tmp			
+			ans[i1, seq.int(i1+1,nrow(seq.DNAbin.matrix))]	<- tmp
 		}		
 	}
 	ans
