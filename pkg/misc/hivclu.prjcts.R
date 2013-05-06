@@ -860,9 +860,9 @@ hivc.proj.pipeline<- function()
 	outdir	<- paste(dir.name,"tmp",sep='/')
 	outfile	<- paste("pipeline",signat,"qsub",sep='.')					
 	lapply(cmd, function(x)
-			{
-				cat(x)
+			{				
 				x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
+				cat(x)
 				hivc.cmd.hpccaller(outdir, outfile, x)
 			})							
 }

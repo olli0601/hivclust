@@ -35,6 +35,9 @@ HPC.MPIRUN		<- "mpirun"
 HPC.SYS			<- "CX1"
 
 #' @export
+HPC.BIN			<- "/home/or105/bin"
+
+#' @export
 HPC.LOAD		<- "module load intel-suite/10.0 mpi R/2.13.0"
 
 #generate clustalo command
@@ -172,7 +175,9 @@ hivc.cmd.hpcwrapper<- function(cmd, hpc.sys=HPC.SYS, hpc.walltime=24, hpc.select
 		wrap<- paste(wrap, "#PBS -j oe", sep='\n')
 		if(!is.na(hpc.q))
 			wrap<- paste(wrap, paste("#PBS -q",hpc.q), sep='\n\n')
-		wrap<- paste(wrap, HPC.LOAD, sep='\n\n')
+		wrap<- paste(wrap, HPC.LOAD, sep='\n')
+		tmp	<- paste("export PATH=$PATH:",HPC.BIN,sep='')
+		wrap<- paste(wrap, tmp, sep='\n')
 
 	}
 	else
