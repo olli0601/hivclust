@@ -130,11 +130,13 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 	
 	cmd			<- paste(cmd,paste("\necho \'run ",prog.examl,"\'\n",sep=''))
 	#default commands for parser
-	tmp			<- hivc.get.hpcsys()	
-	cmd			<- switch(	tmp,
-							"debug"			= paste(cmd,HPC.MPIRUN[tmp]," -np ",HPC.NPROC[tmp],' ',prog.examl,' ',args.examl,sep=''),
-							HPC.CX1.IMPERIAL= paste(cmd,HPC.MPIRUN[tmp],' ',prog.examl,' ',args.examl,sep='')
-							)		
+	tmp			<- hivc.get.hpcsys()
+	if(tmp=="debug")
+		cmd		<- paste(cmd,HPC.MPIRUN[tmp]," -np ",HPC.NPROC[tmp],' ',prog.examl,' ',args.examl,sep='')
+	else if(tmp==HPC.CX1.IMPERIAL)
+		cmd		<- paste(cmd,HPC.MPIRUN[tmp],' ',prog.examl,' ',args.examl,sep='')
+	else	
+		stop("unknown hpc sys")
 	tmp			<- paste(infile,'_',signat.out,".phylip.examl.binary",sep='')
 	cmd			<- paste(cmd," -s ",tmp,sep='')
 	tmp			<- paste("RAxML_parsimonyTree.",infile,'_',signat.out,".examlstarttree.0",sep='')
