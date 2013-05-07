@@ -646,6 +646,11 @@ hivc.prog.get.firstseq<- function()
 		load(file)
 	}
 	#create phylip file; need this for ExaML
+	if(1)
+	{
+		print("DEBUG FirstAliSequences")
+		seq.PROT.RT<- seq.PROT.RT[1:10,]
+	}
 	file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".phylip",sep='')
 	if(verbose) cat(paste("\nwrite to ",file))
 	hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)
@@ -880,7 +885,7 @@ hivc.proj.pipeline<- function()
 	signat.out	<- "Wed_May__1_17/08/15_2013"		
 	cmd			<- ''
 
-	if(1)	#extract first sequences for each patient as available
+	if(0)	#extract first sequences for each patient as available
 	{
 		indir		<- paste(dir.name,"tmp",sep='/')
 		infile		<- "ATHENA_2013_03_SeqMaster.R"		
@@ -895,13 +900,35 @@ hivc.proj.pipeline<- function()
 		outdir	<- paste(dir.name,"tmp",sep='/')
 		cmd		<- paste(cmd,hivc.cmd.get.geneticdist(indir, infile, signat.out, gd.max, outdir=outdir),sep='')
 	}	
-	if(1)	#compute ExaML tree
+	if(0)	#compute ExaML tree
 	{		
 		indir	<- paste(dir.name,"tmp",sep='/')
 		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
 		outdir	<- paste(dir.name,"tmp",sep='/')
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
+	}
+	if(1)	#compute ExaML trees with bootstrap values
+	{
+		bs.from	<- 0
+		bs.to	<- 2
+		bs.n	<- 3
+		indir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		cmd		<- hivc.cmd.bsexaml(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
+		#check if we have all bs.n files. if yes, combine and cleanup
+		
+		signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		outfile	<- paste("pipeline",signat,"qsub",sep='.')					
+		lapply(cmd, function(x)
+				{				
+					x<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
+					cat(x)
+					#hivc.cmd.hpccaller(outdir, outfile, x)
+				})
+		stop()
 	}
 	
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')

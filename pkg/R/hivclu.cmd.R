@@ -23,7 +23,10 @@ PR.EXAML.PARSER	<- "ExaML-parser"
 PR.EXAML.STARTTREE	<- "ExaML-parsimonator"
 
 #' @export
-PR.EXAML.EXAML	<- "ExaML-examl"
+PR.EXAML.EXAML	<- "examl"
+
+#' @export
+PR.EXAML.BS		<- "raxml"
 
 #' @export
 HPC.NPROC		<- {tmp<- c(1,6); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
@@ -35,10 +38,10 @@ HPC.MPIRUN		<- {tmp<- c("mpirun","mpiexec"); names(tmp)<- c("debug","cx1.hpc.ic.
 HPC.CX1.IMPERIAL<- "cx1.hpc.ic.ac.uk"		#this is set to system('domainname',intern=T) for the hpc cluster of choice
 
 #' @export
-HPC.MEM			<- "3600mb"
+HPC.MEM			<- "1750mb"
 
 #' @export
-HPC.LOAD		<- "module load intel-suite mpi R/2.13.0"
+HPC.LOAD		<- "module load intel-suite mpi R/2.13.0 raxml examl/2013-05-07"
 
 #generate clustalo command
 #' @export
@@ -102,14 +105,15 @@ hivc.cmd.get.firstseq<- function(indir, infile, signat.in, signat.out, outdir=in
 }
 
 #' @export
-hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, args.starttree="-p 12345", prog.examl= PR.EXAML.EXAML, args.examl="-m GAMMA -B 20 -D", resume=1, verbose=1)
+hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, args.starttree.seed=12345, args.starttree.bsid= 1, prog.examl= PR.EXAML.EXAML, args.examl="-m GAMMA -B 20 -D", resume=1, verbose=1)
 {
+	args.starttree.bsid<-	sprintf("%03d",args.starttree.bsid)
 	cmd<- "#######################################################
 # compute ExaML tree
 #######################################################"
 	cmd<- paste(cmd,paste("\necho \'run ",prog.parser,"\'\n",sep=''))
-	#default commands for parser	
-				
+	#default commands for parser					
+	
 	curr.dir	<- getwd()
 	cmd			<- paste(cmd,"cd ",outdir,'\n',sep='')
 	tmp			<- paste(indir,paste(infile,'_',signat.in,".phylip",sep=''),sep='/')
@@ -120,16 +124,16 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 	cmd			<- paste(cmd,paste("\necho \'end ",prog.parser,"\'",sep=''))
 		
 	cmd			<- paste(cmd,paste("\necho \'run ",prog.starttree,"\'\n",sep=''))
-	#default commands for parser
-	tmp			<- paste(indir,paste(infile,'_',signat.in,".phylip",sep=''),sep='/')
-	cmd			<- paste(cmd,prog.starttree,' ',args.starttree," -s ",tmp,sep='')	
-	tmp			<- paste(infile,'_',signat.out,".examlstarttree",sep='')
+	#default commands for start tree
+	tmp			<- paste(indir,paste(infile,'_',signat.in,".phylip",sep=''),sep='/')	
+	cmd			<- paste(cmd,prog.starttree," -p",args.starttree.seed," -s ",tmp,sep='')	
+	tmp			<- paste(infile,'_',signat.out,".starttree.",args.starttree.bsid,sep='')
 	cmd			<- paste(cmd," -n ",tmp,sep='')
 	#verbose stuff
 	cmd			<- paste(cmd,paste("\necho \'end ",prog.starttree,"\'",sep=''))
 	
 	cmd			<- paste(cmd,paste("\necho \'run ",prog.examl,"\'\n",sep=''))
-	#default commands for parser
+	#default commands for final tree
 	tmp			<- hivc.get.hpcsys()
 	if(tmp=="debug")
 		cmd		<- paste(cmd,HPC.MPIRUN[tmp]," -np ",HPC.NPROC[tmp],' ',prog.examl,' ',args.examl,sep='')
@@ -139,15 +143,58 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 		stop("unknown hpc sys")
 	tmp			<- paste(infile,'_',signat.out,".phylip.examl.binary",sep='')
 	cmd			<- paste(cmd," -s ",tmp,sep='')
-	tmp			<- paste("RAxML_parsimonyTree.",infile,'_',signat.out,".examlstarttree.0",sep='')
+	tmp			<- paste("RAxML_parsimonyTree.",infile,'_',signat.out,".starttree.",args.starttree.bsid,".0",sep='')
 	cmd			<- paste(cmd," -t ",tmp,sep='')
-	tmp			<- paste(infile,'_',signat.out,".examltree",sep='')
+	tmp			<- paste(infile,'_',signat.out,".finaltree.",args.starttree.bsid,sep='')
 	cmd			<- paste(cmd," -n ",tmp,sep='')		
+	cmd			<- paste(cmd,paste("\necho \'end ",prog.examl,"\'",sep=''))
 	
-	cmd			<- paste(cmd,paste("\necho \'end ",prog.examl,"\'\n",sep=''))	
-	cmd			<- paste(cmd,"cd ",curr.dir,'\n',sep='')
+	#delete ExaML output that is not further needed 
+	cmd			<- paste(cmd,paste("\necho \'start cleanup\'",sep=''))
+	cmd			<- paste(cmd,"\nfind -E .  -name \'*starttree.",args.starttree.bsid,"*\' -delete",sep='')
+	cmd 		<- paste(cmd,"\nfind -E .  -name \'ExaML_binaryCheckpoint.*?finaltree.",args.starttree.bsid,"*\' -delete", sep='' )
+	cmd 		<- paste(cmd,"\nfind -E .  -name \'ExaML_log.*?finaltree.",args.starttree.bsid,"*\' -delete", sep='' )
+	cmd			<- paste(cmd,paste("\necho \'end cleanup\'",sep=''))
+		
+	cmd			<- paste(cmd,"\ncd ",curr.dir,'\n',sep='')
 	
 	cmd
+}
+
+#' @export
+hivc.cmd.bsexaml<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.to=99, bs.n=bs.to-bs.from+ifelse(bs.from==0,1,0),outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, args.examl="-m GAMMA -D", prog.supportadder=PR.EXAML.BS, resume=1, verbose=1)
+{
+	#create number of seeds for the number of runs being processed, which could be less than bs.n
+	bs.id	<- seq.int(bs.from,bs.to)
+	bs.seeds<- floor( runif(length(bs.id), 1e4, 1e5-1) )
+	lapply(seq_along(bs.seeds), function(i)
+			{
+				cmd			<- hivc.cmd.examl(indir, infile, signat.in, signat.out, outdir=outdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose)
+				curr.dir	<- getwd()
+				cmd			<- paste(cmd,"cd ",outdir,sep='')
+				cmd			<- paste(cmd,paste("\necho \'check if all bootstrap samples have been computed\'",sep=''))
+				tmp			<- paste("\nif [ $(find -E . -name 'ExaML_result*' | wc -l) -eq ",bs.n," ]; then",sep='')
+				cmd			<- paste(cmd,tmp,sep='')
+				cmd			<- paste(cmd,paste("\n\techo \'all bootstrap samples computed -- find best tree and add bootstrap support values\'",sep=''))				
+				tmp			<- c(	paste("ExaML_result.",infile,'_',signat.out,".finaltree",sep=''), 	paste("ExaML_result.",infile,'_',signat.out,".bstree",sep=''))
+				#add all bootstrap final trees into bs tree file
+				cmd			<- paste(cmd,"\n\tfor i in $(seq ",bs.from," ",bs.to,"); do cat ",tmp[1],".$(printf %03d $i) >> ",tmp[2],"; done",sep='')
+				#identify suffix finaltree.XXX of final tree with highest likelihood
+				cmd			<- paste(cmd,"\n\tBSBEST=$(grep 'Likelihood of best tree' ExaML_info.* | awk '{print $3,$1;}' | sort -n | tail -1 | grep -o 'finaltree.*' | cut -d':' -f 1)",sep='')
+				#create final tree with bootstrap support values
+				tmp			<- c(	paste(infile,'_',signat.out,".phylip.examl.binary",sep=''),	paste("ExaML_result.",infile,'_',signat.out,".$BSBEST",sep=''),	paste("ExaML_result.",infile,'_',signat.out,".bstree",sep=''), paste(infile,'_',signat.out,".supporttree",sep=''))
+				cmd			<- paste(cmd,"\n\t",prog.supportadder," -f b -m GTRCAT -s ",tmp[1]," -t ",tmp[2]," -z ",tmp[3]," -n ",tmp[4],sep='' )
+				cmd			<- paste(cmd,paste("\n\techo \'all bootstrap samples computed -- found best tree and added bootstrap support values\'",sep=''))										
+				#delete ExaML output that is not further needed
+				cmd			<- paste(cmd,paste("\n\techo \'start cleanup\'",sep=''))
+				cmd			<- paste(cmd,"\n\trm ",paste(paste(outdir,c("RAxML_info*","ExaML_info*"),sep='/'),collapse=' ',sep=''),sep=' ')
+				cmd			<- paste(cmd,paste("\n\techo \'end cleanup\'",sep=''))
+				cmd			<- paste(cmd,"\nfi",sep='')
+				cmd			<- paste(cmd,"\ncd ",curr.dir,'\n',sep='')
+				#cat(cmd)
+				#stop()
+				#if [ $(find -E . -name 'ExaML_result*' | wc -l)==2 ]; then echo 'hello'; fi
+			})
 }
 
 #' @export
