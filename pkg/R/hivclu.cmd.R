@@ -178,7 +178,7 @@ hivc.cmd.bsexaml<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.
 				cmd			<- paste(cmd,paste("\n\techo \'all bootstrap samples computed -- find best tree and add bootstrap support values\'",sep=''))				
 				tmp			<- c(	paste("ExaML_result.",infile,'_',signat.out,".finaltree",sep=''), 	paste("ExaML_result.",infile,'_',signat.out,".bstree",sep=''))
 				#add all bootstrap final trees into bs tree file
-				cmd			<- paste(cmd,"\n\tfor i in $(seq ",bs.from," ",bs.to,"); do cat ",tmp[1],".$(printf %03d $i) >> ",tmp[2],"; done",sep='')
+				cmd			<- paste(cmd,"\n\tfor i in $(seq 0 ",bs.n-1,"); do cat ",tmp[1],".$(printf %03d $i) >> ",tmp[2],"; done",sep='')
 				#identify suffix finaltree.XXX of final tree with highest likelihood
 				cmd			<- paste(cmd,"\n\tBSBEST=$(grep 'Likelihood of best tree' ExaML_info.* | awk '{print $3,$1;}' | sort -n | tail -1 | grep -o 'finaltree.*' | cut -d':' -f 1)",sep='')
 				cmd			<- paste(cmd,paste("\n\techo \'best tree is $BSBEST\'",sep=''))
