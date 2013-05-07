@@ -918,15 +918,16 @@ hivc.proj.pipeline<- function()
 		outdir	<- paste(dir.name,"tmp",sep='/')
 		cmd		<- hivc.cmd.bsexaml(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
 		#check if we have all bs.n files. if yes, combine and cleanup
-		
-		signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-		outdir	<- paste(dir.name,"tmp",sep='/')
-		outfile	<- paste("pipeline",signat,"qsub",sep='.')					
+				
+		outdir	<- paste(dir.name,"tmp",sep='/')							
 		lapply(cmd, function(x)
 				{				
-					x<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("pipeline",signat,"qsub",sep='.')
 					#cat(x)
 					hivc.cmd.hpccaller(outdir, outfile, x)
+					Sys.sleep(1)
 				})
 		stop()
 	}
