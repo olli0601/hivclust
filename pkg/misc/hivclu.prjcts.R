@@ -911,8 +911,8 @@ hivc.proj.pipeline<- function()
 	if(1)	#compute ExaML trees with bootstrap values
 	{
 		bs.from	<- 0
-		bs.to	<- 2
-		bs.n	<- 3
+		bs.to	<- 99
+		bs.n	<- 100
 		indir	<- paste(dir.name,"tmp",sep='/')
 		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
 		outdir	<- paste(dir.name,"tmp",sep='/')
@@ -925,8 +925,8 @@ hivc.proj.pipeline<- function()
 		lapply(cmd, function(x)
 				{				
 					x<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
-					cat(x)
-					#hivc.cmd.hpccaller(outdir, outfile, x)
+					#cat(x)
+					hivc.cmd.hpccaller(outdir, outfile, x)
 				})
 		stop()
 	}
