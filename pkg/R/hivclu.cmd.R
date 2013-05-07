@@ -23,13 +23,13 @@ PR.EXAML.PARSER	<- "ExaML-parser"
 PR.EXAML.STARTTREE	<- "ExaML-parsimonator"
 
 #' @export
-PR.EXAML.EXAML	<- "examl"
+PR.EXAML.EXAML	<- "ExaML-examl"
 
 #' @export
-PR.EXAML.BS		<- "raxml"
+PR.EXAML.BS		<- "ExaML-raxml"
 
 #' @export
-HPC.NPROC		<- {tmp<- c(1,6); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
+HPC.NPROC		<- {tmp<- c(1,1); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
 
 #' @export
 HPC.MPIRUN		<- {tmp<- c("mpirun","mpiexec"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
@@ -151,9 +151,9 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 	
 	#delete ExaML output that is not further needed 
 	cmd			<- paste(cmd,paste("\necho \'start cleanup\'",sep=''))
-	cmd			<- paste(cmd,"\nfind -E .  -name \'*starttree.",args.starttree.bsid,"*\' -delete",sep='')
-	cmd 		<- paste(cmd,"\nfind -E .  -name \'ExaML_binaryCheckpoint.*?finaltree.",args.starttree.bsid,"*\' -delete", sep='' )
-	cmd 		<- paste(cmd,"\nfind -E .  -name \'ExaML_log.*?finaltree.",args.starttree.bsid,"*\' -delete", sep='' )
+	cmd			<- paste(cmd,"\nfind . -name \'*starttree.",args.starttree.bsid,"*\' -delete",sep='')
+	cmd 		<- paste(cmd,"\nfind . -name \'ExaML_binaryCheckpoint.*?finaltree.",args.starttree.bsid,"*\' -delete", sep='' )
+	cmd 		<- paste(cmd,"\nfind . -name \'ExaML_log.*?finaltree.",args.starttree.bsid,"*\' -delete", sep='' )
 	cmd			<- paste(cmd,paste("\necho \'end cleanup\'",sep=''))
 		
 	cmd			<- paste(cmd,"\ncd ",curr.dir,'\n',sep='')
@@ -173,7 +173,7 @@ hivc.cmd.bsexaml<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.
 				curr.dir	<- getwd()
 				cmd			<- paste(cmd,"cd ",outdir,sep='')
 				cmd			<- paste(cmd,paste("\necho \'check if all bootstrap samples have been computed\'",sep=''))
-				tmp			<- paste("\nif [ $(find -E . -name 'ExaML_result*' | wc -l) -eq ",bs.n," ]; then",sep='')
+				tmp			<- paste("\nif [ $(find . -name 'ExaML_result*' | wc -l) -eq ",bs.n," ]; then",sep='')
 				cmd			<- paste(cmd,tmp,sep='')
 				cmd			<- paste(cmd,paste("\n\techo \'all bootstrap samples computed -- find best tree and add bootstrap support values\'",sep=''))				
 				tmp			<- c(	paste("ExaML_result.",infile,'_',signat.out,".finaltree",sep=''), 	paste("ExaML_result.",infile,'_',signat.out,".bstree",sep=''))
