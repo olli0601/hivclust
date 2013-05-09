@@ -556,6 +556,7 @@ hivc.prog.get.firstseq<- function()
 {	
 	library(ape)
 	library(data.table)
+	library(hivclust)
 	
 	indir		<- outdir		<- paste(DATA,"tmp",sep='/')
 	infile		<- "ATHENA_2013_03_SeqMaster.R"
@@ -644,16 +645,40 @@ hivc.prog.get.firstseq<- function()
 	{
 		if(verbose)	cat(paste("\nload",file))
 		load(file)
-	}
-	#create phylip file; need this for ExaML
-	if(1)
+	}		
+	if(0){	print("DEBUG FirstAliSequences"); seq.PROT.RT<- seq.PROT.RT[1:10,]	}
+	if(1)	#create phylip file; need this for ExaML
 	{
-		print("DEBUG FirstAliSequences")
-		seq.PROT.RT<- seq.PROT.RT[1:10,]
+		file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".phylip",sep='')
+		if(verbose) cat(paste("\nwrite to ",file))
+		hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)
+		
+		file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_",gsub('/',':',signat.out),".fasta",sep='')
+		if(verbose) cat(paste("\nwrite to ",file))		
+		data( refseq_hiv1_hxb2 )
+		hxb2		<- data.table( hxb2 )
+		hxb2		<- as.character( hxb2[, HXB2.K03455 ] )
+		cat( paste(">HXB2\n",paste( hxb2[ seq.int(1,length(hxb2)-2) ], collapse='',sep='' ),"\n",sep=''), file=file, append=1)
+		write.dna(seq.PROT.RT, file=file, format="fasta", append=1, colsep='', colw=length(hxb2)-2, blocksep=0)
 	}
-	file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".phylip",sep='')
-	if(verbose) cat(paste("\nwrite to ",file))
-	hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)
+	if(0)	#retain only third codon positions
+	{
+		data( refseq_hiv1_hxb2 )
+		hxb2<- data.table( hxb2 )
+		hxb2<- as.character( hxb2[, HXB2.K03455 ] )
+						
+		file<- paste(outdir,"/ATHENA_2013_03_HXB2_PROTRT_",gsub('/',':',signat.out),".fasta",sep='')
+		write.dna(seq.PROT.RT[1:10,], file=file, format="fasta", colsep='', colw=length(hxb2)-2, blocksep=0)
+		hxb2<- paste(">HXB2\n",paste( hxb2[ seq.int(1,length(hxb2)-2) ], collapse='',sep='' ),"\n",sep='')
+		cat(hxb2, file=file, append=1)
+		
+		file<- paste("ATHENA_2013_03_HXB2_PROTRT_",gsub('/',':',signat.out),".fasta",sep='')
+		cmd<- hivc.cmd.clustalo(outdir, file, signat='')
+		system(cmd)
+		
+		
+		
+	}
 }
 
 project.hivc.examl<- function(dir.name= DATA)
@@ -747,7 +772,7 @@ project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 	}	
 	if(0)
 	{
-		#generate clustalo command		 
+		#generate initial clustalo command		 
 		indir	<- paste(dir.name,"derived",sep='/')
 		outdir	<- paste(dir.name,"tmp",sep='/')
 		infiles	<- list.files(path=indir, pattern=".fa$", full.names=0)		
@@ -763,9 +788,7 @@ project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("clustalo",signat,"qsub",sep='.')					
 					hiv.cmd.hpccaller(outdir, outfile, x)			
-				})
-		
-		
+				})			
 	}
 }
 
@@ -886,6 +909,14 @@ hivc.proj.pipeline<- function()
 	signat.out	<- "Wed_May__1_17/08/15_2013"		
 	cmd			<- ''
 
+	if(1)	#align sequences in fasta file
+	{
+		indir	<- paste(dir.name,"tmp",sep='/')
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_Wed_May__1_17:08:15_2013.fasta"		
+		cmd		<- hivc.cmd.clustalo(indir, infile, signat='', outdir=outdir)
+		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1)		
+	}
 	if(0)	#extract first sequences for each patient as available
 	{
 		indir		<- paste(dir.name,"tmp",sep='/')
@@ -909,7 +940,7 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(1)	#compute ExaML trees with bootstrap values
+	if(0)	#compute ExaML trees with bootstrap values
 	{
 		bs.from	<- 0
 		bs.to	<- 99
@@ -940,7 +971,7 @@ hivc.proj.pipeline<- function()
 			{				
 				x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
 				cat(x)
-				#hivc.cmd.hpccaller(outdir, outfile, x)
+				hivc.cmd.hpccaller(outdir, outfile, x)
 			})							
 }
 

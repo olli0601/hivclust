@@ -45,11 +45,11 @@ HPC.LOAD		<- "module load intel-suite mpi R/2.13.0 raxml examl/2013-05-07"
 
 #generate clustalo command
 #' @export
-hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''), outdir=indir, prog= PR.CLUSTALO, hmm=PR.CLUSTALO.HMM, nproc=1)
+hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''), outdir=indir, prog= PR.CLUSTALO, hmm=PR.CLUSTALO.HMM, nproc=1, verbose=1)
 {
-	lapply(infiles,function(x)
+	ans<- lapply(infiles,function(x)
 			{
-				cat(paste("\nprocess",x,"\n"))				
+				if(verbose) cat(paste("\nprocess",x,"\n"))				
 				#verbose stuff
 				cmd<- "#######################################################
 # run clustalo
@@ -72,6 +72,9 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 				cmd<- paste(cmd,paste("\necho \'end ",PR.CLUSTALO,"\'\n\n",sep=''))
 				cmd
 			})
+	if(length(ans)==1)
+		ans<- unlist(ans)
+	ans
 }
 
 #' @export
