@@ -778,7 +778,7 @@ hivc.prog.get.geneticdist<- function()
 	infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
 	resume	<- verbose <- 1	
 	signat 	<- "Wed_May__1_17/08/15_2013"
-	gd.max	<- 0.045 
+	gd.max	<- 0.045 	
 	if(exists("argv"))
 	{
 		tmp<- na.omit(sapply(argv,function(arg)
@@ -819,6 +819,7 @@ hivc.prog.get.geneticdist<- function()
 		print(resume)
 		print(gd.max)
 	}	
+	
 	pattern 	<- paste("Gd",gd.max*1000,"Sequences_PROTRT_",gsub('/',':',signat),".R",sep='')
 	file		<- list.files(path=outdir, pattern=pattern, full.names=1)
 	if(!resume || !length(file))
@@ -829,14 +830,14 @@ hivc.prog.get.geneticdist<- function()
 		file		<- list.files(path=outdir, pattern=pattern, full.names=1)		
 		if(!resume || !length(file))	
 		{		
-			stop()
 			if(verbose)	cat(paste("\ncreate gdm file"))
 			file				<- paste(indir,"/",infile,"_",gsub('/',':',signat),".R",sep='')
 			if(verbose)	cat(paste("\nload",file))
 			load(file)
 			str(seq.PROT.RT)		
 			#tmp				<- tmp[1:10,]
-			gd.bigmat			<- hivc.seq.dist(  seq.PROT.RT )		
+			gd.bigmat			<- hivc.seq.dist(  seq.PROT.RT )
+			stop()
 			file				<- paste(outdir,"/",infile,"_",gsub('/',':',signat),".gdm",sep='')
 			if(verbose) cat(paste("\nwrite to",file))
 			write.big.matrix(gd.bigmat, file, row.names= 1, col.names=0, sep=',')		
