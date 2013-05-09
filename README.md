@@ -4,7 +4,7 @@ hivclust
 HIV clustering tools
 
 to clone this R package from the git repository:
-* if there are issues like "Permission denied (publickey)" , try git clone http://github.com/olli0601/abc.n.git
+* if there are issues like "Permission denied (publickey)" , try git clone http://github.com/olli0601/hivclust.git
 
 to build this R package:
 * R CMD build pkg: builds the package (generates an archive called foo.tar.gz).
