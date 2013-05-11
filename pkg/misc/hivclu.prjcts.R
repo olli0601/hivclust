@@ -647,12 +647,8 @@ hivc.prog.get.firstseq<- function()
 		load(file)
 	}		
 	if(0){	print("DEBUG FirstAliSequences"); seq.PROT.RT<- seq.PROT.RT[1:10,]	}
-	if(1)	#create phylip file; need this for ExaML
+	if(0)	#create full fasta file with reference sequence and align once more
 	{
-		file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat.out),".phylip",sep='')
-		if(verbose) cat(paste("\nwrite to ",file))
-		hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)
-		
 		file		<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_",gsub('/',':',signat.out),".fasta",sep='')
 		if(verbose) cat(paste("\nwrite to ",file))		
 		data( refseq_hiv1_hxb2 )
@@ -660,6 +656,135 @@ hivc.prog.get.firstseq<- function()
 		hxb2		<- as.character( hxb2[, HXB2.K03455 ] )
 		cat( paste(">HXB2\n",paste( hxb2[ seq.int(1,length(hxb2)-2) ], collapse='',sep='' ),"\n",sep=''), file=file, append=1)
 		write.dna(seq.PROT.RT, file=file, format="fasta", append=1, colsep='', colw=length(hxb2)-2, blocksep=0)
+	}
+	if(1)	#curate alignment with reference 
+	{
+		file								<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_",gsub('/',':',signat.out),".fasta.clustalo",sep='')
+		if(verbose) cat(paste("\nread ",file))
+		seq.PROT.RT							<- read.dna(file, format="fasta", as.character=1)
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 2550, c("-","-","-"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,2550:2552]<- matrix( c("c","c","y"), nrow=length(query.yes), ncol=3, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 2550, c("c","c","y","-"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,2550:2553]<- matrix( c("-","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 2751, c("-","-","-","a"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,2751:2754]<- matrix( c("a","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3143, c("-"))
+		for(i in query.yes)	
+			seq.PROT.RT[i,3143:3151]		<-	c(seq.PROT.RT[i,3144:3151],"-") 	#align pos 3143 and move gap into 3rd codon
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3151, c("a","-"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3151:3152]<- matrix( c("-","a"), nrow=length(query.yes), ncol=2, byrow=1 )
+		#always delete drug resistance insertion at pos 69 because this is really cryptic
+		seq.PROT.RT[,2752:2754]				<- matrix( c("-","-","-"), nrow=length(query.yes), ncol=3, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3237, c("-"))
+		for(i in query.yes)	
+			seq.PROT.RT[i,3233:3237]<- c("-",seq.PROT.RT[i,3233:3236]) 		#align pos 3237 and move gap into 3rd codon
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3433, c("-","t"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3433:3434]<- matrix( c("t","-"), nrow=length(query.yes), ncol=2, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3433, c("-","-","-","-","t"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3433:3437]<- matrix( c("t","-","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3434, c("-","-","-","-","a"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3434:3438]<- matrix( c("a","-","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3503, c("-"))
+		for(i in query.yes)
+			seq.PROT.RT[i,3501:3503]		<- c("-",seq.PROT.RT[i,3501:3502])
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3504, c("-","-","-","t"))	
+		for(i in query.yes)
+			seq.PROT.RT[i,3504:3524]		<- c(seq.PROT.RT[i,3507:3524],"-","-","-")
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3506, c("-","-","-","t","g"))
+		for(i in query.yes)
+			seq.PROT.RT[i,3506:3526]		<- c(seq.PROT.RT[i,3509:3526],"-","-","-")
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3507, c("-","-","-","g","a"))
+		for(i in query.yes)
+			seq.PROT.RT[i,3507:3537]		<-	c(seq.PROT.RT[i,3510:3537],"-","-","-")
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3504, c("g","a","c"))
+		for(i in query.yes)
+			seq.PROT.RT[i,3504:3530]		<-	c("-","-","-",seq.PROT.RT[i,3504:3527])
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3495, c("g","-","-","-","g"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3495:3499]<- matrix( c("g","g","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3501, c("-","t","a"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3501:3503]<- matrix( c("t","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3501, c("a","-"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3501:3502]<- matrix( c("-","a"), nrow=length(query.yes), ncol=2, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3551, c("g","g"))
+		for(i in query.yes)
+			seq.PROT.RT[i,3551:3600]		<-	c("-",seq.PROT.RT[i,3551:3599])
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3552, c("g","c"))
+		for(i in query.yes)
+			seq.PROT.RT[i,3552:3600]		<-	c("-",seq.PROT.RT[i,3552:3599])
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3501, c("-","t","t"))
+		for(i in query.yes)
+			seq.PROT.RT[i,3501:3600]		<-	c("-",seq.PROT.RT[i,3501:3599])
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3498, c("c","g","t"))
+		for(i in query.yes)
+			seq.PROT.RT[i,3498:3520]		<-	c("-",seq.PROT.RT[i,3498:3519])
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("-","c","a"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3549:3551]<- matrix( c("c","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3543, c("-","c","a","g","g","g","g","c","a"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3543:3551]<- matrix( c("c","a","g","g","g","g","c","a","-"), nrow=length(query.yes), ncol=9, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3543, c("-","c","a","g","g","a","g","c","a"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3543:3551]<- matrix( c("c","a","g","g","a","g","c","a","-"), nrow=length(query.yes), ncol=9, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3543, c("-","c","a","k","g","g","a","c","a"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3543:3551]<- matrix( c("c","a","k","g","g","a","c","a","-"), nrow=length(query.yes), ncol=9, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3543, c("-","c","a","g","g","g","g","g","a"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3543:3551]<- matrix( c("c","a","g","g","g","g","g","a","-"), nrow=length(query.yes), ncol=9, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("a","a","-"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3549:3551]<- matrix( c("-","-","-"), nrow=length(query.yes), ncol=3, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3551, c("g","a","c"))
+		for(i in query.yes)
+			seq.PROT.RT[i,3551:3560]		<-	c("-",seq.PROT.RT[i,3551:3559])
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3551, c("g","a","y","-"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3551:3554]<- matrix( c("-","g","a","y"), nrow=length(query.yes), ncol=4, byrow=1 )
+		query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("-","c","c","g","g"))
+		if(length(query.yes))
+			seq.PROT.RT[query.yes,3549:3551]<- matrix( c("c","-","c"), nrow=length(query.yes), ncol=3, byrow=1 )
+		#some more manual editing at the end
+		#cut before PROT pol start and at max len in database
+		seq.PROT.RT							<- seq.PROT.RT[,2253:ncol(seq.PROT.RT)] 
+		seq.PROT.RT							<- seq.PROT.RT[,1:1624]
+		seq.PROT.RT.sort.by					<- apply(seq.PROT.RT,1,function(x)		which(rev(x)!="-" )[1]  )
+		seq.PROT.RT							<- seq.PROT.RT[sort(seq.PROT.RT.sort.by, index.return=1)$ix,]
+		#some more manual editing at all ends after sorting
+		#always delete drug resistance at G333D/E because this is at the end of the alignment and alignment unreliable - could have picked up other ends
+		seq.PROT.RT[,1294:1299]				<- matrix( c("-","-","-","-","-","-"), nrow=nrow(seq.PROT.RT), ncol=6, byrow=1 )
+
+		seq.PROT.RT							<- as.DNAbin( seq.PROT.RT )
+		file								<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_",gsub('/',':',signat.out),".fasta.clustalo2",sep='')		
+		write.dna(seq.PROT.RT, file=file, format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
+	}
+	if(1)	#create final HXB2PROTRT R and phylip files; need phylip for ExaML
+	{
+		signat.in	<- "Wed_May__1_17/08/15_2013"
+		signat.out	<- "Sat_May_11_14:23:46_2013"
+		file<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_",gsub('/',':',signat.in),".fasta.clustalo4",sep='')
+		seq.PROT.RT	<- read.dna(file, format="fasta")
+		print(seq.PROT.RT)
+						
+		seq.PROT.RT	<- seq.PROT.RT[ rownames(seq.PROT.RT)!="HXB2", ]
+		
+		file		<- paste(outdir,"/ATHENA_2013_03_FirstCurSequences_PROTRT_",gsub('/',':',signat.out),".R",sep='')
+		if(verbose) cat(paste("\nwrite to",file))
+		save(seq.PROT.RT, file=file)
+		
+		file		<- paste(outdir,"/ATHENA_2013_03_FirstCurSequences_PROTRT_",gsub('/',':',signat.out),".phylip",sep='')
+		if(verbose) cat(paste("\nwrite to ",file))
+		hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)				
 	}
 	if(0)	#retain only third codon positions
 	{
@@ -909,7 +1034,7 @@ hivc.proj.pipeline<- function()
 	signat.out	<- "Wed_May__1_17/08/15_2013"		
 	cmd			<- ''
 
-	if(1)	#align sequences in fasta file
+	if(0)	#align sequences in fasta file
 	{
 		indir	<- paste(dir.name,"tmp",sep='/')
 		outdir	<- paste(dir.name,"tmp",sep='/')
@@ -940,13 +1065,15 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(0)	#compute ExaML trees with bootstrap values
+	if(1)	#compute ExaML trees with bootstrap values
 	{
 		bs.from	<- 0
-		bs.to	<- 99
+		bs.to	<- 1
 		bs.n	<- 100
+		signat.in	<- "Sat_May_11_14/23/46_2013"
+		signat.out	<- "Sat_May_11_14/23/46_2013"				
 		indir	<- paste(dir.name,"tmp",sep='/')
-		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
+		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
 		outdir	<- paste(dir.name,"tmp",sep='/')
 		cmd		<- hivc.cmd.bsexaml(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
 		#check if we have all bs.n files. if yes, combine and cleanup

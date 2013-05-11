@@ -168,6 +168,14 @@ hivc.seq.write.dna.phylip<- function(seq.DNAbin.mat, file)
 	cat(tmp, file=file)
 }
 
+hivx.seq.find<- function(char.matrix, pos0= NA, from= c(), verbose=1)
+{
+	if(is.na(pos0)) 	stop("start position of token to be replaced is missing")
+	if(!length(from))	stop("token to be replaced is missing")
+	query.colidx	<- seq.int(pos0,pos0+length(from)-1)
+	query.yes		<- which( apply(char.matrix, 1, function(x)	all(x[query.colidx]==from) ) )
+	query.yes	
+}
 
 #' @export
 hivc.seq.dist<- function(seq.DNAbin.matrix, verbose=1)

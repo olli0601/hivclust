@@ -23,7 +23,7 @@ PR.EXAML.PARSER	<- "ExaML-parser"
 PR.EXAML.STARTTREE	<- "ExaML-parsimonator"
 
 #' @export
-PR.EXAML.EXAML	<- "ExaML-examl"
+PR.EXAML.EXAML	<- "examl"
 
 #' @export
 PR.EXAML.BS		<- "ExaML-raxml"
@@ -41,7 +41,7 @@ HPC.CX1.IMPERIAL<- "cx1.hpc.ic.ac.uk"		#this is set to system('domainname',inter
 HPC.MEM			<- "1750mb"
 
 #' @export
-HPC.LOAD		<- "module load intel-suite mpi R/2.13.0 raxml examl/2013-05-07"
+HPC.LOAD		<- "module load intel-suite mpi R/2.13.0 raxml examl/2013-05-09"
 
 #generate clustalo command
 #' @export
