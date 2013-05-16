@@ -656,8 +656,12 @@ hivc.prog.get.firstseq<- function()
 		hxb2		<- as.character( hxb2[, HXB2.K03455 ] )
 		cat( paste(">HXB2\n",paste( hxb2[ seq.int(1,length(hxb2)-2) ], collapse='',sep='' ),"\n",sep=''), file=file, append=1)
 		write.dna(seq.PROT.RT, file=file, format="fasta", append=1, colsep='', colw=length(hxb2)-2, blocksep=0)
+				
+		file<- paste("ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_",gsub('/',':',signat.out),".fasta",sep='')
+		cmd<- hivc.cmd.clustalo(outdir, file, signat='')
+		system(cmd)		
 	}
-	if(1)	#curate alignment with reference 
+	if(0)	#curate alignment with reference 
 	{
 		file								<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_",gsub('/',':',signat.out),".fasta.clustalo",sep='')
 		if(verbose) cat(paste("\nread ",file))
@@ -768,7 +772,7 @@ hivc.prog.get.firstseq<- function()
 		file								<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_",gsub('/',':',signat.out),".fasta.clustalo2",sep='')		
 		write.dna(seq.PROT.RT, file=file, format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
 	}
-	if(1)	#create final HXB2PROTRT R and phylip files; need phylip for ExaML
+	if(0)	#create final HXB2PROTRT R and phylip files; need phylip for ExaML
 	{
 		signat.in	<- "Wed_May__1_17/08/15_2013"
 		signat.out	<- "Sat_May_11_14:23:46_2013"
@@ -786,23 +790,24 @@ hivc.prog.get.firstseq<- function()
 		if(verbose) cat(paste("\nwrite to ",file))
 		hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)				
 	}
-	if(0)	#retain only third codon positions
+	if(1)	#retain only third codon positions
 	{
-		data( refseq_hiv1_hxb2 )
-		hxb2<- data.table( hxb2 )
-		hxb2<- as.character( hxb2[, HXB2.K03455 ] )
-						
-		file<- paste(outdir,"/ATHENA_2013_03_HXB2_PROTRT_",gsub('/',':',signat.out),".fasta",sep='')
-		write.dna(seq.PROT.RT[1:10,], file=file, format="fasta", colsep='', colw=length(hxb2)-2, blocksep=0)
-		hxb2<- paste(">HXB2\n",paste( hxb2[ seq.int(1,length(hxb2)-2) ], collapse='',sep='' ),"\n",sep='')
-		cat(hxb2, file=file, append=1)
+		signat.in	<- "Sat_May_11_14:23:46_2013"
+		signat.out	<- "Sat_May_11_14:23:46_2013"
+
+		file		<- paste(outdir,"/ATHENA_2013_03_FirstCurSequences_PROTRT_",gsub('/',':',signat.in),".R",sep='')
+		if(verbose) cat(paste("\nload ",file))			
+		load(file)
 		
-		file<- paste("ATHENA_2013_03_HXB2_PROTRT_",gsub('/',':',signat.out),".fasta",sep='')
-		cmd<- hivc.cmd.clustalo(outdir, file, signat='')
-		system(cmd)
+		codon3.idx	<- seq.int(3,ncol(seq.PROT.RT),3)
+		seq.PROT.RT3<- seq.PROT.RT[, codon3.idx]
+		file		<- paste(outdir,"/ATHENA_2013_03_FirstCurSequences_PROTRTCD3_",gsub('/',':',signat.out),".R",sep='')
+		if(verbose) cat(paste("\nwrite to ",file))
+		save(seq.PROT.RT3, file=file)
 		
-		
-		
+		file		<- paste(outdir,"/ATHENA_2013_03_FirstCurSequences_PROTRTCD3_",gsub('/',':',signat.out),".phylip",sep='')
+		if(verbose) cat(paste("\nwrite to ",file))
+		hivc.seq.write.dna.phylip(seq.PROT.RT3, file=file)
 	}
 }
 
@@ -968,7 +973,7 @@ hivc.prog.get.geneticdist<- function()
 		print(gd.max)
 	}	
 	
-	pattern 	<- paste("Gd",gd.max*1000,"Sequences_PROTRT_",gsub('/',':',signat),".R",sep='')
+	pattern 	<- paste(infile,"_Gd",gd.max*1000,"_",gsub('/',':',signat),".R",sep='')
 	file		<- list.files(path=outdir, pattern=pattern, full.names=1)
 	if(!resume || !length(file))
 	{
@@ -985,7 +990,6 @@ hivc.prog.get.geneticdist<- function()
 			str(seq.PROT.RT)		
 			#tmp				<- tmp[1:10,]
 			gd.bigmat			<- hivc.seq.dist(  seq.PROT.RT )
-			stop()
 			file				<- paste(outdir,"/",infile,"_",gsub('/',':',signat),".gdm",sep='')
 			if(verbose) cat(paste("\nwrite to",file))
 			write.big.matrix(gd.bigmat, file, row.names= 1, col.names=0, sep=',')		
@@ -998,6 +1002,7 @@ hivc.prog.get.geneticdist<- function()
 			if(verbose)	cat(paste("\nloading",file))
 			gd.bigmat			<- read.big.matrix(file, has.row.names=1, sep=',', type="char")
 		}
+		stop()
 		#now have pairwise genetic distances in gd.bigmat
 		gd.bigmat.min	<- sapply(seq.int(1,nrow(gd.bigmat)-1),function(i)
 								{
@@ -1013,7 +1018,8 @@ hivc.prog.get.geneticdist<- function()
 		if(verbose)	cat(paste("\nload",file))
 		load(file)
 		seq.PROT.RT.gd	<- seq.PROT.RT[ rownames(gd.bigmat)[gd.seqs], ]
-		file			<- paste(outdir,"/ATHENA_2013_03_Gd",gd.max*1000,"Sequences_PROTRT_",gsub('/',':',signat),".R",sep='')
+		
+		file 			<- paste(outdir,"/",infile,"_Gd",gd.max*1000,"_",gsub('/',':',signat),".R",sep='')		
 		save(seq.PROT.RT.gd, file=file)
 	}
 	else
@@ -1049,13 +1055,21 @@ hivc.proj.pipeline<- function()
 		outdir		<- paste(dir.name,"tmp",sep='/')
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
-	if(0)	#compute genetic distances
+	if(1)	#compute genetic distances
 	{				
-		gd.max	<- 0.045
-		indir	<- paste(dir.name,"tmp",sep='/')
-		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
-		outdir	<- paste(dir.name,"tmp",sep='/')
-		cmd		<- paste(cmd,hivc.cmd.get.geneticdist(indir, infile, signat.out, gd.max, outdir=outdir),sep='', resume=0)
+		gd.max		<- 0.045
+		signat.in	<- "Sat_May_11_14/23/46_2013"
+		signat.out	<- "Sat_May_11_14/23/46_2013"				
+		indir		<- paste(dir.name,"tmp",sep='/')
+		infile		<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
+		outdir		<- paste(dir.name,"tmp",sep='/')
+		cmd			<- paste(cmd,hivc.cmd.get.geneticdist(indir, infile, signat.out, gd.max, outdir=outdir),sep='', resume=0)
+		
+		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')					
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q="pqeph")
+		cat(cmd)
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		stop()
 	}	
 	if(0)	#compute ExaML tree
 	{		
@@ -1065,7 +1079,7 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(1)	#compute ExaML trees with bootstrap values
+	if(0)	#compute ExaML trees with bootstrap values
 	{
 		bs.from	<- 0
 		bs.to	<- 1

@@ -1,5 +1,5 @@
 #! /Library/Frameworks/R.framework/Versions/2.15/Resources/bin/Rscript
-##! /apps/R/2.13.0/lib64/R/bin/Rscript
+##! /apps/R/2.15/lib64/R/bin/Rscript
 ##! /usr/bin/Rscript
 ###############################################################################
 #
