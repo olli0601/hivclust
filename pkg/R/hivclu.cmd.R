@@ -108,7 +108,7 @@ hivc.cmd.get.firstseq<- function(indir, infile, signat.in, signat.out, outdir=in
 }
 
 #' @export
-hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, args.starttree.seed=12345, args.starttree.bsid= 1, prog.examl= PR.EXAML.EXAML, args.examl="-m GAMMA -B 20 -D", resume=1, verbose=1)
+hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, args.starttree.seed=12345, args.starttree.bsid= 1, prog.examl= PR.EXAML.EXAML, args.examl="-m GTRGAMMA -D", resume=1, verbose=1)
 {
 	args.starttree.bsid<-	sprintf("%03d",args.starttree.bsid)
 	cmd<- "#######################################################
@@ -165,7 +165,7 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 }
 
 #' @export
-hivc.cmd.bsexaml<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.to=99, bs.n=bs.to-bs.from+ifelse(bs.from==0,1,0),outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, args.examl="-m GAMMA -D", prog.supportadder=PR.EXAML.BS, resume=1, verbose=1)
+hivc.cmd.bsexaml<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.to=99, bs.n=bs.to-bs.from+ifelse(bs.from==0,1,0),outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, args.examl="-m GTRGAMMA -D", prog.supportadder=PR.EXAML.BS, resume=1, verbose=1)
 {
 	#create number of seeds for the number of runs being processed, which could be less than bs.n
 	bs.id	<- seq.int(bs.from,bs.to)
@@ -187,7 +187,7 @@ hivc.cmd.bsexaml<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.
 				cmd			<- paste(cmd,paste("\n\techo \"best tree is $BSBEST\"",sep=''))		
 				#create final tree with bootstrap support values
 				tmp			<- c(	paste(infile,'_',signat.out,".phylip.examl.binary",sep=''),	paste("ExaML_result.",infile,'_',signat.out,".$BSBEST",sep=''),	paste("ExaML_result.",infile,'_',signat.out,".bstree",sep=''), paste(infile,'_',signat.out,".supporttree",sep=''))
-				cmd			<- paste(cmd,"\n\t",prog.supportadder," -f b -m GTRCAT -s ",tmp[1]," -t ",tmp[2]," -z ",tmp[3]," -n ",tmp[4],sep='' )
+				cmd			<- paste(cmd,"\n\t",prog.supportadder," -f b -b 12345 -m GTRCAT -s ",tmp[1]," -t ",tmp[2]," -z ",tmp[3]," -n ",tmp[4],sep='' )
 				cmd			<- paste(cmd,paste("\n\techo \'all bootstrap samples computed -- found best tree and added bootstrap support values\'",sep=''))										
 				#delete ExaML output that is not further needed
 				cmd			<- paste(cmd,paste("\n\techo \'start cleanup\'",sep=''))
@@ -195,6 +195,13 @@ hivc.cmd.bsexaml<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.
 				cmd			<- paste(cmd,paste("\n\techo \'end cleanup\'",sep=''))
 				cmd			<- paste(cmd,"\nfi",sep='')
 				cmd			<- paste(cmd,"\ncd ",curr.dir,'\n',sep='')
+				 
+				#TODO rm ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14:23:46_2013.phylip.examl.binary
+				#TODO mv RAxML_bipartitions.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14:23:46_2013.supporttree ATHENA_2013_03_FirstCurSequences_PROTRT_examlbs100_Sat_May_11_14:23:46_2013.newick
+				#TODO rm ExaML_result.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14:23:46_2013.bstree
+				#TODO rm RAxML_bipartitionsBranchLabels.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14:23:46_2013.supporttree
+				#TODO zip FirstCurSequences_PROTRT_GAMMA.zip  ExaML_result.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14\:23\:46_2013.* ExaML_info.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14\:23\:46_2013.finaltree.0* RAxML_*
+				#TODO rm  ExaML_result.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14\:23\:46_2013.* ExaML_info.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14\:23\:46_2013.finaltree.0* RAxML_*
 				#cat(cmd)
 				#stop()
 				#if [ $(find -E . -name 'ExaML_result*' | wc -l)==2 ]; then echo 'hello'; fi

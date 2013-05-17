@@ -1088,6 +1088,7 @@ hivc.proj.pipeline<- function()
 		signat.out	<- "Sat_May_11_14/23/46_2013"				
 		indir	<- paste(dir.name,"tmp",sep='/')
 		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
+		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRTCD3"
 		outdir	<- paste(dir.name,"tmp",sep='/')
 		cmd		<- hivc.cmd.bsexaml(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
 		#check if we have all bs.n files. if yes, combine and cleanup
