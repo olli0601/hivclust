@@ -1055,7 +1055,7 @@ hivc.proj.pipeline<- function()
 		outdir		<- paste(dir.name,"tmp",sep='/')
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
-	if(1)	#compute genetic distances
+	if(0)	#compute genetic distances
 	{				
 		gd.max		<- 0.045
 		signat.in	<- "Sat_May_11_14/23/46_2013"
@@ -1079,7 +1079,7 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(0)	#compute ExaML trees with bootstrap values
+	if(1)	#compute ExaML trees with bootstrap values
 	{
 		bs.from	<- 0
 		bs.to	<- 1
