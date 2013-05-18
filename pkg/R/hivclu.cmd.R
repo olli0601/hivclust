@@ -191,17 +191,16 @@ hivc.cmd.bsexaml<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.
 				cmd			<- paste(cmd,paste("\n\techo \'all bootstrap samples computed -- found best tree and added bootstrap support values\'",sep=''))										
 				#delete ExaML output that is not further needed
 				cmd			<- paste(cmd,paste("\n\techo \'start cleanup\'",sep=''))
-				cmd			<- paste(cmd,"\n\trm ",paste(paste(outdir,c("RAxML_info*"),sep='/'),collapse=' ',sep=''),sep=' ')
+				cmd			<- paste(cmd,"\n\trm RAxML_info*",sep=' ')
+				cmd			<- paste(cmd,paste("\n\trm ",infile,'_',signat.out,".phylip.examl.binary",sep=''),sep='')				
+				cmd			<- paste(cmd,paste("\n\tmv RAxML_bipartitions.",infile,'_',signat.out,".supporttree ",infile,"_examlbs",bs.n,'_',signat.out,".newick",sep=''),sep='')				
+				cmd			<- paste(cmd,paste("\n\trm RAxML_bipartitionsBranchLabels.",infile,'_',signat.out,".supporttree",sep=''),sep='')
+				cmd			<- paste(cmd,paste("\n\trm ExaML_result.",infile,'_',signat.out,".bstree",sep=''),sep='')								
+				cmd			<- paste(cmd,paste("\n\ttar -zcf ",infile,'_examlout_',signat.out,".tar.gz  ExaML_result.",infile,'_',signat.out,".* ExaML_info.",infile,'_',signat.out,".*",sep=''),sep='')
+				cmd			<- paste(cmd,paste("\n\trm ExaML_result.",infile,'_',signat.out,".* ExaML_info.",infile,'_',signat.out,".*",sep=''),sep='')
 				cmd			<- paste(cmd,paste("\n\techo \'end cleanup\'",sep=''))
 				cmd			<- paste(cmd,"\nfi",sep='')
-				cmd			<- paste(cmd,"\ncd ",curr.dir,'\n',sep='')
-				 
-				#TODO rm ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14:23:46_2013.phylip.examl.binary
-				#TODO mv RAxML_bipartitions.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14:23:46_2013.supporttree ATHENA_2013_03_FirstCurSequences_PROTRT_examlbs100_Sat_May_11_14:23:46_2013.newick
-				#TODO rm ExaML_result.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14:23:46_2013.bstree
-				#TODO rm RAxML_bipartitionsBranchLabels.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14:23:46_2013.supporttree
-				#TODO zip FirstCurSequences_PROTRT_GAMMA.zip  ExaML_result.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14\:23\:46_2013.* ExaML_info.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14\:23\:46_2013.finaltree.0* RAxML_*
-				#TODO rm  ExaML_result.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14\:23\:46_2013.* ExaML_info.ATHENA_2013_03_FirstCurSequences_PROTRT_Sat_May_11_14\:23\:46_2013.finaltree.0* RAxML_*
+				cmd			<- paste(cmd,"\ncd ",curr.dir,'\n',sep='')				 				
 				#cat(cmd)
 				#stop()
 				#if [ $(find -E . -name 'ExaML_result*' | wc -l)==2 ]; then echo 'hello'; fi

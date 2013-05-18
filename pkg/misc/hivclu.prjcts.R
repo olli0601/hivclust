@@ -1081,8 +1081,8 @@ hivc.proj.pipeline<- function()
 	}
 	if(1)	#compute ExaML trees with bootstrap values
 	{
-		bs.from	<- 0
-		bs.to	<- 1
+		bs.from	<- 99
+		bs.to	<- 99
 		bs.n	<- 100
 		signat.in	<- "Sat_May_11_14/23/46_2013"
 		signat.out	<- "Sat_May_11_14/23/46_2013"				
@@ -1099,7 +1099,7 @@ hivc.proj.pipeline<- function()
 					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("pipeline",signat,"qsub",sep='.')
-					#cat(x)
+					cat(x)
 					hivc.cmd.hpccaller(outdir, outfile, x)
 					Sys.sleep(1)
 				})
