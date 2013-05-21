@@ -54,6 +54,7 @@ default.fun <- "hivc.proj.pipeline"
 #default.fun	<- "project.hivc.check"
 #default.fun	<- "project.hivc.gettimelines"
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
+default.fun<- "project.bezemer2013a.figs"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -64,7 +65,7 @@ default.fun <- "hivc.proj.pipeline"
 #cat(paste("is.loaded('tipcr')->",is.loaded("tipc_tabulate_after_sample"),'\n'))
 ###############################################################################
 function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$", all.files = FALSE,
-		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'))
+		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),paste(CODE.HOME,"misc","bezemer2013a_figs.R",sep='/'))
 sapply(function.list,function(x){ print(x); source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE) })
 ###############################################################################
 if(0)

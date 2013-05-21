@@ -112,7 +112,7 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 {
 	args.starttree.bsid<-	sprintf("%03d",args.starttree.bsid)
 	cmd<- "#######################################################
-# compute ExaML tree
+# start: compute ExaML tree
 #######################################################"
 	cmd<- paste(cmd,paste("\necho \'run ",prog.parser,"\'\n",sep=''))
 	#default commands for parser					
@@ -157,10 +157,11 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 	cmd			<- paste(cmd,"\nfind . -name \'*starttree.",args.starttree.bsid,"*\' -delete",sep='')
 	cmd 		<- paste(cmd,"\nfind . -name \'ExaML_binaryCheckpoint.*?finaltree.",args.starttree.bsid,"*\' -delete", sep='' )
 	cmd 		<- paste(cmd,"\nfind . -name \'ExaML_log.*?finaltree.",args.starttree.bsid,"*\' -delete", sep='' )
-	cmd			<- paste(cmd,paste("\necho \'end cleanup\'",sep=''))
-		
-	cmd			<- paste(cmd,"\ncd ",curr.dir,'\n',sep='')
-	
+	cmd			<- paste(cmd,paste("\necho \'end cleanup\'",sep=''))		
+	cmd			<- paste(cmd,"\ncd ",curr.dir,sep='')
+	cmd			<- paste(cmd,"\n#######################################################
+# end: compute ExaML tree
+#######################################################\n",sep='')
 	cmd
 }
 
@@ -174,7 +175,10 @@ hivc.cmd.bsexaml<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.
 			{
 				cmd			<- hivc.cmd.examl(indir, infile, signat.in, signat.out, outdir=outdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose)
 				curr.dir	<- getwd()
-				cmd			<- paste(cmd,"cd ",outdir,sep='')
+				cmd			<- paste(cmd,"#######################################################
+# start: check if all ExaML boostrap trees have been computed and if yes create ExaML bootstrap tree
+#######################################################",sep='')				
+				cmd			<- paste(cmd,"\ncd ",outdir,sep='')
 				cmd			<- paste(cmd,paste("\necho \'check if all bootstrap samples have been computed\'",sep=''))
 				tmp			<- paste("\nif [ $(find . -name 'ExaML_result*' | wc -l) -eq ",bs.n," ]; then",sep='')
 				cmd			<- paste(cmd,tmp,sep='')
@@ -200,7 +204,10 @@ hivc.cmd.bsexaml<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.
 				cmd			<- paste(cmd,paste("\n\trm ExaML_result.",infile,'_',signat.out,".* ExaML_info.",infile,'_',signat.out,".*",sep=''),sep='')
 				cmd			<- paste(cmd,paste("\n\techo \'end cleanup\'",sep=''))
 				cmd			<- paste(cmd,"\nfi",sep='')
-				cmd			<- paste(cmd,"\ncd ",curr.dir,'\n',sep='')				 				
+				cmd			<- paste(cmd,"\ncd ",curr.dir,sep='')
+				cmd			<- paste(cmd,"\n#######################################################
+# end: check if all ExaML boostrap trees have been computed and if yes create ExaML bootstrap tree
+#######################################################\n",sep='')
 				#cat(cmd)
 				#stop()
 				#if [ $(find -E . -name 'ExaML_result*' | wc -l)==2 ]; then echo 'hello'; fi
