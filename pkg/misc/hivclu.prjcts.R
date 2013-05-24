@@ -618,7 +618,7 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=1)
 		if(verbose) cat(paste("\nread",file))
 		load(file)
 		print(seq.PROT.RT)
-		print(bs)
+		#print(bs)
 		if(bs)		#keep bs0 intact
 		{
 			dummy			<- 0
@@ -655,7 +655,10 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=1)
 			}					
 		}
 		else
+		{
 			cat(paste("\nkeep boostrap seq alignment no",bs,"as original"))
+			seq.BS	<- seq.PROT.RT
+		}
 		file		<- paste(outdir,"/",infile,"_",gsub('/',':',signat.out),".phylip.",sprintf("%03d",bs),sep='')
 		cat(paste("\nsave boostrap seq alignment to",file))
 		hivc.seq.write.dna.phylip(seq.BS, file=file)
