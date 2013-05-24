@@ -609,6 +609,8 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=1)
 		print(verbose)
 		print(resume)
 		print(bs)
+		print(signat.in)
+		print(signat.out)
 	}
 	pattern 	<- paste(infile,"_",gsub('/',':',signat.out),".phylip.",sprintf("%03d",bs),sep='')
 	file		<- list.files(path=outdir, pattern=pattern, full.names=1)

@@ -186,8 +186,9 @@ hivc.cmd.examl.bsalignment<- function(indir, infile, signat.in, signat.out, bs.f
 # start: create and check bootstrap alignment
 #######################################################\n",sep='')
 				cmd			<- paste(cmd,prog.bscreate," -resume=",0," -bootstrap=",bs.id[i],sep='')
-				cmd			<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir,"\n",sep='')				
-				cmd			<- paste(cmd,"#######################################################
+				cmd			<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir,sep='')
+				cmd			<- paste(cmd," -insignat=",signat.in," -outsignat=",signat.out,sep='')
+				cmd			<- paste(cmd,"\n#######################################################
 # end: create and check bootstrap alignment
 #######################################################",sep='')				
 				cmd			<- paste(cmd,hivc.cmd.examl(indir, infile, signat.in, signat.out, outdir=outdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='\n')
