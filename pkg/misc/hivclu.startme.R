@@ -54,7 +54,7 @@ default.fun <- "hivc.proj.pipeline"
 #default.fun	<- "project.hivc.check"
 #default.fun	<- "project.hivc.gettimelines"
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
-default.fun<- "project.bezemer2013a.figs"
+#default.fun		<- "project.bezemer2013a.figs"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -229,6 +229,7 @@ if(length(args))
 					MAKE.DOCUMENTATION		= "my.make.documentation",
 					MALIGN					= "project.hivc.clustalo",
 					FIRSTSEQ				= "hivc.prog.get.firstseq",
+					BOOTSTRAPSEQ			= "hivc.prog.get.bootstrapseq",
 					GENDISTMAT				= "hivc.prog.get.geneticdist"
 					)
 	}

@@ -552,6 +552,119 @@ project.hivc.getdf<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 }
 
 #create PROT+RT data set of first sequences from all patients
+hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=1)
+{	
+	library(ape)
+	library(data.table)
+	library(hivclust)
+	
+	indir		<- outdir		<- paste(DATA,"tmp",sep='/')
+	infile		<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
+	signat.out	<- signat.in	<- "Sat_May_11_14/23/46_2013"
+	verbose		<- resume		<- 1
+	bs			<- 0
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) signat.in<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									outsignat= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) signat.out<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									bootstrap= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) bs<- tmp[1]
+	}
+	if(1)
+	{
+		print(indir)
+		print(outdir)
+		print(infile)
+		print(signat.in)
+		print(signat.out)
+		print(verbose)
+		print(resume)
+		print(bs)
+	}
+	pattern 	<- paste(infile,"_",gsub('/',':',signat.out),".phylip.",sprintf("%03d",bs),sep='')
+	file		<- list.files(path=outdir, pattern=pattern, full.names=1)
+	if(!resume || !length(file))	
+	{					
+		file		<- paste(outdir,"/",infile,"_",gsub('/',':',signat.out),".R",sep='')
+		if(verbose) cat(paste("\nread",file))
+		load(file)
+		print(seq.PROT.RT)
+		print(bs)
+		if(bs)		#keep bs0 intact
+		{
+			dummy			<- 0
+			any.eq			<- 1
+			j				<- 0
+			while(any.eq)
+			{
+				j			<- j+1
+				bs.blocks.n	<- floor( ncol(seq.PROT.RT )/3)
+				bs.blocks.s	<- sample(seq_len(bs.blocks.n),bs.blocks.n,replace=1)-1
+				bs.seq.s	<- as.numeric( sapply(bs.blocks.s,function(x)		3*x+c(1,2,3)		) )
+				seq.BS		<- seq.PROT.RT[,bs.seq.s]
+				if(check.any.bs.identical)
+				{
+					if(verbose) cat(paste("\ncheck for identity proposed boostrap seq alignment no",j))
+					#check no seqs identical								
+					sapply(seq_len(nrow(seq.BS)-1),function(i1)
+							{
+								seq1		<- seq.BS[i1,]
+								tmp			<- 1-sapply(seq.int(i1+1,nrow(seq.BS)),function(i2)
+													{		
+														.C("hivc_dist_ambiguous_dna", seq1, seq.BS[i2,], ncol(seq1), dummy )[[4]]			
+													})
+								#print(tmp)
+								if(any(tmp==0))	
+									break
+								if(i1==nrow(seq.BS)-1)
+									any.eq	<- 0
+							})
+					if(verbose) cat(paste("\nchecked for identity proposed boostrap seq alignment no",j,"is any identical",any.eq))
+				}
+				else
+					any.eq	<- 0
+			}					
+		}
+		else
+			cat(paste("\nkeep boostrap seq alignment no",bs,"as original"))
+		file		<- paste(outdir,"/",infile,"_",gsub('/',':',signat.out),".phylip.",sprintf("%03d",bs),sep='')
+		cat(paste("\nsave boostrap seq alignment to",file))
+		hivc.seq.write.dna.phylip(seq.BS, file=file)
+	}
+	else
+		cat("\nfound boostrap sequence alignment")
+}
+
+#create PROT+RT data set of first sequences from all patients
 hivc.prog.get.firstseq<- function()
 {	
 	library(ape)
@@ -1079,7 +1192,42 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(1)	#compute ExaML trees with bootstrap values
+	if(1)	#compute ExaML trees with bootstrap values, bootstrap over alignment
+	{
+		bs.from	<- 0
+		bs.to	<- 1
+		bs.n	<- 100
+		signat.in	<- "Fri_May_24_12/59/06_2013"
+		signat.out	<- "Fri_May_24_12/59/06_2013"				
+		indir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
+		#infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRTCD3"
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		cmd		<- hivc.cmd.examl.bsalignment(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
+		outdir	<- paste(dir.name,"tmp",sep='/')							
+		lapply(cmd, function(x)
+				{				
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("pipeline",signat,"qsub",sep='.')
+					cat(x)
+					#stop()
+					hivc.cmd.hpccaller(outdir, outfile, x)
+					Sys.sleep(1)
+				})
+		stop()
+	}
+	
+	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+	outdir	<- paste(dir.name,"tmp",sep='/')
+	outfile	<- paste("pipeline",signat,"qsub",sep='.')					
+	lapply(cmd, function(x)
+			{				
+				x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
+				cat(x)
+				hivc.cmd.hpccaller(outdir, outfile, x)
+			})	
+	if(0)	#compute ExaML trees with bootstrap values, bootstrap over starttree
 	{
 		bs.from	<- 99
 		bs.to	<- 99
@@ -1090,7 +1238,7 @@ hivc.proj.pipeline<- function()
 		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
 		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRTCD3"
 		outdir	<- paste(dir.name,"tmp",sep='/')
-		cmd		<- hivc.cmd.bsexaml(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
+		cmd		<- hivc.cmd.examl.bsstarttree(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
 		#check if we have all bs.n files. if yes, combine and cleanup
 				
 		outdir	<- paste(dir.name,"tmp",sep='/')							
