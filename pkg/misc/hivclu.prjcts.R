@@ -637,19 +637,22 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=1)
 				{
 					if(verbose) cat(paste("\ncheck for identity proposed boostrap seq alignment no",j))
 					#check no seqs identical								
-					sapply(seq_len(nrow(seq.BS)-1),function(i1)
-							{
-								seq1		<- seq.BS[i1,]
-								tmp			<- 1-sapply(seq.int(i1+1,nrow(seq.BS)),function(i2)
+					for(i1 in seq_len(nrow(seq.BS)-1))
+					{
+						seq1		<- seq.BS[i1,]
+						tmp			<- 1-sapply(seq.int(i1+1,nrow(seq.BS)),function(i2)
 													{		
 														.C("hivc_dist_ambiguous_dna", seq1, seq.BS[i2,], ncol(seq1), dummy )[[4]]			
 													})
-								#print(tmp)
-								if(any(tmp==0))	
-									break
-								if(i1==nrow(seq.BS)-1)
-									any.eq	<- 0
-							})
+						#print(tmp)
+						if(any(tmp==0))
+						{
+							print(tmp)
+							break
+						}									
+						if(i1==nrow(seq.BS)-1)
+							any.eq	<- 0
+					}
 					if(verbose) cat(paste("\nchecked for identity proposed boostrap seq alignment no",j,"is any identical",any.eq))
 				}
 				else
