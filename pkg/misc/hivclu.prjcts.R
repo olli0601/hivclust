@@ -1202,7 +1202,7 @@ hivc.proj.pipeline<- function()
 	}
 	if(1)	#compute ExaML trees with bootstrap values, bootstrap over alignment
 	{
-		bs.from	<- 0
+		bs.from	<- 1
 		bs.to	<- 1
 		bs.n	<- 100
 		signat.in	<- "Fri_May_24_12/59/06_2013"
