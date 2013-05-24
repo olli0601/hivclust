@@ -552,7 +552,7 @@ project.hivc.getdf<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 }
 
 #create PROT+RT data set of first sequences from all patients
-hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=1)
+hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 {	
 	library(ape)
 	library(data.table)
@@ -1203,7 +1203,7 @@ hivc.proj.pipeline<- function()
 	if(1)	#compute ExaML trees with bootstrap values, bootstrap over alignment
 	{
 		bs.from	<- 1
-		bs.to	<- 1
+		bs.to	<- 30
 		bs.n	<- 100
 		signat.in	<- "Fri_May_24_12/59/06_2013"
 		signat.out	<- "Fri_May_24_12/59/06_2013"				
