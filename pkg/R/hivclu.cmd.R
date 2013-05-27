@@ -209,12 +209,11 @@ hivc.cmd.examl.bsalignment<- function(indir, infile, signat.in, signat.out, bs.f
 				cmd			<- paste(cmd,paste("\n\techo \"best tree is $BSBEST\"",sep=''))		
 				#create final tree with bootstrap support values
 				tmp			<- c(	paste(infile,'_',signat.out,".phylip.examl.binary",sep=''),	paste("ExaML_result.",infile,'_',signat.out,".$BSBEST",sep=''),	paste("ExaML_result.",infile,'_',signat.out,".bstree",sep=''), paste(infile,'_',signat.out,".supporttree",sep=''))
-				cmd			<- paste(cmd,"\n\t",prog.supportadder," -f b -b 12345 -m GTRCAT -s ",tmp[1]," -t ",tmp[2]," -z ",tmp[3]," -n ",tmp[4],sep='' )
+				cmd			<- paste(cmd,"\n\t",prog.supportadder," -f b -m GTRCAT -s ",tmp[1]," -t ",tmp[2]," -z ",tmp[3]," -n ",tmp[4],sep='' )
 				cmd			<- paste(cmd,paste("\n\techo \'all bootstrap samples computed -- found best tree and added bootstrap support values\'",sep=''))										
 				#delete ExaML output that is not further needed
 				cmd			<- paste(cmd,paste("\n\techo \'start cleanup\'",sep=''))
-				cmd			<- paste(cmd,"\n\trm RAxML_info*",sep=' ')
-				cmd			<- paste(cmd,paste("\n\trm ",infile,'_',signat.out,".phylip.examl.binary",sep=''),sep='')				
+				cmd			<- paste(cmd,"\n\trm RAxML_info*",sep=' ')								
 				cmd			<- paste(cmd,paste("\n\tmv RAxML_bipartitions.",infile,'_',signat.out,".supporttree ",infile,"_examlbs",bs.n,'_',signat.out,".newick",sep=''),sep='')				
 				cmd			<- paste(cmd,paste("\n\trm RAxML_bipartitionsBranchLabels.",infile,'_',signat.out,".supporttree",sep=''),sep='')
 				cmd			<- paste(cmd,paste("\n\trm ExaML_result.",infile,'_',signat.out,".bstree",sep=''),sep='')								
@@ -240,7 +239,9 @@ hivc.cmd.examl.bsstarttree<- function(indir, infile, signat.in, signat.out, bs.f
 	bs.seeds<- floor( runif(length(bs.id), 1e4, 1e5-1) )
 	lapply(seq_along(bs.seeds), function(i)
 			{
-				cmd			<- hivc.cmd.examl(indir, infile, signat.in, signat.out, outdir=outdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose)
+				cmd			<- paste("cp ",paste(indir,paste(infile,'_',signat.in,".phylip",sep=''),sep='/'),sep='')
+				cmd			<- paste(cmd,' ',paste(indir,paste(infile,'_',signat.in,".phylip.",sprintf("%03d",bs.id[i]),sep=''),sep='/'),"\n",sep='')
+				cmd			<- paste(cmd, hivc.cmd.examl(indir, infile, signat.in, signat.out, outdir=outdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='')
 				curr.dir	<- getwd()
 				cmd			<- paste(cmd,"#######################################################
 # start: check if all ExaML boostrap trees have been computed and if yes create ExaML bootstrap tree
@@ -258,7 +259,7 @@ hivc.cmd.examl.bsstarttree<- function(indir, infile, signat.in, signat.out, bs.f
 				cmd			<- paste(cmd,paste("\n\techo \"best tree is $BSBEST\"",sep=''))		
 				#create final tree with bootstrap support values
 				tmp			<- c(	paste(infile,'_',signat.out,".phylip.examl.binary",sep=''),	paste("ExaML_result.",infile,'_',signat.out,".$BSBEST",sep=''),	paste("ExaML_result.",infile,'_',signat.out,".bstree",sep=''), paste(infile,'_',signat.out,".supporttree",sep=''))
-				cmd			<- paste(cmd,"\n\t",prog.supportadder," -f b -b 12345 -m GTRCAT -s ",tmp[1]," -t ",tmp[2]," -z ",tmp[3]," -n ",tmp[4],sep='' )
+				cmd			<- paste(cmd,"\n\t",prog.supportadder," -f b -m GTRCAT -s ",tmp[1]," -t ",tmp[2]," -z ",tmp[3]," -n ",tmp[4],sep='' )
 				cmd			<- paste(cmd,paste("\n\techo \'all bootstrap samples computed -- found best tree and added bootstrap support values\'",sep=''))										
 				#delete ExaML output that is not further needed
 				cmd			<- paste(cmd,paste("\n\techo \'start cleanup\'",sep=''))

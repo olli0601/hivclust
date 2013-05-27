@@ -1202,7 +1202,7 @@ hivc.proj.pipeline<- function()
 	}
 	if(1)	#compute ExaML trees with bootstrap values, bootstrap over alignment
 	{
-		bs.from	<- 1
+		bs.from	<- 0
 		bs.to	<- 30
 		bs.n	<- 100
 		signat.in	<- "Fri_May_24_12/59/06_2013"
@@ -1225,20 +1225,10 @@ hivc.proj.pipeline<- function()
 				})
 		stop()
 	}
-	
-	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-	outdir	<- paste(dir.name,"tmp",sep='/')
-	outfile	<- paste("pipeline",signat,"qsub",sep='.')					
-	lapply(cmd, function(x)
-			{				
-				x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
-				cat(x)
-				hivc.cmd.hpccaller(outdir, outfile, x)
-			})	
 	if(0)	#compute ExaML trees with bootstrap values, bootstrap over starttree
 	{
-		bs.from	<- 99
-		bs.to	<- 99
+		bs.from	<- 0
+		bs.to	<- 0
 		bs.n	<- 100
 		signat.in	<- "Sat_May_11_14/23/46_2013"
 		signat.out	<- "Sat_May_11_14/23/46_2013"				
@@ -1248,7 +1238,7 @@ hivc.proj.pipeline<- function()
 		outdir	<- paste(dir.name,"tmp",sep='/')
 		cmd		<- hivc.cmd.examl.bsstarttree(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
 		#check if we have all bs.n files. if yes, combine and cleanup
-				
+			
 		outdir	<- paste(dir.name,"tmp",sep='/')							
 		lapply(cmd, function(x)
 				{				
@@ -1256,8 +1246,8 @@ hivc.proj.pipeline<- function()
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("pipeline",signat,"qsub",sep='.')
 					cat(x)
-					hivc.cmd.hpccaller(outdir, outfile, x)
-					Sys.sleep(1)
+					#hivc.cmd.hpccaller(outdir, outfile, x)
+					#Sys.sleep(1)
 				})
 		stop()
 	}
