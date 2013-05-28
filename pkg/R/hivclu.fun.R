@@ -260,6 +260,131 @@ hivc.clu.geneticdist.cutoff<- function(dir.name= DATA, plot=1, verbose=1, level.
 	list(gd.cutoff= gd.cutoff, gd.specificity=gd.specificity)	
 }
 
+#' Compute a set of phylogenetic clusters according to several criteria; taken from http://dx.doi.org/10.6084/m9.figshare.97225
+#' Perform DFS. Label a subtree a cluster if both
+#'   -its median pairwise patristic ditance (MPPD) is below a percentile of the whole-tree p-distance and
+#'   -it is not a leaf. 
+#' @export
+#' @param ph					phylogenetic tree with branch lengths
+#' @param thresh.brl 			MPPD threshold
+#' @param dist.brl 				precomputed MPPD values for each node
+#' @param thresh.nodesupport	boostrap reliability threshold
+#' @param nodesupport			precomputed bootstrap values
+#' @param retval				evaluate MPPD by tip nodes only or for all nodes
+#' @return vector indicating, for each internal node, which cluster it belongs to
+hivc.clu.clusterbythresh<- function(ph,thresh.brl=NULL,dist.brl=NULL,thresh.nodesupport=NULL,nodesupport=NULL,retval="all")
+{
+	require(ape)
+	require(geiger)
+	require(igraph)
+	if(all( is.null(c(thresh.brl, thresh.nodesupport))) ) 		stop("all threshold criteria NULL - provide at least one")
+	if(!is.null(thresh.nodesupport) && is.null(nodesupport))	stop("node support threshold set but no node support values provided")
+	if(!is.null(thresh.brl) && is.null(dist.brl))				stop("branch length threshold set but no branch length distances provided")
+	if(!is.null(nodesupport) && any(nodesupport>1+EPS))			warning("Found nodesupport values above 1")
+	if(is.null(thresh.brl))
+	{		
+		dist.brl			<- rep(1,Nnode(ph))
+		thresh.brl			<- 1
+	}	
+	if(is.null(thresh.nodesupport))
+	{
+		nodesupport			<- rep(1,Nnode(ph))
+		thresh.nodesupport	<- 1		
+	}
+	## set up clustering
+	ntips		<- Ntip(ph)	
+	clu.i 		<- 0 ## cluster number
+	clu.mem 	<- rep(NA,ntips+ph$Nnode) ## cluster member assignment
+	clu.idx		<- rep(NA,ntips+ph$Nnode) ## cluster index assignment
+	igraph.ph	<- graph.edgelist(ph$edge) ## ph in igraph form
+	dfs 		<- graph.dfs(igraph.ph,root=ntips+1,neimode='out',order=TRUE,dist=TRUE)
+	## travese the ph in depth first order
+	for(i in 1:length(dfs$order))
+	{
+		node <- dfs$order[i]
+		#print( c(node,node-ntips, is.na(clu.mem[node]), thresh.brl, dist.brl[node-ntips], dist.brl[node-ntips]<=thresh.brl, thresh.nodesupport, nodesupport[node-ntips], nodesupport[node-ntips]<thresh.nodesupport) )
+		if(	node > ntips	&&											## skip leaves
+			is.na(clu.mem[node]) &&										## only consider unassigned nodes
+			nodesupport[node-ntips]>=thresh.nodesupport-EPS &&
+			dist.brl[node-ntips]<=thresh.brl+EPS
+			)	 
+		{				
+			clu.i 			<- clu.i+1
+			subtree 		<- graph.dfs(igraph.ph,node,neimode='out',unreachable=FALSE)$order
+			subtree 		<- subtree[! is.nan(subtree)]
+			clu.mem[subtree]<- clu.i
+			clu.idx[node]	<- clu.i
+		}
+	}
+	ans <- list( clu.mem=clu.mem, clu.idx=which(!is.na(clu.idx)), size.all=table(clu.mem), size.tips=table(clu.mem[1:ntips]), ntips=ntips, thresh.brl=thresh.brl, thresh.nodesupport=thresh.nodesupport)
+	if(retval=="tips")
+		ans$clu.mem 		<- ans$clu.mem[1:ntips]
+	return(ans)
+}
+######################################################################################
+hivc.clu.plot<- function(ph, clu, show.node.label= T, file=NULL, pdf.scaley=10, pdf.width= 7, pdf.height=pdf.scaley*7)
+{
+	require(colorspace)	
+	clu.edge							<- clu[ ph$edge[,1] ]
+	clu.edge							<- clu.edge+1				#set col index for non-clustering edges to 1
+	clu.edge[is.na(clu.edge)]			<- 1
+	cols.n								<- length(unique(clu.edge))-1	
+	#cols.palette 						<- colorRampPalette(c("red", "orange", "blue"),space = "Lab")
+	#cols								<- c("black",cols.palette(cols.n))
+	cols								<- c("black",rainbow_hcl(cols.n, start = 30, end = 300))	
+	clu.edge.col						<- cols[clu.edge]
+	clu.edge.width						<- rep(1, length(clu.edge))
+	clu.edge.width[clu.edge!=1]			<- 2
+	if(class(file)=="character")
+		pdf(file,width=pdf.width,height=pdf.height)
+	plot(ph, show.tip.label=F, show.node.label=show.node.label, cex=0.5, edge.color=clu.edge.col, edge.width=clu.edge.width)
+	if(class(file)=="character")
+		dev.off()
+	#tiplabels(rep("  ",Ntip(ph)), bg=clu)	
+}
+######################################################################################
+#' Compute a statistic of patristic distances for the subtree starting at \code{node}
+#' @param node 				internal node at which the subtree starts
+#' @param tree 				phylogenetic tree
+#' @param distmat 			matrix of patristic distances, either precomputed or NULL
+#' @param eval.dist.btw 	string, either "leaf" or "all". Specifies the nodes of the subtree on which patristic distances are considered.
+#' @param stat.fun 			function, statistic to be computed from a set of patristic distances.
+#' @return statistic of patristic distances		
+hivc.clu.brdist.stats.subtree<- function(node, tree, distmat, eval.dist.btw="leaf", stat.fun=max)
+{
+	if(eval.dist.btw=="leaf")
+	{
+		nlist	<- tips(tree,node)
+		foo 	<- distmat[nlist,nlist] 		
+	}
+	else if(eval.dist.btw=="all")
+	{
+		nlist	<- tips(tree,node)
+		elist 	<- tree$edge[which.edge(tree,nlist),2]
+		foo 	<- distmat[elist,elist] 	
+	}
+	else	
+		stop("unrecognized eval.dist.btw")
+	return( stat.fun(foo[upper.tri(foo,diag=FALSE)]) )
+}
+######################################################################################
+#' Compute a statistic of patristic distances for each subtree in the tree
+hivc.clu.brdist.stats<- function(tree, distmat=NULL, eval.dist.btw="leaf")
+{
+	require(phytools)
+	if(is.null(distmat))
+	{
+		if(eval.dist.btw=='leaf')
+			distmat	<- cophenetic.phylo(tree)
+		else if(eval.dist.btw=='all')
+			distmat <- dist.nodes(tree)
+		else	stop("unrecognized eval.dist.btw")
+	}
+	ntips			<- Ntip(tree)
+	nint 			<- tree$Nnode 		## number of internal nodes
+	return(sapply(seq.int(ntips+1,ntips+nint), function(x) 		hivc.clu.brdist.stats.subtree(x,tree,distmat,eval.dist.btw=eval.dist.btw)		))	
+}
+######################################################################################
 hivc.get.hpcsys<- function()
 {
 	tmp<- system('domainname',intern=T)

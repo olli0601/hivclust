@@ -44,17 +44,18 @@ LIB.LOC		<<- NULL
 #LIB.LOC		<<- paste(CODE.HOME,"../",sep='')
 EPS			<<- 1e-12
 
-default.fun	<- "my.make.documentation"
-default.fun	<- "project.hivc.clustalo"
-default.fun	<- "project.hivc.examl"
-#default.fun <- "hivc.prog.get.geneticdist"
-default.fun <- "hivc.proj.pipeline"
+default.fun		<- "my.make.documentation"
+default.fun		<- "project.hivc.clustalo"
+default.fun		<- "project.hivc.examl"
+#default.fun	<- "hivc.prog.get.geneticdist"
+default.fun 	<- "hivc.proj.pipeline"
 #default.fun	<- "project.hivc.test"
 #default.fun	<- "project.hivc.getdf"
 #default.fun	<- "project.hivc.check"
 #default.fun	<- "project.hivc.gettimelines"
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
-#default.fun		<- "project.bezemer2013a.figs"
+#default.fun	<- "project.bezemer2013a.figs"
+default.fun		<- "project.hivc.clustering"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
