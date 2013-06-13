@@ -275,8 +275,8 @@ hivc.clu.geneticdist.cutoff<- function(dir.name= DATA, plot=1, verbose=1, level.
 hivc.clu.clusterbythresh<- function(ph,thresh.brl=NULL,dist.brl=NULL,thresh.nodesupport=NULL,nodesupport=NULL,retval="all")
 {
 	require(ape)
-	require(geiger)
 	require(igraph)
+	require(geiger)	
 	if(all( is.null(c(thresh.brl, thresh.nodesupport))) ) 		stop("all threshold criteria NULL - provide at least one")
 	if(!is.null(thresh.nodesupport) && is.null(nodesupport))	stop("node support threshold set but no node support values provided")
 	if(!is.null(thresh.brl) && is.null(dist.brl))				stop("branch length threshold set but no branch length distances provided")
@@ -322,6 +322,126 @@ hivc.clu.clusterbythresh<- function(ph,thresh.brl=NULL,dist.brl=NULL,thresh.node
 	return(ans)
 }
 ######################################################################################
+hivc.clu.exp.typeIerror.randomclu<- function(ph, dist.brl, nodesupport, ph.unlinked.seroneg, ph.unlinked.dead, thresh.brl, thresh.bs)
+{
+	ph.tips.n				<- Ntip(ph)
+	#seroneg.n				<- nrow(ph.unlinked.seroneg)
+	#ph.unlinked.seroneg.v	<- ph.unlinked.seroneg[,PhNode]
+	clustering				<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=nodesupport, retval="all")
+	clusters				<- unique(clustering[["clu.mem"]][!is.na(clustering[["clu.mem"]])])
+	clu.fp.exp	<- sapply(clusters,function(clu)		
+			{		
+				tmp							<- which(clustering[["clu.mem"]]==clu)
+				clu.leaves					<- tmp[ tmp<=ph.tips.n ]
+				clu.leaves.seroneg			<- sapply(clu.leaves, function(x)
+						{
+							as.numeric( subset(ph.unlinked.seroneg, x==PhNode, c(PhNodeUnlinked,NegT) ) )	 	#O(logn) search; returns NA if subset dt is empty																 
+						})				
+#print(clu); print(tmp); print(clu.leaves); print(clu.leaves.seroneg)
+				#if all leaves not seroneg, return 0								
+				if(all(is.na(clu.leaves.seroneg[1,])))	return(0)
+				#if at least one seroneg, compute prob that 1-P(X=0) where X is number of seroconverters dead at SC of latest seroconverter				
+				clu.leaves.seroneg			<- rbind(clu.leaves,clu.leaves.seroneg)[,!is.na(clu.leaves.seroneg[2,]),drop=0]								
+				clu.leaves.latestseroneg.ix	<- which.max( clu.leaves.seroneg[3,] )
+				tmp							<- sapply(clu.leaves.seroneg[2,],function(x) length(ph.unlinked.dead[[x]]) )
+				latest.seroneg.unlinked		<- ph.unlinked.dead[[ clu.leaves.seroneg[2,clu.leaves.latestseroneg.ix] ]]				
+				if( max(tmp)!=length(latest.seroneg.unlinked) )	
+					stop("expect latest seroneg to have most unlinked HIV+ dead associated")	#which.max does not work because .ix is not necessarily the first																
+				#m is "number false pos" is length(latest.seroneg.unlinked)
+				#n is "number false pos not known" is ph.tips.n-m
+				#k is "number of draws" is length(clu.leaves)-1 
+				ans<- 1-dhyper(0, length(latest.seroneg.unlinked), ph.tips.n-length(latest.seroneg.unlinked), length(clu.leaves)-1)
+				#c(ans, length(clu.leaves)-1, length(latest.seroneg.unlinked), ph.tips.n)
+				ans
+			})
+	list(fp.data=clu.fp.exp, fp.n=sum(clu.fp.exp), fp.rate= sum(clu.fp.exp)/length(clusters), clustering=clustering)
+}
+######################################################################################
+hivc.clu.typeIerror<- function(clustering, ph.unlinked.seroneg, ph.unlinked.dead, verbose=0)
+{
+	clusters	<- unique(clustering[["clu.mem"]][!is.na(clustering[["clu.mem"]])])
+	clu.fp.n	<- sapply(clusters, function(clu)		
+			{		
+				tmp							<- which(clustering[["clu.mem"]]==clu)
+				clu.leaves					<- tmp[ tmp<=ph.tips.n ]
+				clu.leaves.seroneg			<- sapply(clu.leaves, function(x)
+						{
+							as.numeric( subset(ph.unlinked.seroneg, x==PhNode, c(PhNodeUnlinked,NegT) ) )	 	#O(logn) search; returns NA if subset dt is empty																 
+						})				
+#print(clu); print(tmp); print(clu.leaves); print(clu.leaves.seroneg)
+				#if all leaves not seroneg, return 0								
+				if(all(is.na(clu.leaves.seroneg[1,])))	return(0)
+				#if at least one seroneg, compute prob that 1-P(X=0) where X is number of seroconverters dead at SC of latest seroconverter				
+				clu.leaves.seroneg			<- rbind(clu.leaves,clu.leaves.seroneg)[,!is.na(clu.leaves.seroneg[2,]),drop=0]								
+				clu.leaves.latestseroneg.ix	<- which.max( clu.leaves.seroneg[3,] )
+				tmp							<- sapply(clu.leaves.seroneg[2,],function(x) length(ph.unlinked.dead[[x]]) )
+				latest.seroneg.unlinked		<- ph.unlinked.dead[[ clu.leaves.seroneg[2,clu.leaves.latestseroneg.ix] ]]				
+				if( max(tmp)!=length(latest.seroneg.unlinked) )	
+					stop("expect latest seroneg to have most unlinked HIV+ dead associated")	#which.max does not work because .ix is not necessarily the first																				
+				length(which( latest.seroneg.unlinked%in%clu.leaves ))																	
+			})		
+	list(clu.n=length(clusters), fp.n= length(which(clu.fp.n>0)), fp.unlinked.n= sum(clu.fp.n), fp.rate= length(which(clu.fp.n>0))/length(clusters))
+}
+######################################################################################
+hivc.clu.clusterbytypeIerror<- function(ph, dist.brl, nodesupport, ph.unlinked.seroneg, ph.unlinked.dead, thresh.brl=NULL, thresh.bs=NULL, level= 0.01, tol= level, mxit= 100, thresh.bs.lower= min(nodesupport), thresh.brl.upper=max(dist.brl), verbose=0)
+{		
+	if(is.null(thresh.brl) && is.null(thresh.bs))	stop("either thresh.bs or thresh.brl required")
+	if(!is.null(thresh.brl) && !is.null(thresh.bs))	stop("nothing to do")
+	
+	error								<- 1
+	ph.tips.n							<- Ntip(ph)
+	nit									<- 0	
+	if(is.null(thresh.bs))
+	{
+		srch.find.thresh.bs				<- 1
+		srch.upper						<- 1
+		srch.lower						<- thresh.bs	<- thresh.bs.lower		
+	}
+	else
+	{
+		srch.find.thresh.bs				<- 0
+		srch.lower						<- 0
+		srch.upper						<- thresh.brl	<- thresh.brl.upper		
+	}
+	if(verbose)
+		cat(paste("\ncalibrate bs?",srch.find.thresh.bs,"\nsrch.lower",srch.lower,"srch.upper",srch.upper,"thresh.bs",thresh.bs,"thresh.brl",thresh.brl))
+	#binary search algorithm
+	while(abs(error)>tol && nit<mxit)
+	{	
+		if(nit)
+		{
+			if(srch.find.thresh.bs)	
+				thresh.bs			<- ( srch.upper + srch.lower ) / 2
+			else
+				thresh.brl			<- ( srch.upper + srch.lower ) / 2				
+		}
+			
+		clustering					<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=nodesupport, retval="all")
+		tmp							<- hivc.clu.typeIerror(clustering, ph.unlinked.seroneg, ph.unlinked.dead, verbose=0)		
+		if(verbose)	
+			cat(paste("\nit=",nit,", #clu=",tmp[["clu.n"]],", BS=",thresh.bs,", BRL=",thresh.brl,", #unlinked in any cluster=",tmp[["fp.unlinked.n"]],", #FP=",tmp[["fp.n"]],", %FP=",round(tmp[["fp.rate"]],d=5),sep=''))			
+		error						<- tmp[["fp.rate"]]	- level	
+#print(c(srch.upper,srch.lower, thresh.bs, thresh.brl))
+		if(srch.find.thresh.bs)	
+		{
+			if(error<0)
+				srch.upper			<- thresh.bs
+			else
+				srch.lower			<- thresh.bs							
+		}
+		else
+		{
+			if(error<0)
+				srch.lower			<- thresh.brl				
+			else
+				srch.upper			<- thresh.brl				
+		}
+		nit							<- nit+1
+	}
+	ans<- list(thresh.bs=thresh.bs, thresh.brl=thresh.brl, clu=clustering, clu.fp.n=clu.fp.n, srch.nit= nit, srch.error=error, srch.tol=tol)
+	ans		
+}
+######################################################################################
 hivc.clu.plot<- function(ph, clu, show.node.label= T, file=NULL, pdf.scaley=10, pdf.width= 7, pdf.height=pdf.scaley*7)
 {
 	require(colorspace)	
@@ -352,6 +472,9 @@ hivc.clu.plot<- function(ph, clu, show.node.label= T, file=NULL, pdf.scaley=10, 
 #' @return statistic of patristic distances		
 hivc.clu.brdist.stats.subtree<- function(node, tree, distmat, eval.dist.btw="leaf", stat.fun=max)
 {
+	require(ape)
+	require(igraph)
+	require(geiger)	
 	if(eval.dist.btw=="leaf")
 	{
 		nlist	<- tips(tree,node)

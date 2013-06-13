@@ -228,27 +228,30 @@ project.hivc.get.geneticdist.from.sdc<- function(dir.name= DATA)
 	print(tmp)
 }
 
-project.hivc.gettimelines<- function(dir.name= DATA, verbose=1, resume=1)
-{
-	#for each sequence, get Patient isAcute NegT PosAny PosT PosSeqRT PosSeqPROT PosLoad PosCD4
+project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
+{	
 	require(data.table)
 	MISSING.Acute<- c(NA,9)
 	
+	file.out		<- paste(dir.name,"derived/ATHENA_2013_03_All1stPatientCovariates.R",sep='/')
+	#input files generated with "project.hivc.Excel2dataframe"
+	file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
+	file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patients.R",sep='/')
+	file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
+	file.immu		<- paste(dir.name,"derived/ATHENA_2013_03_Immu.R",sep='/')
 	
 	if(resume)												#//load if there is R Master data.table
 	{
-		options(show.error.messages = FALSE)
-		file	<- paste(dir.name,"derived/ATHENA_2013_03_SeqMaster.R",sep='/')
-		readAttempt<-try(suppressWarnings(load(file)))
-		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresume file",file))
+		options(show.error.messages = FALSE)		
+		readAttempt<-try(suppressWarnings(load(file.out)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresume file",file.out))
 		if(!inherits(readAttempt, "try-error"))	str(df.all)
 		options(show.error.messages = TRUE)		
 	}
 	if(!resume || inherits(readAttempt, "try-error"))		#else generate R Master data.table
 	{
-		#get PosSeqPROT   PosSeqRT
-		file<- paste(dir.name,"tmp/ATHENA_2013_03_Sequences.R",sep='/')
-		load(file)
+		#get PosSeqPROT   PosSeqRT		
+		load(file.seq)
 		df.seq<- df	
 		df.minDateRes	<- lapply( seq_along(df.seq),function(i)
 				{
@@ -276,11 +279,10 @@ project.hivc.gettimelines<- function(dir.name= DATA, verbose=1, resume=1)
 		if(nrow(df.minDateRes)!=length(unique( df.minDateRes[,Patient] )))	stop("non-unique patients at this point")		
 		#str(df.minDateRes)
 	
-		#add Patient data
-		file	<- paste(dir.name,"tmp/ATHENA_2013_03_Patients.R",sep='/')
-		load(file)
+		#add Patient data		
+		load(file.patient)
 		df.pat	<- df
-		cat(paste("\nprocess df.pat"))	
+		cat(paste("\n\nadding patient data"))	
 		#preprocess df.pat
 		df<- data.table( df.pat[,c("Patient","AcuteInfection","MyDateNeg1","MyDateNeg1_Acc","MyDatePos1","MyDatePos1_Acc","isDead","DateDied","Transmission")], key="Patient" )
 		tmp<- df[, AcuteInfection]
@@ -307,42 +309,42 @@ project.hivc.gettimelines<- function(dir.name= DATA, verbose=1, resume=1)
 		}				
 		df.all<- df[df.minDateRes]
 		if(verbose)		cat(paste("\npatients in combined data table", nrow(df.all)))
-		
-		#add first RNA Virology date
-		file	<- paste(dir.name,"tmp/ATHENA_2013_03_Viro.R",sep='/')
-		load(file)
-		df		<- data.table(df, key="Patient")
+		#add first RNA Virology date		
+		load(file.viro)
+		df		<- data.table(df, key="Patient")		
+		#str(df)		
 		setnames(df, "DateRNA","PosRNA")
-		df<- subset(df, !is.na(PosRNA) )
-		df<- df[,min(PosRNA),by=Patient]
-		setnames(df,"V1","PosRNA")
-		if(verbose)		cat(paste("\npatients with at least one non-missing RNA date", nrow(df)))
+		if(verbose)		cat(paste("\n\nadding virology\nentries in viro data table", nrow(df)))
+		df		<- subset(df, !is.na(PosRNA) & Undetectable!="Yes" )
+		if(verbose)		cat(paste("\nentries in viro data table without missing or non-detectable", nrow(df)))
+		df		<- df[,{tmp<- which.min(PosRNA); list(PosRNA1= PosRNA[tmp], RNA1= RNA[tmp]) }, by=Patient]		
+		if(verbose)		cat(paste("\npatients with at least one non-missing and detectable RNA date", nrow(df)))
 		if(0)
 		{
 			print(range(df[,PosRNA], na.rm=1))		
 		}
 		df.all<- df[df.all]
 		
-		#add first CD4 count date
-		file	<- paste(dir.name,"tmp/ATHENA_2013_03_Immu.R",sep='/')
-		load(file)
+		#add first CD4 count date		
+		load(file.immu)
 		df		<- data.table(df, key="Patient")
 		setnames(df, "DateImm","PosCD4")
+		if(verbose)		cat(paste("\nadding immunology\nentries in immu data table", nrow(df)))
 		df<- subset(df, !is.na(PosCD4) )
-		df<- df[,min(PosCD4),by=Patient]
-		setnames(df,"V1","PosCD4")
+		if(verbose)		cat(paste("\nentries in immu data table, non-missing", nrow(df)))
+		df		<- df[,{tmp<- which.min(PosCD4); list(PosCD41= PosCD4[tmp], CD41= CD4A[tmp]) }, by=Patient]
 		if(verbose)		cat(paste("\npatients with at least one non-missing CD4 date", nrow(df)))
 		if(0)
 		{
-			print(range(df[,PosCD4], na.rm=1))		
+			print(range(df[,PosCD41], na.rm=1))		
 		}
 		df.all<- df[df.all]
-		df.all<- subset(df.all,select=c(Patient,Trm,SeqPROT,SeqRT,PosPROT,PosRT,PosT,PosCD4,PosRNA,NegT,isAcute,isDead,Died))
+		df.all<- subset(df.all,select=c(Patient,Trm,SeqPROT,SeqRT,PosPROT,PosRT,PosT,PosT_Acc,PosCD41,PosRNA1,NegT,NegT_Acc,isAcute,isDead,Died,RNA1, CD41))
 		
 		
 		#if 	PosPROT!=PosRT		consider only earliest sequence and set other to missing
 		tmp<- subset(df.all, is.na(PosPROT) & is.na(PosRT))
-		if(verbose)		cat(paste("\npatients with is.na(PosPROT) & is.na(PosRT):", nrow(tmp)))				
+		if(verbose)		cat(paste("\n\nkeep only earliest sequence PROT or RT if PosPROT!=PosRT\npatients with is.na(PosPROT) & is.na(PosRT):", nrow(tmp)))				
 		tmp<- subset(df.all, !is.na(PosPROT) & !is.na(PosRT) & PosPROT!=PosRT)
 		if(verbose)		cat(paste("\npatients with PosPROT!=PosRT & !is.na(PosPROT) & !is.na(PosRT):", nrow(tmp)))
 		tmp<- subset(df.all, !is.na(PosPROT) & !is.na(PosRT) & PosPROT<PosRT, Patient)
@@ -355,12 +357,11 @@ project.hivc.gettimelines<- function(dir.name= DATA, verbose=1, resume=1)
 		tmp					<- df.all[,PosPROT]
 		tmp[ is.na(tmp) ]	<- df.all[is.na(tmp),PosRT]	
 		df.all[,PosSeq:=tmp]		
-		df.all<- subset(df.all, select=c(Patient,Trm,SeqPROT,SeqRT,PosSeq,PosT,PosCD4,PosRNA,NegT,isAcute,isDead,Died))
+		df.all<- subset(df.all, select=c(Patient,Trm,SeqPROT,SeqRT,PosSeq,PosT,PosT_Acc,PosCD41,PosRNA1,NegT,NegT_Acc,isAcute,isDead,Died,RNA1, CD41))
 		
-
-		file	<- paste(dir.name,"derived/ATHENA_2013_03_SeqMaster.R",sep='/')
-		if(verbose)		cat(paste("\nsave df.all to", file))				
-		save(df.all,file=file)
+		
+		if(verbose)		cat(paste("\nsave df.all to", file.out))				
+		save(df.all,file=file.out)
 		str(df.all)
 	}
 	
@@ -381,7 +382,7 @@ project.hivc.gettimelines<- function(dir.name= DATA, verbose=1, resume=1)
 	stop()	
 }
 
-project.hivc.getdf<- function(dir.name= DATA, min.seq.len=21, verbose=1)
+project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 {
 	if(0)
 	{
@@ -415,7 +416,7 @@ project.hivc.getdf<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 					tmp
 				})		
 		names(df)	<- names.GeneCode
-		file		<- paste(dir.name,"tmp/ATHENA_2013_03_Sequences.R",sep='/')
+		file		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
 		cat(paste("\nsave to", file))
 		save(df, file=file)
 	}
@@ -444,7 +445,7 @@ project.hivc.getdf<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 				df[nok.idx,x]	<- NA
 			df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
 		}
-		file		<- paste(dir.name,"tmp/ATHENA_2013_03_Regimens.R",sep='/')
+		file		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
 		if(verbose) cat(paste("\nsave to", file))
 		save(df, file=file)		
 	}
@@ -478,7 +479,7 @@ project.hivc.getdf<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 				df[nok.idx,x]	<- NA
 			df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
 		}
-		file		<- paste(dir.name,"tmp/ATHENA_2013_03_Patients.R",sep='/')
+		file		<- paste(dir.name,"derived/ATHENA_2013_03_Patients.R",sep='/')
 		if(verbose) cat(paste("\nsave to", file))
 		save(df, file=file)		
 	}
@@ -512,7 +513,7 @@ project.hivc.getdf<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 				df[nok.idx,x]	<- NA
 			df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
 		}		
-		file		<- paste(dir.name,"tmp/ATHENA_2013_03_Viro.R",sep='/')
+		file		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
 		if(verbose) cat(paste("\nsave to", file))
 		save(df, file=file)		
 	}
@@ -545,7 +546,7 @@ project.hivc.getdf<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 				df[nok.idx,x]	<- NA
 			df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
 		}		
-		file		<- paste(dir.name,"tmp/ATHENA_2013_03_Immu.R",sep='/')
+		file		<- paste(dir.name,"derived/ATHENA_2013_03_Immu.R",sep='/')
 		if(verbose) cat(paste("\nsave to", file))
 		save(df, file=file)		
 	}
@@ -934,10 +935,10 @@ hivc.prog.get.firstseq<- function()
 
 project.hivc.clustering<- function(dir.name= DATA)
 {
+	require(data.table)
 	require(ape)
-	if(1)
-	{
-		#test tree
+	if(0)	#test clustering on simple test tree
+	{		
 		ph	<- "(Wulfeniopsis:0.196108,(((alpinus:0.459325,grandiflora:0.259364)1.00:0.313204,uniflora:1.155678)1.00:0.160549,(((angustibracteata:0.054609,(brevituba:0.085086,stolonifera:0.086001)0.76:0.035958)1.00:0.231339,(((axillare:0.017540,liukiuense:0.018503)0.96:0.038019,stenostachyum:0.049803)1.00:0.083104,virginicum:0.073686)1.00:0.103843)1.00:0.086965,(carinthiaca:0.018150,orientalis:0.019697)1.00:0.194784)1.00:0.077110)1.00:0.199516,(((((abyssinica:0.077714,glandulosa:0.063758)1.00:0.152861,((((allionii:0.067154,(morrisonicola:0.033595,officinalis:0.067266)1.00:0.055175)1.00:0.090694,(alpina:0.051894,baumgartenii:0.024152,(bellidioides:0.016996,nutans:0.063292)0.68:0.031661,urticifolia:0.032044)0.96:0.036973,aphylla:0.117223)0.67:0.033757,(((japonensis:0.018053,miqueliana:0.033676)1.00:0.160576,vandellioides:0.099761)0.69:0.036188,montana:0.050690)1.00:0.058380)1.00:0.115874,scutellata:0.232093)0.99:0.055014)1.00:0.209754,((((((acinifolia:0.112279,reuterana:0.108698)0.94:0.055829,pusilla:0.110550)1.00:0.230282,((davisii:0.053261,serpyllifolia:0.087290)0.89:0.036820,(gentianoides:0.035798,schistosa:0.038522)0.95:0.039292)1.00:0.092830)1.00:0.169662,(((anagalloides:0.018007,scardica:0.017167)1.00:0.135357,peregrina:0.120179)1.00:0.098045,beccabunga:0.069515)1.00:0.103473)1.00:0.287909,(((((((((((agrestis:0.017079,filiformis:0.018923)0.94:0.041802,ceratocarpa:0.111521)1.00:0.072991,amoena:0.229452,(((argute_serrata:0.017952,campylopoda:0.075210)0.64:0.034411,capillipes:0.022412)0.59:0.034547,biloba:0.037143)1.00:0.141513,intercedens:0.339760,((opaca:0.019779,persica:0.035744)0.94:0.038558,polita:0.036762)1.00:0.108620,rubrifolia:0.186799)1.00:0.144789,(((bombycina_11:0.033926,bombycina_bol:0.035290,cuneifolia:0.017300,jacquinii:0.054249,oltensis:0.045755,paederotae:0.051579,turrilliana:0.017117)0.85:0.049052,czerniakowskiana:0.089983)0.93:0.051111,farinosa:0.138075)1.00:0.080565)1.00:0.104525,((albiflora:0.017984,ciliata_Anna:0.032685,vandewateri:0.017610)0.97:0.045649,arguta:0.063057,(catarractae:0.022789,decora:0.049785)0.96:0.048220,((cheesemanii:0.040125,cupressoides:0.146538)1.00:0.067761,macrantha:0.038130)1.00:0.088158,(densifolia:0.090044,formosa:0.116180)0.71:0.046353,(elliptica:0.038650,(odora:0.019325,salicornioides:0.021228)0.94:0.042950,salicifolia:0.020829)0.92:0.043978,(nivea:0.070429,(papuana:0.035003,tubata:0.031140)0.98:0.064379)0.93:0.065336,raoulii:0.109101)0.97:0.076607)0.93:0.085835,chamaepithyoides:0.485601)0.57:0.072713,(ciliata_157:0.069943,lanuginosa:0.052833)1.00:0.098638,(densiflora:0.069429,macrostemon:0.118926)0.92:0.124911,(fruticulosa:0.086891,saturejoides:0.041181)0.94:0.086148,kellererii:0.083762,lanosa:0.263033,mampodrensis:0.103384,nummularia:0.191180,pontica:0.128944,thessalica:0.129197)0.65:0.031006,(arvensis:0.342138,(((((chamaedrys:0.043720,micans:0.032021,vindobonensis:0.033309)0.51:0.034053,micrantha:0.019084)0.64:0.037906,krumovii:0.020175)1.00:0.103875,verna:0.254017)0.81:0.057105,magna:0.112657)1.00:0.104070)1.00:0.101845)1.00:0.149208,(((aznavourii:0.664103,glauca:0.405588)0.85:0.209945,praecox:0.447238)1.00:0.185614,(donii:0.260827,triphyllos:0.176032)1.00:0.194928)1.00:0.611079)0.74:0.055152,((crista:0.591702,(((cymbalaria_Avlan:0.017401,panormitana:0.017609)1.00:0.229508,((cymbalaria_Istanbul:0.028379,trichadena_332:0.016891,trichadena_Mugla:0.019131)1.00:0.196417,lycica_333:0.146772)1.00:0.097646,lycica_192:0.154877)1.00:0.234748,(((hederifolia:0.018068,triloba:0.075784)1.00:0.084865,(sibthorpioides:0.122542,sublobata:0.136951)1.00:0.074683)0.89:0.043623,stewartii:0.040679)1.00:0.596859)1.00:0.237324)0.58:0.057120,javanica:0.133802)1.00:0.137214)1.00:0.269201,(missurica:0.016685,rubra:0.019696)1.00:0.351184)0.54:0.058275)0.52:0.062485,((dahurica:0.023542,longifolia:0.016484,spicata:0.018125)0.95:0.042294,(nakaiana:0.016270,schmidtiana:0.058451)0.88:0.037207)1.00:0.261643)0.55:0.056458)1.00:0.229509,kurrooa:0.100611)0.74:0.068198,(bonarota:0.040842,lutea:0.115316)1.00:0.241657)0.99:0.085772);"
 		ph <- ladderize( read.tree(text = ph) )
 		#read bootstrap support values
@@ -965,7 +966,7 @@ project.hivc.clustering<- function(dir.name= DATA)
 		print(ph.node.bs[clu.idx])
 		stop()
 	}
-	if(0)
+	if(0)	#clustering on ATHENA tree
 	{
 		infile		<- "ATHENA_2013_03_FirstCurSequences_PROTRT_examlbs100"
 		signat.in	<- "Sat_May_11_14/23/46_2013"
@@ -997,6 +998,186 @@ project.hivc.clustering<- function(dir.name= DATA)
 		clu.idx			<- clustering[["clu.idx"]]-Ntip(ph)
 		print(any(ph.node.bs[clu.idx]<0.9))
 		stop()	
+	}
+	if(1)	#extract unlinked pairs by temporal separation
+	{
+		verbose				<- 1
+		unlinked.closest.n	<- NA
+		indir				<- paste(dir.name,"derived",sep='/')
+		outdir				<- paste(dir.name,"derived",sep='/')
+		infile				<- "ATHENA_2013_03_SeqMaster.R"
+		outfile				<- "ATHENA_2013_03_Unlinked_SeroConv_Dead"
+		file				<- paste(indir,infile,sep='/')
+		if(verbose)
+		{
+			cat(paste("\nunlinked.closest.n",unlinked.closest.n))			
+		}
+		
+		if(verbose)	cat(paste("\nread file",file))
+		load(file)
+		if(verbose) str(df.all)
+		
+		df.dead						<- subset(df.all, !is.na(Died), c(Patient,Died))
+		setkey(df.dead,Died)
+		df.serocon.acc				<- subset(df.all, NegT_Acc=="Yes" & NegT>=df.dead[1,Died],)
+		if(1)
+		{
+			df.serocon.nacc				<- subset(df.all, NegT_Acc=="No" & !is.na(NegT) & NegT>=df.dead[1,Died], )
+			#for inaccurate days, we (conservatively) assume the patient was only seronegative at the start of the month
+			df.serocon.nacc.dy			<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mday==15, )
+			tmp							<- as.POSIXlt(df.serocon.nacc.dy[,NegT] )
+			tmp$mday					<- 1
+			df.serocon.nacc.dy[,NegT:=as.Date(tmp)]
+			#for inaccurate months and days, we (conservatively) assume the patient was only seronegative at the start of the year
+			df.serocon.nacc.mody		<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mon==6 & as.POSIXlt(NegT)$mday==1, )
+			tmp							<- as.POSIXlt(df.serocon.nacc.mody[,NegT] )
+			tmp$mon						<- 0
+			df.serocon.nacc.mody[,NegT:=as.Date(tmp)]
+			#merge all
+			df.serocon					<- rbind(df.serocon.acc, df.serocon.nacc.dy, df.serocon.nacc.mody)
+		}
+		else
+			df.serocon					<- df.serocon.acc
+		
+		if(verbose) cat(paste("\nnumber of seroconverters with at least 1 preceeding dead HIV+",nrow(df.serocon)))
+		#for each accurate seroconverter, extract HIV+ that are dead before seroconversion
+		if( any(as.logical(df.serocon[,is.na(NegT)])) )	warning("Found accurate seroconverters with missing NegT")		
+		setkey(df.serocon,NegT)
+		unlinked.bytime				<- lapply(seq_len(nrow(df.serocon)), function(i)
+										{
+											tmp<- subset(df.dead, Died<=df.serocon[i,NegT],)											
+											#tmp<- tmp[,Patient]
+											#if(length(tmp)<unlinked.closest.n)	
+											#	tmp<- c(rep(NA,unlinked.closest.n-length(tmp)),tmp)
+											#rev(tmp)[1:unlinked.closest.n]
+											if(is.na(unlinked.closest.n))	return( tmp[,Patient] )
+											else							return( rev(tmp)[1:min(length(tmp),unlinked.closest.n)] )
+										})
+		names(unlinked.bytime)	<- df.serocon[,Patient]			
+		#
+		#some quick statistics
+		#
+		if(1)
+		{
+			#number of unlinked HIV+ by date (this date is when someone else is still seroneg)
+			y		<- sapply(unlinked.bytime, function(x) length(x) )
+			x		<- df.serocon[,NegT]
+			xlim	<- range(x)
+			tmp		<- as.POSIXlt(xlim[1])
+			tmp$mday<- 1
+			tmp$mon	<- 1
+			xlim[1]	<- as.Date(tmp)
+			plot(1,1,type='n',bty='n',xlab="time of seroconversion",ylab="number unlinked",xaxt='n',xlim=xlim,ylim=range(y))
+			axis.Date(1,Year,at=seq(xlim[1], xlim[2],by="12 months"))
+			polygon(c(x,c(x[length(x)],x[1])), c(y,0,0), border=NA, col="grey60" )
+						
+			#average PosT for all unlinked patients by date (this date is when someone else is still seroneg)
+			unlinked.PosT	<- sapply(seq_along(unlinked.bytime), function(i)
+										{
+											tmp<- data.table(Patient=unlinked.bytime[[i]], key="Patient")
+											tmp<- subset(df.all[tmp], select=c(Patient, PosT))
+											tmp<- tmp[,mean(as.numeric(difftime(df.serocon[i,NegT],PosT,units="weeks"))/52,na.rm=1)]
+											tmp
+										})
+			y		<- unlinked.PosT				
+			par(mar=c(5,6,1,1))
+			xlim[1]	<- as.Date("2000-01-01")
+			plot(1,1,type='n',bty='n',xlab="time of seroconversion",ylab="median time difference\nbetween unlinked sequences [yrs]",xaxt='n',xlim=xlim,ylim=range(y))
+			axis.Date(1,Year,at=seq(xlim[1], xlim[2],by="12 months"))
+			lines(x,y)
+		}
+		#
+		#print(unlinked.bytime.n)
+		#print(any(diff(unlinked.bytime.n)<0))
+		#
+		#save
+		#
+		if(is.na(unlinked.closest.n))			
+			file						<- paste(outdir,paste(outfile,"_UnlinkedAll.R",sep=''),sep='/')
+		else
+			file						<- paste(outdir,paste(outfile,"_Unlinked",unlinked.closest.n,".R",sep=''),sep='/')
+		if(verbose) cat(paste("\nwrite unlinked pairs to file",file))
+		save(unlinked.bytime, df.serocon, df.all, file=file)		
+		stop()
+	}
+	if(1)	#count how many unlinked pairs in clustering
+	{
+		require(data.table)
+		require(ape)
+		
+		verbose	<- 1
+		file	<- paste(dir.name,"derived/ATHENA_2013_03_Unlinked_SeroConv_Dead_UnlinkedAll.R", sep='/')		
+		if(verbose)	cat(paste("read file",file))
+		load(file)
+		#str(unlinked.bytime)
+		
+		infile		<- "ATHENA_2013_03_FirstCurSequences_PROTRT_examlbs100"
+		signat.in	<- "Fri_May_24_12/59/06_2013"
+		signat.out	<- "Fri_Jun_07_09/59/23_2013"
+		file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
+		cat(paste("read file",file))
+		
+		#
+		#set up tree, get boostrap values and patristic distances between leaves
+		#
+		ph								<- ladderize( read.tree(file) )		
+		ph.node.bs						<- as.numeric( ph$node.label )
+		ph.node.bs[is.na(ph.node.bs)]	<- 0
+		ph.node.bs						<- ph.node.bs/100
+		ph$node.label					<- ph.node.bs
+		#print(quantile(ph.node.bs,seq(0.1,1,by=0.1)))		
+		dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf")		#read patristic distances -- this is the expensive step but still does not take very long
+		#print(quantile(dist.brl,seq(0.1,1,by=0.1)))
+		
+		#
+		#convert truly unlinked pairs from Patient name to ph node index
+		#
+		df.tips							<- data.table(Node=seq_len(Ntip(ph)), Patient=ph$tip.label )
+		setkey(df.tips, Patient)																#use data.table to speed up search
+		df.tips							<- df.all[df.tips]
+		ph.unlinked.dead				<- lapply(seq_along(unlinked.bytime), function(j)
+											{
+												as.numeric( sapply(seq_along(unlinked.bytime[[j]]), function(i)	subset(df.tips, unlinked.bytime[[j]][i]==Patient, Node) ))					
+											})		
+		ph.unlinked.seroneg				<- as.numeric( sapply(names(unlinked.bytime), function(x)	subset(df.tips, x==Patient, Node) ))		
+		tmp								<- sort( ph.unlinked.seroneg, index.return=1)			#sort ph.unlinked.seroneg and return index, so we can also sort ph.unlinked.dead
+		ph.unlinked.seroneg				<- tmp$x
+		names(ph.unlinked.seroneg)		<- names(unlinked.bytime)[tmp$ix]
+		ph.unlinked.dead				<- lapply(tmp$ix, function(i){		ph.unlinked.dead[[i]]	})	
+		names(ph.unlinked.dead)			<- names(unlinked.bytime)[tmp$ix]		
+		ph.unlinked.seroneg				<- data.table(PhNode=ph.unlinked.seroneg, PhNodeUnlinked= seq_along(ph.unlinked.seroneg), Patient= names(ph.unlinked.seroneg))
+		setkey(ph.unlinked.seroneg, Patient)													#set key to take right outer join with df.serocon -- temporarily destroy correspondance with 'ph.unlinked.dead'
+		setkey(df.serocon, Patient)
+		ph.unlinked.seroneg				<- df.serocon[ph.unlinked.seroneg]		
+		setkey(ph.unlinked.seroneg, PhNode)			#use data.table to speed up search -- restore correspondance with 'ph.unlinked.dead'		
+		#print(ph.unlinked.seroneg); print(ph.unlinked.dead); stop()
+
+		#
+		#determine threshold for patristic distances based on truly unlinked pairs
+		#
+		thresh.brl	<- NULL
+		thresh.bs	<- 0.9
+		ans			<- hivc.clu.clusterbytypeIerror(ph, dist.brl, ph.node.bs, ph.unlinked.seroneg, ph.unlinked.dead, thresh.brl=thresh.brl, thresh.bs=thresh.bs, level= 0.001, verbose=1)		
+		#
+		#determine quick estimate of expected false pos for these thresholds if clustering was random
+		#				
+		check		<- hivc.clu.exp.typeIerror.randomclu(ph, dist.brl, ph.node.bs, ph.unlinked.seroneg, ph.unlinked.dead, ans[["thresh.brl"]], ans[["thresh.bs"]])
+		cat(paste("\n#clusters with at least one FP=",check[["fp.n"]]," , %clusters with at least one FP=",check[["fp.rate"]],sep=''))
+		#
+		#max cluster size distribution
+		barplot(cumsum(h$counts), names.arg=seq_along(h$counts)+1, axisnames=1, xlab="maximum cluster size")
+		#
+		#number of sequences in cluster, and %
+		cat(paste("\n#seq in cluster=",sum(ans[["clu"]][["size.tips"]]),", %seq in cluster=",sum(ans[["clu"]][["size.tips"]])/Ntip(ph),sep='')) 		
+		#
+		#plot final clusters, save  clusters
+		#								
+		file		<- paste(dir.name,"tmp",paste(infile,"_clu_",gsub('/',':',signat.out),".pdf",sep=''),sep='/')
+		cat(paste("plot clusters on tree to file",file))
+		hivc.clu.plot(ph, ans[["clu"]][["clu.mem"]], file=file, pdf.scaley=25)
+		file		<- paste(dir.name,"tmp",paste(infile,"_clu_",gsub('/',':',signat.out),".R",sep=''),sep='/')
+		cat(paste("save analysis to file",file))
+		save(ans,check,ph,dist.brl,ph.node.bs,ph.unlinked.seroneg,ph.unlinked.dead, file=file)				
 	}
 }
 
@@ -1271,7 +1452,7 @@ hivc.proj.pipeline<- function()
 	if(1)	#compute ExaML trees with bootstrap values, bootstrap over alignment
 	{
 		bs.from	<- 0
-		bs.to	<- 30
+		bs.to	<- 0
 		bs.n	<- 100
 		signat.in	<- "Fri_May_24_12/59/06_2013"
 		signat.out	<- "Fri_May_24_12/59/06_2013"				
@@ -1288,8 +1469,8 @@ hivc.proj.pipeline<- function()
 					outfile	<- paste("pipeline",signat,"qsub",sep='.')
 					cat(x)
 					#stop()
-					hivc.cmd.hpccaller(outdir, outfile, x)
-					Sys.sleep(1)
+					#hivc.cmd.hpccaller(outdir, outfile, x)
+					#Sys.sleep(1)
 				})
 		stop()
 	}
