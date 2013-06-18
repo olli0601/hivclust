@@ -168,13 +168,56 @@ hivc.seq.write.dna.phylip<- function(seq.DNAbin.mat, file)
 	cat(tmp, file=file)
 }
 
-hivx.seq.find<- function(char.matrix, pos0= NA, from= c(), verbose=1)
+hivc.seq.find<- function(char.matrix, pos0= NA, from= c(), verbose=1)
 {
 	if(is.na(pos0)) 	stop("start position of token to be replaced is missing")
 	if(!length(from))	stop("token to be replaced is missing")
 	query.colidx	<- seq.int(pos0,pos0+length(from)-1)
 	query.yes		<- which( apply(char.matrix, 1, function(x)	all(x[query.colidx]==from) ) )
 	query.yes	
+}
+
+#slight modification of blastSequences() in pkg annotate
+hivc.seq.blast<- function (x, database = "nr", hitListSize = "10", filter = "L", expect = "10", program = "blastn", organism= "HIV-1") 
+{
+	baseUrl <- "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi"
+	query <- paste("QUERY=", as.character(x), "&DATABASE=", database, "&ORGANISM=", organism,
+			"&HITLIST_SIZE=", hitListSize, "&FILTER=", filter, "&EXPECT=", 
+			expect, "&PROGRAM=", program, sep = "")
+	url0 <- sprintf("%s?%s&CMD=Put", baseUrl, query)
+	results <- tempfile()
+	Sys.sleep(5)
+	require(XML)
+	post <- htmlTreeParse(url0, useInternalNodes = TRUE)
+	x <- post[["string(//comment()[contains(., \"QBlastInfoBegin\")])"]]
+	rid <- sub(".*RID = ([[:alnum:]]+).*", "\\1", x)
+	rtoe <- as.integer(sub(".*RTOE = ([[:digit:]]+).*", "\\1", 
+					x))
+	url1 <- sprintf("%s?RID=%s&FORMAT_TYPE=XML&CMD=Get", baseUrl, 
+			rid)
+	Sys.sleep(rtoe)
+	result <- annotate:::.tryParseResult(url1)
+	qseq <- xpathApply(result, "//Hsp_qseq", xmlValue)
+	hseq <- xpathApply(result, "//Hsp_hseq", xmlValue)
+	require(Biostrings)
+	res <- list()
+	for (i in seq_len(length(qseq))) {
+		res[i] <- DNAMultipleAlignment(c(hseq[[i]], qseq[[i]]), 
+				rowmask = as(IRanges(), "NormalIRanges"), colmask = as(IRanges(), 
+						"NormalIRanges"))
+	}
+	res
+}
+
+#slight modification of read.blast() in pkg RFLPtools; expects blast was run with -outfmt 6
+hivc.seq.blast.read<- function (file, sep = "\t") 
+{
+	require(data.table)
+	x <- read.table(file = file, header = FALSE, sep = sep, quote = "\"", dec = ".", fill = TRUE, comment.char = "", stringsAsFactors = FALSE)
+	if (ncol(x) != 12) 
+		stop("Data in given file", basename(file), "has wrong dimension!")
+	names(x) <- c("query.id", "subject.id", "identity", "alignment.length","mismatches", "gap.opens", "q.start", "q.end", "s.start","s.end", "evalue", "bit.score")
+	data.table(x, key="query.id")
 }
 
 #' @export
@@ -211,13 +254,38 @@ hivc.seq.dist<- function(seq.DNAbin.matrix, verbose=1)
 	ans
 }
 
-#' @export
-hivc.seq.rmgaps<- function(seq.DNAbin.matrix, verbose=0)
+hivc.seq.replace<- function(seq.DNAbin.matrix, code.from='?', code.to='n', verbose=0)
 {
-	seq.DNAbin.matrix	<- as.character(seq.DNAbin.matrix)
-	nogap				<- which( !apply(seq.DNAbin.matrix,2,function(x) all(x=="-" || x=="?")) )
-	if(verbose)	cat(paste("\nremove gaps, n=",ncol(seq.DNAbin.matrix)-length(nogap)))
-	as.DNAbin( seq.DNAbin.matrix[,nogap] )
+	seq.DNAbin.matrix	<- as.character(seq.DNAbin.matrix)		
+	seq.DNAbin.matrix	<- apply(seq.DNAbin.matrix, 2, function(col) 		gsub(code.from,code.to,col,fixed=1)			)	
+	as.DNAbin( seq.DNAbin.matrix )
+}
+
+#' @export
+hivc.seq.rmgaps<- function(seq.DNAbin.matrix, rm.only.col.gaps=1, verbose=0)
+{
+	seq.DNAbin.matrix		<- as.character(seq.DNAbin.matrix)		
+	if(!rm.only.col.gaps)
+	{	
+		if(is.matrix(seq.DNAbin.matrix))
+		{
+			tmp					<- lapply(seq_len(nrow(seq.DNAbin.matrix)), function(i){	seq.DNAbin.matrix[i, seq.DNAbin.matrix[i,]!="-" & seq.DNAbin.matrix[i,]!="?"]	})
+			names(tmp)			<- rownames(seq.DNAbin.matrix)
+		}
+		else
+		{
+			tmp					<- lapply(seq_along(seq.DNAbin.matrix), function(i){	seq.DNAbin.matrix[[i]][ seq.DNAbin.matrix[[i]]!="-" & seq.DNAbin.matrix[[i]]!="?"]	})
+			names(tmp)			<- names(seq.DNAbin.matrix)
+		}		
+		seq.DNAbin.matrix	<- tmp
+	}
+	else
+	{		
+		nogap				<- which( !apply(seq.DNAbin.matrix,2,function(x) all(x=="-" || x=="?")) )
+		if(verbose)	cat(paste("\nremove gaps, n=",ncol(seq.DNAbin.matrix)-length(nogap)))
+		seq.DNAbin.matrix	<- seq.DNAbin.matrix[,nogap]	
+	}
+	as.DNAbin( seq.DNAbin.matrix )
 }
 
 #' @export

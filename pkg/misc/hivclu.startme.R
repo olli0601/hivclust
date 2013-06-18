@@ -49,13 +49,14 @@ default.fun		<- "project.hivc.clustalo"
 default.fun		<- "project.hivc.examl"
 #default.fun	<- "hivc.prog.get.geneticdist"
 default.fun 	<- "hivc.proj.pipeline"
+#default.fun 	<- "hivc.prog.get.allseq"
 #default.fun	<- "project.hivc.test"
 #default.fun	<- "project.hivc.Excel2dataframe"
 #default.fun	<- "project.hivc.check"
-default.fun		<- "project.hivc.collectpatientdata"
+#default.fun	<- "project.hivc.collectpatientdata"
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
-#default.fun	<- "project.bezemer2013a.figs"
-#default.fun		<- "project.hivc.clustering"
+#default.fun		<- "project.bezemer2013a.figs"
+#default.fun	<- "project.hivc.clustering"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{

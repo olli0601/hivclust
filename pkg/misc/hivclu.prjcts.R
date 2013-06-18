@@ -1,3 +1,17 @@
+#' @export
+HIVC.COUNTRY.TABLE<- data.table(matrix(c(	"AG","ANTIGUA AND BARBUDA",		"AL","ALBANIA",		"AO","ANGOLA",	"AR","ARGENTINA",	"AT","AUSTRIA",		"AU","AUSTRALIA",				
+						"BB","BARBADOS",	"BE","BELGIUM",	"BG","BULGARIA",	"BR","BRAZIL",	"CA","CANADA",	"CH","SWITZERLAND",		"CI","COTE D'IVOIRE",	"CL","CHILE",	
+						"CN","CHINA",	"CO","COLOMBIA",	"CU","CUBA",	"CV","CAPE VERDE",	"CY","CYPRUS",	"CZ","CZECH REPUBLIC",	"DE","GERMANY",	"DK","DENMARK",	
+						"DO","DOMINICAN REPUBLIC",	"DZ","ALGERIA",		"EC","ECUADOR",	"ES","SPAIN",	"FI","FINLAND",	"FR","FRANCE",	"GA","GABON",	"GB","UNITED KINGDOM",	
+						"GD","GRENADA",	"GE","GIORGIA",	"GH","GHANA",	"GR","GREECE",	"GW","GUINEA-BISSAU",	"GY","GUYANA",	"HN","HONDURAS", "HT","HAITI",	
+						"HU","HUNGARY",	"IL","ISRAEL",	"IN","INDIA",	"IT","ITALY",	"JM","JAMAICA",	"JP","JAPAN",	"KE","KENYA",	"KR","SOUTH KOREA",	"LB","LEBANON",				
+						"LU","LUXEMBOURG",	"LV","LATVIA",	"MA","MOROCCO",	"ME","MONTENEGRO",	"MG","MADAGASCAR",	"ML","MALI",	"MN","MONGOLIA",	"MX","MEXICO",	"MY","MALAYSIA",
+						"NG","NIGERIA",	"NL","NETHERLANDS",	"NO","NORWAY",	"PA","PANAMA",	"PE","PERU",	"PH","PHILIPPINES",	"PL","POLAND",	"PR","PUERTO RICO",	"PT","PORTUGAL",			
+						"PY","PARAGUAY",	"RO","ROMANIA",	"RS","SERBIA",	"RU","RUSSIAN FEDERATION",	"SC","SEYCHELLES",	"SD","SUDAN",	"SE","SWEDEN",	"SG","SINGAPORE",	
+						"SI","SLOVENIA",	"SK","SLOVAKIA",	"SN","SENEGAL",	"SR","SURINAME",	"SV","EL SALVADOR",	"TH","THAILAND",	"TT","TRINIDAD AND TOBAGO",	"TW","TAIWAN",			
+						"UA","UKRAINE",	"UG","UGANDA",	"US","UNITED STATES",	"UY","URUGUAY",	"VE","VENEZUELA",	"VN","VIETNAM",	"YE","YEMEN","ZA","SOUTH AFRICA"),ncol=2,byrow=1,dimnames=list(c(),c("key","country"))))
+
+
 project.hivc.check.DateRes.after.HIVPosTest<- function(dir.name= DATA, verbose=1)
 {
 	require(data.table)
@@ -671,6 +685,319 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 	}
 	else
 		cat("\nfound boostrap sequence alignment")
+}
+
+#create PROT+RT data set of first sequences from all patients
+hivc.prog.get.allseq<- function()
+{	
+	library(ape)
+	library(data.table)
+	library(RFLPtools)
+	library(hivclust)
+	
+	indir		<- paste(DATA,"derived",sep='/')
+	outdir		<- paste(DATA,"tmp",sep='/')
+	infile		<- "ATHENA_2013_03_All1stPatientCovariates.R"
+	signat.out	<- "Sat_Jun_16_17/23/46_2013"
+	signat.in	<- "Wed_May__1_17/08/15_2013"
+	verbose		<- 1 
+	resume		<- 0
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) signat.in<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									outsignat= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) signat.out<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+	}
+	if(1)
+	{
+		print(indir)
+		print(outdir)
+		print(infile)
+		print(signat.in)
+		print(signat.out)
+		print(verbose)
+		print(resume)
+	}
+	pattern 	<- gsub('/',':',paste("ATHENA_2013_03_All+LANL_Sequences_",signat.out,".R$",sep=''))
+	file		<- list.files(path=outdir, pattern=pattern, full.names=1)
+	if(!resume || !length(file))	
+	{						
+		#create file of sequences that are in preliminary cluster. use these as seed to enrich data set to get more reliable boostrap
+		dir.name		<- DATA
+		infile.tree		<- "ATHENA_2013_03_FirstCurSequences_PROTRT_examlbs100"
+		infile.seq		<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
+		signat.in		<- "Sat_May_11_14/23/46_2013"
+		
+		
+		infile.enrich	<- "LosAlamos_HIV1B_Prot_P51_n4243_gapsyes"
+		outfile.enrich	<- "LosAlamos_HIV1B_Prot_P51_n4243_gapsno"
+		infile.enrich	<- "LosAlamos_HIV1B_Prot_n85928_gapsyes"
+		outfile.enrich	<- "LosAlamos_HIV1B_Prot_n85928_gapsno"
+
+		if(0) 
+		{
+			insignat				<- "Sat_Jun_15_18/23/46_2013"
+			#build BLAST database
+			#remove all gaps from FASTA file
+			file<- paste(paste(dir.name,"original",sep='/'),'/',paste(infile.enrich,'_',gsub('/',':',insignat),".fasta", sep=''), sep='')						
+			seq.enrich				<- read.dna( file, format="fa" )
+			seq.enrich				<- hivc.seq.rmgaps(seq.enrich, rm.only.col.gaps=0)
+			names(seq.enrich)		<- gsub('-','NA',names(seq.enrich))					
+			file<- paste(paste(dir.name,"derived",sep='/'),'/',paste(outfile.enrich,'_',gsub('/',':',insignat),".fasta", sep=''), sep='')			
+			write.dna(seq.enrich, file=file, format="fasta", append=0, colsep='', colw=80, blocksep=0)
+			#build BLAST database
+			cmd						<- hivc.cmd.blast.makedb(paste(dir.name,"derived",sep='/'), outfile.enrich, signat=gsub('/',':',insignat), with.mask=0, verbose=0)
+			cat ( cmd )
+			#cat( system(cmd, intern=TRUE) )
+		}
+		if(1)
+		{	
+			plot							<- 0
+			#identify query sequences for BLAST search from large trial clusters
+			signat.in						<- "Fri_May_24_12/59/06_2013"						
+			#read tree to construct large trial clusters
+			file							<- paste(dir.name,"tmp",paste(infile.tree,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
+			cat(paste("read file",file))
+			ph								<- ladderize( read.tree(file) )
+			#read bootstrap support values		
+			ph.node.bs						<- as.numeric( ph$node.label )
+			ph.node.bs[is.na(ph.node.bs)]	<- 0
+			ph.node.bs						<- ph.node.bs/100
+			ph$node.label					<- ph.node.bs
+			dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf")			
+			#produce trial clustering
+			thresh.bs						<- 0.9
+			thresh.brl						<- 0.105		#subst rate 3.4 10^-3  so for 15 years either way have 10.5 * 10^-2
+			clustering						<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+			#get tip names in trial cluster
+			ph.tips.in.cluster				<- which( !is.na(clustering[["clu.mem"]][seq_len(Ntip(ph))]) )
+			ph.tips.in.cluster.names		<- ph$tip.label[ph.tips.in.cluster]
+			#get sequences in trial cluster			
+			file							<- paste(dir.name,"tmp",paste(infile.seq,'_',gsub('/',':',signat.in),".R",sep=''),sep='/')
+			load(file)
+			if(verbose) cat(paste("\nload trial sequences from",file,sep=''))
+			seq.Trial.PROT.RT				<- seq.PROT.RT[ph.tips.in.cluster.names,]
+			seq.Trial.PROT.RT				<- hivc.seq.replace(seq.Trial.PROT.RT, code.from='?', code.to='n')			
+			if(verbose) cat(paste("\nfound trial sequences, n=",nrow(seq.Trial.PROT.RT),sep=''))			
+			outsignat						<- "Sat_Jun_15_18/23/46_2013"
+			file							<- paste(paste(dir.name,"tmp",sep='/'),'/',paste(infile.tree,"_intrialcluster_",gsub('/',':',outsignat),".fasta", sep=''), sep='')
+			if(verbose) cat(paste("\nwrite trial sequences to",file,sep=''))
+			write.dna(seq.Trial.PROT.RT, file=file, format="fasta", append=0, colsep='', colw=ncol(seq.Trial.PROT.RT), blocksep=0)
+			
+			#BLAST search against PROT+P51 database
+			indir							<- paste(dir.name,"tmp",sep='/')
+			infile							<- paste(infile.tree,"_intrialcluster",sep='')
+			insignat						<- "Sat_Jun_15_18/23/46_2013"
+			dbdir							<- paste(dir.name,"derived",sep='/')
+			dbfile							<- "LosAlamos_HIV1B_Prot_P51_n4243_gapsno"			
+			outsignat						<- "Sat_Jun_15_18/23/46_2013"
+			cmd<- hivc.cmd.blast(indir, infile, gsub('/',':',insignat), dbdir, dbfile, gsub('/',':',insignat), outdir=indir, outsignat=gsub('/',':',outsignat), blast.max_target_seqs=20)			
+			cat(cmd)
+			system(cmd, intern=TRUE)	#wait until finished	
+			#read BLAST file against PROT+P51 database and take unique best 10 hits
+			file							<- paste(paste(dir.name,"tmp",sep='/'),'/',paste(infile.tree,"_intrialcluster_",gsub('/',':',signat.out),".blast", sep=''), sep='')
+			seq.enrich						<- hivc.seq.blast.read(file=file)
+			if(plot)
+			{
+				tmp							<- 1-seq.enrich[,identity]/100
+				summary(tmp)
+				hist(tmp)
+			}
+			seq.enrich.unique				<- data.table(subject.id=unique(seq.enrich[,subject.id]), key="subject.id")			
+			tmp								<- seq.enrich.unique[, substr(subject.id,3,4)]
+			tmp[tmp=="NA"]					<- NA
+			seq.enrich.unique[,subject.location:=tmp]
+			tmp								<- sapply(seq.enrich.unique[, strsplit(subject.id,'.',fixed=1) ], function(x) x[3])
+			tmp[tmp=="NA"]					<- NA
+			seq.enrich.unique[,subject.PosSeq:=as.numeric(tmp)]
+			if(plot)
+			{
+				hist(seq.enrich.unique[,subject.PosSeq])
+				seq.enrich.unique.loc		<- sort(table(seq.enrich.unique[,subject.location]),decreasing=TRUE)
+				barplot(seq.enrich.unique.loc, cex.names=.75)
+			}			
+			#best PROT+p51 hits to enrich NL data set
+			indir				<- paste(dir.name,"derived",sep='/')
+			infile				<- "LosAlamos_HIV1B_Prot_P51_n4243_gapsno"
+			insignat			<- "Sat_Jun_15_18/23/46_2013"
+			file				<- paste(indir,'/',paste(infile,'_',gsub('/',':',insignat),".fasta", sep=''), sep='')
+			seq.enrich.PROT.P51	<- read.dna( file, format="fa" )
+			tmp					<- which( names(seq.enrich.PROT.P51)%in%seq.enrich.unique[,subject.id] )
+			tmp2				<- lapply( tmp, function(i)	seq.enrich.PROT.P51[[i]] )
+			names(tmp2)			<- paste("PROT+P51",names(seq.enrich.PROT.P51)[tmp],sep="_")
+			class(tmp2)			<- "DNAbin"
+			seq.enrich.PROT.P51	<- tmp2
+			
+			
+			#BLAST search against PROT database
+			indir							<- paste(dir.name,"tmp",sep='/')
+			infile							<- paste(infile.tree,"_intrialcluster",sep='')			
+			dbdir							<- paste(dir.name,"derived",sep='/')			
+			dbfile							<- "LosAlamos_HIV1B_Prot_n85928_gapsno"
+			outsignat						<- "Sat_Jun_16_17/23/46_2013"
+			cmd<- hivc.cmd.blast(indir, infile, gsub('/',':',insignat), dbdir, dbfile, gsub('/',':',insignat), outdir=indir, outsignat=gsub('/',':',outsignat), blast.max_target_seqs=20)			
+			cat(cmd)
+			#cat( system(cmd, intern=TRUE) )
+			
+			#read BLAST file against PROT database and take unique best 10 hits that are geographically distant as TRUE NEGATIVES
+			file							<- paste(paste(dir.name,"tmp",sep='/'),'/',paste(infile.tree,"_intrialcluster_",gsub('/',':',outsignat),".blast", sep=''), sep='')
+			seq.enrich						<- hivc.seq.blast.read(file=file)
+			if(plot)
+			{
+				tmp							<- 1-seq.enrich[,identity]/100
+				summary(tmp)
+				hist(tmp)
+			}
+			seq.enrich.unique				<- data.table(subject.id=unique(seq.enrich[,subject.id]), key="subject.id")			
+			tmp								<- seq.enrich.unique[, substr(subject.id,3,4)]
+			tmp[tmp=="NA"]					<- NA
+			seq.enrich.unique[,subject.location:=tmp]
+			tmp								<- sapply(seq.enrich.unique[, strsplit(subject.id,'.',fixed=1) ], function(x) x[3])
+			tmp[tmp=="NA"]					<- NA
+			seq.enrich.unique[,subject.PosSeq:=as.numeric(tmp)]
+			if(plot)
+			{
+				hist(seq.enrich.unique[,subject.PosSeq])
+				seq.enrich.unique.loc			<- sort(table(seq.enrich.unique[,subject.location]),decreasing=TRUE)
+				barplot(seq.enrich.unique.loc, cex.names=.75)
+			}
+			
+			#to build HIVC.COUNTRY.TABLE, use this to search LANL
+			#tmp								<- seq.enrich.unique[,min(subject.id),by=subject.location]
+			#tmp								<- sapply(tmp[, strsplit(V1,'.',fixed=1) ], function(x) x[5])			
+			#extract seq.enrich.unique that are very unlikely to transmit to NL		seq.enrich.unique.loc.excl taken from Bezemer2013
+			seq.enrich.unique.loc.level		<- "0.01"			
+			seq.enrich.unique.loc.excl		<- structure(list(	`0.01` = c("GREENLAND", "CHILE", "ALBANIA", "Suriname", "SINGAPORE", "PANAMA", "SENEGAL", "FINLAND", "TAIWAN", "JAPAN", 
+																			"SLOVAKIA", "LUXEMBOURG", "AUSTRALIA", "THAILAND", "SERBIA", "ROMANIA", "NORWAY", "VENEZUELA", "SLOVENIA", "RUSSIAN FEDERATION", 
+																			"AUSTRIA", "SWEDEN", "FRANCE", "SOUTH KOREA", "CYPRUS", "MONTENEGRO", "CUBA", "HONDURAS", "DENMARK", "POLAND", "PORTUGAL", "CHINA", 
+																			"SWITZERLAND", "BRAZIL", "ARGENTINA", "GERMANY", "BELGIUM", "CANADA","CZECH REPUBLIC", "UNITED STATES", "SPAIN", "ITALY", "UNITED KINGDOM","NETHERLANDS"), 
+																`0.05` = c("SERBIA", "ROMANIA", "NORWAY", "VENEZUELA", "SLOVENIA","RUSSIAN FEDERATION", "AUSTRIA", "SWEDEN", "FRANCE", "SOUTH KOREA", 
+																			"CYPRUS", "MONTENEGRO", "CUBA", "HONDURAS", "DENMARK", "POLAND","PORTUGAL", "CHINA", "SWITZERLAND", "BRAZIL", "ARGENTINA", "GERMANY",
+																			"BELGIUM", "CANADA", "CZECH REPUBLIC", "UNITED STATES", "SPAIN","ITALY", "UNITED KINGDOM","NETHERLANDS")), .Names = c("0.01", "0.05"))																										
+			seq.enrich.unique.loc.incl		<- subset(HIVC.COUNTRY.TABLE, !country%in%seq.enrich.unique.loc.excl[[seq.enrich.unique.loc.level]] )
+			seq.enrich.unique.loc.incl		<- subset(seq.enrich.unique.loc.incl, !country%in%c("BULGARIA","GRENADA","GIORGIA","GREECE","HUNGARY","UKRAINE","LATVIA") )						
+			seq.enrich.unlikelytransmission	<- subset(seq.enrich.unique,subject.location%in%as.character(seq.enrich.unique.loc.incl[,key]) )
+			if(plot)
+			{				
+				hist(seq.enrich.unlikelytransmission[,subject.PosSeq])
+				seq.enrich.unique.loc			<- sort(table(seq.enrich.unlikelytransmission[,subject.location]),decreasing=TRUE)
+				barplot(seq.enrich.unique.loc, cex.names=.75)
+			}
+			#best geographically distant PROT hits to enrich NL data set
+			indir				<- paste(dir.name,"derived",sep='/')
+			infile				<- "LosAlamos_HIV1B_Prot_n85928_gapsno"
+			insignat			<- "Sat_Jun_15_18/23/46_2013"
+			file				<- paste(indir,'/',paste(infile,'_',gsub('/',':',insignat),".fasta", sep=''), sep='')
+			seq.enrich.TN		<- read.dna( file, format="fa" )
+			tmp					<- which( names(seq.enrich.TN)%in%seq.enrich.unlikelytransmission[,subject.id] )
+			tmp2				<- lapply( tmp, function(i)	seq.enrich.TN[[i]] )
+			names(tmp2)			<- paste("TN",names(seq.enrich.TN)[tmp],sep="_")
+			class(tmp2)			<- "DNAbin"
+			seq.enrich.TN		<- tmp2
+
+			#combine all sequence data sets and save
+			seq.enrich			<- c(seq.enrich.PROT.P51,seq.enrich.TN)
+			outdir				<- paste(dir.name,"derived",sep='/')
+			outsignat			<- "Sat_Jun_16_17/23/46_2013"			
+			file				<- paste(outdir,"/LosAlamos_EnrichSequences_For_ATHENA201303_",gsub('/',':',outsignat),".R",sep='')
+			if(verbose) cat(paste("\nwrite to",file))
+			save(seq.enrich, file=file)						
+		}
+		if(0)
+		{
+			#get all ATHENA sequences into PROT+RT format, and add foreign sequences
+			indir		<- paste(dir.name,"tmp",sep='/')
+			outdir		<- paste(dir.name,"tmp",sep='/')
+			insignat	<- "Wed_May__1_17/08/15_2013"
+			outsignat	<- "Sat_Jun_16_17/23/46_2013"
+			outfile		<- "ATHENA_2013_03_All+LANL_Sequences"
+			
+			if(verbose)	cat(paste("\ncreate LosAlamos_EnrichSequences_For_ATHENA201303 file"))						
+			#create matrix of all PROT+RT sequences				
+			pattern 	<- gsub('/',':',paste(insignat,".clustalo$",sep=''))
+			files		<- list.files(path=indir, pattern=pattern, full.names=1)
+			#read all sequences and add a missing one with name "NA" if not in union of all possible sequences take at a sampling date		
+			seq.PROT	<- read.dna( files[ grep("PROT",files) ], format="fa", as.matrix=1 )
+			if(verbose) cat(paste("\nfound PROT sequences, n=",nrow(seq.PROT),"\n"))
+			seq.RT		<- read.dna( files[ grep("RT",files) ], format="fa", as.matrix=1 )
+			if(verbose) cat(paste("\nfound RT sequences, n=",nrow(seq.RT),"\n"))
+			seq.nam.all	<- union( rownames(seq.PROT), rownames(seq.RT) )
+			if(verbose) cat(paste("\nfound unique sampling IDs, n=",length(seq.nam.all),"\n"))
+			seq.nam.PROT<- seq.nam.all
+			seq.nam.RT	<- seq.nam.all
+			seq.nam.PROT[ !seq.nam.all%in%rownames(seq.PROT) ]	<- "NA"		#those sampling dates missing among PROT get name NA
+			seq.nam.RT[ !seq.nam.all%in%rownames(seq.RT) ]		<- "NA"
+			#prepare PROT and RT sequences: add a missing one with name "NA" 		
+			seq.PROT	<- read.dna( files[ grep("PROT",files) ], format="fa", as.matrix=1 )
+			tmp			<- as.DNAbin( matrix(rep('-',ncol(seq.PROT)),1,ncol(seq.PROT), dimnames=list(c("NA"),c())) )
+			seq.PROT	<- rbind(seq.PROT,tmp)
+			seq.RT		<- read.dna( files[ grep("RT",files) ], format="fa", as.matrix=1 )						 				
+			tmp			<- as.DNAbin( matrix(rep('-',ncol(seq.RT)),1,ncol(seq.RT), dimnames=list(c("NA"),c())) )
+			seq.RT		<- rbind(seq.RT,tmp)
+			#add missing sequence where needed to combine PROT and RT 
+			seq.PROT	<- seq.PROT[seq.nam.PROT,]
+			seq.RT		<- seq.RT[seq.nam.RT,]
+			rownames(seq.PROT)	<- seq.nam.all
+			rownames(seq.RT)	<- seq.nam.all
+			#combine PROT and RT
+			seq.PROT.RT	<- cbind(seq.PROT,seq.RT)
+			if(verbose) cat(paste("\ncombined PROT and RT sequences, n=",nrow(seq.PROT.RT),"\n"))
+			print(seq.PROT.RT)
+			
+			#load EnrichSequences
+			indir				<- paste(dir.name,"derived",sep='/')
+			insignat			<- "Sat_Jun_16_17/23/46_2013"
+			file				<- paste(indir,"/LosAlamos_EnrichSequences_For_ATHENA201303_",gsub('/',':',insignat),".R",sep='')
+			if(verbose) cat(paste("\nloading file",file))
+			load(file)	
+			print(seq.enrich)
+			#load HXB2 reference sequence
+			data( refseq_hiv1_hxb2 )
+			hxb2				<- as.character( data.table( hxb2 )[, HXB2.K03455 ] )
+			hxb2				<- hxb2[seq_len(length(hxb2)-2)]
+			
+			#write all sequences to fasta file
+			file		<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".fasta",sep='')			
+			if(verbose) cat(paste("\nwrite reference sequence to",file,"\n"))
+			cat( paste(">HXB2\n",paste( hxb2, collapse='',sep='' ),"\n",sep=''), file=file, append=0)			
+			if(verbose) cat(paste("\nappend ATHENA combined PROT and RT sequences to",file,"\n"))
+			write.dna(seq.PROT.RT, file=file, format="fasta", append=1, colsep='', colw=length(hxb2), blocksep=0)
+			if(verbose) cat(paste("\nappend LosAlamos_EnrichSequences to",file,"\n"))
+			write.dna(seq.enrich, file=file, format="fasta", append=1, colsep='', colw=length(hxb2), blocksep=0)				 
+		}				
+		stop()				
+	}
+	else
+	{
+		if(verbose)	cat(paste("\nload",file))
+		load(file)
+	}	
 }
 
 #create PROT+RT data set of first sequences from all patients
@@ -1410,13 +1737,14 @@ hivc.proj.pipeline<- function()
 	signat.out	<- "Wed_May__1_17/08/15_2013"		
 	cmd			<- ''
 
-	if(0)	#align sequences in fasta file
+	if(1)	#align sequences in fasta file
 	{
 		indir	<- paste(dir.name,"tmp",sep='/')
 		outdir	<- paste(dir.name,"tmp",sep='/')
-		infile	<- "ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_Wed_May__1_17:08:15_2013.fasta"		
+		infile	<- "ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_Wed_May__1_17:08:15_2013.fasta"
+		infile	<- "ATHENA_2013_03_All+LANL_Sequences_Sat_Jun_16_17:23:46_2013.fasta"
 		cmd		<- hivc.cmd.clustalo(indir, infile, signat='', outdir=outdir)
-		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1)		
+		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1)
 	}
 	if(0)	#extract first sequences for each patient as available
 	{
@@ -1449,7 +1777,7 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(1)	#compute ExaML trees with bootstrap values, bootstrap over alignment
+	if(0)	#compute ExaML trees with bootstrap values, bootstrap over alignment
 	{
 		bs.from	<- 0
 		bs.to	<- 0
@@ -1506,7 +1834,7 @@ hivc.proj.pipeline<- function()
 	outfile	<- paste("pipeline",signat,"qsub",sep='.')					
 	lapply(cmd, function(x)
 			{				
-				x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
+				#x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
 				cat(x)
 				hivc.cmd.hpccaller(outdir, outfile, x)
 			})							

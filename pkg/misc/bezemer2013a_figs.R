@@ -32,7 +32,19 @@ project.bezemer2013a.figs.v130528<- function()
 	#print(summary(df[,"fpos1"]))
 	df	<- data.table(df, key="clustername")
 	str(df)
-	
+	if(0)	#evaluate distribution by "Country" and collect countries from which there is above level migration to NL 
+	{
+		tmp<- sort(table(df[,Country]),decreasing=TRUE)
+		barplot(tmp, cex.names=.75)
+		tmp<- rev(tmp)/sum(tmp)
+		levels<- c(0.01,0.05)
+		countries.migration.abovelevel	<- lapply(levels,function(level)
+											{
+												names(tmp)[cumsum(tmp)>level]
+											})
+		names(countries.migration.abovelevel)<- levels							
+		dput(countries.migration.abovelevel)				
+	}
 	dir.name			<- "/Users/Oliver/duke/2013_HIV_NL/Bezemer2013_clusters"
 	CLUSTER.N.THRESHOLD	<- 10
 	ylab				<- "transmission network ID"

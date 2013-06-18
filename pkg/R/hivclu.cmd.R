@@ -5,6 +5,15 @@ if(!exists("HIVC.CODE.HOME"))
 }
 
 #' @export
+PR.BLASTMASK	<- "windowmasker"
+
+#' @export
+PR.BLASTMAKEDB	<- "makeblastdb"
+
+#' @export
+PR.BLASTN		<- "blastn"
+
+#' @export
 PR.CLUSTALO		<- "clustalo"
 
 #' @export
@@ -45,6 +54,51 @@ HPC.MEM			<- "1750mb"
 
 #' @export
 HPC.LOAD		<- "module load intel-suite mpi R/2.15 raxml examl/2013-05-09"
+
+
+#generate clustalo command
+#' @export
+hivc.cmd.blast.makedb<- function(indir, infile, signat=paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''), outdir=indir, with.mask=1, prog.mask= PR.BLASTMASK, prog.makedb=PR.BLASTMAKEDB, nproc=1, verbose=1)
+{
+	if(verbose) cat(paste("\nprocess",infile,"\n"))
+	file	<- paste(indir, infile,sep='/')
+	#verbose stuff
+	cmd<- "#######################################################
+# run blast.makedb
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog.makedb,"\'",sep=''))
+	if(with.mask)
+	{
+		cmd<- paste(cmd,'\n',prog.mask," -in ",paste(indir,'/',infile,'_',signat,".fasta",sep='')," -infmt fasta -mk_counts  -parse_seqids -out ",paste(outdir,'/',infile,'_',signat,".count",sep=''), sep='')
+		cmd<- paste(cmd,'\n',prog.mask,  " -in ",paste(indir,'/',infile,'_',signat,".fasta",sep='')," -infmt fasta -ustat ",paste(outdir,'/',infile,'_',signat,".count",sep='')," -outfmt maskinfo_asn1_bin -parse_seqids -out ",paste(outdir,'/',infile,'_',signat,".asnb",sep=''), sep='')
+		cmd<- paste(cmd,'\n',prog.makedb," -in ",paste(indir,'/',infile,'_',signat,".fasta",sep='')," -input_type fasta -dbtype nucl -parse_seqids -mask_data ",paste(outdir,'/',infile,'_',signat,".asnb",sep='')," -out ",paste(outdir,'/',infile,'_',signat,".blastdb",sep=''),' -title \"',infile,'\"',sep='')
+	}
+	else
+		cmd<- paste(cmd,'\n',prog.makedb," -in ",paste(indir,'/',infile,'_',signat,".fasta",sep='')," -input_type fasta -dbtype nucl -parse_seqids -out ",paste(outdir,'/',infile,'_',signat,".blastdb",sep=''),' -title \"',infile,'\"',sep='')
+	#clean up
+	
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog.makedb,"\'\n\n",sep=''))
+	cmd
+}
+
+#' default values taken from http://indra.mullins.microbiol.washington.edu/viroblast/viroblast.php
+#' @export
+hivc.cmd.blast<- function(indir, infile, insignat, dbdir, dbfile, dbsignat, outdir=indir, outfile=infile, outsignat=insignat, prog.blastn= PR.BLASTN, blast.task="blastn", blast.max_target_seqs=10, blast.evalue=10, blast.wordsize=11, blast.gapopen=5, blast.gapextend=2, blast.penalty=-3, blast.reward= 2, blast.dust= "no", nproc=1, verbose=1)
+{
+	if(verbose) cat(paste("\nprocess",infile,"\n"))
+	file	<- paste(indir, infile,sep='/')
+	#verbose stuff
+	cmd<- "#######################################################
+# run blastn
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog.blastn,"\'",sep=''))	
+	cmd<- paste(cmd,'\n',prog.blastn," -query ",paste(indir,'/',infile,'_',insignat,".fasta",sep='')," -db ",paste(dbdir,'/',dbfile,'_',dbsignat,".blastdb",sep='')," -out ",paste(outdir,'/',outfile,'_',outsignat,".blast",sep=''),sep='')
+	cmd<- paste(cmd," -task ",blast.task," -max_target_seqs ",blast.max_target_seqs," -evalue ",blast.evalue," -word_size ",blast.wordsize," -gapopen ",blast.gapopen," -gapextend ",blast.gapextend," -penalty ",blast.penalty," -reward ",blast.reward," -dust ",blast.dust," -outfmt 6",sep='')	
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog.blastn,"\'\n\n",sep=''))
+	cmd
+}
 
 #generate clustalo command
 #' @export
