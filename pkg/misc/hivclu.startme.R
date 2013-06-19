@@ -29,6 +29,7 @@ if(!any(args=='--args'))
 if(any(args=='--args'))
 	args<- args[-(1:match("--args", args)) ]
 
+require(data.table)
 require(hivclust)
 
 
