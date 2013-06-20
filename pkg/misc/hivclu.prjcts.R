@@ -1,3 +1,4 @@
+
 #' @export
 HIVC.COUNTRY.TABLE<- data.table(matrix(c(	"AG","ANTIGUA AND BARBUDA",		"AL","ALBANIA",		"AO","ANGOLA",	"AR","ARGENTINA",	"AT","AUSTRIA",		"AU","AUSTRALIA",				
 						"BB","BARBADOS",	"BE","BELGIUM",	"BG","BULGARIA",	"BR","BRAZIL",	"CA","CANADA",	"CH","SWITZERLAND",		"CI","COTE D'IVOIRE",	"CL","CHILE",	
@@ -2055,7 +2056,7 @@ hivc.proj.pipeline<- function()
 	signat.out	<- "Wed_May__1_17/08/15_2013"		
 	cmd			<- ''
 
-	if(0)	#align sequences in fasta file
+	if(0)	#align sequences in fasta file with Clustalo
 	{
 		indir	<- paste(dir.name,"tmp",sep='/')
 		outdir	<- paste(dir.name,"tmp",sep='/')
@@ -2064,14 +2065,14 @@ hivc.proj.pipeline<- function()
 		cmd		<- hivc.cmd.clustalo(indir, infile, signat='', outdir=outdir)
 		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1)
 	}
-	if(0)	#extract first sequences for each patient as available
+	if(0)	#extract first sequences for each patient as available from ATHENA data set
 	{
 		indir		<- paste(dir.name,"tmp",sep='/')
 		infile		<- "ATHENA_2013_03_SeqMaster.R"		
 		outdir		<- paste(dir.name,"tmp",sep='/')
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
-	if(0)	#compute genetic distances
+	if(0)	#compute raw pairwise genetic distances accounting correctly for ambiguous IUPAC nucleotides 
 	{				
 		gd.max		<- 0.045
 		signat.in	<- "Sat_May_11_14/23/46_2013"
@@ -2087,7 +2088,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}	
-	if(0)	#compute ExaML tree
+	if(0)	#compute one ExaML tree, no bootstrapping
 	{		
 		indir	<- paste(dir.name,"tmp",sep='/')
 		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
@@ -2095,13 +2096,13 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(1)	#compute ExaML trees with bootstrap values, bootstrap over alignment
+	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over nucleotides in alignment and over initial starting trees to start ML search.
 	{
 		bs.from	<- 0
 		bs.to	<- 0
 		bs.n	<- 100
 		signat.in	<- "Sat_Jun_16_17:23:46_2013"
-		signat.out	<- "Wed_Jun_19_19:19:12_2013"				
+		signat.out	<- "Sat_Jun_16_17:23:46_2013"				
 		indir	<- paste(dir.name,"tmp",sep='/')
 		infile	<- "ATHENA_2013_03_CurAll+LANL_Sequences"		
 		outdir	<- paste(dir.name,"tmp",sep='/')
@@ -2119,7 +2120,7 @@ hivc.proj.pipeline<- function()
 				})
 		stop()
 	}
-	if(0)	#compute ExaML trees with bootstrap values, bootstrap over starttree
+	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over initial starting trees to start ML search.
 	{
 		bs.from	<- 0
 		bs.to	<- 0

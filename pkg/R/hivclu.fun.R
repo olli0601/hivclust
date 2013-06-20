@@ -1,5 +1,10 @@
 #' this file contains all R functions of the hivclust package
 #' @useDynLib hivc
+#' @import ape
+#' @import phytools
+#' @import igraph
+#' @import geiger
+#' @import data.table
 
 #' @export
 hivc.seq.read.GenBank<- function (access.nb, seq.names = access.nb, species.names = TRUE, gene.names = FALSE, as.character = FALSE, attributes= c("origin")) 
