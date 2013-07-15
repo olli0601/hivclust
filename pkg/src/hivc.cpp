@@ -1,4 +1,5 @@
 #include <cstdarg>
+#include <cstdlib>
 #include <sstream>
 #include <iostream>
 #include <cmath>
