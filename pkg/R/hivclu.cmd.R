@@ -26,6 +26,9 @@ PR.FIRSTSEQ		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeFIRSTSEQ",se
 PR.GENDISTMAT	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeGENDISTMAT",sep='/')
 
 #' @export
+PR.PRECLUST		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exePRECLUST",sep='/')
+
+#' @export
 PR.EXAML.BSCREATE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBOOTSTRAPSEQ",sep='/')
 
 #' @export
@@ -133,6 +136,22 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 		ans<- unlist(ans)
 	ans
 }
+
+#' @export
+hivc.cmd.preclustering<- function(indir, infile, signat, outdir=indir, prog= PR.PRECLUST, resume=0, verbose=1)
+{
+	cmd<- "#######################################################
+# compute preclustering
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
+	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir," -signat=",signat,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
+	cmd
+}
+
 
 #' @export
 hivc.cmd.get.geneticdist<- function(indir, infile, signat, gd.max, outdir=indir, prog= PR.GENDISTMAT, resume=1, verbose=1)

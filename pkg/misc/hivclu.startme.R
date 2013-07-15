@@ -49,15 +49,17 @@ default.fun		<- "my.make.documentation"
 default.fun		<- "project.hivc.clustalo"
 default.fun		<- "project.hivc.examl"
 #default.fun	<- "hivc.prog.get.geneticdist"
-default.fun 	<- "hivc.proj.pipeline"
 #default.fun 	<- "hivc.prog.get.allseq"
 #default.fun	<- "project.hivc.test"
-#default.fun	<- "project.hivc.Excel2dataframe"
+default.fun		<- "project.hivc.Excel2dataframe"
 #default.fun	<- "project.hivc.check"
-#default.fun	<- "project.hivc.collectpatientdata"
+default.fun		<- "project.hivc.collectpatientdata"
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
 #default.fun		<- "project.bezemer2013a.figs"
-#default.fun	<- "project.hivc.clustering"
+default.fun		<- "project.hivc.clustering"
+#default.fun		<- "hivc.prog.precompute.clustering"
+#default.fun		<- "project.gccontent"
+default.fun 	<- "hivc.proj.pipeline"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -68,7 +70,7 @@ default.fun 	<- "hivc.proj.pipeline"
 #cat(paste("is.loaded('tipcr')->",is.loaded("tipc_tabulate_after_sample"),'\n'))
 ###############################################################################
 function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$", all.files = FALSE,
-		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),paste(CODE.HOME,"misc","bezemer2013a_figs.R",sep='/'))
+		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),paste(CODE.HOME,"misc","bezemer2013a_figs.R",sep='/'),paste(CODE.HOME,"misc","gcproject2013.R",sep='/'))
 sapply(function.list,function(x){ print(x); source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE) })
 ###############################################################################
 if(0)
@@ -233,7 +235,8 @@ if(length(args))
 					MALIGN					= "project.hivc.clustalo",
 					FIRSTSEQ				= "hivc.prog.get.firstseq",
 					BOOTSTRAPSEQ			= "hivc.prog.get.bootstrapseq",
-					GENDISTMAT				= "hivc.prog.get.geneticdist"
+					GENDISTMAT				= "hivc.prog.get.geneticdist",
+					PRECLUST				= "hivc.prog.precompute.clustering"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)

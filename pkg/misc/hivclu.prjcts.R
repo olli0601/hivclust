@@ -245,16 +245,106 @@ project.hivc.get.geneticdist.from.sdc<- function(dir.name= DATA)
 
 project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 {	
-	require(data.table)
-	MISSING.Acute<- c(NA,9)
+	require(data.table)		
 	
-	file.out		<- paste(dir.name,"derived/ATHENA_2013_03_All1stPatientCovariates.R",sep='/')
 	#input files generated with "project.hivc.Excel2dataframe"
 	file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
 	file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patients.R",sep='/')
 	file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
 	file.immu		<- paste(dir.name,"derived/ATHENA_2013_03_Immu.R",sep='/')
+	file.treatment	<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
 	
+	#compute file AllSeqPatientCovariates
+	file.out		<- paste(dir.name,"derived/ATHENA_2013_03_AllSeqPatientCovariates.R",sep='/')
+	if(resume)												#//load if there is R Master data.table
+	{
+		options(show.error.messages = FALSE)		
+		readAttempt<-try(suppressWarnings(load(file.out)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresume file",file.out))
+		if(!inherits(readAttempt, "try-error"))	str(df.all)
+		options(show.error.messages = TRUE)		
+	}
+	if(!resume || inherits(readAttempt, "try-error"))		#else generate R Master data.table
+	{
+		#get data.table of seqs		
+		load(file.seq)			
+		df		<- lapply( df,function(x)	data.table(x[,c("Patient","DateRes","SampleCode")], key="SampleCode")	)
+		df		<- merge(df[[1]],df[[2]],all.x=1,all.y=1)
+		setkey(df, Patient.x)
+		tmp		<- which(df[,is.na(Patient.x)])
+		set(df, tmp, "Patient.x", df[tmp, Patient.y])
+		set(df, tmp, "DateRes.x", df[tmp, DateRes.y])
+		set(df, NULL, "SampleCode", gsub(' ','', df[, SampleCode]))
+		setnames(df, c("SampleCode","Patient.x","DateRes.x"), c("FASTASampleCode","Patient","PosSeqT"))
+		set(df, NULL, "FASTASampleCode", factor(df[,FASTASampleCode]))
+		set(df, NULL, "Patient", factor(df[,Patient]))		
+		df.all	<- subset(df, select=c(FASTASampleCode,Patient,PosSeqT))
+		if(verbose)		cat(paste("\nnumber of sequences found, n=", nrow(df.all)))
+		
+		#add Patient data
+		if(verbose)		cat(paste("\nadding patient data"))
+		load(file.patient)		
+		df.all	<- merge(df.all, df, all.x=1, by="Patient")
+		setnames(df.all, c("MyDateNeg1","MyDatePos1"), c("NegT","PosT"))
+		#add Treatment dates
+		if(verbose)		cat(paste("\nadding treatment data"))
+		load(file.treatment)
+		df		<- subset(df, select=c(Patient,AnyT_T1))
+		df		<- df[,list(AnyT_T1= min(AnyT_T1)),by=Patient]
+		df.all	<- merge(df.all, df, all.x=1, by="Patient")
+		#add first RNA Virology date
+		if(verbose)		cat(paste("\nadding virology data"))
+		load(file.viro)
+		tmp		<- subset(df, !is.na(PosRNA1), select=c(Patient,PosRNA1))
+		tmp		<- tmp[,list(PosRNA1=min(PosRNA1)),by=Patient]
+		df.all	<- merge(df.all, tmp, all.x=1, by="Patient")
+		#add closest lRNA		
+		df		<- subset(df,!is.na(lRNA), select=c(Patient,PosRNA,lRNA))
+		df		<- merge( subset(df.all, select=c(FASTASampleCode,Patient,PosSeqT)), df, allow.cartesian=T, by="Patient" )
+		setkey(df, FASTASampleCode)
+		df		<- df[, { tmp<- which.min(difftime(PosSeqT, PosRNA, units="weeks")); list(PosRNA=PosRNA[tmp], lRNA=lRNA[tmp]) } , by=FASTASampleCode]		
+		df.all	<- merge(df.all, df, all.x=1, by="FASTASampleCode")		
+		#add first CD4 count date
+		if(verbose)		cat(paste("\nadding CD4 data"))
+		load(file.immu)
+		tmp		<- subset(df, !is.na(PosCD41), select=c(Patient,PosCD41))
+		tmp		<- tmp[,list(PosCD41=min(PosCD41)),by=Patient]
+		df.all	<- merge(df.all, tmp, all.x=1, by="Patient")
+		
+		#get first positive event time
+		if(verbose)		cat(paste("\ncompute first pos event"))
+		#define first pos event
+		tmp					<- df.all[, PosT]
+		df.all[,AnyPos_T1:=tmp]
+		tmp2				<- which( df.all[, is.na(AnyPos_T1) | (!is.na(AnyT_T1) &  AnyPos_T1>AnyT_T1) ] )
+		if(verbose)	cat(paste("\nfound PosT>AnyT_T1, n=",length(tmp2)))
+		set(df.all, tmp2, "AnyPos_T1", df.all[tmp2, AnyT_T1])		
+		tmp2				<- which( df.all[, is.na(AnyPos_T1) | (!is.na(PosRNA1) &  AnyPos_T1>PosRNA1) ] )
+		if(verbose)	cat(paste("\nfound AnyPos_T1>PosRNA1, n=",length(tmp2)))				
+		set(df.all, tmp2, "AnyPos_T1", df.all[tmp2, PosRNA1])		
+		tmp2				<- which( df.all[, is.na(AnyPos_T1) | (!is.na(PosCD41) &  AnyPos_T1>PosCD41) ] )
+		if(verbose)	cat(paste("\nfound AnyPos_T1>PosCD41, n=",length(tmp2)))				
+		set(df.all, tmp2, "AnyPos_T1", df.all[tmp2, PosCD41])
+		
+		tmp2				<- which( df.all[, is.na(AnyPos_T1) | (!is.na(PosCD41) &  AnyPos_T1>PosSeqT) ] )
+		if(verbose)	cat(paste("\nfound AnyPos_T1>PosCD41, n=",length(tmp2)))				
+		set(df.all, tmp2, "AnyPos_T1", df.all[tmp2, PosSeqT])
+		
+		
+		if(	length(which(df.all[, AnyPos_T1>PosT])) 		||
+				length(which(df.all[, AnyPos_T1>PosSeqT])) 	|| 
+				length(which(df.all[, AnyPos_T1>PosRNA1]))	||
+				length(which(df.all[, AnyPos_T1>PosCD41]))	||
+				length(which(df.all[, AnyPos_T1>AnyT_T1]))		) 	stop("something is wrong with PosEarliest")			
+		
+		if(verbose)	cat(paste("\nsave to file",file.out))
+		setkey(df.all, FASTASampleCode)
+		save(df.all,file=file.out)
+		str(df.all)		
+	}
+	stop()
+	#compute file All1stPatientCovariates
+	file.out		<- paste(dir.name,"derived/ATHENA_2013_03_All1stPatientCovariates.R",sep='/')
 	if(resume)												#//load if there is R Master data.table
 	{
 		options(show.error.messages = FALSE)		
@@ -295,35 +385,25 @@ project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 		#str(df.minDateRes)
 	
 		#add Patient data		
-		load(file.patient)
-		df.pat	<- df
-		cat(paste("\n\nadding patient data"))	
-		#preprocess df.pat
-		df<- data.table( df.pat[,c("Patient","AcuteInfection","MyDateNeg1","MyDateNeg1_Acc","MyDatePos1","MyDatePos1_Acc","isDead","DateDied","Transmission")], key="Patient" )
-		tmp<- df[, AcuteInfection]
-		tmp[ which( df[,AcuteInfection%in%MISSING.Acute] ) ]<- NA
-		df[, isAcute:=tmp]			
-	
-		df[, "NegT_Acc"]	<- factor(df[,MyDateNeg1_Acc], labels=c("No","Yes"))
-		df[, "PosT_Acc"]	<- factor(df[,MyDatePos1_Acc], labels=c("No","Yes"))
-		df[, "isAcute"]		<- factor(df[,isAcute], labels=c("No","Yes","Maybe"))
-		df[, "isDead"]		<- factor(df[,isDead], labels=c("No","Yes"))	
-		df[, "Trm"]			<- factor(df[, Transmission], levels=c(100, 101,  102,  202, 103,  104,  105,  106,  107, 108,  110), labels= c("MSM","BI","HET","HETfa","IDU","BLOOD","NEEACC", "PREG", "BREAST", "OTH", "SXCH"))
-		df<- subset(df, select=c("Patient","Trm","isAcute","MyDateNeg1","NegT_Acc","MyDatePos1","PosT_Acc","isDead","DateDied"))
-		setnames(df, "MyDateNeg1","NegT")	
-		setnames(df, "MyDatePos1","PosT")	
-		setnames(df, "DateDied","Died")
-		if(0)
-		{
-			print(table(df[, NegT_Acc]))
-			print(table(df[, PosT_Acc]))
-			print(table(df[, Trm]))
-			print(range(df[, NegT], na.rm=1))
-			print(range(df[, PosT], na.rm=1))
-			print(range(df[, Died], na.rm=1))
-		}				
+		load(file.patient)		
 		df.all<- df[df.minDateRes]
 		if(verbose)		cat(paste("\npatients in combined data table", nrow(df.all)))
+		
+		#add Treatment dates
+		load(file.treatment)
+		df		<- data.table(df, key="Patient")
+		setnames(df, "T0","HAART_T1")
+		df		<- subset(df, select= c(Patient, HAART_T1, StartTime))		
+		if(verbose)		cat(paste("\n\nadding treatment data\nentries in regimens data table", nrow(df)))
+		df		<- subset(df, !is.na(StartTime) )				
+		df		<- df[, { tmp<- which.min(StartTime); list(HAART_T1=HAART_T1[tmp], AnyT_T1=StartTime[tmp])}, by=Patient]		
+		if( nrow(subset(df,!is.na(HAART_T1) & HAART_T1<AnyT_T1)) )	stop("found AnyT_T1 that is older than HAART_T1")
+		if(verbose)		cat(paste("\npatients with at least one non-missing treatment date", nrow(df)))
+		df		<- subset(df,select=c(Patient,AnyT_T1))
+		setnames(df, "AnyT_T1","AnyTherT1")		
+		df.all	<- df[df.all]
+		#setnames(df, "T0","PREHAART_T1")
+		
 		#add first RNA Virology date		
 		load(file.viro)
 		df		<- data.table(df, key="Patient")		
@@ -354,7 +434,7 @@ project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 			print(range(df[,PosCD41], na.rm=1))		
 		}
 		df.all<- df[df.all]
-		df.all<- subset(df.all,select=c(Patient,Trm,SeqPROT,SeqRT,PosPROT,PosRT,PosT,PosT_Acc,PosCD41,PosRNA1,NegT,NegT_Acc,isAcute,isDead,Died,RNA1, CD41))
+		df.all<- subset(df.all,select=c(Patient,Trm,SeqPROT,SeqRT,PosPROT,PosRT,PosT,PosT_Acc,PosCD41,PosRNA1, NegT,NegT_Acc, AnyTherT1, isAcute,isDead,Died, RNA1, CD41))
 		
 		
 		#if 	PosPROT!=PosRT		consider only earliest sequence and set other to missing
@@ -372,7 +452,7 @@ project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 		tmp					<- df.all[,PosPROT]
 		tmp[ is.na(tmp) ]	<- df.all[is.na(tmp),PosRT]	
 		df.all[,PosSeq:=tmp]		
-		df.all<- subset(df.all, select=c(Patient,Trm,SeqPROT,SeqRT,PosSeq,PosT,PosT_Acc,PosCD41,PosRNA1,NegT,NegT_Acc,isAcute,isDead,Died,RNA1, CD41))
+		df.all<- subset(df.all, select=c(Patient,Trm,SeqPROT,SeqRT,PosSeq,PosT,PosT_Acc,PosCD41,PosRNA1,NegT,NegT_Acc, AnyTherT1, isAcute,isDead,Died,RNA1, CD41))
 		
 		
 		if(verbose)		cat(paste("\nsave df.all to", file.out))				
@@ -401,8 +481,7 @@ project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=
 {
 	if(0)
 	{
-		#read SEQUENCE csv data file and preprocess		
-		analyze			<- 1
+		#read SEQUENCE csv data file and preprocess				
 		names.GeneCode	<- c("PROT","RT")
 		NA.DateRes		<- as.Date("1911-11-11") 
 		
@@ -434,10 +513,12 @@ project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=
 		file		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
 		cat(paste("\nsave to", file))
 		save(df, file=file)
+		stop()
 	}
 	if(0)
 	{
-		NA.time			<- c("","01/01/1911","11/11/1911")		
+		NA.time			<- c("01/01/1911","01/11/1911","11/11/1911")	
+		MAX.time		<- c("")
 		#read REGIMEN csv data file and preprocess
 		file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
 		df				<- read.csv(file, stringsAsFactors=FALSE)							
@@ -447,40 +528,61 @@ project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=
 		{
 			cat(paste("\nprocess Time", x))
 			nok.idx			<- which( df[,x]==NA.time[1] )
-			if(verbose)	cat(paste("\nentries with format ",NA.time[1],", n=", length(nok.idx)))
+			if(verbose)	cat(paste("\nentries with format ",NA.time[1],", n=", length(nok.idx), "set to NA"))
 			if(length(nok.idx))	
 				df[nok.idx,x]	<- NA
 			nok.idx			<- which( df[,x]==NA.time[2] )
-			if(verbose)	cat(paste("\nentries with format ",NA.time[2],", n=", length(nok.idx)))
+			if(verbose)	cat(paste("\nentries with format ",NA.time[2],", n=", length(nok.idx), "set to NA"))
 			if(length(nok.idx))
 				df[nok.idx,x]	<- NA
 			nok.idx			<- which( df[,x]==NA.time[3] )
-			if(verbose)	cat(paste("\nentries with format ",NA.time[3],", n=", length(nok.idx)))
+			if(verbose)	cat(paste("\nentries with format ",NA.time[3],", n=", length(nok.idx), "set to NA"))
 			if(length(nok.idx))
-				df[nok.idx,x]	<- NA
+				df[nok.idx,x]	<- NA			
+			nok.idx			<- which( df[,x]==MAX.time[1] )
+			if(verbose)	cat(paste("\nentries with format ",MAX.time[1],", n=", length(nok.idx), "set to max time 01/01/2999"))
+			if(length(nok.idx))
+				df[nok.idx,x]	<- "01/01/2999"
 			df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
 		}
+		
+		df		<- data.table(df, key="Patient")
+		setnames(df, "T0","HAART_T1")
+		set(df,NULL,"Patient",factor(df[,Patient]))
+		tmp		<- df[,StartTime]
+		df[,"AnyT_T1":=tmp]
+		tmp		<- which(is.na(df[,AnyT_T1]))
+		set(df, tmp, "AnyT_T1", df[tmp,HAART_T1])		
+		tmp		<- df[, { tmp<- which.min(StartTime); list(HAART_T1=HAART_T1[tmp], AnyT_T1=StartTime[tmp])}, by=Patient]
+		if( nrow(subset(tmp,!is.na(HAART_T1) & HAART_T1<AnyT_T1)) )	stop("found AnyT_T1 that is older than HAART_T1")
+		tmp		<- subset(tmp,select=c(Patient,AnyT_T1))
+		df		<- merge(df,tmp,all.x=1,by="Patient")
+		setnames(df, "AnyT_T1.y","AnyT_T1")
+		df		<- subset(df, select= 1-ncol(df) )
+
 		file		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
 		if(verbose) cat(paste("\nsave to", file))
 		save(df, file=file)		
 	}
 	if(0)
 	{
-		NA.time			<- c("","01/01/1911","11/11/1911")		
-		NA.transmission	<- 900
+		NA.Acute			<- c(NA,9)
+		NA.CountryInfection	<- c(NA,"")
+		NA.time				<- c("","01/01/1911","11/11/1911")		
+		NA.transmission		<- 900
 		#read PATIENT csv data file and preprocess
-		file			<- paste(dir.name,"derived/ATHENA_2013_03_Patient.csv",sep='/')
-		df				<- read.csv(file, stringsAsFactors=FALSE)									
-		df$isDead		<- as.numeric( df[,"DateDied"]!="")
+		file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient.csv",sep='/')
+		df					<- read.csv(file, stringsAsFactors=FALSE)									
+		df$isDead			<- as.numeric( df[,"DateDied"]!="")
 		df[which(df[,"Transmission"]==NA.transmission),"Transmission"]<- NA
-		
-		date.var		<- c("DateBorn","MyDateNeg1","MyDatePos1","DateDied","DateLastContact","DateFirstEverCDCC")		
+
+		date.var			<- c("DateBorn","MyDateNeg1","MyDatePos1","DateDied","DateLastContact","DateFirstEverCDCC")		
 		for(x in date.var)
 		{
 			cat(paste("\nprocess Time", x))
 			nok.idx			<- which( df[,x]==NA.time[1] )
 			if(verbose)	cat(paste("\nentries with format ",NA.time[1],", n=", length(nok.idx)))
-			if(verbose && length(nok.idx))	cat(paste("\nentries with format ",NA.time[1],", Patient", paste(df[nok.idx,"Patient"],collapse=', ')))
+			#if(verbose && length(nok.idx))	cat(paste("\nentries with format ",NA.time[1],", Patient", paste(df[nok.idx,"Patient"],collapse=', ')))
 			
 			if(length(nok.idx))	
 				df[nok.idx,x]	<- NA
@@ -496,6 +598,25 @@ project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=
 		}
 		file		<- paste(dir.name,"derived/ATHENA_2013_03_Patients.R",sep='/')
 		if(verbose) cat(paste("\nsave to", file))
+		
+		df<- data.table(df)
+		setnames(df, c("MyDateNeg1_Acc","MyDatePos1_Acc","AcuteInfection","Transmission","HospitalRegion"), c("NegT_Acc","PosT_Acc","isAcute","Trm","RegionHospital"))
+		set(df, NULL, "Patient", factor(df[,Patient]))
+		set(df, which( df[,isAcute%in%NA.Acute] ), "isAcute", NA )		
+		set(df, NULL, "isAcute", factor(df[,isAcute], levels=c(0,1,2), labels=c("No","Yes","Maybe")) )
+		set(df, NULL, "Sex", factor(df[,Sex], levels=c(1,2), labels=c("M","F")))
+		set(df, NULL, "Subtype", factor(df[,Subtype]))
+		set(df, NULL, "CountryBorn", factor(df[,CountryBorn]))
+		set(df, which( df[,CountryInfection%in%NA.CountryInfection] ), "CountryInfection", NA_character_ )		
+		set(df, NULL, "CountryInfection", factor(df[,CountryInfection]))
+		set(df, NULL, "RegionOrigin", factor(df[,RegionOrigin]))
+		set(df, NULL, "NegT_Acc", factor(df[,NegT_Acc], levels=c(0,1), labels=c("No","Yes")))
+		set(df, NULL, "PosT_Acc", factor(df[,PosT_Acc], levels=c(0,1), labels=c("No","Yes")))		
+		set(df, NULL, "isDead", factor(df[,isDead], levels=c(0,1), labels=c("No","Yes")))
+		set(df, NULL, "Trm", factor(df[, Trm], levels=c(100, 101,  102,  202, 103,  104,  105,  106,  107, 108,  110), labels= c("MSM","BI","HET","HETfa","IDU","BLOOD","NEEACC", "PREG", "BREAST", "OTH", "SXCH")) )
+		set(df, NULL, "RegionHospital", factor(df[,RegionHospital], levels=c(1,2,3,4,5,6), labels=c("Amst","N","E","S","W","Curu")))
+		setkey(df,Patient)
+		str(df)
 		save(df, file=file)		
 	}
 	if(0)
@@ -528,11 +649,22 @@ project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=
 				df[nok.idx,x]	<- NA
 			df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
 		}		
+		
+		df		<- data.table(df, key="Patient")						
+		setnames(df, "DateRNA","PosRNA")
+		set(df, NULL, "Patient", factor(df[,Patient]))				
+		tmp		<- round(log10( df[,RNA] ), d=3) 
+		df[,"lRNA":=tmp]
+		tmp		<- which(df[, Undetectable=="No"])
+		set(df, tmp, "lRNA", NA)		
+		tmp		<- df[,list(PosRNA1=min(PosRNA)),by=Patient]
+		df		<- merge(df, tmp, all.x=1, by="Patient")
+		
 		file		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
 		if(verbose) cat(paste("\nsave to", file))
 		save(df, file=file)		
 	}
-	if(1)
+	if(0)
 	{
 		NA.time			<- c("","01/01/1911","11/11/1911","24/06/1923")		
 		#read CD4 csv data file and preprocess
@@ -561,6 +693,12 @@ project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=
 				df[nok.idx,x]	<- NA
 			df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
 		}		
+		df		<- data.table(df, key="Patient")
+		setnames(df, "DateImm","PosCD4")
+		set(df, NULL, "Patient", factor(df[,Patient]))
+		tmp		<- df[,list(PosCD41=min(PosCD4)),by=Patient]
+		df		<- merge(df, tmp, all.x=1, by="Patient")
+		
 		file		<- paste(dir.name,"derived/ATHENA_2013_03_Immu.R",sep='/')
 		if(verbose) cat(paste("\nsave to", file))
 		save(df, file=file)		
@@ -1307,8 +1445,11 @@ hivc.prog.get.allseq<- function()
 			if(verbose)	cat(paste("\nwrite phylip file to",file))
 			hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)			
 			file								<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')
-			if(verbose)	cat(paste("\nwrite R file to",file))		
+			if(verbose)	cat(paste("\nwrite R file to",file))
+			file								<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".fasta",sep='')
 			save(seq.PROT.RT, file=file)
+			if(verbose)	cat(paste("\nwrite fasta file to",file))
+			write.dna(seq.PROT.RT, file=file, format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)						
 		}
 		stop()				
 	}
@@ -1579,80 +1720,146 @@ hivc.prog.get.firstseq<- function()
 	}
 }
 
-project.hivc.clustering<- function(dir.name= DATA)
+project.hivc.clustering.get.linked.and.unlinked<- function(dir.name= DATA)
 {
 	require(data.table)
 	require(ape)
-	if(0)	#test clustering on simple test tree
-	{		
-		ph	<- "(Wulfeniopsis:0.196108,(((alpinus:0.459325,grandiflora:0.259364)1.00:0.313204,uniflora:1.155678)1.00:0.160549,(((angustibracteata:0.054609,(brevituba:0.085086,stolonifera:0.086001)0.76:0.035958)1.00:0.231339,(((axillare:0.017540,liukiuense:0.018503)0.96:0.038019,stenostachyum:0.049803)1.00:0.083104,virginicum:0.073686)1.00:0.103843)1.00:0.086965,(carinthiaca:0.018150,orientalis:0.019697)1.00:0.194784)1.00:0.077110)1.00:0.199516,(((((abyssinica:0.077714,glandulosa:0.063758)1.00:0.152861,((((allionii:0.067154,(morrisonicola:0.033595,officinalis:0.067266)1.00:0.055175)1.00:0.090694,(alpina:0.051894,baumgartenii:0.024152,(bellidioides:0.016996,nutans:0.063292)0.68:0.031661,urticifolia:0.032044)0.96:0.036973,aphylla:0.117223)0.67:0.033757,(((japonensis:0.018053,miqueliana:0.033676)1.00:0.160576,vandellioides:0.099761)0.69:0.036188,montana:0.050690)1.00:0.058380)1.00:0.115874,scutellata:0.232093)0.99:0.055014)1.00:0.209754,((((((acinifolia:0.112279,reuterana:0.108698)0.94:0.055829,pusilla:0.110550)1.00:0.230282,((davisii:0.053261,serpyllifolia:0.087290)0.89:0.036820,(gentianoides:0.035798,schistosa:0.038522)0.95:0.039292)1.00:0.092830)1.00:0.169662,(((anagalloides:0.018007,scardica:0.017167)1.00:0.135357,peregrina:0.120179)1.00:0.098045,beccabunga:0.069515)1.00:0.103473)1.00:0.287909,(((((((((((agrestis:0.017079,filiformis:0.018923)0.94:0.041802,ceratocarpa:0.111521)1.00:0.072991,amoena:0.229452,(((argute_serrata:0.017952,campylopoda:0.075210)0.64:0.034411,capillipes:0.022412)0.59:0.034547,biloba:0.037143)1.00:0.141513,intercedens:0.339760,((opaca:0.019779,persica:0.035744)0.94:0.038558,polita:0.036762)1.00:0.108620,rubrifolia:0.186799)1.00:0.144789,(((bombycina_11:0.033926,bombycina_bol:0.035290,cuneifolia:0.017300,jacquinii:0.054249,oltensis:0.045755,paederotae:0.051579,turrilliana:0.017117)0.85:0.049052,czerniakowskiana:0.089983)0.93:0.051111,farinosa:0.138075)1.00:0.080565)1.00:0.104525,((albiflora:0.017984,ciliata_Anna:0.032685,vandewateri:0.017610)0.97:0.045649,arguta:0.063057,(catarractae:0.022789,decora:0.049785)0.96:0.048220,((cheesemanii:0.040125,cupressoides:0.146538)1.00:0.067761,macrantha:0.038130)1.00:0.088158,(densifolia:0.090044,formosa:0.116180)0.71:0.046353,(elliptica:0.038650,(odora:0.019325,salicornioides:0.021228)0.94:0.042950,salicifolia:0.020829)0.92:0.043978,(nivea:0.070429,(papuana:0.035003,tubata:0.031140)0.98:0.064379)0.93:0.065336,raoulii:0.109101)0.97:0.076607)0.93:0.085835,chamaepithyoides:0.485601)0.57:0.072713,(ciliata_157:0.069943,lanuginosa:0.052833)1.00:0.098638,(densiflora:0.069429,macrostemon:0.118926)0.92:0.124911,(fruticulosa:0.086891,saturejoides:0.041181)0.94:0.086148,kellererii:0.083762,lanosa:0.263033,mampodrensis:0.103384,nummularia:0.191180,pontica:0.128944,thessalica:0.129197)0.65:0.031006,(arvensis:0.342138,(((((chamaedrys:0.043720,micans:0.032021,vindobonensis:0.033309)0.51:0.034053,micrantha:0.019084)0.64:0.037906,krumovii:0.020175)1.00:0.103875,verna:0.254017)0.81:0.057105,magna:0.112657)1.00:0.104070)1.00:0.101845)1.00:0.149208,(((aznavourii:0.664103,glauca:0.405588)0.85:0.209945,praecox:0.447238)1.00:0.185614,(donii:0.260827,triphyllos:0.176032)1.00:0.194928)1.00:0.611079)0.74:0.055152,((crista:0.591702,(((cymbalaria_Avlan:0.017401,panormitana:0.017609)1.00:0.229508,((cymbalaria_Istanbul:0.028379,trichadena_332:0.016891,trichadena_Mugla:0.019131)1.00:0.196417,lycica_333:0.146772)1.00:0.097646,lycica_192:0.154877)1.00:0.234748,(((hederifolia:0.018068,triloba:0.075784)1.00:0.084865,(sibthorpioides:0.122542,sublobata:0.136951)1.00:0.074683)0.89:0.043623,stewartii:0.040679)1.00:0.596859)1.00:0.237324)0.58:0.057120,javanica:0.133802)1.00:0.137214)1.00:0.269201,(missurica:0.016685,rubra:0.019696)1.00:0.351184)0.54:0.058275)0.52:0.062485,((dahurica:0.023542,longifolia:0.016484,spicata:0.018125)0.95:0.042294,(nakaiana:0.016270,schmidtiana:0.058451)0.88:0.037207)1.00:0.261643)0.55:0.056458)1.00:0.229509,kurrooa:0.100611)0.74:0.068198,(bonarota:0.040842,lutea:0.115316)1.00:0.241657)0.99:0.085772);"
-		ph <- ladderize( read.tree(text = ph) )
-		#read bootstrap support values
-		thresh.bs						<- 0.9
-		ph.node.bs						<- as.numeric( ph$node.label )		
-		ph.node.bs[is.na(ph.node.bs)]	<- 0
-		ph.node.bs[c(13,15,27,41,43)]	<- thresh.bs-0.05*seq(0.01,length.out=5)
-		ph.node.bs[ph.node.bs==1]		<- seq_along(which(ph.node.bs==1))*0.005 + 0.7
-		ph$node.label					<- ph.node.bs
-		#read patristic distances
-		dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf")
-		thresh.brl						<- quantile(dist.brl,seq(0.1,1,by=0.05))["100%"]
-		print(quantile(dist.brl,seq(0.1,0.5,by=0.05)))
-		print(thresh.brl)
-		#produce clustering and plot
-		clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
-		print(clustering)		
-		hivc.clu.plot(ph, clustering[["clu.mem"]])
+	if(1)	#extract unlinked and linked pairs -- this is version Sat_Jun_16_17/23/46_2013
+	{
+		verbose				<- 1
 		
-		#get nodes in each cluster
-		#clu.nodes		<- sapply(unique(clustering[["clu.mem"]])[-1],function(clu){		which(clustering[["clu.mem"]]==clu)	})
-		#get boostrap support of index cases
-		clu.idx			<- clustering[["clu.idx"]]-Ntip(ph)
-		print(clu.idx)
-		print(ph.node.bs[clu.idx])
+		#load all+enriched sequences
+		indir				<- paste(dir.name,"tmp",sep='/')
+		infile				<- "ATHENA_2013_03_CurAll+LANL_Sequences"
+		insignat			<- "Sat_Jun_16_17/23/46_2013"		
+		file				<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+		if(verbose)	cat(paste("\nread file",file))
+		load(file)
+		print(seq.PROT.RT)
+		#exctract geographically distant seqs that are assumed to be truly unlinked to NL seqs
+		seq.PROT.RT.TN		<- seq.PROT.RT[substr(rownames(seq.PROT.RT),1,2)=="TN", ]
+		#extract ATHENA seqs
+		seq.PROT.RT.NL		<- seq.PROT.RT[substr(rownames(seq.PROT.RT),1,2)!="TN", ]
+		seq.PROT.RT.NL		<- seq.PROT.RT.NL[substr(rownames(seq.PROT.RT.NL),1,8)!="PROT+P51", ]
+		
+		#need patient id and PosSeq for each sample code		
+		indir				<- paste(dir.name,"derived",sep='/')
+		infile.seqinfo		<- "ATHENA_2013_03_Sequences"
+		file				<- paste(indir,'/',paste(infile.seqinfo,".R", sep=''), sep='')
+		if(verbose) cat(paste("\nloading file",file))
+		load(file)	
+		df.PROT				<- as.data.table(df[["PROT"]][,c("Patient","SampleCode","DateRes")])
+		setkey(df.PROT,"SampleCode")
+		df.RT				<- as.data.table(df[["RT"]][,c("Patient","SampleCode","DateRes")])
+		setkey(df.RT,"SampleCode")
+		df					<- merge(df.PROT,df.RT,all=TRUE)
+		if( !all( df[,Patient.x==Patient.y], na.rm=1) ) stop("Patient names per sampling code in PROT and RT don t equal")
+		if( !all( df[,DateRes.x==DateRes.y], na.rm=1) ) stop("Sampling dates per sampling code in PROT and RT don t equal")
+		tmp					<- df[,DateRes.x]
+		tmp2				<- df[,is.na(DateRes.x)]
+		tmp[tmp2]			<- df[tmp2,DateRes.y]	
+		df[,PosSeqT:= tmp]
+		tmp					<- df[,Patient.x]
+		tmp2				<- df[,is.na(Patient.x)]
+		tmp[tmp2]			<- df[tmp2,Patient.y]	
+		df[,Patient:= tmp]
+		if(verbose) cat(paste("\nfound ATHENA seqs info, n=",nrow(df)))
+		df.seqinfo			<- subset(df, !is.na(PosSeqT), select=c(SampleCode, Patient, PosSeqT))
+		tmp					<- df.seqinfo[,gsub(' ','',SampleCode,fixed=1)]
+		df.seqinfo[,FASTASampleCode:=tmp]
+		
+		if(verbose) cat(paste("\nfound ATHENA seqs with known sampling date, n=",nrow(df.seqinfo)))
+		if(verbose) cat(paste("\nfound ATHENA patients whose sequences have known sampling date, n=",length(unique(df.seqinfo[,Patient]))))
+		#extract list of truly linked sample codes
+		setkey(df.seqinfo, "Patient")
+		tmp					<- subset(df.seqinfo[, length(SampleCode)>1, by=Patient], V1==T, select=Patient)
+		linked.bypatient	<- merge(tmp, df.seqinfo, all.x=1)
+		setkey(linked.bypatient, "FASTASampleCode")
+		linked.bypatient	<- subset(linked.bypatient, select=c(Patient, FASTASampleCode, PosSeqT))
+		
+		#extract list of truly unlinked seqs -- temporal separation
+		indir				<- paste(dir.name,"derived",sep='/')
+		infile.patient		<- "ATHENA_2013_03_All1stPatientCovariates"
+		file				<- paste(indir,'/',paste(infile.patient,".R", sep=''), sep='')
+		if(verbose) cat(paste("\nloading file",file))
+		load(file)	
+		#extract seqs of dead invidividuals
+		df.dead						<- subset(df.all, !is.na(Died), c(Patient,Died))
+		df.dead						<- merge(df.dead, df.seqinfo, by="Patient")
+		setkey(df.dead,Died)
+		#extract seroconverters
+		df.serocon.acc				<- subset(df.all, NegT_Acc=="Yes" & NegT>=df.dead[1,Died],)
+		#add seroconverters with inaccurate info
+		df.serocon.nacc				<- subset(df.all, NegT_Acc=="No" & !is.na(NegT) & NegT>=df.dead[1,Died], )
+		df.serocon.nacc.dy			<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mday==15, )						#for inaccurate days, we (conservatively) assume the patient was only seronegative at the start of the month
+		tmp							<- as.POSIXlt(df.serocon.nacc.dy[,NegT] )
+		tmp$mday					<- 1
+		df.serocon.nacc.dy[,NegT:=as.Date(tmp)]
+		df.serocon.nacc.mody		<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mon==6 & as.POSIXlt(NegT)$mday==1, )		#for inaccurate months and days, we (conservatively) assume the patient was only seronegative at the start of the year
+		tmp							<- as.POSIXlt(df.serocon.nacc.mody[,NegT] )
+		tmp$mon						<- 0
+		df.serocon.nacc.mody[,NegT:=as.Date(tmp)]
+		df.serocon					<- rbind(df.serocon.acc, df.serocon.nacc.dy, df.serocon.nacc.mody)		
+		if(verbose) cat(paste("\nnumber of seroconverters with at least 1 preceeding dead HIV+",nrow(df.serocon)))
+		#for each accurate seroconverter, extract HIV+ seqs that are dead before seroconversion
+		if( any(as.logical(df.serocon[,is.na(NegT)])) )	warning("Found accurate seroconverters with missing NegT")
+		df.serocon					<- merge(df.serocon,df.seqinfo,all.x=1,by="Patient")		
+		setkey(df.serocon,NegT)
+		unlinked.bytime				<- lapply(seq_len(nrow(df.serocon)), function(i)
+				{
+					tmp				<- subset(df.dead, Died<=df.serocon[i,NegT],select=c(Patient,FASTASampleCode,Died))
+					tmp2			<- rep(df.serocon[i,FASTASampleCode],nrow(tmp))
+					tmp[,query.FASTASampleCode:= tmp2]
+					setkey(tmp,"FASTASampleCode")
+					tmp					
+				})
+		names(unlinked.bytime)	<- df.serocon[,FASTASampleCode]			
+		
+		#need also NegT for each seq			
+		df.seqinfo				<- merge(df.seqinfo, df.serocon[,list(NegT=min(NegT)),by=Patient], all.x=1, by="Patient")
+		
+		#extract list of truly unlinked seqs -- geographical separation
+		unlinked.byspace		<- data.table(FASTASampleCode=rownames(seq.PROT.RT.TN), key="FASTASampleCode")
+						
+		outdir					<- paste(dir.name,"tmp",sep='/')
+		outfile					<- "ATHENA_2013_03_Unlinked_and_Linked"
+		outsignat				<- "Sat_Jun_16_17/23/46_2013"
+		file					<- paste(outdir,'/',outfile,'_',gsub('/',':',insignat),".R",sep='')
+		if(verbose) cat(paste("\nwrite linked and unlinked to file",file))
+		save(unlinked.byspace,unlinked.bytime,linked.bypatient,df.seqinfo,file=file)
+		
+		#
+		#some quick statistics
+		#
+		if(0)
+		{
+			#number of unlinked HIV+ by date (this date is when someone else is still seroneg)
+			y		<- sapply(unlinked.bytime, function(x) nrow(x) )
+			y2		<- nrow(unlinked.byspace)
+			x		<- df.serocon[,NegT]
+			xlim	<- range(x)
+			ylim	<- c(0, y2+max(y))
+			tmp		<- as.POSIXlt(xlim[1])
+			tmp$mday<- 1
+			tmp$mon	<- 1
+			xlim[1]	<- as.Date(tmp)
+			plot(1,1,type='n',bty='n',xlab="time of seroconversion",ylab="number unlinked",xaxt='n',xlim=xlim,ylim=ylim)
+			axis.Date(1,Year,at=seq(xlim[1], xlim[2],by="12 months"))			
+			polygon(c(x[1],x[length(x)],x[length(x)],x[1]), c(y2,y2,0,0), border=NA, col="blue" )
+			polygon(c(x,c(x[length(x)],x[1])), c(y+y2,y2,y2), border=NA, col="grey60" )
+			legend("topleft",bty='n',fill=c("blue","grey60"),legend=c("by space","by time"),border=NA)						
+		}
 		stop()
 	}
-	if(0)	#clustering on ATHENA tree
-	{
-		infile		<- "ATHENA_2013_03_FirstCurSequences_PROTRT_examlbs100"
-		signat.in	<- "Sat_May_11_14/23/46_2013"
-		signat.out	<- "Sat_May_11_14/23/46_2013"
-		file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
-		cat(paste("read file",file))
-		ph			<- ladderize( read.tree(file) )
-		#read bootstrap support values
-		thresh.bs						<- 0.9
-		ph.node.bs						<- as.numeric( ph$node.label )
-		ph.node.bs[is.na(ph.node.bs)]	<- 0
-		ph.node.bs						<- ph.node.bs/100
-		ph$node.label					<- ph.node.bs
-		print(quantile(ph.node.bs,seq(0.1,1,by=0.1)))
-		#read patristic distances -- this is the expensive step but still does not take very long
-		dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf")
-		thresh.brl						<- quantile(dist.brl,seq(0.1,0.5,by=0.05))["50%"]
-		print(quantile(dist.brl,seq(0.1,1,by=0.1)))
-		print(thresh.brl)
-		#produce clustering and plot
-		clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
-		print(clustering)
-		
-		file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.out),".pdf",sep=''),sep='/')
-		cat(paste("write tree to file",file))
-		hivc.clu.plot(ph, clustering[["clu.mem"]], file=file, pdf.scaley=25)
-		
-		#get boostrap support of index cases
-		clu.idx			<- clustering[["clu.idx"]]-Ntip(ph)
-		print(any(ph.node.bs[clu.idx]<0.9))
-		stop()	
-	}
-	if(1)	#extract unlinked pairs by temporal separation
+	if(0)	#extract unlinked pairs by temporal separation -- this is version Fri_May_24_12/59/06_2013
 	{
 		verbose				<- 1
 		unlinked.closest.n	<- NA
 		indir				<- paste(dir.name,"derived",sep='/')
 		outdir				<- paste(dir.name,"derived",sep='/')
-		infile				<- "ATHENA_2013_03_SeqMaster.R"
+		infile				<- "ATHENA_2013_03_All1stPatientCovariates.R"
 		outfile				<- "ATHENA_2013_03_Unlinked_SeroConv_Dead"
+		outsignat			<- "Fri_May_24_12/59/06_2013"
 		file				<- paste(indir,infile,sep='/')
 		if(verbose)
 		{
@@ -1690,15 +1897,15 @@ project.hivc.clustering<- function(dir.name= DATA)
 		if( any(as.logical(df.serocon[,is.na(NegT)])) )	warning("Found accurate seroconverters with missing NegT")		
 		setkey(df.serocon,NegT)
 		unlinked.bytime				<- lapply(seq_len(nrow(df.serocon)), function(i)
-										{
-											tmp<- subset(df.dead, Died<=df.serocon[i,NegT],)											
-											#tmp<- tmp[,Patient]
-											#if(length(tmp)<unlinked.closest.n)	
-											#	tmp<- c(rep(NA,unlinked.closest.n-length(tmp)),tmp)
-											#rev(tmp)[1:unlinked.closest.n]
-											if(is.na(unlinked.closest.n))	return( tmp[,Patient] )
-											else							return( rev(tmp)[1:min(length(tmp),unlinked.closest.n)] )
-										})
+				{
+					tmp<- subset(df.dead, Died<=df.serocon[i,NegT],)											
+					#tmp<- tmp[,Patient]
+					#if(length(tmp)<unlinked.closest.n)	
+					#	tmp<- c(rep(NA,unlinked.closest.n-length(tmp)),tmp)
+					#rev(tmp)[1:unlinked.closest.n]
+					if(is.na(unlinked.closest.n))	return( tmp[,Patient] )
+					else							return( rev(tmp)[1:min(length(tmp),unlinked.closest.n)] )
+				})
 		names(unlinked.bytime)	<- df.serocon[,Patient]			
 		#
 		#some quick statistics
@@ -1716,15 +1923,15 @@ project.hivc.clustering<- function(dir.name= DATA)
 			plot(1,1,type='n',bty='n',xlab="time of seroconversion",ylab="number unlinked",xaxt='n',xlim=xlim,ylim=range(y))
 			axis.Date(1,Year,at=seq(xlim[1], xlim[2],by="12 months"))
 			polygon(c(x,c(x[length(x)],x[1])), c(y,0,0), border=NA, col="grey60" )
-						
+			
 			#average PosT for all unlinked patients by date (this date is when someone else is still seroneg)
 			unlinked.PosT	<- sapply(seq_along(unlinked.bytime), function(i)
-										{
-											tmp<- data.table(Patient=unlinked.bytime[[i]], key="Patient")
-											tmp<- subset(df.all[tmp], select=c(Patient, PosT))
-											tmp<- tmp[,mean(as.numeric(difftime(df.serocon[i,NegT],PosT,units="weeks"))/52,na.rm=1)]
-											tmp
-										})
+					{
+						tmp<- data.table(Patient=unlinked.bytime[[i]], key="Patient")
+						tmp<- subset(df.all[tmp], select=c(Patient, PosT))
+						tmp<- tmp[,mean(as.numeric(difftime(df.serocon[i,NegT],PosT,units="weeks"))/52,na.rm=1)]
+						tmp
+					})
 			y		<- unlinked.PosT				
 			par(mar=c(5,6,1,1))
 			xlim[1]	<- as.Date("2000-01-01")
@@ -1739,18 +1946,749 @@ project.hivc.clustering<- function(dir.name= DATA)
 		#save
 		#
 		if(is.na(unlinked.closest.n))			
-			file						<- paste(outdir,paste(outfile,"_UnlinkedAll.R",sep=''),sep='/')
+			file						<- paste(outdir,paste(outfile,"_UnlinkedAll_",gsub('/',':',outsignat),".R",sep=''),sep='/')
 		else
-			file						<- paste(outdir,paste(outfile,"_Unlinked",unlinked.closest.n,".R",sep=''),sep='/')
+			file						<- paste(outdir,paste(outfile,"_Unlinked",unlinked.closest.n,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')
 		if(verbose) cat(paste("\nwrite unlinked pairs to file",file))
 		save(unlinked.bytime, df.serocon, df.all, file=file)		
 		stop()
 	}
-	if(1)	#count how many unlinked pairs in clustering
+}
+
+project.hivc.clustering.computeclusterstatistics<- function(with.withinpatientclu=0)	
+{	
+	#load precomputed R objects for clustering 
+	infile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterpre"		
+	insignat						<- "Sat_Jun_16_17/23/46_2013"
+	file							<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',insignat),".R",sep=''),sep='/')
+	load(file)
+	
+	#see if we can resume computations
+	infile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterdistrpre"		
+	insignat						<- "Sat_Jun_16_17/23/46_2013"
+	file							<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',insignat),".R",sep=''),sep='/')		
+	options(show.error.messages = FALSE)		
+	readAttempt<-try(suppressWarnings(load(file)))	
+	options(show.error.messages = TRUE)
+	#if not, compute	
+	if(inherits(readAttempt, "try-error"))
 	{
-		require(data.table)
-		require(ape)
+		thresh		<- expand.grid( brl=0.0165*2^seq.int(0,3), bs=seq(0.5,0.9,0.1))
+		clusters	<- lapply(seq_len(nrow(thresh)), function(i)
+				{
+					print(thresh[i,])
+					hivc.clu.clusterbythresh(ph,thresh.brl=thresh[i,"brl"],dist.brl=dist.brl,thresh.nodesupport=thresh[i,"bs"],nodesupport=ph.node.bs,retval="all")
+				})
+		save(thresh,clusters,file=file)		
+	}		
+	#remove within patient clusters
+	if(!with.withinpatientclu)
+	{
+		clusters<- lapply(clusters,function(x)
+				{
+					clu.onlytp			<- hivc.clu.truepos(x, ph.linked, Ntip(ph))$clu.onlytp
+					tmp					<- which( x[["clu.mem"]]%in%clu.onlytp[,clu] )
+					x[["clu.mem"]][tmp]	<- NA
+					x[["size.all"]]		<- table(x[["clu.mem"]])
+					x[["size.tips"]]	<- table(x[["clu.mem"]][1:Ntip(ph)])
+					x
+				})						
+	}
+	patient.nNL			<- length(df.seqinfo[,unique(Patient)])
+	patient.n			<- patient.nNL	 + length(which(substr(ph$tip.label,1,2)=="TN")) + length(which(substr(ph$tip.label,1,8)=="PROT+P51"))
+	
+	
+	clusters.pairs		<- sapply(clusters,function(x){	table(x$size.tips)[1]  	})
+	clusters.seqinclu	<- sapply(clusters,function(x){	sum(x$size.tips) / patient.n 	})
+	clusters.NLseqinclu	<- sapply(clusters,function(x){	sum(x$size.tips) / patient.nNL 	})
+	clusters.totalclu	<- sapply(clusters,function(x){	length(na.omit( unique(x$clu.mem) ))  	})	
+	clusters.maxsize		<- sapply(clusters,function(x){	max(x$size.tips)  	})
+	clusters.info		<- as.data.table( cbind(thresh,clusters.totalclu,clusters.pairs,clusters.maxsize,clusters.seqinclu,clusters.NLseqinclu) )
+	clusters.info		<- clusters.info[c(10:12,14:16,18:20),]
+	clusters.info.bs.sd	<- clusters.info[, list(sd.totalclu=sd(clusters.totalclu), sd.pairs=sd(clusters.pairs), sd.maxsize=sd(clusters.maxsize), sd.seqinclu=sd(clusters.seqinclu), sd.NLseqinclu=sd(clusters.seqinclu)), by=bs]
+	clusters.info.brl.sd<- clusters.info[, list(sd.totalclu=sd(clusters.totalclu), sd.pairs=sd(clusters.pairs), sd.maxsize=sd(clusters.maxsize), sd.seqinclu=sd(clusters.seqinclu), sd.NLseqinclu=sd(clusters.seqinclu)), by=brl]
+	print(clusters.info.bs.sd)
+	print(clusters.info.brl.sd)	
+	
+	#compute cluster size distributions
+	clusters.distr		<- lapply(clusters,function(x){	tmp<- table(x$size.tips); tmp  	})
+	clusters.distr.x	<- lapply(clusters.distr, function(x){	as.numeric(names(x))	})
+	clusters.distr.pch	<- 21 + thresh[,"bs"]*10-5
+	clusters.distr.col	<- log2(thresh[,"brl"]/0.0165)+1
+	cols				<- brewer.pal( length(unique(clusters.distr.col)), "RdYlBu")
+	
+	if(with.withinpatientclu)
+		outfile				<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterdistr"
+	else
+		outfile				<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_transmclusterdistr"
+
+	outsignat			<- "Sat_Jun_16_17/23/46_2013"
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,5_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- 1:4		#BS=0.5
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
+			})
+	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
+	dev.off()
+	
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,6_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- 5:8		#BS=0.6
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
+			})
+	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
+	dev.off()
+	
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,7_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- 9:12		#BS=0.7
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
+			})
+	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
+	dev.off()
+	
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,8_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- 13:16		#BS=0.8
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
+			})
+	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
+	dev.off()
+	
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,9_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- 17:20		#BS=0.9
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
+			})
+	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
+	dev.off()
+	
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BRL=0,132_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- seq.int(4,len=5,by=4)		#BRL=0.132
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
+			})
+	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
+	dev.off()
+}		
+
+project.hivc.clustering<- function(dir.name= DATA)
+{
+	require(ape)
+	require(data.table)
+	require(RColorBrewer)
+	if(0)	#min brl to get a transmission cascade from brl matrix
+	{
+		brlmat	<- matrix( c(0,0.1,0.1, 	0.1,0,0.2,	0.1,0.2,0), ncol=3, nrow=3)
+		brlmat	<- matrix( c(0,0.1,0.1,0.2, 	0.1,0,0.2,0.3,	0.1,0.2,0,0.1,	0.2,0.3,0.1,0), ncol=4, nrow=4)
+		#brlmat	<- matrix( c(0,0.1,0.5,0.5, 	0.1,0,0.5,0.5,	0.5,0.5,0,0.1,	0.5,0.5,0.1,0), ncol=4, nrow=4)
+		#brlmat	<- matrix( c(0,0.5,0.5, 	0.5,0,0.1,	0.5,0.1,0), ncol=3, nrow=3)
+		#brlmat	<- matrix( c(0,0.5,0.1, 	0.5,0,0.5,	0.1,0.5,0), ncol=3, nrow=3)
+		#brlmat	<- 0.5
+		#brlmat	<- matrix(2, ncol=1, nrow=1)
+		#brlmat	<- brlmat[upper.tri(brlmat)]
+		brl		<- hivc.clu.min.transmission.cascade(brlmat)
+		str(brl)
+		stop()
+	}
+	if(0)	#test clustering on simple test tree
+	{		
+		ph	<- "(Wulfeniopsis:0.196108,(((TN_alpinus:0.459325,TN_grandiflora:0.259364)1.00:0.313204,uniflora:1.155678)1.00:0.160549,(((TP_angustibracteata:0.054609,(TN_brevituba:0.085086,TP_stolonifera:0.086001)0.76:0.035958)1.00:0.231339,(((axillare:0.017540,liukiuense:0.018503)0.96:0.038019,stenostachyum:0.049803)1.00:0.083104,virginicum:0.073686)1.00:0.103843)1.00:0.086965,(carinthiaca:0.018150,orientalis:0.019697)1.00:0.194784)1.00:0.077110)1.00:0.199516,(((((abyssinica:0.077714,glandulosa:0.063758)1.00:0.152861,((((allionii:0.067154,(morrisonicola:0.033595,officinalis:0.067266)1.00:0.055175)1.00:0.090694,(alpina:0.051894,baumgartenii:0.024152,(bellidioides:0.016996,nutans:0.063292)0.68:0.031661,urticifolia:0.032044)0.96:0.036973,aphylla:0.117223)0.67:0.033757,(((japonensis:0.018053,miqueliana:0.033676)1.00:0.160576,vandellioides:0.099761)0.69:0.036188,montana:0.050690)1.00:0.058380)1.00:0.115874,scutellata:0.232093)0.99:0.055014)1.00:0.209754,((((((acinifolia:0.112279,reuterana:0.108698)0.94:0.055829,pusilla:0.110550)1.00:0.230282,((davisii:0.053261,serpyllifolia:0.087290)0.89:0.036820,(gentianoides:0.035798,schistosa:0.038522)0.95:0.039292)1.00:0.092830)1.00:0.169662,(((anagalloides:0.018007,scardica:0.017167)1.00:0.135357,peregrina:0.120179)1.00:0.098045,beccabunga:0.069515)1.00:0.103473)1.00:0.287909,(((((((((((agrestis:0.017079,filiformis:0.018923)0.94:0.041802,ceratocarpa:0.111521)1.00:0.072991,amoena:0.229452,(((argute_serrata:0.017952,campylopoda:0.075210)0.64:0.034411,capillipes:0.022412)0.59:0.034547,biloba:0.037143)1.00:0.141513,intercedens:0.339760,((opaca:0.019779,persica:0.035744)0.94:0.038558,polita:0.036762)1.00:0.108620,rubrifolia:0.186799)1.00:0.144789,(((bombycina_11:0.033926,bombycina_bol:0.035290,cuneifolia:0.017300,jacquinii:0.054249,oltensis:0.045755,paederotae:0.051579,turrilliana:0.017117)0.85:0.049052,czerniakowskiana:0.089983)0.93:0.051111,farinosa:0.138075)1.00:0.080565)1.00:0.104525,((albiflora:0.017984,ciliata_Anna:0.032685,vandewateri:0.017610)0.97:0.045649,arguta:0.063057,(catarractae:0.022789,decora:0.049785)0.96:0.048220,((cheesemanii:0.040125,cupressoides:0.146538)1.00:0.067761,macrantha:0.038130)1.00:0.088158,(densifolia:0.090044,formosa:0.116180)0.71:0.046353,(elliptica:0.038650,(odora:0.019325,salicornioides:0.021228)0.94:0.042950,salicifolia:0.020829)0.92:0.043978,(nivea:0.070429,(papuana:0.035003,tubata:0.031140)0.98:0.064379)0.93:0.065336,raoulii:0.109101)0.97:0.076607)0.93:0.085835,chamaepithyoides:0.485601)0.57:0.072713,(ciliata_157:0.069943,lanuginosa:0.052833)1.00:0.098638,(densiflora:0.069429,macrostemon:0.118926)0.92:0.124911,(fruticulosa:0.086891,saturejoides:0.041181)0.94:0.086148,kellererii:0.083762,lanosa:0.263033,mampodrensis:0.103384,nummularia:0.191180,pontica:0.128944,thessalica:0.129197)0.65:0.031006,(arvensis:0.342138,(((((chamaedrys:0.043720,micans:0.032021,vindobonensis:0.033309)0.51:0.034053,micrantha:0.019084)0.64:0.037906,krumovii:0.020175)1.00:0.103875,verna:0.254017)0.81:0.057105,magna:0.112657)1.00:0.104070)1.00:0.101845)1.00:0.149208,(((aznavourii:0.664103,glauca:0.405588)0.85:0.209945,praecox:0.447238)1.00:0.185614,(donii:0.260827,triphyllos:0.176032)1.00:0.194928)1.00:0.611079)0.74:0.055152,((crista:0.591702,(((cymbalaria_Avlan:0.017401,panormitana:0.017609)1.00:0.229508,((cymbalaria_Istanbul:0.028379,trichadena_332:0.016891,trichadena_Mugla:0.019131)1.00:0.196417,lycica_333:0.146772)1.00:0.097646,lycica_192:0.154877)1.00:0.234748,(((hederifolia:0.018068,triloba:0.075784)1.00:0.084865,(sibthorpioides:0.122542,sublobata:0.136951)1.00:0.074683)0.89:0.043623,stewartii:0.040679)1.00:0.596859)1.00:0.237324)0.58:0.057120,javanica:0.133802)1.00:0.137214)1.00:0.269201,(missurica:0.016685,rubra:0.019696)1.00:0.351184)0.54:0.058275)0.52:0.062485,((dahurica:0.023542,longifolia:0.016484,spicata:0.018125)0.95:0.042294,(nakaiana:0.016270,schmidtiana:0.058451)0.88:0.037207)1.00:0.261643)0.55:0.056458)1.00:0.229509,kurrooa:0.100611)0.74:0.068198,(bonarota:0.040842,lutea:0.115316)1.00:0.241657)0.99:0.085772);"
+		ph <- ladderize( read.tree(text = ph) )				
+		#read bootstrap support values
+		thresh.bs						<- 0.9
+		ph.node.bs						<- as.numeric( ph$node.label )		
+		ph.node.bs[is.na(ph.node.bs)]	<- 0
+		ph.node.bs[c(13,15,27,41,43)]	<- thresh.bs-0.05*seq(0.01,length.out=5)
+		ph.node.bs[ph.node.bs==1]		<- seq_along(which(ph.node.bs==1))*0.005 + 0.7
+		ph$node.label					<- ph.node.bs
+		#read patristic distances
+		stat.fun						<- hivc.clu.min.transmission.cascade
+		#stat.fun						<- max
+		dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)
+		print(dist.brl)
+		thresh.brl						<- quantile(dist.brl,seq(0.1,1,by=0.05))["100%"]
+		print(quantile(dist.brl,seq(0.1,0.5,by=0.05)))
+		print(thresh.brl)
+		#produce clustering 
+		clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+		#print(clustering)		
 		
+		hivc.clu.plot(ph, clustering[["clu.mem"]], highlight.edge.of.tiplabel=c("TN_","TP_"), highlight.edge.of.tiplabel.col= c("red","blue") )
+		#produce some tip states
+		ph.tip.state<- rep(1:20, each=ceiling( length( ph$tip.label )/20 ))[seq_len(Ntip(ph))]
+		states		<- data.table(state.text=1:20, state.col=rainbow(20))
+		states		<- states[ph.tip.state,]
+		hivc.clu.plot.tiplabels( seq_len(Ntip(ph)), matrix(states[,state.text], nrow=1,ncol=nrow(states)), matrix(states[,state.col], nrow=1,ncol=nrow(states)), cex=0.4, adj=c(-1,0.5) )
+				
+		#get nodes in each cluster
+		#clu.nodes		<- sapply(unique(clustering[["clu.mem"]])[-1],function(clu){		which(clustering[["clu.mem"]]==clu)	})
+		#get boostrap support of index cases
+		clu.idx			<- clustering[["clu.idx"]]-Ntip(ph)
+		print(clu.idx)
+		print(ph.node.bs[clu.idx])
+		stop()
+	}
+	if(0)	#clustering on ATHENA tree
+	{
+		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+		signat.in	<- "Sat_Jun_16_17/23/46_2013"		
+		file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
+		cat(paste("read file",file))
+		
+		ph			<- ladderize( read.tree(file) )
+		#read bootstrap support values		
+		ph.node.bs						<- as.numeric( ph$node.label )
+		ph.node.bs[is.na(ph.node.bs)]	<- 0
+		ph.node.bs						<- ph.node.bs/100
+		ph$node.label					<- ph.node.bs
+		#print(quantile(ph.node.bs,seq(0.1,1,by=0.1)))
+		#read patristic distances -- this is the expensive step but still does not take very long
+		dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
+		#thresh.brl						<- quantile(dist.brl,seq(0.1,0.5,by=0.05))["50%"]
+		thresh.bs						<- 0.85
+		thresh.brl						<- 0.06				
+		clustering						<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+		
+		#print(clustering)		
+	
+		#for each tip, collect 'Patient' and 'TN or PROT+P51 or ATHENA'
+		indir				<- paste(dir.name,"tmp",sep='/')
+		infile				<- "ATHENA_2013_03_Unlinked_and_Linked"
+		insignat			<- "Sat_Jun_16_17/23/46_2013"
+		file				<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+		if(verbose) cat(paste("\nread linked and unlinked from file",file))
+		load(file)								
+		df.seqinfo			<- merge( data.table(FASTASampleCode= ph$tip.label, Node=seq_along(ph$tip.label), key="FASTASampleCode"), subset(df.seqinfo,select=c(FASTASampleCode, Patient)), all.x=1, by="FASTASampleCode")
+		tmp					<- rep("NL", Ntip(ph))
+		tmp[ df.seqinfo[,substr(FASTASampleCode,1,2)=="TN"] ]<- "FRGNTN"
+		tmp[ df.seqinfo[,substr(FASTASampleCode,1,8)=="PROT+P51"] ]<- "FRGN"
+		df.seqinfo[,InAthena:=tmp]
+				
+		#for each tip, collect seq data 
+		indir				<- paste(dir.name,"derived",sep='/')
+		infile				<- "ATHENA_2013_03_AllSeqPatientCovariates"		
+		file				<- paste(indir,'/',infile,".R",sep='')
+		if(verbose) cat(paste("\nread patient data from file",file))
+		load(file)
+		df.seqinfo			<- merge(df.seqinfo, df.all, all.x=1, by="FASTASampleCode")
+		setnames(df.seqinfo,"Patient.x","Patient")
+		df.seqinfo			<- subset( df.seqinfo,select=-7 )
+				
+		#focus now only on some seq data entries:
+		df.seqinfo			<- subset(df.seqinfo, select=c(Node, FASTASampleCode, InAthena, CountryInfection, Patient, Trm, Sex, PosSeqT , NegT, AnyPos_T1, RegionHospital))	
+		#merge InAthena CountryInfection
+		tmp					<- which(df.seqinfo[,InAthena=="NL"])
+		set(df.seqinfo, tmp, "InAthena", df.seqinfo[tmp,CountryInfection])
+		df.seqinfo			<- subset( df.seqinfo,select=-4 )
+		setnames(df.seqinfo,"InAthena","CountryInfection")
+		
+		#add clustering to data table
+		setkey(df.seqinfo, Node)
+		tmp					<- clustering[["clu.mem"]][seq_len(Ntip(ph))]
+		df.seqinfo[,"cluster":=tmp]
+		outfile		<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_withinpatientclusters_bs",thresh.bs*100,"_brlmed",thresh.brl*100,"_clusterinfo",sep='')
+		outsignat	<- "Sat_Jun_16_17/23/46_2013"
+		file		<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')
+		cat(paste("write cluster info to file",file))
+		save(df.seqinfo, file=file)
+		
+		
+		#set colors CountryInfection
+		tmp					<- rep("transparent",nrow(df.seqinfo))
+		df.seqinfo[,CountryInfection.col:=tmp]
+		set(df.seqinfo, which(df.seqinfo[,CountryInfection=="NL"]), "CountryInfection.col", "#EF9708")
+		#set colors Patient
+		tmp					<- unique( df.seqinfo[,Patient] )
+		tmp2				<- diverge_hcl(length(tmp), h = c(246, 40), c = 96, l = c(85, 90))		
+		tmp					<- data.table(Patient=tmp, Patient.col=tmp2, key="Patient")
+		df.seqinfo			<- merge(  df.seqinfo, tmp, all.x=1, by="Patient" )
+		#set colors Sex
+		tmp					<- rep("transparent",nrow(df.seqinfo))
+		df.seqinfo[,Sex.col:=tmp]						
+		set(df.seqinfo, which(df.seqinfo[,Sex=="M"]), "Sex.col", "#EF9708")
+		#set colors MSM or BI
+		tmp					<- rep("transparent",nrow(df.seqinfo))
+		df.seqinfo[,Trm.col:=tmp]						
+		set(df.seqinfo, which(df.seqinfo[,Trm%in%c("MSM","BI")]), "Trm.col", "#EF9708")
+		#set colors RegionHospital
+		tmp					<- unique( df.seqinfo[,RegionHospital] )		
+		tmp2				<- c("transparent",brewer.pal(length(tmp)-1, "Dark2"))
+		tmp					<- data.table(RegionHospital=tmp, RegionHospital.col=tmp2, key="RegionHospital")
+		df.seqinfo			<- merge(  df.seqinfo, tmp, all.x=1, by="RegionHospital" )		
+		#set colors time		
+		tmp					<- range( range(df.seqinfo[, NegT],na.rm=1), range(df.seqinfo[, AnyPos_T1],na.rm=1) )
+		tmp					<- as.POSIXlt( seq.Date(tmp[1],tmp[2]+365,by="years") )$year
+		tmp2				<- heat_hcl(length(tmp), h = c(0, -100), l = c(75, 40), c = c(40, 80), power = 1)
+		yearcols			<- data.table(Year=tmp, Year.col=tmp2)
+		#set colors PosSeqT
+		tmp					<- data.table(PosSeqT= unique( df.seqinfo[,PosSeqT] ), key="PosSeqT" )
+		tmp2				<- tmp[, as.POSIXlt(PosSeqT)$year]
+		tmp[,"Year":=tmp2]
+		tmp					<- subset( merge(tmp, yearcols, all.x=1, by="Year"), select=c(PosSeqT,Year.col))
+		setnames(tmp,"Year.col","PosSeqT.col")
+		df.seqinfo			<- merge(  df.seqinfo, tmp, all.x=1, by="PosSeqT" )
+		#set colors NegT
+		tmp					<- data.table(NegT= unique( df.seqinfo[,NegT] ), key="NegT" )
+		tmp2				<- tmp[, as.POSIXlt(NegT)$year]
+		tmp[,"Year":=tmp2]
+		tmp					<- subset( merge(tmp, yearcols, all.x=1, by="Year"), select=c(NegT,Year.col))
+		setnames(tmp,"Year.col","NegT.col")
+		df.seqinfo			<- merge(  df.seqinfo, tmp, all.x=1, by="NegT" )
+		#set colors AnyPos_T1
+		tmp					<- data.table(AnyPos_T1= unique( df.seqinfo[,AnyPos_T1] ), key="AnyPos_T1" )
+		tmp2				<- tmp[, as.POSIXlt(AnyPos_T1)$year]
+		tmp[,"Year":=tmp2]
+		tmp					<- subset( merge(tmp, yearcols, all.x=1, by="Year"), select=c(AnyPos_T1,Year.col))
+		setnames(tmp,"Year.col","AnyPos_T1.col")
+		df.seqinfo			<- merge(  df.seqinfo, tmp, all.x=1, by="AnyPos_T1" )									
+		
+		#convert time to string
+		set(df.seqinfo,NULL,"AnyPos_T1",substr(as.character( df.seqinfo[,AnyPos_T1] ),1,7))
+		set(df.seqinfo,NULL,"NegT",substr(as.character( df.seqinfo[,NegT] ),1,7))
+		set(df.seqinfo,NULL,"PosSeqT",substr(as.character( df.seqinfo[,PosSeqT] ),1,7))
+				
+		#handle missing entries
+		setkey(df.seqinfo, Patient)
+		tmp					<- which(is.na(df.seqinfo[,Patient]))
+		set(df.seqinfo, tmp, "Patient", '')
+		set(df.seqinfo, tmp, "Patient.col", "transparent")
+		tmp					<- which(is.na(df.seqinfo[,RegionHospital]))
+		set(df.seqinfo, tmp, "RegionHospital", '-')
+		set(df.seqinfo, tmp, "RegionHospital.col", "transparent")		
+		tmp					<- which(is.na(df.seqinfo[,CountryInfection]))
+		set(df.seqinfo, tmp, "CountryInfection", "--")
+		set(df.seqinfo, tmp, "CountryInfection.col", "transparent")				
+		tmp					<- which(is.na(df.seqinfo[,Trm]))
+		set(df.seqinfo, tmp, "Trm", '')
+		set(df.seqinfo, tmp, "Trm.col", "transparent")
+		tmp					<- which(is.na(df.seqinfo[,Sex]))
+		set(df.seqinfo, tmp, "Sex", '')
+		set(df.seqinfo, tmp, "Sex.col", "transparent")
+		tmp					<- which(is.na(df.seqinfo[,AnyPos_T1]))
+		set(df.seqinfo, tmp, "AnyPos_T1", "-------")
+		set(df.seqinfo, NULL, "AnyPos_T1", paste("HIV+:",df.seqinfo[,AnyPos_T1],sep=''))
+		set(df.seqinfo, tmp, "AnyPos_T1.col", "transparent")
+		tmp					<- which(is.na(df.seqinfo[,NegT]))
+		set(df.seqinfo, tmp, "NegT", "-------")
+		set(df.seqinfo, NULL, "NegT", paste("HIV-:",df.seqinfo[,NegT],sep=''))
+		set(df.seqinfo, tmp, "NegT.col", "transparent")
+		tmp					<- which(is.na(df.seqinfo[,PosSeqT]))
+		set(df.seqinfo, tmp, "PosSeqT", "-------")
+		set(df.seqinfo, NULL, "PosSeqT", paste("HIVS:",df.seqinfo[,PosSeqT],sep=''))
+		set(df.seqinfo, tmp, "PosSeqT.col", "transparent")
+		
+		setkey(df.seqinfo, Node)				
+		#select text and col matrix 
+		text				<- t( as.matrix( subset(df.seqinfo,select=c(CountryInfection, Trm, Sex, NegT, AnyPos_T1, PosSeqT, Patient, RegionHospital)) ) )
+		col					<- t( as.matrix( subset(df.seqinfo,select=c(CountryInfection.col, Trm.col, Sex.col, NegT.col, AnyPos_T1.col, PosSeqT.col, Patient.col, RegionHospital.col)) ) )
+		
+		#load precomputed R objects for clustering -- need ph.linked 
+		infile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterpre"		
+		insignat						<- "Sat_Jun_16_17/23/46_2013"
+		file							<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',insignat),".R",sep=''),sep='/')
+		load(file)
+		
+		clu.onlytp	<- hivc.clu.truepos(clustering, ph.linked, Ntip(ph))$clu.onlytp
+		#double check 'clu.onlytp' 
+		if(0)
+		{
+			dummy<- sapply(clu.onlytp[,clu], function(i)
+				{
+					tmp<- which( clustering[["clu.mem"]]==i)
+					tmp<- tmp[tmp<Ntip(ph)]
+					tmp<- merge( data.table(FASTASampleCode= ph$tip.label[ tmp ]), df.seqinfo, by="FASTASampleCode" )
+					if( length(unique(tmp[,Patient]))!=1 )
+						print(tmp) 					
+				})
+		}
+		
+		#plot tree to file
+		outfile		<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_withinpatientclusters_bs",thresh.bs*100,"_brlmed",thresh.brl*100,sep='')
+		outsignat	<- "Sat_Jun_16_17/23/46_2013"
+		file		<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+		cat(paste("write tree to file",file))
+		hivc.clu.plot(ph, clustering[["clu.mem"]], file=file, pdf.scaley=25, pdf.off=0, highlight.cluster= list( clu.onlytp[,clu] ), highlight.cluster.col="grey50", highlight.edge.of.tiplabel=c("TN","PROT+P51"), highlight.edge.of.tiplabel.col= c("red","blue"), cex.nodelabel=0.1 )
+		hivc.clu.plot.tiplabels( seq_len(Ntip(ph)), text, col, cex=0.12, adj=c(-0.15,0.5), add.xinch=0, add.yinch=0 )
+		dev.off()			
+	}
+	if(0)
+	{
+		#plot properties of concentrated clusters by region
+		verbose							<- 1
+		thresh.bs						<- 0.85
+		thresh.brl						<- 0.06				
+		
+		infile		<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_withinpatientclusters_bs",thresh.bs*100,"_brlmed",thresh.brl*100,"_clusterinfo",sep='')
+		insignat	<- "Sat_Jun_16_17/23/46_2013"
+		file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',insignat),".R",sep=''),sep='/')
+		if(verbose)	cat(paste("read cluster info from file",file))
+		load(file)
+		if(verbose)	cat(paste("found seq, n=",nrow(df.seqinfo)))		
+		print(df.seqinfo)
+		df.seqinfo	<- subset(df.seqinfo, !is.na(cluster) )
+		if(verbose)	cat(paste("found seq in clu, n=",nrow(df.seqinfo)))
+		
+		#remove within patient clusters before out-of-NL taken out		
+		set(df.seqinfo, which( df.seqinfo[,is.na(Patient)] ), "Patient", "NA")
+		tmp			<- df.seqinfo[, list(isWithinCluster= length(unique(Patient))==1), by=cluster]
+		df.seqinfo	<- merge( subset(tmp,!isWithinCluster), df.seqinfo, by="cluster" )
+		#from between patient clusters, remove within patient seqs and foreign seqs
+		df.pat		<- df.seqinfo[,list(CountryInfection=CountryInfection[1], Trm=Trm[1], Sex=Sex[1], NegT=NegT[1], AnyPos_T1=AnyPos_T1[1], RegionHospital=RegionHospital[1]), by=Patient]			
+		df.clu		<- df.seqinfo[, list(Patient=unique(Patient)), by=cluster]		
+		df.clu		<- merge(df.clu, df.pat, all.x=1, by="Patient")
+		
+		
+		#determine if cluster concentrated in region, and where
+		setkey(df.clu, cluster)
+		if(verbose)	cat(paste("found pat in clu, n=",nrow(df.clu)))
+		clu.reg		<- table( df.clu[,cluster,RegionHospital] )
+		clu.reg		<- clu.reg / matrix(apply(clu.reg, 2, sum), nrow=nrow(clu.reg), ncol=ncol(clu.reg), byrow=1)				
+		clu.regconc	<- apply( clu.reg, 2, function(x)	any(x>0.4) && length(which(x!=0))>2 ) |
+					   apply( clu.reg, 2, function(x)	any(x>0.5) && length(which(x!=0))<=2 )
+		if(verbose)	cat(paste("number of clusters, n=",length(clu.regconc)))
+		if(verbose)	cat(paste("number of spatially concentrated clusters, n=",length(which(clu.regconc))))
+		tmp			<- rownames(clu.reg)
+		clu.regconc2<- sapply( seq_len(ncol(clu.reg)), function(j)
+						{
+							ifelse(!clu.regconc[j], NA, tmp[ which.max(clu.reg[,j]) ] )						
+						})
+		df.clureg	<- data.table(cluster= as.numeric(colnames( clu.reg )), IsRegionConcentrated= clu.regconc, RegionConcentrated=clu.regconc2, key="cluster" )
+		
+		#determine median AnyPos_T1 time for cluster and add
+		tmp			<- df.clu[,list(cluster.PosT=mean(AnyPos_T1, na.rm=T)),by=cluster]				
+		df.clureg	<- merge(df.clureg, tmp, all.x=1, by="cluster")
+
+		#merge all
+		df.seqinfo	<- merge( df.seqinfo, df.clureg, all.x=1, by="cluster" )
+						
+		
+		#plot Bezemer style
+		file				<- paste(dir.name,"tmp",paste(infile,"_spatialvariation_",gsub('/',':',insignat),".pdf",sep=''),sep='/')
+		df					<- df.seqinfo
+		df[,time:=AnyPos_T1 ]		
+		set(df, which(df[,!IsRegionConcentrated]), "RegionConcentrated", "Bridge")
+		tmp					<- numeric(nrow(df))
+		tmp2				<- c("N","E","S","W","Amst","Bridge")
+		for( i in seq_along(tmp2))
+			tmp[which(df[,RegionConcentrated==tmp2[i]])]	<- i
+		df[,sort1:=factor(tmp, levels=1:6, labels=tmp2) ]
+		df[,sort2:=cluster.PosT]		
+		tmp					<- numeric(nrow(df))		
+		tmp2				<- c("N","E","S","W","Amst")
+		for( i in seq_along(tmp2))
+			tmp[which(df[,RegionHospital==tmp2[i]])]	<- i
+		df[,covariate:=factor(tmp, levels=1:5, labels=tmp2) ]
+		xlab				<- "first HIV+ event"
+		ylab				<- paste("clusters BS=",thresh.bs*100," BRL.med=",thresh.brl*100," version=",gsub('/',':',insignat),sep="")
+		cex.points			<- 0.5
+		
+		#extract clusters one by one in desired order
+		tmp					<- df[,list(sort1=sort1[1], sort2=sort2[1]),by=cluster]
+		clusters.sortby1	<- as.numeric( tmp[,sort1] )
+		clusters.sortby2	<- as.numeric( tmp[,sort2] )
+		clusters.sortby		<- order(clusters.sortby1,clusters.sortby2, decreasing=F)
+		clusters			<- tmp[clusters.sortby,cluster]								
+		clusters.levels		<- levels(df[,covariate])					
+		clusters			<- lapply(clusters,function(x)	subset(df,cluster==x,c(time,covariate))		)
+		
+		ylim				<- c(-2,length(clusters))
+		cols				<- brewer.pal(length(clusters.levels),"Set1")	#[c(2,1,3,4,5)]		
+#cols			<- c("green","red","blue","grey30")
+		cols				<- sapply(cols, function(x) my.fade.col(x,0.7))
+		pch					<- c(rep(19,length(clusters.levels)))
+		xlim				<- range( df[,time], na.rm=1 )
+		xlim[1]				<- xlim[1]-700
+		
+		cat(paste("\nwrite plot to",file))
+		pdf(file,width=7,height=14)
+		plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,ylab=ylab, xaxt='n',yaxt='n',xlab=xlab)
+		axis.Date(1, seq.Date(xlim[1],xlim[2],by="year"), labels = TRUE )
+		dummy<- sapply(seq_along(clusters),function(i)
+				{							
+					cluster.cex	<- cex.points	#(1 - nrow(subset(clusters[[i]],hregion=="unknown")) / nrow(clusters[[i]])) * cex.points
+					cluster.ix	<- order(as.numeric(clusters[[i]][,time]))
+					cluster.x	<- as.numeric(clusters[[i]][,time])[cluster.ix]										
+					cluster.y	<- rep(i,nrow(clusters[[i]]))
+					cluster.z	<- as.numeric(clusters[[i]][,covariate])[cluster.ix]
+					#print(clusters[[i]][,covariate])
+					#if(cluster.z[1]!=4)
+					#lines( c(cluster.x[1],xlim[2]), rep(i,2), col=cols[ cluster.z[1] ] )					
+					points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=pch[1], cex=cluster.cex )										
+				})	
+		pch[pch==19]	<- 21
+		legend("topleft",bty='n',pt.bg=cols,pch=pch,legend=levels(df[,covariate]), col=rep("transparent",length(clusters.levels)))				
+		dev.off()	
+		stop()
+	}
+	if(0)
+	{
+		project.hivc.clustering.get.linked.and.unlinked()
+	}
+	if(1)
+	{		
+		verbose		<- 1
+		#read tree, get boostrap values and patristic distances between leaves
+		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+		signat.in	<- "Sat_Jun_16_17/23/46_2013"
+		signat.out	<- "Sat_Jun_16_17/23/46_2013"
+		file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
+		cat(paste("read file",file))		
+		ph								<- ladderize( read.tree(file) )						
+		ph$node.label[2]				<- 0								#little hack so that clustering works
+		ph.node.bs						<- as.numeric( ph$node.label )
+		ph.node.bs[is.na(ph.node.bs)]	<- 0
+		ph.node.bs						<- ph.node.bs/100
+		ph$node.label					<- ph.node.bs
+		#print(quantile(ph.node.bs,seq(0.1,1,by=0.1)))
+		print("compute dist.brl.med")
+		dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
+		print("compute dist.brl.max")
+		dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
+		print("compute dist.brl.casc")
+		dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
+		
+		#print(quantile(dist.brl,seq(0.1,1,by=0.1)))
+	
+		#read linked and unlinked
+		indir				<- paste(dir.name,"tmp",sep='/')
+		infile				<- "ATHENA_2013_03_Unlinked_and_Linked"
+		insignat			<- "Sat_Jun_16_17/23/46_2013"
+		file				<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+		if(verbose) cat(paste("\nread linked and unlinked from file",file))
+		load(file)
+		
+		#convert truly unlinked.bytime from SampleCode to ph node index and add truly unlinked.byspace
+		df.tips							<- data.table(Node=seq_len(Ntip(ph)), FASTASampleCode=ph$tip.label )
+		setkey(df.tips, FASTASampleCode)		
+		setkey(df.seqinfo, FASTASampleCode)	
+		df.tips							<- merge(df.tips, df.seqinfo, all.x=1)
+		df.tips							<- subset(df.tips,select=c(FASTASampleCode, Node))		
+		unlinked.byspace				<- merge(unlinked.byspace, df.tips, all.x=1)		
+		ph.unlinked.bytime				<- lapply(unlinked.bytime, function(x)
+											{
+												tmp	<- merge(x, df.tips, all.x=1)
+												tmp2<- tmp[1,query.FASTASampleCode]
+												tmp	<- rbind( subset(tmp, select=c(FASTASampleCode,Node)), unlinked.byspace )
+												tmp2<- rep(tmp2, nrow(tmp))
+												tmp[,query.FASTASampleCode:= tmp2]
+												setkey(tmp, Node)
+												tmp
+											})	
+		names(ph.unlinked.bytime)		<- names(unlinked.bytime)
+		
+				
+		#for those only seropos, use only unlinked.byspace				
+		ph.seroneg						<- merge( data.table(FASTASampleCode=names(ph.unlinked.bytime)), df.tips, by="FASTASampleCode", all.x=1)		
+		ph.seropos						<- subset( df.tips, !FASTASampleCode%in%names(ph.unlinked.bytime) )
+		ph.seropos						<- subset(ph.seropos, substr(FASTASampleCode,1,2)!="TN" )
+		ph.seropos						<- subset(ph.seropos, substr(FASTASampleCode,1,8)!="PROT+P51" )				
+		setkey(unlinked.byspace,"Node")
+		ph.unlinked.byspace				<- lapply(seq_len(nrow(ph.seropos)), function(i)
+												{
+													tmp	<- unlinked.byspace
+													tmp2<- rep(ph.seropos[i,FASTASampleCode], nrow(tmp))
+													tmp[,query.FASTASampleCode:= tmp2]
+													setkey(tmp, Node)
+													tmp
+												})
+		names(ph.unlinked.byspace)		<- ph.seropos[,FASTASampleCode]
+
+		#put all unlinked ATHENA seqs together and sort by Node
+		ph.unlinked						<- c(ph.unlinked.byspace,ph.unlinked.bytime)
+		names(ph.unlinked)				<- c(names(ph.unlinked.byspace),names(ph.unlinked.bytime))
+		ph.unlinked.info				<- rbind(ph.seropos,ph.seroneg)		
+		setkey(ph.unlinked.info, "Node")
+		ph.unlinked						<- lapply(ph.unlinked.info[,FASTASampleCode], function(i){		ph.unlinked[[i]]	})
+		names(ph.unlinked)				<- ph.unlinked.info[,FASTASampleCode]
+		tmp								<- seq_len(nrow(ph.unlinked.info))
+		ph.unlinked.info[,NodeIdx:= tmp]
+		ph.unlinked.info				<- merge(ph.unlinked.info, df.seqinfo, all.x=1, by="FASTASampleCode")
+		setkey(ph.unlinked.info, "Node")		
+		
+		#get data table of all linked ATHENA seqs
+		ph.linked						<- merge(linked.bypatient, df.tips, all.x=1)
+		ph.linked						<- subset(ph.linked, select=c(FASTASampleCode, Patient, Node))
+		ph.linked						<- merge(ph.linked, ph.linked[, length(FASTASampleCode), by=Patient], all.x=1, by="Patient")
+		setnames(ph.linked, "V1","nTP")
+		setkey(ph.linked, "Node")
+		
+		outfile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterpre"		
+		signat.out						<- "Sat_Jun_16_17/23/46_2013"
+		file							<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',signat.out),".R",sep=''),sep='/')
+		if(verbose)	cat(paste("write to file",file))
+		save(ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, file=file )
+		stop()
+	}
+	if(0)	#investigate various cluster size distributions by size etc
+	{	
+		#project.hivc.clustering.computeclusterstatistics(with.withinpatientclu=1)
+		project.hivc.clustering.computeclusterstatistics(with.withinpatientclu=0)		
+		stop()
+	}
+	if(0)
+	{
+		#analyze clusters 
+		infile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterpre"		
+		insignat						<- "Sat_Jun_16_17/23/46_2013"
+		file							<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',insignat),".R",sep=''),sep='/')
+		load(file)
+		
+		#illustrate saturation effect -- level cannot be higher than 90%
+		dist.brl						<- dist.brl.med			
+		thresh.brl						<- c(seq(0.02,0.06,0.01),seq(0.08,0.26,0.04))
+		
+		clusters80						<- lapply(thresh.brl, function(x)
+												{
+													hivc.clu.clusterbythresh(ph,thresh.brl=x,dist.brl=dist.brl,thresh.nodesupport=0.8,nodesupport=ph.node.bs,retval="all")
+												})
+		clusters85						<- lapply(thresh.brl, function(x)
+												{
+													hivc.clu.clusterbythresh(ph,thresh.brl=x,dist.brl=dist.brl,thresh.nodesupport=0.85,nodesupport=ph.node.bs,retval="all")
+												})
+										
+		clusters90						<- lapply(thresh.brl, function(x)
+												{
+													hivc.clu.clusterbythresh(ph,thresh.brl=x,dist.brl=dist.brl,thresh.nodesupport=0.9,nodesupport=ph.node.bs,retval="all")
+												})
+		clusters95						<- lapply(thresh.brl, function(x)
+												{
+													hivc.clu.clusterbythresh(ph,thresh.brl=x,dist.brl=dist.brl,thresh.nodesupport=0.95,nodesupport=ph.node.bs,retval="all")
+												})										
+		clusters80.tp						<- lapply(clusters80,function(x)
+												{
+													hivc.clu.truepos(x, ph.linked, Ntip(ph), verbose=0)
+												})		
+		clusters85.tp						<- lapply(clusters85,function(x)
+												{
+													hivc.clu.truepos(x, ph.linked, Ntip(ph), verbose=0)
+												})		
+		clusters90.tp						<- lapply(clusters90,function(x)
+												{
+													hivc.clu.truepos(x, ph.linked, Ntip(ph), verbose=0)
+												})		
+		clusters95.tp						<- lapply(clusters95,function(x)
+												{
+													hivc.clu.truepos(x, ph.linked, Ntip(ph), verbose=0)
+												})																								
+		clusters80.fp					<- lapply(clusters80,function(x)
+												{
+													hivc.clu.trueneg(x, ph.unlinked.info, ph.unlinked, Ntip(ph), verbose=0)
+												})
+		clusters85.fp					<- lapply(clusters85,function(x)
+												{
+													hivc.clu.trueneg(x, ph.unlinked.info, ph.unlinked, Ntip(ph), verbose=0)
+												})											
+		clusters90.fp					<- lapply(clusters90,function(x)
+												{
+													hivc.clu.trueneg(x, ph.unlinked.info, ph.unlinked, Ntip(ph), verbose=0)
+												})	
+		clusters95.fp					<- lapply(clusters95,function(x)
+												{
+													hivc.clu.trueneg(x, ph.unlinked.info, ph.unlinked, Ntip(ph), verbose=0)
+												})	
+		outfile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterrocpre_brmed"		
+		outsignat						<- "Sat_Jun_16_17/23/46_2013"
+		file							<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')
+		save(clusters80,clusters85,clusters90,clusters95,clusters80.tp,clusters85.tp,clusters90.tp,clusters95.tp,clusters80.fp,clusters85.fp,clusters90.fp,clusters95.fp,file=file)
+		
+		patient.nNL						<- 6260
+		clusters.NLseqinclu				<-	t( sapply(list( list(clusters80,clusters80.tp),list(clusters85,clusters85.tp),list(clusters90,clusters90.tp),list(clusters95,clusters95.tp)),function(clusterstuff)
+												{																										
+													sapply(seq_along(clusterstuff[[1]]),function(i)
+															{					
+																clustering						<- clusterstuff[[1]][[i]]
+																tmp								<- clusterstuff[[2]][[i]][["clu.onlytp"]]
+																tmp								<- tmp[,clu]
+																tmp								<- which( clustering[["clu.mem"]] %in% tmp )
+																clustering[["clu.mem"]][tmp]	<- NA
+																clustering[["size.tips"]]		<- table(clustering[["clu.mem"]][1:Ntip(ph)])
+																sum(clustering[["size.tips"]]) / patient.nNL 	
+															})	
+												}) ) 	
+		method.tp						<- c("tp.rate.tpclu","tp.rate.tpavg")
+		clusters80.tp.stat				<- sapply(clusters80.tp, function(x) x[method.tp] )
+		colnames(clusters80.tp.stat)		<- thresh.brl
+		clusters85.tp.stat				<- sapply(clusters85.tp, function(x) x[method.tp] )
+		colnames(clusters85.tp.stat)		<- thresh.brl
+		clusters90.tp.stat				<- sapply(clusters90.tp, function(x) x[method.tp] )
+		colnames(clusters90.tp.stat)		<- thresh.brl
+		clusters95.tp.stat				<- sapply(clusters95.tp, function(x) x[method.tp] )
+		colnames(clusters95.tp.stat)		<- thresh.brl																				
+		method.fp						<- c("fp.n","fp.rate")
+		clusters80.fp.stat				<- sapply(clusters80.fp, function(x) x[method.fp] )
+		colnames(clusters80.fp.stat)	<- thresh.brl
+		clusters85.fp.stat				<- sapply(clusters85.fp, function(x) x[method.fp] )
+		colnames(clusters85.fp.stat)	<- thresh.brl		
+		clusters90.fp.stat				<- sapply(clusters90.fp, function(x) x[method.fp] )
+		colnames(clusters90.fp.stat)	<- thresh.brl
+		clusters95.fp.stat				<- sapply(clusters95.fp, function(x) x[method.fp] )
+		colnames(clusters95.fp.stat)	<- thresh.brl
+			
+		
+		fp.stat		<- matrix(c( unlist(clusters80.fp.stat[1,]), unlist(clusters85.fp.stat[1,]), unlist(clusters90.fp.stat[1,]), unlist(clusters95.fp.stat[1,]) ), nrow=4, ncol=length(thresh.brl), byrow=T) 
+		tp.stat		<- matrix(c( unlist(clusters80.tp.stat[1,]), unlist(clusters85.tp.stat[1,]), unlist(clusters90.tp.stat[1,]), unlist(clusters95.tp.stat[1,]) ), nrow=4, ncol=length(thresh.brl), byrow=T)
+		cols		<- diverge_hcl(nrow(fp.stat), h = c(246, 40), c = 96, l = c(65, 90))
+		names(cols)	<- c(0.8, 0.85, 0.9, 0.95)
+		
+		outfile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterroc_roc"		
+		outsignat						<- "Sat_Jun_16_17/23/46_2013"
+		file							<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+		pdf(file=file,width=5,height=5)
+		plot(1,1,type='n',bty='n',xlim=range(fp.stat),ylim=range(tp.stat),xlab="#FP",ylab="%TP")
+		dummy	<- sapply(seq_len(nrow(fp.stat)),function(i)
+				{
+					points(fp.stat[i,],tp.stat[i,],col=cols[i],type='b')
+					text(fp.stat[i,],tp.stat[i,],col=cols[i],labels=thresh.brl,adj=c(-0.8,0.5),cex=0.5)
+				})
+		legend("bottomright",border=NA,bty='n',fill=cols,legend=names(cols))
+		dev.off()
+		
+		outfile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterroc_coverage"		
+		outsignat						<- "Sat_Jun_16_17/23/46_2013"
+		file							<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+		pdf(file=file,width=5,height=5)		
+		plot(1,1,type='n',bty='n',xlim=range(fp.stat),ylim=range(clusters.NLseqinclu),xlab="#FP",ylab="%NL seq in cluster")
+		dummy	<- sapply(seq_len(nrow(fp.stat)),function(i)
+				{
+					points(fp.stat[i,],clusters.NLseqinclu[i,],col=cols[i],type='b')
+					text(fp.stat[i,],clusters.NLseqinclu[i,],col=cols[i],labels=thresh.brl,adj=c(-0.8,0.5),cex=0.5)
+				})
+		legend("bottomright",border=NA,bty='n',fill=cols,legend=names(cols))
+		dev.off()
+		
+		#get BRL so that %TP ~ 90%  					 
+		#ans80							<- hivc.clu.clusterbytruepos(ph, dist.brl, ph.node.bs, ph.linked, thresh.bs=0.8, level= 0.9, verbose=1)
+		#ans90							<- hivc.clu.clusterbytruepos(ph, dist.brl, ph.node.bs, ph.linked, thresh.bs=0.9, level= 0.9, verbose=1)
+		#for BS=0.8 BRL is 0.058	-- corresponds to BRL.max 0.106
+		#for BS=0.9 BRL is 0.067	-- corresponds to BRL.max 0.096						
+	}
+	if(0)	#count how many unlinked pairs in clustering
+	{		
 		verbose	<- 1
 		file	<- paste(dir.name,"derived/ATHENA_2013_03_Unlinked_SeroConv_Dead_UnlinkedAll.R", sep='/')		
 		if(verbose)	cat(paste("read file",file))
@@ -1938,6 +2876,79 @@ project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 	}
 }
 
+hivc.prog.precompute.clustering<- function()
+{
+	library(ape)
+	library(hivclust)
+	
+	verbose		<- 1
+	resume		<- 0
+	indir		<- paste(DATA,"tmp",sep='/')
+	outdir		<- indir
+	infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+	outfile		<- paste(infile,"preclust",sep='_')
+	signat.in	<- "Sat_Jun_16_17/23/46_2013"
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))		
+		if(length(tmp)>0) outdir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									signat= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) signat.in<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]		
+	}	
+	signat.out	<- signat.in	
+	if(verbose)
+	{
+		print(indir)
+		print(infile)
+		print(outdir)
+		print(signat.in)
+		print(resume)
+	}	
+		
+	file		<- paste(indir,paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
+	if(verbose) cat(paste("read phylo from file",file))		
+	ph								<- ladderize( read.tree(file) )						
+	ph$node.label[2]				<- 0								#little hack so that clustering works
+	ph.node.bs						<- as.numeric( ph$node.label )
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph.node.bs						<- ph.node.bs/100
+	ph$node.label					<- ph.node.bs
+	#print(quantile(ph.node.bs,seq(0.1,1,by=0.1)))
+	
+	if(verbose) cat("\ncompute dist.brl.med")
+	dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
+	if(verbose) cat("\ncompute dist.brl.max")
+	dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
+	if(verbose) cat("\ncompute dist.brl.casc")
+	#dist.brl.casc					<- NULL
+	dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
+	
+	file		<- paste(outdir,paste(outfile,'_',gsub('/',':',signat.out),".R",sep=''),sep='/')
+	if(verbose) cat(paste("\nsave precomputed node.bs and dist.brl to file",file))
+	save(ph,ph.node.bs,dist.brl.med,dist.brl.max,dist.brl.casc,file=file)
+}
+
 hivc.prog.get.geneticdist<- function()
 {
 	library(bigmemory)
@@ -2088,6 +3099,19 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}	
+	if(1)	#compute bootstrap support and branch length metrics for clustering
+	{
+		insignat	<- "Sat_Jun_16_17/23/46_2013"						
+		indir		<- paste(dir.name,"tmp",sep='/')
+		outdir		<- paste(dir.name,"tmp",sep='/')
+		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"				
+		cmd			<- hivc.cmd.preclustering(indir, infile, insignat, outdir=outdir)
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3600mb")
+		cat(cmd)		
+		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		stop()
+	}
 	if(0)	#compute one ExaML tree, no bootstrapping
 	{		
 		indir	<- paste(dir.name,"tmp",sep='/')
@@ -2096,7 +3120,7 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over nucleotides in alignment and over initial starting trees to start ML search.
+	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over nucleotides in alignment and over initial starting trees to start ML search.
 	{
 		bs.from	<- 0
 		bs.to	<- 0

@@ -182,6 +182,15 @@ hivc.seq.find<- function(char.matrix, pos0= NA, from= c(), verbose=1)
 	query.yes	
 }
 
+hiv.seq.gc.content<- function(seq.DNAbin.mat)
+{	
+	rna.gc.fraction.n		<- c('a','c','g','t',	'r','m','w','s',	'k','y','v','h',		'd','b','n','-','?')
+	rna.gc.fraction			<- c( 0, 1, 1, 0,		0.5, 0.5, 0, 1, 	1/2, 1/2, 2/3, 1/3,		1/3,2/3, 1/4, 0, 0)		#this fraction assumes that U is synonymous with T and that U does not occur in the code
+	rna.gc.sum				<- c( T, T, T, T,       T, T, T, T,         T, T, T, T,				T, T, T, F, F )	
+	counts					<- apply(seq.DNAbin.mat,1,function(x) base.freq(x, freq=1, all=1))
+	apply(counts*rna.gc.fraction,2,sum) / apply(counts[rna.gc.sum,],2,sum)
+}
+
 #slight modification of blastSequences() in pkg annotate
 hivc.seq.blast<- function (x, database = "nr", hitListSize = "10", filter = "L", expect = "10", program = "blastn", organism= "HIV-1") 
 {
@@ -364,6 +373,7 @@ hivc.clu.clusterbythresh<- function(ph,thresh.brl=NULL,dist.brl=NULL,thresh.node
 		nodesupport			<- rep(1,Nnode(ph))
 		thresh.nodesupport	<- 1		
 	}
+#print(nodesupport[1:10]); print(thresh.nodesupport)
 	## set up clustering
 	ntips		<- Ntip(ph)	
 	clu.i 		<- 0 ## cluster number
@@ -371,17 +381,19 @@ hivc.clu.clusterbythresh<- function(ph,thresh.brl=NULL,dist.brl=NULL,thresh.node
 	clu.idx		<- rep(NA,ntips+ph$Nnode) ## cluster index assignment
 	igraph.ph	<- graph.edgelist(ph$edge) ## ph in igraph form
 	dfs 		<- graph.dfs(igraph.ph,root=ntips+1,neimode='out',order=TRUE,dist=TRUE)
+#print(c(length(dfs$order),Ntip(ph),Nnode(ph)))
 	## travese the ph in depth first order
 	for(i in 1:length(dfs$order))
 	{
 		node <- dfs$order[i]
-		#print( c(node,node-ntips, is.na(clu.mem[node]), thresh.brl, dist.brl[node-ntips], dist.brl[node-ntips]<=thresh.brl, thresh.nodesupport, nodesupport[node-ntips], nodesupport[node-ntips]<thresh.nodesupport) )
+#print( c(node,node-ntips, is.na(clu.mem[node]), thresh.brl, dist.brl[node-ntips], dist.brl[node-ntips]<=thresh.brl, thresh.nodesupport, nodesupport[node-ntips], nodesupport[node-ntips]<thresh.nodesupport) )
 		if(	node > ntips	&&											## skip leaves
 			is.na(clu.mem[node]) &&										## only consider unassigned nodes
 			nodesupport[node-ntips]>=thresh.nodesupport-EPS &&
 			dist.brl[node-ntips]<=thresh.brl+EPS
 			)	 
 		{				
+#print(nodesupport[node-ntips]);print(c(node,i))			
 			clu.i 			<- clu.i+1
 			subtree 		<- graph.dfs(igraph.ph,node,neimode='out',unreachable=FALSE)$order
 			subtree 		<- subtree[! is.nan(subtree)]
@@ -430,33 +442,122 @@ hivc.clu.exp.typeIerror.randomclu<- function(ph, dist.brl, nodesupport, ph.unlin
 	list(fp.data=clu.fp.exp, fp.n=sum(clu.fp.exp), fp.rate= sum(clu.fp.exp)/length(clusters), clustering=clustering)
 }
 ######################################################################################
-hivc.clu.typeIerror<- function(clustering, ph.unlinked.seroneg, ph.unlinked.dead, verbose=0)
+hivc.clu.truepos<- function(clustering, ph.linked, ph.tips.n, verbose=0)
 {
 	clusters	<- unique(clustering[["clu.mem"]][!is.na(clustering[["clu.mem"]])])
-	clu.fp.n	<- sapply(clusters, function(clu)		
+	if(!length(clusters))
+	{
+		clu.tp		<- cbind( subset(ph.linked,select=c(Patient,nTP)), TP.clu=0)
+		setnames(clu.tp, "nTP","TP.n")		
+		clu.onlytp	<- as.data.table(na.omit(data.frame(clu=NA)))
+	}
+	else
+	{				
+		clu.tp	<- lapply(c(-1,clusters), function(clu)		
 			{		
+				if(clu==-1)					#bug in data.table; if first data.table empty, rbind fails		http://lists.r-forge.r-project.org/pipermail/datatable-help/2012-November/001372.html
+					return( as.data.table(data.frame(Patient="XXX",TP.clu=0,TP.n=0,TP.all=F,clu=0,stringsAsFactors=F)) )
 				tmp							<- which(clustering[["clu.mem"]]==clu)
 				clu.leaves					<- tmp[ tmp<=ph.tips.n ]
-				clu.leaves.seroneg			<- sapply(clu.leaves, function(x)
-						{
-							as.numeric( subset(ph.unlinked.seroneg, x==PhNode, c(PhNodeUnlinked,NegT) ) )	 	#O(logn) search; returns NA if subset dt is empty																 
-						})				
-#print(clu); print(tmp); print(clu.leaves); print(clu.leaves.seroneg)
-				#if all leaves not seroneg, return 0								
-				if(all(is.na(clu.leaves.seroneg[1,])))	return(0)
-				#if at least one seroneg, compute prob that 1-P(X=0) where X is number of seroconverters dead at SC of latest seroconverter				
-				clu.leaves.seroneg			<- rbind(clu.leaves,clu.leaves.seroneg)[,!is.na(clu.leaves.seroneg[2,]),drop=0]								
-				clu.leaves.latestseroneg.ix	<- which.max( clu.leaves.seroneg[3,] )
-				tmp							<- sapply(clu.leaves.seroneg[2,],function(x) length(ph.unlinked.dead[[x]]) )
-				latest.seroneg.unlinked		<- ph.unlinked.dead[[ clu.leaves.seroneg[2,clu.leaves.latestseroneg.ix] ]]				
-				if( max(tmp)!=length(latest.seroneg.unlinked) )	
-					stop("expect latest seroneg to have most unlinked HIV+ dead associated")	#which.max does not work because .ix is not necessarily the first																				
-				length(which( latest.seroneg.unlinked%in%clu.leaves ))																	
-			})		
-	list(clu.n=length(clusters), fp.n= length(which(clu.fp.n>0)), fp.unlinked.n= sum(clu.fp.n), fp.rate= length(which(clu.fp.n>0))/length(clusters))
+				clu.leaves.linked			<- na.omit(merge( data.table(Node=clu.leaves, key="Node"), ph.linked, all.x=1))	#extract clu.leaves that should be linked
+				if(!nrow(clu.leaves.linked))	
+					ans						<- as.data.table(na.omit(data.frame(Patient=NA,TP.clu=NA,TP.n=NA,TP.all=NA, clu=NA)))
+				else	
+				{
+					ans						<- clu.leaves.linked[, list(TP.clu=length(FASTASampleCode), TP.n=min(nTP) ), by=Patient]
+					tmp						<- length(clu.leaves)==nrow(clu.leaves.linked)	&& nrow(ans)==1
+					ans[,TP.all:=tmp]		
+					ans[,clu:=clu]
+				}
+				ans
+			})
+		clu.tp		<- rbindlist(clu.tp)[-1,]	#rbind and remove bugfix first row
+		clu.onlytp	<- unique(subset(clu.tp,TP.all,select=clu))
+		clu.tp		<- clu.tp[,list(TP.clu=choose(max(TP.clu),2),TP.n=choose(min(TP.n),2)),by=Patient]	#get number of TP pairs			
+	}				
+	list(clu.n=length(clusters), clu.onlytp=clu.onlytp, tp.success= nrow( subset(clu.tp, TP.clu==TP.n) ), tp.total= nrow(clu.tp), tp.rate.tpclu= nrow( subset(clu.tp, TP.clu==TP.n) ) / nrow(clu.tp), tp.rate.tpavg=mean(clu.tp[,TP.clu/TP.n]), tp.rate.tpsum=sum(clu.tp[,TP.clu])/sum(clu.tp[,TP.n])  )
 }
 ######################################################################################
-hivc.clu.clusterbytypeIerror<- function(ph, dist.brl, nodesupport, ph.unlinked.seroneg, ph.unlinked.dead, thresh.brl=NULL, thresh.bs=NULL, level= 0.01, tol= level, mxit= 100, thresh.bs.lower= min(nodesupport), thresh.brl.upper=max(dist.brl), verbose=0)
+hivc.clu.trueneg<- function(clustering, ph.unlinked.info, ph.unlinked, ph.tips.n, verbose=0)
+{
+	clusters	<- unique(clustering[["clu.mem"]][!is.na(clustering[["clu.mem"]])])
+	clu.fp		<- sapply(clusters, function(clu)		
+					{		
+						tmp							<- which(clustering[["clu.mem"]]==clu)
+						clu.leaves					<- tmp[ tmp<=ph.tips.n ]
+						clu.leaves					<- merge( data.table(Node=clu.leaves, key="Node"), subset(ph.unlinked.info,select=c(Node,NodeIdx,NegT)) )						
+						if(all( is.na(clu.leaves[,NodeIdx]) ))	return(rep(NA,2))
+						if(!nrow(clu.leaves))	return(rep(NA,2))				
+						tmp							<- clu.leaves[,NegT]
+						tmp							<- ifelse(all(is.na(tmp)),1,which.max(tmp))	
+						clu.leaves.unlinked			<- ph.unlinked[[ clu.leaves[tmp,NodeIdx] ]]			
+#print(clu.leaves)
+						c(nrow( merge(clu.leaves, clu.leaves.unlinked, by="Node") ), nrow(clu.leaves.unlinked))																					
+					})	
+	clu.fp		<-	clu.fp[, apply(!is.na(clu.fp),2,all),drop=0]
+	list(clu.n=length(clusters), clu.fp= clu.fp, fp.n= length(which(clu.fp[1,]>0)), fp.n.sum= sum(clu.fp[1,]), fp.rate= length(which(clu.fp[1,]>0))/length(clusters))
+}
+######################################################################################
+hivc.clu.clusterbytruepos<- function(ph, dist.brl, nodesupport, ph.linked, thresh.brl=NULL, thresh.bs=NULL, level= 0.95, tol= 0.005, mxit= 10, thresh.bs.lower= min(nodesupport), thresh.brl.upper=max(dist.brl), method.tp="tp.rate.tpclu",verbose=0)
+{		
+	if(is.null(thresh.brl) && is.null(thresh.bs))	stop("either thresh.bs or thresh.brl required")
+	if(!is.null(thresh.brl) && !is.null(thresh.bs))	stop("nothing to do")
+	
+	error								<- 1
+	ph.tips.n							<- Ntip(ph)
+	nit									<- 0	
+	if(is.null(thresh.bs))
+	{
+		srch.find.thresh.bs				<- 1
+		srch.upper						<- 1
+		srch.lower						<- thresh.bs	<- thresh.bs.lower		
+	}
+	else
+	{
+		srch.find.thresh.bs				<- 0
+		srch.lower						<- thresh.brl 	<- 0
+		srch.upper						<- thresh.brl.upper		
+	}
+	if(verbose)
+		cat(paste("\ncalibrate bs?",srch.find.thresh.bs,"\nsrch.lower",srch.lower,"srch.upper",srch.upper))
+	#binary search algorithm
+	while(	abs(error)>tol && srch.lower<srch.upper && nit<mxit)
+	{	
+		if(nit)
+		{
+			if(srch.find.thresh.bs)	
+					thresh.bs			<- ( srch.upper + srch.lower ) / 2
+			else
+					thresh.brl			<- ( srch.upper + srch.lower ) / 2
+		}
+		clustering					<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=nodesupport, retval="all")
+		tmp							<- hivc.clu.truepos(clustering, ph.linked, ph.tips.n)
+print(tmp)		
+		if(verbose)	
+			cat(paste("\nit=",nit,", #clu=",tmp[["clu.n"]],", BS=",thresh.bs,", BRL=",thresh.brl,", avg of %TP in cluster=",round(tmp[[method.tp]],digits=4),sep=''))			
+		error						<- tmp[[method.tp]]	- level	
+#print(c(srch.upper,srch.lower, thresh.bs, thresh.brl))
+		if(srch.find.thresh.bs)	
+		{
+			if(error<0)
+				srch.upper			<- thresh.bs
+			else
+				srch.lower			<- thresh.bs							
+		}
+		else
+		{
+			if(error<0)
+				srch.lower			<- thresh.brl				
+			else
+				srch.upper			<- thresh.brl				
+		}		
+		nit							<- nit+1
+	}
+	ans<- list(thresh.bs=thresh.bs, thresh.brl=thresh.brl, clu=clustering, clu.fp.n=error+level, srch.nit= nit, srch.error=error, srch.tol=tol)
+	ans		
+}
+######################################################################################
+hivc.clu.clusterbytrueneg<- function(ph, dist.brl, nodesupport, ph.unlinked.info, ph.unlinked, thresh.brl=NULL, thresh.bs=NULL, level= 0.01, tol= 0.005, mxit= 20, thresh.bs.lower= min(nodesupport), thresh.brl.upper=max(dist.brl), verbose=0)
 {		
 	if(is.null(thresh.brl) && is.null(thresh.bs))	stop("either thresh.bs or thresh.brl required")
 	if(!is.null(thresh.brl) && !is.null(thresh.bs))	stop("nothing to do")
@@ -479,7 +580,7 @@ hivc.clu.clusterbytypeIerror<- function(ph, dist.brl, nodesupport, ph.unlinked.s
 	if(verbose)
 		cat(paste("\ncalibrate bs?",srch.find.thresh.bs,"\nsrch.lower",srch.lower,"srch.upper",srch.upper,"thresh.bs",thresh.bs,"thresh.brl",thresh.brl))
 	#binary search algorithm
-	while(abs(error)>tol && nit<mxit)
+	while(abs(error)>tol && srch.lower<srch.upper && nit<mxit)
 	{	
 		if(nit)
 		{
@@ -490,9 +591,10 @@ hivc.clu.clusterbytypeIerror<- function(ph, dist.brl, nodesupport, ph.unlinked.s
 		}
 			
 		clustering					<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=nodesupport, retval="all")
-		tmp							<- hivc.clu.typeIerror(clustering, ph.unlinked.seroneg, ph.unlinked.dead, verbose=0)		
+		tmp							<- hivc.clu.trueneg(clustering, ph.unlinked.info, ph.unlinked, ph.tips.n, verbose=0)
+		clustering.fp				<- tmp$clu.fp
 		if(verbose)	
-			cat(paste("\nit=",nit,", #clu=",tmp[["clu.n"]],", BS=",thresh.bs,", BRL=",thresh.brl,", #unlinked in any cluster=",tmp[["fp.unlinked.n"]],", #FP=",tmp[["fp.n"]],", %FP=",round(tmp[["fp.rate"]],d=5),sep=''))			
+			cat(paste("\nit=",nit,", #clu=",tmp[["clu.n"]],", BS=",thresh.bs,", BRL=",thresh.brl,", #unlinked in any cluster=",tmp[["fp.n.sum"]],", #FP=",tmp[["fp.n"]],", %FP=",round(tmp[["fp.rate"]],d=5),sep=''))			
 		error						<- tmp[["fp.rate"]]	- level	
 #print(c(srch.upper,srch.lower, thresh.bs, thresh.brl))
 		if(srch.find.thresh.bs)	
@@ -511,29 +613,110 @@ hivc.clu.clusterbytypeIerror<- function(ph, dist.brl, nodesupport, ph.unlinked.s
 		}
 		nit							<- nit+1
 	}
-	ans<- list(thresh.bs=thresh.bs, thresh.brl=thresh.brl, clu=clustering, clu.fp.n=clu.fp.n, srch.nit= nit, srch.error=error, srch.tol=tol)
+	ans<- list(thresh.bs=thresh.bs, thresh.brl=thresh.brl, clu=clustering, clu.fp=clustering.fp, srch.nit= nit, srch.error=error, srch.tol=tol)
 	ans		
 }
 ######################################################################################
-hivc.clu.plot<- function(ph, clu, show.node.label= T, file=NULL, pdf.scaley=10, pdf.width= 7, pdf.height=pdf.scaley*7)
+hivc.clu.plot.tiplabels<- function (tip, text, col, adj = c(-0.05, 0.5), cex=1,add.xinch= 0.03, add.yinch= 0.02) 
+{		
+	lastPP 			<- get("last_plot.phylo", envir = .PlotPhyloEnv)
+	xx 				<- lastPP$xx[tip]
+	yy 				<- lastPP$yy[tip]
+	if(length(tip)==1)
+	{
+		#assume vector of text and col of same length
+		if(!is.vector(text) || !is.vector(col))	stop("expect vector text and vector col")
+		if(length(text)!=length(col))			stop("expect same length of text and col")
+		wh				<- sapply(text, function(x){	 c(xinch(strwidth(x, units = "inches", cex = cex)), yinch(strheight(x, units = "inches", cex = cex))) 		})
+		wh.total		<- c(sum(wh[1,]),max(wh[2,]))
+		coord			<- matrix(NA,6,length(text),dimnames=list(c("xl","xr","yb","yt","xx","yy"),c()))
+		coord["xl",]	<- xx - wh.total[1] * adj[1] - xinch(add.xinch)
+		tmp				<- cumsum(wh[1,]) + xinch(add.xinch) / ncol(wh)
+		coord["xl",]	<- coord["xl",] + c(0, tmp[-ncol(coord)])
+		coord["xr",]	<- coord["xl",] + wh[1,] + xinch(add.xinch)/ ncol(wh)
+		coord["yb",]	<- yy - wh.total[2] * adj[2] - yinch(add.yinch)
+		coord["yt",]	<- coord["yb",] + wh.total[2] + yinch(add.yinch)
+		coord["xx",]	<- coord["xl",] + c( diff( coord[1,] ), diff(coord[1:2,ncol(wh)])  ) / 2
+		coord["yy",]	<- rep(yy, ncol(coord))
+#print(wh); print(wh.total); print(coord)		
+	}
+	else
+	{
+		#assume matrix of text and col of same ncol
+		if(!is.matrix(text) || !is.matrix(col))				stop("expect matrix text and vector col")
+		if(ncol(text)!=ncol(col) || nrow(text)!=nrow(col))	stop("expect same dimensions of text and col")
+		if(ncol(text)!=length(tip))							stop("expect cols of text and col to correspond to tips")
+		coord	<- lapply( seq_along(xx),function(i)
+				{
+					wh				<- sapply(text[,i], function(x){	 c(xinch(strwidth(x, units = "inches", cex = cex)), yinch(strheight(x, units = "inches", cex = cex))) 		})
+					wh.total		<- c(sum(wh[1,]),max(wh[2,]))
+					coord			<- matrix(NA,6,nrow(text),dimnames=list(c("xl","xr","yb","yt","xx","yy"),c()))
+					coord["xl",]	<- xx[i] - wh.total[1] * adj[1] - xinch(add.xinch)
+					tmp				<- cumsum(wh[1,]) + xinch(add.xinch) / ncol(wh)
+					coord["xl",]	<- coord["xl",] + c(0, tmp[-ncol(coord)])
+					coord["xr",]	<- coord["xl",] + wh[1,] + xinch(add.xinch)/ ncol(wh)
+					coord["yb",]	<- yy[i] - wh.total[2] * adj[2] - yinch(add.yinch)
+					coord["yt",]	<- coord["yb",] + wh.total[2] + yinch(add.yinch)
+					coord["xx",]	<- coord["xl",] + c( diff( coord[1,] ), diff(coord[1:2,ncol(wh)])  ) / 2
+					coord["yy",]	<- rep(yy[i], ncol(coord))
+					coord
+				})
+		coord	<- do.call("cbind",coord)
+		text	<- as.vector(text)
+		col		<- as.vector(col)
+#print(coords); print(text); print(col)
+	}
+	rect(coord["xl",], coord["yb",], coord["xr",], coord["yt",], col = col, border=NA)
+	text(coord["xx",], coord["yy",], text, cex=cex)
+}
+######################################################################################
+hivc.clu.plot<- function(	ph, clu, edge.col.basic="black", show.node.label= T, file=NULL,  
+							highlight.edge.of.tiplabel=NULL, highlight.edge.of.tiplabel.col="red", 
+							highlight.cluster=NULL, highlight.cluster.col="red",							
+							pdf.scaley=10, pdf.width= 7, pdf.height=pdf.scaley*7, pdf.off=1, 
+							cex.nodelabel=0.5, cex.edge.incluster=1, cex.edge.outcluster= cex.edge.incluster/3)
 {
 	require(colorspace)	
 	clu.edge							<- clu[ ph$edge[,1] ]
 	clu.edge							<- clu.edge+1				#set col index for non-clustering edges to 1
 	clu.edge[is.na(clu.edge)]			<- 1
-	cols.n								<- length(unique(clu.edge))-1	
-	#cols.palette 						<- colorRampPalette(c("red", "orange", "blue"),space = "Lab")
-	#cols								<- c("black",cols.palette(cols.n))
-	cols								<- c("black",rainbow_hcl(cols.n, start = 30, end = 300))	
-	clu.edge.col						<- cols[clu.edge]
-	clu.edge.width						<- rep(1, length(clu.edge))
-	clu.edge.width[clu.edge!=1]			<- 2
+	#cols.n								<- length(unique(clu.edge))-1	
+	#cols								<- c("black",rainbow_hcl(cols.n, start = 30, end = 300))	
+	clu.edge.col						<- rep(edge.col.basic, nrow(ph$edge))	#cols[clu.edge]
+	clu.edge.col[clu.edge==1]			<- "grey50" 
+	if(!is.null(highlight.cluster))
+	{
+		if(length(highlight.cluster.col)==1)
+			highlight.cluster.col<- rep(highlight.cluster.col,length(highlight.cluster))
+		for(i in seq_along(highlight.cluster))
+			clu.edge.col[clu.edge%in%(highlight.cluster[[i]]+1)]<- 	highlight.cluster.col[i]	
+	}	
+	if(!is.null(highlight.edge.of.tiplabel))
+	{
+		highlight.edge<- lapply(highlight.edge.of.tiplabel, function(x)		which( ph$edge[,2]%in%which( substr(ph$tip.label, 1, nchar(x))==x ) )		)					
+		if(length(highlight.edge.of.tiplabel.col)==1)
+			highlight.edge.of.tiplabel.col	<- rep(highlight.edge, length(highlight.edge.of.tiplabel.col) )		
+		for(i in seq_along(highlight.edge))
+			clu.edge.col[highlight.edge[[i]]]		<- highlight.edge.of.tiplabel.col[i]		
+	}	
+	clu.edge.width						<- rep(cex.edge.outcluster, length(clu.edge))
+	clu.edge.width[clu.edge!=1]			<- cex.edge.incluster
+	clu.edge.lty						<- rep(1, length(clu.edge))
+	clu.edge.lty[clu.edge!=1]			<- 1
 	if(class(file)=="character")
 		pdf(file,width=pdf.width,height=pdf.height)
-	plot(ph, show.tip.label=F, show.node.label=show.node.label, cex=0.5, edge.color=clu.edge.col, edge.width=clu.edge.width)
-	if(class(file)=="character")
+	plot(ph, show.tip.label=F, show.node.label=show.node.label, cex=cex.nodelabel, edge.color=clu.edge.col, edge.width=clu.edge.width, edge.lty=clu.edge.lty)
+	if(class(file)=="character" && pdf.off)
 		dev.off()
-	#tiplabels(rep("  ",Ntip(ph)), bg=clu)	
+}
+######################################################################################
+hivc.clu.min.transmission.cascade<- function(brlmat)
+{
+	if(is.matrix(brlmat))
+		ans	<- .Call("hivc_clu_mintransmissioncascade", brlmat[upper.tri(brlmat)])  						
+	else
+		ans	<- .Call("hivc_clu_mintransmissioncascade", brlmat)
+	ans		
 }
 ######################################################################################
 #' Compute a statistic of patristic distances for the subtree starting at \code{node}
@@ -565,7 +748,7 @@ hivc.clu.brdist.stats.subtree<- function(node, tree, distmat, eval.dist.btw="lea
 }
 ######################################################################################
 #' Compute a statistic of patristic distances for each subtree in the tree
-hivc.clu.brdist.stats<- function(tree, distmat=NULL, eval.dist.btw="leaf")
+hivc.clu.brdist.stats<- function(tree, distmat=NULL, eval.dist.btw="leaf", stat.fun=max)
 {
 	require(phytools)
 	if(is.null(distmat))
@@ -578,7 +761,7 @@ hivc.clu.brdist.stats<- function(tree, distmat=NULL, eval.dist.btw="leaf")
 	}
 	ntips			<- Ntip(tree)
 	nint 			<- tree$Nnode 		## number of internal nodes
-	return(sapply(seq.int(ntips+1,ntips+nint), function(x) 		hivc.clu.brdist.stats.subtree(x,tree,distmat,eval.dist.btw=eval.dist.btw)		))	
+	return(sapply(seq.int(ntips+1,ntips+nint), function(x) 		hivc.clu.brdist.stats.subtree(x,tree,distmat,eval.dist.btw=eval.dist.btw, stat.fun=stat.fun)		))	
 }
 ######################################################################################
 hivc.get.hpcsys<- function()

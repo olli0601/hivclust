@@ -1,7 +1,23 @@
+#include <cstdarg>
+#include <sstream>
 #include <iostream>
 #include <cmath>
 #include <Rmath.h>
 #include "hivc.h"
+
+// ERROR HANDLING
+static inline void postIfError(const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	//Rvprintf(format, args);
+	vprintf(format, args);
+	va_end(args);
+	fflush(stdout);
+ 	std::exit(EXIT_FAILURE);
+ 	//throw std::runtime_error(nabcGlobals::BUFFER);
+}
+#define FAIL_ON(condition, message) if (condition){ postIfError(message, condition); }/**< macro to throw error messages */
 
 // ASSUMED FROM APE
 //	tab_trans[65] = 0x88; /* A */
@@ -131,4 +147,145 @@ void hivc_dist_ambiguous_dna(unsigned char *x1, unsigned char *x2, int *n, doubl
 	}
 	//std::cout<<"ans "<<m1<<"/"<<m2<<std::endl;
 	*ans= static_cast<double>(m1)/m2;
+}
+
+SEXP hivc_clu_mintransmissioncascade(SEXP inbrlv)
+{
+	FAIL_ON(! Rf_isVector(inbrlv) ,"hivc_clu_mintransmissioncascade: brlv is not vector %c");
+	SEXP ans;
+	PROTECT(ans= Rf_allocVector(REALSXP, 1));
+
+	int i, j, m, nbrl=Rf_length(inbrlv), nchange=0, nequal=0, verbose=0;
+	double tmp= std::sqrt( nbrl*2+0.25 ) + 0.5;
+	FAIL_ON( std::floor(tmp)!=tmp, "hivc_clu_mintransmissioncascade: brlv is not vector of upper triangular matrix %c");
+	int nc= CAST(int, tmp);
+	double *xd= NULL, *yd= NULL, *brlv=NULL;
+	double **xbrlv=NULL, **ybrlv= NULL, **triangle=NULL;
+
+	if(nc==1)
+		*REAL(ans)= 0;
+	else if(nc==2)
+		*REAL(ans)= *REAL(inbrlv);
+	else
+	{
+		//make internal copy of SEXP
+		brlv= NEW_ARY(double,nbrl);
+		for(i= nbrl, xd= REAL(inbrlv), yd=brlv;  	i; 		i--, *yd++= *xd++);
+		//set up array for triangular comparison
+		triangle= NEW_ARY(double*,3);
+		//set up fast indexing
+		xbrlv= NEW_ARY(double*,nc-1);
+		for(i= nc-1, xd= brlv, ybrlv=xbrlv;  	i; 		i--)
+		{
+			*ybrlv++= xd;
+			xd+= i;
+		}
+		if(verbose)
+		{
+			std::cout<<"\nncol is "<<nc<<std::endl;
+			std::cout<<"\ninput"<<std::endl;
+			for(i=0; 	i<nc;  i++)
+			{
+				std::cout<<'\n';
+				for(j=0;		j<=i; 		j++ )
+					std::cout<< 0 <<'\t';
+				for(j=0;		j<(nc-i-1); 		j++ )
+					std::cout<< *(xbrlv[i]+j) <<'\t';
+			}
+			std::cout<<std::endl;
+			//FAIL_ON(1,"stophere");
+		}
+
+		for(m=nc-1;		m--;		)//need at most n-1 rounds of transitive closure
+		{
+			//if all equal, can abort
+			for(i=nbrl, tmp= *(xd= brlv), nequal=0; 	i--;  nequal++)
+				if(tmp!=*xd++)
+					break;
+			if(verbose)
+				std::cout<<"\nnequal "<<nequal<<std::endl;
+			if(nequal==nbrl)
+				break;
+			//one round of transitive closure
+			for(i=0, nchange=0; 	i<(nc-2);		i++)
+				for(j=1;		j<(nc-i-1);		j++)
+				{
+					/*  triangle coding is   0	1
+					 * 							2
+					 */
+					triangle[0]= xbrlv[i];
+					triangle[1]= xbrlv[i]+j;
+					triangle[2]= xbrlv[i+1]+j-1;
+
+					if(verbose)
+						std::cout<<'\n'<<(**triangle)<<'\t'<<(**(triangle+1))<<'\t'<<(**(triangle+2));
+					if( **triangle<=**(triangle+1))
+					{
+						if(			**(triangle+1)<=**(triangle+2))// 0,1,2		ie 2<- 1
+						{
+							if(**(triangle+2)!=**(triangle+1)) 	nchange++;
+							**(triangle+2)= **(triangle+1);
+						}
+						else if(	**(triangle+1)>**(triangle+2)  && 	**triangle<**(triangle+2))// 0,2,1	 ie 1<- 2
+						{
+							if(**(triangle+1)!=**(triangle+2)) 	nchange++;
+							**(triangle+1)= **(triangle+2);
+						}
+						else	// 2,0,1 	ie	1<- 0
+						{
+							if(**(triangle+1)!=**triangle) 		nchange++;
+							**(triangle+1)= **triangle;
+						}
+					}
+					else
+					{
+						if(			**(triangle+1)>**(triangle+2))// 2,1,0 	ie	0<- 1
+						{
+							if(**triangle!=**(triangle+1)) 	nchange++;
+							**triangle= **(triangle+1);
+						}
+						else if(	**(triangle+1)<=**(triangle+2)  && 	**triangle<=**(triangle+2))// 1,0,2		ie 2<- 0
+						{
+							if(**(triangle+2)!=**triangle) 	nchange++;
+							**(triangle+2)= **triangle;
+						}
+						else	// 1,2,0	ie 0<- 2
+						{
+							if(**triangle!=**(triangle+2)) 	nchange++;
+							**triangle= **(triangle+2);
+						}
+					}
+					if(verbose)
+						std::cout<<'\n'<<(**triangle)<<'\t'<<(**(triangle+1))<<'\t'<<(**(triangle+2));
+
+				}
+			if(verbose)
+			{
+				std::cout<<"\ntriangularization step "<<m<<std::endl;
+				for(i=0; 	i<nc;  i++)
+				{
+					std::cout<<'\n';
+					for(j=0;		j<=i; 		j++ )
+						std::cout<< 0 <<'\t';
+					for(j=0;		j<(nc-i-1); 		j++ )
+						std::cout<< *(xbrlv[i]+j) <<'\t';
+				}
+				std::cout<<std::endl;
+				std::cout<<"\nnchange "<<nchange<<std::endl;
+			}
+			//if no change, can abort
+			if(nchange==0)
+				break;
+		}
+		//compute max brl over upper triangular
+		for(i=nbrl, tmp= *(xd= brlv); 	i--;  xd++)
+			if(tmp<*xd)
+				tmp= *xd;
+		*REAL(ans)= tmp;
+		DELETE(brlv);
+		DELETE(triangle);
+		DELETE(xbrlv);
+	}
+	UNPROTECT(1);
+	return ans;
 }
