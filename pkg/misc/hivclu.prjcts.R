@@ -3106,7 +3106,7 @@ hivc.proj.pipeline<- function()
 		outdir		<- paste(dir.name,"tmp",sep='/')
 		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"				
 		cmd			<- hivc.cmd.preclustering(indir, infile, insignat, outdir=outdir)
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3600mb")
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1)
 		cat(cmd)		
 		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
