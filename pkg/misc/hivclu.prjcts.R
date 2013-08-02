@@ -12,7 +12,7 @@ HIVC.COUNTRY.TABLE<- data.table(matrix(c(	"AG","ANTIGUA AND BARBUDA",		"AL","ALB
 						"SI","SLOVENIA",	"SK","SLOVAKIA",	"SN","SENEGAL",	"SR","SURINAME",	"SV","EL SALVADOR",	"TH","THAILAND",	"TT","TRINIDAD AND TOBAGO",	"TW","TAIWAN",			
 						"UA","UKRAINE",	"UG","UGANDA",	"US","UNITED STATES",	"UY","URUGUAY",	"VE","VENEZUELA",	"VN","VIETNAM",	"YE","YEMEN","ZA","SOUTH AFRICA"),ncol=2,byrow=1,dimnames=list(c(),c("key","country"))))
 
-
+######################################################################################
 project.hivc.check.DateRes.after.HIVPosTest<- function(dir.name= DATA, verbose=1)
 {
 	require(data.table)
@@ -169,7 +169,7 @@ project.hivc.check.DateRes.after.HIVPosTest<- function(dir.name= DATA, verbose=1
 	if(verbose)		cat(paste("\npatients with HIVPos>DateRes RT or PROT, n=", length(patient.laterHIVPos)))
 	if(verbose)		cat(paste("\npatients with HIVPos>DateRes RT or PROT, Patient", paste(patient.laterHIVPos,collapse=', ') ))		
 }
-
+######################################################################################
 project.hivc.check.DateRes.after.T0<- function(dir.name= DATA, verbose=1)
 {
 	require(data.table)
@@ -230,19 +230,19 @@ project.hivc.check.DateRes.after.T0<- function(dir.name= DATA, verbose=1)
 				#print(range(df.laterT0))				
 			})
 }
-
+######################################################################################
 project.hivc.check<- function()
 {
 	if(1) project.hivc.check.DateRes.after.HIVPosTest()
 	if(0) project.hivc.check.DateRes.after.T0()	
 }
-
+######################################################################################
 project.hivc.get.geneticdist.from.sdc<- function(dir.name= DATA)
 {	
 	tmp<- hivc.clu.geneticdist.cutoff(dir.name=dir.name, plot=1, verbose=1, level.retain.unlinked=0.05)
 	print(tmp)
 }
-
+######################################################################################
 project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 {	
 	require(data.table)		
@@ -476,7 +476,7 @@ project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 	print(df.all)	
 	stop()	
 }
-
+######################################################################################
 project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 {
 	if(0)
@@ -704,7 +704,7 @@ project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=
 		save(df, file=file)		
 	}
 }
-
+######################################################################################
 #create PROT+RT data set of first sequences from all patients
 hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 {	
@@ -825,7 +825,7 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 	else
 		cat("\nfound boostrap sequence alignment")
 }
-
+######################################################################################
 #create PROT+RT data set of first sequences from all patients
 hivc.prog.get.allseq<- function()
 {	
@@ -1141,89 +1141,89 @@ hivc.prog.get.allseq<- function()
 			file								<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo",sep='')			
 			if(verbose) cat(paste("\nread ",file))
 			seq.PROT.RT							<- read.dna(file, format="fasta", as.character=1)
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2273, c("g","-","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2273, c("g","-","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2273:2275]<- matrix( c("-","-","g"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2348, c("?","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2348, c("?","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2348:2349]<- matrix( c("g","?"), nrow=length(query.yes), ncol=2, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2350, c("-","-","-","t"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2350, c("-","-","-","t"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2350:2353]<- matrix( c("t","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
 			#always delete drug resistance from pos 2356 because this is really cryptic; leave g at 2355 always OK
 			seq.PROT.RT[,2356:2363]				<- matrix( c("-","-","-","-","-","-","-","-"), nrow=nrow(seq.PROT.RT), ncol=8, byrow=1 )			
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo1",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)			
 			#manual edits seq 3151 3243 9049
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2624, c("t","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2624, c("t","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2624:2625]<- matrix( c("-","t"), nrow=length(query.yes), ncol=2, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2634, c("-","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2634, c("-","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2634:2635]<- matrix( c("g","-"), nrow=length(query.yes), ncol=2, byrow=1 )			
 			seq.PROT.RT.sort.by					<- apply(seq.PROT.RT,1,function(x)		which(rev(x)!="-" )[1]  )
 			seq.PROT.RT							<- seq.PROT.RT[sort(seq.PROT.RT.sort.by, index.return=1)$ix,]
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo2",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
 			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2759, c("-","g","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2759, c("-","g","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2759:2761]<- matrix( c("g","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2759, c("-","a","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2759, c("-","a","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2759:2761]<- matrix( c("a","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2760, c("-","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2760, c("-","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2760:2761]<- matrix( c("a","-"), nrow=length(query.yes), ncol=2, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2760, c("-","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2760, c("-","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2760:2761]<- matrix( c("g","-"), nrow=length(query.yes), ncol=2, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2760, c("c","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2760, c("c","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2760:2761]<- matrix( c("-","c"), nrow=length(query.yes), ncol=2, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2761, c("-","c"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2761, c("-","c"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2761:2762]<- matrix( c("c","-"), nrow=length(query.yes), ncol=2, byrow=1 )			
 			#always delete drug resistance from pos 2752 because this is really cryptic; leave a at 2751 always OK
 			seq.PROT.RT[,2752:2759]				<- matrix( c("-","-","-","-","-","-","-","-"), nrow=nrow(seq.PROT.RT), ncol=8, byrow=1 )
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo3",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
 			#double fixup needed
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2759, c("-","g","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2759, c("-","g","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2759:2761]<- matrix( c("g","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2759, c("-","g","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2759, c("-","g","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2759:2761]<- matrix( c("g","g","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2759, c("-","a","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2759, c("-","a","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2759:2761]<- matrix( c("a","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2759, c("-","r","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2759, c("-","r","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2759:2761]<- matrix( c("r","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
 			seq.PROT.RT[,2752:2760]				<- matrix( c("-","-","-","-","-","-","-","-","-"), nrow=nrow(seq.PROT.RT), ncol=9, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2760, c("-","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2760, c("-","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2760:2761]<- matrix( c("g","-"), nrow=length(query.yes), ncol=2, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 2760, c("-","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 2760, c("-","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,2760:2761]<- matrix( c("a","-"), nrow=length(query.yes), ncol=2, byrow=1 )			
 			seq.PROT.RT[,2752:2760]				<- matrix( c("-","-","-","-","-","-","-","-","-"), nrow=nrow(seq.PROT.RT), ncol=9, byrow=1 )
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo4",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3149, c("-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3149, c("-"))
 			if(length(query.yes))
 			{	
 				seq.PROT.RT[query.yes,3149:3156]<- seq.PROT.RT[query.yes,3150:3157]
 				seq.PROT.RT[query.yes,3157]		<- "-"
 			}	
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo5",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)				
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3156, c("-","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3156, c("-","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3156:3157]<- matrix( c("a","-"), nrow=length(query.yes), ncol=2, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3157, c("a","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3157, c("a","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3157:3158]<- matrix( c("-","a"), nrow=length(query.yes), ncol=2, byrow=1 )
 			#rm col 3213 - not in HB2 and we keep the standard numbering
 			seq.PROT.RT							<- seq.PROT.RT[,-3213]
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo6",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3243, c("-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3243, c("-"))
 			if(length(query.yes))
 			{	
 				seq.PROT.RT[query.yes,3241:3243]<- seq.PROT.RT[query.yes,3240:3242]
@@ -1232,165 +1232,165 @@ hivc.prog.get.allseq<- function()
 			#fixup: rm col 2671 to 2676 - not in HB2 and we return to the standard numbering
 			seq.PROT.RT							<- seq.PROT.RT[,c(1:2670,2677:ncol(seq.PROT.RT))]
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo7",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)						
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3433, c("-","t"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3433, c("-","t"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3433:3434]<- matrix( c("t","-"), nrow=length(query.yes), ncol=2, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3433, c("-","-","-","-","t"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3433, c("-","-","-","-","t"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3433:3437]<- matrix( c("t","-","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3434, c("-","-","-","-","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3434, c("-","-","-","-","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3434:3438]<- matrix( c("a","-","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3434, c("g","-","-","-","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3434, c("g","-","-","-","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3434:3438]<- matrix( c("-","-","-","-","g"), nrow=length(query.yes), ncol=5, byrow=1 )
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo8",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3434, c("-","-","-","-","g","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3434, c("-","-","-","-","g","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3434:3439]<- matrix( c("g","-","-","-","-","g"), nrow=length(query.yes), ncol=6, byrow=1 )						
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3435, c("-","-","-","-","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3435, c("-","-","-","-","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3435:3439]<- matrix( c("a","-","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3435, c("-","-","-","-","r"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3435, c("-","-","-","-","r"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3435:3439]<- matrix( c("r","-","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3436, c("-","-","-","c"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3436, c("-","-","-","c"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3436:3439]<- matrix( c("c","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3436, c("-","-","-","t"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3436, c("-","-","-","t"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3436:3439]<- matrix( c("t","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3436, c("-","-","c"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3436, c("-","-","c"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3436:3438]<- matrix( c("c","-","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3436, c("-","-","t"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3436, c("-","-","t"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3436:3438]<- matrix( c("t","-","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3436, c("-","-","y"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3436, c("-","-","y"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3436:3438]<- matrix( c("y","-","-"), nrow=length(query.yes), ncol=3, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3437, c("-","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3437, c("-","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3437:3438]<- matrix( c("a","-"), nrow=length(query.yes), ncol=2, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3438, c("-","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3438, c("-","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3438:3439]<- matrix( c("g","-"), nrow=length(query.yes), ncol=2, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3438, c("a","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3438, c("a","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3437:3438]<- matrix( c("-","a"), nrow=length(query.yes), ncol=2, byrow=1 )
 			
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo9",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3491, c("c","a","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3491, c("c","a","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3491:3493]<- matrix( c("-","c","a"), nrow=length(query.yes), ncol=3, byrow=1 )															
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3501, c("-","t","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3501, c("-","t","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3501:3503]<- matrix( c("t","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3501, c("a","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3501, c("a","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3501:3502]<- matrix( c("-","a"), nrow=length(query.yes), ncol=2, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3503, c("-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3503, c("-"))
 			for(i in query.yes)
 				seq.PROT.RT[i,3501:3503]		<- c("-",seq.PROT.RT[i,3501:3502])			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3504, c("-","-","-","t"))	
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3504, c("-","-","-","t"))	
 			for(i in query.yes)
 				seq.PROT.RT[i,3504:3524]		<- c(seq.PROT.RT[i,3507:3524],"-","-","-")
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3506, c("-","-","-","t","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3506, c("-","-","-","t","g"))
 			for(i in query.yes)
 				seq.PROT.RT[i,3506:3526]		<- c(seq.PROT.RT[i,3509:3526],"-","-","-")
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3507, c("-","-","-","g","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3507, c("-","-","-","g","a"))
 			for(i in query.yes)
 				seq.PROT.RT[i,3507:3537]		<-	c(seq.PROT.RT[i,3510:3537],"-","-","-")			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3543, c("-","c"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3543, c("-","c"))
 			if(length(query.yes))
 			{	
 				seq.PROT.RT[query.yes,3543:3550]<- seq.PROT.RT[query.yes,3544:3551]
 				seq.PROT.RT[query.yes,3551]		<- "-"
 			}
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("-","c","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3549, c("-","c","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3549:3551]<- matrix( c("c","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("-","g","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3549, c("-","g","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3549:3551]<- matrix( c("g","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("-","g","t"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3549, c("-","g","t"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3549:3551]<- matrix( c("g","t","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3551, c("g","g","c","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3551, c("g","g","c","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3551:3554]<- matrix( c("-","g","g","c"), nrow=length(query.yes), ncol=4, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3495, c("g","-","-","-","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3495, c("g","-","-","-","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3495:3499]<- matrix( c("g","g","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo10",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
 			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3497, c("-","-","-","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3497, c("-","-","-","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3497:3500]<- matrix( c("a","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )						
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3497, c("-","-","-","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3497, c("-","-","-","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3497:3500]<- matrix( c("g","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )									
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3499, c("t","-","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3499, c("t","-","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3499:3501]<- matrix( c("-","-","t"), nrow=length(query.yes), ncol=3, byrow=1 )			
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3578, c("g","a","g","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3578, c("g","a","g","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3578:3581]<- matrix( c("-","g","a","g"), nrow=length(query.yes), ncol=4, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3578, c("g","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3578, c("g","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3578:3579]<- matrix( c("-","g"), nrow=length(query.yes), ncol=2, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3551, c("g","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3551, c("g","g"))
 			for(i in query.yes)
 				seq.PROT.RT[i,3551:3600]		<-	c("-",seq.PROT.RT[i,3551:3599])
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3552, c("g","c"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3552, c("g","c"))
 			for(i in query.yes)
 				seq.PROT.RT[i,3552:3600]		<-	c("-",seq.PROT.RT[i,3552:3599])
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3498, c("c","g","t"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3498, c("c","g","t"))
 			for(i in query.yes)
 				seq.PROT.RT[i,3498:3520]		<-	c("-",seq.PROT.RT[i,3498:3519])
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("a","a","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3549, c("a","a","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3549:3551]<- matrix( c("-","-","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3551, c("g","a","c"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3551, c("g","a","c"))
 			for(i in query.yes)
 				seq.PROT.RT[i,3551:3560]		<-	c("-",seq.PROT.RT[i,3551:3559])
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3551, c("g","a","y","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3551, c("g","a","y","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3551:3554]<- matrix( c("-","g","a","y"), nrow=length(query.yes), ncol=4, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("-","c","c","g","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3549, c("-","c","c","g","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3549:3551]<- matrix( c("c","-","c"), nrow=length(query.yes), ncol=3, byrow=1 )
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo11",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
 			
 			#manual curation on the end
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3422, c("t","-","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3422, c("t","-","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3422:3424]<- matrix( c("-","-","t"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3494, c("g","g","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3494, c("g","g","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3494:3496]<- matrix( c("-","g","g"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3498, c("-","-","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3498, c("-","-","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3498:3500]<- matrix( c("g","-","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3578, c("g","a","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3578, c("g","a","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3578:3580]<- matrix( c("-","g","a"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3618, c("g","-","-","-","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3618, c("g","-","-","-","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3618:3622]<- matrix( c("-","-","-","-","g"), nrow=length(query.yes), ncol=5, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3499, c("-","c"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3499, c("-","c"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3499:3500]<- matrix( c("c","-"), nrow=length(query.yes), ncol=2, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3504, c("a","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3504, c("a","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3504:3505]<- matrix( c("-","a"), nrow=length(query.yes), ncol=2, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3437, c("-","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3437, c("-","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3437:3438]<- matrix( c("a","-"), nrow=length(query.yes), ncol=2, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3438, c("c","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3438, c("c","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3438:3439]<- matrix( c("-","c"), nrow=length(query.yes), ncol=2, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 3444, c("c","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 3444, c("c","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,3444:3445]<- matrix( c("-","c"), nrow=length(query.yes), ncol=2, byrow=1 )
 			#cut before PROT pol start and at max len in database
@@ -1401,38 +1401,38 @@ hivc.prog.get.allseq<- function()
 			#always delete drug resistance at G333D/E because this is at the end of the alignment and alignment unreliable - could have picked up other ends
 			seq.PROT.RT[,1294:1299]				<- matrix( c("-","-","-","-","-","-"), nrow=nrow(seq.PROT.RT), ncol=6, byrow=1 )			
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo12",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("g","g","g"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("g","g","g"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1302]<- matrix( c("g","g","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("g","g","t"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("g","g","t"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1302]<- matrix( c("g","g","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("g","g","a"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("g","g","a"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1302]<- matrix( c("g","g","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("g","a","c"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("g","a","c"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1302]<- matrix( c("-","-","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("g","g","-","c"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("g","g","-","c"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1303]<- matrix( c("g","g","g","c"), nrow=length(query.yes), ncol=4, byrow=1 )			
 			write.dna(seq.PROT.RT, file=paste(indir,'/',infile,'_',gsub('/',':',insignat),".fasta.clustalo14",sep=''), format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)						
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("a","a","c","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("a","a","c","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1303]<- matrix( c("-","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("g","a","t","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("g","a","t","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1303]<- matrix( c("g","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("t","g","t","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("t","g","t","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1303]<- matrix( c("t","g","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("a","t","c","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("a","t","c","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1303]<- matrix( c("-","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("-","g","t","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("-","g","t","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1303]<- matrix( c("-","g","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
-			query.yes							<- hivx.seq.find(seq.PROT.RT, 1300, c("g","a","y","-"))
+			query.yes							<- hivc.seq.find(seq.PROT.RT, 1300, c("g","a","y","-"))
 			if(length(query.yes))
 				seq.PROT.RT[query.yes,1300:1303]<- matrix( c("g","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
 			
@@ -1446,8 +1446,8 @@ hivc.prog.get.allseq<- function()
 			hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)			
 			file								<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')
 			if(verbose)	cat(paste("\nwrite R file to",file))
-			file								<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".fasta",sep='')
 			save(seq.PROT.RT, file=file)
+			file								<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".fasta",sep='')			
 			if(verbose)	cat(paste("\nwrite fasta file to",file))
 			write.dna(seq.PROT.RT, file=file, format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)						
 		}
@@ -1459,7 +1459,7 @@ hivc.prog.get.allseq<- function()
 		load(file)
 	}	
 }
-
+######################################################################################
 #create PROT+RT data set of first sequences from all patients
 hivc.prog.get.firstseq<- function()
 {	
@@ -1575,96 +1575,96 @@ hivc.prog.get.firstseq<- function()
 		file								<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_",gsub('/',':',signat.out),".fasta.clustalo",sep='')
 		if(verbose) cat(paste("\nread ",file))
 		seq.PROT.RT							<- read.dna(file, format="fasta", as.character=1)
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 2550, c("-","-","-"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 2550, c("-","-","-"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,2550:2552]<- matrix( c("c","c","y"), nrow=length(query.yes), ncol=3, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 2550, c("c","c","y","-"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 2550, c("c","c","y","-"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,2550:2553]<- matrix( c("-","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 2751, c("-","-","-","a"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 2751, c("-","-","-","a"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,2751:2754]<- matrix( c("a","-","-","-"), nrow=length(query.yes), ncol=4, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3143, c("-"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3143, c("-"))
 		for(i in query.yes)	
 			seq.PROT.RT[i,3143:3151]		<-	c(seq.PROT.RT[i,3144:3151],"-") 	#align pos 3143 and move gap into 3rd codon
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3151, c("a","-"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3151, c("a","-"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3151:3152]<- matrix( c("-","a"), nrow=length(query.yes), ncol=2, byrow=1 )
 		#always delete drug resistance insertion at pos 69 because this is really cryptic
 		seq.PROT.RT[,2752:2754]				<- matrix( c("-","-","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3237, c("-"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3237, c("-"))
 		for(i in query.yes)	
 			seq.PROT.RT[i,3233:3237]<- c("-",seq.PROT.RT[i,3233:3236]) 		#align pos 3237 and move gap into 3rd codon
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3433, c("-","t"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3433, c("-","t"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3433:3434]<- matrix( c("t","-"), nrow=length(query.yes), ncol=2, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3433, c("-","-","-","-","t"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3433, c("-","-","-","-","t"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3433:3437]<- matrix( c("t","-","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3434, c("-","-","-","-","a"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3434, c("-","-","-","-","a"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3434:3438]<- matrix( c("a","-","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3503, c("-"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3503, c("-"))
 		for(i in query.yes)
 			seq.PROT.RT[i,3501:3503]		<- c("-",seq.PROT.RT[i,3501:3502])
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3504, c("-","-","-","t"))	
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3504, c("-","-","-","t"))	
 		for(i in query.yes)
 			seq.PROT.RT[i,3504:3524]		<- c(seq.PROT.RT[i,3507:3524],"-","-","-")
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3506, c("-","-","-","t","g"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3506, c("-","-","-","t","g"))
 		for(i in query.yes)
 			seq.PROT.RT[i,3506:3526]		<- c(seq.PROT.RT[i,3509:3526],"-","-","-")
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3507, c("-","-","-","g","a"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3507, c("-","-","-","g","a"))
 		for(i in query.yes)
 			seq.PROT.RT[i,3507:3537]		<-	c(seq.PROT.RT[i,3510:3537],"-","-","-")
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3504, c("g","a","c"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3504, c("g","a","c"))
 		for(i in query.yes)
 			seq.PROT.RT[i,3504:3530]		<-	c("-","-","-",seq.PROT.RT[i,3504:3527])
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3495, c("g","-","-","-","g"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3495, c("g","-","-","-","g"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3495:3499]<- matrix( c("g","g","-","-","-"), nrow=length(query.yes), ncol=5, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3501, c("-","t","a"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3501, c("-","t","a"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3501:3503]<- matrix( c("t","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3501, c("a","-"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3501, c("a","-"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3501:3502]<- matrix( c("-","a"), nrow=length(query.yes), ncol=2, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3551, c("g","g"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3551, c("g","g"))
 		for(i in query.yes)
 			seq.PROT.RT[i,3551:3600]		<-	c("-",seq.PROT.RT[i,3551:3599])
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3552, c("g","c"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3552, c("g","c"))
 		for(i in query.yes)
 			seq.PROT.RT[i,3552:3600]		<-	c("-",seq.PROT.RT[i,3552:3599])
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3501, c("-","t","t"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3501, c("-","t","t"))
 		for(i in query.yes)
 			seq.PROT.RT[i,3501:3600]		<-	c("-",seq.PROT.RT[i,3501:3599])
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3498, c("c","g","t"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3498, c("c","g","t"))
 		for(i in query.yes)
 			seq.PROT.RT[i,3498:3520]		<-	c("-",seq.PROT.RT[i,3498:3519])
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("-","c","a"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3549, c("-","c","a"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3549:3551]<- matrix( c("c","a","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3543, c("-","c","a","g","g","g","g","c","a"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3543, c("-","c","a","g","g","g","g","c","a"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3543:3551]<- matrix( c("c","a","g","g","g","g","c","a","-"), nrow=length(query.yes), ncol=9, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3543, c("-","c","a","g","g","a","g","c","a"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3543, c("-","c","a","g","g","a","g","c","a"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3543:3551]<- matrix( c("c","a","g","g","a","g","c","a","-"), nrow=length(query.yes), ncol=9, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3543, c("-","c","a","k","g","g","a","c","a"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3543, c("-","c","a","k","g","g","a","c","a"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3543:3551]<- matrix( c("c","a","k","g","g","a","c","a","-"), nrow=length(query.yes), ncol=9, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3543, c("-","c","a","g","g","g","g","g","a"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3543, c("-","c","a","g","g","g","g","g","a"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3543:3551]<- matrix( c("c","a","g","g","g","g","g","a","-"), nrow=length(query.yes), ncol=9, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("a","a","-"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3549, c("a","a","-"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3549:3551]<- matrix( c("-","-","-"), nrow=length(query.yes), ncol=3, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3551, c("g","a","c"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3551, c("g","a","c"))
 		for(i in query.yes)
 			seq.PROT.RT[i,3551:3560]		<-	c("-",seq.PROT.RT[i,3551:3559])
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3551, c("g","a","y","-"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3551, c("g","a","y","-"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3551:3554]<- matrix( c("-","g","a","y"), nrow=length(query.yes), ncol=4, byrow=1 )
-		query.yes							<- hivx.seq.find(seq.PROT.RT, 3549, c("-","c","c","g","g"))
+		query.yes							<- hivc.seq.find(seq.PROT.RT, 3549, c("-","c","c","g","g"))
 		if(length(query.yes))
 			seq.PROT.RT[query.yes,3549:3551]<- matrix( c("c","-","c"), nrow=length(query.yes), ncol=3, byrow=1 )
 		#some more manual editing at the end
@@ -1719,7 +1719,7 @@ hivc.prog.get.firstseq<- function()
 		hivc.seq.write.dna.phylip(seq.PROT.RT3, file=file)
 	}
 }
-
+######################################################################################
 project.hivc.clustering.get.linked.and.unlinked<- function(dir.name= DATA)
 {
 	require(data.table)
@@ -1954,11 +1954,109 @@ project.hivc.clustering.get.linked.and.unlinked<- function(dir.name= DATA)
 		stop()
 	}
 }
-
+######################################################################################
+project.hivc.clustering.computeclusterstatistics.fordistbrl<- function(thresh, clusters, with.withinpatientclu=0, dist.brl="dist.brl.med")
+{
+	#select clusters for analysis
+	clusters			<- clusters[[dist.brl]]		
+	patient.nNL			<- 15700	#estimate from 2012 annual report	
+	#length(df.seqinfo[,unique(Patient)])		
+	patient.n			<- patient.nNL	 + length(which(substr(ph$tip.label,1,2)=="TN")) + length(which(substr(ph$tip.label,1,8)=="PROT+P51"))
+	
+	clusters.pairs		<- sapply(clusters,function(x){	table(x$size.tips)[1]  	})
+	clusters.seqinclu	<- sapply(clusters,function(x){	sum(x$size.tips) / patient.n 	})
+	clusters.NLseqinclu	<- sapply(clusters,function(x){	sum(x$size.tips) / patient.nNL 	})
+	clusters.totalclu	<- sapply(clusters,function(x){	length(na.omit( unique(x$clu.mem) ))  	})	
+	clusters.maxsize		<- sapply(clusters,function(x){	max(x$size.tips)  	})
+	clusters.info		<- as.data.table( cbind(thresh,clusters.totalclu,clusters.pairs,clusters.maxsize,clusters.seqinclu,clusters.NLseqinclu) )
+	clusters.info		<- subset(clusters.info, brl>0.025 & bs>0.6)	
+	clusters.info.bs.sd	<- clusters.info[, list(sd.totalclu=sd(clusters.totalclu), sd.pairs=sd(clusters.pairs), sd.maxsize=sd(clusters.maxsize), sd.seqinclu=sd(clusters.seqinclu), sd.NLseqinclu=sd(clusters.seqinclu)), by=bs]
+	clusters.info.brl.sd<- clusters.info[, list(sd.totalclu=sd(clusters.totalclu), sd.pairs=sd(clusters.pairs), sd.maxsize=sd(clusters.maxsize), sd.seqinclu=sd(clusters.seqinclu), sd.NLseqinclu=sd(clusters.seqinclu)), by=brl]
+	print(clusters.info)
+	print(clusters.info.bs.sd)
+	print(clusters.info.brl.sd)	
+	
+	#compute cluster size distributions
+	clusters.distr		<- lapply(clusters,function(x){	tmp<- table(x$size.tips); tmp  	})
+	clusters.distr.x	<- lapply(clusters.distr, function(x){	as.numeric(names(x))	})
+	clusters.distr.plot	<- merge( thresh, data.table(bs= unique(thresh[,"bs"]), bs.pch= 20+seq_along(unique(thresh[,"bs"]))), all.x=1, by="bs")	
+	clusters.distr.plot	<- merge( clusters.distr.plot, data.table(brl= unique(thresh[,"brl"]), brl.col= seq_along(unique(thresh[,"brl"]))), all.x=1, by="brl")
+	clusters.distr.plot	<- as.data.table(clusters.distr.plot)
+	setkey(clusters.distr.plot, bs)	
+	cols				<- brewer.pal( length(unique(clusters.distr.plot[,brl.col])), "RdYlBu")
+	
+	if(with.withinpatientclu)
+		outfile				<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterdistr_",dist.brl,sep='')
+	else
+		outfile				<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_transmclusterdistr_",dist.brl,sep='')
+	
+	outsignat			<- "Sat_Jun_16_17/23/46_2013"
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,6_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- 1:7		#BS=0.6
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.plot[i,brl.col]],pch=clusters.distr.plot[i,bs.pch])
+			})
+	legend("topright", fill=cols[clusters.distr.plot[1:7,brl.col]], legend= thresh[1:7,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=unique(clusters.distr.plot[,bs.pch]), legend= thresh[seq.int(1,len=4,by=7),"bs"], bty='n', border=NA)
+	dev.off()
+	
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,7_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- 8:14		#BS=0.7
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.plot[i,brl.col]],pch=clusters.distr.plot[i,bs.pch])
+			})
+	legend("topright", fill=cols[clusters.distr.plot[1:7,brl.col]], legend= thresh[1:7,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=unique(clusters.distr.plot[,bs.pch]), legend= thresh[seq.int(1,len=4,by=7),"bs"], bty='n', border=NA)
+	dev.off()
+	
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,8_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- 15:21		#BS=0.8
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.plot[i,brl.col]],pch=clusters.distr.plot[i,bs.pch])
+			})
+	legend("topright", fill=cols[clusters.distr.plot[1:7,brl.col]], legend= thresh[1:7,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=unique(clusters.distr.plot[,bs.pch]), legend= thresh[seq.int(1,len=4,by=7),"bs"], bty='n', border=NA)
+	dev.off()
+	
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,9_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- 22:28		#BS=0.9
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.plot[i,brl.col]],pch=clusters.distr.plot[i,bs.pch])
+			})
+	legend("topright", fill=cols[clusters.distr.plot[1:7,brl.col]], legend= thresh[1:7,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=unique(clusters.distr.plot[,bs.pch]), legend= thresh[seq.int(1,len=4,by=7),"bs"], bty='n', border=NA)
+	dev.off()
+	
+		
+	file				<- paste(dir.name,"tmp",paste(outfile,"_BRL=0,12_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	pdf(file=file, width=5,height=5)
+	select				<- seq.int(7,len=4,by=7)		#BRL=0.12
+	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
+	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+			{
+				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.plot[i,brl.col]],pch=clusters.distr.plot[i,bs.pch])
+			})
+	legend("topright", fill=cols[clusters.distr.plot[1:7,brl.col]], legend= thresh[1:7,"brl"], bty='n', border=NA)
+	legend("bottomright", pch=unique(clusters.distr.plot[,bs.pch]), legend= thresh[seq.int(1,len=4,by=7),"bs"], bty='n', border=NA)
+	dev.off()
+}
+######################################################################################
 project.hivc.clustering.computeclusterstatistics<- function(with.withinpatientclu=0)	
 {	
 	#load precomputed R objects for clustering 
-	infile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterpre"		
+	infile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_preclustlink"		
 	insignat						<- "Sat_Jun_16_17/23/46_2013"
 	file							<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',insignat),".R",sep=''),sep='/')
 	load(file)
@@ -1973,129 +2071,195 @@ project.hivc.clustering.computeclusterstatistics<- function(with.withinpatientcl
 	#if not, compute	
 	if(inherits(readAttempt, "try-error"))
 	{
-		thresh		<- expand.grid( brl=0.0165*2^seq.int(0,3), bs=seq(0.5,0.9,0.1))
-		clusters	<- lapply(seq_len(nrow(thresh)), function(i)
-				{
-					print(thresh[i,])
-					hivc.clu.clusterbythresh(ph,thresh.brl=thresh[i,"brl"],dist.brl=dist.brl,thresh.nodesupport=thresh[i,"bs"],nodesupport=ph.node.bs,retval="all")
-				})
+		thresh			<- expand.grid( brl=c(0.015,seq(0.02,0.06,0.01),0.12), bs=seq(0.6,0.9,0.1))
+		clusters		<- lapply(list(dist.brl.med,dist.brl.max,dist.brl.casc),function(dist.brl)
+							{
+								tmp	<- lapply(seq_len(nrow(thresh)), function(i)
+										{
+											print(thresh[i,])
+											hivc.clu.clusterbythresh(ph,thresh.brl=thresh[i,"brl"],dist.brl=dist.brl,thresh.nodesupport=thresh[i,"bs"],nodesupport=ph.node.bs,retval="all")
+										})
+								names(tmp)<- sapply(seq_len(nrow(thresh)), function(i) paste(thresh[i,],collapse='',sep='') )
+								tmp
+							})
+		names(clusters)	<- 	c("dist.brl.med","dist.brl.max","dist.brl.casc")		
 		save(thresh,clusters,file=file)		
-	}		
+	}	
+	
 	#remove within patient clusters
 	if(!with.withinpatientclu)
 	{
-		clusters<- lapply(clusters,function(x)
-				{
-					clu.onlytp			<- hivc.clu.truepos(x, ph.linked, Ntip(ph))$clu.onlytp
-					tmp					<- which( x[["clu.mem"]]%in%clu.onlytp[,clu] )
-					x[["clu.mem"]][tmp]	<- NA
-					x[["size.all"]]		<- table(x[["clu.mem"]])
-					x[["size.tips"]]	<- table(x[["clu.mem"]][1:Ntip(ph)])
-					x
-				})						
+		#see if we can resume computations
+		infile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterdistrprewithin"		
+		insignat						<- "Sat_Jun_16_17/23/46_2013"
+		file							<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',insignat),".R",sep=''),sep='/')		
+		options(show.error.messages = FALSE)		
+		readAttempt<-try(suppressWarnings(load(file)))	
+		options(show.error.messages = TRUE)
+		#if not, compute	
+		if(inherits(readAttempt, "try-error"))
+		{		
+			tmp			<- lapply(seq_along(clusters),function(i)
+							{
+								tmp<- lapply(clusters[[i]],function(x){
+											clu.onlytp			<- hivc.clu.truepos(x, ph.linked, Ntip(ph))$clu.onlytp
+											tmp					<- which( x[["clu.mem"]]%in%clu.onlytp[,clu] )
+											x[["clu.mem"]][tmp]	<- NA
+											x[["size.all"]]		<- table(x[["clu.mem"]])
+											x[["size.tips"]]	<- table(x[["clu.mem"]][1:Ntip(ph)])
+											x
+										})
+								names(tmp)<- names(clusters[[i]])
+								tmp
+							})
+			names(tmp)	<- names(clusters)
+			clusters.w	<- tmp
+			save(thresh,clusters.w,file=file)	
+		}	
 	}
-	patient.nNL			<- length(df.seqinfo[,unique(Patient)])
-	patient.n			<- patient.nNL	 + length(which(substr(ph$tip.label,1,2)=="TN")) + length(which(substr(ph$tip.label,1,8)=="PROT+P51"))
-	
-	
-	clusters.pairs		<- sapply(clusters,function(x){	table(x$size.tips)[1]  	})
-	clusters.seqinclu	<- sapply(clusters,function(x){	sum(x$size.tips) / patient.n 	})
-	clusters.NLseqinclu	<- sapply(clusters,function(x){	sum(x$size.tips) / patient.nNL 	})
-	clusters.totalclu	<- sapply(clusters,function(x){	length(na.omit( unique(x$clu.mem) ))  	})	
-	clusters.maxsize		<- sapply(clusters,function(x){	max(x$size.tips)  	})
-	clusters.info		<- as.data.table( cbind(thresh,clusters.totalclu,clusters.pairs,clusters.maxsize,clusters.seqinclu,clusters.NLseqinclu) )
-	clusters.info		<- clusters.info[c(10:12,14:16,18:20),]
-	clusters.info.bs.sd	<- clusters.info[, list(sd.totalclu=sd(clusters.totalclu), sd.pairs=sd(clusters.pairs), sd.maxsize=sd(clusters.maxsize), sd.seqinclu=sd(clusters.seqinclu), sd.NLseqinclu=sd(clusters.seqinclu)), by=bs]
-	clusters.info.brl.sd<- clusters.info[, list(sd.totalclu=sd(clusters.totalclu), sd.pairs=sd(clusters.pairs), sd.maxsize=sd(clusters.maxsize), sd.seqinclu=sd(clusters.seqinclu), sd.NLseqinclu=sd(clusters.seqinclu)), by=brl]
-	print(clusters.info.bs.sd)
-	print(clusters.info.brl.sd)	
-	
-	#compute cluster size distributions
-	clusters.distr		<- lapply(clusters,function(x){	tmp<- table(x$size.tips); tmp  	})
-	clusters.distr.x	<- lapply(clusters.distr, function(x){	as.numeric(names(x))	})
-	clusters.distr.pch	<- 21 + thresh[,"bs"]*10-5
-	clusters.distr.col	<- log2(thresh[,"brl"]/0.0165)+1
-	cols				<- brewer.pal( length(unique(clusters.distr.col)), "RdYlBu")
-	
-	if(with.withinpatientclu)
-		outfile				<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterdistr"
-	else
-		outfile				<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_transmclusterdistr"
+	#now have clusters and clusters.w
 
+	#compute cluster distributions etc for clusters
+	project.hivc.clustering.computeclusterstatistics.fordistbrl(thresh, clusters.w, with.withinpatientclu=0, dist.brl="dist.brl.med")
+	project.hivc.clustering.computeclusterstatistics.fordistbrl(thresh, clusters.w, with.withinpatientclu=0, dist.brl="dist.brl.max")
+	project.hivc.clustering.computeclusterstatistics.fordistbrl(thresh, clusters.w, with.withinpatientclu=0, dist.brl="dist.brl.casc")
+	
+	#compare BS=0.8 BRL=0.06 across dist.brl methods
+	outfile				<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_transmclusterdistr_dist.brl.cmp",sep='')
 	outsignat			<- "Sat_Jun_16_17/23/46_2013"
-	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,5_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	file				<- paste(dir.name,"tmp",paste(outfile,"_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+
+	select.thresh			<- c(20,22)
+	select.brl				<- c("dist.brl.max","dist.brl.casc")
+	cluster.d				<- lapply(select.thresh, function(i)
+				{
+					tmp			<- lapply( select.brl, function(x)	cumsum(table( clusters.w[[x]][[i]][["size.tips"]])	)	)
+					names(tmp)	<- select.brl
+					tmp
+				})
+	names(cluster.d)		<- 	apply( thresh[select.thresh,], 1, function(x) paste(x,collapse='_',sep='')	)
+	xlim					<- c(2,45)
+	ylim					<- c(0, 800)
 	pdf(file=file, width=5,height=5)
-	select				<- 1:4		#BS=0.5
-	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
-	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
+	plot(1,1,type='n',bty='n',xlim=xlim, ylim=ylim, xlab="cluster size",ylab="number clusters")
+	cols					<- brewer.pal(3, "Set1")
+	dummy					<- sapply(seq_along(cluster.d), function(i)
 			{
-				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
+				sapply(seq_along(cluster.d[[i]]), function(j)
+						{
+							lines( as.numeric(names(cluster.d[[i]][[j]])), cluster.d[[i]][[j]], lty=i, col=cols[j] )
+						})
 			})
-	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
-	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
-	dev.off()
-	
-	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,6_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
-	pdf(file=file, width=5,height=5)
-	select				<- 5:8		#BS=0.6
-	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
-	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
-			{
-				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
-			})
-	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
-	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
-	dev.off()
-	
-	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,7_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
-	pdf(file=file, width=5,height=5)
-	select				<- 9:12		#BS=0.7
-	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
-	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
-			{
-				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
-			})
-	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
-	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
-	dev.off()
-	
-	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,8_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
-	pdf(file=file, width=5,height=5)
-	select				<- 13:16		#BS=0.8
-	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
-	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
-			{
-				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
-			})
-	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
-	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
-	dev.off()
-	
-	file				<- paste(dir.name,"tmp",paste(outfile,"_BS=0,9_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
-	pdf(file=file, width=5,height=5)
-	select				<- 17:20		#BS=0.9
-	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
-	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
-			{
-				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
-			})
-	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
-	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
-	dev.off()
-	
-	file				<- paste(dir.name,"tmp",paste(outfile,"_BRL=0,132_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
-	pdf(file=file, width=5,height=5)
-	select				<- seq.int(4,len=5,by=4)		#BRL=0.132
-	plot(1,1,bty='n',type='n',xlim=range(unlist(clusters.distr.x)), ylim=range((unlist(clusters.distr))), xlab="size",ylab="frequency")
-	dummy<- lapply(seq_along(clusters.distr)[select],function(i)
-			{
-				points(clusters.distr.x[[i]],(clusters.distr[[i]]),type='b',col=cols[clusters.distr.col[i]],pch=clusters.distr.pch[i])
-			})
-	legend("topright", fill=cols[clusters.distr.col[1:4]], legend= thresh[1:4,"brl"], bty='n', border=NA)
-	legend("bottomright", pch=clusters.distr.pch[seq.int(1,len=5,by=4)], legend= thresh[seq.int(1,len=5,by=4),"bs"], bty='n', border=NA)
+	legend("bottomright", legend= select.brl, fill= cols[1:2], bty='n', border=NA)
+	legend("bottomleft", legend= names(cluster.d), lty= 1:2, bty='n')
 	dev.off()
 }		
-
+######################################################################################
+project.hivc.clustering.computeTPstatistics<- function(ph, ph.node.bs, dist.brl, ph.linked, ph.unlinked.info, ph.unlinked, outdir=NA, outfile=NA, outsignat=NA, thresh.brl= c(seq(0.02,0.06,0.01),seq(0.08,0.26,0.04)), thresh.bs= c(0.8,0.85,0.9,0.95), resume=1)
+{
+	file		<- paste(outdir, paste(outfile,"_pre_",gsub('/',':',outsignat),".R",sep=''),sep='/')
+	if(resume)												#//load if there is R Master data.table
+	{
+		options(show.error.messages = FALSE)		
+		readAttempt<-try(suppressWarnings(load(file)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresume file",file))			
+		options(show.error.messages = TRUE)		
+	}
+	if(!resume || inherits(readAttempt, "try-error"))		#else generate R Master data.table
+	{
+		cat(paste("\ncreate file",file))
+		clusters		<- lapply(thresh.bs, function(bs)
+							{
+								clusters	<- lapply(thresh.brl, function(brl)
+										{
+											hivc.clu.clusterbythresh(ph,thresh.brl=brl,dist.brl=dist.brl,thresh.nodesupport=bs,nodesupport=ph.node.bs,retval="all")
+										})
+								clusters.tp	<- lapply(clusters,function(x)
+										{
+											hivc.clu.truepos(x, ph.linked, Ntip(ph), verbose=0)
+										})		
+								clusters.fp	<- lapply(clusters,function(x)
+										{
+											hivc.clu.trueneg(x, ph.unlinked.info, ph.unlinked, Ntip(ph), verbose=0)
+										})
+								list(clu= clusters, tp= clusters.tp, fp= clusters.fp)							
+							})	
+		names(clusters)	<- thresh.bs
+		file			<- paste(outdir, paste(outfile,"_pre_",gsub('/',':',outsignat),".R",sep=''),sep='/')
+		save(clusters,file=file)
+	}
+	
+	patient.nNL						<- 15700
+	clusters.NLseqinclu				<- sapply(seq_along(clusters),function(i)
+										{				
+											sapply(seq_along(clusters[[i]][["clu"]]), function(j)
+													{
+														#print(clusters[[i]][["tp"]])
+														clustering						<- clusters[[i]][["clu"]][[j]]
+														tmp								<- clusters[[i]][["tp"]][[j]][["clu.onlytp"]]
+														tmp								<- tmp[,clu]
+														tmp								<- which( clustering[["clu.mem"]] %in% tmp )
+														clustering[["clu.mem"]][tmp]	<- NA
+														clustering[["size.tips"]]		<- table(clustering[["clu.mem"]][1:Ntip(ph)])
+														sum(clustering[["size.tips"]]) / patient.nNL
+													})
+										})
+	rownames(clusters.NLseqinclu)	<- thresh.brl
+	colnames(clusters.NLseqinclu)	<- thresh.bs
+	clusters.NLseqinclu				<- t(clusters.NLseqinclu)
+	
+	method.tp				<- "tp.rate.tpclu" #"tp.rate.tpavg"
+	tp.stat					<- sapply(seq_along(clusters),function(i)
+								{				
+									sapply(clusters[[i]][["tp"]], function(x) x[method.tp] )
+								})
+	rownames(tp.stat)		<- thresh.brl
+	colnames(tp.stat)		<- thresh.bs
+	tp.stat					<- t(tp.stat)
+	
+	method.fp				<- "fp.n" #"fp.rate"
+	fp.stat					<- sapply(seq_along(clusters),function(i)
+								{				
+									sapply(clusters[[i]][["fp"]], function(x) x[method.fp] )
+								})
+	rownames(fp.stat)		<- thresh.brl
+	colnames(fp.stat)		<- thresh.bs
+	fp.stat					<- t(fp.stat)		
+	#print(fp.stat); print(tp.stat); print(clusters.NLseqinclu)
+		
+	cols		<- diverge_hcl(nrow(fp.stat), h = c(246, 40), c = 96, l = c(65, 90))
+	names(cols)	<- thresh.bs
+	
+	file		<- paste(outdir, paste(outfile,"_TPvsFP_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	xlim		<- c(0,16)	#range(fp.stat)
+	xlim[2]		<- xlim[2] + 2
+	cat(paste("\nplot file",file))
+	pdf(file=file,width=5,height=5)
+	plot(1,1,type='n',bty='n',xlim=xlim,ylim=range(tp.stat),xlab="#FP",ylab="%TP")
+	dummy	<- sapply(seq_len(nrow(fp.stat)),function(i)
+			{
+				points(fp.stat[i,],tp.stat[i,],col=cols[i],type='b')
+				text(fp.stat[i,],tp.stat[i,],col=cols[i],labels=thresh.brl,adj=c(-0.8,0.5),cex=0.5)
+			})
+	legend("bottomright",border=NA,bty='n',fill=cols,legend=names(cols))
+	dev.off()
+	
+	file		<- paste(outdir, paste(outfile,"_COvsFP_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	cat(paste("\nplot file",file))
+	pdf(file=file,width=5,height=5)
+	xlim		<- c(0,16)	#range(fp.stat)
+	xlim[2]		<- xlim[2] + 2	
+	plot(1,1,type='n',bty='n',xlim=xlim,ylim=range(clusters.NLseqinclu),xlab="#FP",ylab="%NL seq in cluster")
+	dummy	<- sapply(seq_len(nrow(fp.stat)),function(i)
+			{
+				points(fp.stat[i,],clusters.NLseqinclu[i,],col=cols[i],type='b')
+				text(fp.stat[i,],clusters.NLseqinclu[i,],col=cols[i],labels=thresh.brl,adj=c(-0.8,0.5),cex=0.5)
+			})
+	legend("bottomright",border=NA,bty='n',fill=cols,legend=names(cols))
+	dev.off()
+	list(clusters.NLseqinclu=clusters.NLseqinclu, fp.stat=fp.stat, tp.stat=tp.stat)
+}
+######################################################################################
 project.hivc.clustering<- function(dir.name= DATA)
 {
 	require(ape)
@@ -2153,26 +2317,32 @@ project.hivc.clustering<- function(dir.name= DATA)
 		print(ph.node.bs[clu.idx])
 		stop()
 	}
-	if(0)	#clustering on ATHENA tree
+	if(1)	#clustering on ATHENA tree
 	{
-		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
-		signat.in	<- "Sat_Jun_16_17/23/46_2013"		
-		file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
-		cat(paste("read file",file))
-		
-		ph			<- ladderize( read.tree(file) )
-		#read bootstrap support values		
-		ph.node.bs						<- as.numeric( ph$node.label )
-		ph.node.bs[is.na(ph.node.bs)]	<- 0
-		ph.node.bs						<- ph.node.bs/100
-		ph$node.label					<- ph.node.bs
-		#print(quantile(ph.node.bs,seq(0.1,1,by=0.1)))
-		#read patristic distances -- this is the expensive step but still does not take very long
-		dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
-		#thresh.brl						<- quantile(dist.brl,seq(0.1,0.5,by=0.05))["50%"]
-		thresh.bs						<- 0.85
-		thresh.brl						<- 0.06				
-		clustering						<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+		opt.dist.brl	<- "dist.brl.max"
+		opt.dist.brl	<- "dist.brl.casc"
+		opt.dist.brl	<- "dist.brl.med"
+		if(1)
+		{
+			#read tree, get boostrap values and patristic distances between leaves
+			infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_preclustlink"
+			signat.in	<- "Sat_Jun_16_17/23/46_2013"			
+			file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".R",sep=''),sep='/')
+			cat(paste("load file",file))		
+			load(file)
+		}
+		else
+		{
+			stop(paste("cannot find file",infile))
+		}
+		dist.brl			<- switch(	opt.dist.brl, 
+										"dist.brl.max"		= dist.brl.max,
+										"dist.brl.med"		= dist.brl.med,
+										"dist.brl.casc"		= dist.brl.casc,
+										NA)		
+		thresh.bs			<- 0.85
+		thresh.brl			<- 0.06				
+		clustering			<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
 		
 		#print(clustering)		
 	
@@ -2185,8 +2355,8 @@ project.hivc.clustering<- function(dir.name= DATA)
 		load(file)								
 		df.seqinfo			<- merge( data.table(FASTASampleCode= ph$tip.label, Node=seq_along(ph$tip.label), key="FASTASampleCode"), subset(df.seqinfo,select=c(FASTASampleCode, Patient)), all.x=1, by="FASTASampleCode")
 		tmp					<- rep("NL", Ntip(ph))
-		tmp[ df.seqinfo[,substr(FASTASampleCode,1,2)=="TN"] ]<- "FRGNTN"
-		tmp[ df.seqinfo[,substr(FASTASampleCode,1,8)=="PROT+P51"] ]<- "FRGN"
+		tmp[ df.seqinfo[,substr(FASTASampleCode,1,2)=="TN"] ]		<- "FRGNTN"
+		tmp[ df.seqinfo[,substr(FASTASampleCode,1,8)=="PROT+P51"] ]	<- "FRGN"
 		df.seqinfo[,InAthena:=tmp]
 				
 		#for each tip, collect seq data 
@@ -2211,9 +2381,10 @@ project.hivc.clustering<- function(dir.name= DATA)
 		setkey(df.seqinfo, Node)
 		tmp					<- clustering[["clu.mem"]][seq_len(Ntip(ph))]
 		df.seqinfo[,"cluster":=tmp]
-		outfile		<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_withinpatientclusters_bs",thresh.bs*100,"_brlmed",thresh.brl*100,"_clusterinfo",sep='')
-		outsignat	<- "Sat_Jun_16_17/23/46_2013"
-		file		<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')
+		
+		outfile				<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clustPHY_",opt.dist.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,sep='')
+		outsignat			<- "Sat_Jun_16_17/23/46_2013"
+		file				<- paste(dir.name,"tmp",paste(outfile,"_clusterinfo_",gsub('/',':',outsignat),".R",sep=''),sep='/')
 		cat(paste("write cluster info to file",file))
 		save(df.seqinfo, file=file)
 		
@@ -2306,14 +2477,8 @@ project.hivc.clustering<- function(dir.name= DATA)
 		#select text and col matrix 
 		text				<- t( as.matrix( subset(df.seqinfo,select=c(CountryInfection, Trm, Sex, NegT, AnyPos_T1, PosSeqT, Patient, RegionHospital)) ) )
 		col					<- t( as.matrix( subset(df.seqinfo,select=c(CountryInfection.col, Trm.col, Sex.col, NegT.col, AnyPos_T1.col, PosSeqT.col, Patient.col, RegionHospital.col)) ) )
-		
-		#load precomputed R objects for clustering -- need ph.linked 
-		infile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterpre"		
-		insignat						<- "Sat_Jun_16_17/23/46_2013"
-		file							<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',insignat),".R",sep=''),sep='/')
-		load(file)
-		
-		clu.onlytp	<- hivc.clu.truepos(clustering, ph.linked, Ntip(ph))$clu.onlytp
+						
+		clu.onlytp			<- hivc.clu.truepos(clustering, ph.linked, Ntip(ph))$clu.onlytp
 		#double check 'clu.onlytp' 
 		if(0)
 		{
@@ -2328,13 +2493,12 @@ project.hivc.clustering<- function(dir.name= DATA)
 		}
 		
 		#plot tree to file
-		outfile		<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_withinpatientclusters_bs",thresh.bs*100,"_brlmed",thresh.brl*100,sep='')
-		outsignat	<- "Sat_Jun_16_17/23/46_2013"
 		file		<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')
 		cat(paste("write tree to file",file))
 		hivc.clu.plot(ph, clustering[["clu.mem"]], file=file, pdf.scaley=25, pdf.off=0, highlight.cluster= list( clu.onlytp[,clu] ), highlight.cluster.col="grey50", highlight.edge.of.tiplabel=c("TN","PROT+P51"), highlight.edge.of.tiplabel.col= c("red","blue"), cex.nodelabel=0.1 )
 		hivc.clu.plot.tiplabels( seq_len(Ntip(ph)), text, col, cex=0.12, adj=c(-0.15,0.5), add.xinch=0, add.yinch=0 )
-		dev.off()			
+		dev.off()
+		stop()
 	}
 	if(0)
 	{
@@ -2449,29 +2613,41 @@ project.hivc.clustering<- function(dir.name= DATA)
 	{
 		project.hivc.clustering.get.linked.and.unlinked()
 	}
-	if(1)
+	if(0)
 	{		
 		verbose		<- 1
-		#read tree, get boostrap values and patristic distances between leaves
-		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
-		signat.in	<- "Sat_Jun_16_17/23/46_2013"
-		signat.out	<- "Sat_Jun_16_17/23/46_2013"
-		file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
-		cat(paste("read file",file))		
-		ph								<- ladderize( read.tree(file) )						
-		ph$node.label[2]				<- 0								#little hack so that clustering works
-		ph.node.bs						<- as.numeric( ph$node.label )
-		ph.node.bs[is.na(ph.node.bs)]	<- 0
-		ph.node.bs						<- ph.node.bs/100
-		ph$node.label					<- ph.node.bs
-		#print(quantile(ph.node.bs,seq(0.1,1,by=0.1)))
-		print("compute dist.brl.med")
-		dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
-		print("compute dist.brl.max")
-		dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
-		print("compute dist.brl.casc")
-		dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
-		
+		if(1)
+		{
+			#read tree, get boostrap values and patristic distances between leaves
+			infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_preclust"
+			signat.in	<- "Sat_Jun_16_17/23/46_2013"
+			signat.out	<- "Sat_Jun_16_17/23/46_2013"
+			file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".R",sep=''),sep='/')
+			cat(paste("load file",file))		
+			load(file)
+		}
+		else	#takes lots of memory ..
+		{
+			#read tree, get boostrap values and patristic distances between leaves
+			infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+			signat.in	<- "Sat_Jun_16_17/23/46_2013"
+			signat.out	<- "Sat_Jun_16_17/23/46_2013"
+			file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
+			cat(paste("read file",file))		
+			ph								<- ladderize( read.tree(file) )						
+			ph$node.label[2]				<- 0								#little hack so that clustering works
+			ph.node.bs						<- as.numeric( ph$node.label )
+			ph.node.bs[is.na(ph.node.bs)]	<- 0
+			ph.node.bs						<- ph.node.bs/100
+			ph$node.label					<- ph.node.bs
+			#print(quantile(ph.node.bs,seq(0.1,1,by=0.1)))
+			print("compute dist.brl.med")
+			dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
+			print("compute dist.brl.max")
+			dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
+			print("compute dist.brl.casc")
+			dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)			
+		}			
 		#print(quantile(dist.brl,seq(0.1,1,by=0.1)))
 	
 		#read linked and unlinked
@@ -2537,7 +2713,7 @@ project.hivc.clustering<- function(dir.name= DATA)
 		setnames(ph.linked, "V1","nTP")
 		setkey(ph.linked, "Node")
 		
-		outfile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterpre"		
+		outfile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_preclustlink"		
 		signat.out						<- "Sat_Jun_16_17/23/46_2013"
 		file							<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',signat.out),".R",sep=''),sep='/')
 		if(verbose)	cat(paste("write to file",file))
@@ -2550,142 +2726,94 @@ project.hivc.clustering<- function(dir.name= DATA)
 		project.hivc.clustering.computeclusterstatistics(with.withinpatientclu=0)		
 		stop()
 	}
-	if(0)
+	if(1)
 	{
 		#analyze clusters 
-		infile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterpre"		
+		infile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_preclustlink"		
 		insignat						<- "Sat_Jun_16_17/23/46_2013"
 		file							<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',insignat),".R",sep=''),sep='/')
 		load(file)
 		
 		#illustrate saturation effect -- level cannot be higher than 90%
-		dist.brl						<- dist.brl.med			
-		thresh.brl						<- c(seq(0.02,0.06,0.01),seq(0.08,0.26,0.04))
-		
-		clusters80						<- lapply(thresh.brl, function(x)
-												{
-													hivc.clu.clusterbythresh(ph,thresh.brl=x,dist.brl=dist.brl,thresh.nodesupport=0.8,nodesupport=ph.node.bs,retval="all")
-												})
-		clusters85						<- lapply(thresh.brl, function(x)
-												{
-													hivc.clu.clusterbythresh(ph,thresh.brl=x,dist.brl=dist.brl,thresh.nodesupport=0.85,nodesupport=ph.node.bs,retval="all")
-												})
-										
-		clusters90						<- lapply(thresh.brl, function(x)
-												{
-													hivc.clu.clusterbythresh(ph,thresh.brl=x,dist.brl=dist.brl,thresh.nodesupport=0.9,nodesupport=ph.node.bs,retval="all")
-												})
-		clusters95						<- lapply(thresh.brl, function(x)
-												{
-													hivc.clu.clusterbythresh(ph,thresh.brl=x,dist.brl=dist.brl,thresh.nodesupport=0.95,nodesupport=ph.node.bs,retval="all")
-												})										
-		clusters80.tp						<- lapply(clusters80,function(x)
-												{
-													hivc.clu.truepos(x, ph.linked, Ntip(ph), verbose=0)
-												})		
-		clusters85.tp						<- lapply(clusters85,function(x)
-												{
-													hivc.clu.truepos(x, ph.linked, Ntip(ph), verbose=0)
-												})		
-		clusters90.tp						<- lapply(clusters90,function(x)
-												{
-													hivc.clu.truepos(x, ph.linked, Ntip(ph), verbose=0)
-												})		
-		clusters95.tp						<- lapply(clusters95,function(x)
-												{
-													hivc.clu.truepos(x, ph.linked, Ntip(ph), verbose=0)
-												})																								
-		clusters80.fp					<- lapply(clusters80,function(x)
-												{
-													hivc.clu.trueneg(x, ph.unlinked.info, ph.unlinked, Ntip(ph), verbose=0)
-												})
-		clusters85.fp					<- lapply(clusters85,function(x)
-												{
-													hivc.clu.trueneg(x, ph.unlinked.info, ph.unlinked, Ntip(ph), verbose=0)
-												})											
-		clusters90.fp					<- lapply(clusters90,function(x)
-												{
-													hivc.clu.trueneg(x, ph.unlinked.info, ph.unlinked, Ntip(ph), verbose=0)
-												})	
-		clusters95.fp					<- lapply(clusters95,function(x)
-												{
-													hivc.clu.trueneg(x, ph.unlinked.info, ph.unlinked, Ntip(ph), verbose=0)
-												})	
-		outfile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterrocpre_brmed"		
+		opt.dist.brl					<- "dist.brl.med"
+		outdir							<- paste(dir.name,"tmp",sep='/')
+		outfile							<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clustTP",opt.dist.brl,sep='_')
 		outsignat						<- "Sat_Jun_16_17/23/46_2013"
-		file							<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')
-		save(clusters80,clusters85,clusters90,clusters95,clusters80.tp,clusters85.tp,clusters90.tp,clusters95.tp,clusters80.fp,clusters85.fp,clusters90.fp,clusters95.fp,file=file)
+		stat.med						<- project.hivc.clustering.computeTPstatistics(ph, ph.node.bs, dist.brl.med, ph.linked, ph.unlinked.info, ph.unlinked, outdir=outdir, outfile=outfile, outsignat=outsignat)
 		
-		patient.nNL						<- 6260
-		clusters.NLseqinclu				<-	t( sapply(list( list(clusters80,clusters80.tp),list(clusters85,clusters85.tp),list(clusters90,clusters90.tp),list(clusters95,clusters95.tp)),function(clusterstuff)
-												{																										
-													sapply(seq_along(clusterstuff[[1]]),function(i)
-															{					
-																clustering						<- clusterstuff[[1]][[i]]
-																tmp								<- clusterstuff[[2]][[i]][["clu.onlytp"]]
-																tmp								<- tmp[,clu]
-																tmp								<- which( clustering[["clu.mem"]] %in% tmp )
-																clustering[["clu.mem"]][tmp]	<- NA
-																clustering[["size.tips"]]		<- table(clustering[["clu.mem"]][1:Ntip(ph)])
-																sum(clustering[["size.tips"]]) / patient.nNL 	
-															})	
-												}) ) 	
-		method.tp						<- c("tp.rate.tpclu","tp.rate.tpavg")
-		clusters80.tp.stat				<- sapply(clusters80.tp, function(x) x[method.tp] )
-		colnames(clusters80.tp.stat)		<- thresh.brl
-		clusters85.tp.stat				<- sapply(clusters85.tp, function(x) x[method.tp] )
-		colnames(clusters85.tp.stat)		<- thresh.brl
-		clusters90.tp.stat				<- sapply(clusters90.tp, function(x) x[method.tp] )
-		colnames(clusters90.tp.stat)		<- thresh.brl
-		clusters95.tp.stat				<- sapply(clusters95.tp, function(x) x[method.tp] )
-		colnames(clusters95.tp.stat)		<- thresh.brl																				
-		method.fp						<- c("fp.n","fp.rate")
-		clusters80.fp.stat				<- sapply(clusters80.fp, function(x) x[method.fp] )
-		colnames(clusters80.fp.stat)	<- thresh.brl
-		clusters85.fp.stat				<- sapply(clusters85.fp, function(x) x[method.fp] )
-		colnames(clusters85.fp.stat)	<- thresh.brl		
-		clusters90.fp.stat				<- sapply(clusters90.fp, function(x) x[method.fp] )
-		colnames(clusters90.fp.stat)	<- thresh.brl
-		clusters95.fp.stat				<- sapply(clusters95.fp, function(x) x[method.fp] )
-		colnames(clusters95.fp.stat)	<- thresh.brl
-			
+		opt.dist.brl					<- "dist.brl.max"
+		outfile							<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clustTP",opt.dist.brl,sep='_')
+		stat.max						<- project.hivc.clustering.computeTPstatistics(ph, ph.node.bs, dist.brl.max, ph.linked, ph.unlinked.info, ph.unlinked, outdir=outdir, outfile=outfile, outsignat=outsignat)
 		
-		fp.stat		<- matrix(c( unlist(clusters80.fp.stat[1,]), unlist(clusters85.fp.stat[1,]), unlist(clusters90.fp.stat[1,]), unlist(clusters95.fp.stat[1,]) ), nrow=4, ncol=length(thresh.brl), byrow=T) 
-		tp.stat		<- matrix(c( unlist(clusters80.tp.stat[1,]), unlist(clusters85.tp.stat[1,]), unlist(clusters90.tp.stat[1,]), unlist(clusters95.tp.stat[1,]) ), nrow=4, ncol=length(thresh.brl), byrow=T)
-		cols		<- diverge_hcl(nrow(fp.stat), h = c(246, 40), c = 96, l = c(65, 90))
-		names(cols)	<- c(0.8, 0.85, 0.9, 0.95)
-		
-		outfile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterroc_roc"		
-		outsignat						<- "Sat_Jun_16_17/23/46_2013"
-		file							<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')
-		pdf(file=file,width=5,height=5)
-		plot(1,1,type='n',bty='n',xlim=range(fp.stat),ylim=range(tp.stat),xlab="#FP",ylab="%TP")
-		dummy	<- sapply(seq_len(nrow(fp.stat)),function(i)
-				{
-					points(fp.stat[i,],tp.stat[i,],col=cols[i],type='b')
-					text(fp.stat[i,],tp.stat[i,],col=cols[i],labels=thresh.brl,adj=c(-0.8,0.5),cex=0.5)
-				})
-		legend("bottomright",border=NA,bty='n',fill=cols,legend=names(cols))
-		dev.off()
-		
-		outfile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clusterroc_coverage"		
-		outsignat						<- "Sat_Jun_16_17/23/46_2013"
-		file							<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')
-		pdf(file=file,width=5,height=5)		
-		plot(1,1,type='n',bty='n',xlim=range(fp.stat),ylim=range(clusters.NLseqinclu),xlab="#FP",ylab="%NL seq in cluster")
-		dummy	<- sapply(seq_len(nrow(fp.stat)),function(i)
-				{
-					points(fp.stat[i,],clusters.NLseqinclu[i,],col=cols[i],type='b')
-					text(fp.stat[i,],clusters.NLseqinclu[i,],col=cols[i],labels=thresh.brl,adj=c(-0.8,0.5),cex=0.5)
-				})
-		legend("bottomright",border=NA,bty='n',fill=cols,legend=names(cols))
-		dev.off()
-		
+		opt.dist.brl					<- "dist.brl.casc"
+		outfile							<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clustTP",opt.dist.brl,sep='_')
+		stat.casc						<- project.hivc.clustering.computeTPstatistics(ph, ph.node.bs, dist.brl.casc, ph.linked, ph.unlinked.info, ph.unlinked, outdir=outdir, outfile=outfile, outsignat=outsignat)
 		#get BRL so that %TP ~ 90%  					 
 		#ans80							<- hivc.clu.clusterbytruepos(ph, dist.brl, ph.node.bs, ph.linked, thresh.bs=0.8, level= 0.9, verbose=1)
 		#ans90							<- hivc.clu.clusterbytruepos(ph, dist.brl, ph.node.bs, ph.linked, thresh.bs=0.9, level= 0.9, verbose=1)
 		#for BS=0.8 BRL is 0.058	-- corresponds to BRL.max 0.106
-		#for BS=0.9 BRL is 0.067	-- corresponds to BRL.max 0.096						
+		#for BS=0.9 BRL is 0.067	-- corresponds to BRL.max 0.096
+	
+		outfile			<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clustTP_dist.brl.cmp",sep='_')
+		
+		select.bs		<- as.character(c(0.8,0.95))
+		stat.cmp		<- lapply(list("clusters.NLseqinclu","fp.stat","tp.stat"), function(x)
+				{
+					tmp	<- lapply(select.bs,function(bs)
+							{
+								tmp				<- rbind(stat.max[[x]][bs,],stat.casc[[x]][bs,])
+								rownames(tmp)	<- c("max","casc")
+								tmp
+							})
+					names(tmp)	<- select.bs
+					
+					tmp
+				})
+		names(stat.cmp)	<- c("clusters.NLseqinclu","fp.stat","tp.stat")
+		
+		thresh.brl		<- as.numeric(colnames(stat.max[[1]]))
+		xlim			<- c(0,17)
+		ylim			<- c(0.75,0.95)
+		cols			<- diverge_hcl(4, h = c(246, 40), c = 96, l = c(65, 90))[c(1,4)]
+		names(cols)		<- c("max","casc")
+		file			<- paste(outdir, paste(outfile,"_TPvsFP_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+		pdf(file=file,width=5,height=5)
+		plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,xlab="#FP",ylab="%TP")
+		sapply(list("max","casc"),function(x)
+				{
+					sapply(seq_along(stat.cmp[[1]]),function(j)
+							{								
+								tmp.x<- as.numeric(stat.cmp[["fp.stat"]][[j]][x,])
+								tmp.y<- as.numeric(stat.cmp[["tp.stat"]][[j]][x,])
+								points(tmp.x, tmp.y, type='b',col=cols[x], lty=j, pch=15+j)
+								text(tmp.x, tmp.y,col=cols[x],labels=thresh.brl,adj=c(-0.8,0.5),cex=0.5)
+							})
+				})
+		legend("bottomright",bty='n',border=NA,fill= cols, legend= names(cols))
+		legend("topleft",bty='n',legend= select.bs, pch= 15+1:2)
+		dev.off()
+		
+		xlim			<- c(0,17)
+		ylim			<- c(0.05,0.25)
+		cols			<- diverge_hcl(4, h = c(246, 40), c = 96, l = c(65, 90))[c(1,4)]
+		names(cols)		<- c("max","casc")
+		file			<- paste(outdir, paste(outfile,"_COvsFP_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+		pdf(file=file,width=5,height=5)
+		plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,xlab="#FP",ylab="%NL in cluster")
+		sapply(list("max","casc"),function(x)
+				{
+					sapply(seq_along(stat.cmp[[1]]),function(j)
+							{								
+								tmp.x<- as.numeric(stat.cmp[["fp.stat"]][[j]][x,])
+								tmp.y<- as.numeric(stat.cmp[["clusters.NLseqinclu"]][[j]][x,])
+								points(tmp.x, tmp.y, type='b',col=cols[x], lty=j, pch=15+j)
+								text(tmp.x, tmp.y,col=cols[x],labels=thresh.brl,adj=c(-0.8,0.5),cex=0.5)
+							})
+				})
+		legend("bottomright",bty='n',border=NA,fill= cols, legend= names(cols))
+		legend("topleft",bty='n',legend= select.bs, pch= 15+1:2)
+		dev.off()
+		
 	}
 	if(0)	#count how many unlinked pairs in clustering
 	{		
@@ -2928,7 +3056,8 @@ hivc.prog.precompute.clustering<- function()
 		
 	file		<- paste(indir,paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
 	if(verbose) cat(paste("read phylo from file",file))		
-	ph								<- ladderize( read.tree(file) )						
+	ph								<- ladderize( read.tree(file) )
+	gc()
 	ph$node.label[2]				<- 0								#little hack so that clustering works
 	ph.node.bs						<- as.numeric( ph$node.label )
 	ph.node.bs[is.na(ph.node.bs)]	<- 0
@@ -2938,15 +3067,119 @@ hivc.prog.precompute.clustering<- function()
 	
 	if(verbose) cat("\ncompute dist.brl.med")
 	dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
+	gc()
 	if(verbose) cat("\ncompute dist.brl.max")
 	dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
+	gc()
 	if(verbose) cat("\ncompute dist.brl.casc")
 	#dist.brl.casc					<- NULL
 	dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
-	
+	gc()
 	file		<- paste(outdir,paste(outfile,'_',gsub('/',':',signat.out),".R",sep=''),sep='/')
 	if(verbose) cat(paste("\nsave precomputed node.bs and dist.brl to file",file))
 	save(ph,ph.node.bs,dist.brl.med,dist.brl.max,dist.brl.casc,file=file)
+}
+
+hivc.prog.remove.resistancemut<- function()
+{
+	library(ape)
+	library(data.table)
+	
+	#load drug resistance mutations and select unique mutants by codon
+	dr		<- as.data.table( read.csv( paste( CODE.HOME,"/data/IAS_primarydrugresistance_201303.csv",sep='' ), stringsAsFactors=F ) )	
+	dr[,Alignment.nuc.pos:= (Gene.codon.number-1)*3+Gene.HXB2pos ]		
+	dr		<- dr[,	{	tmp<- unique(Mutant); list(Mutant=tmp, Gene.codon.number=Gene.codon.number[1], Wild.type=Wild.type[1], DR.name=DR.name[1])	}, by=Alignment.nuc.pos]
+	#select nucleotide codes that are consistent with drug resistance mutants
+	nt2aa	<- as.data.table( read.csv( paste( CODE.HOME,"/data/standard_nt_code.csv",sep='' ), stringsAsFactors=F ) )
+	setnames(nt2aa,c("AA","NTs"),c("Mutant","Mutant.NTs"))
+	nt2aa	<- subset(nt2aa, select=c(Mutant,Mutant.NTs))
+	dr		<- merge(dr, nt2aa, all.x=1, by="Mutant", allow.cartesian=TRUE)
+	setkey(dr, "Alignment.nuc.pos")
+	#print(dr, nrows=250)
+	dr		<- subset(dr, select=c(Alignment.nuc.pos, Mutant.NTs, DR.name))
+	set(dr, NULL, "Mutant.NTs", tolower(dr[,Mutant.NTs]))
+
+	indir			<- paste(DATA,"tmp",sep='/')
+	infile			<- "ATHENA_2013_03_CurAll+LANL_Sequences"
+	insignat		<- "Sat_Jun_16_17/23/46_2013"
+	outdir			<- paste(DATA,"tmp",sep='/')
+	outfile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+	outsignat		<- "Thu_Aug_01_17/05/23_2013"
+	alignment.start	<- 2253	
+	verbose			<- 1
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,8),
+									outfile= return(substr(arg,10,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outfile<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									outsignat= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outsignat<- tmp[1]	
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,16),
+									alignment.start= return(substr(arg,18,nchar(arg))),NA)	}))
+		if(length(tmp)>0) alignment.start<- tmp[1]	
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+	}
+	if(verbose)
+	{
+		print(indir)
+		print(infile)
+		print(insignat)
+		print(outdir)
+		print(outfile)		
+		print(outsignat)
+		print(alignment.start)
+		print(verbose)
+	}	
+	#load alignment
+	file				<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+	load(file)	
+	#modify dr table for particular alignment	
+	set(dr, NULL, "Alignment.nuc.pos", dr[,Alignment.nuc.pos]-alignment.start+1)
+	
+	#remove	likely.nonB.outliers
+	cat("\nchange infile: remove	likely.nonB.outliers")
+	likely.nonB.outliers	<- c("R03-07193","2006G206","PROT+P51_B.AU.1995.C92.AF538307","2008G084")
+	likely.nonB.outliers	<- which(rownames(seq.PROT.RT) %in% likely.nonB.outliers)
+	seq.PROT.RT				<- seq.PROT.RT[-likely.nonB.outliers,]
+	
+	#if alignment equals any of the drug resistance mutants, replace with NNN	
+	seq.PROT.RT			<- hivc.seq.rm.drugresistance(as.character(seq.PROT.RT), dr, verbose=verbose, rtn.DNAbin=1 )	
+	
+	#save No Drug resistance alignment to file
+	file								<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')
+	if(verbose)	cat(paste("\nwrite R file to",file))
+	save(seq.PROT.RT, file=file)	
+	file								<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".phylip",sep='')
+	if(verbose)	cat(paste("\nwrite phylip file to",file))
+	hivc.seq.write.dna.phylip(seq.PROT.RT, file=file)					
+	file								<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".fasta",sep='')			
+	if(verbose)	cat(paste("\nwrite fasta file to",file))
+	write.dna(seq.PROT.RT, file=file, format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)
+	
+	seq.PROT.RT
 }
 
 hivc.prog.get.geneticdist<- function()
@@ -3099,14 +3332,14 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}	
-	if(1)	#compute bootstrap support and branch length metrics for clustering
+	if(0)	#compute bootstrap support and branch length metrics for clustering
 	{
 		insignat	<- "Sat_Jun_16_17/23/46_2013"						
 		indir		<- paste(dir.name,"tmp",sep='/')
 		outdir		<- paste(dir.name,"tmp",sep='/')
 		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"				
 		cmd			<- hivc.cmd.preclustering(indir, infile, insignat, outdir=outdir)
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1)
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="7600mb",  hpc.nproc=1)
 		cat(cmd)		
 		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
@@ -3120,27 +3353,31 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over nucleotides in alignment and over initial starting trees to start ML search.
+	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over nucleotides in alignment and over initial starting trees to start ML search.
 	{
-		bs.from	<- 0
-		bs.to	<- 0
-		bs.n	<- 100
+		bs.from		<- 0
+		bs.to		<- 2
+		bs.n		<- 100
 		signat.in	<- "Sat_Jun_16_17:23:46_2013"
 		signat.out	<- "Sat_Jun_16_17:23:46_2013"				
-		indir	<- paste(dir.name,"tmp",sep='/')
-		infile	<- "ATHENA_2013_03_CurAll+LANL_Sequences"		
-		outdir	<- paste(dir.name,"tmp",sep='/')
-		cmd		<- hivc.cmd.examl.bsalignment(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
-		outdir	<- paste(dir.name,"tmp",sep='/')							
+		indir		<- paste(dir.name,"tmp",sep='/')
+		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences"
+
+		signat.in	<- "Thu_Aug_01_17/05/23_2013"
+		signat.out	<- "Thu_Aug_01_17/05/23_2013"						
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+
+		outdir		<- paste(dir.name,"tmp",sep='/')
+		cmd			<- hivc.cmd.examl.bsalignment(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
+		outdir		<- paste(dir.name,"tmp",sep='/')							
 		lapply(cmd, function(x)
 				{				
-					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q=NA, hpc.mem="3850mb", hpc.nproc=8)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("pipeline",signat,"qsub",sep='.')
-					cat(x)
-					#stop()
+					#cat(x)					
 					hivc.cmd.hpccaller(outdir, outfile, x)
-					#Sys.sleep(1)
+					Sys.sleep(1)
 				})
 		stop()
 	}

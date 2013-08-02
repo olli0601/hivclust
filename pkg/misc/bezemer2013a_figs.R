@@ -1,3 +1,190 @@
+project.bezemer2013a.figs.v130715<- function()
+{
+	require(data.table)
+	require(RColorBrewer)	 
+	verbose			<- 1
+	dir.name		<- "/Users/Oliver/duke/2013_HIV_NL/Bezemer2013_clusters"	
+	signat			<- "130715"
+	infile			<- "Bezemer2014_clusters_"
+	f.name			<- paste(infile,signat,".csv",sep='')
+	df				<- read.csv(paste(dir.name,f.name,sep='/'), stringsAsFactors=FALSE)
+	
+	#deal with missing data and get into reasonable shape
+	#@TODO Daniela, see if I interpret all the fields correctly, especially what is NA
+	df[df[,"fpos1"]=="","fpos1"]						<- NA
+	df[,"fpos1"]										<- as.Date(df[,"fpos1"], format="%d/%m/%Y")	
+	df[,"patient"]										<- factor(df[,"patient"])
+	tmp													<- !is.na(df[,"RegionOrigin"]) & (df[,"RegionOrigin"]=="" | df[,"RegionOrigin"]=="U") 		
+	df[tmp,"RegionOrigin"]								<- NA
+	df[,"RegionOrigin"]									<- factor(df[,"RegionOrigin"])
+	
+	tmp													<- unclass(df[,"RegionOrigin"]	)
+	code												<- seq_along(attr(tmp,"levels"))
+	names(code)											<- attr(tmp,"levels")
+	print(code)
+	tmp[ tmp==code[c("NL")] ]							<- 20
+	tmp[ tmp==code[c("NLseAnt")] ]						<- 21
+	tmp[ tmp==code[c("Lat")] ]							<- 22
+	tmp[ tmp%in%code[c("EUC","EUO","EUW")] ]			<- 23
+	tmp[ tmp%in%code[c("AUS","NAM","OAP","SSA","ZAz")] ]<- 24
+	df[,"RegionOrigin"]									<- factor(tmp, levels=as.character(20:24), labels=c("NL","NLseAnt","Latin","Europe","other"))
+	
+	
+	df[which(df[,"Country"]==""),"Country"]				<- NA
+	df[which(df[,"clustername"]==0),"clustername"]		<- NA
+	df[,"Country"]										<- factor(df[,"Country"])
+	df[which(df[,"hregion"]==""),"hregion"]				<- "unknown"
+	df[,"hregion"]										<- factor(df[,"hregion"], levels=c("CU","Ea","NH","No","So","UT","ZH","unknown"))	
+	df[,"HospitalRegion"]								<- factor(df[,"HospitalRegion"], levels=c(1,2,3,4,5,6), labels=c("Amst","N","E","S","W","Curu"))	
+	df[which(df[,"sexy"]==""),"sexy"]					<- NA
+	df[,"sexy"]											<- factor(df[,"sexy"])
+	df[which(df[,"rout"]==""),"rout"]					<- "unknown/other"
+	df[which(df[,"rout"]=="CH"),"rout"]					<- "unknown/other"
+	df[which(df[,"rout"]=="BL"),"rout"]					<- "unknown/other"
+	df[which(df[,"rout"]=="U"),"rout"]					<- "unknown/other"
+	df[,"rout"]											<- factor(df[,"rout"])
+	#print(levels(df[,"Country"]))
+	#print(levels(df[,"hregion"]))
+	#print(levels(df[,"sexy"]))
+	#print(levels(df[,"rout"]))
+	#print(summary(df[,"fpos1"]))
+	df	<- data.table(df, key="clustername")
+	setnames(df, c("clustername","HospitalRegion"),c("cluster","RegionHospital"))
+	str(df)
+		
+	#determine if network concentrated in region origin, and where
+	clu.reg		<- table( df[,cluster,RegionOrigin] )
+	clu.reg		<- clu.reg / matrix(apply(clu.reg, 2, sum), nrow=nrow(clu.reg), ncol=ncol(clu.reg), byrow=1)				
+	#ALTERNATIVE DEFINITION
+	#clu.regconc	<- apply( clu.reg, 2, function(x)	any(x>0.4) && length(which(x!=0))>2 ) |
+	#					apply( clu.reg, 2, function(x)	any(x>0.5) && length(which(x!=0))<=2 )
+	clu.regconc	<- apply( clu.reg, 2, function(x)	any(x>0.5) ) 			
+	if(verbose)	cat(paste("number of clusters, n=",length(clu.regconc)))
+	if(verbose)	cat(paste("number of spatially concentrated clusters, n=",length(which(clu.regconc))))
+	tmp			<- rownames(clu.reg)
+	clu.regconc2<- sapply( seq_len(ncol(clu.reg)), function(j)
+			{
+				ifelse(!clu.regconc[j], NA, tmp[ which.max(clu.reg[,j]) ] )						
+			})
+	df.clureg	<- data.table(cluster= as.numeric(colnames( clu.reg )), IsRegionConcentrated= clu.regconc, RegionConcentrated=clu.regconc2, key="cluster" )
+	#determine median fpos1 time for cluster and add
+	#PLUS determine cex for each cluster and add
+	tmp			<- df[,list(cluster.PosT=mean(fpos1, na.rm=T), cluster.cex=log(sequencesperCluster[1])),by=cluster]
+	set(tmp, NULL, "cluster.cex", tmp[,cluster.cex] * 0.5/(max(tmp[,cluster.cex]) - min(tmp[,cluster.cex])) )
+	set(tmp, NULL, "cluster.cex", tmp[,cluster.cex]  - max(tmp[,cluster.cex]) + 1)	
+	df.clureg	<- merge(df.clureg, tmp, all.x=1, by="cluster")	
+	#merge all
+	df.main		<- merge( df, df.clureg, all.x=1, by="cluster" )
+	
+	#remove non-clustering sequences
+	df.main		<- subset(df.main, !is.na(cluster))	
+	
+	#print main statistics of networks by region of origin
+	print(table(df.main[,RegionConcentrated]))
+	
+	CLUSTER.N.THRESHOLD	<- 10
+	ylab				<- "transmission network ID"
+	yheight				<- 1.5
+	cex.points			<- 0.5	
+	
+	#plot by sort1 and sort2	
+	df					<- df.main
+	df[,time:=fpos1 ]		
+	set(df, which(df[,!IsRegionConcentrated]), "RegionConcentrated", "Bridge")
+	tmp					<- numeric(nrow(df))	
+	tmp2				<- c("NL","Europe","Latin","NLseAnt","other","Bridge")
+	for( i in seq_along(tmp2))
+		tmp[which(df[,RegionConcentrated==tmp2[i]])]	<- i
+	df[,sort1:=factor(tmp, levels=1:6, labels=tmp2) ]
+	df[,sort3:=rout ]
+	set(df, which(df[,is.na(sort3)]),"sort3","unknown/other")
+	df[,sort2:=cluster.PosT]
+	
+	tmp					<- numeric(nrow(df))		
+	tmp2				<- c("NL","Europe","Latin","NLseAnt","other")
+	for( i in seq_along(tmp2))
+		tmp[which(df[,RegionOrigin==tmp2[i]])]	<- i
+	df[,covariate:=factor(tmp, levels=1:5, labels=tmp2) ]
+	xlab				<- "first pos date"
+	xlim				<- range( df[,fpos1], na.rm=1 )
+	ylab				<- ""#paste("clusters BS=",thresh.bs*100," BRL.med=",thresh.brl*100," version=",gsub('/',':',signat),sep="")	
+	
+	#extract clusters one by one in desired order, with all the information for plotting
+	tmp					<- df[,list(sort1=sort1[1], sort2=sort2[1], sort3= as.numeric(length(which(sort3=="MSM"))/length(sort3) > 0.7 )[1]),by=cluster]
+	clusters.sortby1	<- as.numeric( tmp[,sort1] )
+	clusters.sortby2	<- as.numeric( tmp[,sort2] )
+	clusters.sortby3	<- as.numeric( tmp[,sort3] )	
+	clusters.sortby		<- order(clusters.sortby1,clusters.sortby3,clusters.sortby2, decreasing=F)
+	clusters			<- tmp[clusters.sortby,cluster]														
+	clusters			<- lapply(clusters,function(x)	subset(df,cluster==x,c(time,covariate,rout, RegionOrigin, cluster.cex,sort1))		)
+	ylim				<- c(-2,length(clusters))
+	xlim[1]				<- xlim[1]-700
+	
+	if(1)	#plot hospital region in colors to justify ordering of plot
+	{
+		ncols				<- length(levels(df[,covariate]))
+		cols				<- c("darkblue","Cyan","firebrick1","darkorange","grey50")	#brewer.pal(ncols,"Set1")#[c(1,6,3,4,5,2)]		
+		cols				<- sapply(cols, function(x) my.fade.col(x,0.7))	
+		
+		
+		file				<- paste(dir.name,paste(infile,"RegionOrigin_",gsub('/',':',signat),".pdf",sep=''),sep='/')
+		cat(paste("\nwrite plot to",file))
+		pdf(file,width=7,height=14)
+		plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,ylab=ylab, xaxt='n',yaxt='n',xlab=xlab)
+		axis.Date(1, seq.Date(xlim[1],xlim[2],by="year"), labels = TRUE )
+		dummy	<- sapply(seq_along(clusters),function(i)
+				{							
+					cluster.cex	<- cex.points  * clusters[[i]][1,cluster.cex]
+					cluster.ix	<- order(as.numeric(clusters[[i]][,time]))
+					cluster.x	<- as.numeric(clusters[[i]][,time])[cluster.ix]										
+					cluster.y	<- rep(i,nrow(clusters[[i]]))
+					cluster.z	<- as.numeric(clusters[[i]][,covariate])[cluster.ix]
+					#print(clusters[[i]][,covariate])
+					#if(cluster.z[1]!=4)
+					#lines( c(cluster.x[1],xlim[2]), rep(i,2), col=cols[ cluster.z[1] ] )					
+					points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )										
+				})	
+		c.lines	<- sapply(clusters,function(x) x[1,sort1])
+		c.lines	<- which(diff(as.numeric(c.lines))!=0)
+		lapply(c.lines,function(x)		abline(h=x+0.5, lty=3, lwd=0.75, col="grey50")			)
+		
+		mtext(text=levels(df[,covariate]), 2, at=c(0,c.lines[-length(c.lines)]) + diff( c(0,c.lines) )/2, las=1)
+		legend("topleft",bty='n',pt.bg=cols,pch=21,legend=levels(df[,covariate]), col=rep("transparent",ncols))				
+		dev.off()	
+	}
+	if(1)	#plot exposure group in colors
+	{
+		ncols				<- length(levels(df[,rout]))
+		cols				<- c(brewer.pal(ncols-1,"Set1"),"grey50")		
+		cols				<- sapply(cols, function(x) my.fade.col(x,0.7))[c(1,3,2,4)]	
+		
+		file				<- paste(dir.name,paste(infile,"rout_",gsub('/',':',signat),".pdf",sep=''),sep='/')
+		cat(paste("\nwrite plot to",file))
+		pdf(file,width=7,height=14)
+		plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,ylab=ylab, xaxt='n',yaxt='n',xlab=xlab)
+		axis.Date(1, seq.Date(xlim[1],xlim[2],by="year"), labels = TRUE )
+		dummy	<- sapply(seq_along(clusters),function(i)
+				{							
+					cluster.cex	<- cex.points  * clusters[[i]][1,cluster.cex]
+					cluster.ix	<- order(as.numeric(clusters[[i]][,time]))
+					cluster.x	<- as.numeric(clusters[[i]][,time])[cluster.ix]										
+					cluster.y	<- rep(i,nrow(clusters[[i]]))
+					cluster.z	<- as.numeric(clusters[[i]][,rout])[cluster.ix]
+					#print(clusters[[i]][,covariate])
+					#if(cluster.z[1]!=4)
+					#lines( c(cluster.x[1],xlim[2]), rep(i,2), col=cols[ cluster.z[1] ] )					
+					points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )										
+				})	
+		c.lines	<- sapply(clusters,function(x) x[1,sort1])
+		c.lines	<- which(diff(as.numeric(c.lines))!=0)
+		lapply(c.lines,function(x)		abline(h=x+0.5, lty=3, lwd=0.75, col="grey50")			)
+		
+		mtext(text=levels(df[,covariate]), 2, at=c(0,c.lines[-length(c.lines)]) + diff( c(0,c.lines) )/2, las=1)
+		legend("topleft",bty='n',pt.bg=cols,pch=21,legend=levels(df[,rout]), col=rep("transparent",ncols))				
+		dev.off()	
+	}
+}
+
 project.bezemer2013a.figs.v130714<- function()
 {
 	require(data.table)
@@ -645,5 +832,6 @@ project.bezemer2013a.figs<- function()
 {
 	#project.bezemer2013a.figs.v130517()
 	#project.bezemer2013a.figs.v130528()
-	project.bezemer2013a.figs.v130714()
+	#project.bezemer2013a.figs.v130714()
+	project.bezemer2013a.figs.v130715()
 }
