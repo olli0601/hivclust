@@ -138,20 +138,19 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 }
 
 #' @export
-hivc.cmd.preclustering<- function(indir, infile, signat, outdir=indir, prog= PR.PRECLUST, resume=0, verbose=1)
+hivc.cmd.preclustering<- function(indir, infile, insignat, indircov, infilecov, prog= PR.PRECLUST, resume=0, verbose=1)
 {
 	cmd<- "#######################################################
-# compute preclustering
+# precompute clustering helper objects that are memory intensive
 #######################################################"
 	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
 	#default commands
 	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
-	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir," -signat=",signat,sep='')
+	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov,sep='')
 	#verbose stuff
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
 	cmd
 }
-
 
 #' @export
 hivc.cmd.get.geneticdist<- function(indir, infile, signat, gd.max, outdir=indir, prog= PR.GENDISTMAT, resume=1, verbose=1)

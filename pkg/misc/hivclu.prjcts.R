@@ -3007,15 +3007,16 @@ project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 hivc.prog.precompute.clustering<- function()
 {
 	library(ape)
-	library(hivclust)
+	library(adephylo)
+	library(data.table)	
 	
 	verbose		<- 1
 	resume		<- 0
-	indir		<- paste(DATA,"tmp",sep='/')
-	outdir		<- indir
+	indir		<- paste(DATA,"tmp",sep='/')	
 	infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
-	outfile		<- paste(infile,"preclust",sep='_')
-	signat.in	<- "Sat_Jun_16_17/23/46_2013"
+	insignat	<- "Sat_Jun_16_17/23/46_2013"
+	indircov	<- paste(DATA,"derived",sep='/')	
+	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	
 	if(exists("argv"))
 	{
@@ -3028,13 +3029,17 @@ hivc.prog.precompute.clustering<- function()
 									infile= return(substr(arg,9,nchar(arg))),NA)	}))
 		if(length(tmp)>0) infile<- tmp[1]				
 		tmp<- na.omit(sapply(argv,function(arg)
-						{	switch(substr(arg,2,7),
-									outdir= return(substr(arg,9,nchar(arg))),NA)	}))		
-		if(length(tmp)>0) outdir<- tmp[1]
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]		
 		tmp<- na.omit(sapply(argv,function(arg)
-						{	switch(substr(arg,2,7),
-									signat= return(substr(arg,9,nchar(arg))),NA)	}))
-		if(length(tmp)>0) signat.in<- tmp[1]
+						{	switch(substr(arg,2,9),
+									indircov= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indircov<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									infilecov= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilecov<- tmp[1]								
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,7),
 									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
@@ -3044,27 +3049,59 @@ hivc.prog.precompute.clustering<- function()
 									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) verbose<- tmp[1]		
 	}	
-	signat.out	<- signat.in	
+	outdir		<- indir
+	outsignat	<- insignat
+	outfile		<- paste(infile,"preclust",sep='_')
+	
 	if(verbose)
 	{
 		print(indir)
 		print(infile)
-		print(outdir)
-		print(signat.in)
+		print(insignat)
+		print(indircov)
+		print(infilecov)
 		print(resume)
-	}	
-		
-	file		<- paste(indir,paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
+	}			
+	
+	file							<- paste(indir,paste(infile,'_',gsub('/',':',insignat),".newick",sep=''),sep='/')
 	if(verbose) cat(paste("read phylo from file",file))		
 	ph								<- ladderize( read.tree(file) )
 	gc()
+	#
+	#	easy: extract bootstrap support
+	#
 	ph$node.label[2]				<- 0								#little hack so that clustering works
 	ph.node.bs						<- as.numeric( ph$node.label )
 	ph.node.bs[is.na(ph.node.bs)]	<- 0
 	ph.node.bs						<- ph.node.bs/100
 	ph$node.label					<- ph.node.bs
-	#print(quantile(ph.node.bs,seq(0.1,1,by=0.1)))
-	
+	#
+	#	easy: extract tree specific TP and FN data sets
+	#		
+	file							<- paste(indircov,"/",infilecov,".R",sep='')
+	load(file)
+	if(verbose) cat(paste("\nfound covariates for patients, n=",nrow(df.all)))
+	df.seqinfo						<- subset(df.all, !is.na(PosSeqT) )
+	if(verbose) cat(paste("\nfound covariates for patients with non-NA PosSeqT, n=",nrow(df.seqinfo)))
+	if(verbose) cat(paste("\nstart: compute TP and TN data tables for phylogeny"))
+	tmp								<- hivc.phy.get.TP.and.TN(ph, df.seqinfo, verbose=verbose)
+	if(verbose) cat(paste("\nend: compute TP and TN data tables for phylogeny"))
+	unlinked.byspace				<- tmp[["unlinked.byspace"]]
+	unlinked.bytime					<- tmp[["unlinked.bytime"]]
+	linked.bypatient				<- tmp[["linked.bypatient"]]	
+	ph.linked						<- tmp[["ph.linked"]]
+	ph.unlinked.info				<- tmp[["ph.unlinked.info"]]
+	ph.unlinked						<- tmp[["ph.unlinked"]]		
+	#
+	#	memory consuming: compute branch length matrix between tips
+	#
+	dist.root						<-  distRoot(ph, method= "patristic")
+	gc()
+	dist.tips.mat					<-  distTips(ph, method= "patristic")
+	gc()
+	#
+	#	memory consuming: extract branch length statistic of subtree
+	#
 	if(verbose) cat("\ncompute dist.brl.med")
 	dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
 	gc()
@@ -3075,9 +3112,12 @@ hivc.prog.precompute.clustering<- function()
 	#dist.brl.casc					<- NULL
 	dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
 	gc()
-	file		<- paste(outdir,paste(outfile,'_',gsub('/',':',signat.out),".R",sep=''),sep='/')
-	if(verbose) cat(paste("\nsave precomputed node.bs and dist.brl to file",file))
-	save(ph,ph.node.bs,dist.brl.med,dist.brl.max,dist.brl.casc,file=file)
+	#
+	#	save output
+	#
+	file							<- paste(outdir,paste(outfile,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')	
+	if(verbose)	cat(paste("write to file",file))
+	save(ph, dist.root, dist.tips.mat, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  file=file )
 }
 
 hivc.prog.remove.resistancemut<- function()
@@ -3332,16 +3372,17 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}	
-	if(0)	#compute bootstrap support and branch length metrics for clustering
-	{
-		insignat	<- "Sat_Jun_16_17/23/46_2013"						
-		indir		<- paste(dir.name,"tmp",sep='/')
-		outdir		<- paste(dir.name,"tmp",sep='/')
-		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"				
-		cmd			<- hivc.cmd.preclustering(indir, infile, insignat, outdir=outdir)
+	if(1)	#compute bootstrap support and branch length metrics for clustering
+	{						
+		indir		<- paste(dir.name,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+		insignat	<- "Sat_Jun_16_17/23/46_2013"		
+		indircov	<- paste(dir.name,"derived",sep='/')
+		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		cmd			<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov)
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="7600mb",  hpc.nproc=1)
 		cat(cmd)		
-		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
+		outfile		<- paste("preclust",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
@@ -3353,7 +3394,7 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over nucleotides in alignment and over initial starting trees to start ML search.
+	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over nucleotides in alignment and over initial starting trees to start ML search.
 	{
 		bs.from		<- 0
 		bs.to		<- 2

@@ -182,7 +182,7 @@ hivc.seq.find<- function(char.matrix, pos0= NA, from= c(), verbose=1)
 	query.yes	
 }
 
-hiv.seq.gc.content<- function(seq.DNAbin.mat)
+hivc.seq.gc.content<- function(seq.DNAbin.mat)
 {	
 	rna.gc.fraction.n		<- c('a','c','g','t',	'r','m','w','s',	'k','y','v','h',		'd','b','n','-','?')
 	rna.gc.fraction			<- c( 0, 1, 1, 0,		0.5, 0.5, 0, 1, 	1/2, 1/2, 2/3, 1/3,		1/3,2/3, 1/4, 0, 0)		#this fraction assumes that U is synonymous with T and that U does not occur in the code
@@ -787,6 +787,135 @@ hivc.clu.brdist.stats<- function(tree, distmat=NULL, eval.dist.btw="leaf", stat.
 	ntips			<- Ntip(tree)
 	nint 			<- tree$Nnode 		## number of internal nodes
 	return(sapply(seq.int(ntips+1,ntips+nint), function(x) 		hivc.clu.brdist.stats.subtree(x,tree,distmat,eval.dist.btw=eval.dist.btw, stat.fun=stat.fun)		))	
+}
+
+######################################################################################
+hivc.phy.get.TP.and.TN<- function(ph, df.all, verbose= 1)
+{
+	#
+	# exctract geographically distant seqs that are assumed to be truly unlinked to NL seqs
+	#
+	tmp					<-  ph$tip.label[ substr(ph$tip.label,1,2)=="TN" ]
+	unlinked.byspace	<- data.table(FASTASampleCode=tmp, key="FASTASampleCode")		
+	#
+	# extract list of truly linked sample codes
+	#
+	tmp					<- subset(df.all[, length(FASTASampleCode)>1, by=Patient], V1==T, select=Patient)
+	linked.bypatient	<- merge(tmp, df.all, all.x=1, by="Patient")
+	setkey(linked.bypatient, "FASTASampleCode")
+	linked.bypatient	<- subset(linked.bypatient, select=c(Patient, FASTASampleCode, PosSeqT))					
+	#
+	# extract list of truly unlinked sample codes by temporal separation
+	#
+	df.dead						<- subset(df.all, !is.na(DateDied))	
+	setkey(df.dead, DateDied)	
+	#extract seroconverters
+	df.serocon.acc				<- subset(df.all, NegT_Acc=="Yes" & NegT>=df.dead[1,DateDied],)
+	#add seroconverters with inaccurate info
+	df.serocon.nacc				<- subset(df.all, NegT_Acc=="No" & !is.na(NegT) & NegT>=df.dead[1,DateDied], )
+	df.serocon.nacc.dy			<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mday==15, )						#for inaccurate days, we (conservatively) assume the patient was only seronegative at the start of the month
+	tmp							<- as.POSIXlt(df.serocon.nacc.dy[,NegT] )
+	tmp$mday					<- 1
+	df.serocon.nacc.dy[,NegT:=as.Date(tmp)]
+	df.serocon.nacc.mody		<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mon==6 & as.POSIXlt(NegT)$mday==1, )		#for inaccurate months and days, we (conservatively) assume the patient was only seronegative at the start of the year
+	tmp							<- as.POSIXlt(df.serocon.nacc.mody[,NegT] )
+	tmp$mon						<- 0
+	df.serocon.nacc.mody[,NegT:=as.Date(tmp)]
+	df.serocon					<- rbind(df.serocon.acc, df.serocon.nacc.dy, df.serocon.nacc.mody)		
+	if(verbose) cat(paste("\nnumber of seroconverters with at least 1 preceeding dead HIV+",nrow(df.serocon)))
+	#for each seq of seroconverter, extract HIV+ seqs that are dead before seroconversion
+	if( any(as.logical(df.serocon[,is.na(NegT)])) )	warning("Found accurate seroconverters with missing NegT")		
+	setkey(df.serocon,NegT)
+	unlinked.bytime				<- lapply(seq_len(nrow(df.serocon)), function(i)
+				{
+					tmp				<- subset(df.dead, DateDied<=df.serocon[i,NegT],select=c(Patient,FASTASampleCode,DateDied))
+					tmp2			<- rep(df.serocon[i,FASTASampleCode],nrow(tmp))
+					tmp[,query.FASTASampleCode:= tmp2]
+					setkey(tmp,"FASTASampleCode")
+					tmp					
+				})
+	names(unlinked.bytime)	<- df.serocon[,FASTASampleCode]											
+	#
+	#plot number of unlinked HIV+ by date (this date is when someone else is still seroneg)
+	#
+	if(0)
+	{
+			#
+			y		<- sapply(unlinked.bytime, function(x) nrow(x) )
+			y2		<- nrow(unlinked.byspace)
+			x		<- df.serocon[,NegT]
+			xlim	<- range(x)
+			ylim	<- c(0, y2+max(y))
+			tmp		<- as.POSIXlt(xlim[1])
+			tmp$mday<- 1
+			tmp$mon	<- 1
+			xlim[1]	<- as.Date(tmp)
+			plot(1,1,type='n',bty='n',xlab="time of seroconversion",ylab="number unlinked",xaxt='n',xlim=xlim,ylim=ylim)
+			axis.Date(1,Year,at=seq(xlim[1], xlim[2],by="12 months"))			
+			polygon(c(x[1],x[length(x)],x[length(x)],x[1]), c(y2,y2,0,0), border=NA, col="blue" )
+			polygon(c(x,c(x[length(x)],x[1])), c(y+y2,y2,y2), border=NA, col="grey60" )
+			legend("topleft",bty='n',fill=c("blue","grey60"),legend=c("by space","by time"),border=NA)						
+	}	
+	#
+	# get TN for seroneg: convert unlinked.bytime from SampleCode to ph node index and add truly unlinked.byspace
+	#
+	df.tips							<- data.table(Node=seq_len(Ntip(ph)), FASTASampleCode=ph$tip.label, key="FASTASampleCode" )
+	#df.tips							<- merge(df.tips, df.all, all.x=1, by="FASTASampleCode")
+	#df.tips							<- subset(df.tips,select=c(FASTASampleCode, Node))		
+	unlinked.byspace				<- merge(unlinked.byspace, df.tips, all.x=1, by="FASTASampleCode")
+	setkey(unlinked.byspace,"Node")
+	ph.unlinked.bytime				<- lapply(unlinked.bytime, function(x)
+				{
+					tmp	<- merge(x, df.tips, all.x=1)
+					tmp2<- tmp[1,query.FASTASampleCode]
+					tmp	<- rbind( subset(tmp, select=c(FASTASampleCode,Node)), unlinked.byspace )
+					tmp2<- rep(tmp2, nrow(tmp))
+					tmp[,query.FASTASampleCode:= tmp2]
+					setkey(tmp, Node)
+					tmp
+				})	
+	names(ph.unlinked.bytime)		<- names(unlinked.bytime)
+	#
+	# get TN for seropos: use only unlinked.byspace
+	#
+	ph.seroneg						<- merge( data.table(FASTASampleCode=names(ph.unlinked.bytime)), df.tips, by="FASTASampleCode", all.x=1)		
+	ph.seropos						<- subset( df.tips[,c(2,1), with=F], !FASTASampleCode%in%names(ph.unlinked.bytime) 
+														& 	substr(FASTASampleCode,1,2)!="TN"
+														&	substr(FASTASampleCode,1,8)!="PROT+P51"
+														)			
+	ph.unlinked.byspace				<- lapply(seq_len(nrow(ph.seropos)), function(i)
+			{
+				tmp	<- unlinked.byspace
+				tmp2<- rep(ph.seropos[i,FASTASampleCode], nrow(tmp))
+				tmp[,query.FASTASampleCode:= tmp2]
+				setkey(tmp, Node)
+				tmp
+			})
+	names(ph.unlinked.byspace)		<- ph.seropos[,FASTASampleCode]
+	#
+	# put all unlinked ATHENA seqs together and sort by Node
+	#
+	ph.unlinked						<- c(ph.unlinked.byspace, ph.unlinked.bytime)
+	names(ph.unlinked)				<- c(names(ph.unlinked.byspace),names(ph.unlinked.bytime))
+	ph.unlinked.info				<- rbind(ph.seropos,ph.seroneg)		
+	setkey(ph.unlinked.info, "Node")
+	ph.unlinked						<- lapply(ph.unlinked.info[,FASTASampleCode], function(i){		ph.unlinked[[i]]	})
+	names(ph.unlinked)				<- ph.unlinked.info[,FASTASampleCode]
+	tmp								<- seq_len(nrow(ph.unlinked.info))
+	ph.unlinked.info[,NodeIdx:= tmp]
+	ph.unlinked.info				<- merge(ph.unlinked.info, df.all, all.x=1, by="FASTASampleCode")
+	setkey(ph.unlinked.info, "Node")		
+	#
+	#	get data table of all linked ATHENA seqs
+	#
+	ph.linked						<- merge(linked.bypatient, df.tips, all.x=1)
+	ph.linked						<- subset(ph.linked, select=c(FASTASampleCode, Patient, Node))
+	ph.linked						<- merge(ph.linked, ph.linked[, length(FASTASampleCode), by=Patient], all.x=1, by="Patient")
+	setnames(ph.linked, "V1","nTP")
+	setkey(ph.linked, "Node")
+
+	ans<- list(	unlinked.byspace=unlinked.byspace, unlinked.bytime=unlinked.bytime, linked.bypatient=linked.bypatient,
+				ph.linked=ph.linked, ph.unlinked.info=ph.unlinked.info, ph.unlinked=ph.unlinked)	
 }
 ######################################################################################
 hivc.get.hpcsys<- function()
