@@ -57,7 +57,7 @@ default.fun		<- "project.hivc.collectpatientdata"
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
 #default.fun		<- "project.bezemer2013a.figs"
 default.fun		<- "project.hivc.clustering"
-default.fun		<- "hivc.prog.precompute.clustering"
+#default.fun		<- "hivc.prog.precompute.clustering"
 #default.fun	<- "project.gccontent"
 default.fun 	<- "hivc.proj.pipeline"
 #default.fun 	<- "hivc.prog.remove.resistancemut"
@@ -266,7 +266,8 @@ if(length(args))
 					FIRSTSEQ				= "hivc.prog.get.firstseq",
 					BOOTSTRAPSEQ			= "hivc.prog.get.bootstrapseq",
 					GENDISTMAT				= "hivc.prog.get.geneticdist",
-					PRECLUST				= "hivc.prog.precompute.clustering"
+					PRECLUST				= "hivc.prog.precompute.clustering",
+					CLUST					= "hivc.prog.get.clustering"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)

@@ -2317,7 +2317,7 @@ project.hivc.clustering<- function(dir.name= DATA)
 		print(ph.node.bs[clu.idx])
 		stop()
 	}
-	if(1)	#clustering on ATHENA tree
+	if(0)	#clustering on ATHENA tree
 	{
 		opt.dist.brl	<- "dist.brl.max"
 		opt.dist.brl	<- "dist.brl.casc"
@@ -2609,116 +2609,28 @@ project.hivc.clustering<- function(dir.name= DATA)
 		dev.off()	
 		stop()
 	}
-	if(0)
-	{
-		project.hivc.clustering.get.linked.and.unlinked()
-	}
-	if(0)
+	if(1)
 	{		
 		verbose		<- 1
-		if(1)
-		{
-			#read tree, get boostrap values and patristic distances between leaves
-			infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_preclust"
-			signat.in	<- "Sat_Jun_16_17/23/46_2013"
-			signat.out	<- "Sat_Jun_16_17/23/46_2013"
-			file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".R",sep=''),sep='/')
-			cat(paste("load file",file))		
-			load(file)
-		}
-		else	#takes lots of memory ..
-		{
-			#read tree, get boostrap values and patristic distances between leaves
-			infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
-			signat.in	<- "Sat_Jun_16_17/23/46_2013"
-			signat.out	<- "Sat_Jun_16_17/23/46_2013"
-			file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".newick",sep=''),sep='/')
-			cat(paste("read file",file))		
-			ph								<- ladderize( read.tree(file) )						
-			ph$node.label[2]				<- 0								#little hack so that clustering works
-			ph.node.bs						<- as.numeric( ph$node.label )
-			ph.node.bs[is.na(ph.node.bs)]	<- 0
-			ph.node.bs						<- ph.node.bs/100
-			ph$node.label					<- ph.node.bs
-			#print(quantile(ph.node.bs,seq(0.1,1,by=0.1)))
-			print("compute dist.brl.med")
-			dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
-			print("compute dist.brl.max")
-			dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
-			print("compute dist.brl.casc")
-			dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)			
-		}			
-		#print(quantile(dist.brl,seq(0.1,1,by=0.1)))
-	
-		#read linked and unlinked
-		indir				<- paste(dir.name,"tmp",sep='/')
-		infile				<- "ATHENA_2013_03_Unlinked_and_Linked"
-		insignat			<- "Sat_Jun_16_17/23/46_2013"
-		file				<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
-		if(verbose) cat(paste("\nread linked and unlinked from file",file))
-		load(file)
-		
-		#convert truly unlinked.bytime from SampleCode to ph node index and add truly unlinked.byspace
-		df.tips							<- data.table(Node=seq_len(Ntip(ph)), FASTASampleCode=ph$tip.label )
-		setkey(df.tips, FASTASampleCode)		
-		setkey(df.seqinfo, FASTASampleCode)	
-		df.tips							<- merge(df.tips, df.seqinfo, all.x=1)
-		df.tips							<- subset(df.tips,select=c(FASTASampleCode, Node))		
-		unlinked.byspace				<- merge(unlinked.byspace, df.tips, all.x=1)		
-		ph.unlinked.bytime				<- lapply(unlinked.bytime, function(x)
-											{
-												tmp	<- merge(x, df.tips, all.x=1)
-												tmp2<- tmp[1,query.FASTASampleCode]
-												tmp	<- rbind( subset(tmp, select=c(FASTASampleCode,Node)), unlinked.byspace )
-												tmp2<- rep(tmp2, nrow(tmp))
-												tmp[,query.FASTASampleCode:= tmp2]
-												setkey(tmp, Node)
-												tmp
-											})	
-		names(ph.unlinked.bytime)		<- names(unlinked.bytime)
-		
-				
-		#for those only seropos, use only unlinked.byspace				
-		ph.seroneg						<- merge( data.table(FASTASampleCode=names(ph.unlinked.bytime)), df.tips, by="FASTASampleCode", all.x=1)		
-		ph.seropos						<- subset( df.tips, !FASTASampleCode%in%names(ph.unlinked.bytime) )
-		ph.seropos						<- subset(ph.seropos, substr(FASTASampleCode,1,2)!="TN" )
-		ph.seropos						<- subset(ph.seropos, substr(FASTASampleCode,1,8)!="PROT+P51" )				
-		setkey(unlinked.byspace,"Node")
-		ph.unlinked.byspace				<- lapply(seq_len(nrow(ph.seropos)), function(i)
-												{
-													tmp	<- unlinked.byspace
-													tmp2<- rep(ph.seropos[i,FASTASampleCode], nrow(tmp))
-													tmp[,query.FASTASampleCode:= tmp2]
-													setkey(tmp, Node)
-													tmp
-												})
-		names(ph.unlinked.byspace)		<- ph.seropos[,FASTASampleCode]
-
-		#put all unlinked ATHENA seqs together and sort by Node
-		ph.unlinked						<- c(ph.unlinked.byspace,ph.unlinked.bytime)
-		names(ph.unlinked)				<- c(names(ph.unlinked.byspace),names(ph.unlinked.bytime))
-		ph.unlinked.info				<- rbind(ph.seropos,ph.seroneg)		
-		setkey(ph.unlinked.info, "Node")
-		ph.unlinked						<- lapply(ph.unlinked.info[,FASTASampleCode], function(i){		ph.unlinked[[i]]	})
-		names(ph.unlinked)				<- ph.unlinked.info[,FASTASampleCode]
-		tmp								<- seq_len(nrow(ph.unlinked.info))
-		ph.unlinked.info[,NodeIdx:= tmp]
-		ph.unlinked.info				<- merge(ph.unlinked.info, df.seqinfo, all.x=1, by="FASTASampleCode")
-		setkey(ph.unlinked.info, "Node")		
-		
-		#get data table of all linked ATHENA seqs
-		ph.linked						<- merge(linked.bypatient, df.tips, all.x=1)
-		ph.linked						<- subset(ph.linked, select=c(FASTASampleCode, Patient, Node))
-		ph.linked						<- merge(ph.linked, ph.linked[, length(FASTASampleCode), by=Patient], all.x=1, by="Patient")
-		setnames(ph.linked, "V1","nTP")
-		setkey(ph.linked, "Node")
-		
-		outfile							<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_preclustlink"		
-		signat.out						<- "Sat_Jun_16_17/23/46_2013"
-		file							<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',signat.out),".R",sep=''),sep='/')
-		if(verbose)	cat(paste("write to file",file))
-		save(ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, file=file )
+		resume		<- 1
+		#precompute clustering stuff		#KEY1
+		indir		<- paste(dir.name,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+		insignat	<- "Sat_Jun_16_17/23/46_2013"		
+		indircov	<- paste(dir.name,"derived",sep='/')
+		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"		
+		argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
+		argv		<<- unlist(strsplit(argv,' '))
+		clu.pre		<- hivc.prog.precompute.clustering()
+		#precompute clustering stuff for particular thresholds etc
+		opt.brl		<- "dist.brl.casc" 
+		thresh.brl	<- 0.096
+		thresh.bs	<- 0.8
+		argv		<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl, thresh.brl, thresh.bs, resume=resume)				 
+		argv		<<- unlist(strsplit(argv,' '))
+		clu			<- hivc.prog.get.clustering()
 		stop()
+		
 	}
 	if(0)	#investigate various cluster size distributions by size etc
 	{	
@@ -3003,7 +2915,129 @@ project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 				})			
 	}
 }
+######################################################################################
+hivc.prog.get.clustering<- function()
+{
+	library(ape)
+	library(data.table)	
+			
+	opt.dist.brl	<- "dist.brl.casc"
+	thresh.bs		<- 0.8
+	thresh.brl		<- 0.096	#with mut rate 6e-3/yr expect 2*0.048 brl for 8 yrs apart	
+	verbose			<- 1
+	resume			<- 0
+	indir			<- paste(DATA,"tmp",sep='/')
+	infile			<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+	insignat		<- "Sat_Jun_16_17/23/46_2013"
 
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									thresh.bs= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) thresh.bs<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,11),
+									thresh.brl= return(as.numeric(substr(arg,13,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) thresh.brl<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,8),
+									opt.brl= return(substr(arg,10,nchar(arg))),NA)	}))
+		if(length(tmp)>0) opt.dist.brl<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]		
+	}	
+	
+	if(verbose)
+	{
+		cat(paste("\nopt.dist.brl",opt.dist.brl))
+		cat(paste("\nthresh.bs",thresh.bs))
+		cat(paste("\nthresh.brl",thresh.brl))
+		cat(paste("\nindir",indir))
+		cat(paste("\ninfile",infile))
+		cat(paste("\ninsignat",insignat))				
+	}
+	outdir			<- indir
+	outfile			<- paste(infile,"_clust_",opt.dist.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,sep='')
+	outsignat		<- insignat	
+	
+	if(resume)
+	{
+		file		<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')		
+		options(show.error.messages = FALSE)		
+		if(verbose)
+			cat(paste("\ntry to resume file ",file))
+		readAttempt<-	try(suppressWarnings(load(file)))
+		options(show.error.messages = TRUE)
+		if(!inherits(readAttempt, "try-error") && verbose)
+			cat(paste("\nresumed file ",file))
+	}
+	if(!resume || inherits(readAttempt, "try-error"))
+	{		
+		#
+		#	load preclustlink files
+		#
+		file		<- paste(indir,paste(infile,"_preclust_",gsub('/',':',insignat),".R",sep=''),sep='/')
+		if(verbose) cat(paste("load file",file))
+		options(show.error.messages = FALSE)
+		readAttempt<-	try(suppressWarnings(load(file)))
+		if(inherits(readAttempt, "try-error"))	stop(paste("cannot load required file", file))
+		options(show.error.messages = TRUE)
+		#
+		#	generate clustering
+		#
+		dist.brl		<- switch(	opt.dist.brl, 
+									"dist.brl.max"		= dist.brl.max,
+									"dist.brl.med"		= dist.brl.med,
+									"dist.brl.casc"		= dist.brl.casc,
+									NA)
+		if(any(is.na(dist.brl)))	stop("unexpected NA in dist.brl")					
+		clustering		<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+		#
+		#	add cluster membership to df.seqinfo
+		#
+		setkey(df.seqinfo, Node)
+		df.seqinfo[,"cluster":= clustering[["clu.mem"]][seq_len(Ntip(ph))]]
+		#	set CountryInfection for non-ATHENA seqs
+		tmp				<- which( df.seqinfo[,substr(FASTASampleCode,1,2)=="TN"] )
+		set(df.seqinfo, tmp, "CountryInfection", "FRGNTN")
+		tmp				<- which( df.seqinfo[,substr(FASTASampleCode,1,8)=="PROT+P51"] )
+		set(df.seqinfo, tmp, "CountryInfection", "FRGN")
+		#
+		#	compute TP and TN clusters
+		#
+		clusters.tp		<- hivc.clu.truepos(clustering, ph.linked, Ntip(ph), verbose= 0)
+		clusters.tn		<- hivc.clu.trueneg(clustering, ph.unlinked.info, ph.unlinked, Ntip(ph), verbose=0)
+		#
+		#	save
+		#
+		file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')
+		cat(paste("\nwrite cluster info to file",file))
+		save(df.seqinfo, clustering, clusters.tp, clusters.tn, file=file)
+	}
+	
+	ans	<- list(thresh.bs=thresh.bs, thresh.brl=thresh.brl, opt.dist.brl=opt.dist.brl, df.seqinfo=df.seqinfo, clustering=clustering, clusters.tp=clusters.tp, clusters.tn=clusters.tn)
+	ans
+}
+######################################################################################
 hivc.prog.precompute.clustering<- function()
 {
 	library(ape)
@@ -3039,7 +3073,7 @@ hivc.prog.precompute.clustering<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,10),
 									infilecov= return(substr(arg,12,nchar(arg))),NA)	}))
-		if(length(tmp)>0) infilecov<- tmp[1]								
+		if(length(tmp)>0) infilecov<- tmp[1]		
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,7),
 									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
@@ -3049,10 +3083,10 @@ hivc.prog.precompute.clustering<- function()
 									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) verbose<- tmp[1]		
 	}	
-	outdir		<- indir
-	outsignat	<- insignat
-	outfile		<- paste(infile,"preclust",sep='_')
-	
+	outdir			<- indir
+	outsignat		<- insignat
+	outfile			<- paste(infile,"preclust",sep='_')
+	outfile.dtips	<- paste(infile,"predtips",sep='_')
 	if(verbose)
 	{
 		print(indir)
@@ -3061,63 +3095,89 @@ hivc.prog.precompute.clustering<- function()
 		print(indircov)
 		print(infilecov)
 		print(resume)
-	}			
+	}
+	if(resume)
+	{
+		file		<- paste(outdir,paste(outfile,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')
+		options(show.error.messages = FALSE)		
+		if(verbose)
+			cat(paste("\ntry to resume file ",file))
+		readAttempt<-	try(suppressWarnings(load(file)))
+		options(show.error.messages = TRUE)
+		if(!inherits(readAttempt, "try-error") && verbose)
+			cat(paste("\nresumed file ",file))
+	}
+	if(!resume || inherits(readAttempt, "try-error"))
+	{	
+		file							<- paste(indir,paste(infile,'_',gsub('/',':',insignat),".newick",sep=''),sep='/')
+		if(verbose) cat(paste("read phylo from file",file))		
+		ph								<- ladderize( read.tree(file) )
+		gc()
+		#
+		#	easy: extract bootstrap support
+		#
+		ph$node.label[2]				<- 0								#little hack so that clustering works
+		ph.node.bs						<- as.numeric( ph$node.label )
+		ph.node.bs[is.na(ph.node.bs)]	<- 0
+		ph.node.bs						<- ph.node.bs/100
+		ph$node.label					<- ph.node.bs
+		#
+		#	easy: extract tree specific TP and FN data sets
+		#		
+		file							<- paste(indircov,"/",infilecov,".R",sep='')
+		load(file)
+		if(verbose) cat(paste("\nfound covariates for patients, n=",nrow(df.all)))
+		df.seqinfo						<- subset(df.all, !is.na(PosSeqT) )
+		if(verbose) cat(paste("\nfound covariates for patients with non-NA PosSeqT, n=",nrow(df.seqinfo)))
+		if(verbose) cat(paste("\nstart: compute TP and TN data tables for phylogeny"))
+		tmp								<- hivc.phy.get.TP.and.TN(ph, df.seqinfo, verbose=verbose)
+		if(verbose) cat(paste("\nend: compute TP and TN data tables for phylogeny"))
+		unlinked.byspace				<- tmp[["unlinked.byspace"]]
+		unlinked.bytime					<- tmp[["unlinked.bytime"]]
+		linked.bypatient				<- tmp[["linked.bypatient"]]	
+		ph.linked						<- tmp[["ph.linked"]]
+		ph.unlinked.info				<- tmp[["ph.unlinked.info"]]
+		ph.unlinked						<- tmp[["ph.unlinked"]]
+		#
+		#	add node number to df.seqinfo
+		#
+		df.seqinfo						<- merge( df.all, data.table(Node=seq_len(Ntip(ph)), FASTASampleCode=ph$tip.label, key="FASTASampleCode" ), all.y=1)
+		#
+		#	memory consuming: extract branch length statistic of subtree
+		#
+		if(verbose) cat("\ncompute dist.brl.med")
+		dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
+		gc()
+		if(verbose) cat("\ncompute dist.brl.max")
+		dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
+		gc()
+		if(verbose) cat("\ncompute dist.brl.casc")
+		dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
+		gc()
+		#
+		#	memory consuming: compute branch length matrix between tips
+		#
+		#if(verbose) cat("\ncompute dist.root")
+		#dist.root						<-  distRoot(ph, method= "patristic")
+		#gc()
+		if(verbose) cat("\ncompute dist.tips.mat")
+		dist.tips.mat					<-  distTips(ph, method= "patristic")
+		gc()		
+		#
+		#	save output
+		#
+		file							<- paste(outdir,paste(outfile,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')	
+		if(verbose)	cat(paste("write to file",file))
+		save(ph, dist.tips.mat, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  file=file )
+		#save(ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  file=file )		
+	}
 	
-	file							<- paste(indir,paste(infile,'_',gsub('/',':',insignat),".newick",sep=''),sep='/')
-	if(verbose) cat(paste("read phylo from file",file))		
-	ph								<- ladderize( read.tree(file) )
-	gc()
-	#
-	#	easy: extract bootstrap support
-	#
-	ph$node.label[2]				<- 0								#little hack so that clustering works
-	ph.node.bs						<- as.numeric( ph$node.label )
-	ph.node.bs[is.na(ph.node.bs)]	<- 0
-	ph.node.bs						<- ph.node.bs/100
-	ph$node.label					<- ph.node.bs
-	#
-	#	easy: extract tree specific TP and FN data sets
-	#		
-	file							<- paste(indircov,"/",infilecov,".R",sep='')
-	load(file)
-	if(verbose) cat(paste("\nfound covariates for patients, n=",nrow(df.all)))
-	df.seqinfo						<- subset(df.all, !is.na(PosSeqT) )
-	if(verbose) cat(paste("\nfound covariates for patients with non-NA PosSeqT, n=",nrow(df.seqinfo)))
-	if(verbose) cat(paste("\nstart: compute TP and TN data tables for phylogeny"))
-	tmp								<- hivc.phy.get.TP.and.TN(ph, df.seqinfo, verbose=verbose)
-	if(verbose) cat(paste("\nend: compute TP and TN data tables for phylogeny"))
-	unlinked.byspace				<- tmp[["unlinked.byspace"]]
-	unlinked.bytime					<- tmp[["unlinked.bytime"]]
-	linked.bypatient				<- tmp[["linked.bypatient"]]	
-	ph.linked						<- tmp[["ph.linked"]]
-	ph.unlinked.info				<- tmp[["ph.unlinked.info"]]
-	ph.unlinked						<- tmp[["ph.unlinked"]]		
-	#
-	#	memory consuming: compute branch length matrix between tips
-	#
-	dist.root						<-  distRoot(ph, method= "patristic")
-	gc()
-	dist.tips.mat					<-  distTips(ph, method= "patristic")
-	gc()
-	#
-	#	memory consuming: extract branch length statistic of subtree
-	#
-	if(verbose) cat("\ncompute dist.brl.med")
-	dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
-	gc()
-	if(verbose) cat("\ncompute dist.brl.max")
-	dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
-	gc()
-	if(verbose) cat("\ncompute dist.brl.casc")
-	#dist.brl.casc					<- NULL
-	dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
-	gc()
-	#
-	#	save output
-	#
-	file							<- paste(outdir,paste(outfile,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')	
-	if(verbose)	cat(paste("write to file",file))
-	save(ph, dist.root, dist.tips.mat, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  file=file )
+	ans	<- list(	ph=ph, dist.tips.mat=dist.tips.mat, #dist.root=dist.root,  
+					dist.brl.max=dist.brl.max, dist.brl.med=dist.brl.med, dist.brl.casc=dist.brl.casc, 
+					ph.node.bs=ph.node.bs, ph.linked=ph.linked, ph.unlinked.info=ph.unlinked.info, ph.unlinked=ph.unlinked, 
+					df.seqinfo=df.seqinfo, unlinked.byspace=unlinked.byspace, unlinked.bytime=unlinked.bytime, linked.bypatient=linked.bypatient
+					)
+	ans				
 }
 
 hivc.prog.remove.resistancemut<- function()
@@ -3221,7 +3281,7 @@ hivc.prog.remove.resistancemut<- function()
 	
 	seq.PROT.RT
 }
-
+######################################################################################
 hivc.prog.get.geneticdist<- function()
 {
 	library(bigmemory)
@@ -3380,7 +3440,7 @@ hivc.proj.pipeline<- function()
 		indircov	<- paste(dir.name,"derived",sep='/')
 		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
 		cmd			<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov)
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="7600mb",  hpc.nproc=1)
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="7850mb",  hpc.nproc=1)
 		cat(cmd)		
 		outdir		<- paste(dir.name,"tmp",sep='/')
 		outfile		<- paste("preclust",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')

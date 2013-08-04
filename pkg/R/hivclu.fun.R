@@ -860,8 +860,6 @@ hivc.phy.get.TP.and.TN<- function(ph, df.all, verbose= 1)
 	# get TN for seroneg: convert unlinked.bytime from SampleCode to ph node index and add truly unlinked.byspace
 	#
 	df.tips							<- data.table(Node=seq_len(Ntip(ph)), FASTASampleCode=ph$tip.label, key="FASTASampleCode" )
-	#df.tips							<- merge(df.tips, df.all, all.x=1, by="FASTASampleCode")
-	#df.tips							<- subset(df.tips,select=c(FASTASampleCode, Node))		
 	unlinked.byspace				<- merge(unlinked.byspace, df.tips, all.x=1, by="FASTASampleCode")
 	setkey(unlinked.byspace,"Node")
 	ph.unlinked.bytime				<- lapply(unlinked.bytime, function(x)
@@ -913,9 +911,9 @@ hivc.phy.get.TP.and.TN<- function(ph, df.all, verbose= 1)
 	ph.linked						<- merge(ph.linked, ph.linked[, length(FASTASampleCode), by=Patient], all.x=1, by="Patient")
 	setnames(ph.linked, "V1","nTP")
 	setkey(ph.linked, "Node")
-
-	ans<- list(	unlinked.byspace=unlinked.byspace, unlinked.bytime=unlinked.bytime, linked.bypatient=linked.bypatient,
-				ph.linked=ph.linked, ph.unlinked.info=ph.unlinked.info, ph.unlinked=ph.unlinked)	
+	ans								<- list(	unlinked.byspace=unlinked.byspace, unlinked.bytime=unlinked.bytime, linked.bypatient=linked.bypatient,
+												ph.linked=ph.linked, ph.unlinked.info=ph.unlinked.info, ph.unlinked=ph.unlinked)
+	ans									
 }
 ######################################################################################
 hivc.get.hpcsys<- function()
