@@ -3122,6 +3122,18 @@ hivc.prog.precompute.clustering<- function()
 		ph.node.bs						<- ph.node.bs/100
 		ph$node.label					<- ph.node.bs
 		#
+		#	memory consuming: extract branch length statistic of subtree
+		#
+		if(verbose) cat("\ncompute dist.brl.med")
+		dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
+		gc()
+		if(verbose) cat("\ncompute dist.brl.max")
+		dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
+		gc()
+		if(verbose) cat("\ncompute dist.brl.casc")
+		dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
+		gc()		
+		#
 		#	easy: extract tree specific TP and FN data sets
 		#		
 		file							<- paste(indircov,"/",infilecov,".R",sep='')
@@ -3142,18 +3154,6 @@ hivc.prog.precompute.clustering<- function()
 		#	add node number to df.seqinfo
 		#
 		df.seqinfo						<- merge( df.all, data.table(Node=seq_len(Ntip(ph)), FASTASampleCode=ph$tip.label, key="FASTASampleCode" ), all.y=1)
-		#
-		#	memory consuming: extract branch length statistic of subtree
-		#
-		if(verbose) cat("\ncompute dist.brl.med")
-		dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
-		gc()
-		if(verbose) cat("\ncompute dist.brl.max")
-		dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
-		gc()
-		if(verbose) cat("\ncompute dist.brl.casc")
-		dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
-		gc()
 		#
 		#	memory consuming: compute branch length matrix between tips
 		#
@@ -3440,7 +3440,7 @@ hivc.proj.pipeline<- function()
 		indircov	<- paste(dir.name,"derived",sep='/')
 		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
 		cmd			<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov)
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="7850mb",  hpc.nproc=1)
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="15850mb",  hpc.nproc=1)
 		cat(cmd)		
 		outdir		<- paste(dir.name,"tmp",sep='/')
 		outfile		<- paste("preclust",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
