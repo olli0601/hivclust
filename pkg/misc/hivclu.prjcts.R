@@ -3433,10 +3433,13 @@ hivc.proj.pipeline<- function()
 		stop()
 	}	
 	if(1)	#compute bootstrap support and branch length metrics for clustering
-	{						
+	{								
 		indir		<- paste(dir.name,"tmp",sep='/')		
 		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
-		insignat	<- "Sat_Jun_16_17/23/46_2013"		
+		insignat	<- "Sat_Jun_16_17/23/46_2013"
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+
 		indircov	<- paste(dir.name,"derived",sep='/')
 		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
 		cmd			<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov)
