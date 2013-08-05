@@ -3041,7 +3041,7 @@ hivc.prog.get.clustering<- function()
 hivc.prog.precompute.clustering<- function()
 {
 	library(ape)
-	library(adephylo)
+	#library(adephylo)
 	library(data.table)	
 	
 	verbose		<- 1
@@ -3160,19 +3160,19 @@ hivc.prog.precompute.clustering<- function()
 		#if(verbose) cat("\ncompute dist.root")
 		#dist.root						<-  distRoot(ph, method= "patristic")
 		#gc()
-		if(verbose) cat("\ncompute dist.tips.mat")
-		dist.tips.mat					<-  distTips(ph, method= "patristic")
-		gc()		
+		#if(verbose) cat("\ncompute dist.tips.mat")
+		#dist.tips.mat					<-  distTips(ph, method= "patristic")
+		#gc()		
 		#
 		#	save output
 		#
 		file							<- paste(outdir,paste(outfile,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')	
 		if(verbose)	cat(paste("write to file",file))
-		save(ph, dist.tips.mat, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  file=file )
+		save(ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  file=file )
 		#save(ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  file=file )		
 	}
 	
-	ans	<- list(	ph=ph, dist.tips.mat=dist.tips.mat, #dist.root=dist.root,  
+	ans	<- list(	ph=ph, #dist.tips.mat=dist.tips.mat, #dist.root=dist.root,  
 					dist.brl.max=dist.brl.max, dist.brl.med=dist.brl.med, dist.brl.casc=dist.brl.casc, 
 					ph.node.bs=ph.node.bs, ph.linked=ph.linked, ph.unlinked.info=ph.unlinked.info, ph.unlinked=ph.unlinked, 
 					df.seqinfo=df.seqinfo, unlinked.byspace=unlinked.byspace, unlinked.bytime=unlinked.bytime, linked.bypatient=linked.bypatient
