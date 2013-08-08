@@ -59,7 +59,7 @@ default.fun		<- "project.hivc.collectpatientdata"
 default.fun		<- "project.hivc.clustering"
 #default.fun		<- "hivc.prog.precompute.clustering"
 #default.fun	<- "project.gccontent"
-default.fun 	<- "hivc.proj.pipeline"
+#default.fun 	<- "hivc.proj.pipeline"
 #default.fun 	<- "hivc.prog.remove.resistancemut"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
@@ -123,6 +123,19 @@ my.make.documentation<- function()
 my.fade.col<-function(col,alpha=0.5)
 {
 	return(rgb(col2rgb(col)[1]/255,col2rgb(col)[2]/255,col2rgb(col)[3]/255,alpha))
+}
+
+my.intersect.n<- function( list.to.intersect )
+{
+	if(length(list.to.intersect)==2)
+		ans<- intersect(list.to.intersect[[1]],list.to.intersect[[2]])
+	else
+	{
+		ans	<- table(unlist(list.to.intersect))														
+		ans <- as.numeric(attr(ans,"dimnames")[[1]])[ans==length(list.to.intersect)]	
+		
+	}	
+	ans
 }
 
 print.v<- function(x,cut=3,digits=4,prefix= "simu_",print.char= TRUE, as.R= TRUE)
