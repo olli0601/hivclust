@@ -32,6 +32,9 @@ PR.PRECLUST		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exePRECLUST",se
 PR.CLUST		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeCLUST",sep='/')
 
 #' @export
+PR.CLUSTTPTN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeCLUSTTPTN",sep='/')
+
+#' @export
 PR.EXAML.BSCREATE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBOOTSTRAPSEQ",sep='/')
 
 #' @export
@@ -138,6 +141,20 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 	if(length(ans)==1)
 		ans<- unlist(ans)
 	ans
+}
+
+hivc.cmd.clustering.tptn<- function(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=15700, prog= PR.CLUSTTPTN, resume=1, verbose=1)
+{
+	cmd<- "#######################################################
+# compute clustering true pos and true neg statistics
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
+	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov," -patient.n=",patient.n," -opt.brl=",opt.brl,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
+	cmd
 }
 
 hivc.cmd.clustering<- function(indir, infile, insignat, opt.brl, thresh.brl, thresh.bs, prog= PR.CLUST, resume=1, verbose=1)

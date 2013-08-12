@@ -470,57 +470,103 @@ hivc.clu.exp.typeIerror.randomclu<- function(ph, dist.brl, nodesupport, ph.unlin
 hivc.clu.truepos<- function(clustering, ph.linked, ph.tips.n, verbose=0)
 {
 	clusters	<- unique(clustering[["clu.mem"]][!is.na(clustering[["clu.mem"]])])
+	tmp			<- which(!is.na(clustering[["clu.mem"]][seq_len(ph.tips.n)]))
+	clu.linked	<- merge( data.table(Node=tmp), ph.linked, by="Node" )	
+	clu.linked	<- clu.linked[,list(nTP.clu= length(FASTASampleCode)), by="Patient"]
+	clu.linked	<- merge(ph.linked, clu.linked, all.x=1, by="Patient")
+	set(clu.linked, which(is.na(clu.linked[,nTP.clu])) ,"nTP.clu", 1L )
+	setkey(clu.linked, Node)
+	
 	if(!length(clusters))
 	{
-		clu.tp		<- cbind( subset(ph.linked,select=c(Patient,nTP)), TP.clu=0)
-		setnames(clu.tp, "nTP","TP.n")		
-		clu.onlytp	<- as.data.table(na.omit(data.frame(clu=NA)))
+		clu.tp		<- cbind( subset(clu.linked,select=c(Patient,nTP,nTP.clu)), TP.clu=0)
+		setnames(clu.tp, c("nTP","nTP.clu"),c("TP.n","TP.n.clu"))				
 	}
 	else
 	{				
 		clu.tp	<- lapply(c(-1,clusters), function(clu)		
 			{		
+				#clu<- 48
 				if(clu==-1)					#bug in data.table; if first data.table empty, rbind fails		http://lists.r-forge.r-project.org/pipermail/datatable-help/2012-November/001372.html
-					return( as.data.table(data.frame(Patient="XXX",TP.clu=0,TP.n=0,TP.all=F,clu=0,stringsAsFactors=F)) )
+					return( as.data.table(data.frame(Patient="XXX",TP.clu=0,TP.n=0,TP.n.clu=0,clu=0,clu.tips=0,stringsAsFactors=F)) )
 				tmp							<- which(clustering[["clu.mem"]]==clu)
-				clu.leaves					<- tmp[ tmp<=ph.tips.n ]
-				clu.leaves.linked			<- na.omit(merge( data.table(Node=clu.leaves, key="Node"), ph.linked, all.x=1))	#extract clu.leaves that should be linked
-				if(!nrow(clu.leaves.linked))	
-					ans						<- as.data.table(na.omit(data.frame(Patient=NA,TP.clu=NA,TP.n=NA,TP.all=NA, clu=NA)))
+				clu.tips					<- tmp[ tmp<=ph.tips.n ]				
+				clu.tips.linked				<- na.omit(merge( data.table(Node=clu.tips, key="Node"), clu.linked, all.x=1))	#extract clu.tips that should be linked
+				if(!nrow(clu.tips.linked))	
+					ans						<- as.data.table(na.omit(data.frame(Patient=NA,TP.clu=NA,TP.n=NA, TP.n.clu=NA, clu=NA, clu.tips=NA)))
 				else	
 				{
-					ans						<- clu.leaves.linked[, list(TP.clu=length(FASTASampleCode), TP.n=min(nTP) ), by=Patient]
-					tmp						<- length(clu.leaves)==nrow(clu.leaves.linked)	&& nrow(ans)==1
-					ans[,TP.all:=tmp]		
-					ans[,clu:=clu]
+					ans						<- clu.tips.linked[, list(TP.clu=length(FASTASampleCode), TP.n=nTP[1], TP.n.clu=nTP.clu[1], clu=clu, clu.tips=length(clu.tips) ), by=Patient]
+					set(ans, NULL, "Patient", as.character(ans[,Patient]))
 				}
 				ans
 			})
-		clu.tp		<- rbindlist(clu.tp)[-1,]	#rbind and remove bugfix first row
-		clu.onlytp	<- unique(subset(clu.tp,TP.all,select=clu))
-		clu.tp		<- clu.tp[,list(TP.clu=choose(max(TP.clu),2),TP.n=choose(min(TP.n),2)),by=Patient]	#get number of TP pairs			
-	}				
-	list(clu.n=length(clusters), clu.onlytp=clu.onlytp, tp.success= nrow( subset(clu.tp, TP.clu==TP.n) ), tp.total= nrow(clu.tp), tp.rate.tpclu= nrow( subset(clu.tp, TP.clu==TP.n) ) / nrow(clu.tp), tp.rate.tpavg=mean(clu.tp[,TP.clu/TP.n]), tp.rate.tpsum=sum(clu.tp[,TP.clu])/sum(clu.tp[,TP.n])  )
+		#rbind and remove bugfix first row
+		clu.tp		<- rbindlist(clu.tp)[-1,]	
+		
+	}	
+	# account for different seq numbers per patient with a combinatorial argument 
+	# -- only important when the number of correctly clustered within-patient sequences is evaluated
+	clu.tp[, pairs.TP.n:= choose(TP.n,2)]
+	clu.tp[, pairs.TP.n.clu:= choose(TP.n.clu,2)]
+	clu.tp[, pairs.TP.clu:= choose(TP.clu,2)]
+	# patients in wrong cluster
+	clu.diffclu								<- subset( clu.tp[,list(nclu=length(na.omit(unique(clu)))),by="Patient"], nclu>1, Patient )
+	clu.diffclu								<- merge( clu.diffclu, clu.tp, all.x=1, by="Patient" )
+
+	# evaluate among all sequences in tree
+	patients.allseqinsameclu				<- nrow( subset(clu.tp, TP.clu==TP.n) )							#if TP.clu==TP.n then Patient can occur only once in subset
+	patients.total							<- length(unique(clu.linked[,Patient]))
+	tmp										<- clu.tp[, list(TP.clu= max(TP.clu), pairs.TP.clu= max(pairs.TP.clu), TP.n=TP.n[1], pairs.TP.n=pairs.TP.n[1]),by=Patient]	#if TP.clu!=TP.n then Patient occurs multiple times
+	patients.freqinsameclu					<- sum(tmp[, TP.clu]) / sum(tmp[, TP.n])
+	# preferred way to quantify  the number of correctly clustered within-patient sequences
+	pairs.freqinsameclu						<- sum(tmp[, pairs.TP.clu]) / sum(tmp[, pairs.TP.n])
+	
+	# evaluate among all sequences that cluster
+	patients.clustering.allseqindiffclu		<- length(unique(clu.wc[,Patient]))
+	patients.clustering.allseqinsameclu		<- nrow( subset(clu.tp, TP.clu==TP.n.clu & TP.n.clu>1) )
+	patients.clustering.total				<- length(unique(subset(clu.linked,nTP.clu>1)[,Patient]))
+	tmp										<- subset(clu.tp, TP.n.clu>1)[, list(TP.clu= max(TP.clu), pairs.TP.clu=max(pairs.TP.clu), TP.n.clu=TP.n.clu[1], pairs.TP.n.clu=pairs.TP.n.clu[1]),by=Patient]
+	patients.clustering.freqinsameclu		<- sum(tmp[, TP.clu]) / sum(tmp[,TP.n.clu])
+	# preferred way to quantify  the number of correctly clustered within-patient sequences	
+	pairs.clustering.freqinsameclu			<- sum(tmp[, pairs.TP.clu]) / sum(tmp[,pairs.TP.n.clu])
+	
+	list(	clu.n				= length(clusters),	
+			clu.onlytp			= subset(clu.tp, TP.clu==TP.n),
+			clu.missedtp		= subset(clu.tp, TP.clu!=TP.n),
+			clu.diffclu 		= clu.diffclu,
+			tp.by.all			= patients.allseqinsameclu / patients.total,
+			tp.by.sum			= pairs.freqinsameclu,
+			tpclu.by.all		= patients.clustering.allseqinsameclu / patients.clustering.total,			
+			tpclu.by.diffclu	= (patients.clustering.total - patients.clustering.allseqindiffclu) / patients.clustering.total,
+			tpclu.by.sum		= pairs.clustering.freqinsameclu			
+			)	
 }
 ######################################################################################
 hivc.clu.trueneg<- function(clustering, ph.unlinked.info, ph.unlinked, ph.tips.n, verbose=0)
 {
-	clusters	<- unique(clustering[["clu.mem"]][!is.na(clustering[["clu.mem"]])])
-	clu.fp		<- sapply(clusters, function(clu)		
-					{		
-						tmp							<- which(clustering[["clu.mem"]]==clu)
-						clu.leaves					<- tmp[ tmp<=ph.tips.n ]
-						clu.leaves					<- merge( data.table(Node=clu.leaves, key="Node"), subset(ph.unlinked.info,select=c(Node,NodeIdx,NegT)) )						
-						if(all( is.na(clu.leaves[,NodeIdx]) ))	return(rep(NA,2))
-						if(!nrow(clu.leaves))	return(rep(NA,2))				
-						tmp							<- clu.leaves[,NegT]
-						tmp							<- ifelse(all(is.na(tmp)),1,which.max(tmp))	
-						clu.leaves.unlinked			<- ph.unlinked[[ clu.leaves[tmp,NodeIdx] ]]			
-#print(clu.leaves)
-						c(nrow( merge(clu.leaves, clu.leaves.unlinked, by="Node") ), nrow(clu.leaves.unlinked))																					
-					})	
-	clu.fp		<-	clu.fp[, apply(!is.na(clu.fp),2,all),drop=0]
-	list(clu.n=length(clusters), clu.fp= clu.fp, fp.n= length(which(clu.fp[1,]>0)), fp.n.sum= sum(clu.fp[1,]), fp.rate= length(which(clu.fp[1,]>0))/length(clusters))
+	clusters			<- unique(clustering[["clu.mem"]][!is.na(clustering[["clu.mem"]])])
+	clu.fp				<- sapply(clusters, function(clu)		
+							{		
+								tmp							<- which(clustering[["clu.mem"]]==clu)
+								clu.tips					<- tmp[ tmp<=ph.tips.n ]
+								clu.tips					<- merge( data.table(Node=clu.tips, key="Node"), subset(ph.unlinked.info,select=c(Node,NodeIdx,NegT)) )						
+								if(all( is.na(clu.tips[,NodeIdx]) ))	return(rep(NA,2))
+								if(!nrow(clu.tips))	return(rep(NA,2))				
+								tmp							<- clu.tips[,NegT]
+								tmp							<- ifelse(all(is.na(tmp)),1,which.max(tmp))	
+								clu.tips.unlinked			<- ph.unlinked[[ clu.tips[tmp,NodeIdx] ]]			
+								#print(clu.tips)
+								c(nrow( merge(clu.tips, clu.tips.unlinked, by="Node") ), nrow(clu.tips.unlinked))																					
+							})
+	colnames(clu.fp)	<- clusters		
+	clu.fp				<-	clu.fp[, apply(!is.na(clu.fp),2,all),drop=0]
+	list( 	clu.n		= length(clusters), 
+			clu.fp		= clu.fp, 
+			fpn.by.all	= length(which(clu.fp[1,]>0)), 
+			fpn.by.sum	= sum(clu.fp[1,]), 
+			fp.by.all	= length(which(clu.fp[1,]>0))/length(clusters)
+			)
 }
 ######################################################################################
 hivc.clu.clusterbytruepos<- function(ph, dist.brl, nodesupport, ph.linked, thresh.brl=NULL, thresh.bs=NULL, level= 0.95, tol= 0.005, mxit= 10, thresh.bs.lower= min(nodesupport), thresh.brl.upper=max(dist.brl), method.tp="tp.rate.tpclu",verbose=0)
@@ -751,71 +797,103 @@ hivc.clu.getplot.incountry<- function(ph, clustering, df.cluinfo, verbose=1, plo
 	list(clustering=clustering, df.cluinfo=df.cluinfo, cluphy=cluphy, cluphy.subtrees=cluphy.subtrees, cluphy.df=cluphy.df)
 }
 ######################################################################################
-hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, levels.msm=c("BI","MSM","IDU","NA"), levels.het=c("BI","HET","IDU","NA"), levels.mixed=c("BI","MSM","HET","IDU","NA"))
+hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, levels.msm=c("BI","MSM","IDU","NA"), levels.het=c("BI","HET","IDU","NA"), levels.mixed=c("BI","MSM","HET","IDU","NA"),levels.oth="OTH", split.clusters=0)
 {	
 	clut						<- table( df.cluinfo[,cluster,Trm], useNA= "always" )
 	rownames(clut)[nrow(clut)]	<- "NA"
 	clut						<- clut[,-ncol(clut)]
 	clut						<- rbind(clut, apply(clut, 2, sum) )
 	rownames(clut)[nrow(clut)]	<- "sum"
-#TODO change which to colnames
-	#	
-	#select mixed HET MSM clusters and retain those with HET M only
 	#
-	clut.mixed					<- apply(clut, 2, function(x)		sum( x[levels.msm] )!=x["sum"] & sum( x[levels.het] )!=x["sum"] & sum( x[levels.mixed] )==x["sum"]		)	
-	cluphy.df					<- merge(data.table(cluster=which( clut.mixed )), df.cluinfo, by="cluster")	
-	if(verbose)	cat(paste("\nFound clusters with mixed MSM and HET patients, n=",length(unique(cluphy.df[,cluster]))))
-	cluphy.hetM 				<- cluphy.df[,list( HetM.only= all(Sex=="M") ),by=cluster]
-	if(verbose)	cat(paste("\nFound clusters with mixed MSM and HET-M patients, n=",nrow(subset(cluphy.hetM,HetM.only))))
-	cluphy.hetM					<- merge(subset(cluphy.hetM,HetM.only,select=cluster), df.cluinfo, all.x=1, by="cluster")
-	#
-	#select MSM clusters
+	# clusters with MSM only
 	#
 	clut.onlymsm				<- apply(clut, 2, function(x)		sum( x[levels.msm] )==x["sum"]		)
-	cluphy.df					<- merge(data.table(cluster=which(clut.onlymsm)), df.cluinfo, by="cluster")	
-	if(verbose)	cat(paste("\nFound clusters without HET patients, n=",length(unique(cluphy.df[,cluster]))))	
-	cluphy.df					<- rbind( cluphy.hetM, cluphy.df )			
+	clut.onlymsm				<- as.numeric(colnames(clut[,clut.onlymsm]))
+	cluphy.onlymsm				<- merge(data.table(cluster=clut.onlymsm), df.cluinfo, by="cluster")	
+	if(verbose)	cat(paste("\nnumber of clusters with MSM only seq is n=",length(unique(cluphy.onlymsm[,cluster]))))		
 	#
-	#select MSM clusters that are mixed with HET-F
+	# clusters with MSM/HET
 	#
-	clut.mixed					<- apply(clut, 2, function(x)		sum( x[levels.msm] )!=x["sum"] & sum( x[levels.het] )!=x["sum"] & sum( x[levels.mixed] )==x["sum"]		)		
-	tmp							<- merge(data.table(cluster=which( clut.mixed )), df.cluinfo, by="cluster")	
-	if(verbose)	cat(paste("\nFound clusters with mixed MSM and HET patients, n=",length(unique(tmp[,cluster]))))		
-	cluphy.hetF 				<- tmp[,list( with.HETF= any(Sex=="F") ),by=cluster]
+	clut.het					<- apply(clut, 2, function(x)		sum( x[levels.msm] )!=x["sum"] & sum( x[levels.het] )!=x["sum"] & sum( x[levels.mixed] )==x["sum"]		)
+	clut.het					<- as.numeric(colnames(clut[,clut.het]))
+	cluphy.het					<- merge(data.table(cluster=clut.het), df.cluinfo, by="cluster")
+	if(verbose)	cat(paste("\nnumber of clusters with MSM/HET seq is n=",length(unique(cluphy.het[,cluster]))))
+	#	
+	# clusters with MSM/HET-M
+	#	
+	cluphy.hetM 				<- cluphy.het[,list( HetM.only= all(Sex=="M") ),by=cluster]
+	if(verbose)	cat(paste("\nnumber of clusters with MSM/HET-M seq is n=",nrow(subset(cluphy.hetM,HetM.only))))
+	cluphy.hetM					<- merge(subset(cluphy.hetM,HetM.only,select=cluster), df.cluinfo, all.x=1, by="cluster")				
+	#
+	# clusters with MSM/HET-F
+	#
+	cluphy.hetF 				<- cluphy.het[,list( with.HETF= any(Sex=="F") ),by=cluster]
+	if(verbose)	cat(paste("\nnumber of clusters with MSM/HET-F seq is n=",nrow(subset(cluphy.hetF,with.HETF))))
 	cluphy.hetF					<- merge(subset(cluphy.hetF,with.HETF,select=cluster), df.cluinfo, all.x=1, by="cluster")
-	#exclude pairs -- split would result in singleton
-	tmp							<- cluphy.hetF[, list(size=length(unique(FASTASampleCode))), by="cluster"]
-	cluphy.hetF.rm				<- subset(tmp,size<=2, cluster)[,cluster]		
-	cluphy.hetF					<- merge( subset(tmp,size>2, cluster), df.cluinfo, all.x=1, by="cluster" )
-	if(verbose)	cat(paste("\nFound clusters with mixed MSM and HET-F patients, n=",length(unique(cluphy.hetF[,cluster]))))
 	if(length(intersect( unique(cluphy.hetF[,cluster]),unique(cluphy.hetM[,cluster]) )))
 		stop("unexpected overlap between cluphy.hetF and cluphy.hetM")
-	#extract selected clusters		
-	cluphy.cluidx				<- clustering[["clu.idx"]][ unique( cluphy.hetF[,cluster] ) ]					
+	if(length(intersect( unique(cluphy.onlymsm[,cluster]),unique(cluphy.hetM[,cluster]) )))
+		stop("unexpected overlap between cluphy.onlymsm and cluphy.hetM")		
+	#
+	# clusters with OTH
+	#	
+	clut.oth					<- apply(clut, 2, function(x)		x["MSM"]>0 & sum( x[levels.msm] )!=x["sum"] & x[levels.oth]>0 & sum( x[levels.oth] )!=x["sum"] & sum( x[levels.het] )!=x["sum"] & sum( x[unique(c(levels.msm,levels.het,levels.oth))] )==x["sum"]		)
+	clut.oth					<- as.numeric(colnames(clut[,clut.oth]))
+	cluphy.oth					<- merge(data.table(cluster=clut.oth), df.cluinfo, by="cluster")
+	if(verbose)	cat(paste("\nnumber of clusters with OTH seq is n=",length(unique(cluphy.oth[,cluster]))))
+	# combine cluphy.oth and cluphy.hetF for splitting
+	if(length(intersect( unique(cluphy.hetF[,cluster]),unique(cluphy.oth[,cluster]) )))
+		stop("unexpected overlap between cluphy.hetF and cluphy.oth")
+	cluphy.split				<- rbind(cluphy.hetF, cluphy.oth)
+	# exclude pairs -- split would result in singleton
+	tmp							<- cluphy.split[, list(size=length(unique(FASTASampleCode))), by="cluster"]
+	cluphy.split.rm				<- subset(tmp,size<=2, cluster)[,cluster]		
+	cluphy.split				<- merge( subset(tmp,size>2, cluster), df.cluinfo, all.x=1, by="cluster" )	
+	# extract subtrees for MSM/HET-F clusters		
+	cluphy.cluidx				<- clustering[["clu.idx"]][ unique( cluphy.split[,cluster] ) ]					
 	cluphy.subtrees				<- lapply(cluphy.cluidx, function(x)		extract.clade(ph, x, root.edge= 1, interactive = FALSE) 		)
-	names(cluphy.subtrees)		<- unique( cluphy.hetF[,cluster] )				
-	#split HET F clusters		
-	tmp							<- hivc.clu.splitcluster(ph, clustering, cluphy.subtrees, df.cluinfo, parse(text='Sex=="F"'))
-	cluphy.subtrees				<- tmp$cluphy.subtrees
-	if(verbose)	cat(paste("\nSplit clusters with mixed MSM and HET-F patients into n=",length(cluphy.subtrees)))
+	names(cluphy.subtrees)		<- unique( cluphy.split[,cluster] )				
+	if(split.clusters)	#split cluster at HETF or OTH sequence
+	{
+		# split HET-F, OTH clusters					
+		#subset(cluphy.hetF, select=c(cluster,FASTASampleCode,Patient,Sex))
+		#splitexpr<- parse(text='Sex=="F"')
+		#cluphy.df<- df.cluinfo
+		if(verbose)	cat(paste("\nnumber of splitting clusters is n=",length(unique(cluphy.split[,cluster]))))
+		tmp							<- hivc.clu.splitcluster(ph, clustering, cluphy.subtrees, df.cluinfo, parse(text='Sex=="F" | Trm=="OTH"'))
+		#z<- subset(tmp$cluphy.df[cluphy.hetF[,FASTASampleCode],], !is.na(cluster),select=c(cluster,FASTASampleCode,Patient,Sex,Trm))	
+		cluphy.subtrees				<- tmp$cluphy.subtrees
+		if(verbose)	cat(paste("\nnumber of splitted clusters is n=",length(cluphy.subtrees)))		
+	}
+	else				#drop HETF or OTH sequence from cluster
+	{		
+		if(verbose)	cat(paste("\nnumber of droptip clusters is n=",length(unique(cluphy.split[,cluster]))))
+		tmp							<- hivc.clu.droptipincluster(ph, clustering, cluphy.subtrees, df.cluinfo, parse(text='Sex=="F" | Trm=="OTH"') )
+		cluphy.subtrees				<- tmp$cluphy.subtrees
+		if(verbose)	cat(paste("\nnumber of droptip clusters is n=",length(cluphy.subtrees)))						
+	}
 	clustering					<- tmp$clustering 
 	df.cluinfo					<- tmp$cluphy.df
+	# update clustering after splitting
+	cluphy.split				<- subset(df.cluinfo[cluphy.split[,FASTASampleCode],], !is.na(cluster))
 	#
 	# remove previously excluded pairs
 	#
-	set(df.cluinfo,which(df.cluinfo[,cluster]%in%cluphy.hetF.rm),"cluster",NA)
+	set(df.cluinfo,which(df.cluinfo[,cluster]%in%cluphy.split.rm),"cluster",NA)
 	df.cluinfo																<- subset(df.cluinfo, !is.na(cluster) )
-	clustering[["clu.mem"]][ clustering[["clu.mem"]]%in%cluphy.hetF.rm ]	<- NA
-	clustering[["clu.idx"]][ cluphy.hetF.rm ]								<- NA
+	clustering[["clu.mem"]][ clustering[["clu.mem"]]%in%cluphy.split.rm ]	<- NA
+	clustering[["clu.idx"]][ cluphy.split.rm ]								<- NA
 	clustering[["size.tips"]]												<- table( clustering[["clu.mem"]][1:Ntip(ph)] )
-	# update clustering after splitting
-	cluphy.hetF					<- subset(df.cluinfo[cluphy.hetF[,FASTASampleCode],], !is.na(cluster))				#update clustering in HET-F
-	# combine 'cluphy.hetF', 'cluphy.df'
-	setcolorder(cluphy.hetF, colnames(cluphy.df))
-	cluphy.df					<- rbind(cluphy.hetF, cluphy.df)
-	if(verbose) cat(paste("\nnumber of MSM/BI/HETM clusters is n=", length(unique(cluphy.df[,cluster]))))
-	if(verbose) cat(paste("\nnumber of seq in MSM/BI/HETM clusters is n=", nrow(cluphy.df)))
-	if(verbose) cat(paste("\nCHECK: number of in-country clusters in df.cluinfo is n=", length(unique(df.cluinfo[,cluster]))))
+	#
+	# combine 'cluphy.split', 'cluphy.hetM', 'cluphy.onlymsm'
+	#
+	setcolorder(cluphy.split, colnames(cluphy.hetM))
+	cluphy.df					<- rbind( rbind(cluphy.split, cluphy.hetM), cluphy.onlymsm )
+	# may have lost all MSM in cluster due to splitting 
+	cluphy.df					<- subset( cluphy.df[,list(with.MSM= any(Trm=="MSM")),by="cluster"], with.MSM, cluster )
+	if(verbose) cat(paste("\nnumber of MSM clusters is n=", nrow(cluphy.df)))
+	cluphy.df					<- merge(cluphy.df, df.cluinfo, all.x=1, by="cluster")
+	if(verbose) cat(paste("\nnumber of seq in MSM clusters is n=", nrow(cluphy.df)))	
 	#
 	# build polyphyletic tree from clusters
 	#
@@ -1086,6 +1164,47 @@ hivc.clu.plot<- function(	ph, clu, edge.col.basic="black", show.node.label= T, f
 		dev.off()
 }
 ######################################################################################
+hivc.clu.plot.tptn<- function(stat.cmp.x, stat.cmp.y, plotfile, cols, xlab= "#FP (among all)", ylab= "%TP (among all)", xlim= range(stat.cmp.x), labels= as.numeric(colnames(stat.cmp.x)), verbose=1)
+{		
+	if(verbose) cat(paste("\nplot file",plotfile))
+	pdf(file=plotfile,width=5,height=5)
+	plot(1,1,type='n',bty='n',xlim=xlim,ylim=range(stat.cmp.y),xlab=xlab,ylab=ylab)
+	dummy	<- sapply(seq_len(nrow(stat.cmp.x)),function(i)
+			{
+				points(stat.cmp.x[i,],stat.cmp.y[i,],col=cols[i],type='b')
+				text(stat.cmp.x[i,],stat.cmp.y[i,],col=cols[i],labels=labels,adj=c(-0.8,0.5),cex=0.5)
+			})
+	legend("bottomright",border=NA,bty='n',fill=cols,legend=names(cols))
+	dev.off()
+}	
+######################################################################################
+hivc.clu.plot.withinpatientseq.not.samecluster<- function(missed.ph, clustering, clusters.tp, missed.df, plotfile, verbose=1)
+{
+	clusters.tp.missed									<- merge( data.table(Patient=unique( clusters.tp$clu.missedtp[,Patient] ) ), subset(missed.df,select=c(Patient, FASTASampleCode, cluster, Node)), by="Patient" )				
+	# highlight sequences of patients that are not clustering in blue
+	node.missed											<- subset(clusters.tp.missed,is.na(cluster),Node)[,Node]
+	missed.ph$tip.label[ node.missed ]					<- paste("TPm",missed.ph$tip.label[ node.missed ],sep='-') 
+	tmp													<- which( missed.df[,Node]%in%node.missed )
+	set(missed.df, tmp, "FASTASampleCode", paste("TPm",missed.df[tmp,FASTASampleCode],sep='-') )		
+	# highlight sequences of patients that are not in the same cluster in red
+	node.wrong											<- data.table(Patient=unique(clusters.tp$clu.diffclu[,Patient]))
+	node.wrong											<- merge(node.wrong , subset(missed.df,select=c(Patient, FASTASampleCode, cluster, Node)), by="Patient" )
+	node.wrong											<- subset(node.wrong, !is.na(cluster), Node)[,Node]
+	missed.ph$tip.label[ node.wrong ]					<- paste("TPw",missed.ph$tip.label[ node.wrong ],sep='-') 
+	tmp													<- which( missed.df[,Node]%in%node.wrong )
+	set(missed.df, tmp, "FASTASampleCode", paste("TPw",missed.df[tmp,FASTASampleCode],sep='-') )
+	# highlight clusters with missed within patient seq 
+	missed.clumem										<- clustering[["clu.mem"]]
+	tmp													<- na.omit( unique(clusters.tp.missed[, cluster]) )
+	missed.clumem[ !missed.clumem%in%tmp ]	 			<- NA
+	#plot tree to file	
+	tiplabels.missed									<- hivc.clu.get.tiplabels( missed.ph, missed.df )					
+	if(verbose) cat(paste("write tree to file",plotfile))
+	hivc.clu.plot(missed.ph, missed.clumem, file=plotfile, pdf.scaley=25, pdf.off=0, highlight.edge.of.tiplabel=c("TPw","TPm"), highlight.edge.of.tiplabel.col= c("red","blue"), cex.nodelabel=0.1 )
+	hivc.clu.plot.tiplabels( seq_len(Ntip(missed.ph)), tiplabels.missed$text, tiplabels.missed$col, cex=0.12, adj=c(-0.15,0.5), add.xinch=0, add.yinch=0 )
+	dev.off()
+}	
+######################################################################################
 hivc.clu.min.transmission.cascade<- function(brlmat)
 {
 	if(is.matrix(brlmat))
@@ -1140,6 +1259,43 @@ hivc.clu.brdist.stats<- function(tree, distmat=NULL, eval.dist.btw="leaf", stat.
 	return(sapply(seq.int(ntips+1,ntips+nint), function(x) 		hivc.clu.brdist.stats.subtree(x,tree,distmat,eval.dist.btw=eval.dist.btw, stat.fun=stat.fun)		))	
 }
 ######################################################################################
+hivc.clu.droptipincluster<- function(ph, clustering, cluphy.subtrees, df.cluinfo, splitexpr)
+{	
+	setkey(df.cluinfo, FASTASampleCode)
+	for(i in seq_along(cluphy.subtrees))
+	{
+		x																	<- cluphy.subtrees[[i]]
+		x.cluster															<- as.numeric(names(cluphy.subtrees)[i])
+		#drop selected tips from cluster					
+		x.droplabel															<- subset( df.cluinfo[x$tip.label,], eval(splitexpr), FASTASampleCode )[,FASTASampleCode]
+		if(length(x.droplabel)+1==length(x$tip.label))
+		{			
+			x.droplabel														<- x$tip.label
+			x.tip.mrca														<- NA
+			x																<- numeric()					#cannot do NULL which would automatically shorten 'cluphy.subtrees' and give an outofbounds error			
+		}
+		else	
+		{
+			x																<- drop.tip(x, x.droplabel, root.edge=1)			
+			x.tip															<- sapply(x$tip.label, function(z) match(z, ph$tip.label) )				
+			x.tip.anc														<- lapply(x.tip, function(z) Ancestors(ph, z) )
+			x.tip.jnt														<- my.intersect.n( x.tip.anc )			
+			x.tip.mrca														<- x.tip.anc[[1]][min(which(x.tip.anc[[1]] %in% x.tip.jnt))]							
+		}
+		#drop selected tips from data.table
+		set(df.cluinfo, which(df.cluinfo[,FASTASampleCode%in%x.droplabel ]), "cluster", NA)												
+		#drop selected tips from clustering
+		clustering[["clu.mem"]][ clustering[["clu.mem"]]==x.cluster ]		<- NA				
+		if(!is.na(x.tip.mrca))		
+			clustering[["clu.mem"]][ c(x.tip.mrca, x.tip) ]					<- x.cluster					#WARNING: might miss inner nodes, so size.all would not be accurate
+		clustering[["clu.idx"]][ x.cluster ]								<- x.tip.mrca		
+		cluphy.subtrees[[i]]												<- x							
+	}	
+	cluphy.subtrees	<- lapply( which(sapply(cluphy.subtrees, length)>0), function(i) 	cluphy.subtrees[[i]] 	)
+	
+	list(cluphy.subtrees=cluphy.subtrees, clustering=clustering, cluphy.df=df.cluinfo)
+}
+######################################################################################
 #modify clustering by splitting existing clusters based on 'splitexpr'. This is useful when additional meta-information is available.
 hivc.clu.splitcluster<- function(ph, clustering, cluphy.subtrees, cluphy.df, splitexpr)
 {
@@ -1149,12 +1305,13 @@ hivc.clu.splitcluster<- function(ph, clustering, cluphy.subtrees, cluphy.df, spl
 	for(j in seq_along(cluphy.subtrees))		#need for loop because we change 'cluphy.df' and 'clustering'
 	{
 		#print(j)
-		#j<- 2
+		#j<- 17
 		x					<- cluphy.subtrees[[j]]			
 		x.tiplabel			<- x$tip.label
 		x.cluster			<- cluphy.df[x.tiplabel[1],cluster][,cluster]
 		x.splitlabel		<- subset( cluphy.df[x.tiplabel,], eval(splitexpr), FASTASampleCode )[,FASTASampleCode]
 		#print(x); print(x.splitlabel); print(cluphy.df[x$tip.label,], )
+		splitlabel	<- x.splitlabel
 		x.splittrees		<- hivc.phy.splittip(x, x.splitlabel)
 		#from x.splittrees, select between patient clusters
 		#print(x.splittrees)
@@ -1204,12 +1361,13 @@ hivc.clu.splitcluster<- function(ph, clustering, cluphy.subtrees, cluphy.df, spl
 ######################################################################################
 hivc.phy.splittip<- function(x, splitlabel)
 {
+	#str(x)
 	x.splittip			<- which(x$tip.label%in%splitlabel)								#take first matching label as this 'x.splittip' and put rest on stack
 	if(!length(x.splittip))		
 		return(list(x))
 	x.splittip			<- x.splittip[1]
 	splitlabel.stack	<- setdiff(splitlabel, x$tip.label[ x.splittip ])	
-	#print(x$tip.label); print(splitlabel[1]); print(x.splittip)	
+	#print(x$tip.label); print(x.splittip); print(splitlabel.stack)	
 	if(Ntip(x)<3)																		#tip is among tiplabels, so splitting will break pair
 		return(list())
 	x.splitnode			<- x$edge[x$edge[,2]==x.splittip, 1]							#ancestor of HETF tip		
@@ -1248,11 +1406,12 @@ hivc.phy.splittip<- function(x, splitlabel)
 		x.splittip						<- 1
 	}
 	ans							<- list()
+	#print("HERE"); str(x); print(x.splittip); str(x.splittree2); print(x$tip.label[x.splittip]); print("HERE2")
 	if(Ntip(x)>2)
 		ans[[1]]				<- drop.tip(x, x.splittip, root.edge=1)
 	if(Ntip(x.splittree2)>2)
 		ans[[length(ans)+1]]	<- drop.tip(x.splittree2, x$tip.label[x.splittip], root.edge=1)
-	if(length(splitlabel.stack))
+	if(length(splitlabel.stack) && length(ans))
 	{
 		tmp	<- paste("c(",paste('hivc.phy.splittip(ans[[',seq_along(ans),']], splitlabel.stack)', sep='',collapse=','),")",sep='')		
 		tmp	<- eval(parse(text=tmp))																	#annoyingly, sapply etc is not the same as c( etc )		

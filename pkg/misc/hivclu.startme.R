@@ -59,7 +59,7 @@ default.fun		<- "project.hivc.collectpatientdata"
 default.fun		<- "project.hivc.clustering"
 #default.fun		<- "hivc.prog.precompute.clustering"
 #default.fun	<- "project.gccontent"
-#default.fun 	<- "hivc.proj.pipeline"
+default.fun 	<- "hivc.proj.pipeline"
 #default.fun 	<- "hivc.prog.remove.resistancemut"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
@@ -280,7 +280,8 @@ if(length(args))
 					BOOTSTRAPSEQ			= "hivc.prog.get.bootstrapseq",
 					GENDISTMAT				= "hivc.prog.get.geneticdist",
 					PRECLUST				= "hivc.prog.precompute.clustering",
-					CLUST					= "hivc.prog.get.clustering"
+					CLUST					= "hivc.prog.get.clustering",
+					CLUSTTPTN				= "hivc.prog.get.clustering.TPTN"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)
