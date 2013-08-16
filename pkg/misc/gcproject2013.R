@@ -1,4 +1,4 @@
-project.gccontent.collect.data<- function(dir.name, select.MSM=0, select.max.months.after.PosEarliest= 30, select.min.months.after.PosEarliest=6)
+project.gccontent.collect.data<- function(dir.name, select.MSM=0, select.max.months.after.AnyPos_T1= 30, select.min.months.after.AnyPos_T1=6)
 {
 	#read ATHENA sequences 		
 	indir				<- paste(dir.name,"tmp",sep='/')
@@ -11,117 +11,130 @@ project.gccontent.collect.data<- function(dir.name, select.MSM=0, select.max.mon
 	seq.PROT.RT			<- seq.PROT.RT[substr(rownames(seq.PROT.RT),1,8)!="PROT+P51", ]
 	if(verbose) cat(paste("\nfound ATHENA seqs, n=",nrow(seq.PROT.RT)))
 	
+	
 	#read patient data
 	indir				<- paste(dir.name,"derived",sep='/')
-	infile.patient		<- "ATHENA_2013_03_All1stPatientCovariates"
+	infile.patient		<- "ATHENA_2013_03_AllSeqPatientCovariates"
 	file				<- paste(indir,'/',paste(infile.patient,".R", sep=''), sep='')
 	if(verbose) cat(paste("\nloading file",file))
 	load(file)
-	df.patient			<- df.all	
+	df.patient			<- df.all
 	df.all				<- NULL
-	#define first pos event
-	tmp					<- df.patient[, AnyTherT1]
-	tmp2				<- df.patient[, is.na(AnyTherT1) | (!is.na(PosRNA1) &  PosRNA1<AnyTherT1) ]
-	tmp[tmp2]			<- df.patient[tmp2, PosRNA1]
-	tmp2				<- df.patient[, !is.na(PosCD41) & !is.na(tmp) & PosCD41<tmp ]
-	tmp[tmp2]			<- df.patient[tmp2, PosCD41]
-	tmp2				<- df.patient[, !is.na(PosSeq) & !is.na(tmp) & PosSeq<tmp ]
-	tmp[tmp2]			<- df.patient[tmp2, PosSeq]
-	tmp2				<- df.patient[, !is.na(PosT) & !is.na(tmp) & PosT<tmp ]
-	if(verbose) cat(paste("\nfound PosT is earliest pos event, n=",length(which(tmp2))," out of n=",nrow(df.patient)))
-	tmp[tmp2]			<- df.patient[tmp2, PosT]
-	df.patient[, PosEarliest:=tmp]
-	if(	length(which(df.patient[, PosEarliest>PosT])) 		||
-		length(which(df.patient[, PosEarliest>PosSeq])) 	|| 
-		length(which(df.patient[, PosEarliest>PosRNA1]))	||
-		length(which(df.patient[, PosEarliest>PosCD41]))	||
-		length(which(df.patient[, PosEarliest>AnyTherT1]))		) 	stop("something is wrong with PosEarliest")			
-	
-	#read RNA data and merge with first PosEarliest, NegT, NegT_Acc, isAcute 
+	setnames(df.patient, c("PosRNA","lRNA"), c("PosRNA.closestToPosSeqT","lRNA.closestToPosSeqT"))
+	if(verbose) cat(paste("\nnumber of ATHENA seqs info, n=",nrow(df.patient)))
+	df.patient			<- subset(df.patient, !is.na(PosSeqT))
+	if(verbose) cat(paste("\nnumber of ATHENA seqs with known sampling date, n=",nrow(df.patient)))
+	if(verbose) cat(paste("\nnumber of ATHENA patients whose sequences have known sampling date, n=",length(unique(df.patient[,Patient]))))
+	#
+	# keep only ATHENA sequences with known sampling date	and 	sampling date < treatment start
+	#
+	tmp					<- subset(df.patient, is.na(AnyT_T1))
+	if(verbose) cat(paste("\nnumber of ATHENA seqs with is.na(AnyT_T1), n=",nrow(tmp),"IGNORE FOR NOW"))	
+	df.patient			<- subset(df.patient, !is.na(AnyT_T1) & PosSeqT<=AnyT_T1)
+	if(verbose) cat(paste("\nnumber of ATHENA seqs with PosSeqT<=AnyT_T1, n=",nrow(df.patient)))
+	#
+	# keep only ATHENA sequences with known MSM transmission route
+	#
+	if(select.MSM)
+	{
+		df.patient		<- subset(df.patient,Trm=="MSM")
+		if(verbose) cat(paste("\nfound ATHENA seqs with known MSM, n=",nrow(df.patient)))		
+	}
+	#
+	# keep only ATHENA sequences with sampling date < CDC-C event
+	#
+	tmp					<- subset(df.patient, !is.na(DateFirstEverCDCC) & PosSeqT>DateFirstEverCDCC)
+	if(verbose) cat(paste("\nnumber of ATHENA seqs with CDC-C event and PosSeqT>DateFirstEverCDCC, n=",nrow(tmp),"-- ignoring these"))
+	df.patient			<- subset(df.patient, is.na(DateFirstEverCDCC) | (!is.na(DateFirstEverCDCC) & PosSeqT<=DateFirstEverCDCC))
+	if(verbose) cat(paste("\nnumber of ATHENA seqs with PosSeqT<=DateFirstEverCDCC, n=",nrow(df.patient)))
+	#
+	# reset seroconverters with inaccurate info, so they are definitely Neg at NegT
+	#
+	df.patient			<- hivc.db.reset.inaccurateNegT(df.patient, nacc.dy.dy= 1, nacc.mody.mo= 0, nacc.mody.dy= 1, verbosee=1)	
+	#
+	# read RNA data and merge with first AnyPos_T1, NegT, NegT_Acc, isAcute
+	#
 	indir				<- paste(dir.name,"derived",sep='/')
 	infile.viro			<- "ATHENA_2013_03_Viro"
 	file				<- paste(indir,'/',paste(infile.viro,".R", sep=''), sep='')
 	if(verbose) cat(paste("\nloading file",file))
 	load(file)
-	df.viro				<- as.data.table(df)
-	setkey(df.viro, "Patient")
-	df.viro				<- subset(df.viro, !is.na(DateRNA) & Undetectable=="No", c(Patient, DateRNA, RNA))
+	df.viro				<- df
 	df					<- NULL
-	df.viro				<- merge(df.viro, subset(df.patient, select=c(Patient,PosEarliest, NegT, NegT_Acc, isAcute)))
+	df.viro				<- subset(df.viro, !is.na(PosRNA) & Undetectable=="No", c(Patient, PosRNA, lRNA))
+	if(verbose) cat(paste("\nnumber of viral detectable and non-missing VL measurements, n=",nrow(df.viro)))	
+	setkey(df.viro, Patient)
+	if(verbose) cat(paste("\nnumber of patients with viral detectable and non-missing VL measurments, n=",nrow(unique(df.viro))))		
+	setkey(df.patient, Patient)
+	df.viro				<- merge(df.viro, df.patient, by="Patient", allow.cartesian=T)
+	if(verbose) cat(paste("\nnumber of VL measurements crossed with ATHENA seq, n=",nrow(df.viro)))
+	if(verbose) cat(paste("\nnumber of selected patients with VL measurements and ATHENA seq, n=",nrow(unique(df.viro))))
+	#
+	# keep measurements before therapy
+	#
+	df.viro				<- subset(df.viro, PosRNA<AnyT_T1)
+	if(verbose) cat(paste("\nnumber of VL measurements with PosRNA<AnyT_T1, n=",nrow(df.viro)))
+	#
+	df.viro[, NegT2PosRNA:=df.viro[,PosRNA-NegT]]
+	#
+	#  keep measurements after 6mo of first pos event
+	#
+	select.max.months.AnyPos_T1.after.NegT<- 12
+
+	df.viro.before6mo		<- subset(df.viro, PosRNA<(AnyPos_T1+30*select.min.months.after.AnyPos_T1))
+	table( df.viro.before6mo[,list(nRNA= length(lRNA)),by="Patient"][,nRNA] )
 	
-	#read sampling date of sequences
-	indir				<- paste(dir.name,"derived",sep='/')
-	infile.seqinfo		<- "ATHENA_2013_03_Sequences"
-	file				<- paste(indir,'/',paste(infile.seqinfo,".R", sep=''), sep='')
-	if(verbose) cat(paste("\nloading file",file))
-	load(file)	
-	df.PROT				<- as.data.table(df[["PROT"]][,c("Patient","SampleCode","DateRes")])
-	setkey(df.PROT,"SampleCode")
-	df.RT				<- as.data.table(df[["RT"]][,c("Patient","SampleCode","DateRes")])
-	setkey(df.RT,"SampleCode")
-	df					<- merge(df.PROT,df.RT,all=TRUE)
-	#sanity checks
-	if( !all( df[,Patient.x==Patient.y], na.rm=1) ) stop("Patient names per sampling code in PROT and RT don t equal")
-	if( !all( df[,DateRes.x==DateRes.y], na.rm=1) ) stop("Sampling dates per sampling code in PROT and RT don t equal")
-	tmp					<- df[,DateRes.x]
-	tmp2				<- df[,is.na(DateRes.x)]
-	tmp[tmp2]			<- df[tmp2,DateRes.y]	
-	df[,PosSeqT:= tmp]
-	tmp					<- df[,Patient.x]
-	tmp2				<- df[,is.na(Patient.x)]
-	tmp[tmp2]			<- df[tmp2,Patient.y]	
-	df[,Patient:= tmp]
-	if(verbose) cat(paste("\nfound ATHENA seqs info, n=",nrow(df)))
-	gc.seqinfo			<- subset(df, !is.na(PosSeqT), select=c(SampleCode, Patient, PosSeqT))
-	if(verbose) cat(paste("\nfound ATHENA seqs with known sampling date, n=",nrow(gc.seqinfo)))
-	if(verbose) cat(paste("\nfound ATHENA patients whose sequences have known sampling date, n=",length(unique(gc.seqinfo[,Patient]))))
-		
-	#keep only ATHENA sequences with known sampling date	and 	sampling date < treatment start	
-	df					<- subset(df.patient,!is.na(AnyTherT1),select=c(Patient,AnyTherT1))
-	if(verbose) cat(paste("\nfound ATHENA patients with known therapy date, n=",nrow(df)))
-	setkey(gc.seqinfo,"Patient")	
-	gc.seqinfo			<- merge(gc.seqinfo,df,all=TRUE)
-	gc.seqinfo			<- subset(gc.seqinfo, !is.na(PosSeqT) & !is.na(AnyTherT1))
-	if(verbose) cat(paste("\nfound ATHENA seqs with known sampling date and known therapy date, n=",nrow(gc.seqinfo)))
-	gc.seqinfo			<- subset(gc.seqinfo, PosSeqT<=AnyTherT1)
-	if(verbose) cat(paste("\nfound ATHENA seqs with sampling date < therapy date, n=",nrow(gc.seqinfo)))	
-	tmp					<- gsub(' ','',gc.seqinfo[,SampleCode])
-	gc.seqinfo[,SampleCodeFASTA:=tmp]	
 	
-	#keep only ATHENA sequences with known MSM transmission route
-	if(select.MSM)
-	{
-		df					<- subset(df.patient,!is.na(Trm) & Trm=="MSM",Patient)
-		if(verbose) cat(paste("\nfound ATHENA patients with known MSM, n=",nrow(df)))
-		gc.seqinfo			<- merge(gc.seqinfo, df)
-		if(verbose) cat(paste("\nfound ATHENA patients with sampling date < therapy date and known MSM, n=",nrow(df)))
-	}
 	
-	#keep those without AIDS defining event before sampling date -- would like to but don t have it
+	df.viro.before6mo.sn	<- subset(df.viro.before6mo, !is.na(NegT) & AnyPos_T1<(NegT+30*select.max.months.AnyPos_T1.after.NegT) )
+	table( df.viro.before6mo.sn[,list(nRNA= length(lRNA)),by="Patient"][,nRNA] )
+	
+	subset(df.viro.before6mo.sn, lRNA<3, c(Patient, PosRNA, lRNA, isAcute, NegT, NegT_Acc, Trm))
+	
+	df.viro.spvl			<- subset(df.viro, PosRNA>=(AnyPos_T1+30*select.min.months.after.AnyPos_T1) & PosRNA<=(AnyPos_T1+30*select.max.months.after.AnyPos_T1))
+	table( df.viro.spvl[,list(nRNA= length(lRNA)),by="Patient"][,nRNA] )
+	
+	df.viro.spvl.sn			<- subset(df.viro.spvl, !is.na(NegT) & AnyPos_T1<(NegT+30*select.max.months.AnyPos_T1.after.NegT) )
+	table( df.viro.spvl.sn[,list(nRNA= length(lRNA)),by="Patient"][,nRNA] )
+	
+	
+	plot( df.viro.before6mo.sn[,NegT2PosRNA], df.viro.before6mo.sn[,lRNA], pch=19 )
+	
+	
+	
+	hist(df.viro.before6mo[,lRNA])
+	hist(df.viro.before6mo.sn[,lRNA])	
+	hist(df.viro.spvl[,lRNA])
+	hist(df.viro.spvl.sn[,lRNA])
+	
+stop()
+
+
+
 	
 	#consider RNA for these patients and keep those before therapy 			 
 	df.viro				<- merge(gc.seqinfo, df.viro)
 	if(verbose) cat(paste("\nfound viral loads for candidate sequences, n=",nrow(df.viro)))
 	df.viro				<- subset(df.viro, DateRNA<=AnyTherT1)
 	if(verbose) cat(paste("\nfound viral loads for candidate sequences with RNA<=AnyTherapyT1, n=",nrow(df.viro)))
-	#keep RNA for which there is at least one RNA before 'select.max.months.after.PosEarliest' mo after PosEarliest		
-	df.viro				<- subset(df.viro, DateRNA<=(PosEarliest+30*select.max.months.after.PosEarliest))
-	if(verbose) cat(paste("\nfound viral loads for candidate sequences with RNA<=max months after PosEarliest, n=",nrow(df.viro)))
+	#keep RNA for which there is at least one RNA before 'select.max.months.after.AnyPos_T1' mo after AnyPos_T1		
+	df.viro				<- subset(df.viro, DateRNA<=(AnyPos_T1+30*select.max.months.after.AnyPos_T1))
+	if(verbose) cat(paste("\nfound viral loads for candidate sequences with RNA<=max months after AnyPos_T1, n=",nrow(df.viro)))
 	#for those for which there is no reliable seroNeg date, 
-	#keep RNA for which there is at least one RNA after 'select.min.months.after.PosEarliest' mo after PosEarliest	
+	#keep RNA for which there is at least one RNA after 'select.min.months.after.AnyPos_T1' mo after AnyPos_T1	
 	if(0)
 	{
 		#TODO treat seroneg and seropos separately
 		#TODO need not lump NegT_Acc="No" separately into seropos
 		df.viro.seropos		<- subset(df.viro, is.na(NegT) | is.na(NegT_Acc) | NegT_Acc=="No" )							
-		if(verbose) cat(paste("\nfound viral loads for candidate sequences with RNA<=max months after PosEarliest for seropos, n=",nrow(df.viro.seropos)))
-		df.viro.seropos		<- subset(df.viro.seropos, DateRNA>=(PosEarliest+30*select.min.months.after.PosEarliest))
-		if(verbose) cat(paste("\nfound viral loads for candidate sequences with min months after PosEarliest<=RNA<=max months after PosEarliest for seropos, n=",nrow(df.viro.seropos)))
+		if(verbose) cat(paste("\nfound viral loads for candidate sequences with RNA<=max months after AnyPos_T1 for seropos, n=",nrow(df.viro.seropos)))
+		df.viro.seropos		<- subset(df.viro.seropos, DateRNA>=(AnyPos_T1+30*select.min.months.after.AnyPos_T1))
+		if(verbose) cat(paste("\nfound viral loads for candidate sequences with min months after AnyPos_T1<=RNA<=max months after AnyPos_T1 for seropos, n=",nrow(df.viro.seropos)))
 	}
 	else
 	{
-		df.viro				<- subset(df.viro, DateRNA>=(PosEarliest+30*select.min.months.after.PosEarliest))
-		if(verbose) cat(paste("\nfound viral loads for candidate sequences with min months after PosEarliest<=RNA<=max months after PosEarliest, n=",nrow(df.viro)))
+		df.viro				<- subset(df.viro, DateRNA>=(AnyPos_T1+30*select.min.months.after.AnyPos_T1))
+		if(verbose) cat(paste("\nfound viral loads for candidate sequences with min months after AnyPos_T1<=RNA<=max months after AnyPos_T1, n=",nrow(df.viro)))
 	}
 	if(1)	#check for DateRNA duplicates
 	{

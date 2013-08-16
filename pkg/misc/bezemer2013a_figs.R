@@ -835,3 +835,94 @@ project.bezemer2013a.figs<- function()
 	#project.bezemer2013a.figs.v130714()
 	project.bezemer2013a.figs.v130715()
 }
+
+project.bezemer2013b.rates.v130813<- function()
+{
+	require(data.table)
+	require(ape)
+	require(RColorBrewer)	 
+	verbose			<- 1
+	indir			<- "/Users/Oliver/duke/2013_HIV_NL/Bezemer2013_clusters"	
+	insignat		<- "130813"
+	infile			<- "BezemerRates_Timedtree6CUnetworks"
+	f.name			<- paste(indir,'/',infile,'_',insignat,".nex",sep='')
+	
+	if(verbose) cat(paste("\nload file",f.name))
+	ph	<- read.nexus(f.name)
+	#
+	# generate data.table from tip.labels
+	#
+	ph.tl			<- t(sapply(strsplit(ph$tip.label,'/'),function(x)
+						{
+							if(length(x)==16)	return(x)
+							else if(length(x)==4)	return(  c(x[1],x[2],rep(NA,12),x[3],x[4]))
+							else stop("unexpected line in file")
+						}))
+	colnames(ph.tl)	<- c("cluster","Patient","Trm","Sex","HCV","RegionDiagnosed","Infected","CountryInfected","XX","CountryBorn","Pos_T1","Age_T1","Age_now","Therapy","Country","PosSeq_T1")
+	ph.tl			<- as.data.table(ph.tl)
+	set(ph.tl,NULL,"cluster",as.numeric(as.character(ph.tl[,cluster])))
+	set(ph.tl,NULL,"PosSeq_T1",as.numeric(as.character(ph.tl[,PosSeq_T1])))
+	set(ph.tl,NULL,"Pos_T1",as.numeric(as.character(ph.tl[,Pos_T1])))
+	set(ph.tl,NULL,"Age_T1",as.numeric(as.character(ph.tl[,Age_T1])))
+	set(ph.tl,NULL,"Age_now",as.numeric(as.character(ph.tl[,Age_now])))
+	# Trm
+	if(verbose) cat(paste("\nsetting Trm %in% BL CH DU to NA"))
+	tmp									<- as.character( ph.tl[,Trm] )
+	tmp[tmp%in%c("BL","CH","DU","U")]	<- NA
+	set(ph.tl,NULL,"Trm",factor(tmp, levels=c("MSM","HT"),labels=c("MSM","HET")))
+	# CountryBorn
+	tmp									<- as.character( ph.tl[,CountryBorn] )
+	if(verbose) cat(paste("\nsetting CountryBorn %in% AN  DO  HT SR TT  VE to C(arribean)"))
+	tmp[tmp%in%c("AN","CW","DO","HT","SR","TT","VE")]	<- "C"
+	if(verbose) cat(paste("\nsetting CountryBorn %in% ER  GE  GR LK RO to OTH"))
+	tmp[tmp%in%c("ER","GE","GR","LK","RO","")]				<- NA
+	set(ph.tl, NULL, "CountryBorn", factor(tmp, levels=c("C","NL"),labels=c("C","NL")))
+	# CountryDiagnosed
+	tmp									<- as.character( ph.tl[,RegionDiagnosed] )
+	if(verbose) cat(paste("\nsetting RegionDiagnosed %in% DR FL GL GR LB NB NH OV UT ZH to NL"))
+	tmp[tmp%in%c("DR","FL","GL","GR","LB","NB","NH","OV","UT","ZH")]	<- "NL"
+	tmp[tmp%in%c("CU")]	<- "C"
+	ph.tl[,"CountryDiagnosed":=factor(tmp, levels=c("C","NL"),labels=c("C","NL"))]
+	# CountryInfected
+	tmp									<- as.character( ph.tl[,CountryInfected] )
+	if(verbose) cat(paste("\nsetting CountryInfected %in% AN CW DO  HN to C"))
+	tmp[tmp%in%c("AN","CW","DO","HN")]	<- "C"
+	if(verbose) cat(paste("\nsetting CountryInfected %in% US GE LK ID to NA"))
+	tmp[tmp%in%c("US","GE","LK","ID")]	<- NA
+	set(ph.tl, NULL, "CountryInfected", factor(tmp, levels=c("C","NL"),labels=c("C","NL")))
+	# MigState.null
+	ph.tl[, "MigState.null":=as.character(ph.tl[,CountryDiagnosed])]
+	# MigState.bridge
+	ph.tl[, "MigState.bridge":=as.character(ph.tl[,CountryDiagnosed])]	
+	tmp									<- c( 	which( ph.tl[, !is.na(CountryDiagnosed) & !is.na(CountryInfected) & CountryDiagnosed!=CountryInfected] ),
+												which( ph.tl[, !is.na(CountryDiagnosed) & !is.na(CountryBorn) & CountryDiagnosed!=CountryBorn] ) )
+	if(verbose) cat(paste("\nfound potentially bridging individuals, n=",length(tmp)))
+	set(ph.tl, tmp, "MigState.bridge", "B")
+	# TrmState
+	ph.tl[,TrmState:= as.character(ph.tl[,Sex])]
+	set(ph.tl, which(ph.tl[,TrmState=="F"]), "TrmState", "f")
+	set(ph.tl, which(ph.tl[,TrmState=="M" & Trm=="HET"]), "TrmState", "m")
+	set(ph.tl, which(ph.tl[,TrmState=="M" & Trm=="MSM"]), "TrmState", "msm")
+	set(ph.tl, NULL, "TrmState", factor(ph.tl[,TrmState], levels=c("f","m","msm"), labels=c("f","m","msm")))	
+	# TraitState.null
+	tmp									<- apply( cbind( as.character( ph.tl[,MigState.null]),as.character( ph.tl[,TrmState]) ), 1, function(x) paste(x,collapse='',sep='') )
+	ph.tl[,"TraitState.null":= tmp]
+	# TraitState.bridge
+	tmp									<- apply( cbind( as.character( ph.tl[,MigState.bridge]),as.character( ph.tl[,TrmState]) ), 1, function(x) paste(x,collapse='',sep='') )
+	ph.tl[,"TraitState.bridge":= tmp]
+	#print(subset(ph.tl,select=c(Patient, MigState.null, MigState.bridge, TrmState, TraitState.null, TraitState.bridge )), nrow=170)
+	
+	#
+	# reset tip.labels
+	#
+	ph$tip.label						<- ph.tl[, paste(Patient,TraitState,PosSeq_T1,sep='_')]
+	ph<- ladderize(ph)
+	plot(ph)
+	
+	
+}
+
+project.bezemer2013b.rates<- function()
+{
+	project.bezemer2013b.rates.v130813()	
+}
