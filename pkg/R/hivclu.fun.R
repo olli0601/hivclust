@@ -6,6 +6,9 @@
 #' @import geiger
 #' @import data.table
 
+#' @export
+HIVC.db.locktime	<-  as.Date("30/03/2013", format="%d/%m/%Y")
+
 ######################################################################################
 #' @export
 hivc.seq.read.GenBank<- function (access.nb, seq.names = access.nb, species.names = TRUE, gene.names = FALSE, as.character = FALSE, attributes= c("origin")) 
@@ -107,29 +110,83 @@ hivc.db.resetCD4byNegT<- function(df.cross, with.NegT_Acc.No=0, verbose=1)
 	df.cross
 }	
 ######################################################################################
-hivc.db.getlRNA.T1andTS<- function(df.cross, lRNA.bTS.quantile= 0.75, lRNA.aTS.quantile= 0.25, verbose=1)
-{				
+hivc.db.getTrIMo<- function(df.cross, verbose=1)
+{
+	ans		<- df.cross[, 	{ 
+								x		<- data.table( PosSeqT, StartTime, StopTime, TrI )
+								x		<- subset(x, !is.na(StartTime))		#discard first time period if unknown StartTime					
+								if(!nrow(x) || is.na(x[1,PosSeqT]))
+								{
+									TrImo_bTS		<- TrImo_aTS	<- NA_real_
+								}
+								else if(x[1,PosSeqT]<=x[1,StartTime])
+								{
+									TrImo_bTS		<- 0
+									TrImo_aTS		<- sum(as.numeric(subset(x, TrI=="Yes")[,difftime(StopTime,StartTime,units="days")/30]))
+								}
+								else
+								{
+									z				<- which( as.numeric( x[,difftime(PosSeqT,StartTime,units="days")] )>0 )	#all rows in which PosSeqT>=StartTime						
+									z				<- z[length(z)]
+									z2				<- seq.int(1,z)
+									xb				<- x[z2,]
+									set(xb,z,"StopTime",x[z,PosSeqT])
+									z2				<- seq.int(z,nrow(x))
+									xa				<- x[z2,]
+									set(xa,1L,"StartTime",x[z,PosSeqT])		
+									z				<- as.numeric(xb[,difftime(StopTime,StartTime,units="days")/30])
+									z2				<- as.numeric(xa[,difftime(StopTime,StartTime,units="days")/30])
+									TrImo_bTS		<- sum(z[ which(xb[, TrI=="Yes"]) ])
+									TrImo_aTS		<- sum(z2[ which(xa[, TrI=="Yes"]) ])
+								}					
+								list( 	TrImo_bTS	= TrImo_bTS, 
+										TrImo_aTS	= TrImo_aTS			)																					
+							}, by=FASTASampleCode]
+	set(ans,NULL,"TrImo_bTS",round(ans[,TrImo_bTS],d=1))
+	set(ans,NULL,"TrImo_aTS",round(ans[,TrImo_aTS],d=1))
+	if(verbose)	cat(paste("\nnumber of entries, n=",nrow(ans)))
+	ans		
+}
+######################################################################################
+hivc.db.getlRNA.T1andTS<- function(df.cross, lRNA.bTS.quantile= 0.75, lRNA.aTS.quantile= 0.25, lRNAi.min= log10(1e4), db.locktime= HIVC.db.locktime, verbose=1)
+{						
 	if(verbose)	cat(paste("\nlRNA.aTS.quantile is",lRNA.aTS.quantile))
 	if(verbose)	cat(paste("\nlRNA.bTS.quantile is",lRNA.bTS.quantile))
-	if(verbose)	cat(paste("\nnumber of entries in cross product is, n=",nrow(df.cross)))	
+	if(verbose)	cat(paste("\nlRNAi.min is",lRNAi.min))
+	if(verbose)	cat(paste("\nnumber of entries in cross product is, n=",nrow(df.cross)))
+	df.cross[, lRNAi:=lRNA>=lRNAi.min]			
 	ans		<-	df.cross[, 	{
-				z	<- which.min(PosRNA)
-				if(!is.na(PosSeqT[1]))
-				{
-					z2			<- which.min(abs(difftime(PosSeqT, PosRNA, units="weeks")))
-					PoslRNA_TS	<- PosRNA[z2]
-					lRNA_TS		<- round( mean( lRNA[seq.int(z2-1,z2+1)], na.rm=1 ), d=1 )				
-					lRNA_bTS	<- round( quantile(lRNA[seq_len(z2+1)], probs = lRNA.bTS.quantile, na.rm=T, names = F), d=1 )
-					lRNA_aTS	<- round( quantile(lRNA[seq.int(z2-1,length(lRNA))], probs = lRNA.aTS.quantile, na.rm=T, names = F), d=1 )
-				}
-				else
-				{
-					PoslRNA_TS	<- as.Date(NA)
-					lRNA_TS <- lRNA_bTS <- lRNA_aTS <- NA_real_
-				}
-				list(PoslRNA_T1=PosRNA[z], lRNA_T1=lRNA[z], PoslRNA_TS=PoslRNA_TS, lRNA_TS=lRNA_TS, lRNA_bTS=lRNA_bTS, lRNA_aTS=lRNA_aTS	 ) 							 	
-			},by=FASTASampleCode]
+								z	<- which.min(PosRNA)
+								if(!is.na(PosSeqT[1]))
+								{
+									z2			<- which.min(abs(difftime(PosSeqT, PosRNA, units="weeks")))
+									PoslRNA_TS	<- PosRNA[z2]
+									lRNA_TS		<- round( mean( lRNA[seq.int(z2-1,z2+1)], na.rm=1 ), d=1 )				
+									lRNA_bTS	<- round( quantile(lRNA[seq_len(z2+1)], probs = lRNA.bTS.quantile, na.rm=T, names = F), d=1 )
+									lRNA_aTS	<- round( quantile(lRNA[seq.int(z2-1,length(lRNA))], probs = lRNA.aTS.quantile, na.rm=T, names = F), d=1 )							
+									lRNAit		<- as.numeric( difftime(c(PosRNA[-1],db.locktime), PosRNA,units="days") )
+									#print(data.table(Patient, FASTASampleCode, AnyPos_T1, PosSeqT, PosRNA, lRNA, lRNAi, lRNA.hb4tr_LT, lRNA.early)); print(lRNAit); print(z2); print(lRNAit[ seq.int(z2,length(lRNA)) ]); print(lRNAit[ seq_len(z2) ][  lRNAi[ seq_len(z2) ]  ])
+									lRNAi_bTS	<- sum( lRNAit[ seq_len(z2) ][  lRNAi[ seq_len(z2) ]  ] ) / sum( lRNAit[ seq_len(z2) ] ) 							
+									lRNAi_aTS	<- sum( lRNAit[seq.int(z2,length(lRNAit))][  lRNAi[ seq.int(z2,length(lRNAi)) ]	] ) /	sum( lRNAit[seq.int(z2,length(lRNAit))] )
+								}
+								else
+								{
+									PoslRNA_TS	<- lRNAi_bTS<- lRNAi_aTS<- as.Date(NA)
+									lRNA_TS 	<- lRNA_bTS <- lRNA_aTS <- NA_real_
+								}
+								list(	PoslRNA_T1		= PosRNA[z], 
+										lRNA_T1			= lRNA[z], 
+										PoslRNA_TS		= PoslRNA_TS, 
+										lRNA_TS			= lRNA_TS, 
+										lRNA_bTS		= lRNA_bTS, 
+										lRNA_aTS		= lRNA_aTS,
+										lRNAi_bTS		= lRNAi_bTS,
+										lRNAi_aTS		= lRNAi_aTS,
+										lRNA.hb4tr_LT	= lRNA.hb4tr_LT[1], 
+										lRNA.early		= lRNA.early[1]				) 							 	
+							},by=FASTASampleCode]
 	if(verbose)	cat(paste("\nnumber of seq with PosCD4_T1 CD4_T1  PosCD4_TS CD4_TS is n=",nrow(ans)))
+	df.cross[,lRNAi:=NULL]
 	ans	
 }
 ######################################################################################
@@ -562,6 +619,7 @@ hivc.clu.collapse.monophyletic.withinpatientseq<- function(cluphy.subtrees, df.c
 ######################################################################################
 hivc.clu.clusterbycluphy<- function(cluphy.subtrees, cluphy)	
 {
+	require(phangorn)
 	cluphy.subtrees.names					<- as.numeric(names(cluphy.subtrees))	
 	clustering								<- list()	
 	clustering[["ntips"]]					<- Ntip(cluphy)
@@ -917,13 +975,16 @@ hivc.clu.polyphyletic.clusters<- function(cluphy.df, cluphy.subtrees=NULL, ph=NU
 	else if(is.null(cluphy.subtrees))
 		stop("expect either ('ph' and 'clustering') or 'cluphy.subtrees' as input")
 	cluphy							<- eval(parse(text=paste('cluphy.subtrees[[',seq_along(cluphy.subtrees),']]', sep='',collapse='+')))
+	print(cluphy)
 	plot.coordinates				<- NULL
 	#plot selected clusters
 	if(!is.na(plot.file))
 	{		
-		cluphy.tiplabels			<- hivc.clu.get.tiplabels( cluphy, cluphy.df )
+		cluphy.tiplabels						<- hivc.clu.get.tiplabels( cluphy, copy(cluphy.df) )
 		if(verbose) cat(paste("\nwrite tree to file",plot.file))
-		plot.coordinates			<- hivc.clu.plot(cluphy, cluphy.df[,cluster], file=plot.file, pdf.scaley=pdf.scaley, pdf.off=0, pdf.xlim=pdf.xlim, cex.nodelabel=cex.nodelabel )		
+		color.except.rootedge					<- rep(1, Nnode(cluphy, internal.only=F))
+		color.except.rootedge[Ntip(cluphy)+1]	<- NA
+		plot.coordinates						<- hivc.clu.plot(cluphy, color.except.rootedge, file=plot.file, pdf.scaley=pdf.scaley, pdf.off=0, pdf.xlim=pdf.xlim, cex.nodelabel=cex.nodelabel )		
 		hivc.clu.plot.tiplabels( seq_len(Ntip(cluphy)), cluphy.tiplabels$text, cluphy.tiplabels$col, cex=cex.tiplabel, adj=adj.tiplabel, add.xinch=0, add.yinch=0 )
 		dev.off()
 	}	
@@ -1148,6 +1209,7 @@ hivc.clu.getplot.mixedexposuregroup<- function(ph, clustering, df.cluinfo, verbo
 ######################################################################################
 hivc.clu.getplot.excludeallmultifrgninfection<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, char.select= "!all(!is.na(CountryInfection) & CountryInfection!='NL')", pdf.scaley=25, pdf.xlim=0, cex.nodelabel=0.2, cex.tiplabel=0.2, adj.tiplabel= c(-0.15,0.5))
 {		
+	require(phangorn)
 	expr.select	<- parse(text=char.select)
 	tmp			<- subset( df.cluinfo[,eval(expr.select),by="cluster"], V1, cluster )
 	clu.exlc	<- setdiff( df.cluinfo[,cluster], tmp[,cluster] )
@@ -1181,6 +1243,7 @@ hivc.clu.getplot.multifrgninfection<- function(ph, clustering, df.cluinfo, verbo
 ######################################################################################
 hivc.clu.getplot.potentialsuperinfections<- function(ph, clustering, cluphy.df, verbose=1, plot.file=NA, pdf.scaley=4, cex.nodelabel=0.4, cex.tiplabel=0.4, adj.tiplabel= c(-0.15,0.5))
 {
+	require(phangorn)
 	cluphy.df			<- subset(df.cluinfo, !is.na(Patient))[,list(n.clu=length(unique(na.omit(cluster))), cluster=unique(na.omit(cluster)), cluster.merged=unique(na.omit(cluster))[1]),by="Patient"]
 	cluphy.df			<- subset(cluphy.df, n.clu>1)
 	cluphy.merged		<- lapply( unique(cluphy.df[,Patient]), function(x)
@@ -1257,11 +1320,224 @@ hivc.clu.getplot.mixedfrgngroup<- function(ph, clustering, df.cluinfo, verbose=1
 		cluphy		<- tmp$cluphy
 	}
 	list(cluphy=cluphy, cluphy.df=cluphy.df )			
-}	
+}
+######################################################################################
+hivc.clu.get.tiplabels<- function(ph, df.info, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5")
+{
+	require(colorspace)
+	require(RColorBrewer)
+	#
+	#	PATIENT
+	#
+	#set colors CountryInfection
+	tmp					<- rep("transparent",nrow(df.info))
+	df.info[,CountryInfection.col:=tmp]
+	set(df.info, which(df.info[,!is.na(CountryInfection) & CountryInfection!="NL"]), "CountryInfection.col", col.notmsm)
+	#set colors Patient
+	tmp					<- unique( df.info[,Patient] )
+	#tmp2				<- diverge_hcl(length(tmp), h = c(246, 40), c = 96, l = c(85, 90))		
+	tmp					<- data.table(Patient=tmp, Patient.col="transparent", key="Patient")
+	df.info				<- merge(  df.info, tmp, all.x=1, by="Patient" )
+	#set colors Sex
+	df.info[,Sex.col:="transparent"]						
+	set(df.info, which(df.info[,!is.na(Sex) & Sex!="M"]), "Sex.col", col.notmsm)
+	#set colors MSM or BI	
+	df.info[,Trm.col:="transparent"]						
+	set(df.info, which(df.info[,!is.na(Trm) & Trm!="MSM"]), "Trm.col", col.notmsm)
+	#set colors RegionHospital
+	tmp					<- levels( df.info[,RegionHospital] )		
+	tmp2				<- brewer.pal(length(tmp), "Dark2")
+	tmp					<- data.table(RegionHospital=tmp, RegionHospital.col=tmp2, key="RegionHospital")
+	df.info				<- merge(  df.info, tmp, all.x=1, by="RegionHospital" )
+	#set colors isAcute
+	df.info[,isAcute.col:="transparent"]						
+	set(df.info, which(df.info[,isAcute%in%c("Yes","Maybe")]), "isAcute.col", col.Early)
+	#
+	#	TIMELINE
+	#
+	#	set transparent colors:		PosSeqT NegT AnyPos_T1	
+	df.info[, NegT.col:="transparent"]
+	df.info[, AnyPos_T1.col:="transparent"]
+	#
+	#	TREATMENT
+	#
+	#	set AnyT_T1.col				if 	PosSeqT<AnyT_T1 	orange 		else pink
+	df.info[, AnyT_T1.col:="transparent"]
+	select.seqb4tr		<- which(df.info[, !is.na(PosSeqT) & !is.na(AnyT_T1) & PosSeqT<=AnyT_T1])
+	select.seqatr		<- which(df.info[, !is.na(PosSeqT) & !is.na(AnyT_T1) & PosSeqT>AnyT_T1])
+	set(df.info, select.seqb4tr, "AnyT_T1.col", col.Early)
+	set(df.info, select.seqatr, "AnyT_T1.col", col.AfterTreat)
+	df.info[, TrImo_bTS.col:="transparent"]
+	df.info[, TrImo_aTS.col:="transparent"]
+	set(df.info, which(df.info[, TrImo_aTS>4]), "TrImo_aTS.col", col.AfterTreat)
+	set(df.info, which(df.info[, TrImo_bTS>4]), "TrImo_bTS.col", col.AfterTreat)
+	df.info[, PosSeqT.col:="transparent"]
+	set(df.info, select.seqb4tr, "PosSeqT.col", col.Early)
+	set(df.info, select.seqatr, "PosSeqT.col", col.AfterTreat)	
+	#
+	#	VIRAL LOAD
+	#	
+	df.info[, lRNA_bTS.col:="transparent"]
+	set(df.info,	which(df.info[,lRNA_bTS>5]),	"lRNA_bTS.col",		col.highVL) 
+	df.info[, lRNA_TS.col:="transparent"]
+	set(df.info,	which(df.info[,lRNA_TS>5]),	"lRNA_TS.col",		col.highVL) 
+	df.info[, lRNA_aTS.col:="transparent"]
+	set(df.info,	which(df.info[,lRNA_aTS>3.5]),	"lRNA_aTS.col",		col.highVL) 
+	df.info[, lRNAi_bTS.col:="transparent"]
+	set(df.info,	which(df.info[,lRNAi_bTS>0.75]),	"lRNAi_bTS.col",		col.highVL) 
+	df.info[, lRNAi_aTS.col:="transparent"]
+	set(df.info,	which(df.info[,lRNAi_aTS>0.25]),	"lRNAi_aTS.col",		col.highVL) 
+	df.info[, lRNA.hb4tr_LT.col:="transparent"]
+	set(df.info,	which(df.info[,!is.na(lRNA.hb4tr_LT) & PosSeqT<=lRNA.hb4tr_LT]),	"lRNA.hb4tr_LT.col",		col.highVL) 
+	df.info[, lRNA.early.col:="transparent"]
+	set(df.info,	which(df.info[, lRNA.early]),	"lRNA.early.col",		col.Early) 
+	#
+	#	CD4
+	#		
+	df.info[, CD4_T1.col:="transparent"]
+	set(df.info,	which(df.info[,CD4_T1>350]),	"CD4_T1.col",		col.green)	
+	df.info[, PosCD4_T1.col:="transparent"]
+	set(df.info,	which(df.info[,CD4_T1>350]),	"PosCD4_T1.col",		col.green)	
+	df.info[, CD4_bTS.col:="transparent"]
+	set(df.info,	which(df.info[,CD4_bTS>350]),	"CD4_bTS.col",		col.green)	
+	df.info[, CD4_TS.col:="transparent"]
+	set(df.info,	which(df.info[,CD4_TS>350]),	"CD4_TS.col",		col.green)	
+	df.info[, CD4_aTS.col:="transparent"]
+	set(df.info,	which(df.info[,CD4_aTS>350]),	"CD4_aTS.col",		col.green)
+	#
+	#	color late presenter
+	#
+	tmp<- which(df.info[,CD4_T1<350])
+	set(df.info,	tmp,	"CD4_T1.col",			col.latePres)
+	set(df.info,	tmp,	"PosCD4_T1.col",		col.latePres)
+	set(df.info,	tmp,	"lRNA_bTS.col",			col.latePres)
+	set(df.info,	tmp,	"lRNAi_bTS.col",		col.latePres)
+	#	
+	#	convert time to string
+	#
+	set(df.info,NULL,"AnyPos_T1",		as.character( df.info[,AnyPos_T1], "%y.%m" ))
+	set(df.info,NULL,"NegT", 			as.character( df.info[,NegT], "%y.%m" ))
+	set(df.info,NULL,"PosSeqT", 		as.character( df.info[,PosSeqT], "%y.%m" ))
+	set(df.info,NULL,"lRNA.hb4tr_LT",	as.character( df.info[,lRNA.hb4tr_LT], "%y.%m" ))
+	set(df.info,NULL,"PosCD4_T1", 		as.character( df.info[,PosCD4_T1], "%y.%m" ))
+	set(df.info,NULL,"AnyT_T1", 		as.character( df.info[,AnyT_T1], "%y.%m" ))
+	#	set isAcute to either Y or M or N
+	set(df.info,NULL,"isAcute", 		as.character( df.info[,isAcute]))
+	set(df.info,which(df.info[,isAcute=="No"]),"isAcute",'N')
+	set(df.info,which(df.info[,isAcute=="Maybe"]),"isAcute",'M')
+	set(df.info,which(df.info[,isAcute=="Yes"]),"isAcute",'Y')
+	#	set lRNA.early to either HVLE or ----
+	set(df.info,NULL,"lRNA.early", 		as.character( df.info[, lRNA.early]))
+	set(df.info,which(df.info[,lRNA.early=="TRUE"]),"lRNA.early","Y")
+	set(df.info,which(df.info[,lRNA.early=="FALSE"]),"lRNA.early","N")
+	#	set lRNAi_bTS lRNAi_aTS
+	set(df.info,NULL,"lRNAi_bTS", 		as.character( round(df.info[, lRNAi_bTS],d=2)))
+	set(df.info,NULL,"lRNAi_aTS", 		as.character( round(df.info[, lRNAi_aTS],d=2)))
+	#	set TrImo_bTS TrImo_aTS
+	set(df.info,NULL,"TrImo_bTS", 		as.character( round(df.info[, TrImo_bTS],d=1)))
+	set(df.info,NULL,"TrImo_aTS", 		as.character( round(df.info[, TrImo_aTS],d=1)))
+	#	set CD4_T1
+	set(df.info,NULL,"CD4_T1", 		as.character( round(df.info[, CD4_T1],d=0)))
+	#	set CD4_TS CD4_bTS CD4_aTS
+	set(df.info,NULL,"CD4_TS", 		as.character( df.info[, CD4_TS]))
+	set(df.info,NULL,"CD4_bTS", 		as.character( df.info[, CD4_bTS]))
+	set(df.info,NULL,"CD4_aTS", 		as.character( df.info[, CD4_aTS]))
+	#	set 'Amst' to 'A'
+	set(df.info,NULL,"RegionHospital", 		as.character( df.info[,RegionHospital]))
+	set(df.info,which(df.info[,RegionHospital=="Amst"]),"RegionHospital",'A')	
+	#
+	#	handle missing entries -- ensure that alignment is OK
+	#
+	setkey(df.info, Patient)
+	tmp					<- which(is.na(df.info[,Patient]))
+	set(df.info, tmp, "Patient", '')
+	set(df.info, tmp, "Patient.col", "transparent")
+	tmp					<- which(is.na(df.info[,RegionHospital]))
+	set(df.info, tmp, "RegionHospital", '-')
+	set(df.info, tmp, "RegionHospital.col", "transparent")		
+	tmp					<- which(is.na(df.info[,CountryInfection]))
+	set(df.info, tmp, "CountryInfection", "--")
+	set(df.info, tmp, "CountryInfection.col", "transparent")				
+	tmp					<- which(is.na(df.info[,Trm]))
+	set(df.info, tmp, "Trm", '--')
+	set(df.info, tmp, "Trm.col", "transparent")
+	tmp					<- which(is.na(df.info[,Sex]))
+	set(df.info, tmp, "Sex", '-')
+	set(df.info, tmp, "Sex.col", "transparent")	
+	set(df.info, which(df.info[,is.na(isAcute)]), "isAcute", 	'-')	
+	tmp					<- which(is.na(df.info[,AnyPos_T1]))
+	set(df.info, tmp, "AnyPos_T1", "--.--")	
+	set(df.info, tmp, "AnyPos_T1.col", "transparent")
+	tmp					<- which(is.na(df.info[,NegT]))
+	set(df.info, tmp, "NegT", "--.--")	
+	set(df.info, tmp, "NegT.col", "transparent")
+	tmp					<- which(is.na(df.info[,PosSeqT]))
+	set(df.info, tmp, "PosSeqT", "--.--")	
+	set(df.info, tmp, "PosSeqT.col", "transparent")		
+	tmp					<- which(is.na(df.info[,lRNA.hb4tr_LT]))
+	set(df.info, tmp, "lRNA.hb4tr_LT", "--.--")		
+	tmp					<- which(is.na(df.info[,PosCD4_T1]))
+	set(df.info, tmp, "PosCD4_T1", "--.--")		
+	tmp					<- which(is.na(df.info[,AnyT_T1]))
+	set(df.info, tmp, "AnyT_T1", "--.--")		
+	set(df.info, which(df.info[,is.na(TrImo_aTS)]), "TrImo_aTS", 	'-')
+	set(df.info, which(df.info[,is.na(TrImo_bTS)]), "TrImo_bTS", 	'-')	
+	set(df.info, which(df.info[,is.na(CD4_T1)]), "CD4_T1", 			'---')
+	set(df.info, which(df.info[,is.na(PosCD4_T1)]), "PosCD4_T1", 	'---')
+	set(df.info, which(df.info[,is.na(CD4_TS)]), "CD4_TS", 			'---')
+	set(df.info, which(df.info[,is.na(CD4_bTS)]), "CD4_bTS", 		'---')
+	set(df.info, which(df.info[,is.na(CD4_aTS)]), "CD4_aTS", 		'---')
+	#
+	#	add suffixes 
+	#	
+	set(df.info,NULL,"AnyPos_T1",		paste("d:",df.info[,AnyPos_T1],sep=''))
+	set(df.info,NULL,"NegT", 			paste("n:",df.info[,NegT],sep=''))
+	set(df.info,NULL,"PosSeqT", 		paste("s:",df.info[,PosSeqT],"   ",sep=''))
+	set(df.info,NULL,"lRNA.hb4tr_LT",	paste("VLeh:",df.info[,lRNA.hb4tr_LT],sep=''))
+	set(df.info,NULL,"AnyT_T1", 		paste("TR+:",df.info[,AnyT_T1],sep=''))
+	set(df.info,NULL,"TrImo_bTS", 		paste("TR-:",df.info[,TrImo_bTS],sep=''))
+	set(df.info,NULL,"TrImo_aTS", 		paste(":",df.info[,TrImo_aTS],"   ",sep=''))			
+	set(df.info,NULL,"isAcute", 		paste("AC:",df.info[,isAcute],sep=''))
+	set(df.info,NULL,"lRNA.early", 		paste(":",df.info[,lRNA.early],"   ",sep=''))
+	set(df.info,NULL,"CountryInfection",paste("inf:",df.info[,CountryInfection],sep=''))
+	set(df.info,NULL,"RegionHospital",	paste("",df.info[,RegionHospital],sep=''))
+	set(df.info,NULL,"lRNA_bTS", 		paste("VL:",df.info[,lRNA_bTS],sep=''))
+	set(df.info,NULL,"lRNA_TS", 		paste(":",df.info[,lRNA_TS],sep=''))
+	set(df.info,NULL,"lRNA_aTS", 		paste(":",df.info[,lRNA_aTS],sep=''))
+	set(df.info,NULL,"lRNAi_bTS", 		paste("VI:",df.info[,lRNAi_bTS],sep=''))
+	set(df.info,NULL,"lRNAi_aTS", 		paste(":",df.info[,lRNAi_aTS],"   ",sep=''))	
+	set(df.info,NULL,"PosCD4_T1", 		paste("CD4:",df.info[,PosCD4_T1],sep=''))
+	set(df.info,NULL,"CD4_T1", 			paste(":",df.info[,CD4_T1],sep=''))	
+	set(df.info,NULL,"CD4_bTS", 		paste(":",df.info[,CD4_bTS],sep=''))
+	set(df.info,NULL,"CD4_TS", 			paste(":",df.info[,CD4_TS],sep=''))
+	set(df.info,NULL,"CD4_aTS", 		paste(":",df.info[,CD4_aTS],"   ",sep=''))
+	#
+	#get df.info into order of tips
+	#
+	setkey(df.info, FASTASampleCode)
+	df.info				<- df.info[ph$tip.label,]
+	#select text and col matrix 
+	text				<- t( as.matrix( subset(df.info,select=c(	CountryInfection, Trm, Sex, isAcute, lRNA.early,
+									NegT, AnyPos_T1, PosSeqT, 
+									lRNA.hb4tr_LT, lRNA_bTS, lRNA_TS, lRNA_aTS, lRNAi_bTS, lRNAi_aTS,
+									AnyT_T1, TrImo_bTS, TrImo_aTS,
+									PosCD4_T1, CD4_T1, CD4_bTS, CD4_TS, CD4_aTS,  Patient, RegionHospital)) ) )
+	colnames(text)		<- ph$tip.label
+	col					<- t( as.matrix( subset(df.info,select=c(	CountryInfection.col, Trm.col, Sex.col, isAcute.col, lRNA.early.col,
+									NegT.col, AnyPos_T1.col, PosSeqT.col, 
+									lRNA.hb4tr_LT.col, lRNA_bTS.col, lRNA_TS.col, lRNA_aTS.col, lRNAi_bTS.col, lRNAi_aTS.col,
+									AnyT_T1.col, TrImo_bTS.col, TrImo_aTS.col,
+									PosCD4_T1.col, CD4_T1.col, CD4_bTS.col, CD4_TS.col, CD4_aTS.col, Patient.col, RegionHospital.col)) ) )
+	colnames(col)		<- ph$tip.label
+	ans<- list(text=text, col=col)
+	ans
+}
 ######################################################################################
 #prepare standard format of tip labels -- requires df.info to be sorted along the tips as they appear in a phylogeny
-hivc.clu.get.tiplabels<- function(ph, df.info)
+hivc.clu.get.tiplabels.v1<- function(ph, df.info)
 {
+	require(colorspace)
+	require(RColorBrewer)
 	#set colors CountryInfection
 	tmp					<- rep("transparent",nrow(df.info))
 	df.info[,CountryInfection.col:=tmp]
@@ -1495,6 +1771,7 @@ hivc.clu.plot.withinpatientseq.not.samecluster<- function(missed.ph, clustering,
 ######################################################################################
 hivc.clu.mrca<- function(ph, tiplabel)
 {
+	require(phangorn)
 	x.tip		<- match(tiplabel, ph$tip.label)				
 	x.tip.anc	<- lapply(x.tip, function(z) Ancestors(ph, z) )
 	x.tip.jnt	<- my.intersect.n( x.tip.anc )			
