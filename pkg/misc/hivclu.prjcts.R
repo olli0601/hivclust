@@ -2889,7 +2889,7 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 															set(df.cluinfo, NULL, "cluster", clustering[["clu.mem"]][seq_len(Ntip(clu.pre$ph))] )
 															df.bwpatclu			<- subset(df.cluinfo, !is.na(cluster) )[ , list(n.pat= length(unique(na.omit(Patient))) ), by="cluster"]
 															df.bwpatclu			<- subset(df.bwpatclu, n.pat>1)
-															nrow(df.bwpatclu) 							
+															sum(df.bwpatclu[,n.pat]) 							
 														})
 											}) )
 		rownames(clusters.nbwpat)		<- thresh.bs
@@ -4176,7 +4176,6 @@ hivc.prog.precompute.clustering<- function()
 		if(verbose) cat(paste("\nstart: compute TP and TN data tables for phylogeny"))
 		tmp								<- hivc.phy.get.TP.and.TN(ph, df.seqinfo, verbose=verbose, use.seroneg.as.is= use.seroneg.as.is)		
 		if(verbose) cat(paste("\nend: compute TP and TN data tables for phylogeny"))
-		stop()
 		unlinked.byspace				<- tmp[["unlinked.byspace"]]
 		unlinked.bytime					<- tmp[["unlinked.bytime"]]
 		linked.bypatient				<- tmp[["linked.bypatient"]]	

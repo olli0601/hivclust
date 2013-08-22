@@ -408,7 +408,312 @@ project.bezemer2013a.figs.v130714<- function()
 		dev.off()	
 	}
 	stop()
-}	
+}
+
+project.bezemer2013a.figs.v130821<- function()
+{
+	require(data.table)
+	require(RColorBrewer)	 
+	
+	dir.name			<- "/Users/Oliver/duke/2013_HIV_NL/Bezemer2013_clusters"	
+	signat				<- "130715"
+	f.name				<- paste("Bezemer2014_clusters_",signat,".csv",sep='')
+	df					<- read.csv(paste(dir.name,f.name,sep='/'), stringsAsFactors=FALSE)
+	dir.name			<- "/Users/Oliver/duke/2013_HIV_NL/Bezemer2013_clusters"
+	CLUSTER.N.THRESHOLD	<- 10
+	ylab				<- ""
+	yheight				<- 1.5
+	cex.points			<- 0.75
+	xlab				<- "first date of HIV-1 diagnosis"
+	outfile				<- "BezemerFig1"
+	outsignat			<- "130821"
+	#deal with missing data and get into reasonable shape
+	#@TODO Daniela, see if I interpret all the fields correctly, especially what is NA
+	df[df[,"fpos1"]=="","fpos1"]						<- NA
+	df[,"fpos1"]										<- as.Date(df[,"fpos1"], format="%d/%m/%Y")
+	df[which(is.na(df[,"hcv"])),"hcv"]					<- 2
+	df[,"hcv"]											<- factor(df[,"hcv"],levels=c(0,1,2),labels=c("No","Yes","unknown"))
+	df[,"patient"]										<- factor(df[,"patient"])
+	tmp													<- !is.na(df[,"RegionOrigin"]) & (df[,"RegionOrigin"]=="" | df[,"RegionOrigin"]=="U") 		
+	df[tmp,"RegionOrigin"]								<- NA
+	df[,"RegionOrigin"]									<- factor(df[,"RegionOrigin"])	
+	tmp													<- unclass(df[,"RegionOrigin"]	)
+	code												<- seq_along(attr(tmp,"levels"))
+	names(code)											<- attr(tmp,"levels")
+	print(code)
+	tmp[ tmp==code[c("NL")] ]							<- 20
+	tmp[ tmp==code[c("NLseAnt")] ]						<- 21
+	tmp[ tmp==code[c("Lat")] ]							<- 22
+	tmp[ tmp%in%code[c("EUC","EUO","EUW")] ]			<- 23
+	tmp[ tmp%in%code[c("AUS","NAM","OAP","SSA","ZAz")] ]<- 24
+	df[,"RegionOrigin"]									<- factor(tmp, levels=as.character(20:24), labels=c("NL","NLseAnt","Latin","Europe","other"))
+	df[which(df[,"Country"]==""),"Country"]				<- NA
+	df[which(df[,"clustername"]==0),"clustername"]		<- NA
+	df[,"Country"]										<- factor(df[,"Country"])
+	df[which(df[,"hregion"]==""),"hregion"]				<- "unknown"
+	df[,"hregion"]										<- factor(df[,"hregion"], levels=c("CU","Ea","NH","No","So","UT","ZH","unknown"))	
+	#df[,"HospitalRegion"]								<- factor(df[,"HospitalRegion"], levels=c(1,2,3,4,5,6), labels=c("Amst","N","E","S","W","Curu"))	
+	df[which(df[,"sexy"]==""),"sexy"]					<- NA
+	df[,"sexy"]											<- factor(df[,"sexy"])
+	df[which(df[,"rout"]==""),"rout"]					<- "unknown"
+	df[which(df[,"rout"]=="U"),"rout"]					<- "unknown"
+	df[which(df[,"rout"]=="CH"),"rout"]					<- "other"
+	df[which(df[,"rout"]=="BL"),"rout"]					<- "other"	
+	df[,"rout"]											<- factor(df[,"rout"])
+	#print(levels(df[,"Country"]))
+	#print(levels(df[,"hregion"]))
+	#print(levels(df[,"sexy"]))
+	#print(levels(df[,"rout"]))
+	#print(summary(df[,"fpos1"]))
+	df	<- data.table(df, key="clustername")
+	setnames(df, c("clustername","hregion"),c("cluster","RegionHospital"))
+	str(df)
+	#
+	#	determine median fpos1 time for cluster and add PLUS determine cex for each cluster and add
+	#
+	tmp			<- df[,	list(	cluster.PosT=	mean(fpos1, na.rm=T), 
+								cluster.cex=	log(sequencesperCluster[1]),
+								cluster.fNL=	length(which(RegionOrigin=="NL")) / length(RegionOrigin)
+								),	by=cluster]
+	tmp			<- subset(tmp, !is.na(cluster))
+	set(tmp, NULL, "cluster.cex", tmp[,cluster.cex] * 0.5/(max(tmp[,cluster.cex]) - min(tmp[,cluster.cex])) )
+	set(tmp, NULL, "cluster.cex", tmp[,cluster.cex]  - max(tmp[,cluster.cex]) + 1)	
+	df			<- merge(df, tmp, all.x=1, by="cluster")	
+	cat(paste("number of sequences in df, n=", nrow(df)))
+	#
+	#	remove small clusters and singletons
+	#
+	singletons			<- subset(df,is.na(cluster))
+	cat(paste("number of singletones, n=", nrow(singletons)))
+	clusters.small		<- df[, list(select= (sequencesperCluster>1 & sequencesperCluster<CLUSTER.N.THRESHOLD)[1]), by= cluster]	
+	clusters.small		<- merge(subset(clusters.small, select), df, by="cluster")
+	cat(paste("number seq in small clusters, n=", nrow(clusters.small)))
+	df					<- subset(df, !is.na(cluster) & sequencesperCluster>=CLUSTER.N.THRESHOLD)
+	cat(paste("number seq in large clusters, n=", nrow(df)))
+	#
+	#	determine if network concentrated in region origin, and where
+	#
+	clu.reg				<- table( df[,cluster,RegionOrigin] )
+	clu.reg				<- clu.reg / matrix(apply(clu.reg, 2, sum), nrow=nrow(clu.reg), ncol=ncol(clu.reg), byrow=1)				
+	#ALTERNATIVE DEFINITION
+	#clu.regconc	<- apply( clu.reg, 2, function(x)	any(x>0.4) && length(which(x!=0))>2 ) |
+	#					apply( clu.reg, 2, function(x)	any(x>0.5) && length(which(x!=0))<=2 )
+	clu.regconc			<- apply( clu.reg, 2, function(x)	any(x>0.5) ) 			
+	if(verbose)	cat(paste("number of clusters, n=",length(clu.regconc)))
+	if(verbose)	cat(paste("number of spatially concentrated clusters, n=",length(which(clu.regconc))))
+	tmp					<- rownames(clu.reg)
+	clu.regconc2		<- sapply( seq_len(ncol(clu.reg)), function(j)
+								{
+									ifelse(!clu.regconc[j], NA, tmp[ which.max(clu.reg[,j]) ] )						
+								})
+	df.clureg			<- data.table(cluster= as.numeric(colnames( clu.reg )), IsRegionConcentrated= clu.regconc, RegionConcentrated=clu.regconc2, key="cluster" )
+	df					<- merge(df, df.clureg, all.x=1, by="cluster" )
+	#
+	#	determine if network concentrated risk group, and which
+	#
+	clu.reg				<- table( subset(df,rout!="unknown")[,cluster,rout] )
+	clu.reg				<- clu.reg / matrix(apply(clu.reg, 2, sum), nrow=nrow(clu.reg), ncol=ncol(clu.reg), byrow=1)				
+	clu.regconc			<- apply( clu.reg, 2, function(x)	any(x>0.5) ) 			
+	if(verbose)	cat(paste("number of clusters, n=",length(clu.regconc)))
+	if(verbose)	cat(paste("number of clusters concentrated by risk group, n=",length(which(clu.regconc))))
+	tmp					<- rownames(clu.reg)
+	clu.regconc2		<- sapply( seq_len(ncol(clu.reg)), function(j)
+			{
+				ifelse(!clu.regconc[j], NA, tmp[ which.max(clu.reg[,j]) ] )						
+			})
+	df.clureg			<- data.table(cluster= as.numeric(colnames( clu.reg )), IsExpGrConcentrated= clu.regconc, ExpGrConcentrated=clu.regconc2, key="cluster" )
+	df					<- merge(df, df.clureg, all.x=1, by="cluster" )
+	#
+	#
+	#
+	df[,time:=fpos1 ]		
+	set(df, which(df[,!IsExpGrConcentrated | is.na(IsExpGrConcentrated)]), "ExpGrConcentrated", "mixed")
+	tmp					<- numeric(nrow(df))	
+	tmp2				<- c("HT","MSM","DU","mixed")
+	for( i in seq_along(tmp2))
+		tmp[which(df[,ExpGrConcentrated==tmp2[i]])]	<- i
+	df[,sort1:=factor(tmp, levels=1:4, labels=tmp2) ]
+	df[,sort2:=cluster.PosT]
+	#	
+	xlim				<- range( df[,fpos1], na.rm=1 )		
+	#extract clusters one by one in desired order, with all the information for plotting
+	tmp					<- df[,list(sort1=sort1[1], sort2=sort2[1]),by=cluster]
+	clusters.sortby1	<- as.numeric( tmp[,sort1] )
+	clusters.sortby2	<- as.numeric( tmp[,sort2] )
+	clusters.sortby		<- order(clusters.sortby1,clusters.sortby2, decreasing=F)
+	clusters			<- tmp[clusters.sortby,cluster]														
+	clusters			<- lapply(clusters,function(x)	subset(df,cluster==x,c(time, rout, RegionOrigin, RegionHospital, hcv, cluster.cex, sort1))		)
+	ylim				<- c(-50,length(clusters))
+	xlim[1]				<- xlim[1]-700	
+	
+	#
+	#	plot by HCV
+	#
+	ncols				<- length(levels(df[,hcv]))
+	cols				<- c(brewer.pal(9,"Set1"),"grey50")		
+	cols				<- sapply(cols, function(x) my.fade.col(x,0.8))[c(2,8,10)]	
+	file				<- paste(dir.name,paste(outfile,"_hcv_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	cat(paste("\nwrite plot to",file))
+	pdf(file,width=7,height=12)
+	par(mar=c(4,4,0,0))	
+	plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,ylab=ylab, xaxt='n',yaxt='n',xlab=xlab)
+	axis.Date(1, seq.Date(xlim[1],xlim[2],by="year"), labels = TRUE )
+	dummy	<- sapply(seq_along(clusters),function(i)
+			{							
+				cluster.cex	<- cex.points  * clusters[[i]][1,cluster.cex]
+				cluster.ix	<- order(as.numeric(clusters[[i]][,time]))
+				cluster.x	<- as.numeric(clusters[[i]][,time])[cluster.ix]										
+				cluster.y	<- rep(i,nrow(clusters[[i]]))
+				cluster.z	<- as.numeric(clusters[[i]][,hcv])[cluster.ix]
+				#print(clusters[[i]][,covariate])
+				#if(cluster.z[1]!=4)
+				#lines( c(cluster.x[1],xlim[2]), rep(i,2), col=cols[ cluster.z[1] ] )					
+				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )										
+			})	
+	
+	c.lines	<- sapply(clusters,function(x) x[1,sort1])
+	c.lines	<- c( which(diff(as.numeric(c.lines))!=0), length(clusters) )
+	dummy	<- lapply(c(0,c.lines),function(x)		abline(h=x+0.5, lty=3, lwd=0.75, col="grey50")			)	
+	mtext(text=levels(df[,sort1]), 2, at=c(0,c.lines[-length(c.lines)]) + diff( c(0,c.lines) )/2, las=1, cex=0.7)	
+	legend(xlim[1]-600,ylim[2]*0.9,bty='n',pt.bg=cols,pch=21,legend=levels(df[,hcv]), col=rep("transparent",ncols))			
+	#plot small clusters	
+	tmp	<- runif(nrow(clusters.small), min=-23,max=-3)
+	points( as.numeric(clusters.small[,fpos1]), tmp, col=cols[ as.numeric(clusters.small[,hcv]) ], pch=19, cex= cex.points*0.4 )
+	mtext(text="patients\nclusters<10", 2, at=mean(c(-23,-3)), las=1, cex=0.7)
+	#plot singletons
+	tmp	<- runif(nrow(singletons), min=-47,max=-27)
+	points( as.numeric(singletons[,fpos1]), tmp, col=cols[ as.numeric(singletons[,hcv]) ], pch=19, cex= cex.points*0.4 )
+	mtext(text="patients\nnot\nclustering", 2, at=mean(c(-47,-27)), las=1, cex=0.7)	
+	dev.off()
+	#
+	#	plot by RegionHospital
+	#
+	ncols				<- length(levels(df[,RegionHospital]))
+	cols				<- c(brewer.pal(9,"Set1"),"grey50")		
+	cols				<- sapply(cols, function(x) my.fade.col(x,0.8))[c(1,3,2,4,5,6,7,10)]	
+	file				<- paste(dir.name,paste(outfile,"_RegionHospital_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	cat(paste("\nwrite plot to",file))
+	pdf(file,width=7,height=12)
+	par(mar=c(4,4,0,0))	
+	plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,ylab=ylab, xaxt='n',yaxt='n',xlab=xlab)
+	axis.Date(1, seq.Date(xlim[1],xlim[2],by="year"), labels = TRUE )
+	dummy	<- sapply(seq_along(clusters),function(i)
+			{							
+				cluster.cex	<- cex.points  * clusters[[i]][1,cluster.cex]
+				cluster.ix	<- order(as.numeric(clusters[[i]][,time]))
+				cluster.x	<- as.numeric(clusters[[i]][,time])[cluster.ix]										
+				cluster.y	<- rep(i,nrow(clusters[[i]]))
+				cluster.z	<- as.numeric(clusters[[i]][,RegionHospital])[cluster.ix]
+				#print(clusters[[i]][,covariate])
+				#if(cluster.z[1]!=4)
+				#lines( c(cluster.x[1],xlim[2]), rep(i,2), col=cols[ cluster.z[1] ] )					
+				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )										
+			})	
+	
+	c.lines	<- sapply(clusters,function(x) x[1,sort1])
+	c.lines	<- c( which(diff(as.numeric(c.lines))!=0), length(clusters) )
+	dummy	<- lapply(c(0,c.lines),function(x)		abline(h=x+0.5, lty=3, lwd=0.75, col="grey50")			)	
+	mtext(text=levels(df[,sort1]), 2, at=c(0,c.lines[-length(c.lines)]) + diff( c(0,c.lines) )/2, las=1, cex=0.7)	
+	legend(xlim[1]-600,ylim[2]*0.9,bty='n',pt.bg=cols,pch=21,legend=levels(df[,RegionHospital]), col=rep("transparent",ncols))			
+	#plot small clusters	
+	tmp	<- runif(nrow(clusters.small), min=-23,max=-3)
+	points( as.numeric(clusters.small[,fpos1]), tmp, col=cols[ as.numeric(clusters.small[,RegionHospital]) ], pch=19, cex= cex.points*0.4 )
+	mtext(text="patients\nclusters<10", 2, at=mean(c(-23,-3)), las=1, cex=0.7)
+	#plot singletons
+	tmp	<- runif(nrow(singletons), min=-47,max=-27)
+	points( as.numeric(singletons[,fpos1]), tmp, col=cols[ as.numeric(singletons[,RegionHospital]) ], pch=19, cex= cex.points*0.4 )
+	mtext(text="patients\nnot\nclustering", 2, at=mean(c(-47,-27)), las=1, cex=0.7)	
+	dev.off()
+	#
+	#	plot by region origin
+	#
+	ncols				<- length(levels(df[,RegionOrigin]))
+	cols				<- c(brewer.pal(9,"Set1"),"grey50")		
+	cols				<- sapply(cols, function(x) my.fade.col(x,0.8))[c(2,5,3,7,10)]	
+	file				<- paste(dir.name,paste(outfile,"_RegionOrigin_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	cat(paste("\nwrite plot to",file))
+	pdf(file,width=7,height=12)
+	par(mar=c(4,4,0,0))	
+	plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,ylab=ylab, xaxt='n',yaxt='n',xlab=xlab)
+	axis.Date(1, seq.Date(xlim[1],xlim[2],by="year"), labels = TRUE )
+	dummy	<- sapply(seq_along(clusters),function(i)
+			{							
+				cluster.cex	<- cex.points  * clusters[[i]][1,cluster.cex]
+				cluster.ix	<- order(as.numeric(clusters[[i]][,time]))
+				cluster.x	<- as.numeric(clusters[[i]][,time])[cluster.ix]										
+				cluster.y	<- rep(i,nrow(clusters[[i]]))
+				cluster.z	<- as.numeric(clusters[[i]][,RegionOrigin])[cluster.ix]
+				#print(clusters[[i]][,covariate])
+				#if(cluster.z[1]!=4)
+				#lines( c(cluster.x[1],xlim[2]), rep(i,2), col=cols[ cluster.z[1] ] )					
+				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )										
+			})	
+	
+	c.lines	<- sapply(clusters,function(x) x[1,sort1])
+	c.lines	<- c( which(diff(as.numeric(c.lines))!=0), length(clusters) )
+	dummy	<- lapply(c(0,c.lines),function(x)		abline(h=x+0.5, lty=3, lwd=0.75, col="grey50")			)	
+	mtext(text=levels(df[,sort1]), 2, at=c(0,c.lines[-length(c.lines)]) + diff( c(0,c.lines) )/2, las=1, cex=0.7)	
+	legend(xlim[1]-600,ylim[2]*0.9,bty='n',pt.bg=cols,pch=21,legend=levels(df[,RegionOrigin]), col=rep("transparent",ncols))			
+	#plot small clusters	
+	tmp	<- runif(nrow(clusters.small), min=-23,max=-3)
+	points( as.numeric(clusters.small[,fpos1]), tmp, col=cols[ as.numeric(clusters.small[,RegionOrigin]) ], pch=19, cex= cex.points*0.4 )
+	mtext(text="patients\nclusters<10", 2, at=mean(c(-23,-3)), las=1, cex=0.7)
+	#plot singletons
+	tmp	<- runif(nrow(singletons), min=-47,max=-27)
+	points( as.numeric(singletons[,fpos1]), tmp, col=cols[ as.numeric(singletons[,RegionOrigin]) ], pch=19, cex= cex.points*0.4 )
+	mtext(text="patients\nnot\nclustering", 2, at=mean(c(-47,-27)), las=1, cex=0.7)	
+	dev.off()	
+	#
+	#	plot by exposure group
+	#
+	df[,covariate:=rout]
+	ncols				<- length(levels(df[,covariate]))
+	cols				<- c(brewer.pal(ncols-1,"Set1"),"grey50")		
+	cols				<- sapply(cols, function(x) my.fade.col(x,0.7))[c(1,3,2,4,5)]	
+	file				<- paste(dir.name,paste(outfile,"_rout_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	cat(paste("\nwrite plot to",file))
+	pdf(file,width=7,height=12)
+	par(mar=c(4,4,0,0))	
+	plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,ylab=ylab, xaxt='n',yaxt='n',xlab=xlab)
+	axis.Date(1, seq.Date(xlim[1],xlim[2],by="year"), labels = TRUE )
+	dummy	<- sapply(seq_along(clusters),function(i)
+			{							
+				cluster.cex	<- cex.points  * clusters[[i]][1,cluster.cex]
+				cluster.ix	<- order(as.numeric(clusters[[i]][,time]))
+				cluster.x	<- as.numeric(clusters[[i]][,time])[cluster.ix]										
+				cluster.y	<- rep(i,nrow(clusters[[i]]))
+				cluster.z	<- as.numeric(clusters[[i]][,covariate])[cluster.ix]
+				#print(clusters[[i]][,covariate])
+				#if(cluster.z[1]!=4)
+				#lines( c(cluster.x[1],xlim[2]), rep(i,2), col=cols[ cluster.z[1] ] )					
+				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )										
+			})	
+	
+	c.lines	<- sapply(clusters,function(x) x[1,sort1])
+	c.lines	<- c( which(diff(as.numeric(c.lines))!=0), length(clusters) )
+	dummy	<- lapply(c(0,c.lines),function(x)		abline(h=x+0.5, lty=3, lwd=0.75, col="grey50")			)	
+	mtext(text=levels(df[,sort1]), 2, at=c(0,c.lines[-length(c.lines)]) + diff( c(0,c.lines) )/2, las=1, cex=0.7)	
+	legend(xlim[1]-600,ylim[2]*0.9,bty='n',pt.bg=cols,pch=21,legend=levels(df[,covariate]), col=rep("transparent",ncols))			
+	#plot small clusters	
+	tmp	<- runif(nrow(clusters.small), min=-23,max=-3)
+	points( as.numeric(clusters.small[,fpos1]), tmp, col=cols[ as.numeric(clusters.small[,covariate]) ], pch=19, cex= cex.points*0.4 )
+	mtext(text="patients\nclusters<10", 2, at=mean(c(-23,-3)), las=1, cex=0.7)
+	#plot singletons
+	tmp	<- runif(nrow(singletons), min=-47,max=-27)
+	points( as.numeric(singletons[,fpos1]), tmp, col=cols[ as.numeric(singletons[,covariate]) ], pch=19, cex= cex.points*0.4 )
+	mtext(text="patients\nnot\nclustering", 2, at=mean(c(-47,-27)), las=1, cex=0.7)	
+	dev.off()	
+	
+	
+	
+	tmp					<- numeric(nrow(df))		
+	tmp2				<- c("NL","Europe","Latin","NLseAnt","other")
+	for( i in seq_along(tmp2))
+		tmp[which(df[,RegionOrigin==tmp2[i]])]	<- i
+	df[,covariate:=factor(tmp, levels=1:5, labels=tmp2) ]
+	
+	
+}
 
 project.bezemer2013a.figs.v130528<- function()
 {
@@ -833,7 +1138,8 @@ project.bezemer2013a.figs<- function()
 	#project.bezemer2013a.figs.v130517()
 	#project.bezemer2013a.figs.v130528()
 	#project.bezemer2013a.figs.v130714()
-	project.bezemer2013a.figs.v130715()
+	#project.bezemer2013a.figs.v130715()
+	project.bezemer2013a.figs.v130821()
 }
 
 project.bezemer2013b.rates.v130813<- function()
