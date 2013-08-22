@@ -583,7 +583,7 @@ hivc.clu.collapse.monophyletic.withinpatientseq<- function(cluphy.subtrees, df.c
 	cluphy.subtrees.names	<- names(cluphy.subtrees)		
 	cluphy.subtrees			<- lapply(seq_along(cluphy.subtrees), function(i)
 								{
-									#i			<- 1
+									#i			<- 409
 									x			<- cluphy.subtrees[[i]]
 									setkey(df.cluinfo, "FASTASampleCode")		
 									tmp		<- subset(df.cluinfo[x$tip.label, ][, list(nseq=length(FASTASampleCode), FASTASampleCode=FASTASampleCode, PosSeqT=PosSeqT), by="Patient"], nseq>1, c(Patient, FASTASampleCode, PosSeqT))	#determine Patients with >1 seq in cluster
@@ -598,9 +598,11 @@ hivc.clu.collapse.monophyletic.withinpatientseq<- function(cluphy.subtrees, df.c
 									if(nrow(tmp))	#drop all within patient seqs from cluster except the one closest to root
 									{			
 										x.d2r		<- node.depth.edgelength(x)
+										x.rootedge	<- x$root.edge
 										names(x.d2r)<- x$tip.label			 
 										tmp			<- tmp[,  list(FASTASampleCode=FASTASampleCode, root.edge=root.edge, order=order(x.d2r[FASTASampleCode], PosSeqT))	,by="Patient"]
 										x			<- drop.tip(x,subset(tmp,order>1)[,FASTASampleCode])						#drop within patient seqs furthest away from root
+										x$root.edge	<- x.rootedge
 										tmp			<- subset(tmp,order==1)
 										x.tip		<- match( tmp[,FASTASampleCode], x$tip.label)			
 										x$edge.length[ sapply( x.tip, function(z) which(x$edge[,2]==z) ) ]	<- tmp[,root.edge]	#set edge.length of new tip to root length of within patient clade			
@@ -1115,7 +1117,7 @@ hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose
 	# get subtrees corresponding to MSM only and MSM/HET-M clusters
 	#
 	cluphy.msm					<- rbind(cluphy.onlymsm, cluphy.hetM)
-	cluphy.msm.subtrees			<- hivc.clu.polyphyletic.clusters(cluphy.msm , ph=ph, clustering=clustering)$cluphy.subtrees	
+	cluphy.msm.subtrees			<- hivc.clu.polyphyletic.clusters(cluphy.msm , ph=ph, clustering=clustering)$cluphy.subtrees
 	#
 	# clusters with MSM/HET-F
 	#
@@ -1144,7 +1146,7 @@ hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose
 	# extract subtrees for MSM/HET-F clusters		
 	cluphy.cluidx						<- clustering[["clu.idx"]][ unique( cluphy.split[,cluster] ) ]					
 	cluphy.split.subtrees				<- lapply(cluphy.cluidx, function(x)		extract.clade(ph, x, root.edge= 1, interactive = FALSE) 		)
-	names(cluphy.split.subtrees)		<- unique( cluphy.split[,cluster] )				
+	names(cluphy.split.subtrees)		<- unique( cluphy.split[,cluster] )	
 	if(split.clusters)	#split cluster at HETF or OTH sequence
 	{
 		# split HET-F, OTH clusters					
@@ -1241,7 +1243,7 @@ hivc.clu.getplot.multifrgninfection<- function(ph, clustering, df.cluinfo, verbo
 	list(cluphy=cluphy, cluphy.df=cluphy.df )
 }	
 ######################################################################################
-hivc.clu.getplot.potentialsuperinfections<- function(ph, clustering, cluphy.df, verbose=1, plot.file=NA, pdf.scaley=4, cex.nodelabel=0.4, cex.tiplabel=0.4, adj.tiplabel= c(-0.15,0.5))
+hivc.clu.getplot.potentialsuperinfections<- function(ph, clustering, cluphy.df, verbose=1, plot.file=NA, pdf.xlim=0.3, pdf.scaley=4, cex.nodelabel=0.4, cex.tiplabel=0.4, adj.tiplabel= c(-0.15,0.5))
 {
 	require(phangorn)
 	cluphy.df			<- subset(df.cluinfo, !is.na(Patient))[,list(n.clu=length(unique(na.omit(cluster))), cluster=unique(na.omit(cluster)), cluster.merged=unique(na.omit(cluster))[1]),by="Patient"]
@@ -1265,7 +1267,7 @@ hivc.clu.getplot.potentialsuperinfections<- function(ph, clustering, cluphy.df, 
 	{
 		cluphy.tiplabels	<- hivc.clu.get.tiplabels( cluphy, cluphy.df )
 		if(verbose) cat(paste("\nwrite tree to file",plot.file))
-		hivc.clu.plot(cluphy, cluphy.df[,cluster], file=plot.file, pdf.scaley=pdf.scaley, pdf.off=0, cex.nodelabel=cex.nodelabel )											
+		hivc.clu.plot(cluphy, cluphy.df[,cluster], file=plot.file, pdf.scaley=pdf.scaley, pdf.off=0, pdf.xlim= pdf.xlim, cex.nodelabel=cex.nodelabel )											
 		hivc.clu.plot.tiplabels( seq_len(Ntip(cluphy)), cluphy.tiplabels$text, cluphy.tiplabels$col, cex=cex.tiplabel, adj=adj.tiplabel, add.xinch=0, add.yinch=0 )
 		dev.off()
 	}
@@ -1413,14 +1415,19 @@ hivc.clu.get.tiplabels<- function(ph, df.info, col.notmsm="#4EB3D3", col.Early="
 	set(df.info,	tmp,	"lRNA_bTS.col",			col.latePres)
 	set(df.info,	tmp,	"lRNAi_bTS.col",		col.latePres)
 	#	
-	#	convert time to string
+	#	convert time to string	& handle inaccurate NegT or AnyPos_T1
 	#
-	set(df.info,NULL,"AnyPos_T1",		as.character( df.info[,AnyPos_T1], "%y.%m" ))
-	set(df.info,NULL,"NegT", 			as.character( df.info[,NegT], "%y.%m" ))
-	set(df.info,NULL,"PosSeqT", 		as.character( df.info[,PosSeqT], "%y.%m" ))
-	set(df.info,NULL,"lRNA.hb4tr_LT",	as.character( df.info[,lRNA.hb4tr_LT], "%y.%m" ))
-	set(df.info,NULL,"PosCD4_T1", 		as.character( df.info[,PosCD4_T1], "%y.%m" ))
-	set(df.info,NULL,"AnyT_T1", 		as.character( df.info[,AnyT_T1], "%y.%m" ))
+	tmp		<- which(df.info[, as.POSIXlt(NegT)$mday==1 & as.POSIXlt(NegT)$mon==0])				#since NegT were reset, these are the ones with inaccurate month
+	set(df.info,NULL,	"NegT", 		as.character( df.info[,NegT], "%y.%m" ))
+	set(df.info, tmp,	"NegT", 		paste(df.info[tmp,substr(NegT,1,3)],'??',sep='') )
+	tmp		<- which(df.info[, as.POSIXlt(AnyPos_T1)$mday==31 & as.POSIXlt(AnyPos_T1)$mon==11])	#since AnyPos_T1 were reset, these are the ones with inaccurate month
+	set(df.info,NULL,	"AnyPos_T1",	as.character( df.info[,AnyPos_T1], "%y.%m" ))
+	set(df.info, tmp, 	"AnyPos_T1", 	paste(df.info[tmp,substr(AnyPos_T1,1,3)],'??',sep='') )
+	set(df.info,NULL,	"PosSeqT", 		as.character( df.info[,PosSeqT], "%y.%m" ))
+	set(df.info,NULL,	"lRNA.hb4tr_LT",as.character( df.info[,lRNA.hb4tr_LT], "%y.%m" ))
+	set(df.info,NULL,	"PosCD4_T1", 	as.character( df.info[,PosCD4_T1], "%y.%m" ))
+	set(df.info,NULL,	"AnyT_T1", 		as.character( df.info[,AnyT_T1], "%y.%m" ))
+	#	
 	#	set isAcute to either Y or M or N
 	set(df.info,NULL,"isAcute", 		as.character( df.info[,isAcute]))
 	set(df.info,which(df.info[,isAcute=="No"]),"isAcute",'N')
@@ -2050,12 +2057,12 @@ hivc.phy.splittip<- function(x, splitlabel)
 	ans
 }		
 ######################################################################################
-hivc.phy.get.TP.and.TN<- function(ph, df.all, verbose= 1)
+hivc.phy.get.TP.and.TN<- function(ph, df.all, use.seroneg.as.is= 0, verbose= 1)
 {
 	#
 	# exctract geographically distant seqs that are assumed to be truly unlinked to NL seqs
 	#
-	tmp					<-  ph$tip.label[ substr(ph$tip.label,1,2)=="TN" ]
+	tmp					<- ph$tip.label[ substr(ph$tip.label,1,2)=="TN" ]
 	unlinked.byspace	<- data.table(FASTASampleCode=tmp, key="FASTASampleCode")		
 	#
 	# extract list of truly linked sample codes
@@ -2073,15 +2080,27 @@ hivc.phy.get.TP.and.TN<- function(ph, df.all, verbose= 1)
 	df.serocon.acc				<- subset(df.all, NegT_Acc=="Yes" & NegT>=df.dead[1,DateDied],)
 	#add seroconverters with inaccurate info
 	df.serocon.nacc				<- subset(df.all, NegT_Acc=="No" & !is.na(NegT) & NegT>=df.dead[1,DateDied], )
-	df.serocon.nacc.dy			<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mday==15, )						#for inaccurate days, we (conservatively) assume the patient was only seronegative at the start of the month
-	tmp							<- as.POSIXlt(df.serocon.nacc.dy[,NegT] )
-	tmp$mday					<- 1
-	df.serocon.nacc.dy[,NegT:=as.Date(tmp)]
-	df.serocon.nacc.mody		<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mon==6 & as.POSIXlt(NegT)$mday==1, )		#for inaccurate months and days, we (conservatively) assume the patient was only seronegative at the start of the year
-	tmp							<- as.POSIXlt(df.serocon.nacc.mody[,NegT] )
-	tmp$mon						<- 0
-	df.serocon.nacc.mody[,NegT:=as.Date(tmp)]
-	df.serocon					<- rbind(df.serocon.acc, df.serocon.nacc.dy, df.serocon.nacc.mody)		
+	if(!use.seroneg.as.is)
+	{
+		df.serocon.nacc.dy			<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mday==15, )						#for inaccurate days, we (conservatively) assume the patient was only seronegative at the start of the month
+		if(verbose)	cat(paste("\nnumber of seroconverters with innacurate days, n=", nrow(df.serocon.nacc.dy)))
+		if(nrow(df.serocon.nacc.dy))
+		{
+			tmp							<- as.POSIXlt(df.serocon.nacc.dy[,NegT] )
+			tmp$mday					<- 1
+			df.serocon.nacc.dy[,NegT:=as.Date(tmp)]		
+		}
+		df.serocon.nacc.mody		<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mon==6 & as.POSIXlt(NegT)$mday==1, )		#for inaccurate months and days, we (conservatively) assume the patient was only seronegative at the start of the year
+		if(verbose)	cat(paste("\nnumber of seroconverters with innacurate months & days, n=", nrow(df.serocon.nacc.mody)))
+		if(nrow(df.serocon.nacc.mody))
+		{
+			tmp							<- as.POSIXlt(df.serocon.nacc.mody[,NegT] )
+			tmp$mon						<- 0
+			df.serocon.nacc.mody[,NegT:=as.Date(tmp)]
+		}
+		df.serocon.nacc					<- rbind(df.serocon.nacc.dy, df.serocon.nacc.mody)
+	}
+	df.serocon					<- rbind(df.serocon.acc, df.serocon.nacc)		
 	if(verbose) cat(paste("\nnumber of seroconverters with at least 1 preceeding dead HIV+",nrow(df.serocon)))
 	#for each seq of seroconverter, extract HIV+ seqs that are dead before seroconversion
 	if( any(as.logical(df.serocon[,is.na(NegT)])) )	warning("Found accurate seroconverters with missing NegT")		

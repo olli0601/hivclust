@@ -282,7 +282,8 @@ if(length(args))
 					GENDISTMAT				= "hivc.prog.get.geneticdist",
 					PRECLUST				= "hivc.prog.precompute.clustering",
 					CLUST					= "hivc.prog.get.clustering",
-					CLUSTTPTN				= "hivc.prog.get.clustering.TPTN"
+					CLUSTTPTN				= "hivc.prog.get.clustering.TPTN",
+					CLUSTMSM				= "hivc.prog.get.clustering.MSM"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)

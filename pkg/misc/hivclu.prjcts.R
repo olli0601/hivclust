@@ -2536,6 +2536,231 @@ project.hivc.clustering.computeclusterstatistics.fordistbrl<- function(thresh, c
 	print(clusters.info.brl.sd)	
 }		
 ######################################################################################
+hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
+{
+	verbose		<- 1
+	resume		<- 1
+	indir		<- paste(DATA,"tmp",sep='/')		
+	infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"			
+	insignat	<- "Thu_Aug_01_17/05/23_2013"
+	indircov	<- paste(DATA,"derived",sep='/')
+	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	opt.brl		<- "dist.brl.casc" 
+	thresh.brl	<- 0.096
+	thresh.bs	<- 0.8
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									indircov= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indircov<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									infilecov= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilecov<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,8),
+									opt.brl= return(substr(arg,10,nchar(arg))),NA)	}))
+		if(length(tmp)>0) opt.brl<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									thresh.bs= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) thresh.bs<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,11),
+									thresh.brl= return(as.numeric(substr(arg,13,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) thresh.brl<- tmp[1]		
+	}	
+	if(verbose)
+	{
+		print(indir)
+		print(infile)
+		print(insignat)
+		print(indircov)
+		print(infilecov)
+		print(resume)
+		print(opt.brl)
+		print(thresh.brl)
+		print(thresh.bs)		
+	}	
+	stop()
+	if(resume)												#//load if there is R Master data.table
+	{
+		outdir			<- indir
+		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
+		outsignat		<- insignat	
+		file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')		
+		options(show.error.messages = FALSE)		
+		readAttempt<-try(suppressWarnings(load(file)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))			
+		options(show.error.messages = TRUE)		
+	}
+	if(!resume || inherits(readAttempt, "try-error"))
+	{			
+		#
+		# precompute clustering stuff		
+		#
+		if(is.null(clu.pre))
+		{
+			argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
+			argv		<<- unlist(strsplit(argv,' '))
+			clu.pre		<- hivc.prog.precompute.clustering()
+		}
+		if(0)
+		{
+			clu.pre$df.seqinfo<- merge(df.all, subset(clu.pre$df.seqinfo,select=c(FASTASampleCode, Node)), all.y=1, by="FASTASampleCode")
+			ph<- clu.pre$ph; dist.brl.max<- clu.pre$dist.brl.max; dist.brl.med<- clu.pre$dist.brl.med; dist.brl.casc<- clu.pre$dist.brl.casc; ph.node.bs<- clu.pre$ph.node.bs; ph.linked<- clu.pre$ph.linked; ph.unlinked.info<- clu.pre$ph.unlinked.info; ph.unlinked<- clu.pre$ph.unlinked; df.seqinfo<- clu.pre$df.seqinfo; unlinked.byspace<- clu.pre$unlinked.byspace; unlinked.bytime<- clu.pre$unlinked.bytime; linked.bypatient<- clu.pre$linked.bypatient	
+			save(ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient, file="/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp/ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100_preclust_Thu_Aug_01_17:05:23_2013.R")
+		}
+		#
+		#precompute clustering stuff for particular thresholds etc	
+		argv		<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl, thresh.brl, thresh.bs, resume=resume)				 
+		argv		<<- unlist(strsplit(argv,' '))
+		clu			<- hivc.prog.get.clustering()
+		if(0)
+		{
+			clu$df.seqinfo<- merge(clu.pre$df.seqinfo,subset(clu$df.seqinfo,select=c(FASTASampleCode, cluster)), all.y=1, by="FASTASampleCode")
+			set(clu$df.seqinfo, which( clu$df.seqinfo[,substr(FASTASampleCode,1,2)=="TN"] ), "CountryInfection", "FRGNTN")			
+			set(clu$df.seqinfo, which( clu$df.seqinfo[,substr(FASTASampleCode,1,8)=="PROT+P51"] ), "CountryInfection", "FRGN")
+			df.seqinfo<- clu$df.seqinfo; clustering<- clu$clustering; clusters.tp<- clu$clusters.tp; clusters.tn<- clu$clusters.tn
+			save(df.seqinfo, clustering, clusters.tp, clusters.tn,file="/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp/ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100_clust_dist.brl.casc_bs80_brl9.6_Thu_Aug_01_17:05:23_2013.R")		
+		}
+		#
+		# remove singletons
+		#
+		if(verbose) cat(paste("\nnumber of seq in tree is n=", nrow(clu$df.cluinfo)))
+		df.cluinfo	<- subset(clu$df.seqinfo, !is.na(cluster) )
+		if(verbose) cat(paste("\nnumber of seq in clusters is n=", nrow(df.cluinfo)))
+		if(verbose) cat(paste("\nnumber of clusters is n=", length(unique(df.cluinfo[,cluster]))))
+		#
+		# remove within patient clusters
+		#
+		tmp			<- subset(df.cluinfo[,list(clu.is.bwpat=length(unique(Patient))>1),by="cluster"], clu.is.bwpat, cluster )
+		df.cluinfo	<- merge(tmp, df.cluinfo, by="cluster", all.x=1)
+		if(verbose) cat(paste("\nnumber of seq in clusters between patients is n=", nrow(df.cluinfo)))
+		if(verbose) cat(paste("\nnumber of clusters between patients is n=", length(unique(df.cluinfo[,cluster]))))				
+		if(0)	#plot clusters that have multiple foreign infections
+		{
+			outdir			<- indir
+			outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"multifrgninfection",sep='')
+			outsignat		<- insignat									
+			hivc.clu.getplot.multifrgninfection(clu.pre$ph, clu$clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''))
+		}					
+		if(0)	#plot clusters with mixed exposure group
+		{			
+			outdir		<- indir
+			outfile		<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"mixedexpgr",sep='')
+			outsignat	<- insignat		
+			hivc.clu.getplot.mixedexposuregroup( clu.pre$ph, clu$clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep='') )
+		}	
+		#
+		# remove clusters with all seq coming from frgn infection
+		#
+		tmp			<- hivc.clu.getplot.excludeallmultifrgninfection(clu.pre$ph, clu$clustering, df.cluinfo )
+		ph			<- tmp$cluphy
+		df.cluinfo	<- tmp$cluphy.df
+		clustering	<- tmp$cluphy.clustering		
+		#
+		#get in-country clusters. this splits clusters with a foreign sequence
+		#		
+		outdir			<- indir
+		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"incountry",sep='')
+		outsignat		<- insignat									
+		#ph			<- clu.pre$ph; clustering	<- clu$clustering; plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); char.frgn  	='CountryInfection=="FRGN"'; char.frgntn	='CountryInfection=="FRGNTN"'; 
+		incountry		<- hivc.clu.getplot.incountry(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''))
+		ph				<- incountry$cluphy
+		clustering		<- incountry$clustering
+		df.cluinfo		<- incountry$df.cluinfo		
+		#
+		# get msm exposure group clusters. this splits clusters with HET-F
+		#
+		set(df.cluinfo, which( df.cluinfo[,Trm%in%c("BLOOD","BREAST","PREG","NEEACC")] ), "Trm", "OTH" )
+		set(df.cluinfo, which( df.cluinfo[,Trm=="HETfa"] ), "Trm", "HET" )		
+		set(df.cluinfo, NULL, "Trm", factor(df.cluinfo[,Trm]) )		
+		#ph<- incountry$cluphy; 		plot.file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); levels.msm=c("BI","MSM","IDU","NA"); levels.het=c("BI","HET","IDU","NA"); levels.mixed=c("BI","MSM","HET","IDU","NA"); levels.oth="OTH"
+		outdir			<- indir
+		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
+		outsignat		<- insignat							
+		msm				<- hivc.clu.getplot.msmexposuregroup(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''))		
+		#
+		# collapse within patient subclades in each subtree
+		#
+		msm				<- hivc.clu.collapse.monophyletic.withinpatientseq(msm$cluphy.subtrees, msm$cluphy.df )
+		ph				<- msm$cluphy
+		df.cluinfo		<- msm$cluphy.df
+		cluphy.subtrees	<- msm$cluphy.subtrees		
+		clustering		<- msm$cluphy.clustering
+		#
+		# get statistics of clusters that describe acute/early infection, branch lengths (#mutations)
+		#				
+		msm.brl.bwpat				<- hivc.clu.brl.bwpat(cluphy.subtrees, df.cluinfo)
+		tmp							<- sapply(msm.brl.bwpat, function(x) c(median(na.omit(x)), sd(na.omit(x))))
+		if(any(is.na(tmp[1,])))	stop("unexpected NA in median branch length - all within patient clusters removed ?")
+		msm.clusu.df				<- data.table(cluster= as.numeric( names(cluphy.subtrees) ), clu.bwpat.medbrl= tmp[1,])		
+		# add number of patients in cluster to 'msm$cluphy.df'
+		tmp							<- df.cluinfo[, list(	cluster			= unique(cluster),
+															nseq			= length(FASTASampleCode),
+															FrgnInfection	= (!is.na(CountryInfection) & CountryInfection!="NL")[1],
+															PossAcute		= (isAcute%in%c("Yes","Maybe"))[1],
+															AnyPos_T1		= AnyPos_T1[1]
+													), by="Patient"]
+		tmp							<- tmp[, list(		clu.npat			= length(Patient), 
+														clu.ntip			= sum(nseq),
+														clu.nFrgnInfection	= length(which(FrgnInfection)),
+														clu.fPossAcute		= length(which(PossAcute)) / length(Patient),
+														clu.AnyPos_T1		= min(AnyPos_T1)						
+												), by="cluster"]
+		msm.clusu.df				<- merge(tmp, msm.clusu.df, by="cluster")
+		#
+		# re-order cluphy by branch length and plot
+		#
+		df.cluinfo				<- merge( df.cluinfo, msm.clusu.df, by="cluster" )
+		setkey(df.cluinfo,clu.bwpat.medbrl)											#sort clusters by median branch length
+		cluphy.subtrees			<- lapply( as.character(unique(df.cluinfo[,cluster])), function(name) cluphy.subtrees[[name]] )
+		names(cluphy.subtrees)	<- as.character(unique(df.cluinfo[,cluster]))
+		#
+		# plot
+		#		
+		outdir			<- indir
+		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_bybwpatmedbrl",sep='')
+		outsignat		<- insignat									
+		tmp				<- hivc.clu.polyphyletic.clusters(df.cluinfo, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=35, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
+		cluphy			<- tmp$cluphy
+		#
+		# save
+		#
+		outdir			<- indir
+		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
+		outsignat		<- insignat	
+		file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')
+		if(verbose)	cat(paste("\nsave msm output to",file))
+		save(df.cluinfo, cluphy.subtrees, clustering, cluphy, file=file)
+	}
+	list(df.cluinfo=df.cluinfo, cluphy=cluphy, cluphy.subtrees=cluphy.subtrees, clustering=clustering)
+}
+######################################################################################
 hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 {
 	indir		<- paste(DATA,"tmp",sep='/')		
@@ -3192,7 +3417,7 @@ project.hivc.clustering<- function(dir.name= DATA)
 		stop()
 	}
 	if(0)
-	{
+	{		
 		verbose		<- 1
 		resume		<- 1
 		#
@@ -3241,148 +3466,9 @@ project.hivc.clustering<- function(dir.name= DATA)
 		hivc.clu.plot.tptn(stat.cmp.x, stat.cmp.y, paste(outdir, '/', infile,"_clusttptn_cascmax","_",select.x,"_",select.y,'_',gsub('/',':',outsignat),".pdf",sep=''), cols, xlab= "#FP (among all)", ylab= "%coverage (among epi)",labels= as.numeric(colnames(stat.cmp.x)), verbose=1)		
 	}
 	if(1)
-	{	
-		verbose		<- 1
-		resume		<- 1
-		#
-		# precompute clustering stuff		
-		#
-		indir		<- paste(DATA,"tmp",sep='/')		
-		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
-		insignat	<- "Sat_Jun_16_17/23/46_2013"
-		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"			
-		insignat	<- "Thu_Aug_01_17/05/23_2013"
-		indircov	<- paste(DATA,"derived",sep='/')
-		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"							
-		argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
-		argv		<<- unlist(strsplit(argv,' '))
-		clu.pre		<- hivc.prog.precompute.clustering()
-		#clu.pre$df.seqinfo<- merge(df.all, subset(clu.pre$df.seqinfo,select=c(FASTASampleCode, Node)), all.y=1, by="FASTASampleCode")
-		#ph<- clu.pre$ph; dist.brl.max<- clu.pre$dist.brl.max; dist.brl.med<- clu.pre$dist.brl.med; dist.brl.casc<- clu.pre$dist.brl.casc; ph.node.bs<- clu.pre$ph.node.bs; ph.linked<- clu.pre$ph.linked; ph.unlinked.info<- clu.pre$ph.unlinked.info; ph.unlinked<- clu.pre$ph.unlinked; df.seqinfo<- clu.pre$df.seqinfo; unlinked.byspace<- clu.pre$unlinked.byspace; unlinked.bytime<- clu.pre$unlinked.bytime; linked.bypatient<- clu.pre$linked.bypatient	
-		#save(ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient, file="/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp/ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100_preclust_Thu_Aug_01_17:05:23_2013.R")
-		
-		#precompute clustering stuff for particular thresholds etc
-		opt.brl		<- "dist.brl.casc" 
-		thresh.brl	<- 0.096
-		thresh.bs	<- 0.8		
-		argv		<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl, thresh.brl, thresh.bs, resume=resume)				 
-		argv		<<- unlist(strsplit(argv,' '))
-		clu			<- hivc.prog.get.clustering()
-		#clu$df.seqinfo<- merge(clu.pre$df.seqinfo,subset(clu$df.seqinfo,select=c(FASTASampleCode, cluster)), all.y=1, by="FASTASampleCode")
-		#set(clu$df.seqinfo, which( clu$df.seqinfo[,substr(FASTASampleCode,1,2)=="TN"] ), "CountryInfection", "FRGNTN")			
-		#set(clu$df.seqinfo, which( clu$df.seqinfo[,substr(FASTASampleCode,1,8)=="PROT+P51"] ), "CountryInfection", "FRGN")
-		#df.seqinfo<- clu$df.seqinfo; clustering<- clu$clustering; clusters.tp<- clu$clusters.tp; clusters.tn<- clu$clusters.tn
-		#save(df.seqinfo, clustering, clusters.tp, clusters.tn,file="/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp/ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100_clust_dist.brl.casc_bs80_brl9.6_Thu_Aug_01_17:05:23_2013.R")
-	
-		#
-		# remove singletons
-		#
-		if(verbose) cat(paste("\nnumber of seq in tree is n=", nrow(clu$df.cluinfo)))
-		df.cluinfo	<- subset(clu$df.seqinfo, !is.na(cluster) )
-		if(verbose) cat(paste("\nnumber of seq in clusters is n=", nrow(df.cluinfo)))
-		if(verbose) cat(paste("\nnumber of clusters is n=", length(unique(df.cluinfo[,cluster]))))
-		#
-		# remove within patient clusters
-		#
-		tmp			<- subset(df.cluinfo[,list(clu.is.bwpat=length(unique(Patient))>1),by="cluster"], clu.is.bwpat, cluster )
-		df.cluinfo	<- merge(tmp, df.cluinfo, by="cluster", all.x=1)
-		if(verbose) cat(paste("\nnumber of seq in clusters between patients is n=", nrow(df.cluinfo)))
-		if(verbose) cat(paste("\nnumber of clusters between patients is n=", length(unique(df.cluinfo[,cluster]))))				
-		if(0)	#plot clusters that have multiple foreign infections
-		{
-			outdir			<- indir
-			outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"multifrgninfection",sep='')
-			outsignat		<- insignat									
-			hivc.clu.getplot.multifrgninfection(clu.pre$ph, clu$clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''))
-		}			
-		if(0)	#plot merged clusters that have shared patients
-		{					
-			outdir			<- indir
-			outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"sharingpatclu",sep='')
-			outsignat		<- insignat									
-			tmp				<- hivc.clu.getplot.potentialsuperinfections(clu.pre$ph, clu$clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep='') )		 
-		}
-		if(0)	#plot clusters with mixed exposure group
-		{			
-			outdir		<- indir
-			outfile		<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"mixedexpgr",sep='')
-			outsignat	<- insignat		
-			hivc.clu.getplot.mixedexposuregroup( clu.pre$ph, clu$clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep='') )
-		}	
-		#
-		# remove clusters with all seq coming from frgn infection
-		#
-		tmp			<- hivc.clu.getplot.excludeallmultifrgninfection(clu.pre$ph, clu$clustering, df.cluinfo )
-		ph			<- tmp$cluphy
-		df.cluinfo	<- tmp$cluphy.df
-		clustering	<- tmp$cluphy.clustering		
-		#
-		#get in-country clusters. this splits clusters with a foreign sequence
-		#		
-		outdir			<- indir
-		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"incountry",sep='')
-		outsignat		<- insignat									
-		#ph			<- clu.pre$ph; clustering	<- clu$clustering; plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); char.frgn  	='CountryInfection=="FRGN"'; char.frgntn	='CountryInfection=="FRGNTN"'; 
-		incountry		<- hivc.clu.getplot.incountry(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''))
-		ph				<- incountry$cluphy
-		clustering		<- incountry$clustering
-		df.cluinfo		<- incountry$df.cluinfo		
-		#
-		# get msm exposure group clusters. this splits clusters with HET-F
-		#
-		set(df.cluinfo, which( df.cluinfo[,Trm%in%c("BLOOD","BREAST","PREG","NEEACC")] ), "Trm", "OTH" )
-		set(df.cluinfo, which( df.cluinfo[,Trm=="HETfa"] ), "Trm", "HET" )		
-		set(df.cluinfo, NULL, "Trm", factor(df.cluinfo[,Trm]) )		
-		ph<- incountry$cluphy; 		plot.file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); levels.msm=c("BI","MSM","IDU","NA"); levels.het=c("BI","HET","IDU","NA"); levels.mixed=c("BI","MSM","HET","IDU","NA"); levels.oth="OTH"
-		outdir			<- indir
-		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
-		outsignat		<- insignat							
-		msm				<- hivc.clu.getplot.msmexposuregroup(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''))		
-		#
-		# collapse within patient subclades in each subtree
-		#
-		msm				<- hivc.clu.collapse.monophyletic.withinpatientseq(msm$cluphy.subtrees, msm$cluphy.df )
-		ph				<- msm$cluphy
-		df.cluinfo		<- msm$cluphy.df
-		cluphy.subtrees	<- msm$cluphy.subtrees		
-		clustering		<- msm$cluphy.clustering
-		#
-		# get statistics of clusters that describe acute/early infection, branch lengths (#mutations)
-		#				
-		msm.brl.bwpat				<- hivc.clu.brl.bwpat(cluphy.subtrees, df.cluinfo)
-		tmp							<- sapply(msm.brl.bwpat, function(x) c(median(na.omit(x)), sd(na.omit(x))))
-		if(any(is.na(tmp[1,])))	stop("unexpected NA in median branch length - all within patient clusters removed ?")
-		msm.clusu.df				<- data.table(cluster= as.numeric( names(cluphy.subtrees) ), clu.bwpat.medbrl= tmp[1,])		
-		# add number of patients in cluster to 'msm$cluphy.df'
-		tmp							<- df.cluinfo[, list(	cluster			= cluster[1],
-															nseq			= length(FASTASampleCode),
-															FrgnInfection	= !is.na(CountryInfection) & CountryInfection!="NL",
-															PossAcute		= isAcute%in%c("Yes","Maybe"),
-															AnyPos_T1		= AnyPos_T1[1]
-															), by="Patient"]
-		tmp							<- tmp[, list(		clu.npat			= length(Patient), 
-														clu.ntip			= sum(nseq),
-														clu.nFrgnInfection	= length(which(FrgnInfection)),
-														clu.fPossAcute		= length(which(PossAcute)) / length(Patient),
-														clu.AnyPos_T1		= min(AnyPos_T1)						
-														), by="cluster"]
-		msm.clusu.df				<- merge(tmp, msm.clusu.df, by="cluster")
-		#
-		# re-order cluphy by branch length and plot
-		#
-		df.cluinfo				<- merge( df.cluinfo, msm.clusu.df, by="cluster" )
-		setkey(df.cluinfo,clu.bwpat.medbrl)											#sort clusters by median branch length
-		cluphy.subtrees			<- lapply( as.character(unique(df.cluinfo[,cluster])), function(name) cluphy.subtrees[[name]] )
-		names(cluphy.subtrees)	<- as.character(unique(df.cluinfo[,cluster]))		
-		outdir			<- indir
-		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_bybwpatmedbrl",sep='')
-		outsignat		<- insignat									
-		tmp				<- hivc.clu.polyphyletic.clusters(df.cluinfo, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=35, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
-		
-		
-		
-		
-		stop()		
+	{
+
+stop()		
 		#get branch lengths between F2F transmissions, where there must be a missed intermediary
 		outdir					<- indir
 		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"hetsamegender",sep='')
@@ -3593,7 +3679,154 @@ project.hivc.clustering<- function(dir.name= DATA)
 		save(ans,check,ph,dist.brl,ph.node.bs,ph.unlinked.seroneg,ph.unlinked.dead, file=file)				
 	}
 }
-
+######################################################################################
+project.hivc.clustering.selectparticularclusters<- function()
+{	
+	if(1)
+	{
+		verbose		<- 1
+		resume		<- 1
+		indir		<- paste(DATA,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"			
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		indircov	<- paste(DATA,"derived",sep='/')
+		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		opt.brl		<- "dist.brl.casc" 
+		thresh.brl	<- 0.096
+		thresh.bs	<- 0.8
+		argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
+		argv		<<- unlist(strsplit(argv,' '))
+		clu.pre		<- hivc.prog.precompute.clustering()
+		argv		<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl, thresh.brl, thresh.bs, resume=resume)				 
+		argv		<<- unlist(strsplit(argv,' '))
+		clu			<- hivc.prog.get.clustering()		
+		#
+		# remove singletons
+		#
+		if(verbose) cat(paste("\nnumber of seq in tree is n=", nrow(clu$df.cluinfo)))
+		df.cluinfo	<- subset(clu$df.seqinfo, !is.na(cluster) )
+		if(verbose) cat(paste("\nnumber of seq in clusters is n=", nrow(df.cluinfo)))
+		if(verbose) cat(paste("\nnumber of clusters is n=", length(unique(df.cluinfo[,cluster]))))
+		#
+		# remove within patient clusters
+		#
+		tmp			<- subset(df.cluinfo[,list(clu.is.bwpat=length(unique(Patient))>1),by="cluster"], clu.is.bwpat, cluster )
+		df.cluinfo	<- merge(tmp, df.cluinfo, by="cluster", all.x=1)
+		#
+		#plot merged clusters that have shared patients
+		#
+		outdir			<- indir
+		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"sharingpatclu",sep='')
+		outsignat		<- insignat									
+		tmp				<- hivc.clu.getplot.potentialsuperinfections(clu.pre$ph, clu$clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep='') )		 		
+		
+	}
+	if(1)
+	{	
+		msm<- hivc.prog.get.clustering.MSM()		
+		#
+		#1) plot clusters with 		small brl / npat 	--> explosive for targeted testing -- mostly acute -- serial or starlike or what ?
+		#
+		df.cluinfo				<- msm$df.cluinfo
+		tmp						<- df.cluinfo[,list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], select=clu.bwpat.medbrl[1]/clu.npat[1]),by="cluster"]
+		cumsum( table( tmp[,clu.npat] ) / nrow(tmp) )
+		tmp						<- subset(tmp, clu.npat>4)
+		tmp						<- subset( tmp, select<quantile( tmp[,select], probs=0.2 ))
+		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
+		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))		
+		cluphy.subtrees			<- lapply( as.character(tmp[,cluster]), function(x)  msm$cluphy.subtrees[[x]]	)
+		names(cluphy.subtrees)	<- as.character(tmp[,cluster])
+		outdir					<- indir
+		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectexplosive",sep='')
+		outsignat				<- insignat									
+		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=10, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
+		cluphy					<- tmp$cluphy
+		#
+		#2) plot clusters with 		npat>4 	very small acute	small brl / npat 	--> explosive for targeted testing -- non - acute
+		#
+		df.cluinfo				<- msm$df.cluinfo
+		tmp						<- df.cluinfo[,list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], select=clu.bwpat.medbrl[1]/clu.npat[1]/clu.npat[1]),by="cluster"]
+		cumsum( table( tmp[,clu.npat] ) / nrow(tmp) )
+		tmp						<- subset(tmp, clu.npat>4)
+		tmp						<- subset( tmp,  clu.fPossAcute<quantile( tmp[,clu.fPossAcute], probs=0.2 ) )
+		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
+		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))		
+		cluphy.subtrees			<- lapply( as.character(tmp[,cluster]), function(x)  msm$cluphy.subtrees[[x]]	)
+		names(cluphy.subtrees)	<- as.character(tmp[,cluster])
+		outdir					<- indir
+		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectlargenonacute",sep='')
+		outsignat				<- insignat									
+		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=10, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
+		#
+		#3) plot clusters with 		high VLI after treat			--> likely to infect -- check manually ?	large clusters are a subset of (2) so plot all
+		#
+		df.cluinfo				<- msm$df.cluinfo
+		tmp						<- df.cluinfo[,	{
+					z			<- which(PosSeqT>AnyT_T1)
+					hlRNA.mx	<- ifelse(length(z), max(lRNA_aTS[z]), 0)
+					hlRNA.sm	<- ifelse(length(z), sum(lRNA_aTS[z]), 0)
+					list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], hlRNA.mx=hlRNA.mx, hlRNA.sm=hlRNA.sm)
+				},by="cluster"]
+		tmp						<- subset( tmp, hlRNA.sm>=quantile(tmp[,hlRNA.sm], probs=0.8) )
+		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
+		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))		
+		cluphy.subtrees			<- lapply( as.character(tmp[,cluster]), function(x)  msm$cluphy.subtrees[[x]]	)
+		names(cluphy.subtrees)	<- as.character(tmp[,cluster])
+		outdir					<- indir
+		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selecthighVLduringtreat",sep='')
+		outsignat				<- insignat									
+		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=15, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.25, pdf.xlim=0.36)
+		#
+		#4) plot clusters with 		long treatment interruptions			--> likely to infect -- check manually ?	large clusters are a subset of (2) so plot all
+		#
+		df.cluinfo				<- msm$df.cluinfo
+		tmp						<- df.cluinfo[,	{
+					z		<- which(!is.na(AnyT_T1))
+					TrI.mx	<- ifelse(length(z),	max(TrImo_bTS[z] + TrImo_aTS[z]), 0)
+					TrI.sm	<- ifelse(length(z),	sum(TrImo_bTS[z] + TrImo_aTS[z]), 0)
+					list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], TrI.mx=TrI.mx, TrI.sm=TrI.sm)
+				},by="cluster"]
+		tmp						<- subset(tmp, TrI.mx>=quantile(tmp[,TrI.mx], probs=0.8)  & clu.fPossAcute<0.7 )
+		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
+		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))		
+		cluphy.subtrees			<- lapply( as.character(tmp[,cluster]), function(x)  msm$cluphy.subtrees[[x]]	)
+		names(cluphy.subtrees)	<- as.character(tmp[,cluster])
+		outdir					<- indir
+		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectLongTRI",sep='')
+		outsignat				<- insignat									
+		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=12, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.27, pdf.xlim=0.36)
+		#
+		#5) plot clusters with 		NegT			--> might help to better understand what is going on ?	
+		#
+		df.cluinfo				<- msm$df.cluinfo
+		tmp						<- df.cluinfo[,	list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], fNegT=length(which(!is.na(NegT))) / clu.ntip[1]),by="cluster"]										
+		tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=0.8) )
+		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
+		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))		
+		cluphy.subtrees			<- lapply( as.character(tmp[,cluster]), function(x)  msm$cluphy.subtrees[[x]]	)
+		names(cluphy.subtrees)	<- as.character(tmp[,cluster])
+		outdir					<- indir
+		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectAllWithNegT",sep='')
+		outsignat				<- insignat									
+		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=10, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
+		#
+		#6) plot clusters with 		long treatment interruptions			--> long TRI vs Acute ?	
+		#		
+		df.cluinfo				<- msm$df.cluinfo
+		tmp						<- df.cluinfo[,	list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], fNegT=length(which(!is.na(NegT))) / clu.ntip[1]),by="cluster"]										
+		tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=0.8) )
+		tmp						<- subset(tmp, clu.npat>3)
+		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
+		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))		
+		cluphy.subtrees			<- lapply( as.character(tmp[,cluster]), function(x)  msm$cluphy.subtrees[[x]]	)
+		names(cluphy.subtrees)	<- as.character(tmp[,cluster])
+		outdir					<- indir
+		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectLargeLongTRI",sep='')
+		outsignat				<- insignat									
+		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=3, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
+	}
+}
+	
 project.hivc.examl<- function(dir.name= DATA)
 {
 	require(ape)
@@ -3839,13 +4072,14 @@ hivc.prog.precompute.clustering<- function()
 	#library(adephylo)
 	library(data.table)	
 	
-	verbose		<- 1
-	resume		<- 0
-	indir		<- paste(DATA,"tmp",sep='/')	
-	infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
-	insignat	<- "Sat_Jun_16_17/23/46_2013"
-	indircov	<- paste(DATA,"derived",sep='/')	
-	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"	
+	verbose				<- 1
+	resume				<- 0
+	use.seroneg.as.is	<- 1	#use with updated "ATHENA_2013_03_AllSeqPatientCovariates"
+	indir				<- paste(DATA,"tmp",sep='/')	
+	infile				<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+	insignat			<- "Sat_Jun_16_17/23/46_2013"
+	indircov			<- paste(DATA,"derived",sep='/')	
+	infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	
 	if(exists("argv"))
 	{
@@ -3916,18 +4150,21 @@ hivc.prog.precompute.clustering<- function()
 		ph.node.bs[is.na(ph.node.bs)]	<- 0
 		ph.node.bs						<- ph.node.bs/100
 		ph$node.label					<- ph.node.bs
-		#
-		#	memory consuming: extract branch length statistic of subtree
-		#
-		if(verbose) cat("\ncompute dist.brl.med")
-		dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
-		gc()
-		if(verbose) cat("\ncompute dist.brl.max")
-		dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
-		gc()
-		if(verbose) cat("\ncompute dist.brl.casc")
-		dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
-		gc()		
+		if(1)
+		{
+			#
+			#	memory consuming: extract branch length statistic of subtree
+			#
+			if(verbose) cat("\ncompute dist.brl.med")
+			dist.brl.med					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=median)
+			gc()
+			if(verbose) cat("\ncompute dist.brl.max")
+			dist.brl.max					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)		#read patristic distances -- this is the expensive step but still does not take very long
+			gc()
+			if(verbose) cat("\ncompute dist.brl.casc")
+			dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
+			gc()		
+		}
 		#
 		#	easy: extract tree specific TP and FN data sets
 		#		
@@ -3937,8 +4174,9 @@ hivc.prog.precompute.clustering<- function()
 		df.seqinfo						<- subset(df.all, !is.na(PosSeqT) )
 		if(verbose) cat(paste("\nfound covariates for patients with non-NA PosSeqT, n=",nrow(df.seqinfo)))
 		if(verbose) cat(paste("\nstart: compute TP and TN data tables for phylogeny"))
-		tmp								<- hivc.phy.get.TP.and.TN(ph, df.seqinfo, verbose=verbose)
+		tmp								<- hivc.phy.get.TP.and.TN(ph, df.seqinfo, verbose=verbose, use.seroneg.as.is= use.seroneg.as.is)		
 		if(verbose) cat(paste("\nend: compute TP and TN data tables for phylogeny"))
+		stop()
 		unlinked.byspace				<- tmp[["unlinked.byspace"]]
 		unlinked.bytime					<- tmp[["unlinked.bytime"]]
 		linked.bypatient				<- tmp[["linked.bypatient"]]	
@@ -4227,7 +4465,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}	
-	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering
+	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
 	{	
 		resume		<- 1
 		verbose		<- 1
@@ -4251,9 +4489,11 @@ hivc.proj.pipeline<- function()
 		cmd			<- paste(cmd, hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=resume),sep='')
 		cmd			<- paste(cmd, hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.max", patient.n=patient.n, resume=resume),sep='')
 		cmd			<- paste(cmd, hivc.cmd.clustering(indir, infile, insignat, opt.brl, thresh.brl, thresh.bs, resume=resume),sep='')		
+		cmd			<- paste(cmd, hivc.cmd.clustering.msm(indir, infile, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=resume),sep='')			
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="15850mb",  hpc.nproc=1)
+		
 		cat(cmd)
-		stop()
+		#stop()
 		outdir		<- paste(dir.name,"tmp",sep='/')
 		outfile		<- paste("clust",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
