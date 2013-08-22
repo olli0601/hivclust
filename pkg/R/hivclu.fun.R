@@ -190,6 +190,13 @@ hivc.db.getlRNA.T1andTS<- function(df.cross, lRNA.bTS.quantile= 0.75, lRNA.aTS.q
 	ans	
 }
 ######################################################################################
+hivc.db.getcoverage<- function(df)
+{
+	ans	<- paste( c("df[,list(", paste( 	sapply(colnames(df), function(x) paste(x,"= length(which(!is.na(",x,")))",sep='')), collapse=",", sep='' ),")]") , collapse='',sep='')
+	ans	<- eval(parse(text=ans))	/ nrow(df)
+	ans
+}
+######################################################################################
 hivc.db.getCD4.T1andTS<- function(df.cross, verbose=1, CD4.HIVNeg.min= 500, CD4.bTS.quantile= 0.75, CD4.aTS.quantile= 0.25)
 {
 	if(verbose)	cat(paste("\nCD4.HIVNeg.min is",CD4.HIVNeg.min))

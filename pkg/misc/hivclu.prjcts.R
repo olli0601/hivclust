@@ -399,6 +399,21 @@ project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 		save(df.all,file=file.out)
 		str(df.all)		
 	}
+	#compute coverage of all data covariates	
+	df			<- df.all
+	#coverage by seq
+	df.covbyseq	<- hivc.db.getcoverage(df)
+	
+	#coverage by patient
+	df			<- subset(df.all, select= c(	Patient, DateBorn, Sex, CountryBorn, RegionOrigin, DateDied, Subtype, isAcute, 
+												NegT, NegT_Acc, PosT, PosT_Acc, CountryInfection, Trm,  DateLastContact, RegionHospital, DateFirstEverCDCC,
+												isDead, PoslRNA_T1, lRNA_T1, PosCD4_T1, CD4_T1, AnyT_T1))
+	setkey(df, Patient)
+	df			<- unique(df)
+	df.covbypat	<- hivc.db.getcoverage(df)							
+	#compute number of entries / year, average time of follow up per patient for RNA & CD4
+
+
 	stop()
 	#compute file All1stPatientCovariates
 	file.out		<- paste(dir.name,"derived/ATHENA_2013_03_All1stPatientCovariates.R",sep='/')
@@ -793,6 +808,66 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	set(df, tmp, "CD4A", NA)	
 	tmp		<- which(df[, Patient=="M26334" & PosCD4=="2008-09-11" & CD4A==2230])
 	if(verbose) cat(paste("\nnumber of entries with corrected CD4 units Patient==M26334 & PosCD4==2008-09-11 & CD4A==2230, n=",length(tmp),"double entry, remove"))
+	set(df, tmp, "CD4A", NA)		
+	tmp		<- which(df[, 	Patient=='M26293' & PosCD4=='2003-09-12' & CD4A==800])
+	if(verbose) cat(paste("\nnumber of entries with corrected PosCD4  Patient=='M26293' & PosCD4=='2003-09-12' & CD4A==800, n=",length(tmp),"set to 16/9/2003"))
+	set(df, tmp, "PosCD4", as.Date('2003-09-16'))
+	tmp		<- which(df[, 	Patient=='M11233' & PosCD4=='2001-01-10' & CD4A==24])
+	if(verbose) cat(paste("\nnumber of entries with corrected PosCD4  Patient=='M11233' & PosCD4=='2001-01-10' & CD4A==24, n=",length(tmp),"set to 25/4/1996"))
+	set(df, tmp, "PosCD4", as.Date('1996-04-25'))
+	tmp		<- which(df[, 	Patient=='M13124' & PosCD4=='1998-08-07'])
+	if(verbose) cat(paste("\nnumber of entries with corrected PosCD4  Patient=='M13124' & PosCD4=='1998-08-07', n=",length(tmp),"set to 7/9/1998"))
+	set(df, tmp, "PosCD4", as.Date('1998-09-07'))	
+	tmp		<- which(df[, 	Patient=='M13124' & PosCD4=='2001-09-14'])
+	if(verbose) cat(paste("\nnumber of entries with corrected PosCD4  Patient=='M13124' & PosCD4=='2001-09-14', n=",length(tmp),"set to 14/9/2000"))
+	set(df, tmp, "PosCD4", as.Date('2000-09-14'))
+	tmp		<- which(df[, 	Patient=="M10544" & PosCD4=="2003-02-17" & CD4A==850	|
+							Patient=="M11099" & PosCD4=="1997-12-30" & CD4A==1240	|
+							Patient=="M11133" & PosCD4=="2003-06-16" & CD4A==170	|
+							Patient=="M11137" & PosCD4=="2003-06-25" & CD4A==460	|
+							Patient=="M11167" & PosCD4=="2006-09-04" & CD4A==400	|	
+							Patient=="M11351" & PosCD4=="1996-10-08" & CD4A==150	|
+							Patient=="M11713" & PosCD4=="1996-07-03" & CD4A==0.37	|
+							Patient=="M12577" & PosCD4=="2000-09-25" & CD4A==210	|
+							Patient=="M12884" & PosCD4=="1997-11-04" & CD4A==350	|
+							Patient=="M13051" & PosCD4=="1998-06-08" & CD4A==460	|
+							Patient=="M13124" & PosCD4=="2001-10-09" & CD4A==1.17	|
+							Patient=="M13124" & PosCD4=="2003-02-12" & CD4A==0.74	|
+							Patient=="M13124" & PosCD4=="2003-03-21" & CD4A==0.59	|
+							Patient=="M13124" & PosCD4=="2003-06-17" & CD4A==0.61	|
+							Patient=="M13126" & PosCD4=="2001-01-08" & CD4A==0.5	|
+							Patient=="M13126" & PosCD4=="2001-03-05" & CD4A==0.43	|
+							Patient=="M13126" & PosCD4=="2003-01-17" & CD4A==0.48	|
+							Patient=="M13126" & PosCD4=="2003-04-28" & CD4A==0.48	|
+							Patient=="M13126" & PosCD4=="2003-07-24" & CD4A==0.46	|	#no CD4 anymore at 24/7/2003, delete both
+							Patient=="M13126" & PosCD4=="2003-07-24" & CD4A==460	|
+							Patient=="M13298" & PosCD4=="1997-12-11" & CD4A==760	|
+							Patient=="M14834" & PosCD4=="1998-12-10" & CD4A==990	|
+							Patient=="M14945" & PosCD4=="2000-09-20" & CD4A==1620	|
+							Patient=="M14986" & PosCD4=="2001-03-29" & CD4A==640	|
+							Patient=="M14995" & PosCD4=="1999-01-12" & CD4A==370	|
+							Patient=="M15071" & PosCD4=="1999-10-12" & CD4A==100	|
+							Patient=="M15234" & PosCD4=="1998-09-02" & CD4A==25		|
+							Patient=="M15234" & PosCD4=="1998-11-04" & CD4A==32		|
+							Patient=="M15234" & PosCD4=="1998-12-16" & CD4A==35		|
+							Patient=="M16018" & PosCD4=="1998-09-09" & CD4A==1400	|
+							Patient=="M16570" & PosCD4=="2003-06-17" & CD4A==280	|
+							Patient=="M16622" & PosCD4=="2000-09-27" & CD4A==100	|
+							Patient=="M17154" & PosCD4=="2011-01-05" & CD4A==495	|
+							Patient=="M17819" & PosCD4=="2000-03-15" & CD4A==1010	|
+							Patient=="M17951" & PosCD4=="1999-07-22" & CD4A==530	|
+							Patient=="M18712" & PosCD4=="2000-07-31" & CD4A==600	|
+							Patient=="M25530" & PosCD4=="2002-04-09" & CD4A==59		|
+							Patient=="M25530" & PosCD4=="2002-04-19" & CD4A==66		|	
+							Patient=="M28189" & PosCD4=="2007-09-04" & CD4A==31		|
+							Patient=="M30605" & PosCD4=="2011-08-22" & CD4A==83		|
+							Patient=="M31573" & PosCD4=="2011-03-24" & CD4A==0		|	#import from hospital db, remove unlikely entry
+							Patient=="M33353" & PosCD4=="2006-03-22" & CD4A==101	|
+							Patient=="M33924" & PosCD4=="2007-11-01" & CD4A==0		|
+							Patient=="M37294" & PosCD4=="2011-07-18" & CD4A==820	|
+							Patient=="M39055" & PosCD4=="2012-02-06" & CD4A==6850							
+							])
+	if(verbose) cat(paste("\nnumber of entries with incorrect CD4  should be 45, n=",length(tmp),"set to NA"))	
 	set(df, tmp, "CD4A", NA)	
 	#	adjust likely wrong units > 20000
 	tmp		<- which(df[, CD4A>20000])
@@ -2981,7 +3056,7 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 	thresh.bs.select	<- which(thresh.bs %in% c(0.7, 0.75, 0.8, 0.85, 0.9, 0.95) )
 	pch					<- 20 + seq_along(thresh.brl.select)
 	lapply(thresh.brl.select,function(i)
-							{				
+							{												
 								file				<- paste(outdir, paste(infile,"_clustpdf_",opt.brl,"_brl",thresh.brl[i],'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')				
 								pdf(file=file, width=5,height=5)				
 								if( with.singleton )
@@ -4185,7 +4260,7 @@ hivc.prog.precompute.clustering<- function()
 		#
 		#	add node number to df.seqinfo
 		#
-		df.seqinfo						<- merge( df.all, data.table(Node=seq_len(Ntip(ph)), FASTASampleCode=ph$tip.label, key="FASTASampleCode" ), all.y=1)
+		df.seqinfo						<- merge( df.all, data.table(Node=seq_len(Ntip(ph)), FASTASampleCode=ph$tip.label), all.y=1, by="FASTASampleCode")
 		#
 		#	memory consuming: compute branch length matrix between tips
 		#
