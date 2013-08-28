@@ -383,6 +383,16 @@ hivc.seq.create.referencepairs<- function(dir.name= DATA)
 }
 
 #' @export
+hivc.seq.write.dna.nexus<- function(seq.DNAbin.mat, file, nexus.format="DNA",nexus.gap='-', nexus.missing='?', nexus.interleave="NO")
+{		
+	tmp		<- cbind( rownames(seq.DNAbin.mat), apply( as.character( seq.DNAbin.mat ), 1, function(x) paste(x,sep='',collapse='')  ) )
+	tmp		<- apply(tmp, 1, function(x) paste(x, collapse='\t', sep=''))
+	tmp		<- paste(tmp, collapse='\n',sep='')
+	header	<- paste( "#NEXUS\nBEGIN DATA;\nDIMENSIONS NTAX=",nrow(seq.DNAbin.mat)," NCHAR=",ncol(seq.DNAbin.mat),";\nFORMAT DATATYPE=",nexus.format," MISSING=",nexus.missing," GAP=",nexus.gap," INTERLEAVE=",nexus.interleave,";\nMATRIX\n", collapse='',sep='')
+	cat(paste(header, tmp, "\n;\nEND;\n", sep=''), file=file)
+}		
+
+#' @export
 hivc.seq.write.dna.phylip<- function(seq.DNAbin.mat, file)
 {		
 	tmp<- cbind( rownames(seq.DNAbin.mat), apply( as.character( seq.DNAbin.mat ), 1, function(x) paste(x,sep='',collapse='')  ) )

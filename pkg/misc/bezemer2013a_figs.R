@@ -493,7 +493,7 @@ project.bezemer2013a.figs.v130821<- function()
 	#
 	#	determine if network concentrated in region origin, and where
 	#
-	clu.reg				<- table( df[,cluster,RegionOrigin] )
+	clu.reg				<- table( subset(df,RegionHospital!="unknown")[,cluster,RegionHospital] )
 	clu.reg				<- clu.reg / matrix(apply(clu.reg, 2, sum), nrow=nrow(clu.reg), ncol=ncol(clu.reg), byrow=1)				
 	#ALTERNATIVE DEFINITION
 	#clu.regconc	<- apply( clu.reg, 2, function(x)	any(x>0.4) && length(which(x!=0))>2 ) |
@@ -529,11 +529,11 @@ project.bezemer2013a.figs.v130821<- function()
 	df[,time:=fpos1 ]		
 	set(df, which(df[,!IsExpGrConcentrated | is.na(IsExpGrConcentrated)]), "ExpGrConcentrated", "mixed")
 	tmp					<- numeric(nrow(df))	
-	tmp2				<- c("HT","MSM","DU","mixed")
+	tmp2				<- c("DU","HT","MSM","mixed")
 	for( i in seq_along(tmp2))
 		tmp[which(df[,ExpGrConcentrated==tmp2[i]])]	<- i
 	df[,sort1:=factor(tmp, levels=1:4, labels=tmp2) ]
-	df[,sort2:=cluster.PosT]
+	df[,sort2:=max(duration,na.rm=1)-duration]
 	#	
 	xlim				<- range( df[,fpos1], na.rm=1 )		
 	#extract clusters one by one in desired order, with all the information for plotting
@@ -586,45 +586,6 @@ project.bezemer2013a.figs.v130821<- function()
 	mtext(text="patients\nnot\nclustering", 2, at=mean(c(-47,-27)), las=1, cex=0.7)	
 	dev.off()
 	#
-	#	plot by RegionHospital
-	#
-	ncols				<- length(levels(df[,RegionHospital]))
-	cols				<- c(brewer.pal(9,"Set1"),"grey50")		
-	cols				<- sapply(cols, function(x) my.fade.col(x,0.8))[c(1,3,2,4,5,6,7,10)]	
-	file				<- paste(dir.name,paste(outfile,"_RegionHospital_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
-	cat(paste("\nwrite plot to",file))
-	pdf(file,width=7,height=12)
-	par(mar=c(4,4,0,0))	
-	plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,ylab=ylab, xaxt='n',yaxt='n',xlab=xlab)
-	axis.Date(1, seq.Date(xlim[1],xlim[2],by="year"), labels = TRUE )
-	dummy	<- sapply(seq_along(clusters),function(i)
-			{							
-				cluster.cex	<- cex.points  * clusters[[i]][1,cluster.cex]
-				cluster.ix	<- order(as.numeric(clusters[[i]][,time]))
-				cluster.x	<- as.numeric(clusters[[i]][,time])[cluster.ix]										
-				cluster.y	<- rep(i,nrow(clusters[[i]]))
-				cluster.z	<- as.numeric(clusters[[i]][,RegionHospital])[cluster.ix]
-				#print(clusters[[i]][,covariate])
-				#if(cluster.z[1]!=4)
-				#lines( c(cluster.x[1],xlim[2]), rep(i,2), col=cols[ cluster.z[1] ] )					
-				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )										
-			})	
-	
-	c.lines	<- sapply(clusters,function(x) x[1,sort1])
-	c.lines	<- c( which(diff(as.numeric(c.lines))!=0), length(clusters) )
-	dummy	<- lapply(c(0,c.lines),function(x)		abline(h=x+0.5, lty=3, lwd=0.75, col="grey50")			)	
-	mtext(text=levels(df[,sort1]), 2, at=c(0,c.lines[-length(c.lines)]) + diff( c(0,c.lines) )/2, las=1, cex=0.7)	
-	legend(xlim[1]-600,ylim[2]*0.9,bty='n',pt.bg=cols,pch=21,legend=levels(df[,RegionHospital]), col=rep("transparent",ncols))			
-	#plot small clusters	
-	tmp	<- runif(nrow(clusters.small), min=-23,max=-3)
-	points( as.numeric(clusters.small[,fpos1]), tmp, col=cols[ as.numeric(clusters.small[,RegionHospital]) ], pch=19, cex= cex.points*0.4 )
-	mtext(text="patients\nclusters<10", 2, at=mean(c(-23,-3)), las=1, cex=0.7)
-	#plot singletons
-	tmp	<- runif(nrow(singletons), min=-47,max=-27)
-	points( as.numeric(singletons[,fpos1]), tmp, col=cols[ as.numeric(singletons[,RegionHospital]) ], pch=19, cex= cex.points*0.4 )
-	mtext(text="patients\nnot\nclustering", 2, at=mean(c(-47,-27)), las=1, cex=0.7)	
-	dev.off()
-	#
 	#	plot by region origin
 	#
 	ncols				<- length(levels(df[,RegionOrigin]))
@@ -665,9 +626,8 @@ project.bezemer2013a.figs.v130821<- function()
 	dev.off()	
 	#
 	#	plot by exposure group
-	#
-	df[,covariate:=rout]
-	ncols				<- length(levels(df[,covariate]))
+	#	
+	ncols				<- length(levels(df[,rout]))
 	cols				<- c(brewer.pal(ncols-1,"Set1"),"grey50")		
 	cols				<- sapply(cols, function(x) my.fade.col(x,0.7))[c(1,3,2,4,5)]	
 	file				<- paste(dir.name,paste(outfile,"_rout_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
@@ -682,7 +642,7 @@ project.bezemer2013a.figs.v130821<- function()
 				cluster.ix	<- order(as.numeric(clusters[[i]][,time]))
 				cluster.x	<- as.numeric(clusters[[i]][,time])[cluster.ix]										
 				cluster.y	<- rep(i,nrow(clusters[[i]]))
-				cluster.z	<- as.numeric(clusters[[i]][,covariate])[cluster.ix]
+				cluster.z	<- as.numeric(clusters[[i]][,rout])[cluster.ix]
 				#print(clusters[[i]][,covariate])
 				#if(cluster.z[1]!=4)
 				#lines( c(cluster.x[1],xlim[2]), rep(i,2), col=cols[ cluster.z[1] ] )					
@@ -693,25 +653,75 @@ project.bezemer2013a.figs.v130821<- function()
 	c.lines	<- c( which(diff(as.numeric(c.lines))!=0), length(clusters) )
 	dummy	<- lapply(c(0,c.lines),function(x)		abline(h=x+0.5, lty=3, lwd=0.75, col="grey50")			)	
 	mtext(text=levels(df[,sort1]), 2, at=c(0,c.lines[-length(c.lines)]) + diff( c(0,c.lines) )/2, las=1, cex=0.7)	
-	legend(xlim[1]-600,ylim[2]*0.9,bty='n',pt.bg=cols,pch=21,legend=levels(df[,covariate]), col=rep("transparent",ncols))			
+	legend(xlim[1]-600,ylim[2]*0.9,bty='n',pt.bg=cols,pch=21,legend=levels(df[,rout]), col=rep("transparent",ncols))			
 	#plot small clusters	
 	tmp	<- runif(nrow(clusters.small), min=-23,max=-3)
-	points( as.numeric(clusters.small[,fpos1]), tmp, col=cols[ as.numeric(clusters.small[,covariate]) ], pch=19, cex= cex.points*0.4 )
+	points( as.numeric(clusters.small[,fpos1]), tmp, col=cols[ as.numeric(clusters.small[,rout]) ], pch=19, cex= cex.points*0.4 )
 	mtext(text="patients\nclusters<10", 2, at=mean(c(-23,-3)), las=1, cex=0.7)
 	#plot singletons
 	tmp	<- runif(nrow(singletons), min=-47,max=-27)
-	points( as.numeric(singletons[,fpos1]), tmp, col=cols[ as.numeric(singletons[,covariate]) ], pch=19, cex= cex.points*0.4 )
+	points( as.numeric(singletons[,fpos1]), tmp, col=cols[ as.numeric(singletons[,rout]) ], pch=19, cex= cex.points*0.4 )
 	mtext(text="patients\nnot\nclustering", 2, at=mean(c(-47,-27)), las=1, cex=0.7)	
 	dev.off()	
-	
-	
-	
-	tmp					<- numeric(nrow(df))		
-	tmp2				<- c("NL","Europe","Latin","NLseAnt","other")
+	#
+	#	plot by RegionHospital
+	#
+	df[,time:=fpos1 ]		
+	set(df, which(df[,!IsRegionConcentrated | is.na(IsRegionConcentrated)]), "RegionConcentrated", "mixed")
+	tmp					<- numeric(nrow(df))	
+	tmp2				<- c("NH","CU","Ea","No","So","UT","ZH","mixed")
 	for( i in seq_along(tmp2))
-		tmp[which(df[,RegionOrigin==tmp2[i]])]	<- i
-	df[,covariate:=factor(tmp, levels=1:5, labels=tmp2) ]
+		tmp[which(df[,RegionConcentrated==tmp2[i]])]	<- i
+	df[,sort1:=factor(tmp, levels=1:8, labels=tmp2) ]
+	df[,sort2:=max(duration,na.rm=1)-duration]
+	#	
+	xlim				<- range( df[,fpos1], na.rm=1 )		
+	#extract clusters one by one in desired order, with all the information for plotting
+	tmp					<- df[,list(sort1=sort1[1], sort2=sort2[1]),by=cluster]
+	clusters.sortby1	<- as.numeric( tmp[,sort1] )
+	clusters.sortby2	<- as.numeric( tmp[,sort2] )
+	clusters.sortby		<- order(clusters.sortby1,clusters.sortby2, decreasing=F)
+	clusters			<- tmp[clusters.sortby,cluster]														
+	clusters			<- lapply(clusters,function(x)	subset(df,cluster==x,c(time, rout, RegionOrigin, RegionHospital, hcv, cluster.cex, sort1))		)
+	ylim				<- c(-50,length(clusters))
+	xlim[1]				<- xlim[1]-700	
+
+	ncols				<- length(levels(df[,RegionHospital]))
+	cols				<- c(brewer.pal(9,"Set1"),"grey50")		
+	cols				<- sapply(cols, function(x) my.fade.col(x,0.8))[c(1,3,2,4,5,6,7,10)]	
+	file				<- paste(dir.name,paste(outfile,"_RegionHospital_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
+	cat(paste("\nwrite plot to",file))
+	pdf(file,width=7,height=12)
+	par(mar=c(4,4,0,0))	
+	plot(1,1,type='n',bty='n',xlim=xlim,ylim=ylim,ylab=ylab, xaxt='n',yaxt='n',xlab=xlab)
+	axis.Date(1, seq.Date(xlim[1],xlim[2],by="year"), labels = TRUE )
+	dummy	<- sapply(seq_along(clusters),function(i)
+			{							
+				cluster.cex	<- cex.points  * clusters[[i]][1,cluster.cex]
+				cluster.ix	<- order(as.numeric(clusters[[i]][,time]))
+				cluster.x	<- as.numeric(clusters[[i]][,time])[cluster.ix]										
+				cluster.y	<- rep(i,nrow(clusters[[i]]))
+				cluster.z	<- as.numeric(clusters[[i]][,RegionHospital])[cluster.ix]
+				#print(clusters[[i]][,covariate])
+				#if(cluster.z[1]!=4)
+				#lines( c(cluster.x[1],xlim[2]), rep(i,2), col=cols[ cluster.z[1] ] )					
+				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )										
+			})	
 	
+	c.lines	<- sapply(clusters,function(x) x[1,sort1])
+	c.lines	<- c( which(diff(as.numeric(c.lines))!=0), length(clusters) )
+	dummy	<- lapply(c(0,c.lines),function(x)		abline(h=x+0.5, lty=3, lwd=0.75, col="grey50")			)	
+	mtext(text=levels(df[,sort1]), 2, at=c(0,c.lines[-length(c.lines)]) + diff( c(0,c.lines) )/2, las=1, cex=0.5)	
+	legend(xlim[1]-600,ylim[2]*1,bty='n',pt.bg=cols,pch=21,legend=levels(df[,RegionHospital]), col=rep("transparent",ncols))			
+	#plot small clusters	
+	tmp	<- runif(nrow(clusters.small), min=-23,max=-3)
+	points( as.numeric(clusters.small[,fpos1]), tmp, col=cols[ as.numeric(clusters.small[,RegionHospital]) ], pch=19, cex= cex.points*0.4 )
+	mtext(text="patients\nclusters<10", 2, at=mean(c(-23,-3)), las=1, cex=0.7)
+	#plot singletons
+	tmp	<- runif(nrow(singletons), min=-47,max=-27)
+	points( as.numeric(singletons[,fpos1]), tmp, col=cols[ as.numeric(singletons[,RegionHospital]) ], pch=19, cex= cex.points*0.4 )
+	mtext(text="patients\nnot\nclustering", 2, at=mean(c(-47,-27)), las=1, cex=0.7)	
+	dev.off()
 	
 }
 
