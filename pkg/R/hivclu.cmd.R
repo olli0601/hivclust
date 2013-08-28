@@ -449,7 +449,7 @@ hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog= PR.BEAST, tmpdir
 		cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
 		tmp		<- paste(tmpdir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
 		cmd		<- paste(cmd,prog[hpcsys]," -strict -working ",tmp,'\n',sep='')	
-		cmd		<- paste(cmd,"cp ",tmpdir,"/* ", indir,'\n',sep='')
+		cmd		<- paste(cmd,"cp -f ",tmpdir,"/* ", indir,'\n',sep='')
 		cmd		<- paste(cmd,"echo \'end ",prog[hpcsys],"\'\n",sep='')
 	}
 	#TODO add mcc tree etc
