@@ -53,6 +53,9 @@ PR.EXAML.EXAML	<- "examl"
 PR.EXAML.BS		<- "ExaML-raxml"
 
 #' @export
+PR.BEAST		<- {tmp<- c("/Applications/BEAST_1.7.5/bin/beast","beast"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp } 
+
+#' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
 
 #' @export
@@ -65,7 +68,7 @@ HPC.CX1.IMPERIAL<- "cx1.hpc.ic.ac.uk"		#this is set to system('domainname',inter
 HPC.MEM			<- "1750mb"
 
 #' @export
-HPC.LOAD		<- "module load intel-suite mpi R/2.15 raxml examl/2013-05-09"
+HPC.LOAD		<- "module load intel-suite mpi R/2.15 raxml examl/2013-05-09 beast/1.7.4"
 
 
 #generate clustalo command
@@ -421,6 +424,41 @@ hivc.cmd.examl.cleanup<- function(outdir, prog= PR.EXAML.EXAML)
 	cmd<- paste(cmd,paste("\necho \'cleaned up after ",prog,"\'\n",sep=''))
 	cmd
 }
+
+#' @export
+hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog= PR.BEAST, tmpdir.prefix="beast")
+{
+	cmd		<- "#######################################################
+# start: run BEAST
+#######################################################"	
+	hpcsys	<- hivc.get.hpcsys()
+	print(hpcsys)
+	if(hpcsys=="debug")						#my MAC - don t use scratch
+	{
+		cmd		<- paste(cmd,paste("\necho \'run ",prog[hpcsys],"\'\n",sep=''))
+		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
+		cmd		<- paste(cmd,prog[hpcsys]," -strict -working ",tmp,'\n',sep='')
+		cmd		<- paste(cmd,"echo \'end ",prog[hpcsys],"\'\n",sep='')
+	}
+	else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
+	{
+		cmd		<- paste(cmd,paste("\necho \'run ",prog[hpcsys],"\'\n",sep=''))
+		tmpdir	<- paste(tmpdir.prefix,'_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
+		cmd		<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
+		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
+		cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
+		tmp		<- paste(tmpdir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
+		cmd		<- paste(cmd,prog[hpcsys]," -strict -working ",tmp,'\n',sep='')	
+		cmd		<- paste(cmd,"cp ",tmpdir,"/* ", indir,'\n',sep='')
+		cmd		<- paste(cmd,"echo \'end ",prog[hpcsys],"\'\n",sep='')
+	}
+	#TODO add mcc tree etc
+	cmd<- paste(cmd,"#######################################################
+# end: run BEAST
+#######################################################\n",sep='')
+	cmd
+}
+
 
 #add additional high performance computing information 
 #' @export

@@ -4608,6 +4608,22 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
+	if(1)	#run BEAST
+	{
+		indir		<- paste(dir.name,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg_standard"
+		insignat	<- "Tue_Aug_26_09-13-47_2013"
+		
+		cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog= PR.BEAST)		
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3850mb",  hpc.nproc=1)
+		
+		cat(cmd)
+		outdir		<- paste(dir.name,"tmp",sep='/')
+		outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		
+		stop()
+	}
 	if(0)	#compute one ExaML tree, no bootstrapping
 	{		
 		indir	<- paste(dir.name,"tmp",sep='/')
@@ -4644,7 +4660,7 @@ hivc.proj.pipeline<- function()
 				})
 		stop()
 	}
-	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over initial starting trees to start ML search.
+	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over initial starting trees to start ML search.
 	{
 		bs.from	<- 0
 		bs.to	<- 0
