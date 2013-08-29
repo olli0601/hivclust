@@ -57,10 +57,10 @@ default.fun		<- "project.hivc.collectpatientdata"
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
 default.fun		<- "project.bezemer2013a.figs"
 #default.fun		<-"project.bezemer2013b.rates"
-#default.fun		<- "project.hivc.clustering"
+default.fun		<- "project.hivc.clustering"
 #default.fun	<- "hivc.prog.get.clustering.precompute"
 #default.fun	<- "project.gccontent"
-default.fun 	<- "hivc.proj.pipeline"
+#default.fun 	<- "hivc.proj.pipeline"
 #default.fun 	<- "hivc.prog.remove.resistancemut"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))

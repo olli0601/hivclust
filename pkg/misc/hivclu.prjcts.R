@@ -3165,81 +3165,91 @@ project.hivc.clustering<- function(dir.name= DATA)
 		thresh.bs	<- 0.8
 		resume		<- 1
 		verbose		<- 1
-		
-		file		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
-		if(verbose)	cat(paste("\nload sequences from file",file))
-		load( file )
-		print( seq.PROT.RT )
-		
-		
+		#
+		#	load msm clusters
+		#
 		argv		<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=resume)
 		argv		<<- unlist(strsplit(argv,' '))		
 		msm			<- hivc.prog.get.clustering.MSM()	
-		
-		#	select seroconverters		
+		#
+		#	select seroconverters
+		#
 		df.cluinfo				<- msm$df.cluinfo
 		tmp						<- df.cluinfo[,	list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], fNegT=length(which(!is.na(NegT))) / clu.ntip[1]),by="cluster"]										
 		tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=0.8) )
 		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
-		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))	
+		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))
+		cluphy.df				<- hivc.beast.addBEASTLabel( cluphy.df )
 		
-		
+		#
+		#	load sequences
+		#
+		file		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+		if(verbose)	cat(paste("\nload sequences from file",file))
+		load( file )
+		#print( seq.PROT.RT )
+		#
+		#	load complete tree to generate starting tree
+		#argv		<<- hivc.cmd.preclustering(indir, infiletree, insignat, indircov, infilecov, resume=resume)				 
+		#argv		<<- unlist(strsplit(argv,' '))
+		#clu.pre		<- hivc.prog.precompute.clustering()
+		#ph			<- clu.pre$ph
+
+
+
+				
 		outfile		<- paste(infile,"beast","seroneg",sep='_')
 		outdir		<- indir
 		outsignat	<- "Tue_Aug_26_09/13/47_2013"
-		file		<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".nex",sep='')
-		df			<- cluphy.df
-		#		
-		#	get BEAST taxon labels:		cluster	FASTASampleCode	NegT	AnyPosT	SeqT  -> turn date into numerical format
-		#
-		df						<- df[,	{
-											z	<- as.POSIXlt(c(NegT, AnyPos_T1, PosSeqT))
-											tmp	<- z$year + 1900
-											z	<- tmp + round( z$yday / ifelse((tmp%%4==0 & tmp%%100!=0) | tmp%%400==0,366,365), d=3 )												
-											list(BEASTlabel= paste(c(cluster, z, FASTASampleCode), collapse='_', sep=''))
-										}, by="FASTASampleCode"]
-		# 	select clustering sequences					
-		seq.PROT.RT				<- seq.PROT.RT[ df[,FASTASampleCode], ]	
-		rownames(seq.PROT.RT)	<- df[,BEASTlabel]		
-		#	produce nexus file
-		if(!is.na(file))
-			hivc.seq.write.dna.nexus(seq.PROT.RT, file)
-		#	TODO get starting tree
-
+		hivc.beast.writeNexus4Beauti(seq.PROT.RT, cluphy.df, file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".nex",sep=''))
+	
 		#
 		#	TODO produce xml file directly
+		insignat	<- "Tue_Aug_26_09/13/47_2013"
+		require(XML)
+		file		<- paste(indir,'/',infile,'_',"beast",'_',"seroneg",'_',"standard",'_',gsub('/','-',insignat),".xml",sep='')
+		bxml		<- xmlInternalTreeParse(file)		
+		df			<- copy(cluphy.df)		
+		setkey(df, cluster)	
+		
+		bxml		<- hivc.beast.add.taxonsets4clusters(bxml, df)
+		
+		#	write xml file
+		outfile		<- paste(infile,'_',"beast",'_',"seroneg",'_',"txs4clu",'_',gsub('/',':',outsignat),sep='')
+		#	reset output fileNames
+		bxml.onodes	<- getNodeSet(bxml, "//*[@fileName]")
+		tmp			<- sapply(bxml.onodes, function(x) xmlGetAttr(x,"fileName"))
+		tmp			<- gsub("(time).","time",tmp,fixed=1)
+		tmp			<- gsub("(subst).","subst",tmp,fixed=1)
+		tmp			<- sapply(strsplit(tmp,'.',fixed=1), function(x)	paste(outfile, '.', x[2], sep=''))		
+		dummy		<- sapply(seq_along(bxml.onodes), function(i){		xmlAttrs(bxml.onodes[[i]])["fileName"]<- tmp[i]		})
+		#	write xml file
+		file		<- paste(outdir,'/',outfile,".xml",sep='')
+		saveXML(bxml, file=file)
 		
 		
-data("woodmouse")
-write.nexus.data(woodmouse, file= file, interleaved = TRUE, charsperline = 100)
+		getNodeSet(bxml, "//beast")
 
 		
+
+
+		ans			<- xmlTree()
+		ans.beast	<- newXMLNode("beast")
+		ans$addNode(ans.beast)
 		
-		cluphy.subtrees			<- lapply( as.character(tmp[,cluster]), function(x)  msm$cluphy.subtrees[[x]]	)
-		names(cluphy.subtrees)	<- as.character(tmp[,cluster])
-		outdir					<- indir
-		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectAllWithNegT",sep='')
-		outsignat				<- insignat									
-		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=10, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
+		taxa	<- getNodeSet(bxml, "//taxa[@id='taxa']")[[1]]
+		ans$addNode(taxa,ans.beast)
 		
-		
-		#
-		#1) plot clusters with 		small brl / npat 	--> explosive for targeted testing -- mostly acute -- serial or starlike or what ?
-		#
-		df.cluinfo				<- msm$df.cluinfo
-		tmp						<- df.cluinfo[,list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], select=clu.bwpat.medbrl[1]/clu.npat[1]),by="cluster"]
-		cumsum( table( tmp[,clu.npat] ) / nrow(tmp) )
-		tmp						<- subset(tmp, clu.npat>4)
-		tmp						<- subset( tmp, select<quantile( tmp[,select], probs=0.2 ))
-		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
-		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))		
-		cluphy.subtrees			<- lapply( as.character(tmp[,cluster]), function(x)  msm$cluphy.subtrees[[x]]	)
-		names(cluphy.subtrees)	<- as.character(tmp[,cluster])
-		outdir					<- indir
-		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectexplosive",sep='')
-		outsignat				<- insignat									
-		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=10, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
-		cluphy					<- tmp$cluphy
+
+
+
+
+		df[,	{
+					list(taxonset= newXMLNode("taxa", attrs= list(id="cXX") ))
+				},by="cluster"]
+		taxonset	<- newXMLNode("taxa", attrs= list(id="cXX") )
+		newXMLNode("taxon", attrs= list(idref="blah"), parent=taxonset )
+		newXMLNode("taxon", attrs= list(idref="blah1"), parent=taxonset )
 		
 	}
 	if(0)	#min brl to get a transmission cascade from brl matrix

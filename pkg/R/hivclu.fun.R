@@ -269,6 +269,94 @@ hivc.db.reset.inaccurateNegT<- function(df, nacc.dy.dy= 1, nacc.mody.mo= 0, nacc
 	df
 }
 ######################################################################################
+#	get BEAST taxon labels:		cluster	FASTASampleCode	NegT	AnyPosT	SeqT  -> turn date into numerical format
+hivc.beast.addBEASTLabel<- function( df )
+{
+	tmp	<- df[,		{
+						z	<- as.POSIXlt(c(NegT, AnyPos_T1, PosSeqT))
+						tmp	<- z$year + 1900
+						z	<- tmp + round( z$yday / ifelse((tmp%%4==0 & tmp%%100!=0) | tmp%%400==0,366,365), d=3 )												
+						list(BEASTlabel= paste(c(cluster, z, FASTASampleCode), collapse='_', sep=''))
+					}, by="FASTASampleCode"]
+	df	<- merge(df, tmp, by="FASTASampleCode")
+	df
+}	
+######################################################################################
+#	write nexus file for all sequences specified in df. assumes df has BEASTlabel. assumes seq.DNAbin.matrix and ph contain FASTASampleCode in df.
+hivc.beast.writeNexus4Beauti<- function( seq.DNAbin.matrix, df, ph=NULL, file=NULL )
+{
+	# 	select sequences and relabel					
+	seq.DNAbin.matrix			<- seq.DNAbin.matrix[ df[,FASTASampleCode], ]	
+	rownames(seq.DNAbin.matrix)	<- df[,BEASTlabel]
+	#	generate starting tree and relabel
+	if(!is.null(ph))
+	{
+		
+		tmp					<- setdiff( ph$tip.label, df[,FASTASampleCode] )
+		tmp					<- match( tmp, ph$tip.label)
+		ph.start			<- drop.tip(ph, tmp)
+		ph.start$node.label	<- NULL
+		setkey(df, FASTASampleCode)
+		ph.start$tip.label	<- df[ph.start$tip.label,][,BEASTlabel]
+	}
+	#	produce nexus text			
+	ans<- hivc.seq.write.dna.nexus(seq.DNAbin.matrix, ph=ph.start, file=file)
+	ans
+}
+######################################################################################
+#	assumes df has BEASTlabel and cluster
+hivc.beast.get.taxonsets4clusters	<- function(df)
+{	
+	ans	<- lapply( unique( df[,cluster] ), function(clu)
+			{					
+				taxonset	<- newXMLNode("taxa", attrs= list(id=paste("c",clu,sep='')) )
+				tmp<- df[cluster==clu,][,BEASTlabel]
+				tmp<- lapply(tmp, function(x)		newXMLNode("taxon", attrs= list(idref=x), parent=taxonset )	)
+				taxonset
+			})
+	ans		
+}
+######################################################################################
+#	get a list of tmrcaStatistics. assumes all tmrcaStatistics share a treeModel.id and the same includeStem attribute
+hivc.beast.get.tmrcaStatistic<- function(btaxonsets, treeModel.id, includeStem="false") 
+{		
+	btaxonset.id	<- sapply(btaxonsets, function(x)	xmlGetAttr(x,"id")	)
+	ans				<- lapply(btaxonset.id, function(x)
+			{
+				tmrcaStatistic	<- newXMLNode("tmrcaStatistic", attrs= list(id=paste("tmrca(",x,")",sep=''), includeStem=includeStem) )
+				mrca			<- newXMLNode("mrca", parent=tmrcaStatistic)
+				newXMLNode("taxa", attrs= list(idref=x), parent=mrca )
+				newXMLNode("treeModel", attrs= list(idref=treeModel.id), parent=tmrcaStatistic )
+				tmrcaStatistic					
+			})
+	ans
+}	
+######################################################################################
+hivc.beast.add.taxonsets4clusters<- function(bxml, df)
+{
+	bxml.treeModel.id			<- unlist(xpathApply(bxml, "//treeModel[@id]", xmlGetAttr, "id"))
+	
+	#get taxon sets for each cluster
+	btaxonsets.clusters			<- hivc.beast.get.taxonsets4clusters(df)				
+	#get tmrcaStatistic for each cluster
+	btmrcaStatistics.clusters	<- hivc.beast.get.tmrcaStatistic(btaxonsets.clusters, bxml.treeModel.id, includeStem="false") 		
+	#TODO get monophylyStatistic and get booleanLikelihood
+	
+	#	modify from template
+	bxml.beast<- getNodeSet(bxml, "//beast")[[1]]
+	#	add 'btaxonsets.clusters' after last taxa
+	bxml.idx					<- which(xmlSApply(bxml.beast, xmlName)=="taxa")		
+	addChildren(bxml.beast, btaxonsets.clusters, at=bxml.idx[length(bxml.idx)] )
+	#	add 'btmrcaStatistics.clusters' after last treeModel
+	bxml.idx					<- which(xmlSApply(bxml.beast, xmlName)=="treeModel")
+	addChildren(bxml.beast, btmrcaStatistics.clusters, at=bxml.idx[length(bxml.idx)] )
+	#add trmcaStatistics to log 
+	bxml.fileLog				<- getNodeSet(bxml, "//log[@id='fileLog']")
+	tmrcaStatistics.id			<- sapply(btmrcaStatistics.clusters, function(x)	xmlGetAttr(x,"id")	)
+	tmp							<- lapply(tmrcaStatistics.id, function(x)	newXMLNode("tmrcaStatistic", attrs= list(idref=x), parent=bxml.fileLog )	)
+	bxml
+}
+######################################################################################
 #' @export
 or.dist.dna<- function (x, model = "K80", variance = FALSE, gamma = FALSE, 
 		pairwise.deletion = FALSE, base.freq = NULL, as.matrix = FALSE) 
@@ -383,13 +471,21 @@ hivc.seq.create.referencepairs<- function(dir.name= DATA)
 }
 
 #' @export
-hivc.seq.write.dna.nexus<- function(seq.DNAbin.mat, file, nexus.format="DNA",nexus.gap='-', nexus.missing='?', nexus.interleave="NO")
+hivc.seq.write.dna.nexus<- function(seq.DNAbin.mat, ph=NULL, file=NULL, nexus.format="DNA",nexus.gap='-', nexus.missing='?', nexus.interleave="NO")
 {		
 	tmp		<- cbind( rownames(seq.DNAbin.mat), apply( as.character( seq.DNAbin.mat ), 1, function(x) paste(x,sep='',collapse='')  ) )
 	tmp		<- apply(tmp, 1, function(x) paste(x, collapse='\t', sep=''))
 	tmp		<- paste(tmp, collapse='\n',sep='')
 	header	<- paste( "#NEXUS\nBEGIN DATA;\nDIMENSIONS NTAX=",nrow(seq.DNAbin.mat)," NCHAR=",ncol(seq.DNAbin.mat),";\nFORMAT DATATYPE=",nexus.format," MISSING=",nexus.missing," GAP=",nexus.gap," INTERLEAVE=",nexus.interleave,";\nMATRIX\n", collapse='',sep='')
-	cat(paste(header, tmp, "\n;\nEND;\n", sep=''), file=file)
+	tmp		<- paste(header, tmp, "\n;\nEND;\n", sep='')
+	if(!is.null(ph))
+	{
+		tmp	<- paste(tmp,"#BEGIN TAXA;\nTAXLABELS ", paste(ph$tip.label, sep='',collapse=' '), ';\nEND;\n\n',sep='')
+		tmp	<- paste(tmp, "BEGIN TREES;\nTREE tree1 = ", write.tree(ph), "\nEND;\n", sep='')
+	}
+	if(!is.null(file))
+		cat(tmp, file=file)
+	tmp
 }		
 
 #' @export
