@@ -280,6 +280,59 @@ hivc.beast.addBEASTLabel<- function( df )
 					}, by="FASTASampleCode"]
 	df	<- merge(df, tmp, by="FASTASampleCode")
 	df
+}
+######################################################################################
+#	pool clusters into sets containing roughly 'pool.ntip' sequences
+hivc.beast.poolclusters<- function(cluphy.df, pool.ntip= 130, verbose=1)
+{	
+	df		<- cluphy.df[, list(clu.ntip=clu.ntip[1], clu.AnyPos_T1=clu.AnyPos_T1[1]), by="cluster"]
+	if(verbose) cat(paste("\npool evenly across clu.AnyPos_T1"))
+	setkey(df, clu.AnyPos_T1)
+	pool.n	<- ceiling( sum( df[,clu.ntip] ) / pool.ntip )
+	tmp		<- lapply( seq_len(pool.n), function(x)	seq.int(x,nrow(df),by=pool.n) )
+	pool.df	<- lapply(seq_along(tmp), function(i) merge(subset(df[tmp[[i]],], select=cluster), cluphy.df, by="cluster") )
+	if(verbose) cat(paste("\nnumber of pools is n=",pool.n))		
+	if(verbose) cat(paste("\nnumber of seq in pools is n=",paste( sapply(pool.df, nrow), sep='', collapse=', ' )))
+	list(pool.df=pool.df, pool.ntip=pool.ntip)
+}	
+######################################################################################
+#	get replace taxa and alignment in template bxml with BEASTlabels in df and alignment in seq.PROT.RT
+hivc.beast.replace.seq<- function(bxml, df, seq.PROT.RT, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years")
+{			
+	#	get sequence taxa
+	tmp.label	<- df[,BEASTlabel]
+	tmp.date	<- sapply( strsplit(tmp.label, beast.label.sep, fixed=1), function(x) x[beast.label.datepos] )	
+	seqtaxa		<- lapply(seq_along(tmp.label), function(i)
+			{
+				taxon	<- newXMLNode("taxon", attrs= list(id=tmp.label[i]) )
+				dummy	<- newXMLNode("date", attrs= list(value=tmp.date[i], direction=beast.date.direction, units=beast.date.units), parent=taxon )
+				taxon
+			})	
+	#	get alignment
+	seqalign	<- lapply( seq_len(nrow(df)), function(i)
+			{
+				seq		<- newXMLNode("sequence")
+				dummy	<- newXMLNode("taxon", attrs= list(idref= df[i, BEASTlabel]), parent=seq)
+				tmp		<- which( rownames(seq.PROT.RT)==df[i, FASTASampleCode] )
+				if(length(tmp)!=1)	stop("unexpected row in seq.PROT.RT selected")
+				tmp		<- paste(as.character(seq.PROT.RT[tmp,])[1,],collapse='',sep='')						
+				dummy	<- newXMLTextNode(text=tmp, parent=seq)
+				seq
+			})
+	
+	#	replace sequence taxa
+	bxml.seqtaxa	<- getNodeSet(bxml, "//taxa[@id='taxa']")
+	if(length(bxml.seqtaxa)!=1)	stop("unexpected length of taxa[@id='taxa'")
+	bxml.seqtaxa	<- bxml.seqtaxa[[1]]
+	dummy			<- removeChildren( bxml.seqtaxa, kids=as.list( seq_len(xmlSize(bxml.seqtaxa)) ), free=TRUE )
+	dummy			<- addChildren( bxml.seqtaxa, seqtaxa)
+	#	replace alignment
+	bxml.ali		<- getNodeSet(bxml, "//alignment[@id='alignment']")
+	if(length(bxml.ali)!=1)	stop("unexpected length of alignment[@id='alignment'")
+	bxml.ali		<- bxml.ali[[1]]
+	dummy			<- removeChildren( bxml.ali, kids=as.list( seq_len(xmlSize(bxml.ali)) ), free=TRUE )
+	dummy			<- addChildren( bxml.ali, seqalign)	
+	bxml
 }	
 ######################################################################################
 #	write nexus file for all sequences specified in df. assumes df has BEASTlabel. assumes seq.DNAbin.matrix and ph contain FASTASampleCode in df.

@@ -3180,7 +3180,8 @@ project.hivc.clustering<- function(dir.name= DATA)
 		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
 		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))
 		cluphy.df				<- hivc.beast.addBEASTLabel( cluphy.df )
-		
+		#	create sets of cluster pools for BEAST
+		df.clupool	<- hivc.beast.poolclusters(cluphy.df, pool.ntip= 130, verbose=1)			
 		#
 		#	load sequences
 		#
@@ -3189,29 +3190,29 @@ project.hivc.clustering<- function(dir.name= DATA)
 		load( file )
 		#print( seq.PROT.RT )
 		#
-		#	load complete tree to generate starting tree
-		#argv		<<- hivc.cmd.preclustering(indir, infiletree, insignat, indircov, infilecov, resume=resume)				 
-		#argv		<<- unlist(strsplit(argv,' '))
-		#clu.pre		<- hivc.prog.precompute.clustering()
-		#ph			<- clu.pre$ph
-
-
-
-				
-		outfile		<- paste(infile,"beast","seroneg",sep='_')
-		outdir		<- indir
-		outsignat	<- "Tue_Aug_26_09/13/47_2013"
-		hivc.beast.writeNexus4Beauti(seq.PROT.RT, cluphy.df, file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".nex",sep=''))
-	
+		if(0)		#used to generate standard xml file
+		{
+			#	load complete tree to generate starting tree
+			#argv		<<- hivc.cmd.preclustering(indir, infiletree, insignat, indircov, infilecov, resume=resume)				 
+			#argv		<<- unlist(strsplit(argv,' '))
+			#clu.pre		<- hivc.prog.precompute.clustering()
+			#ph			<- clu.pre$ph			
+			outfile		<- paste(infile,"beast","seroneg",sep='_')
+			outdir		<- indir
+			outsignat	<- "Tue_Aug_26_09/13/47_2013"
+			hivc.beast.writeNexus4Beauti(seq.PROT.RT, cluphy.df, file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".nex",sep=''))
+		}
 		#
 		#	TODO produce xml file directly
 		insignat	<- "Tue_Aug_26_09/13/47_2013"
 		require(XML)
 		file		<- paste(indir,'/',infile,'_',"beast",'_',"seroneg",'_',"standard",'_',gsub('/','-',insignat),".xml",sep='')
-		bxml		<- xmlInternalTreeParse(file)		
-		df			<- copy(cluphy.df)		
+		bxml		<- xmlInternalTreeParse(file)
+		
+		df			<- copy( df.clupool$pool.df[[1]] )		
 		setkey(df, cluster)	
 		
+		bxml		<- hivc.beast.replace.seq(bxml, df, seq.PROT.RT, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years")
 		bxml		<- hivc.beast.add.taxonsets4clusters(bxml, df)
 		
 		#	write xml file
@@ -3229,26 +3230,12 @@ project.hivc.clustering<- function(dir.name= DATA)
 		
 		
 		getNodeSet(bxml, "//beast")
-
 		
-
-
-		ans			<- xmlTree()
-		ans.beast	<- newXMLNode("beast")
-		ans$addNode(ans.beast)
-		
-		taxa	<- getNodeSet(bxml, "//taxa[@id='taxa']")[[1]]
-		ans$addNode(taxa,ans.beast)
-		
-
-
-
-
 		df[,	{
 					list(taxonset= newXMLNode("taxa", attrs= list(id="cXX") ))
 				},by="cluster"]
 		taxonset	<- newXMLNode("taxa", attrs= list(id="cXX") )
-		newXMLNode("taxon", attrs= list(idref="blah"), parent=taxonset )
+		
 		newXMLNode("taxon", attrs= list(idref="blah1"), parent=taxonset )
 		
 	}
