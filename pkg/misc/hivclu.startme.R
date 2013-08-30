@@ -283,7 +283,8 @@ if(length(args))
 					PRECLUST				= "hivc.prog.precompute.clustering",
 					CLUST					= "hivc.prog.get.clustering",
 					CLUSTTPTN				= "hivc.prog.get.clustering.TPTN",
-					CLUSTMSM				= "hivc.prog.get.clustering.MSM"
+					CLUSTMSM				= "hivc.prog.get.clustering.MSM",
+					BEASTPOOLRUN			= "hivc.prog.BEASTpoolrunxml"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)
