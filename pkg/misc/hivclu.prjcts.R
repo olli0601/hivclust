@@ -4372,24 +4372,25 @@ hivc.prog.BEASTpoolrunxml<- function()
 {	
 	require(XML)
 	
-	indir			<- paste(DATA,"tmp",sep='/')		
-	infile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
-	insignat		<- "Thu_Aug_01_17/05/23_2013"
-	indircov		<- paste(DATA,"derived",sep='/')
-	infilecov		<- "ATHENA_2013_03_AllSeqPatientCovariates"
-	infiletree		<- paste(infile,"examlbs100",sep="_")
-	infilexml		<- paste(infile,'_',"beast",'_',"seroneg",sep='')
+	indir				<- paste(DATA,"tmp",sep='/')		
+	infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+	insignat			<- "Thu_Aug_01_17/05/23_2013"
+	indircov			<- paste(DATA,"derived",sep='/')
+	infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infiletree			<- paste(infile,"examlbs100",sep="_")
+	infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
 	
-	outdir			<- indir
-	outsignat		<- "Tue_Aug_26_09/13/47_2013"
+	outdir				<- indir
+	outsignat			<- "Tue_Aug_26_09/13/47_2013"
 		
-	opt.brl			<- "dist.brl.casc" 
-	thresh.brl		<- 0.096
-	thresh.bs		<- 0.8
-	pool.ntip		<- 130
-	infilexml.opt	<- "txs4clu"
-	resume			<- 1
-	verbose			<- 1
+	opt.brl				<- "dist.brl.casc" 
+	thresh.brl			<- 0.096
+	thresh.bs			<- 0.8
+	pool.ntip			<- 130
+	infilexml.opt		<- "txs4clu"
+	infilexml.template	<- "standard"
+	resume				<- 1
+	verbose				<- 1
 	
 	if(exists("argv"))
 	{
@@ -4459,7 +4460,11 @@ hivc.prog.BEASTpoolrunxml<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,14),
 									infilexml.opt= return(substr(arg,16,nchar(arg))),NA)	}))
-		if(length(tmp)>0) infilexml.opt<- tmp[1]		
+		if(length(tmp)>0) infilexml.opt<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.template<- tmp[1]
 	}	
 	if(verbose)
 	{
@@ -4478,6 +4483,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 		print(thresh.bs)
 		print(pool.ntip)
 		print(infilexml.opt)
+		print(infilexml.template)
 	}	
 	#
 	#	load sequences
@@ -4520,7 +4526,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 	#
 	#	load xml template file
 	#	
-	file		<- paste(indir,'/',infilexml,'_',"standard",'_',gsub('/',':',insignat),".xml",sep='')
+	file		<- paste(indir,'/',infilexml,'_',infilexml.template,'_',gsub('/',':',insignat),".xml",sep='')
 	btemplate	<- xmlTreeParse(file, useInternalNodes=TRUE, addFinalizer = TRUE)		
 	#
 	#	produce xml files for each cluster pool from template
@@ -4530,7 +4536,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 				df			<- df.clupool$pool.df[[pool.id]]
 				setkey(df, cluster)
 				#	get xml file 
-				outfile		<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')	
+				outfile		<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')	
 				bxml		<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
 				getNodeSet(bxml, "//*[@id='tmrca(c1)']")		
 				#	write xml file
@@ -4538,7 +4544,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 				if(verbose)	cat(paste("\nwrite xml file to",file))
 				saveXML(bxml, file=file)		
 				#	freed through R garbage collection (I hope!) since addFinalizer=TRUE throughout
-				paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.opt,sep='')
+				paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,sep='')
 			})
 	#
 	#	generate BEAST commands and run
@@ -4546,11 +4552,11 @@ hivc.prog.BEASTpoolrunxml<- function()
 	sapply(bfile, function(x)
 			{
 				cmd			<- hivc.cmd.beast.runxml(outdir, x, outsignat, tmpdir.prefix="beast")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3850mb",  hpc.nproc=1)					
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="600mb",  hpc.nproc=1)					
 				cat(cmd)
-				stop()					
 				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
-				hivc.cmd.hpccaller(outdir, outfile, cmd)					
+				hivc.cmd.hpccaller(outdir, outfile, cmd)
+				Sys.sleep(1)
 			})		
 }
 ######################################################################################
@@ -4740,16 +4746,18 @@ hivc.proj.pipeline<- function()
 	}
 	if(1)	#run BEAST POOL
 	{
-		indir			<- paste(DATA,"tmp",sep='/')		
-		infile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
-		insignat		<- "Thu_Aug_01_17/05/23_2013"
-		indircov		<- paste(DATA,"derived",sep='/')
-		infilecov		<- "ATHENA_2013_03_AllSeqPatientCovariates"
-		infiletree		<- paste(infile,"examlbs100",sep="_")
-		infilexml		<- paste(infile,'_',"beast",'_',"seroneg",sep='')
-		
-		outdir			<- indir
-		outsignat		<- "Tue_Aug_26_09/13/47_2013"
+		indir				<- paste(DATA,"tmp",sep='/')		
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat			<- "Thu_Aug_01_17/05/23_2013"
+		indircov			<- paste(DATA,"derived",sep='/')
+		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		infiletree			<- paste(infile,"examlbs100",sep="_")
+		infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
+		infilexml.template	<- "um22rhU2050"
+		infilexml.template	<- "um22rhG202018"
+
+		outdir				<- indir
+		outsignat			<- "Tue_Aug_26_09/13/47_2013"
 		
 		opt.brl			<- "dist.brl.casc" 
 		thresh.brl		<- 0.096
@@ -4759,7 +4767,7 @@ hivc.proj.pipeline<- function()
 		resume			<- 1
 		verbose			<- 1
 		
-		argv		<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
+		argv		<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv		<<- unlist(strsplit(argv,' '))
 		hivc.prog.BEASTpoolrunxml()		
 		stop()

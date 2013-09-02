@@ -152,7 +152,7 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 	ans
 }
 
-hivc.cmd.beast.poolrunxml<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt="txs4clu", opt.brl="dist.brl.casc", thresh.brl=0.096, thresh.bs=0.8, prog= PR.BEASTPOOLRUN, resume=1, verbose=1)
+hivc.cmd.beast.poolrunxml<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt="txs4clu", infilexml.template="standard", opt.brl="dist.brl.casc", thresh.brl=0.096, thresh.bs=0.8, prog= PR.BEASTPOOLRUN, resume=1, verbose=1)
 {
 	cmd<- "#######################################################
 # run BEAST for pooled clusters capturing MSM transmission
@@ -161,7 +161,7 @@ hivc.cmd.beast.poolrunxml<- function(indir, infile, insignat, indircov, infileco
 	#default commands
 	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
 	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov,sep='')
-	cmd<- paste(cmd," -infilexml=",infilexml," -infilexml.opt=",infilexml.opt," -infiletree=",infiletree," -outdir=",indir," -outsignat=",outsignat,sep='')
+	cmd<- paste(cmd," -infilexml=",infilexml," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -infiletree=",infiletree," -outdir=",indir," -outsignat=",outsignat,sep='')
 	cmd<- paste(cmd," -pool.ntip=",pool.ntip," -thresh.brl=",thresh.brl," -thresh.bs=",thresh.bs," -opt.brl=",opt.brl,sep='')
 	#verbose stuff
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
