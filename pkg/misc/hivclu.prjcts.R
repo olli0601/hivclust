@@ -2701,7 +2701,7 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 		{
 			argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 			argv		<<- unlist(strsplit(argv,' '))
-			clu.pre		<- hivc.prog.precompute.clustering()
+			clu.pre		<- hivc.prog.get.clustering.precompute()
 		}
 		if(0)
 		{
@@ -2911,7 +2911,7 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 	{
 		argv	<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 		argv	<<- unlist(strsplit(argv,' '))
-		clu.pre	<- hivc.prog.precompute.clustering()
+		clu.pre	<- hivc.prog.get.clustering.precompute()
 	}
 	dist.brl	<- switch(	opt.brl, 
 							"dist.brl.max"		= clu.pre$dist.brl.max,
@@ -3546,7 +3546,7 @@ project.hivc.clustering<- function(dir.name= DATA)
 		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"							
 		argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 		argv		<<- unlist(strsplit(argv,' '))
-		clu.pre		<- hivc.prog.precompute.clustering()
+		clu.pre		<- hivc.prog.get.clustering.precompute()
 		#
 		# evaluate TPTN for various thresholds
 		#
@@ -3750,7 +3750,7 @@ project.hivc.clustering.selectparticularclusters<- function()
 		thresh.bs	<- 0.8
 		argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 		argv		<<- unlist(strsplit(argv,' '))
-		clu.pre		<- hivc.prog.precompute.clustering()
+		clu.pre		<- hivc.prog.get.clustering.precompute()
 		argv		<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl, thresh.brl, thresh.bs, resume=resume)				 
 		argv		<<- unlist(strsplit(argv,' '))
 		clu			<- hivc.prog.get.clustering()		
@@ -4466,6 +4466,21 @@ hivc.prog.BEASTpoolrunxml<- function()
 									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
 		if(length(tmp)>0) infilexml.template<- tmp[1]
 	}	
+	
+	if(infilexml.opt %in% c("mph4clu"))	
+	{
+		xml.monophyly4clusters	<- 1
+		#	load complete tree to generate starting tree
+		argv					<<- hivc.cmd.preclustering(indir, infiletree, insignat, indircov, infilecov, resume=resume)				 
+		argv					<<- unlist(strsplit(argv,' '))
+		clu.pre					<- hivc.prog.get.clustering.precompute()
+		ph						<- clu.pre$ph					
+	}
+	else
+	{
+		xml.monophyly4clusters	<- 0
+		ph						<- NULL
+	}
 	if(verbose)
 	{
 		print(indir)
@@ -4484,6 +4499,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 		print(pool.ntip)
 		print(infilexml.opt)
 		print(infilexml.template)
+		print(xml.monophyly4clusters)
 	}	
 	#
 	#	load sequences
@@ -4514,11 +4530,6 @@ hivc.prog.BEASTpoolrunxml<- function()
 	#
 	if(0)		#used to generate standard xml file
 	{
-		#	load complete tree to generate starting tree
-		#argv		<<- hivc.cmd.preclustering(indir, infiletree, insignat, indircov, infilecov, resume=resume)				 
-		#argv		<<- unlist(strsplit(argv,' '))
-		#clu.pre		<- hivc.prog.precompute.clustering()
-		#ph			<- clu.pre$ph			
 		outfile		<- paste(infile,"beast","seroneg",sep='_')
 		outsignat	<- "Thu_Aug_01_17/05/23_2013"
 		hivc.beast.writeNexus4Beauti(seq.PROT.RT, cluphy.df, file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".nex",sep=''))
@@ -4537,7 +4548,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 				setkey(df, cluster)
 				#	get xml file 
 				outfile		<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')	
-				bxml		<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
+				bxml		<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, ph=ph, xml.monophyly4clusters=xml.monophyly4clusters, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
 				getNodeSet(bxml, "//*[@id='tmrca(c1)']")		
 				#	write xml file
 				file		<- paste(outdir,'/',outfile,".xml",sep='')
@@ -4753,22 +4764,28 @@ hivc.proj.pipeline<- function()
 		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
 		infiletree			<- paste(infile,"examlbs100",sep="_")
 		infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
-		infilexml.template	<- "um22rhU2050"
-		infilexml.template	<- "um22rhG202018"
-
+		#infilexml.template	<- "um22rhU2050"
+		#infilexml.template	<- "um22rhG202018"
+		infilexml.template	<- "rhU65rho753"
+		infilexml.template	<- "rhU65rho903"
+		infilexml.template	<- "rhU65rho906"
+		infilexml.template	<- "rhU65rho909"
+		infilexml.template	<- "rhU65rho1503"
+		infilexml.opt		<- "txs4clu"
+		#infilexml.opt		<- "mph4clu"
+		
 		outdir				<- indir
 		outsignat			<- "Tue_Aug_26_09/13/47_2013"
 		
-		opt.brl			<- "dist.brl.casc" 
-		thresh.brl		<- 0.096
-		thresh.bs		<- 0.8
-		pool.ntip		<- 130
-		infilexml.opt	<- "txs4clu"
-		resume			<- 1
-		verbose			<- 1
+		opt.brl				<- "dist.brl.casc" 
+		thresh.brl			<- 0.096
+		thresh.bs			<- 0.8
+		pool.ntip			<- 130		
+		resume				<- 1
+		verbose				<- 1
 		
-		argv		<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
-		argv		<<- unlist(strsplit(argv,' '))
+		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
+		argv				<<- unlist(strsplit(argv,' '))
 		hivc.prog.BEASTpoolrunxml()		
 		stop()
 	}
