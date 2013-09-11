@@ -283,14 +283,28 @@ hivc.beast.addBEASTLabel<- function( df )
 }
 ######################################################################################
 #	pool clusters into sets containing roughly 'pool.ntip' sequences
-hivc.beast.poolclusters<- function(cluphy.df, pool.ntip= 130, verbose=1)
+hivc.beast.poolclusters<- function(cluphy.df, pool.ntip= 130, pool.includealwaysbeforeyear=NA, verbose=1)
 {	
-	df		<- cluphy.df[, list(clu.ntip=clu.ntip[1], clu.AnyPos_T1=clu.AnyPos_T1[1]), by="cluster"]
-	if(verbose) cat(paste("\npool evenly across clu.AnyPos_T1"))
-	setkey(df, clu.AnyPos_T1)
-	pool.n	<- ceiling( sum( df[,clu.ntip] ) / pool.ntip )
-	tmp		<- lapply( seq_len(pool.n), function(x)	seq.int(x,nrow(df),by=pool.n) )
-	pool.df	<- lapply(seq_along(tmp), function(i) merge(subset(df[tmp[[i]],], select=cluster), cluphy.df, by="cluster") )
+	df			<- cluphy.df[, list(clu.ntip=clu.ntip[1], clu.AnyPos_T1=clu.AnyPos_T1[1]), by="cluster"]	
+	if(!is.na(pool.includealwaysbeforeyear))
+	{
+		if(verbose) cat(paste("\nalways include clusters starting before ",pool.includealwaysbeforeyear,"and then pool evenly across clu.AnyPos_T1"))
+		df.always	<- subset(df,as.POSIXlt(clu.AnyPos_T1)$year<(pool.includealwaysbeforeyear-1900))
+		df			<- subset(df,as.POSIXlt(clu.AnyPos_T1)$year>=(pool.includealwaysbeforeyear-1900))
+		pool.ntip	<- pool.ntip - sum(df.always[,clu.ntip])		
+		setkey(df, clu.AnyPos_T1)
+		pool.n		<- ceiling( sum( df[,clu.ntip] ) / pool.ntip )
+		tmp			<- lapply( seq_len(pool.n), function(x)	seq.int(x,nrow(df),by=pool.n) )		
+		pool.df		<- lapply(seq_along(tmp), function(i) merge(subset(rbind(df.always, df[tmp[[i]],]), select=cluster), cluphy.df, by="cluster") )		
+	}
+	else
+	{
+		if(verbose) cat(paste("\npool evenly across clu.AnyPos_T1"))
+		setkey(df, clu.AnyPos_T1)
+		pool.n	<- ceiling( sum( df[,clu.ntip] ) / pool.ntip )
+		tmp		<- lapply( seq_len(pool.n), function(x)	seq.int(x,nrow(df),by=pool.n) )
+		pool.df	<- lapply(seq_along(tmp), function(i) merge(subset(df[tmp[[i]],], select=cluster), cluphy.df, by="cluster") )		
+	}
 	if(verbose) cat(paste("\nnumber of pools is n=",pool.n))		
 	if(verbose) cat(paste("\nnumber of seq in pools is n=",paste( sapply(pool.df, nrow), sep='', collapse=', ' )))
 	list(pool.df=pool.df, pool.ntip=pool.ntip)

@@ -4467,20 +4467,24 @@ hivc.prog.BEASTpoolrunxml<- function()
 		if(length(tmp)>0) infilexml.template<- tmp[1]
 	}	
 	
-	if(infilexml.opt %in% c("mph4clu"))	
+	if(grepl("mph",infilexml.opt))	
 	{
 		xml.monophyly4clusters	<- 1
 		#	load complete tree to generate starting tree
-		argv					<<- hivc.cmd.preclustering(indir, infiletree, insignat, indircov, infilecov, resume=resume)				 
-		argv					<<- unlist(strsplit(argv,' '))
-		clu.pre					<- hivc.prog.get.clustering.precompute()
-		ph						<- clu.pre$ph					
+		file					<- paste(indir,'/',infiletree,'_',gsub('/',':',insignat),".R",sep='')
+		if(verbose)	cat(paste("\nload complete tree to generate starting tree from file",file))
+		load(file)	#load object 'ph'							
 	}
 	else
 	{
 		xml.monophyly4clusters	<- 0
 		ph						<- NULL
 	}
+	if(grepl("fx03",infilexml.opt))
+		pool.includealwaysbeforeyear	<- 2003
+	else
+		pool.includealwaysbeforeyear	<- NA
+	
 	if(verbose)
 	{
 		print(indir)
@@ -4497,6 +4501,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 		print(thresh.brl)
 		print(thresh.bs)
 		print(pool.ntip)
+		print(pool.includealwaysbeforeyear)
 		print(infilexml.opt)
 		print(infilexml.template)
 		print(xml.monophyly4clusters)
@@ -4526,7 +4531,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 	#
 	#	create sets of cluster pools for BEAST
 	#
-	df.clupool				<- hivc.beast.poolclusters(cluphy.df, pool.ntip= pool.ntip, verbose=1)			
+	df.clupool				<- hivc.beast.poolclusters(cluphy.df, pool.ntip= pool.ntip, pool.includealwaysbeforeyear=pool.includealwaysbeforeyear, verbose=1)			
 	#
 	if(0)		#used to generate standard xml file
 	{
@@ -4546,6 +4551,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 			{
 				df			<- df.clupool$pool.df[[pool.id]]
 				setkey(df, cluster)
+				#print( unique(df[,cluster]) )
 				#	get xml file 
 				outfile		<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')	
 				bxml		<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, ph=ph, xml.monophyly4clusters=xml.monophyly4clusters, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
@@ -4563,7 +4569,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 	sapply(bfile, function(x)
 			{
 				cmd			<- hivc.cmd.beast.runxml(outdir, x, outsignat, tmpdir.prefix="beast")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="600mb",  hpc.nproc=1)					
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3800mb",  hpc.nproc=1)					
 				cat(cmd)
 				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
@@ -4767,20 +4773,22 @@ hivc.proj.pipeline<- function()
 		#infilexml.template	<- "um22rhU2050"
 		#infilexml.template	<- "um22rhG202018"
 		infilexml.template	<- "rhU65rho753"
-		infilexml.template	<- "rhU65rho903"
-		infilexml.template	<- "rhU65rho906"
-		infilexml.template	<- "rhU65rho909"
-		infilexml.template	<- "rhU65rho1503"
-		infilexml.opt		<- "txs4clu"
+		#infilexml.template	<- "rhU65rho903"
+		#infilexml.template	<- "rhU65rho906"
+		#infilexml.template	<- "rhU65rho909"		
+		#infilexml.opt		<- "txs4clu"
+		infilexml.opt		<- "txs4clufx03"
 		#infilexml.opt		<- "mph4clu"
-		
+		#infilexml.opt		<- "mph4clufx03"
+
 		outdir				<- indir
 		outsignat			<- "Tue_Aug_26_09/13/47_2013"
 		
 		opt.brl				<- "dist.brl.casc" 
 		thresh.brl			<- 0.096
 		thresh.bs			<- 0.8
-		pool.ntip			<- 130		
+		pool.ntip			<- 130
+		#pool.ntip			<- 150
 		resume				<- 1
 		verbose				<- 1
 		
