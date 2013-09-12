@@ -57,7 +57,8 @@ default.fun		<- "project.hivc.collectpatientdata"
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
 default.fun		<- "project.bezemer2013a.figs"
 #default.fun		<-"project.bezemer2013b.rates"
-#default.fun		<- "project.hivc.clustering"
+default.fun		<- "project.hivc.clustering"
+default.fun		<- "project.hivc.beast"
 #default.fun	<- "hivc.prog.get.clustering.precompute"
 #default.fun	<- "project.gccontent"
 default.fun 	<- "hivc.proj.pipeline"
@@ -283,7 +284,8 @@ if(length(args))
 					PRECLUST				= "hivc.prog.precompute.clustering",
 					CLUST					= "hivc.prog.get.clustering",
 					CLUSTTPTN				= "hivc.prog.get.clustering.TPTN",
-					CLUSTMSM				= "hivc.prog.get.clustering.MSM"
+					CLUSTMSM				= "hivc.prog.get.clustering.MSM",
+					BEASTPOOLRUN			= "hivc.prog.BEASTpoolrunxml"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)

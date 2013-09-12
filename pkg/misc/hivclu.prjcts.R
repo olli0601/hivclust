@@ -2702,7 +2702,7 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 		{
 			argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 			argv		<<- unlist(strsplit(argv,' '))
-			clu.pre		<- hivc.prog.precompute.clustering()
+			clu.pre		<- hivc.prog.get.clustering.precompute()
 		}
 		if(0)
 		{
@@ -2912,7 +2912,7 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 	{
 		argv	<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 		argv	<<- unlist(strsplit(argv,' '))
-		clu.pre	<- hivc.prog.precompute.clustering()
+		clu.pre	<- hivc.prog.get.clustering.precompute()
 	}
 	dist.brl	<- switch(	opt.brl, 
 							"dist.brl.max"		= clu.pre$dist.brl.max,
@@ -3148,101 +3148,45 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 			)
 }
 ######################################################################################
+project.hivc.beast<- function(dir.name= DATA)
+{
+	require(ape)
+	require(data.table)
+	require(RColorBrewer)
+	require(XLM)
+	if(1)	#get BEAST nexus file for seroconverters
+	{		
+		indir			<- paste(DATA,"tmp",sep='/')		
+		infile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat		<- "Thu_Aug_01_17/05/23_2013"
+		indircov		<- paste(DATA,"derived",sep='/')
+		infilecov		<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		infiletree		<- paste(infile,"examlbs100",sep="_")
+		infilexml		<- paste(infile,'_',"beast",'_',"seroneg",sep='')
+		
+		outdir			<- indir
+		outsignat		<- "Tue_Aug_26_09/13/47_2013"
+		
+		opt.brl			<- "dist.brl.casc" 
+		thresh.brl		<- 0.096
+		thresh.bs		<- 0.8
+		pool.ntip		<- 130
+		infilexml.opt	<- "txs4clu"
+		resume			<- 1
+		verbose			<- 1
+		
+		argv		<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
+		cat(argv)
+		argv		<<- unlist(strsplit(argv,' '))
+		hivc.prog.BEASTpoolrunxml()		
+	}	
+}
+######################################################################################
 project.hivc.clustering<- function(dir.name= DATA)
 {
 	require(ape)
 	require(data.table)
 	require(RColorBrewer)
-	if(1)	#get BEAST nexus file for seroconverters
-	{
-		indir		<- paste(DATA,"tmp",sep='/')		
-		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
-		insignat	<- "Thu_Aug_01_17/05/23_2013"
-		indircov	<- paste(DATA,"derived",sep='/')
-		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
-		infiletree	<- paste(infile,"examlbs100",sep="_")
-		opt.brl		<- "dist.brl.casc" 
-		thresh.brl	<- 0.096
-		thresh.bs	<- 0.8
-		resume		<- 1
-		verbose		<- 1
-		
-		file		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
-		if(verbose)	cat(paste("\nload sequences from file",file))
-		load( file )
-		print( seq.PROT.RT )
-		
-		
-		argv		<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=resume)
-		argv		<<- unlist(strsplit(argv,' '))		
-		msm			<- hivc.prog.get.clustering.MSM()	
-		
-		#	select seroconverters		
-		df.cluinfo				<- msm$df.cluinfo
-		tmp						<- df.cluinfo[,	list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], fNegT=length(which(!is.na(NegT))) / clu.ntip[1]),by="cluster"]										
-		tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=0.8) )
-		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
-		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))	
-		
-		
-		outfile		<- paste(infile,"beast","seroneg",sep='_')
-		outdir		<- indir
-		outsignat	<- "Tue_Aug_26_09/13/47_2013"
-		file		<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".nex",sep='')
-		df			<- cluphy.df
-		#		
-		#	get BEAST taxon labels:		cluster	FASTASampleCode	NegT	AnyPosT	SeqT  -> turn date into numerical format
-		#
-		df						<- df[,	{
-											z	<- as.POSIXlt(c(NegT, AnyPos_T1, PosSeqT))
-											tmp	<- z$year + 1900
-											z	<- tmp + round( z$yday / ifelse((tmp%%4==0 & tmp%%100!=0) | tmp%%400==0,366,365), d=3 )												
-											list(BEASTlabel= paste(c(cluster, z, FASTASampleCode), collapse='_', sep=''))
-										}, by="FASTASampleCode"]
-		# 	select clustering sequences					
-		seq.PROT.RT				<- seq.PROT.RT[ df[,FASTASampleCode], ]	
-		rownames(seq.PROT.RT)	<- df[,BEASTlabel]		
-		#	produce nexus file
-		if(!is.na(file))
-			hivc.seq.write.dna.nexus(seq.PROT.RT, file)
-		#	TODO get starting tree
-
-		#
-		#	TODO produce xml file directly
-		
-		
-data("woodmouse")
-write.nexus.data(woodmouse, file= file, interleaved = TRUE, charsperline = 100)
-
-		
-		
-		cluphy.subtrees			<- lapply( as.character(tmp[,cluster]), function(x)  msm$cluphy.subtrees[[x]]	)
-		names(cluphy.subtrees)	<- as.character(tmp[,cluster])
-		outdir					<- indir
-		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectAllWithNegT",sep='')
-		outsignat				<- insignat									
-		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=10, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
-		
-		
-		#
-		#1) plot clusters with 		small brl / npat 	--> explosive for targeted testing -- mostly acute -- serial or starlike or what ?
-		#
-		df.cluinfo				<- msm$df.cluinfo
-		tmp						<- df.cluinfo[,list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], select=clu.bwpat.medbrl[1]/clu.npat[1]),by="cluster"]
-		cumsum( table( tmp[,clu.npat] ) / nrow(tmp) )
-		tmp						<- subset(tmp, clu.npat>4)
-		tmp						<- subset( tmp, select<quantile( tmp[,select], probs=0.2 ))
-		cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
-		if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))		
-		cluphy.subtrees			<- lapply( as.character(tmp[,cluster]), function(x)  msm$cluphy.subtrees[[x]]	)
-		names(cluphy.subtrees)	<- as.character(tmp[,cluster])
-		outdir					<- indir
-		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectexplosive",sep='')
-		outsignat				<- insignat									
-		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=10, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
-		cluphy					<- tmp$cluphy
-		
-	}
 	if(0)	#min brl to get a transmission cascade from brl matrix
 	{
 		brlmat	<- matrix( c(0,0.1,0.1, 	0.1,0,0.2,	0.1,0.2,0), ncol=3, nrow=3)
@@ -3603,7 +3547,7 @@ write.nexus.data(woodmouse, file= file, interleaved = TRUE, charsperline = 100)
 		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"							
 		argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 		argv		<<- unlist(strsplit(argv,' '))
-		clu.pre		<- hivc.prog.precompute.clustering()
+		clu.pre		<- hivc.prog.get.clustering.precompute()
 		#
 		# evaluate TPTN for various thresholds
 		#
@@ -3807,7 +3751,7 @@ project.hivc.clustering.selectparticularclusters<- function()
 		thresh.bs	<- 0.8
 		argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 		argv		<<- unlist(strsplit(argv,' '))
-		clu.pre		<- hivc.prog.precompute.clustering()
+		clu.pre		<- hivc.prog.get.clustering.precompute()
 		argv		<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl, thresh.brl, thresh.bs, resume=resume)				 
 		argv		<<- unlist(strsplit(argv,' '))
 		clu			<- hivc.prog.get.clustering()		
@@ -4425,6 +4369,215 @@ hivc.prog.remove.resistancemut<- function()
 	seq.PROT.RT
 }
 ######################################################################################
+hivc.prog.BEASTpoolrunxml<- function()
+{	
+	require(XML)
+	
+	indir				<- paste(DATA,"tmp",sep='/')		
+	infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+	insignat			<- "Thu_Aug_01_17/05/23_2013"
+	indircov			<- paste(DATA,"derived",sep='/')
+	infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infiletree			<- paste(infile,"examlbs100",sep="_")
+	infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
+	
+	outdir				<- indir
+	outsignat			<- "Tue_Aug_26_09/13/47_2013"
+		
+	opt.brl				<- "dist.brl.casc" 
+	thresh.brl			<- 0.096
+	thresh.bs			<- 0.8
+	pool.ntip			<- 130
+	infilexml.opt		<- "txs4clu"
+	infilexml.template	<- "standard"
+	resume				<- 1
+	verbose				<- 1
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									indircov= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indircov<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									infilecov= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilecov<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,11),
+									infiletree= return(substr(arg,13,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infiletree<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									infilexml= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									outsignat= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outsignat<- tmp[1]				
+		#		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,8),
+									opt.brl= return(substr(arg,10,nchar(arg))),NA)	}))
+		if(length(tmp)>0) opt.brl<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									thresh.bs= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) thresh.bs<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,11),
+									thresh.brl= return(as.numeric(substr(arg,13,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) thresh.brl<- tmp[1]
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									pool.ntip= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) pool.ntip<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,14),
+									infilexml.opt= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.opt<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.template<- tmp[1]
+	}	
+	
+	if(grepl("mph",infilexml.opt))	
+	{
+		xml.monophyly4clusters	<- 1
+		#	load complete tree to generate starting tree
+		file					<- paste(indir,'/',infiletree,'_',gsub('/',':',insignat),".R",sep='')
+		if(verbose)	cat(paste("\nload complete tree to generate starting tree from file",file))
+		load(file)	#load object 'ph'							
+	}
+	else
+	{
+		xml.monophyly4clusters	<- 0
+		ph						<- NULL
+	}
+	if(grepl("fx03",infilexml.opt))
+		pool.includealwaysbeforeyear	<- 2003
+	else
+		pool.includealwaysbeforeyear	<- NA
+	
+	if(verbose)
+	{
+		print(indir)
+		print(infile)
+		print(insignat)
+		print(indircov)
+		print(infilecov)
+		print(infiletree)
+		print(infilexml)
+		print(outdir)		
+		print(outsignat)
+		print(resume)
+		print(opt.brl)
+		print(thresh.brl)
+		print(thresh.bs)
+		print(pool.ntip)
+		print(pool.includealwaysbeforeyear)
+		print(infilexml.opt)
+		print(infilexml.template)
+		print(xml.monophyly4clusters)
+	}	
+	#
+	#	load sequences
+	#
+	file		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+	if(verbose)	cat(paste("\nload sequences from file",file))
+	load( file )
+	#print( seq.PROT.RT )	
+	#
+	#	load msm clusters
+	#
+	argv		<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=resume)
+	argv		<<- unlist(strsplit(argv,' '))		
+	msm			<- hivc.prog.get.clustering.MSM()	
+	#
+	#	select seroconverters
+	#
+	df.cluinfo				<- msm$df.cluinfo
+	tmp						<- df.cluinfo[,	list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], fNegT=length(which(!is.na(NegT))) / clu.ntip[1]),by="cluster"]										
+	tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=0.8) )
+	cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
+	if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))
+	cluphy.df				<- hivc.beast.addBEASTLabel( cluphy.df )
+	#
+	#	create sets of cluster pools for BEAST
+	#
+	df.clupool				<- hivc.beast.poolclusters(cluphy.df, pool.ntip= pool.ntip, pool.includealwaysbeforeyear=pool.includealwaysbeforeyear, verbose=1)			
+	#
+	if(0)		#used to generate standard xml file
+	{
+		outfile		<- paste(infile,"beast","seroneg",sep='_')
+		outsignat	<- "Thu_Aug_01_17/05/23_2013"
+		hivc.beast.writeNexus4Beauti(seq.PROT.RT, cluphy.df, file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".nex",sep=''))
+	}
+	#
+	#	load xml template file
+	#	
+	file		<- paste(indir,'/',infilexml,'_',infilexml.template,'_',gsub('/',':',insignat),".xml",sep='')
+	btemplate	<- xmlTreeParse(file, useInternalNodes=TRUE, addFinalizer = TRUE)		
+	#
+	#	produce xml files for each cluster pool from template
+	#	
+	bfile		<- lapply(seq_len(length(df.clupool$pool.df)), function(pool.id)
+			{
+				df			<- df.clupool$pool.df[[pool.id]]
+				setkey(df, cluster)
+				#print( unique(df[,cluster]) )
+				#	get xml file 
+				outfile		<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')	
+				bxml		<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, ph=ph, xml.monophyly4clusters=xml.monophyly4clusters, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
+				getNodeSet(bxml, "//*[@id='tmrca(c1)']")		
+				#	write xml file
+				file		<- paste(outdir,'/',outfile,".xml",sep='')
+				if(verbose)	cat(paste("\nwrite xml file to",file))
+				saveXML(bxml, file=file)		
+				#	freed through R garbage collection (I hope!) since addFinalizer=TRUE throughout
+				paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,sep='')
+			})
+	#
+	#	generate BEAST commands and run
+	#
+	sapply(bfile, function(x)
+			{
+				cmd			<- hivc.cmd.beast.runxml(outdir, x, outsignat, tmpdir.prefix="beast")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3800mb",  hpc.nproc=1)					
+				cat(cmd)
+				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
+				hivc.cmd.hpccaller(outdir, outfile, cmd)
+				Sys.sleep(1)
+			})		
+}
+######################################################################################
 hivc.prog.get.geneticdist<- function()
 {
 	library(bigmemory)
@@ -4609,20 +4762,40 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(1)	#run BEAST
+	if(1)	#run BEAST POOL
 	{
-		indir		<- paste(dir.name,"tmp",sep='/')		
-		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg_standard"
-		insignat	<- "Tue_Aug_26_09-13-47_2013"
+		indir				<- paste(DATA,"tmp",sep='/')		
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat			<- "Thu_Aug_01_17/05/23_2013"
+		indircov			<- paste(DATA,"derived",sep='/')
+		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		infiletree			<- paste(infile,"examlbs100",sep="_")
+		infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
+		#infilexml.template	<- "um22rhU2050"
+		#infilexml.template	<- "um22rhG202018"
+		infilexml.template	<- "rhU65rho753"
+		#infilexml.template	<- "rhU65rho903"
+		#infilexml.template	<- "rhU65rho906"
+		#infilexml.template	<- "rhU65rho909"		
+		#infilexml.opt		<- "txs4clu"
+		infilexml.opt		<- "txs4clufx03"
+		#infilexml.opt		<- "mph4clu"
+		#infilexml.opt		<- "mph4clufx03"
+
+		outdir				<- indir
+		outsignat			<- "Tue_Aug_26_09/13/47_2013"
 		
-		cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog= PR.BEAST)		
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3850mb",  hpc.nproc=1)
+		opt.brl				<- "dist.brl.casc" 
+		thresh.brl			<- 0.096
+		thresh.bs			<- 0.8
+		pool.ntip			<- 130
+		#pool.ntip			<- 150
+		resume				<- 1
+		verbose				<- 1
 		
-		cat(cmd)
-		outdir		<- paste(dir.name,"tmp",sep='/')
-		outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
-		hivc.cmd.hpccaller(outdir, outfile, cmd)
-		
+		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
+		argv				<<- unlist(strsplit(argv,' '))
+		hivc.prog.BEASTpoolrunxml()		
 		stop()
 	}
 	if(0)	#compute one ExaML tree, no bootstrapping

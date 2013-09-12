@@ -56,6 +56,9 @@ PR.EXAML.BS		<- "ExaML-raxml"
 PR.BEAST		<- {tmp<- c("/Applications/BEAST_1.7.5/bin/beast","beast"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp } 
 
 #' @export
+PR.BEASTPOOLRUN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEASTPOOLRUN",sep='/')
+
+#' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
 
 #' @export
@@ -147,6 +150,22 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 	if(length(ans)==1)
 		ans<- unlist(ans)
 	ans
+}
+
+hivc.cmd.beast.poolrunxml<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt="txs4clu", infilexml.template="standard", opt.brl="dist.brl.casc", thresh.brl=0.096, thresh.bs=0.8, prog= PR.BEASTPOOLRUN, resume=1, verbose=1)
+{
+	cmd<- "#######################################################
+# run BEAST for pooled clusters capturing MSM transmission
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
+	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov,sep='')
+	cmd<- paste(cmd," -infilexml=",infilexml," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -infiletree=",infiletree," -outdir=",indir," -outsignat=",outsignat,sep='')
+	cmd<- paste(cmd," -pool.ntip=",pool.ntip," -thresh.brl=",thresh.brl," -thresh.bs=",thresh.bs," -opt.brl=",opt.brl,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
+	cmd	
 }
 
 hivc.cmd.clustering.msm<- function(indir, infile, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, prog= PR.CLUSTMSM, resume=1, verbose=1)
