@@ -4763,7 +4763,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(1)	#run BEAST POOL
+	if(0)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -4807,20 +4807,23 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over nucleotides in alignment and over initial starting trees to start ML search.
+	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
 	{
 		bs.from		<- 0
-		bs.to		<- 2
+		bs.to		<- 0
 		bs.n		<- 100
 		signat.in	<- "Sat_Jun_16_17:23:46_2013"
 		signat.out	<- "Sat_Jun_16_17:23:46_2013"				
 		indir		<- paste(dir.name,"tmp",sep='/')
-		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences"
-
+		#infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences"		
 		signat.in	<- "Thu_Aug_01_17/05/23_2013"
 		signat.out	<- "Thu_Aug_01_17/05/23_2013"						
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
 
+		infile		<- "xMRV.gag.Lo.Ike"
+		signat.in	<- "Thu_Sep_12_17/05/23_2013"
+		signat.out	<- "Thu_Sep_12_17/05/23_2013"
+		
 		outdir		<- paste(dir.name,"tmp",sep='/')
 		cmd			<- hivc.cmd.examl.bsalignment(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
 		outdir		<- paste(dir.name,"tmp",sep='/')							
@@ -4829,7 +4832,7 @@ hivc.proj.pipeline<- function()
 					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q=NA, hpc.mem="3850mb", hpc.nproc=8)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("pipeline",signat,"qsub",sep='.')
-					#cat(x)					
+					cat(x)					
 					hivc.cmd.hpccaller(outdir, outfile, x)
 					Sys.sleep(1)
 				})
