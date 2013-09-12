@@ -19,6 +19,7 @@ project.hivc.check.DateRes.after.HIVPosTest<- function(dir.name= DATA, verbose=1
 	require(data.table)
 	require(ggplot2)
 	require(plyr)
+	
 	NL.HIV.phases<- as.Date( c("1980-01-01","1984-01-01","1996-01-01","2000-01-01","2004-01-01") )
 	NL.possibly.Acute<- c(1,2)
 	
