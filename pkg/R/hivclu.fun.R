@@ -440,6 +440,8 @@ hivc.beast.get.xml<- function(btemplate, seq.PROT.RT, df, file, ph=NULL, xml.mon
 	if(length(tmp)!=1)	stop("unexpected number of *[@id='skyride.groupSize'")
 	tmp			<- tmp[[1]]
 	xmlAttrs(tmp)["dimension"]	<-	nrow(df)-1
+	#	if uniform prior for rootheight, set minimum to earliest sample time in data set
+	dummy		<- hivc.beast.adjust.rootheightprior(bxml, df, verbose=verbose)
 	#	for clusters, add taxon sets and tmrcaStatistics 
 	dummy		<- hivc.beast.add.taxonsets4clusters(bxml, df, xml.monophyly4clusters=xml.monophyly4clusters, verbose=verbose)		
 	#	reset output fileNames
@@ -452,6 +454,23 @@ hivc.beast.get.xml<- function(btemplate, seq.PROT.RT, df, file, ph=NULL, xml.mon
 	#
 	bxml
 }	
+######################################################################################
+#	if rootheight prior uniform, sets lower bound to earliest sampling time in data set
+hivc.beast.adjust.rootheightprior<- function(bxml, df, verbose=1)
+{
+	bxml.prior	<- getNodeSet(bxml, "//uniformPrior[descendant::parameter[@idref='treeModel.rootHeight']]")
+	if(length(bxml.prior)>1)	stop("unexpected length of //uniformPrior[descendant::parameter[@idref='treeModel.rootHeight']]")
+	if(length(bxml.prior)==1)
+	{
+		tmp								<- df[,range(AnyPos_T1)]
+		if(verbose)	cat(paste("\nfound uniformPrior for treeModel.rootHeight. Range of tip dates is",tmp[1],tmp[2]))
+		tmp								<- difftime(tmp[2],tmp[1], units="days")	
+		bxml.prior						<- bxml.prior[[1]]
+		if(verbose)	cat(paste("\nset lower bound of uniformPrior for treeModel.rootHeight to", floor( tmp/365 )))
+		xmlAttrs(bxml.prior)["lower"]	<- floor( tmp/365 )	
+	}
+	bxml
+}
 ######################################################################################
 #	assumes df has BEASTlabel and cluster
 hivc.beast.get.taxonsets4clusters	<- function(bxml, df)

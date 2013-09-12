@@ -1,6 +1,7 @@
-#! /Library/Frameworks/R.framework/Versions/2.11/Resources/bin/Rscript
+#! /Library/Frameworks/R.framework/Versions/2.15/Resources/bin/Rscript
 ##	first line in shell script starts with #! and start Rscript
 ##	CHANGE  as needed
+##! /Library/Frameworks/R.framework/Versions/2.11/Resources/bin/Rscript
 ##! /Library/Frameworks/R.framework/Versions/2.15/Resources/bin/Rscript
 ##! /apps/R/2.15/lib64/R/bin/Rscript
 ##! /usr/bin/Rscript
@@ -38,11 +39,11 @@ require(hivclust)
 
 
 CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
-CODE.HOME	<<- "/Users/Stephane/Phylogenetics/github/hivclust/pkg"
+#CODE.HOME	<<- "/Users/Stephane/Phylogenetics/github/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
 INST		<<- paste(CODE.HOME,"inst",sep='/')
 HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
-HOME		<<- "/Users/Stephane/Desktop/CASCADE_phylo/hivclust"
+#HOME		<<- "/Users/Stephane/Desktop/CASCADE_phylo/hivclust"
 #HOME		<<- "/home/koelle/or7/phylody"
 #HOME		<<- "/work/or105/ATHENA_2013"
 DATA		<<- paste(HOME,"data",sep='/')

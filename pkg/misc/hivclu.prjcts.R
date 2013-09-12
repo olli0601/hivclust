@@ -4469,23 +4469,13 @@ hivc.prog.BEASTpoolrunxml<- function()
 		if(length(tmp)>0) infilexml.template<- tmp[1]
 	}	
 	
-	if(grepl("mph",infilexml.opt))	
-	{
-		xml.monophyly4clusters	<- 1
-		#	load complete tree to generate starting tree
-		file					<- paste(indir,'/',infiletree,'_',gsub('/',':',insignat),".R",sep='')
-		if(verbose)	cat(paste("\nload complete tree to generate starting tree from file",file))
-		load(file)	#load object 'ph'							
-	}
-	else
-	{
-		xml.monophyly4clusters	<- 0
-		ph						<- NULL
-	}
-	if(grepl("fx03",infilexml.opt))
-		pool.includealwaysbeforeyear	<- 2003
-	else
-		pool.includealwaysbeforeyear	<- NA
+	#	load complete tree to generate starting tree
+	file					<- paste(indir,'/',infiletree,'_',gsub('/',':',insignat),".R",sep='')
+	if(verbose)	cat(paste("\nload complete tree to generate starting tree from file",file))
+	load(file)	#load object 'ph'
+	
+	xml.monophyly4clusters			<- ifelse(grepl("mph",infilexml.opt),1,0)		
+	pool.includealwaysbeforeyear	<- ifelse(grepl("fx03",infilexml.opt),2003, NA)
 	
 	if(verbose)
 	{
@@ -4571,7 +4561,7 @@ hivc.prog.BEASTpoolrunxml<- function()
 	sapply(bfile, function(x)
 			{
 				cmd			<- hivc.cmd.beast.runxml(outdir, x, outsignat, tmpdir.prefix="beast")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3800mb",  hpc.nproc=1)					
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="1200mb",  hpc.nproc=1)					
 				cat(cmd)
 				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
@@ -4763,7 +4753,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(0)	#run BEAST POOL
+	if(1)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -4774,12 +4764,13 @@ hivc.proj.pipeline<- function()
 		infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
 		#infilexml.template	<- "um22rhU2050"
 		#infilexml.template	<- "um22rhG202018"
-		infilexml.template	<- "rhU65rho753"
+		#infilexml.template	<- "rhU65rho753"
 		#infilexml.template	<- "rhU65rho903"
 		#infilexml.template	<- "rhU65rho906"
-		#infilexml.template	<- "rhU65rho909"		
-		#infilexml.opt		<- "txs4clu"
-		infilexml.opt		<- "txs4clufx03"
+		#infilexml.template	<- "rhU65rho909"	
+		infilexml.template	<- "um181rhU2045"
+		infilexml.opt		<- "txs4clu"
+		#infilexml.opt		<- "txs4clufx03"
 		#infilexml.opt		<- "mph4clu"
 		#infilexml.opt		<- "mph4clufx03"
 
@@ -4807,7 +4798,7 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
+	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
 	{
 		bs.from		<- 0
 		bs.to		<- 0
