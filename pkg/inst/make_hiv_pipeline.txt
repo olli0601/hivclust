@@ -22,6 +22,7 @@ cd ..
 rm -r clustal-omega-1.1.0
 
 
+
 tar xvfz openmpi-1.6.4.tar.gz
 cd openmpi-1.6.4
 ./configure --disable-mpi-f77  --prefix=$HOME
