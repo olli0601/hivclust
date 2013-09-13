@@ -4823,7 +4823,7 @@ hivc.proj.pipeline<- function()
 				{				
 					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q=NA, hpc.mem="3850mb", hpc.nproc=8)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-					outfile	<- paste("pipeline",signat,"qsub",sep='.')
+					outfile	<- paste("exa",signat,"qsub",sep='.')
 					cat(x)					
 					hivc.cmd.hpccaller(outdir, outfile, x)
 					Sys.sleep(1)
