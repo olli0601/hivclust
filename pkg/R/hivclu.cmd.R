@@ -267,8 +267,7 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 #######################################################"
 	cmd<- paste(cmd,paste("\necho \'run ",prog.parser,"\'\n",sep=''))
 	#default commands for parser					
-	
-	curr.dir	<- getwd()
+	cmd			<- paste(cmd,"CWD=$(pwd)\n",sep='')
 	cmd			<- paste(cmd,"cd ",outdir,'\n',sep='')
 	tmp			<- paste(indir,paste(infile,'_',signat.in,".phylip.",args.starttree.bsid,sep=''),sep='/')
 	cmd			<- paste(cmd,prog.parser," -m DNA -s ",tmp,sep='')
@@ -311,7 +310,7 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 	cmd 		<- paste(cmd,"\nfind . -name \'ExaML_binaryCheckpoint.*?finaltree.",args.starttree.bsid,"*\' -delete", sep='' )
 	cmd 		<- paste(cmd,"\nfind . -name \'ExaML_log.*?finaltree.",args.starttree.bsid,"*\' -delete", sep='' )
 	cmd			<- paste(cmd,paste("\necho \'end cleanup\'",sep=''))		
-	cmd			<- paste(cmd,"\ncd ",curr.dir,sep='')
+	cmd			<- paste(cmd,"\ncd $CWD",sep='')
 	cmd			<- paste(cmd,"\n#######################################################
 # end: compute ExaML tree
 #######################################################\n",sep='')
@@ -319,29 +318,52 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 }
 
 #' @export
-hivc.cmd.examl.bsalignment<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.to=99, bs.n=bs.to-bs.from+ifelse(bs.from==0,1,0),outdir=indir, prog.bscreate= PR.EXAML.BSCREATE, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, args.examl="-m GAMMA -D", prog.supportadder=PR.EXAML.BS, resume=1, verbose=1)
+#' 	creates a shell command to create a new bootstrap alignment over codon positions of an input alignment 
+hivc.cmd.examl.bsalignment<- function(indir, infile, signat.in, signat.out, bs.id, outdir=indir, prog.bscreate= PR.EXAML.BSCREATE, resume=0, verbose=1)
 {
+	cmd			<- paste("#######################################################
+# start: create and check bootstrap alignment
+#######################################################\n",sep='')
+	cmd			<- paste(cmd,prog.bscreate," -resume=",resume," -bootstrap=",bs.id,sep='')
+	cmd			<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir,sep='')
+	cmd			<- paste(cmd," -insignat=",signat.in," -outsignat=",signat.out,sep='')
+	cmd			<- paste(cmd,"\n#######################################################
+# end: create and check bootstrap alignment
+#######################################################",sep='')			
+	cmd
+}
+
+#' @export
+hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.to=99, bs.n=bs.to-bs.from+ifelse(bs.from==0,1,0),outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, args.examl="-m GAMMA -D", prog.supportadder=PR.EXAML.BS, tmpdir.prefix="examl", resume=1, verbose=1)
+{
+	hpcsys		<- hivc.get.hpcsys()
+	#hpcsys		<- "cx1.hpc.ic.ac.uk"
 	#create number of seeds for the number of runs being processed, which could be less than bs.n
 	bs.id	<- seq.int(bs.from,bs.to)
 	bs.seeds<- floor( runif(length(bs.id), 1e4, 1e5-1) )
 	lapply(seq_along(bs.seeds), function(i)
 			{
 				cmd			<- ''
-				cmd			<- paste(cmd,"#######################################################
-# start: create and check bootstrap alignment
-#######################################################\n",sep='')
-				cmd			<- paste(cmd,prog.bscreate," -resume=",0," -bootstrap=",bs.id[i],sep='')
-				cmd			<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir,sep='')
-				cmd			<- paste(cmd," -insignat=",signat.in," -outsignat=",signat.out,sep='')
-				cmd			<- paste(cmd,"\n#######################################################
-# end: create and check bootstrap alignment
-#######################################################",sep='')				
-				cmd			<- paste(cmd,hivc.cmd.examl(indir, infile, signat.in, signat.out, outdir=outdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='\n')
-				curr.dir	<- getwd()
+				if(hpcsys=="debug")						#my MAC - don t use scratch
+				{
+					cmd		<- paste(cmd,hivc.cmd.examl.bsalignment(indir, infile, signat.in, signat.out, bs.id[i], outdir=indir, verbose=verbose),sep='\n')
+					cmd		<- paste(cmd,hivc.cmd.examl(indir, infile, signat.in, signat.out, outdir=outdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='\n')
+				}
+				else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
+				{
+					tmpdir	<- paste(tmpdir.prefix,'_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
+					cmd		<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
+					tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+					cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
+					cmd		<- paste(cmd,hivc.cmd.examl.bsalignment(tmpdir, infile, signat.in, signat.out, bs.id[i], outdir=tmpdir, verbose=verbose),sep='\n')
+					cmd		<- paste(cmd,hivc.cmd.examl(tmpdir, infile, signat.in, signat.out, outdir=tmpdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='\n')
+					cmd		<- paste(cmd,"cp -f ",tmpdir,"/* ", outdir,'\n',sep='')
+				}				
 				cmd			<- paste(cmd,"#######################################################
 # start: check if all ExaML boostrap trees have been computed and if yes create ExaML bootstrap tree
-#######################################################",sep='')				
-				cmd			<- paste(cmd,"\ncd ",outdir,sep='')
+#######################################################",sep='')	
+				cmd			<- paste(cmd,"\nCWD=$(pwd)\n",sep='')
+				cmd			<- paste(cmd,"cd ",outdir,sep='')
 				cmd			<- paste(cmd,paste("\necho \'check if all bootstrap samples have been computed\'",sep=''))
 				tmp			<- paste("\nif [ $(find . -name 'ExaML_result*' | wc -l) -eq ",bs.n," ]; then",sep='')
 				cmd			<- paste(cmd,tmp,sep='')
@@ -366,7 +388,7 @@ hivc.cmd.examl.bsalignment<- function(indir, infile, signat.in, signat.out, bs.f
 				cmd			<- paste(cmd,paste("\n\trm ExaML_result.",infile,'_',signat.out,".* ExaML_info.",infile,'_',signat.out,".*",sep=''),sep='')
 				cmd			<- paste(cmd,paste("\n\techo \'end cleanup\'",sep=''))
 				cmd			<- paste(cmd,"\nfi",sep='')
-				cmd			<- paste(cmd,"\ncd ",curr.dir,sep='')
+				cmd			<- paste(cmd,"\ncd $CWD",sep='')
 				cmd			<- paste(cmd,"\n#######################################################
 # end: check if all ExaML boostrap trees have been computed and if yes create ExaML bootstrap tree
 #######################################################\n",sep='')
@@ -451,7 +473,7 @@ hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog= PR.BEAST, tmpdir
 # start: run BEAST
 #######################################################"	
 	hpcsys	<- hivc.get.hpcsys()
-	print(hpcsys)
+	#hpcsys<- "cx1.hpc.ic.ac.uk"
 	if(hpcsys=="debug")						#my MAC - don t use scratch
 	{
 		cmd		<- paste(cmd,paste("\necho \'run ",prog[hpcsys],"\'\n",sep=''))

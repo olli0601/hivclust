@@ -4753,7 +4753,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(1)	#run BEAST POOL
+	if(0)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -4769,6 +4769,7 @@ hivc.proj.pipeline<- function()
 		#infilexml.template	<- "rhU65rho906"
 		#infilexml.template	<- "rhU65rho909"	
 		infilexml.template	<- "um181rhU2045"
+		infilexml.template	<- "um182rhU2045"
 		infilexml.opt		<- "txs4clu"
 		#infilexml.opt		<- "txs4clufx03"
 		#infilexml.opt		<- "mph4clu"
@@ -4798,11 +4799,11 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
+	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
 	{
-		bs.from		<- 0
-		bs.to		<- 0
-		bs.n		<- 100
+		bs.from		<- 99
+		bs.to		<- 99
+		bs.n		<- 200
 		signat.in	<- "Sat_Jun_16_17:23:46_2013"
 		signat.out	<- "Sat_Jun_16_17:23:46_2013"				
 		indir		<- paste(dir.name,"tmp",sep='/')
@@ -4811,12 +4812,12 @@ hivc.proj.pipeline<- function()
 		signat.out	<- "Thu_Aug_01_17/05/23_2013"						
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
 
-		infile		<- "xMRV.gag.Lo.Ike"
-		signat.in	<- "Thu_Sep_12_17/05/23_2013"
-		signat.out	<- "Thu_Sep_12_17/05/23_2013"
+		#infile		<- "xMRV.gag.Lo.Ike"
+		#signat.in	<- "Thu_Sep_12_17/05/23_2013"
+		#signat.out	<- "Thu_Sep_12_17/05/23_2013"
 		
 		outdir		<- paste(dir.name,"tmp",sep='/')
-		cmd			<- hivc.cmd.examl.bsalignment(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
+		cmd			<- hivc.cmd.examl.bootstrap(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
 		outdir		<- paste(dir.name,"tmp",sep='/')							
 		lapply(cmd, function(x)
 				{				
