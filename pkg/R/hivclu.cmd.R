@@ -353,7 +353,7 @@ hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.fro
 				{
 					tmpdir	<- paste(tmpdir.prefix,'_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
 					cmd		<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
-					tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+					tmp		<- paste(indir,'/',infile,'_',gsub('/',':',signat.in),".R",sep='')
 					cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
 					cmd		<- paste(cmd,hivc.cmd.examl.bsalignment(tmpdir, infile, signat.in, signat.out, bs.id[i], outdir=tmpdir, verbose=verbose),sep='\n')
 					cmd		<- paste(cmd,hivc.cmd.examl(tmpdir, infile, signat.in, signat.out, outdir=tmpdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='\n')
