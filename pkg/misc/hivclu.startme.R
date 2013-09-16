@@ -70,6 +70,7 @@ default.fun		<- "project.hivc.beast"
 #default.fun	<- "project.gccontent"
 default.fun 	<- "hivc.proj.pipeline"
 #default.fun 	<- "hivc.prog.remove.resistancemut"
+#default.fun 	<- "hivc.prog.BEAST.evalpoolrun"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -292,7 +293,8 @@ if(length(args))
 					CLUST					= "hivc.prog.get.clustering",
 					CLUSTTPTN				= "hivc.prog.get.clustering.TPTN",
 					CLUSTMSM				= "hivc.prog.get.clustering.MSM",
-					BEASTPOOLRUN			= "hivc.prog.BEASTpoolrunxml"
+					BEASTPOOLRUN			= "hivc.prog.BEASTpoolrunxml",
+					BEASTEVALRUN			= "hivc.prog.BEAST.evalpoolrun"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)

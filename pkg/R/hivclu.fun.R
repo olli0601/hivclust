@@ -9,6 +9,7 @@
 #' @export
 HIVC.db.locktime	<-  as.Date("30/03/2013", format="%d/%m/%Y")
 
+
 ######################################################################################
 #' @export
 hivc.seq.read.GenBank<- function (access.nb, seq.names = access.nb, species.names = TRUE, gene.names = FALSE, as.character = FALSE, attributes= c("origin")) 
@@ -362,6 +363,93 @@ hivc.beast.add.seq<- function(bxml, df, seq.PROT.RT, beast.label.datepos= 4, bea
 	#if(verbose)	cat(paste("\nreplaced BEAST alignment with new alignments, n=", xmlSize(bxml.ali)))
 	bxml
 }	
+######################################################################################
+#	Read a BEAST treeannotator file. The node.label is set to a data.table that contains the SIMMAP annotation for the interior nodes in the newick tree.
+hivc.beast.read.treeannotator<- function(file, verbose=1) 
+{
+	require(data.table)
+	require(ape)
+	ph 			<- read.nexus(file)
+	if(verbose)	cat(paste("\nReading BEAST file",file,sep=''))
+	X 			<- scan(file = file, what = "", sep = "\n", quiet = TRUE)	
+	#	read annotations of node in order as they appear in 'file'
+	tab			<- X[grep("tree TREE1[[:space:]]+=", X)]
+	tab 		<- gsub("tree TREE1[[:space:]]+= \\[&R\\] ", "", tab)
+	tab 		<- unlist(strsplit(tab, "\\["))[-1]
+	tab 		<- gsub("&|;|\\]", "", tab)
+	tab 		<- gsub(":.+$", "", tab)
+	tab 		<- lapply(tab, function(x) unlist(strsplit(x, ","))	)	
+	tab			<- lapply(tab, function(x)
+			{
+				x			<- gsub('%','',x,fixed=1)
+				ind 		<- grep("[{]", x)
+				names 		<- gsub("=.+$", "", x[ind])
+				x[ind] 		<- gsub("[{]", "", x[ind])
+				x[ind] 		<- gsub("=", "_MIN=", x[ind])
+				x[ind + 1] 	<- gsub("[}]", "", x[ind + 1])
+				x[ind + 1] 	<- paste(paste(names, "MAX=", sep = "_"), x[ind + 1],sep='')
+				x
+			})
+	colnames	<- unique(gsub("=.+$", "", unlist(tab)))
+	if(verbose)	cat(paste("\nFound BEAST variables ",paste(colnames,collapse=', '),sep=''))
+	tab			<- c(list(paste(colnames,-1,sep='=')), tab)		#rbindlist bug fix
+	tab			<- lapply(tab, function(x)
+			{
+				ans									<- rep(NA, length(colnames))
+				names(ans)							<- colnames				
+				x									<- strsplit(x,'=',fixed=1)
+				ans[ sapply(x, function(z) z[1]) ]	<- sapply(x, function(z) z[2])
+				ans									<- paste(apply( rbind( names(ans), ans ), 2, function(z) paste(z,collapse='=',sep='')),collapse=',')
+				eval(parse(text=paste("data.table(",ans,")",sep='')))				
+			})
+	df.beast	<- rbindlist(tab)[-1,]
+	tmp			<- length(which(df.beast[,!is.na(posterior)]))
+	if(verbose)	cat(paste("\nFound annotated nodes, n=", tmp))
+	if(verbose)	cat(paste("\nFound annotated tips, n=", nrow(df.beast)-tmp))	
+	#	determine node index for 'df.beast':
+	#
+	#	- delete SIMMAP information from 'X'	
+	LEFT 		<- grep("\\[", X)
+	RIGHT 		<- grep("\\]", X)
+	if (length(LEFT)) 
+	{
+		w 	<- LEFT == RIGHT
+		if (any(w)) 
+		{
+			s 		<- LEFT[w]
+			X[s] 	<- gsub("\\[[^]]*\\]", "", X[s])
+		}
+		w <- !w
+		if(any(w)) 
+		{
+			s 		<- LEFT[w]
+			X[s] 	<- gsub("\\[.*", "", X[s])
+			sb	 	<- RIGHT[w]
+			X[sb] 	<- gsub(".*\\]", "", X[sb])
+			if(any(s < sb - 1)) 
+				X 	<- X[-unlist(mapply(":", (s + 1), (sb - 1)))]
+		}
+	}	
+	#	- read tree block
+	endblock 			<- grep("END;|ENDBLOCK;", X, ignore.case = TRUE)
+	semico 				<- grep(";", X)
+	i1 					<- grep("BEGIN TREES;", X, ignore.case = TRUE)
+	i2 					<- grep("TRANSLATE", X, ignore.case = TRUE)
+	tree 				<- X[(semico[semico > i2][1] + 1):(endblock[endblock > i1][1] - 1)]
+	tree 				<- gsub("^.*= *", "", tree)
+	tree				<- substr(tree, 1, nchar(tree)-1)	 
+	# 	- For each node, add a dummy node label that is the index in 'df.beast'	
+	tmp					<- unlist(strsplit(tree, ":"))
+	interiorm1			<- which( df.beast[,!is.na(posterior)] )
+	tmp					<- sapply(seq_along(tmp), function(i) 			ifelse(i %in% interiorm1, 	paste(tmp[i],i,sep=''),	tmp[i])				)
+	tmp					<- paste(paste(tmp, collapse=':'),';',sep='')
+	#	- read this newick string and determine the node index in 'df.beast'
+	tmp					<- read.tree(text=tmp)
+	ph[["node.label"]]	<- cbind(data.table(node=Ntip(ph) + seq_len(Nnode(ph))), df.beast[as.numeric( tmp$node.label ),])
+	setkey(ph[["node.label"]], node)
+	
+	ph
+}
 ######################################################################################
 #	write nexus file for all sequences specified in df. assumes df has BEASTlabel. assumes seq.DNAbin.matrix and ph contain FASTASampleCode in df.
 hivc.beast.writeNexus4Beauti<- function( seq.DNAbin.matrix, df, ph=NULL, file=NULL )
@@ -2133,10 +2221,11 @@ hivc.clu.plot.withinpatientseq.not.samecluster<- function(missed.ph, clustering,
 	dev.off()
 }	
 ######################################################################################
-hivc.clu.mrca<- function(ph, tiplabel)
+hivc.clu.mrca<- function(ph, tiplabel, x.tip=NULL)
 {
 	require(phangorn)
-	x.tip		<- match(tiplabel, ph$tip.label)				
+	if(is.null(x.tip))
+		x.tip	<- match(tiplabel, ph$tip.label)				
 	x.tip.anc	<- lapply(x.tip, function(z) Ancestors(ph, z) )
 	x.tip.jnt	<- my.intersect.n( x.tip.anc )			
 	x.tip.anc[[1]][min(which(x.tip.anc[[1]] %in% x.tip.jnt))]				

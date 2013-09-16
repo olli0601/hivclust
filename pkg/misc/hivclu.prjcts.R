@@ -3155,7 +3155,7 @@ project.hivc.beast<- function(dir.name= DATA)
 	require(data.table)
 	require(RColorBrewer)
 	require(XLM)
-	if(1)	#get BEAST nexus file for seroconverters
+	if(0)	#get BEAST nexus file for seroconverters
 	{		
 		indir			<- paste(DATA,"tmp",sep='/')		
 		infile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -3179,8 +3179,23 @@ project.hivc.beast<- function(dir.name= DATA)
 		argv		<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		cat(argv)
 		argv		<<- unlist(strsplit(argv,' '))
-		hivc.prog.BEASTpoolrunxml()		
-	}	
+		hivc.prog.BEAST.poolrunxml()		
+	}
+	if(1)	#get distribution of TMRCAs of tip nodes for a particular BEAST run
+	{
+		indir				<- paste(DATA,"beast/beast_130908",sep='/')		
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg"
+		insignat			<- "Tue_Aug_26_09/13/47_2013"
+		infilexml.opt		<- "txs4clu"
+		infilexml.template	<- "um22rhG202018"
+		verbose				<- 1
+		beastlabel.idx.hivs	<- 4
+		pool.n				<- 1
+		
+		argv				<<- hivc.cmd.beast.evalrun(indir, infile, insignat, infilexml.opt, infilexml.template, pool.n, verbose=verbose)
+		argv				<<- unlist(strsplit(argv,' '))
+		hivc.prog.BEAST.evalpoolrun()
+	}
 }
 ######################################################################################
 project.hivc.clustering<- function(dir.name= DATA)
@@ -4370,7 +4385,119 @@ hivc.prog.remove.resistancemut<- function()
 	seq.PROT.RT
 }
 ######################################################################################
-hivc.prog.BEASTpoolrunxml<- function()
+hivc.prog.BEAST.evalpoolrun<- function()
+{		
+	indir				<- paste(DATA,"tmp",sep='/')		
+	infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg"
+	insignat			<- "Tue_Aug_26_09/13/47_2013"
+	#infilexml.opt		<- "txs4clu"
+	infilexml.opt		<- "mph4clu"
+	#infilexml.template	<- "um22rhG202018"
+	infilexml.template	<- "um182rhU2045"	
+	
+	verbose				<- 1
+	beastlabel.idx.clu	<- 1
+	beastlabel.idx.hivs	<- 4
+	pool.n				<- 3
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]		
+		#		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,14),
+									infilexml.opt= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.opt<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.template<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									pool.n= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) pool.n<- tmp[1]
+	}	
+	if(verbose)
+	{
+		print(indir)
+		print(infile)
+		print(insignat)
+		print(infilexml.opt)
+		print(infilexml.template)
+		print(pool.n)
+	}	
+	#	
+	#	read annotated mcc trees
+	#
+	tmp			<- list.files(indir, pattern=paste(".nex$",sep=''))
+	tmp			<- tmp[ grepl(infilexml.template, tmp) & grepl(infilexml.opt, tmp) & grepl(gsub('/',':',insignat), tmp) ]
+	if(verbose)	cat(paste("\nFound files matching input args, n=", length(tmp)))
+	
+	if(length(tmp)==pool.n)
+	{
+		ph.beast	<- lapply(tmp, function(x)		hivc.beast.read.treeannotator(paste(indir,x,sep='/'), verbose=verbose)		)
+		if(verbose)	cat(paste("\nRead trees matching input args, n=", length(ph.beast)))
+		#	for each tree, return 	height_median height_95_HPD_MIN height_95_HPD_MAX for the parent of each tip 		
+		ph.trmca	<- lapply(ph.beast, function(x)
+				{
+					#select heights and convert heights into calendar time
+					tip.latest			<- max( as.numeric( sapply(strsplit(x$tip.label,'_'), function(x)	x[beastlabel.idx.hivs] ) ) )
+					tip.parents			<- unique( x$edge[x$edge[,2]<=Ntip(x),1] )		
+					ans					<- x$node.label[J(tip.parents)][, list(node=node, height_median=tip.latest-height_median, height_95_HPD_MIN=tip.latest-height_95_HPD_MAX, height_95_HPD_MAX=tip.latest-height_95_HPD_MIN)]
+					tmp					<- sapply(ans[,node], function(z)	x$edge[ x$edge[,1]==z, 2 ] )
+					tmp[tmp>Ntip(x)]	<- NA
+					tmp					<- t( apply(tmp,2,function(z) x$tip.label[ sort(z,na.last=1) ]) )
+					ans[,height_95_diff:= height_95_HPD_MAX-height_95_HPD_MIN]
+					ans[,tip1:= tmp[,1]]		
+					ans[,tip2:= tmp[,2]]					
+					ans
+				})
+		ph.trmca	<- rbindlist( ph.trmca )
+		#	for each of the clusters, compute the posterior probability of a common MRCA
+		clu.df	<- lapply(ph.beast, function(x)
+				{							
+					tmp		<- data.table(tip=seq_len(Ntip(x)), cluster=as.numeric( sapply( strsplit(x$tip.label,'_'),function(z)  z[beastlabel.idx.clu] ) ))
+					ans		<- merge( tmp[, list(node=hivc.clu.mrca(x, x.tip=tip)), by=cluster], subset(x$node.label, select=c(node, posterior)), by="node" )
+					subset(ans, select=c(cluster, posterior))
+				})
+		clu.df	<- rbindlist(clu.df)		
+		if(verbose)	cat(paste("\nRange of posterior probabilities that each of the putative clusters each has a common MRCA, min=",min(clu.df[,posterior])," max=",max(clu.df[,posterior]) ))
+		#	save mcc tree in R format
+		file		<- paste(indir,'/',infile,'_',infilexml.template,'_',infilexml.opt,"_mcc_",gsub('/',':',insignat),".R",sep='')
+		if(verbose)	cat(paste("\nSave mcc tree to file",file))
+		save(ph.beast, ph.trmca, clu.df, file=file)
+		
+		#	plot tip TMRCAs
+		tmp			<- sort(ph.trmca[, height_95_diff])	
+		file		<- paste(indir,'/',infile,'_',infilexml.template,'_',infilexml.opt,"_mcc_tiptmrca_",gsub('/',':',insignat),".pdf",sep='')
+		if(verbose)	cat(paste("\nPlot tip TMRCAs to file",file))
+		pdf(file,width=7,height=7)
+		plot( tmp, seq_len(nrow(ph.trmca)), type="l", xlab='width of 95% interval of TMRCA of tips', ylab='#MRCA of tips', bty='n' )
+		tmp			<- quantile(tmp, prob=c(0.25,0.5,0.8,0.9,0.95))
+		legend("bottomright",bty='n',border=NA,legend=paste( apply(rbind(names(tmp), round(tmp,d=2)),2,function(x) paste(x,collapse='=',sep='')), collapse=', ',sep=''))
+		legend("topleft",bty='n',border=NA,legend=paste(infilexml.template,infilexml.opt,sep='_'))
+		dev.off()
+	}
+	else if(verbose)	cat(paste("\nNothing evaluated - waiting for BEAST runs to complete"))
+}
+######################################################################################
+hivc.prog.BEAST.poolrunxml<- function()
 {	
 	require(XML)
 	
@@ -4560,8 +4687,9 @@ hivc.prog.BEASTpoolrunxml<- function()
 	#
 	sapply(bfile, function(x)
 			{
-				cmd			<- hivc.cmd.beast.runxml(outdir, x, outsignat, tmpdir.prefix="beast")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="1200mb",  hpc.nproc=1)					
+				cmd			<- hivc.cmd.beast.runxml(outdir, x, outsignat, hpc.tmpdir.prefix="beast", hpc.ncpu=4)				
+				cmd			<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=4)					
 				cat(cmd)
 				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
@@ -4753,7 +4881,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(0)	#run BEAST POOL
+	if(1)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -4768,11 +4896,14 @@ hivc.proj.pipeline<- function()
 		#infilexml.template	<- "rhU65rho903"
 		#infilexml.template	<- "rhU65rho906"
 		#infilexml.template	<- "rhU65rho909"	
-		infilexml.template	<- "um181rhU2045"
+		#infilexml.template	<- "um181rhU2045"
 		infilexml.template	<- "um182rhU2045"
-		infilexml.opt		<- "txs4clu"
+		infilexml.template	<- "um183rhU2045"
+		infilexml.template	<- "um182us45"
+		infilexml.template	<- "um182us60"
+		#infilexml.opt		<- "txs4clu"
 		#infilexml.opt		<- "txs4clufx03"
-		#infilexml.opt		<- "mph4clu"
+		infilexml.opt		<- "mph4clu"
 		#infilexml.opt		<- "mph4clufx03"
 
 		outdir				<- indir
@@ -4788,7 +4919,7 @@ hivc.proj.pipeline<- function()
 		
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))
-		hivc.prog.BEASTpoolrunxml()		
+		hivc.prog.BEAST.poolrunxml()		
 		stop()
 	}
 	if(0)	#compute one ExaML tree, no bootstrapping
@@ -4799,7 +4930,7 @@ hivc.proj.pipeline<- function()
 		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
 		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
 	}
-	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
+	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
 	{
 		bs.from		<- 99
 		bs.to		<- 99

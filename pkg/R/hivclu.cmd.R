@@ -56,6 +56,12 @@ PR.EXAML.BS		<- "ExaML-raxml"
 PR.BEAST		<- {tmp<- c("/Applications/BEAST_1.7.5/bin/beast","beast"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp } 
 
 #' @export
+PR.BEASTMCC		<- {tmp<- c("/Applications/BEAST_1.7.5/bin/treeannotator","treeannotator"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp }
+
+#' @export
+PR.BEASTEVALRUN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEASTEVALRUN",sep='/')
+
+#' @export
 PR.BEASTPOOLRUN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEASTPOOLRUN",sep='/')
 
 #' @export
@@ -155,7 +161,7 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 hivc.cmd.beast.poolrunxml<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt="txs4clu", infilexml.template="standard", opt.brl="dist.brl.casc", thresh.brl=0.096, thresh.bs=0.8, prog= PR.BEASTPOOLRUN, resume=1, verbose=1)
 {
 	cmd<- "#######################################################
-# run BEAST for pooled clusters capturing MSM transmission
+# start: run BEAST for pooled clusters capturing MSM transmission
 #######################################################"
 	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
 	#default commands
@@ -165,6 +171,23 @@ hivc.cmd.beast.poolrunxml<- function(indir, infile, insignat, indircov, infileco
 	cmd<- paste(cmd," -pool.ntip=",pool.ntip," -thresh.brl=",thresh.brl," -thresh.bs=",thresh.bs," -opt.brl=",opt.brl,sep='')
 	#verbose stuff
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
+	cmd	
+}
+
+hivc.cmd.beast.evalrun<- function(indir, infile, insignat, infilexml.opt, infilexml.template, pool.n, prog= PR.BEASTEVALRUN, verbose=1)
+{
+	cmd<- "#######################################################
+# start: evaluate BEAST MCC trees
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,prog," -v=",verbose," -indir=",indir," -infile=",infile," -insignat=",insignat,sep='')
+	cmd<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -pool.n=",pool.n,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd<- paste(cmd,"#######################################################
+# end: evaluate BEAST MCC trees
+#######################################################\n",sep='')
 	cmd	
 }
 
@@ -469,36 +492,58 @@ hivc.cmd.examl.cleanup<- function(outdir, prog= PR.EXAML.EXAML)
 }
 
 #' @export
-hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog= PR.BEAST, tmpdir.prefix="beast")
+hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
 {
 	cmd		<- "#######################################################
 # start: run BEAST
 #######################################################"	
 	hpcsys	<- hivc.get.hpcsys()
 	#hpcsys<- "cx1.hpc.ic.ac.uk"
+	cmd		<- paste(cmd,paste("\necho \'run ",prog.beast[hpcsys],"\'\n",sep=''))
 	if(hpcsys=="debug")						#my MAC - don t use scratch
-	{
-		cmd		<- paste(cmd,paste("\necho \'run ",prog[hpcsys],"\'\n",sep=''))
+	{		
 		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,prog[hpcsys]," -strict -working ",tmp,'\n',sep='')
-		cmd		<- paste(cmd,"echo \'end ",prog[hpcsys],"\'\n",sep='')
+		cmd		<- paste(cmd,prog.beast[hpcsys]," -strict -working ",tmp,'\n',sep='')
 	}
 	else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
 	{
-		cmd		<- paste(cmd,paste("\necho \'run ",prog[hpcsys],"\'\n",sep=''))
-		tmpdir	<- paste(tmpdir.prefix,'_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
+		cmd		<- paste(cmd,"CWD=$(pwd)\n",sep='')
+		cmd		<- paste(cmd,"echo $CWD\n",sep='')		
+		tmpdir	<- paste("$CWD/",hpc.tmpdir.prefix,'_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
 		cmd		<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
 		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
 		cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
 		tmp		<- paste(tmpdir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,prog[hpcsys]," -strict -working -threads 1 ",tmp,'\n',sep='')	
-		cmd		<- paste(cmd,"cp -f ",tmpdir,"/* ", indir,'\n',sep='')
-		cmd		<- paste(cmd,"echo \'end ",prog[hpcsys],"\'\n",sep='')
+		cmd		<- paste(cmd,prog.beast[hpcsys]," -strict -working -threads ",hpc.ncpu," ",tmp,'\n',sep='')	
+		cmd		<- paste(cmd,"cp -f ",tmpdir,"/* ", indir,'\n',sep='')		
 	}
-	#TODO add mcc tree etc
-	cmd<- paste(cmd,"#######################################################
+	cmd		<- paste(cmd,"echo \'end ",prog.beast[hpcsys],"\'\n",sep='')
+	cmd		<- paste(cmd,"#######################################################
 # end: run BEAST
 #######################################################\n",sep='')
+	cmd<- paste(cmd,"#######################################################
+# start: run TREEANNOTATOR
+#######################################################\n",sep='')
+	cmd		<- paste(cmd,"echo \'run ",prog.beastmcc[hpcsys],"\'\n",sep='')
+	if(hpcsys=="debug")						#my MAC - don t use scratch
+	{	
+		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".timetrees",sep='')
+		cmd		<- paste(cmd,prog.beastmcc[hpcsys]," -burnin ",beastmcc.burnin," -heights ",beastmcc.heights," ",tmp,sep='')
+		tmp		<- paste(indir,'/',infile,"_mcc_",gsub('/',':',insignat),".nex",sep='')
+		cmd		<- paste(cmd," ",tmp,"\n",sep='')
+	}
+	else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
+	{
+		tmp		<- paste(tmpdir,'/',infile,'_',gsub('/',':',insignat),".timetrees",sep='')
+		cmd		<- paste(cmd,prog.beastmcc[hpcsys]," -burnin ",beastmcc.burnin," -heights ",beastmcc.heights," ",tmp,sep='')
+		tmp		<- paste(tmpdir,'/',infile,"_mcc_",gsub('/',':',insignat),".nex",sep='')
+		cmd		<- paste(cmd," ",tmp,"\n",sep='')
+		cmd		<- paste(cmd,"cp -f ",tmp," ", indir,'\n',sep='')
+	}
+	cmd		<- paste(cmd,"echo \'end ",prog.beastmcc[hpcsys],"\'\n",sep='')
+	cmd<- paste(cmd,"#######################################################
+# end: run TREEANNOTATOR
+#######################################################\n",sep='')		
 	cmd
 }
 
