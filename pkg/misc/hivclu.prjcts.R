@@ -3203,6 +3203,59 @@ project.hivc.clustering<- function(dir.name= DATA)
 	require(ape)
 	require(data.table)
 	require(RColorBrewer)
+	if(1)	#get distribution of BS for TN and TP
+	{		
+		verbose		<- 1
+		resume		<- 1
+		#
+		# precompute clustering stuff		
+		#
+		patient.n	<- 15700
+		indir		<- paste(DATA,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+		insignat	<- "Sat_Jun_16_17/23/46_2013"
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"			
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		indircov	<- paste(DATA,"derived",sep='/')
+		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"							
+		argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
+		argv		<<- unlist(strsplit(argv,' '))
+		clu.pre		<- hivc.prog.get.clustering.precompute()
+		
+		
+		
+		linked.bypatient	<- clu.pre$linked.bypatient
+		ph					<- clu.pre$ph
+		ph.mrca				<- mrca(ph)		#probably fastest
+		
+		setkey(linked.bypatient,Patient)
+		x					<- subset(linked.bypatient,Patient=="M10002")
+		tmp					<- match(x$FASTASampleCode, ph$tip.label)
+		ans					<- t(combn(tmp, 2 ))
+		apply(ans, 1, function(z) getMRCA(ph, z))
+		
+		
+		tip.mrca			<- getMRCA(ph, tmp)
+		Ancestors(ph, tip.mrca)
+		
+		
+		tip.ph				<- extract.clade(ph, getMRCA(ph, tmp), root.edge=1)
+		tip.mrca			<- mrca(tip.ph)
+		ans					<- t(combn(seq_len(nrow(x)), 2 ))
+		ans					<- as.data.table( apply(ans,2,function(z) x$FASTASampleCode[z]) )
+		setnames(ans, c("V1","V2"),c("tip1","tip2"))		
+		ans					<- cbind(ans, data.table(mrca= apply(ans, 1, function(z)  tip.mrca[z[1],z[2]])))
+		tip.ph$node.label[ ans[, mrca-Ntip(tip.ph)] ]
+		
+		
+		ans[, tip.mrca[tip1,tip2]]
+		
+		ans					<- cbind( ans, apply(ans, 1, function(z)  tip.mrca[z[1],z[2]]) )
+		
+		
+		tmp					<- t(combn(tmp, 2 ))
+		
+	}
 	if(0)	#min brl to get a transmission cascade from brl matrix
 	{
 		brlmat	<- matrix( c(0,0.1,0.1, 	0.1,0,0.2,	0.1,0.2,0), ncol=3, nrow=3)
@@ -4249,7 +4302,7 @@ hivc.prog.get.clustering.precompute<- function()
 		if(verbose) cat(paste("\nend: compute TP and TN data tables for phylogeny"))
 		unlinked.byspace				<- tmp[["unlinked.byspace"]]
 		unlinked.bytime					<- tmp[["unlinked.bytime"]]
-		linked.bypatient				<- tmp[["linked.bypatient"]]	
+		clu				<- tmp[["linked.bypatient"]]	
 		ph.linked						<- tmp[["ph.linked"]]
 		ph.unlinked.info				<- tmp[["ph.unlinked.info"]]
 		ph.unlinked						<- tmp[["ph.unlinked"]]
@@ -4520,7 +4573,9 @@ hivc.prog.BEAST.poolrunxml<- function()
 	infilexml.template	<- "standard"
 	resume				<- 1
 	verbose				<- 1
-	
+	hpc.ncpu			<- 8
+	hpc.mem				<- "3800mb"
+
 	if(exists("argv"))
 	{
 		tmp<- na.omit(sapply(argv,function(arg)
@@ -4601,9 +4656,10 @@ hivc.prog.BEAST.poolrunxml<- function()
 	if(verbose)	cat(paste("\nload complete tree to generate starting tree from file",file))
 	load(file)	#load object 'ph'
 	
-	xml.monophyly4clusters			<- ifelse(grepl("mph",infilexml.opt),1,0)		
+	xml.monophyly4clusters			<- ifelse(grepl("mph4clu",infilexml.opt),1,0)		
 	pool.includealwaysbeforeyear	<- ifelse(grepl("fx03",infilexml.opt),2003, NA)
-	
+	xml.prior4tipstem				<- ifelse(grepl("mph4tu",infilexml.opt),"uniform",NA)
+			
 	if(verbose)
 	{
 		print(indir)
@@ -4624,6 +4680,7 @@ hivc.prog.BEAST.poolrunxml<- function()
 		print(infilexml.opt)
 		print(infilexml.template)
 		print(xml.monophyly4clusters)
+		print(xml.prior4tipstem)
 	}	
 	#
 	#	load sequences
@@ -4673,7 +4730,7 @@ hivc.prog.BEAST.poolrunxml<- function()
 				#print( unique(df[,cluster]) )
 				#	get xml file 
 				outfile		<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')	
-				bxml		<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, ph=ph, xml.monophyly4clusters=xml.monophyly4clusters, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
+				bxml		<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, ph=ph, xml.monophyly4clusters=xml.monophyly4clusters, xml.prior4tipstem=xml.prior4tipstem, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
 				getNodeSet(bxml, "//*[@id='tmrca(c1)']")		
 				#	write xml file
 				file		<- paste(outdir,'/',outfile,".xml",sep='')
@@ -4687,9 +4744,9 @@ hivc.prog.BEAST.poolrunxml<- function()
 	#
 	sapply(bfile, function(x)
 			{
-				cmd			<- hivc.cmd.beast.runxml(outdir, x, outsignat, hpc.tmpdir.prefix="beast", hpc.ncpu=4)				
+				cmd			<- hivc.cmd.beast.runxml(outdir, x, outsignat, hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)				
 				cmd			<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=4)					
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
 				cat(cmd)
 				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
@@ -4897,13 +4954,14 @@ hivc.proj.pipeline<- function()
 		#infilexml.template	<- "rhU65rho906"
 		#infilexml.template	<- "rhU65rho909"	
 		#infilexml.template	<- "um181rhU2045"
-		infilexml.template	<- "um182rhU2045"
+		#infilexml.template	<- "um182rhU2045"
 		infilexml.template	<- "um183rhU2045"
-		infilexml.template	<- "um182us45"
-		infilexml.template	<- "um182us60"
+		#infilexml.template	<- "um182us45"
+		#infilexml.template	<- "um182us60"
 		#infilexml.opt		<- "txs4clu"
 		#infilexml.opt		<- "txs4clufx03"
 		infilexml.opt		<- "mph4clu"
+		#infilexml.opt		<- "mph4clumph4tu"
 		#infilexml.opt		<- "mph4clufx03"
 
 		outdir				<- indir
@@ -4914,6 +4972,8 @@ hivc.proj.pipeline<- function()
 		thresh.bs			<- 0.8
 		pool.ntip			<- 130
 		#pool.ntip			<- 150
+		pool.ntip			<- 190
+		#pool.ntip			<- 400
 		resume				<- 1
 		verbose				<- 1
 		

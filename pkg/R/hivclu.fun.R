@@ -473,8 +473,8 @@ hivc.beast.writeNexus4Beauti<- function( seq.DNAbin.matrix, df, ph=NULL, file=NU
 }
 ######################################################################################
 #	create xml file from btemplate and seq.PROT.RT, using seq in df 
-# 	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; verbose=1
-hivc.beast.get.xml<- function(btemplate, seq.PROT.RT, df, file, ph=NULL, xml.monophyly4clusters=0, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
+# 	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; verbose=1; xml.prior4tipstem="uniform"
+hivc.beast.get.xml<- function(btemplate, seq.PROT.RT, df, file, ph=NULL, xml.monophyly4clusters=0, xml.prior4tipstem=NA, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
 {
 	
 	bxml		<- newXMLDoc(addFinalizer=T)
@@ -530,6 +530,10 @@ hivc.beast.get.xml<- function(btemplate, seq.PROT.RT, df, file, ph=NULL, xml.mon
 	xmlAttrs(tmp)["dimension"]	<-	nrow(df)-1
 	#	if uniform prior for rootheight, set minimum to earliest sample time in data set
 	dummy		<- hivc.beast.adjust.rootheightprior(bxml, df, verbose=verbose)
+	#	for tips, add taxon sets and tmrcaStatistics
+	if(!is.na(xml.prior4tipstem))
+		dummy	<- hivc.beast.add.taxonsets4tips(bxml, df, xml.prior4stem=xml.prior4tipstem, log=1, verbose=1)
+
 	#	for clusters, add taxon sets and tmrcaStatistics 
 	dummy		<- hivc.beast.add.taxonsets4clusters(bxml, df, xml.monophyly4clusters=xml.monophyly4clusters, verbose=verbose)		
 	#	reset output fileNames
@@ -560,7 +564,7 @@ hivc.beast.adjust.rootheightprior<- function(bxml, df, verbose=1)
 	bxml
 }
 ######################################################################################
-#	assumes df has BEASTlabel and cluster
+#	For each cluster, create a taxonset. Assumes df has BEASTlabel and cluster
 hivc.beast.get.taxonsets4clusters	<- function(bxml, df)
 {	
 	ans	<- lapply( unique( df[,cluster] ), function(clu)
@@ -573,7 +577,20 @@ hivc.beast.get.taxonsets4clusters	<- function(bxml, df)
 	ans		
 }
 ######################################################################################
-# 	extract starting tree from 'ph' by tips in 'df'. Only keeps tree topology and resets branch lengths so that the maximum root distance is 'beast.rootHeight' 
+#	For each tip, create a taxonset. Assumes df has BEASTlabel
+hivc.beast.get.taxonsets4tips	<- function(bxml, df)
+{	
+	ans	<- lapply( seq_len(nrow(df)), function(i)
+			{							
+				taxonset	<- newXMLNode("taxa", attrs= list(id=paste("tip",i,sep='')), doc=bxml, addFinalizer=T )
+				newXMLNode("taxon", attrs= list(idref=df[i,BEASTlabel]), parent=taxonset, doc=bxml, addFinalizer=T )
+				taxonset
+			})
+	ans		
+}
+######################################################################################
+# 	extract starting tree from 'ph' by tips in 'df'. Only keeps tree topology and resets branch lengths so that the maximum root distance is 'beast.rootHeight'
+#	beast.rootHeight= 35; beast.usingDates= "false"; beast.newickid= "startingTree"
 hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= 35, beast.usingDates= "false", beast.newickid= "startingTree", verbose=1)
 {
 	require(adephylo)
@@ -585,10 +602,21 @@ hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= 35, beast
 	setkey(df, FASTASampleCode)
 	ph.start$tip.label	<- df[ph.start$tip.label,][,BEASTlabel]
 	if(verbose) cat(paste("\nselected tips for startingTree, n=",Ntip(ph.start)))
+	#	adjust rootHeight to 'beast.rootHeight'
 	tmp					<- beast.rootHeight / max(distRoot(ph.start))
 	ph.start$edge.length<- ph.start$edge.length*tmp
-	tmp					<- write.tree( ph.start )
-	
+	#	compute adjusted branch lengths for each tip: midpoint within NegT and AnyPos_T1
+	df.length			<- t( sapply( strsplit(df[,BEASTlabel],'_',fixed=1), function(x)  as.numeric( x[2:4]) ) )
+	df.length			<- data.table(BEASTlabel=df[,BEASTlabel], NegT=df.length[,1], AnyPos_T1=df.length[,2], PosSeqT=df.length[,3])
+	tmp					<- max( df.length[, PosSeqT])		#TODO should this be height or length ?
+	df.length			<- df.length[, list(BEASTlabel=BEASTlabel, brl=(AnyPos_T1-NegT)/2+PosSeqT-AnyPos_T1)]
+	setkey(df.length, BEASTlabel)
+	#	adjust stem of each tip to be within NegT and AnyPos_T1
+	tmp							<- sapply(seq_len(Ntip(ph.start)), function(x) which( ph.start$edge[,2]==x ) )
+	ph.start$edge.length[ tmp ]	<- df.length[ph.start$tip.label,][,brl]
+	if(verbose) cat(paste("\nadjusted branch lengths of tips to be within NegT and AnyPos_T1. New root height is",max(distRoot(ph.start))))
+	#	write ph.start as newick tree to bxml
+	tmp					<- write.tree( ph.start )	
 	bxml.beast			<- getNodeSet(bxml, "//beast")[[1]]
 	dummy				<- newXMLCommentNode(text="The user-specified starting tree in a newick tree format", parent=bxml.beast, doc=bxml, addFinalizer=T)
 	bxml.startingTree	<- newXMLNode("newick", attrs= list(id=beast.newickid, usingDates=beast.usingDates), parent= bxml.beast, doc=bxml, addFinalizer=T)
@@ -633,13 +661,14 @@ hivc.beast.add.monophylylkl<- function(bxml, monophylyStatistics)
 	bxml
 }
 ######################################################################################
-#	get a list of tmrcaStatistics. assumes all tmrcaStatistics share a treeModel.id and the same includeStem attribute
+#	For each taxonset, get a list of tmrcaStatistics. Assumes all tmrcaStatistics share a treeModel.id and the same includeStem attribute
 hivc.beast.get.tmrcaStatistic<- function(bxml, btaxonsets, treeModel.id, includeStem="false") 
 {		
 	btaxonset.id	<- sapply(btaxonsets, function(x)	xmlGetAttr(x,"id")	)
+	prefix.id		<- ifelse(includeStem=="false","tmrca","tstem")
 	ans				<- lapply(btaxonset.id, function(x)
 			{
-				tmrcaStatistic	<- newXMLNode("tmrcaStatistic", attrs= list(id=paste("tmrca(",x,")",sep=''), includeStem=includeStem), doc=bxml, addFinalizer=T )
+				tmrcaStatistic	<- newXMLNode("tmrcaStatistic", attrs= list(id=paste(prefix.id,"(",x,")",sep=''), includeStem=includeStem), doc=bxml, addFinalizer=T )
 				mrca			<- newXMLNode("mrca", parent=tmrcaStatistic, doc=bxml, addFinalizer=T)
 				newXMLNode("taxa", attrs= list(idref=x), parent=mrca, doc=bxml, addFinalizer=T )
 				newXMLNode("treeModel", attrs= list(idref=treeModel.id), parent=tmrcaStatistic, doc=bxml, addFinalizer=T )
@@ -647,6 +676,69 @@ hivc.beast.get.tmrcaStatistic<- function(bxml, btaxonsets, treeModel.id, include
 			})
 	ans
 }	
+######################################################################################
+#	For each tip: construct a prior for the corresponding tmrcaStatistics
+hivc.beast.get.tipPrior<- function(bxml, df, btmrcaStatistics.tips, xml.prior4stem="uniform", verbose=1)
+{
+	if(xml.prior4stem!="uniform")	stop("unexpected xml.tipprior")
+	#
+	df.height	<- t( sapply( strsplit(df[,BEASTlabel],'_',fixed=1), function(x)  as.numeric( x[2:4]) ) )
+	df.height	<- data.table(BEASTlabel=df[,BEASTlabel], NegT=df.height[,1], AnyPos_T1=df.height[,2], PosSeqT=df.height[,3])
+	tmp			<- max( df.height[, PosSeqT])		#TODO should this be height or length ?
+	df.height	<- df.height[, list(BEASTlabel=BEASTlabel, NegT=tmp-NegT, AnyPos_T1=tmp-AnyPos_T1, PosSeqT=tmp-PosSeqT)]
+	#add uniform prior according to last NegT and first PosT
+	ans			<- lapply(btmrcaStatistics.tips, function(x)
+					{						
+						tmrcaStatistics.id	<- xmlGetAttr(x,"id")
+						tmp					<- xpathApply(x, "mrca/taxa", xmlGetAttr, "idref" )
+						if(length(tmp)!=1)	stop("unexpected length of idref for mrca/taxa") 
+						tip					<- as.numeric( substr(tmp[[1]],4,nchar(tmp[[1]])) )												
+						bxml.tipprior		<- newXMLNode("uniformPrior", attrs= list(lower=df.height[tip,AnyPos_T1], upper=df.height[tip,NegT]), doc=bxml, addFinalizer=T )
+						dummy				<- newXMLNode("statistic", attrs= list(idref=tmrcaStatistics.id), parent=bxml.tipprior, doc=bxml, addFinalizer=T )
+						bxml.tipprior
+					})
+	ans			
+}
+######################################################################################
+#	For each tip: add a taxonset, tmrcaStatistic, prior for the tmrcaStatistics and potentially a reference to fileLog to 'bxml'
+hivc.beast.add.taxonsets4tips<- function(bxml, df, xml.prior4stem="uniform", log=1, verbose=1)
+{
+	bxml.treeModel.id			<- unlist(xpathApply(bxml, "//treeModel[@id]", xmlGetAttr, "id"))
+	
+	#get taxon sets for each tip
+	btaxonsets.tips				<- hivc.beast.get.taxonsets4tips(bxml, df)	
+	#get tmrcaStatistic for each tip
+	btmrcaStatistics.tips		<- hivc.beast.get.tmrcaStatistic(bxml, btaxonsets.tips, bxml.treeModel.id, includeStem="true") 		
+	#get prior for each tip stem
+	bprior.tips					<- hivc.beast.get.tipPrior(bxml, df, btmrcaStatistics.tips, xml.prior4stem=xml.prior4stem, verbose=1)
+		
+	#	modify from template
+	bxml.beast					<- getNodeSet(bxml, "//beast")[[1]]
+	#	add 'btaxonsets.tips' after last taxa
+	bxml.idx					<- which(xmlSApply(bxml.beast, xmlName)=="taxa")		
+	addChildren(bxml.beast, btaxonsets.tips, at=bxml.idx[length(bxml.idx)] )
+	if(verbose) cat(paste("\nadded taxon sets for each tip, n=",length(btaxonsets.tips)))
+	#	add 'btmrcaStatistics.tips' after last treeModel or tmrcaStatistic
+	bxml.idx					<- which(xmlSApply(bxml.beast, xmlName)%in%c("treeModel","tmrcaStatistic"))
+	addChildren(bxml.beast, btmrcaStatistics.tips, at=tail(bxml.idx,1) )
+	if(verbose) cat(paste("\nadded tmrcaStatistics for stem of each tip, n=",length(btmrcaStatistics.tips)))
+	#	add 'bprior.tips' to prior
+	bxml.prior					<- getNodeSet(bxml, "//prior[@id='prior']")
+	if(length(bxml.prior)!=1)	stop("unexpected number of //prior[@id='prior']")
+	bxml.prior					<- bxml.prior[[1]]
+	addChildren(bxml.prior, bprior.tips)
+	if(verbose) cat(paste("\nadded priors for stem of each tip, n=",length(bprior.tips)))
+	#add tmrcaStatistics to log 
+	if(log)
+	{
+		bxml.fileLog				<- getNodeSet(bxml, "//log[@id='fileLog']")
+		tmrcaStatistics.id			<- sapply(btmrcaStatistics.tips, function(x)	xmlGetAttr(x,"id")	)
+		tmp							<- lapply(tmrcaStatistics.id, function(x)	newXMLNode("tmrcaStatistic", attrs= list(idref=x), parent=bxml.fileLog, doc=bxml, addFinalizer=T )	)
+		if(verbose) cat(paste("\nadded tmrcaStatistics to fileLog"))
+	}
+	
+	bxml
+}
 ######################################################################################
 hivc.beast.add.taxonsets4clusters<- function(bxml, df, xml.monophyly4clusters=1, verbose=1)
 {
