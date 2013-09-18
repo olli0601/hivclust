@@ -4573,6 +4573,7 @@ hivc.prog.BEAST.poolrunxml<- function()
 	infilexml.template	<- "standard"
 	resume				<- 1
 	verbose				<- 1
+	hpc.walltime		<- 160
 	hpc.ncpu			<- 8
 	hpc.mem				<- "3800mb"
 
@@ -4746,7 +4747,7 @@ hivc.prog.BEAST.poolrunxml<- function()
 			{
 				cmd			<- hivc.cmd.beast.runxml(outdir, x, outsignat, hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)				
 				cmd			<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
 				cat(cmd)
 				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
