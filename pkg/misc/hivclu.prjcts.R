@@ -3154,7 +3154,7 @@ project.hivc.beast<- function(dir.name= DATA)
 	require(ape)
 	require(data.table)
 	require(RColorBrewer)
-	require(XLM)
+	require(XML)
 	if(0)	#get BEAST nexus file for seroconverters
 	{		
 		indir			<- paste(DATA,"tmp",sep='/')		
@@ -3181,7 +3181,7 @@ project.hivc.beast<- function(dir.name= DATA)
 		argv		<<- unlist(strsplit(argv,' '))
 		hivc.prog.BEAST.poolrunxml()		
 	}
-	if(1)	#get distribution of TMRCAs of tip nodes for a particular BEAST run
+	if(0)	#get distribution of TMRCAs of tip nodes for a particular BEAST run
 	{
 		indir				<- paste(DATA,"beast/beast_130908",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg"
@@ -3189,12 +3189,109 @@ project.hivc.beast<- function(dir.name= DATA)
 		infilexml.opt		<- "txs4clu"
 		infilexml.template	<- "um22rhG202018"
 		verbose				<- 1
-		beastlabel.idx.hivs	<- 4
 		pool.n				<- 1
 		
 		argv				<<- hivc.cmd.beast.evalrun(indir, infile, insignat, infilexml.opt, infilexml.template, pool.n, verbose=verbose)
 		argv				<<- unlist(strsplit(argv,' '))
 		hivc.prog.BEAST.evalpoolrun()
+	}
+	if(1)	#plot BEAST clusters
+	{
+		indir				<- paste(DATA,"beast/beast_130918",sep='/')		
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg"
+		insignat			<- "Tue_Aug_26_09/13/47_2013"
+		infilexml.opt		<- "mph4clu"
+		infilexml.template	<- "um183rhU2045"
+		verbose				<- 1
+		pool.n				<- 3
+		
+		verbose						<- 1
+		beastlabel.idx.clu			<- 1
+		beastlabel.idx.hivs			<- 4
+		beastlabel.idx.samplecode	<- 5
+		pool.n						<- 3
+		#	
+		#	read annotated mcc trees
+		#
+		tmp			<- list.files(indir, pattern=paste(".nex$",sep=''))
+		tmp			<- tmp[ grepl(infilexml.template, tmp) & grepl(infilexml.opt, tmp) & grepl(gsub('/',':',insignat), tmp) ]
+		if(verbose)	cat(paste("\nFound files matching input args, n=", length(tmp)))
+		#		
+		if(length(tmp)==pool.n)
+		{
+			ph.beast		<- lapply(tmp, function(x)		hivc.beast.read.treeannotator(paste(indir,x,sep='/'), verbose=verbose)		)
+			if(verbose)	cat(paste("\nRead trees matching input args, n=", length(ph.beast)))
+			#	get root height for final tree in calendar time
+			ph.tip.ctime	<- sapply(ph.beast, function(x) max( as.numeric( sapply(strsplit(x$tip.label,'_'), function(x)	x[beastlabel.idx.hivs] ) ) ))			
+			ph.root.ctime	<- min( sapply(seq_along(ph.beast), function(i)	ph.tip.ctime[i]-max(node.depth.edgelength(ph.beast[[i]]))	) )
+			
+			subset(x$node.label, node==161, select=c(node, height_median, height_95_HPD_MIN, height_95_HPD_MAX, posterior))
+			
+			i<- 1
+			x<- ph.beast[[i]]
+			#	convert heights into calendar time and collapse node.label
+			tmp					<- ph.tip.ctime[i]								
+			tmp					<- x$node.label[, list(node=node, height_median=tmp-height_median, height_95_HPD_MIN=tmp-height_95_HPD_MAX, height_95_HPD_MAX=tmp-height_95_HPD_MIN, posterior=posterior)]			
+			tmp					<- tmp[, list(node.label= paste(round(posterior,d=3),round(height_median,d=3), round(height_95_HPD_MIN,d=3), round(height_95_HPD_MAX,d=3), sep='_')),by="node"]
+			x$node.label		<- tmp[,node.label]
+			x$node.label.format	<- "posterior height_median height_95_HPD_MIN height_95_HPD_MAX"
+			#
+			#	extract rooted ExaML clusters
+			#
+			tmp			<- t( sapply(strsplit(x$tip.label,'_'), function(x)	x[c(beastlabel.idx.clu,beastlabel.idx.samplecode)] ) )
+			clu.df		<- data.table(cluster=tmp[,1], FASTASampleCode=tmp[,2], tip=seq_along(x$tip.label) )
+			#x$tip.label	<- clu.df[, FASTASampleCode]
+			tmp			<- clu.df[,list(node=getMRCA(x,tip)),by=cluster]
+			clu.subtrees<- lapply(tmp[,node], function(z)
+					{	
+						ans						<- extract.clade(x, z, root.edge= 1, interactive = FALSE)
+						ans$root.edge			<- as.numeric(strsplit(ans$node.label[1],'_')[[1]][2])-ph.root.ctime		#reset root edge against root of all runs combined
+						ans$node.label.format	<- x$node.label.format
+						ans
+					})	
+			names(clu.subtrees)<- tmp[,cluster]			
+			#	join all clusters 
+			cluphy		<- eval(parse(text=paste('clu.subtrees[[',seq_along(clu.subtrees),']]', sep='',collapse='+')))
+			
+			
+				
+			
+			
+		}
+		
+		
+		
+		
+		
+		
+		
+		argv				<<- hivc.cmd.beast.evalrun(indir, infile, insignat, infilexml.opt, infilexml.template, pool.n, verbose=verbose)
+		argv				<<- unlist(strsplit(argv,' '))
+		hivc.prog.BEAST.evalpoolrun()
+		
+		indir				<- paste(DATA,"tmp",sep='/')		
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat			<- "Thu_Aug_01_17/05/23_2013"
+		indircov			<- paste(DATA,"derived",sep='/')
+		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		infiletree			<- paste(infile,"examlbs100",sep="_")
+		infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
+		#infilexml.template	<- "um22rhU2050"
+		#infilexml.template	<- "um22rhG202018"
+		#infilexml.template	<- "rhU65rho753"
+		#infilexml.template	<- "rhU65rho903"
+		#infilexml.template	<- "rhU65rho906"
+		#infilexml.template	<- "rhU65rho909"	
+		#infilexml.template	<- "um181rhU2045"
+		#infilexml.template	<- "um182rhU2045"
+		infilexml.template	<- "um183rhU2045"
+		#infilexml.template	<- "um182us45"
+		#infilexml.template	<- "um182us60"
+		#infilexml.opt		<- "txs4clu"
+		#infilexml.opt		<- "txs4clufx03"
+		infilexml.opt		<- "mph4clu"
+		#infilexml.opt		<- "mph4clumph4tu"
+	#infilexml.opt		<- "mph4clufx03"
 	}
 }
 ######################################################################################
@@ -3221,39 +3318,161 @@ project.hivc.clustering<- function(dir.name= DATA)
 		argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 		argv		<<- unlist(strsplit(argv,' '))
 		clu.pre		<- hivc.prog.get.clustering.precompute()
+	
+		load(paste(indir,'/',"mrcas.R",sep=''))
+		
+		outfile				<- paste(infile,"preclust",sep='_')
 		
 		
-		
+		dist.brl			<- clu.pre$dist.brl.casc
 		linked.bypatient	<- clu.pre$linked.bypatient
+		unlinked			<- clu.pre$ph.unlinked
+		unlinked.info		<- clu.pre$ph.unlinked.info
 		ph					<- clu.pre$ph
-		ph.mrca				<- mrca(ph)		#probably fastest
+		df.seqinfo			<- clu.pre$df.seqinfo
+		#ph.mrca			<- mrca(ph)		#probably fastest
+		thresh.brl			<- 0.096
+		plot.file			<- paste(indir,'/',outfile,"_distbs_",gsub('/',':',insignat),".pdf")
+
+		hivc.phy.get.TP.and.TN.bootstrapvalues(clu.pre$ph, clu.pre$df.seqinfo, clu.pre$linked.bypatient, clu.pre$ph.unlinked, dist.brl=clu.pre$dist.brl.casc, thresh.brl=0.096, plot.file=paste(indir,'/',outfile,"_distbs_",gsub('/',':',insignat),".pdf"), verbose= 1)
 		
-		setkey(linked.bypatient,Patient)
-		x					<- subset(linked.bypatient,Patient=="M10002")
-		tmp					<- match(x$FASTASampleCode, ph$tip.label)
-		ans					<- t(combn(tmp, 2 ))
-		apply(ans, 1, function(z) getMRCA(ph, z))
+hivc.phy.get.TP.and.TN.bootstrapvalues<- function(ph, df.seqinfo, linked.bypatient, unlinked, dist.brl=NULL, thresh.brl=NULL, plot.file=NULL, verbose= 1)	
+{
+	require(phangorn)
+	require(RColorBrewer)	
+	breaks.n			<- 10
+	
+	# fastest to precompute MRCAs
+	ph.mrca				<- mrca(ph)		
+	#
+	# compute bootstrap values between all unlinked sequences
+	#
+	unlinked			<- clu.pre$unlinked.bytime
+	bs.unlinked			<- lapply(unlinked, function(x)
+							{						
+								set(x, NULL, "query.FASTASampleCode", as.character(x[,query.FASTASampleCode]))
+								set(x, NULL, "FASTASampleCode", as.character(x[,FASTASampleCode]))
+								tmp					<- x[, list(mrca= ph.mrca[query.FASTASampleCode,FASTASampleCode]) ,by=FASTASampleCode]
+								ans					<- merge(x,tmp,by="FASTASampleCode")
+								setnames(ans, c("FASTASampleCode","query.FASTASampleCode"), c("tip2","tip1"))
+								ans					<- cbind(ans, data.table(mrca.bs= ph$node.label[ ans[,mrca]-Ntip(ph) ]))
+								tmp					<- t( sapply(seq_len(nrow(ans)), function(i)
+														{
+															tmp					<- Ancestors(ph,ans[i,mrca])
+															anc.bs				<- ph$node.label[ tmp-Ntip(ph) ]
+															anc.brl				<- dist.brl[ tmp-Ntip(ph) ]
+															tmp2				<- which( !as.logical(cumsum( as.numeric( anc.brl>=thresh.brl ) )) )
+															c(ifelse(length(tmp),max(anc.bs),0), ifelse(length(tmp2),max(anc.bs[ tmp2 ]),0))
+														}) )
+								ans					<- cbind(ans, data.table(amrca.bs=tmp[,1], amrca.bs.brl=tmp[,2]))
+								subset(ans, select=c(tip1, tip2, mrca, mrca.bs, amrca.bs, amrca.bs.brl))					
+							})
+	bs.unlinked			<- rbindlist(bs.unlinked)
+	# compute "bs" from "mrca.bs","amrca.bs","amrca.bs.brl"									
+	tmp					<- apply( rbind( bs.unlinked[, mrca.bs], bs.unlinked[,amrca.bs]), 2, max)		
+	tmp2				<- apply( rbind( bs.unlinked[, mrca.bs], bs.unlinked[,amrca.bs.brl]), 2, max)
+	if(verbose)	cat(paste("\nnumber of bs.unlinked pairs for which brl threshold restricts the bootstrap value, n=",length(which(tmp2>tmp))))
+	bs.unlinked[, bs:=tmp]
+	# compute BS category
+	tmp					<- round(bs.unlinked[, bs]*10,d=0)
+	bs.unlinked[, bs.cat:=tmp]
+	set(bs.unlinked,which(bs.unlinked[, bs.cat==0]),"bs.cat",1)
+	#
+	#
+	#
+	setkey(linked.bypatient,Patient)	
+	# compute bootstrap values between all within patient sequences by Patient
+	bs.linked.bypatient	<- linked.bypatient[, {
+				tmp					<- match(FASTASampleCode, ph$tip.label)
+				ans					<- t(combn(tmp, 2 ))
+				ans					<- cbind(ans, apply(ans, 1, function(z)  ph.mrca[z[1],z[2]]))
+				ans					<- cbind(ans, ph$node.label[ ans[,3]-Ntip(ph) ])
+				tmp					<- t( sapply(seq_len(nrow(ans)), function(i)
+								{
+									tmp					<- Ancestors(ph,ans[i,3])
+									anc.bs				<- ph$node.label[ tmp-Ntip(ph) ]
+									anc.brl				<- dist.brl[ tmp-Ntip(ph) ]
+									tmp2				<- which( !as.logical(cumsum( as.numeric( anc.brl>=thresh.brl ) )) )
+									c(ifelse(length(tmp),max(anc.bs),0), ifelse(length(tmp2),max(anc.bs[ tmp2 ]),0))
+								}) )
+				ans					<- cbind(ans, tmp)		
+				colnames(ans)		<- c("tip1","tip2","mrca","mrca.bs","amrca.bs","amrca.bs.brl")
+				as.data.table(ans)
+			}, by="Patient"]
+	# compute "bs" from "mrca.bs","amrca.bs","amrca.bs.brl"									
+	tmp					<- apply( rbind( bs.linked.bypatient[, mrca.bs], bs.linked.bypatient[,amrca.bs]), 2, max)		
+	tmp2				<- apply( rbind( bs.linked.bypatient[, mrca.bs], bs.linked.bypatient[,amrca.bs.brl]), 2, max)
+	if(verbose)	cat(paste("\nnumber of bs.linked.bypatient pairs for which brl threshold restricts the bootstrap value, n=",length(which(tmp2>tmp))))
+	bs.linked.bypatient[, bs:=tmp]
+	# compute BS category
+	tmp					<- round(bs.linked.bypatient[, bs]*10,d=0)
+	bs.linked.bypatient[, bs.cat:=tmp]
+	set(bs.linked.bypatient,which(bs.linked.bypatient[, bs.cat==0]),"bs.cat",1)
+	#
+	set(bs.linked.bypatient, NULL, "tip1", ph$tip.label[ bs.linked.bypatient[,tip1] ])
+	set(bs.linked.bypatient, NULL, "tip2", ph$tip.label[ bs.linked.bypatient[,tip2] ])
+	# compute time between the two within patient sequences
+	tmp					<- data.table( tip1.PosSeqT= df.seqinfo[bs.linked.bypatient[,tip1],PosSeqT][,PosSeqT], tip2.PosSeqT= df.seqinfo[bs.linked.bypatient[,tip2],PosSeqT][,PosSeqT])
+	tmp[, PosSeqT.diff:=tmp[, abs(as.numeric(difftime(tip1.PosSeqT, tip2.PosSeqT, units="days")))/365]]			
+	bs.linked.bypatient	<- cbind(bs.linked.bypatient, tmp)
+	bs.linked.bypatient	<- subset(bs.linked.bypatient, select=c(Patient, tip1, tip2, bs, PosSeqT.diff))	
+	#
+	# plot boostrap histogram
+	#	
+	if(!is.null(plot.file))
+	{
+		breaks.n			<- 20
+		pdf(width=5,height=8,file=plot.file)
+		def.par <- par(no.readonly = TRUE)
+		layout( matrix(c(1,1,1,2),ncol=1,nrow=4) )
+		par(mar=c(0.5,4,0.5,0.5))		
+		cols		<- c(sapply(brewer.pal(4,"Paired"), function(x)  my.fade.col(x, 1))[1:2], "transparent")
+		border		<- c("transparent","transparent","black")
+		hist(bs.linked.bypatient[,bs], breaks=breaks.n, main='', xlab="", border=border[1], col=cols[1], xaxt='n', freq=1, add=0)		
+		hist(subset(bs.linked.bypatient, PosSeqT.diff<1.5)[,bs],breaks=breaks.n, border=border[2], add=1, col=cols[2], freq=1)
+		hist(bs.unlinked[,bs], breaks=breaks.n, main='', xlab="", border=border[3], col=cols[3], xaxt='n', freq=1, add=1)
+		legend("topright", bty='n', border=border, legend=c("all pairs of within patient sequences","pairs of within patient sequences\n with difference in time of sampling < 18 mo","seq pairs of dead/HIV- patients"), fill=cols)
 		
+		tmp			<- bs.linked.bypatient[, list(prop.recent= length(which(PosSeqT.diff<1.5))/length(PosSeqT.diff) ),by=bs.cat]
+		setkey(tmp, bs.cat)
 		
-		tip.mrca			<- getMRCA(ph, tmp)
-		Ancestors(ph, tip.mrca)
+		par(mar=c(5,4,0.5,0.5))
+		plot(1,1,type='n',xlim=range(bs.linked.bypatient[,bs]),ylim=c(0,1),xlab="bootstrap",ylab='prop',bty='n')
+		polygon(c(range(bs.linked.bypatient[,bs]),rev(range(bs.linked.bypatient[,bs]))), c(0,0,1,1), col=cols[1], border=NA)
+		sapply(seq_len(nrow(tmp)),function(i)
+				{										 
+					polygon(c(tmp[i,bs.cat]/10-0.1,tmp[i,bs.cat]/10,tmp[i,bs.cat]/10,tmp[i,bs.cat]/10-0.1),c(0,0,rep(tmp[i,prop.recent],2)), border=NA, col=cols[2])
+				})
+		par(def.par)
+		dev.off()
+	}
+	
+	list(bs.linked.bypatient=bs.linked.bypatient, bs.unlinked=bs.unlinked)
+}
 		
+		if(0)
+		{
+			bs.linked.bypatient.eqPosSeqT		<- subset(bs.linked.bypatient, PosSeqT.diff==0)
+			# compute raw genetic distance between sequences
+			indir								<- paste(dir.name,"tmp",sep='/')
+			infile								<- "ATHENA_2013_03_CurAll+LANL_Sequences"			
+			insignat							<- "Sat_Jun_16_17/23/46_2013"
+			file								<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')			
+			load(file)
+			#dist.dna( rbind( seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip1], ], seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip2], ]), model="raw", as.matrix=1)
+			#tmp		<- hivc.seq.dist( rbind( seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip1], ], seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip2], ]) )
+			dummy	<- 0
+			tmp		<- sapply(seq_len(nrow(bs.linked.bypatient.eqPosSeqT)),function(i)
+					{
+						1 - .C("hivc_dist_ambiguous_dna", seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip1], ], seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip2], ], ncol(seq.PROT.RT), dummy )[[4]]
+					})
+			bs.linked.bypatient.eqPosSeqT[,dist:=tmp]
+			#
+			#	conclusion: despite identical sequences, BS can be suprisingly low! Unclear if this improves with more BS replications
+			#
+			save(bs.linked.bypatient.eqPosSeqT, file="/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/notes/20130917_ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100_poorBSvalues.R")
+		}
 		
-		tip.ph				<- extract.clade(ph, getMRCA(ph, tmp), root.edge=1)
-		tip.mrca			<- mrca(tip.ph)
-		ans					<- t(combn(seq_len(nrow(x)), 2 ))
-		ans					<- as.data.table( apply(ans,2,function(z) x$FASTASampleCode[z]) )
-		setnames(ans, c("V1","V2"),c("tip1","tip2"))		
-		ans					<- cbind(ans, data.table(mrca= apply(ans, 1, function(z)  tip.mrca[z[1],z[2]])))
-		tip.ph$node.label[ ans[, mrca-Ntip(tip.ph)] ]
-		
-		
-		ans[, tip.mrca[tip1,tip2]]
-		
-		ans					<- cbind( ans, apply(ans, 1, function(z)  tip.mrca[z[1],z[2]]) )
-		
-		
-		tmp					<- t(combn(tmp, 2 ))
 		
 	}
 	if(0)	#min brl to get a transmission cascade from brl matrix
@@ -4302,7 +4521,7 @@ hivc.prog.get.clustering.precompute<- function()
 		if(verbose) cat(paste("\nend: compute TP and TN data tables for phylogeny"))
 		unlinked.byspace				<- tmp[["unlinked.byspace"]]
 		unlinked.bytime					<- tmp[["unlinked.bytime"]]
-		clu				<- tmp[["linked.bypatient"]]	
+		linked.bypatient				<- tmp[["linked.bypatient"]]	
 		ph.linked						<- tmp[["ph.linked"]]
 		ph.unlinked.info				<- tmp[["ph.unlinked.info"]]
 		ph.unlinked						<- tmp[["ph.unlinked"]]
@@ -4310,6 +4529,12 @@ hivc.prog.get.clustering.precompute<- function()
 		#	add node number to df.seqinfo
 		#
 		df.seqinfo						<- merge( df.all, data.table(Node=seq_len(Ntip(ph)), FASTASampleCode=ph$tip.label), all.y=1, by="FASTASampleCode")
+		#
+		#	get and plot distribution of bootstrap values for TP and TN pairs
+		#
+		tmp								<- hivc.phy.get.TP.and.TN.bootstrapvalues(ph, df.seqinfo, linked.bypatient, ph.unlinked, dist.brl=dist.brl.casc, thresh.brl=0.096, plot.file=paste(outdir,'/',outfile,"_distbs_",gsub('/',':',outsignat),".pdf",sep=''), verbose=verbose)
+		bs.linked.bypatient				<- tmp[["bs.linked.bypatient"]] 
+		bs.unlinked						<- tmp[["bs.unlinked"]]
 		#
 		#	memory consuming: compute branch length matrix between tips
 		#
@@ -4324,14 +4549,17 @@ hivc.prog.get.clustering.precompute<- function()
 		#
 		file							<- paste(outdir,paste(outfile,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')	
 		if(verbose)	cat(paste("write to file",file))
-		save(ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  file=file )
+		save(	ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, 
+				df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  
+				bs.linked.bypatient, bs.unlinked, file=file )
 		#save(ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  file=file )		
 	}
 	
 	ans	<- list(	ph=ph, #dist.tips.mat=dist.tips.mat, #dist.root=dist.root,  
 					dist.brl.max=dist.brl.max, dist.brl.med=dist.brl.med, dist.brl.casc=dist.brl.casc, 
 					ph.node.bs=ph.node.bs, ph.linked=ph.linked, ph.unlinked.info=ph.unlinked.info, ph.unlinked=ph.unlinked, 
-					df.seqinfo=df.seqinfo, unlinked.byspace=unlinked.byspace, unlinked.bytime=unlinked.bytime, linked.bypatient=linked.bypatient
+					df.seqinfo=df.seqinfo, unlinked.byspace=unlinked.byspace, unlinked.bytime=unlinked.bytime, linked.bypatient=linked.bypatient,
+					bs.linked.bypatient=bs.linked.bypatient, bs.unlinked=bs.unlinked
 					)
 	ans				
 }
@@ -4573,9 +4801,9 @@ hivc.prog.BEAST.poolrunxml<- function()
 	infilexml.template	<- "standard"
 	resume				<- 1
 	verbose				<- 1
-	hpc.walltime		<- 160
-	hpc.ncpu			<- 8
-	hpc.mem				<- "3800mb"
+	hpc.walltime		<- 71
+	hpc.ncpu			<- 1
+	hpc.mem				<- "600mb"
 
 	if(exists("argv"))
 	{
@@ -4954,14 +5182,14 @@ hivc.proj.pipeline<- function()
 		#infilexml.template	<- "rhU65rho903"
 		#infilexml.template	<- "rhU65rho906"
 		#infilexml.template	<- "rhU65rho909"	
-		#infilexml.template	<- "um181rhU2045"
+		infilexml.template	<- "um181rhU2045"
 		#infilexml.template	<- "um182rhU2045"
-		infilexml.template	<- "um183rhU2045"
+		#infilexml.template	<- "um183rhU2045"
 		#infilexml.template	<- "um182us45"
 		#infilexml.template	<- "um182us60"
-		#infilexml.opt		<- "txs4clu"
+		infilexml.opt		<- "txs4clu"
 		#infilexml.opt		<- "txs4clufx03"
-		infilexml.opt		<- "mph4clu"
+		#infilexml.opt		<- "mph4clu"
 		#infilexml.opt		<- "mph4clumph4tu"
 		#infilexml.opt		<- "mph4clufx03"
 
@@ -4973,7 +5201,7 @@ hivc.proj.pipeline<- function()
 		thresh.bs			<- 0.8
 		pool.ntip			<- 130
 		#pool.ntip			<- 150
-		pool.ntip			<- 190
+		#pool.ntip			<- 190
 		#pool.ntip			<- 400
 		resume				<- 1
 		verbose				<- 1

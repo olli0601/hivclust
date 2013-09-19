@@ -591,7 +591,7 @@ hivc.beast.get.taxonsets4tips	<- function(bxml, df)
 ######################################################################################
 # 	extract starting tree from 'ph' by tips in 'df'. Only keeps tree topology and resets branch lengths so that the maximum root distance is 'beast.rootHeight'
 #	beast.rootHeight= 35; beast.usingDates= "false"; beast.newickid= "startingTree"
-hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= 35, beast.usingDates= "false", beast.newickid= "startingTree", verbose=1)
+hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= 35, beast.usingDates= "true", beast.newickid= "startingTree", beast.brlunits="years", verbose=1)
 {
 	require(adephylo)
 	if(verbose) cat(paste("\ncreate startingTree with root height=",beast.rootHeight))
@@ -619,7 +619,7 @@ hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= 35, beast
 	tmp					<- write.tree( ph.start )	
 	bxml.beast			<- getNodeSet(bxml, "//beast")[[1]]
 	dummy				<- newXMLCommentNode(text="The user-specified starting tree in a newick tree format", parent=bxml.beast, doc=bxml, addFinalizer=T)
-	bxml.startingTree	<- newXMLNode("newick", attrs= list(id=beast.newickid, usingDates=beast.usingDates), parent= bxml.beast, doc=bxml, addFinalizer=T)
+	bxml.startingTree	<- newXMLNode("newick", attrs= list(id=beast.newickid, usingDates=beast.usingDates, units=beast.brlunits), parent= bxml.beast, doc=bxml, addFinalizer=T)
 	dummy				<- newXMLTextNode(text=tmp, parent=bxml.startingTree, doc=bxml, addFinalizer=T) 
 	bxml
 }
@@ -1021,11 +1021,13 @@ hivc.seq.dist<- function(seq.DNAbin.matrix, verbose=1)
 		options(bigmemory.typecast.warning=FALSE)
 		big.matrix.charmax<- 127
 		dummy	<- 0
-		ans<- big.matrix(nrow(seq.DNAbin.matrix),nrow(seq.DNAbin.matrix), dimnames=list(rownames(seq.DNAbin.matrix),c()), type="char", init=NA)		
-		ans[1,1:6]<- 2^seq.int(6,11)-1
-		if(is.na(ans[1,2]))		stop("unexpected behaviour of bigmemory")
-		ans[1,1:6]<- NA
-								
+		ans<- big.matrix(nrow(seq.DNAbin.matrix),nrow(seq.DNAbin.matrix), dimnames=list(rownames(seq.DNAbin.matrix),c()), type="char", init=NA)
+		if(nrow(seq.DNAbin.matrix)>5)
+		{
+			ans[1,1:6]<- 2^seq.int(6,11)-1
+			if(is.na(ans[1,2]))		stop("unexpected behaviour of bigmemory")
+			ans[1,1:6]<- NA
+		}						
 		for(i1 in seq.int(1,nrow(seq.DNAbin.matrix)-1))
 		{			
 			seq1<- seq.DNAbin.matrix[i1,]
