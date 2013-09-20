@@ -503,7 +503,7 @@ hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, p
 	if(hpcsys=="debug")						#my MAC - don t use scratch
 	{		
 		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,prog.beast[hpcsys]," -strict -working ",tmp,'\n',sep='')
+		cmd		<- paste(cmd,prog.beast[hpcsys]," -strict -overwrite -working ",tmp,'\n',sep='')
 	}
 	else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
 	{

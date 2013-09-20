@@ -270,6 +270,14 @@ hivc.db.reset.inaccurateNegT<- function(df, nacc.dy.dy= 1, nacc.mody.mo= 0, nacc
 	df
 }
 ######################################################################################
+hivc.db.Date2numeric<- function( x )
+{
+	x	<- as.POSIXlt(x)
+	tmp	<- x$year + 1900
+	x	<- tmp + round( x$yday / ifelse((tmp%%4==0 & tmp%%100!=0) | tmp%%400==0,366,365), d=3 )
+	x	
+}
+######################################################################################
 #	get BEAST taxon labels:		cluster	FASTASampleCode	NegT	AnyPosT	SeqT  -> turn date into numerical format
 hivc.beast.addBEASTLabel<- function( df )
 {
@@ -365,7 +373,7 @@ hivc.beast.add.seq<- function(bxml, df, seq.PROT.RT, beast.label.datepos= 4, bea
 }	
 ######################################################################################
 #	Read a BEAST treeannotator file. The node.label is set to a data.table that contains the SIMMAP annotation for the interior nodes in the newick tree.
-hivc.beast.read.treeannotator<- function(file, verbose=1) 
+hivc.treeannotator.read<- function(file, verbose=1) 
 {
 	require(data.table)
 	require(ape)
@@ -780,6 +788,643 @@ hivc.beast.add.taxonsets4clusters<- function(bxml, df, xml.monophyly4clusters=1,
 	
 	bxml
 }
+######################################################################################
+hivc.phy.plotupon<- function (x, type = "phylogram", use.edge.length = TRUE, node.pos = NULL, 
+		show.tip.label = TRUE, show.node.label = FALSE, edge.color = "black", 
+		edge.width = 1, edge.lty = 1, font = 3, cex = par("cex"), 
+		adj = NULL, srt = 0, no.margin = FALSE, root.edge = FALSE, 
+		label.offset = 0, underscore = FALSE, y.lim = NULL, lab4ut = "horizontal", 
+		tip.color = "black", ...) 
+{
+	lastPP <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+	direction <- lastPP$direction
+	type <- lastPP$type
+	x.lim <- lastPP$x.lim
+	Ntip <- length(x$tip.label)
+	if (Ntip == 1) {
+		warning("found only one tip in the tree")
+		return(NULL)
+	}
+	if (any(tabulate(x$edge[, 1]) == 1)) 
+		stop("there are single (non-splitting) nodes in your tree; you may need to use collapse.singles()")
+	.nodeHeight <- function(Ntip, Nnode, edge, Nedge, yy) .C("node_height", 
+				as.integer(Ntip), as.integer(Nnode), as.integer(edge[, 
+								1]), as.integer(edge[, 2]), as.integer(Nedge), as.double(yy), 
+				DUP = FALSE, PACKAGE = "ape")[[6]]
+	.nodeDepth <- function(Ntip, Nnode, edge, Nedge) .C("node_depth", 
+				as.integer(Ntip), as.integer(Nnode), as.integer(edge[, 
+								1]), as.integer(edge[, 2]), as.integer(Nedge), double(Ntip + 
+								Nnode), DUP = FALSE, PACKAGE = "ape")[[6]]
+	.nodeDepthEdgelength <- function(Ntip, Nnode, edge, Nedge, 
+			edge.length) .C("node_depth_edgelength", as.integer(Ntip), 
+				as.integer(Nnode), as.integer(edge[, 1]), as.integer(edge[, 
+								2]), as.integer(Nedge), as.double(edge.length), double(Ntip + 
+								Nnode), DUP = FALSE, PACKAGE = "ape")[[7]]
+	Nedge <- dim(x$edge)[1]
+	Nnode <- x$Nnode
+	ROOT <- Ntip + 1
+	type <- match.arg(type, c("phylogram", "cladogram", "fan", 
+					"unrooted", "radial"))
+	direction <- match.arg(direction, c("rightwards", "leftwards", 
+					"upwards", "downwards"))
+	if (is.null(x$edge.length)) 
+		use.edge.length <- FALSE
+	if (type %in% c("unrooted", "radial") || !use.edge.length || 
+			is.null(x$root.edge) || !x$root.edge) 
+		root.edge <- FALSE
+	if (type == "fan" && root.edge) {
+		warning("drawing root edge with type = 'fan' is not yet supported")
+		root.edge <- FALSE
+	}
+	phyloORclado <- type %in% c("phylogram", "cladogram")
+	horizontal <- direction %in% c("rightwards", "leftwards")
+	xe <- x$edge
+	if (phyloORclado) {
+		phyOrder <- attr(x, "order")
+		if (is.null(phyOrder) || phyOrder != "cladewise") {
+			x <- reorder(x)
+			if (!identical(x$edge, xe)) {
+				ereorder <- match(x$edge[, 2], xe[, 2])
+				if (length(edge.color) > 1) {
+					edge.color <- rep(edge.color, length.out = Nedge)
+					edge.color <- edge.color[ereorder]
+				}
+				if (length(edge.width) > 1) {
+					edge.width <- rep(edge.width, length.out = Nedge)
+					edge.width <- edge.width[ereorder]
+				}
+				if (length(edge.lty) > 1) {
+					edge.lty <- rep(edge.lty, length.out = Nedge)
+					edge.lty <- edge.lty[ereorder]
+				}
+			}
+		}
+		yy <- numeric(Ntip + Nnode)
+		TIPS <- x$edge[x$edge[, 2] <= Ntip, 2]
+		yy[TIPS] <- 1:Ntip
+	}
+	z <- reorder(x, order = "pruningwise")
+	if (phyloORclado) {
+		if (is.null(node.pos)) {
+			node.pos <- 1
+			if (type == "cladogram" && !use.edge.length) 
+				node.pos <- 2
+		}
+		if (node.pos == 1) 
+			yy <- .nodeHeight(Ntip, Nnode, z$edge, Nedge, yy)
+		else {
+			ans <- .C("node_height_clado", as.integer(Ntip), 
+					as.integer(Nnode), as.integer(z$edge[, 1]), as.integer(z$edge[, 
+									2]), as.integer(Nedge), double(Ntip + Nnode), 
+					as.double(yy), DUP = FALSE, PACKAGE = "ape")
+			xx <- ans[[6]] - 1
+			yy <- ans[[7]]
+		}
+		if (!use.edge.length) {
+			if (node.pos != 2) 
+				xx <- .nodeDepth(Ntip, Nnode, z$edge, Nedge) - 
+						1
+			xx <- max(xx) - xx
+		}
+		else {
+			xx <- .nodeDepthEdgelength(Ntip, Nnode, z$edge, Nedge, 
+					z$edge.length)
+		}
+	}
+	else switch(type, fan = {
+					TIPS <- x$edge[which(x$edge[, 2] <= Ntip), 2]
+					xx <- seq(0, 2 * pi * (1 - 1/Ntip), 2 * pi/Ntip)
+					theta <- double(Ntip)
+					theta[TIPS] <- xx
+					theta <- c(theta, numeric(Nnode))
+					theta <- .nodeHeight(Ntip, Nnode, z$edge, Nedge, theta)
+					if (use.edge.length) {
+						r <- .nodeDepthEdgelength(Ntip, Nnode, z$edge, Nedge, 
+								z$edge.length)
+					} else {
+						r <- .nodeDepth(Ntip, Nnode, z$edge, Nedge)
+						r <- 1/r
+					}
+					xx <- r * cos(theta)
+					yy <- r * sin(theta)
+				}, unrooted = {
+					nb.sp <- .nodeDepth(Ntip, Nnode, z$edge, Nedge)
+					XY <- if (use.edge.length) unrooted.xy(Ntip, Nnode, z$edge, 
+										z$edge.length, nb.sp) else unrooted.xy(Ntip, Nnode, 
+										z$edge, rep(1, Nedge), nb.sp)
+					xx <- XY$M[, 1] - min(XY$M[, 1])
+					yy <- XY$M[, 2] - min(XY$M[, 2])
+				}, radial = {
+					X <- .nodeDepth(Ntip, Nnode, z$edge, Nedge)
+					X[X == 1] <- 0
+					X <- 1 - X/Ntip
+					yy <- c((1:Ntip) * 2 * pi/Ntip, rep(0, Nnode))
+					Y <- .nodeHeight(Ntip, Nnode, z$edge, Nedge, yy)
+					xx <- X * cos(Y)
+					yy <- X * sin(Y)
+				})
+	if (phyloORclado) {
+		if (!horizontal) {
+			tmp <- yy
+			yy <- xx
+			xx <- tmp - min(tmp) + 1
+		}
+		if (root.edge) {
+			if (direction == "rightwards") 
+				xx <- xx + x$root.edge
+			if (direction == "upwards") 
+				yy <- yy + x$root.edge
+		}
+	}
+	if (no.margin) 
+		par(mai = rep(0, 4))
+	if (is.null(x.lim)) {
+		if (phyloORclado) {
+			if (horizontal) {
+				x.lim <- c(0, NA)
+				pin1 <- par("pin")[1]
+				strWi <- strwidth(x$tip.label, "inches")
+				xx.tips <- xx[1:Ntip] * 1.04
+				alp <- try(uniroot(function(a) max(a * xx.tips + 
+													strWi) - pin1, c(0, 1e+06))$root, silent = TRUE)
+				if (is.character(alp)) 
+					tmp <- max(xx.tips) * 1.5
+				else {
+					tmp <- if (show.tip.label) 
+								max(xx.tips + strWi/alp)
+							else max(xx.tips)
+				}
+				x.lim[2] <- tmp
+			}
+			else x.lim <- c(1, Ntip)
+		}
+		else switch(type, fan = {
+						if (show.tip.label) {
+							offset <- max(nchar(x$tip.label) * 0.018 * max(yy) * 
+											cex)
+							x.lim <- c(min(xx) - offset, max(xx) + offset)
+						} else x.lim <- c(min(xx), max(xx))
+					}, unrooted = {
+						if (show.tip.label) {
+							offset <- max(nchar(x$tip.label) * 0.018 * max(yy) * 
+											cex)
+							x.lim <- c(0 - offset, max(xx) + offset)
+						} else x.lim <- c(0, max(xx))
+					}, radial = {
+						if (show.tip.label) {
+							offset <- max(nchar(x$tip.label) * 0.03 * cex)
+							x.lim <- c(-1 - offset, 1 + offset)
+						} else x.lim <- c(-1, 1)
+					})
+	}
+	else if (length(x.lim) == 1) {
+		x.lim <- c(0, x.lim)
+		if (phyloORclado && !horizontal) 
+			x.lim[1] <- 1
+		if (type %in% c("fan", "unrooted") && show.tip.label) 
+			x.lim[1] <- -max(nchar(x$tip.label) * 0.018 * max(yy) * 
+							cex)
+		if (type == "radial") 
+			x.lim[1] <- if (show.tip.label) 
+						-1 - max(nchar(x$tip.label) * 0.03 * cex)
+					else -1
+	}
+	if (phyloORclado && direction == "leftwards") 
+		xx <- x.lim[2] - xx
+	if (is.null(y.lim)) {
+		if (phyloORclado) {
+			if (horizontal) 
+				y.lim <- c(1, Ntip)
+			else {
+				y.lim <- c(0, NA)
+				pin2 <- par("pin")[2]
+				strWi <- strwidth(x$tip.label, "inches")
+				yy.tips <- yy[1:Ntip] * 1.04
+				alp <- try(uniroot(function(a) max(a * yy.tips + 
+													strWi) - pin2, c(0, 1e+06))$root, silent = TRUE)
+				if (is.character(alp)) 
+					tmp <- max(yy.tips) * 1.5
+				else {
+					tmp <- if (show.tip.label) 
+								max(yy.tips + strWi/alp)
+							else max(yy.tips)
+				}
+				y.lim[2] <- tmp
+			}
+		}
+		else switch(type, fan = {
+						if (show.tip.label) {
+							offset <- max(nchar(x$tip.label) * 0.018 * max(yy) * 
+											cex)
+							y.lim <- c(min(yy) - offset, max(yy) + offset)
+						} else y.lim <- c(min(yy), max(yy))
+					}, unrooted = {
+						if (show.tip.label) {
+							offset <- max(nchar(x$tip.label) * 0.018 * max(yy) * 
+											cex)
+							y.lim <- c(0 - offset, max(yy) + offset)
+						} else y.lim <- c(0, max(yy))
+					}, radial = {
+						if (show.tip.label) {
+							offset <- max(nchar(x$tip.label) * 0.03 * cex)
+							y.lim <- c(-1 - offset, 1 + offset)
+						} else y.lim <- c(-1, 1)
+					})
+	}
+	else if (length(y.lim) == 1) {
+		y.lim <- c(0, y.lim)
+		if (phyloORclado && horizontal) 
+			y.lim[1] <- 1
+		if (type %in% c("fan", "unrooted") && show.tip.label) 
+			y.lim[1] <- -max(nchar(x$tip.label) * 0.018 * max(yy) * 
+							cex)
+		if (type == "radial") 
+			y.lim[1] <- if (show.tip.label) 
+						-1 - max(nchar(x$tip.label) * 0.018 * max(yy) * 
+										cex)
+					else -1
+	}
+	if (phyloORclado && direction == "downwards") 
+		yy <- y.lim[2] - yy
+	if (phyloORclado && root.edge) {
+		if (direction == "leftwards") 
+			x.lim[2] <- x.lim[2] + x$root.edge
+		if (direction == "downwards") 
+			y.lim[2] <- y.lim[2] + x$root.edge
+	}
+	asp <- if (type %in% c("fan", "radial")) 
+				1
+			else NA
+	if (is.null(adj)) 
+		adj <- if (phyloORclado && direction == "leftwards") 
+					1
+				else 0
+	if (phyloORclado && show.tip.label) {
+		MAXSTRING <- max(strwidth(x$tip.label, cex = cex))
+		loy <- 0
+		if (direction == "rightwards") {
+			lox <- label.offset + MAXSTRING * 1.05 * adj
+		}
+		if (direction == "leftwards") {
+			lox <- -label.offset - MAXSTRING * 1.05 * (1 - adj)
+		}
+		if (!horizontal) {
+			psr <- par("usr")
+			MAXSTRING <- MAXSTRING * 1.09 * (psr[4] - psr[3])/(psr[2] - 
+						psr[1])
+			loy <- label.offset + MAXSTRING * 1.05 * adj
+			lox <- 0
+			srt <- 90 + srt
+			if (direction == "downwards") {
+				loy <- -loy
+				srt <- 180 + srt
+			}
+		}
+	}
+	if (type == "phylogram") {
+		phylogram.plot(x$edge, Ntip, Nnode, xx, yy, horizontal, 
+				edge.color, edge.width, edge.lty)
+	}
+	else {
+		if (type == "fan") {
+			ereorder <- match(z$edge[, 2], x$edge[, 2])
+			if (length(edge.color) > 1) {
+				edge.color <- rep(edge.color, length.out = Nedge)
+				edge.color <- edge.color[ereorder]
+			}
+			if (length(edge.width) > 1) {
+				edge.width <- rep(edge.width, length.out = Nedge)
+				edge.width <- edge.width[ereorder]
+			}
+			if (length(edge.lty) > 1) {
+				edge.lty <- rep(edge.lty, length.out = Nedge)
+				edge.lty <- edge.lty[ereorder]
+			}
+			circular.plot(z$edge, Ntip, Nnode, xx, yy, theta, 
+					r, edge.color, edge.width, edge.lty)
+		}
+		else cladogram.plot(x$edge, xx, yy, edge.color, edge.width, 
+					edge.lty)
+	}
+	if (root.edge) 
+		switch(direction, rightwards = segments(0, yy[ROOT], 
+						x$root.edge, yy[ROOT]), leftwards = segments(xx[ROOT], 
+						yy[ROOT], xx[ROOT] + x$root.edge, yy[ROOT]), upwards = segments(xx[ROOT], 
+						0, xx[ROOT], x$root.edge), downwards = segments(xx[ROOT], 
+						yy[ROOT], xx[ROOT], yy[ROOT] + x$root.edge))
+	if (show.tip.label) {
+		if (is.expression(x$tip.label)) 
+			underscore <- TRUE
+		if (!underscore) 
+			x$tip.label <- gsub("_", " ", x$tip.label)
+		if (phyloORclado) 
+			text(xx[1:Ntip] + lox, yy[1:Ntip] + loy, x$tip.label, 
+					adj = adj, font = font, srt = srt, cex = cex, 
+					col = tip.color)
+		if (type == "unrooted") {
+			if (lab4ut == "horizontal") {
+				y.adj <- x.adj <- numeric(Ntip)
+				sel <- abs(XY$axe) > 0.75 * pi
+				x.adj[sel] <- -strwidth(x$tip.label)[sel] * 1.05
+				sel <- abs(XY$axe) > pi/4 & abs(XY$axe) < 0.75 * 
+						pi
+				x.adj[sel] <- -strwidth(x$tip.label)[sel] * (2 * 
+							abs(XY$axe)[sel]/pi - 0.5)
+				sel <- XY$axe > pi/4 & XY$axe < 0.75 * pi
+				y.adj[sel] <- strheight(x$tip.label)[sel]/2
+				sel <- XY$axe < -pi/4 & XY$axe > -0.75 * pi
+				y.adj[sel] <- -strheight(x$tip.label)[sel] * 
+						0.75
+				text(xx[1:Ntip] + x.adj * cex, yy[1:Ntip] + y.adj * 
+								cex, x$tip.label, adj = c(adj, 0), font = font, 
+						srt = srt, cex = cex, col = tip.color)
+			}
+			else {
+				adj <- as.numeric(abs(XY$axe) > pi/2)
+				srt <- 180 * XY$axe/pi
+				srt[as.logical(adj)] <- srt[as.logical(adj)] - 
+						180
+				for (i in 1:Ntip) text(xx[i], yy[i], cex = cex, 
+							x$tip.label[i], adj = adj[i], font = font, 
+							srt = srt[i], col = tip.color[i])
+			}
+		}
+		if (type %in% c("fan", "radial")) {
+			xx.tips <- xx[1:Ntip]
+			angle <- atan2(yy[1:Ntip], xx.tips) * 180/pi
+			s <- xx.tips < 0
+			angle[s] <- angle[s] + 180
+			adj <- numeric(Ntip)
+			adj[xx.tips < 0] <- 1
+			for (i in 1:Ntip) text(xx[i], yy[i], x$tip.label[i], 
+						font = font, cex = cex, srt = angle[i], adj = adj[i], 
+						col = tip.color[i])
+		}
+	}
+	if (show.node.label) 
+		text(xx[ROOT:length(xx)] + label.offset, yy[ROOT:length(yy)], 
+				x$node.label, adj = adj, font = font, srt = srt, 
+				cex = cex)
+}
+######################################################################################
+hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.hivs=4, beastlabel.idx.samplecode=5)
+{
+	#	get root height for final tree in calendar time
+	ph.tip.ctime	<- sapply(ph.beast, function(x) max( as.numeric( sapply(strsplit(x$tip.label,'_'), function(x)	x[beastlabel.idx.hivs] ) ) ))			
+	ph.root.ctime	<- min( sapply(seq_along(ph.beast), function(i)	ph.tip.ctime[i]-max(node.depth.edgelength(ph.beast[[i]]))	) )
+	
+	clu.subtrees	<- lapply( seq_along(ph.beast), function(i)
+			{				
+				x<- ph.beast[[i]]
+				#	convert heights into calendar time and collapse node.label
+				tmp					<- ph.tip.ctime[i]								
+				#subset(x$node.label, node==147, select=c(node, height_median, height_95_HPD_MIN, height_95_HPD_MAX, posterior))
+				tmp					<- x$node.label[, list(	node=node, 
+								height_median=ph.tip.ctime[i]-height_median, 
+								height_95_HPD_MIN=ph.tip.ctime[i]-height_95_HPD_MAX, 
+								height_95_HPD_MAX=ph.tip.ctime[i]-height_95_HPD_MIN, 
+								posterior=posterior)]			
+				tmp					<- tmp[, list(node.label= paste(round(posterior,d=3),round(height_median,d=3), round(height_95_HPD_MIN,d=3), round(height_95_HPD_MAX,d=3), sep='_')),by="node"]
+				x$node.label		<- tmp[,node.label]
+				x$node.label.format	<- "posterior height_median height_95_HPD_MIN height_95_HPD_MAX"
+				#
+				#	extract rooted ExaML clusters
+				#
+				tmp			<- t( sapply(strsplit(x$tip.label,'_'), function(x)	x[c(beastlabel.idx.clu,beastlabel.idx.samplecode)] ) )
+				clu.df		<- data.table(cluster=tmp[,1], FASTASampleCode=tmp[,2], tip=seq_along(x$tip.label) )
+				x$tip.label	<- clu.df[, FASTASampleCode]
+				tmp			<- clu.df[,list(node=getMRCA(x,tip)),by=cluster]
+				clu.subtrees<- lapply(tmp[,node], function(z)
+						{	
+							ans						<- extract.clade(x, z, root.edge= 1, interactive = FALSE)
+							ans$root.edge			<- as.numeric(strsplit(ans$node.label[1],'_')[[1]][2])-ph.root.ctime		#reset root edge against root of all runs combined
+							ans$node.label.format	<- x$node.label.format
+							ans
+						})	
+				names(clu.subtrees)<- tmp[,cluster]	
+				clu.subtrees
+			})
+	clu.subtrees	<- eval(parse(text= paste("c(",paste('clu.subtrees[[',seq_along(clu.subtrees),']]', sep='',collapse=','),")",sep='') ))
+	if(verbose)	cat(paste("\nFound ExaML clusters in treeannotator files, number of clusters is n=", length(clu.subtrees) ))
+	#clu.subtrees	<- lapply(1:3, function(i) clu.subtrees[[i]] )
+	#	join all clusters 
+	cluphy				<- eval(parse(text=paste('clu.subtrees[[',seq_along(clu.subtrees),']]', sep='',collapse='+')))
+	if(verbose)	cat(paste("\nFound ExaML clusters in treeannotator files, number of sequences is n=", Ntip(cluphy) ))
+	list(cluphy=cluphy, ph.tip.ctime=ph.tip.ctime, ph.root.ctime=ph.root.ctime)
+}
+######################################################################################
+hivc.treeannotator.get.tmrcas<- function(ph.beast, beastlabel.idx.hivs=4)
+{
+	#	for each tree, return 	height_median height_95_HPD_MIN height_95_HPD_MAX for the parent of each tip 		
+	ph.trmca	<- lapply(ph.beast, function(x)
+			{
+				#select heights and convert heights into calendar time
+				tip.latest			<- max( as.numeric( sapply(strsplit(x$tip.label,'_'), function(x)	x[beastlabel.idx.hivs] ) ) )
+				tip.parents			<- unique( x$edge[x$edge[,2]<=Ntip(x),1] )		
+				ans					<- x$node.label[J(tip.parents)][, list(node=node, height_median=tip.latest-height_median, height_95_HPD_MIN=tip.latest-height_95_HPD_MAX, height_95_HPD_MAX=tip.latest-height_95_HPD_MIN)]
+				tmp					<- sapply(ans[,node], function(z)	x$edge[ x$edge[,1]==z, 2 ] )
+				tmp[tmp>Ntip(x)]	<- NA
+				tmp					<- t( apply(tmp,2,function(z) x$tip.label[ sort(z,na.last=1) ]) )
+				ans[,height_95_diff:= height_95_HPD_MAX-height_95_HPD_MIN]
+				ans[,tip1:= tmp[,1]]		
+				ans[,tip2:= tmp[,2]]					
+				ans
+			})
+	ph.trmca	<- rbindlist( ph.trmca )
+}
+######################################################################################
+hivc.treeannotator.get.clusterprob<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.samplecode=5, verbose=1)
+{
+	#	for each of the clusters, compute the posterior probability of a common MRCA
+	clu.df	<- lapply(ph.beast, function(x)
+			{							
+				tmp		<- data.table(	tip=seq_len(Ntip(x)), 
+										cluster=as.numeric( sapply( strsplit(x$tip.label,'_'),function(z)  z[beastlabel.idx.clu] ) ),
+										FASTASampleCode=sapply( strsplit(x$tip.label,'_'),function(z)  z[beastlabel.idx.samplecode] )										
+										)
+				ans		<- merge( tmp[, list(node=hivc.clu.mrca(x, x.tip=tip), FASTASampleCode=FASTASampleCode), by=cluster], subset(x$node.label, select=c(node, posterior)), by="node" )
+				subset(ans, select=c(cluster, FASTASampleCode, posterior))
+			})
+	clu.df	<- rbindlist(clu.df)		
+	if(verbose)	cat(paste("\nRange of posterior probabilities that each of the putative clusters each has a common MRCA, min=",min(clu.df[,posterior])," max=",max(clu.df[,posterior]) ))
+	clu.df
+}
+######################################################################################
+hivc.treeannotator.plot<- function(ph, youngest.tip.ctime, df.all, df.viro, df.immu, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=NULL, pdf.width=7, pdf.height=20)
+{		
+	if(class(file)=="character")
+		pdf(file, width=pdf.width, height=pdf.height)
+	par(mar=c(0,0,0,0))
+	
+	cols			<- brewer.pal(12,"Paired")
+	ph.xlim			<- end.ctime-ph.root.ctime+ c(-22,6)
+	ph.ylim			<- c(1,Ntip(ph)) + c(-1,1)			
+	plot(ph, x.lim=ph.xlim, y.lim= ph.ylim, show.tip.label=0, edge.color = 0, tip.color = 0)
+	# add calendar timeline			
+	hivc.treeannotator.plot.ctimeline(ph, youngest.tip.ctime, end.ctime, add.yinch= 0.5)
+	# add BEAST TMRCA 95% credibility interval
+	ph.nodeheighthpds	<- hivc.treeannotator.nodelabels.getnodeheightHPD(ph, youngest.tip.ctime)
+	hivc.treeannotator.plot.hpdbars(ph, ph.nodeheighthpds, col=cols[1], lwd=4)
+	# add NegT and AnyPos_T1
+	ph.seronodeheight	<- hivc.treeannotator.sero.getnodeheight.range(ph, df.all, youngest.tip.ctime)
+	hivc.treeannotator.plot.seronodeheightrange(ph, ph.seronodeheight, add.yinch= -0.025, width.yinch= 0.05, width.yinch.past.AnyPos_T1= 0, col=cols[2])
+	# add lRNA timeline
+	ph.viro.timeline	<- hivc.treeannotator.get.viro.timeline(ph, df.all, df.viro, youngest.tip.ctime)
+	hivc.treeannotator.plot.viro.timeline(ph, ph.viro.timeline, viro.min= log10(300), width.yinch= 0.15, add.yinch= 0.005, col.bg= cols[5], col.legend= cols[6], cex.txt= 0.2)
+	# add CD4 timeline
+	ph.immu.timeline	<- hivc.treeannotator.get.immu.timeline(ph, df.all, df.immu, youngest.tip.ctime, end.ctime=2013.3)
+	hivc.treeannotator.plot.immu.timeline(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, immu.legend= c(200, 350, 500, immu.max), width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2)
+	# re-plot phylogeny
+	ph$node.label		<- as.numeric(sapply( strsplit( ph$node.label, '_' ), function(x)	x[1] ))
+	hivc.phy.plotupon(ph, show.tip.label=0, show.node.label=1, cex=cex.nodelabel)
+	# add tip labels			
+	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=c("CountryInfection","Trm","Sex","isAcute","lRNA.early","Patient","RegionHospital") )				
+	tmp					<- rep( max(node.depth.edgelength(ph)) - (youngest.tip.ctime-ceiling(end.ctime)), Ntip(ph))
+	hivc.clu.plot.tiplabels(seq_len(Ntip(ph)), ph.tiplabel$text, ph.tiplabel$col, xx=tmp, adj = c(-0.05, 0.5), cex=cex.tiplabel, add.xinch= 0.03, add.yinch= 0.02)
+	# add legend	
+	legend("topright", fill= cols[c(1,2,3,5)], legend=c("BEAST 95% TMRCA", "interval [last HIV-, diagnosis]", "CD4 timeline", "VL timeline"), bty='n', border=NA, cex=cex.tiplabel)
+	
+	if(class(file)=="character")
+		dev.off()				
+}
+######################################################################################
+hivc.treeannotator.plot.ctimeline<- function(ph, youngest.tip.ctime, end.ctime, col.bg= c(my.fade.col("black",0.15),"transparent"), col.txt= c(my.fade.col("black",1),"transparent"), cex.txt= 0.5, add.yinch= 0.5)
+{
+	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)	
+	
+	tmp 	<- seq( max(lastPP$xx) - ( youngest.tip.ctime-floor(youngest.tip.ctime) )+1, min(lastPP$xx), -1 )
+	df.time	<- data.table(ctime= seq( floor(youngest.tip.ctime), by=-1, len= length(tmp) ), xx.u=tmp) 
+	if(1+floor(youngest.tip.ctime)<floor(end.ctime))
+	{
+		tmp		<- seq( 1+floor(youngest.tip.ctime),floor(end.ctime),by=1 )
+		tmp		<- data.table( ctime=rev(tmp), xx.u=rev(seq(df.time[1,xx.u]+1, len=length(tmp), by=1)))
+		df.time	<- rbind(tmp, df.time)
+	}
+	df.time	<- cbind( 	df.time[-nrow(df.time), ], 
+						data.table(	xx.l	= df.time[-1,xx.u], 
+									col.bg	= rep(col.bg,ceiling(nrow(df.time)/length(col.bg)))[seq_len(nrow(df.time)-1)],
+									col.txt = rep(col.txt,ceiling(nrow(df.time)/length(col.txt)))[seq_len(nrow(df.time)-1)]		) )
+	
+	rect(df.time[,xx.l], lastPP$y.lim[1]-yinch(add.yinch), df.time[,xx.u], lastPP$y.lim[2]+yinch(add.yinch), col=df.time[,col.bg], border=NA)				
+	text(df.time[,xx.l+(xx.u-xx.l)/2.1], lastPP$y.lim[1]-yinch(add.yinch)/4, df.time[,ctime], cex=cex.txt, col=df.time[,col.txt], offset=0)
+	text(df.time[,xx.l+(xx.u-xx.l)/2.1], lastPP$y.lim[2]+yinch(add.yinch)/4, df.time[,ctime], cex=cex.txt, col=df.time[,col.txt], offset=0)
+}
+######################################################################################
+hivc.treeannotator.plot.immu.timeline<- function(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, immu.legend= c(200, 350, 500, immu.max), width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2)
+{
+	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)
+	set(ph.immu.timeline, NULL, "PosCD4", max(node.depth.edgelength(ph)) - ph.immu.timeline[,PosCD4])
+	ph.immu.timeline[, yyCD4:= CD4]
+	set(ph.immu.timeline, which(ph.immu.timeline[,yyCD4]>immu.max), "yyCD4", immu.max)
+	set(ph.immu.timeline, NULL, "yyCD4", ph.immu.timeline[,yyCD4]-immu.min)
+	set(ph.immu.timeline, which(ph.immu.timeline[,yyCD4]<0), "yyCD4", 0.)			
+	scale	<- yinch(width.yinch) / max( ph.immu.timeline[,yyCD4])
+	set(ph.immu.timeline, NULL, "yyCD4", ph.immu.timeline[,yyCD4] * scale )
+	ph.immu.timeline[, yy:= yinch(add.yinch)+lastPP$yy[ph.immu.timeline[,tip]]]
+	
+	dummy<- sapply( unique(ph.immu.timeline[,tip]), function(x)
+			{
+				z<- ph.immu.timeline[J(x)]
+				polygon( c( z[,PosCD4], z[nrow(z),PosCD4], z[1,PosCD4] ), c( z[,yy-yyCD4], z[nrow(z),yy], z[1,yy] ), border=NA, col=col.bg	)
+				sapply(z[1,yy]-(immu.legend-immu.min)*scale,function(i)		lines(z[c(1,nrow(z)),PosCD4], rep(i,2), col=col.legend, lty=3, lwd=0.2)		)		
+				text(rep(z[nrow(z),PosCD4],3),z[1,yy]-(immu.legend-immu.min)*scale,immu.legend,cex=cex.txt, col=col.legend)
+			})
+}
+######################################################################################
+hivc.treeannotator.get.immu.timeline<- function(ph, df, df.immu, youngest.tip.ctime, end.ctime=2013.3)
+{				
+	setkey(df, FASTASampleCode)
+	tmp				<- df[J(ph$tip.label)][, list(tip=seq_along(ph$tip.label), FASTASampleCode=FASTASampleCode, Patient=Patient, DateDied=DateDied)]		
+	ans				<- merge(subset(df.immu, select=c(Patient, PosCD4, CD4)), tmp, all.y=1, by="Patient")
+	set(ans,NULL,"PosCD4",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosCD4]))
+	set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))				
+	set(ans,which(is.na(ans[,DateDied])), "DateDied", youngest.tip.ctime - end.ctime)				
+	ans				<- ans[,list(PosCD4=c(PosCD4,DateDied[1]), CD4=c(CD4,tail(CD4,1))),by="tip"]
+	setkey(ans,tip)
+	ans
+}
+######################################################################################
+hivc.treeannotator.plot.viro.timeline<- function(ph, ph.viro.timeline, viro.min= log10(300), width.yinch= 0.2, add.yinch= 0.005, col.bg= "red", col.legend="red", cex.txt= 0.2)
+{
+	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)
+	set(ph.viro.timeline, NULL, "PosRNA", max(node.depth.edgelength(ph)) - ph.viro.timeline[,PosRNA])
+	ph.viro.timeline[, yylRNA:= lRNA]
+	set(ph.viro.timeline, NULL, "yylRNA", ph.viro.timeline[,yylRNA]-viro.min)
+	scale	<- yinch(width.yinch) / max( ph.viro.timeline[,yylRNA])
+	set(ph.viro.timeline, NULL, "yylRNA", ph.viro.timeline[,yylRNA] * scale )
+	ph.viro.timeline[, yy:= yinch(add.yinch)+lastPP$yy[ph.viro.timeline[,tip]]]
+	
+	dummy<- sapply( unique(ph.viro.timeline[,tip]), function(x)
+			{
+				z<- ph.viro.timeline[J(x)]
+				polygon( c( z[,PosRNA], z[nrow(z),PosRNA], z[1,PosRNA] ), c( z[,yylRNA+yy], z[nrow(z),yy], z[1,yy] ), border=NA, col=col.bg	)
+				sapply(z[1,yy]+(c(3,4,5)-viro.min)*scale,function(i)		lines(z[c(1,nrow(z)),PosRNA], rep(i,2), col=col.legend, lty=3, lwd=0.2)		)		
+				text(rep(z[nrow(z),PosRNA],3),z[1,yy]+(c(3,4,5)-viro.min)*scale,c("1e3","1e4","1e5"),cex=cex.txt, col=col.legend)
+			})
+}
+######################################################################################
+hivc.treeannotator.get.viro.timeline<- function(ph, df, df.viro, youngest.tip.ctime, end.ctime=2013.3)
+{
+	setkey(df, FASTASampleCode)
+	tmp				<- df[J(ph$tip.label)][, list(tip=seq_along(ph$tip.label), FASTASampleCode=FASTASampleCode, Patient=Patient, DateDied=DateDied)]		
+	ans				<- merge(subset(df.viro, select=c(Patient, PosRNA, lRNA)), tmp, all.y=1, by="Patient")
+	set(ans,NULL,"PosRNA",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosRNA]))
+	set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))				
+	set(ans,which(is.na(ans[,DateDied])), "DateDied", youngest.tip.ctime - end.ctime)				
+	ans				<- ans[,list(PosRNA=c(PosRNA,DateDied[1]), lRNA=c(lRNA,tail(lRNA,1))),by="tip"]
+	setkey(ans,tip)
+	ans
+}
+######################################################################################
+hivc.treeannotator.sero.getnodeheight.range<- function(ph, df, youngest.tip.ctime)
+{
+	setkey(df, FASTASampleCode)
+	ans					<- cbind( data.table(tip=seq_along(ph$tip.label)), subset(df[J(ph$tip.label)], select=c(NegT, AnyPos_T1, DateDied)) )
+	set(ans,NULL,"NegT",		youngest.tip.ctime - hivc.db.Date2numeric(ans[,NegT]))
+	set(ans,NULL,"AnyPos_T1",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,AnyPos_T1]))				
+	set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))
+	set(ans,which(is.na(ans[,DateDied])), "DateDied", 0.)
+	ans
+}
+######################################################################################
+hivc.treeannotator.plot.seronodeheightrange<- function(ph, ph.seronodeheight, add.yinch= -0.05, width.yinch= 0.1, width.yinch.past.AnyPos_T1= 0.02, col="red")
+{						
+	lastPP <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+	if (!lastPP$use.edge.length) 
+		stop("function needs edge length information")
+	if (lastPP$type != "phylogram") 
+		stop("currently only 'type == phylogram' supported")
+	if (lastPP$dir!="rightwards")
+		stop("currently only rightwards supported")			
+	
+	
+	tmp				<- max(node.depth.edgelength(ph)) - subset(ph.seronodeheight, select=c(NegT, AnyPos_T1, DateDied))		#from node heights to root heights, assuming root is plotted at 0
+	yy.l 			<- lastPP$yy[ph.seronodeheight[,tip]] + yinch(add.yinch)			
+	rect(tmp[,NegT], yy.l, tmp[,AnyPos_T1], yy.l+yinch(width.yinch), col = col, border=NA)			
+	rect(tmp[,AnyPos_T1], yy.l, tmp[,DateDied], yy.l+yinch(width.yinch.past.AnyPos_T1), col=col, border=NA)	
+}
+######################################################################################
+hivc.treeannotator.nodelabels.getnodeheightHPD<- function(ph, youngest.tip.ctime, node.label.hpd.l= 3, node.label.hpd.u= 4)
+{
+	nodes			<- which(!is.na(ph$node.label))
+	node.hpd		<- t( sapply(strsplit(ph$node.label[nodes],'_'), function(x)	as.numeric(x[c(node.label.hpd.l, node.label.hpd.u)])) )
+	node.hpd		<- youngest.tip.ctime - node.hpd				#from calendar time to node heights
+	data.table(node=nodes, hpd.l=node.hpd[,1], hpd.u=node.hpd[,2])
+}
+######################################################################################
+hivc.treeannotator.plot.hpdbars<- function(ph, ph.nodeheighthpds, col="grey75", lwd=4 ) 
+{
+	lastPP <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+	if (!lastPP$use.edge.length) 
+		stop("function needs edge length information")
+	if (lastPP$type != "phylogram") 
+		stop("currently only 'type == phylogram' supported")
+	if (lastPP$dir!="rightwards")
+		stop("currently only rightwards supported")				
+	tmp				<- max(node.depth.edgelength(ph)) - subset(ph.nodeheighthpds, select=c(hpd.l,hpd.u))		#from node heights to root heights, assuming root is plotted at 0
+	yy 				<- lastPP$yy[Ntip(ph)+ph.nodeheighthpds[,node]]
+	segments(tmp[,hpd.l], yy, tmp[,hpd.u], yy, col = col, lwd = lwd)					
+}	
 ######################################################################################
 #' @export
 or.dist.dna<- function (x, model = "K80", variance = FALSE, gamma = FALSE, 
@@ -1863,7 +2508,8 @@ hivc.clu.getplot.mixedfrgngroup<- function(ph, clustering, df.cluinfo, verbose=1
 	list(cluphy=cluphy, cluphy.df=cluphy.df )			
 }
 ######################################################################################
-hivc.clu.get.tiplabels<- function(ph, df.info, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5")
+hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5",
+										select=c("CountryInfection","Trm","Sex","isAcute","lRNA.early","NegT","AnyPos_T1","PosSeqT","lRNA.hb4tr_LT","lRNA_bTS","lRNA_TS","lRNA_aTS","lRNAi_bTS","lRNAi_aTS","AnyT_T1","TrImo_bTS","TrImo_aTS","PosCD4_T1","CD4_T1","CD4_bTS","CD4_TS","CD4_aTS","Patient","RegionHospital") )
 {
 	require(colorspace)
 	require(RColorBrewer)
@@ -2063,17 +2709,9 @@ hivc.clu.get.tiplabels<- function(ph, df.info, col.notmsm="#4EB3D3", col.Early="
 	setkey(df.info, FASTASampleCode)
 	df.info				<- df.info[ph$tip.label,]
 	#select text and col matrix 
-	text				<- t( as.matrix( subset(df.info,select=c(	CountryInfection, Trm, Sex, isAcute, lRNA.early,
-									NegT, AnyPos_T1, PosSeqT, 
-									lRNA.hb4tr_LT, lRNA_bTS, lRNA_TS, lRNA_aTS, lRNAi_bTS, lRNAi_aTS,
-									AnyT_T1, TrImo_bTS, TrImo_aTS,
-									PosCD4_T1, CD4_T1, CD4_bTS, CD4_TS, CD4_aTS,  Patient, RegionHospital)) ) )
+	text				<- t( as.matrix( df.info[,select, with=0] ) )
 	colnames(text)		<- ph$tip.label
-	col					<- t( as.matrix( subset(df.info,select=c(	CountryInfection.col, Trm.col, Sex.col, isAcute.col, lRNA.early.col,
-									NegT.col, AnyPos_T1.col, PosSeqT.col, 
-									lRNA.hb4tr_LT.col, lRNA_bTS.col, lRNA_TS.col, lRNA_aTS.col, lRNAi_bTS.col, lRNAi_aTS.col,
-									AnyT_T1.col, TrImo_bTS.col, TrImo_aTS.col,
-									PosCD4_T1.col, CD4_T1.col, CD4_bTS.col, CD4_TS.col, CD4_aTS.col, Patient.col, RegionHospital.col)) ) )
+	col					<- t( as.matrix( df.info[,paste(select,".col",sep=''),with=0] ) )
 	colnames(col)		<- ph$tip.label
 	ans<- list(text=text, col=col)
 	ans
@@ -2179,10 +2817,11 @@ hivc.clu.get.tiplabels.v1<- function(ph, df.info)
 	ans
 }	
 ######################################################################################
-hivc.clu.plot.tiplabels<- function (tip, text, col, adj = c(-0.05, 0.5), cex=1,add.xinch= 0.03, add.yinch= 0.02) 
+hivc.clu.plot.tiplabels<- function (tip, text, col, xx=NULL, adj = c(-0.05, 0.5), cex=1, add.xinch= 0.03, add.yinch= 0.02) 
 {		
 	lastPP 			<- get("last_plot.phylo", envir = .PlotPhyloEnv)
-	xx 				<- lastPP$xx[tip]
+	if(is.null(xx))
+		xx 			<- lastPP$xx[tip]
 	yy 				<- lastPP$yy[tip]
 	if(length(tip)==1)
 	{
