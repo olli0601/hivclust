@@ -3236,6 +3236,13 @@ project.hivc.clustering<- function(dir.name= DATA)
 	{		
 		verbose		<- 1
 		resume		<- 1
+		
+		# load sequences
+		indir								<- paste(dir.name,"tmp",sep='/')
+		infile								<- "ATHENA_2013_03_CurAll+LANL_Sequences"			
+		insignat							<- "Sat_Jun_16_17/23/46_2013"
+		file								<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')			
+		load(file)		
 		#
 		# precompute clustering stuff		
 		#
@@ -3342,14 +3349,51 @@ hivc.phy.get.TP.and.TN.bootstrapvalues<- function(ph, df.seqinfo, linked.bypatie
 	set(bs.linked.bypatient,which(bs.linked.bypatient[, bs.cat==0]),"bs.cat",1)
 	#
 	set(bs.linked.bypatient, NULL, "tip1", ph$tip.label[ bs.linked.bypatient[,tip1] ])
-	set(bs.linked.bypatient, NULL, "tip2", ph$tip.label[ bs.linked.bypatient[,tip2] ])
+	set(bs.linked.bypatient, NULL, "tip2", ph$tip.label[ bs.linked.bypatient[,tip2] ])	
+	# compute genetic distance between tip1 and tip2	
+	dummy	<- 0
+	tmp		<- sapply(seq_len(nrow(bs.linked.bypatient)),function(i)
+			{
+				1 - .C("hivc_dist_ambiguous_dna", seq.PROT.RT[bs.linked.bypatient[i,tip1], ], seq.PROT.RT[bs.linked.bypatient[i,tip2], ], ncol(seq.PROT.RT), dummy )[[4]]
+			})
+	bs.linked.bypatient[, dist.raw:=tmp]	
 	# compute time between the two within patient sequences
 	tmp					<- data.table( tip1.PosSeqT= df.seqinfo[bs.linked.bypatient[,tip1],PosSeqT][,PosSeqT], tip2.PosSeqT= df.seqinfo[bs.linked.bypatient[,tip2],PosSeqT][,PosSeqT])
 	tmp[, PosSeqT.diff:=tmp[, abs(as.numeric(difftime(tip1.PosSeqT, tip2.PosSeqT, units="days")))/365]]			
 	bs.linked.bypatient	<- cbind(bs.linked.bypatient, tmp)
 	bs.linked.bypatient	<- subset(bs.linked.bypatient, select=c(Patient, tip1, tip2, bs, PosSeqT.diff))	
 	#
-	# plot boostrap histogram
+	# plot boostrap histogram with 'dist.raw'
+	#	
+	if(!is.null(plot.file))
+	{
+		breaks.n			<- 20
+		pdf(width=5,height=8,file=plot.file)
+		def.par <- par(no.readonly = TRUE)
+		layout( matrix(c(1,1,1,2),ncol=1,nrow=4) )
+		par(mar=c(0.5,4,0.5,0.5))		
+		cols		<- c(sapply(brewer.pal(4,"Paired"), function(x)  my.fade.col(x, 1))[1:2], "transparent")
+		border		<- c("transparent","transparent","black")
+		tmp<- subset(bs.linked.bypatient,!is.nan(bs.linked.bypatient[,dist.raw]))[,dist.raw]
+		hist(bs.linked.bypatient[,dist.raw], breaks=breaks.n, main='', xlab="", border=border[1], col=cols[1], freq=1, add=0)		
+		hist(subset(bs.linked.bypatient, PosSeqT.diff<1.5)[,dist.raw],breaks=breaks.n, border=border[2], add=1, col=cols[2], freq=1)		
+		legend("topright", bty='n', border=border, legend=c("all pairs of within patient sequences","pairs of within patient sequences\n with difference in time of sampling < 18 mo","seq pairs of dead/HIV- patients"), fill=cols)
+		
+		tmp			<- bs.linked.bypatient[, list(prop.recent= length(which(PosSeqT.diff<1.5))/length(PosSeqT.diff) ),by=bs.cat]
+		setkey(tmp, bs.cat)
+		
+		par(mar=c(5,4,0.5,0.5))
+		plot(1,1,type='n',xlim=range(bs.linked.bypatient[,dist.raw]),ylim=c(0,1),xlab="bootstrap",ylab='prop',bty='n')
+		polygon(c(range(bs.linked.bypatient[,dist.raw]),rev(range(bs.linked.bypatient[,dist.raw]))), c(0,0,1,1), col=cols[1], border=NA)
+		sapply(seq_len(nrow(tmp)),function(i)
+				{										 
+					polygon(c(tmp[i,bs.cat]/10-0.1,tmp[i,bs.cat]/10,tmp[i,bs.cat]/10,tmp[i,bs.cat]/10-0.1),c(0,0,rep(tmp[i,prop.recent],2)), border=NA, col=cols[2])
+				})
+		par(def.par)
+		dev.off()
+	}
+	#
+	# plot boostrap histogram with BS
 	#	
 	if(!is.null(plot.file))
 	{
@@ -4767,9 +4811,9 @@ hivc.prog.BEAST.poolrunxml<- function()
 	infilexml.template	<- "standard"
 	resume				<- 1
 	verbose				<- 1
-	hpc.walltime		<- 71
-	hpc.ncpu			<- 1
-	hpc.mem				<- "600mb"
+	hpc.walltime		<- 271
+	hpc.ncpu			<- 8
+	hpc.mem				<- "3800mb"
 
 	if(exists("argv"))
 	{
@@ -5133,7 +5177,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(0)	#run BEAST POOL
+	if(1)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -5143,19 +5187,19 @@ hivc.proj.pipeline<- function()
 		infiletree			<- paste(infile,"examlbs100",sep="_")
 		infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
 		#infilexml.template	<- "um22rhU2050"
-		infilexml.template	<- "um22rhG202018"
+		#infilexml.template	<- "um22rhG202018"
 		#infilexml.template	<- "rhU65rho753"
 		#infilexml.template	<- "rhU65rho903"
 		#infilexml.template	<- "rhU65rho906"
 		#infilexml.template	<- "rhU65rho909"	
 		#infilexml.template	<- "um181rhU2045"
-		#infilexml.template	<- "um182rhU2045"
+		infilexml.template	<- "um182rhU2045"
 		#infilexml.template	<- "um183rhU2045"
 		#infilexml.template	<- "um182us45"
 		#infilexml.template	<- "um182us60"
-		infilexml.opt		<- "txs4clu"
+		#infilexml.opt		<- "txs4clu"
 		#infilexml.opt		<- "txs4clufx03"
-		#infilexml.opt		<- "mph4clu"
+		infilexml.opt		<- "mph4clu"
 		#infilexml.opt		<- "mph4clumph4tu"
 		#infilexml.opt		<- "mph4clufx03"
 
@@ -5167,7 +5211,7 @@ hivc.proj.pipeline<- function()
 		thresh.bs			<- 0.8
 		pool.ntip			<- 130		
 		#pool.ntip			<- 150
-		#pool.ntip			<- 190
+		pool.ntip			<- 190
 		#pool.ntip			<- 400
 		resume				<- 1
 		verbose				<- 1

@@ -1167,7 +1167,7 @@ hivc.phy.plotupon<- function (x, type = "phylogram", use.edge.length = TRUE, nod
 				cex = cex)
 }
 ######################################################################################
-hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.hivs=4, beastlabel.idx.samplecode=5)
+hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.hivs=4, beastlabel.idx.samplecode=5, verbose=1)
 {
 	#	get root height for final tree in calendar time
 	ph.tip.ctime	<- sapply(ph.beast, function(x) max( as.numeric( sapply(strsplit(x$tip.label,'_'), function(x)	x[beastlabel.idx.hivs] ) ) ))			
