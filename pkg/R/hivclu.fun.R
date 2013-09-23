@@ -1384,6 +1384,7 @@ hivc.treeannotator.plot.viro.timeline<- function(ph, ph.viro.timeline, viro.min=
 hivc.treeannotator.get.viro.timeline<- function(ph, df, df.viro, youngest.tip.ctime, df.treatment=NULL, end.ctime=2013.3)
 {
 	setkey(df, FASTASampleCode)
+	
 	if(is.null(df.treatment))		#prepare a single viral load timeline without treatment periods
 	{
 		tmp				<- df[J(ph$tip.label)][, list(tip=seq_along(ph$tip.label), FASTASampleCode=FASTASampleCode, Patient=Patient, DateDied=DateDied)]		

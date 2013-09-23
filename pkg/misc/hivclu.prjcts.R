@@ -1391,7 +1391,7 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 	}
 	if(1)
 	{
-		print(indir)
+		print( indir ) 
 		print(outdir)
 		print(infile)
 		print(signat.in)
