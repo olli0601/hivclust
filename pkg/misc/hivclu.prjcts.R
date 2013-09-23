@@ -4649,14 +4649,16 @@ hivc.prog.BEAST.evalpoolrun<- function()
 	file.cov			<- paste(indircov,"/",infilecov,".R",sep='')
 	file.viro			<- paste(indircov,"/ATHENA_2013_03_Viro.R",sep='/')
 	file.immu			<- paste(indircov,"/ATHENA_2013_03_Immu.R",sep='/')
-	
-	indir				<- paste(DATA,"tmp",sep='/')		
+	file.treatment		<- paste(indircov,"/ATHENA_2013_03_Regimens.R",sep='/')
+		
+	indir				<- paste(DATA,"beast/beast_130908",sep='/')
+	indir				<- paste(DATA,"tmp",sep='/')	
 	infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg"
 	insignat			<- "Tue_Aug_26_09/13/47_2013"
-	#infilexml.opt		<- "txs4clu"
-	infilexml.opt		<- "mph4clu"
-	#infilexml.template	<- "um22rhG202018"
-	infilexml.template	<- "um182rhU2045"	
+	infilexml.opt		<- "txs4clu"
+	#infilexml.opt		<- "mph4clu"
+	infilexml.template	<- "um22rhG202018"
+	#infilexml.template	<- "um182rhU2045"	
 	
 	plot						<- 1
 	verbose						<- 1
@@ -4776,11 +4778,15 @@ hivc.prog.BEAST.evalpoolrun<- function()
 				#load patient CD4				
 				load(file.immu)
 				df.immu				<- df
+				#load patient regimen
+				load(file.treatment)
+				df.treatment		<- df
 				
 				youngest.tip.ctime	<- max(ph.tip.ctime)
+				#youngest.tip.ctime	<- 2010.46
 				file				<- paste(indir,'/',infile,'_',infilexml.template,'_',infilexml.opt,"_mcc_",gsub('/',':',insignat),".pdf",sep='')
 				if(verbose)	cat(paste("\nplotting dated clusters to file", file ))
-				dummy				<- hivc.treeannotator.plot(cluphy, youngest.tip.ctime, df.all, df.viro, df.immu, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=file, pdf.width=7, pdf.height=130)
+				dummy				<- hivc.treeannotator.plot(cluphy, youngest.tip.ctime, df.all, df.viro, df.immu, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=file, pdf.width=7, pdf.height=150)
 			}
 		}
 		else if(verbose)	
@@ -5152,7 +5158,8 @@ hivc.proj.pipeline<- function()
 		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
 		insignat	<- "Sat_Jun_16_17/23/46_2013"
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"
-		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		insignat	<- "Thu_Aug_01_17/05/23_2013"		
+		
 		#seq covariates
 		indircov	<- paste(dir.name,"derived",sep='/')
 		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
@@ -5177,7 +5184,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(1)	#run BEAST POOL
+	if(0)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -5231,23 +5238,20 @@ hivc.proj.pipeline<- function()
 	}
 	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
 	{
-		bs.from		<- 99
-		bs.to		<- 99
-		bs.n		<- 200
-		signat.in	<- "Sat_Jun_16_17:23:46_2013"
-		signat.out	<- "Sat_Jun_16_17:23:46_2013"				
+		bs.from		<- 0
+		bs.to		<- 0
+		bs.n		<- 100
+								
 		indir		<- paste(dir.name,"tmp",sep='/')
-		#infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences"		
-		signat.in	<- "Thu_Aug_01_17/05/23_2013"
-		signat.out	<- "Thu_Aug_01_17/05/23_2013"						
-		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
-
-		#infile		<- "xMRV.gag.Lo.Ike"
-		#signat.in	<- "Thu_Sep_12_17/05/23_2013"
-		#signat.out	<- "Thu_Sep_12_17/05/23_2013"
+		#infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences"
+		#signat.in	<- "Sat_Jun_16_17:23:46_2013"								
+		#infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+		#signat.in	<- "Thu_Aug_01_17/05/23_2013"	
+		infile		<- "UKCA_2013_07_TNTPHIVnGTR"
+		signat.in	<- "Mon_Sep_22_17/23/46_2013"
 		
 		outdir		<- paste(dir.name,"tmp",sep='/')
-		cmd			<- hivc.cmd.examl.bootstrap(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
+		cmd			<- hivc.cmd.examl.bootstrap(indir,infile,gsub('/',':',signat.in),gsub('/',':',signat.in),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
 		outdir		<- paste(dir.name,"tmp",sep='/')							
 		lapply(cmd, function(x)
 				{				

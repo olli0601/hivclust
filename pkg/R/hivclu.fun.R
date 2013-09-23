@@ -1250,6 +1250,7 @@ hivc.treeannotator.get.clusterprob<- function(ph.beast, beastlabel.idx.clu=1, be
 	clu.df
 }
 ######################################################################################
+#	end.ctime=2013.3; cex.nodelabel=0.5; cex.tiplabel=0.5; file=NULL; pdf.width=7; pdf.height=20
 hivc.treeannotator.plot<- function(ph, youngest.tip.ctime, df.all, df.viro, df.immu, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=NULL, pdf.width=7, pdf.height=20)
 {		
 	if(class(file)=="character")
@@ -1269,8 +1270,8 @@ hivc.treeannotator.plot<- function(ph, youngest.tip.ctime, df.all, df.viro, df.i
 	ph.seronodeheight	<- hivc.treeannotator.sero.getnodeheight.range(ph, df.all, youngest.tip.ctime)
 	hivc.treeannotator.plot.seronodeheightrange(ph, ph.seronodeheight, add.yinch= -0.025, width.yinch= 0.05, width.yinch.past.AnyPos_T1= 0, col=cols[2])
 	# add lRNA timeline
-	ph.viro.timeline	<- hivc.treeannotator.get.viro.timeline(ph, df.all, df.viro, youngest.tip.ctime)
-	hivc.treeannotator.plot.viro.timeline(ph, ph.viro.timeline, viro.min= log10(300), width.yinch= 0.15, add.yinch= 0.005, col.bg= cols[5], col.legend= cols[6], cex.txt= 0.2)
+	ph.viro.timeline	<- hivc.treeannotator.get.viro.timeline(ph, df.all, df.viro, youngest.tip.ctime, df.treatment=df.treatment)
+	hivc.treeannotator.plot.viro.timeline(ph, ph.viro.timeline, viro.min= log10(300), width.yinch= 0.15, add.yinch= 0.005, col.bg= cols[c(5,10,12)], col.legend= cols[6], cex.txt= 0.2)
 	# add CD4 timeline
 	ph.immu.timeline	<- hivc.treeannotator.get.immu.timeline(ph, df.all, df.immu, youngest.tip.ctime, end.ctime=2013.3)
 	hivc.treeannotator.plot.immu.timeline(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, immu.legend= c(200, 350, 500, immu.max), width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2)
@@ -1282,7 +1283,7 @@ hivc.treeannotator.plot<- function(ph, youngest.tip.ctime, df.all, df.viro, df.i
 	tmp					<- rep( max(node.depth.edgelength(ph)) - (youngest.tip.ctime-ceiling(end.ctime)), Ntip(ph))
 	hivc.clu.plot.tiplabels(seq_len(Ntip(ph)), ph.tiplabel$text, ph.tiplabel$col, xx=tmp, adj = c(-0.05, 0.5), cex=cex.tiplabel, add.xinch= 0.03, add.yinch= 0.02)
 	# add legend	
-	legend("topright", fill= cols[c(1,2,3,5)], legend=c("BEAST 95% TMRCA", "interval [last HIV-, diagnosis]", "CD4 timeline", "VL timeline"), bty='n', border=NA, cex=cex.tiplabel)
+	legend("topright", fill= cols[c(1,2,3,5,10,12)], legend=c("BEAST 95% TMRCA", "interval [last HIV-, diagnosis]", "CD4 timeline", "VL timeline", "VL timeline under treatment", "VL timeline under treatment"), bty='n', border=NA, cex=cex.tiplabel)
 	
 	if(class(file)=="character")
 		dev.off()				
@@ -1344,8 +1345,9 @@ hivc.treeannotator.get.immu.timeline<- function(ph, df, df.immu, youngest.tip.ct
 	ans
 }
 ######################################################################################
-hivc.treeannotator.plot.viro.timeline<- function(ph, ph.viro.timeline, viro.min= log10(300), width.yinch= 0.2, add.yinch= 0.005, col.bg= "red", col.legend="red", cex.txt= 0.2)
-{
+#	viro.min= log10(300); width.yinch= 0.15; add.yinch= 0.005; col.bg= cols[c(5,9,10)]; col.legend= cols[6]; cex.txt= 0.2
+hivc.treeannotator.plot.viro.timeline<- function(ph, ph.viro.timeline, viro.min= log10(300), viro.legend=c(3,4,5,6), width.yinch= 0.2, add.yinch= 0.005, col.bg= "red", col.legend="red", cex.txt= 0.2)
+{	
 	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)
 	set(ph.viro.timeline, NULL, "PosRNA", max(node.depth.edgelength(ph)) - ph.viro.timeline[,PosRNA])
 	ph.viro.timeline[, yylRNA:= lRNA]
@@ -1353,26 +1355,95 @@ hivc.treeannotator.plot.viro.timeline<- function(ph, ph.viro.timeline, viro.min=
 	scale	<- yinch(width.yinch) / max( ph.viro.timeline[,yylRNA])
 	set(ph.viro.timeline, NULL, "yylRNA", ph.viro.timeline[,yylRNA] * scale )
 	ph.viro.timeline[, yy:= yinch(add.yinch)+lastPP$yy[ph.viro.timeline[,tip]]]
-	
+	#define treatment periods if there
+	if(!any(ph.viro.timeline[, NoDrug!=0]))
+		ph.viro.timeline[, col:=col.bg[1]]
+	else
+	{
+		if(length(col.bg)==1)	stop("for TPeriod != NA, expect more than one 'col.bg'")
+		col.bg.nNA	<- rep(col.bg[-1], ceiling(max(ph.viro.timeline[, TPeriod])/(length(col.bg)-1)))
+		ph.viro.timeline[, col:=""]
+		set(ph.viro.timeline, which(ph.viro.timeline[,NoDrug==0]), "col", col.bg[1])
+		set(ph.viro.timeline, which(ph.viro.timeline[,NoDrug!=0]), "col", col.bg.nNA[ subset(ph.viro.timeline, NoDrug!=0)[,TPeriod] ])		
+	}	
+	setkey(ph.viro.timeline, tip)
 	dummy<- sapply( unique(ph.viro.timeline[,tip]), function(x)
 			{
-				z<- ph.viro.timeline[J(x)]
-				polygon( c( z[,PosRNA], z[nrow(z),PosRNA], z[1,PosRNA] ), c( z[,yylRNA+yy], z[nrow(z),yy], z[1,yy] ), border=NA, col=col.bg	)
-				sapply(z[1,yy]+(c(3,4,5)-viro.min)*scale,function(i)		lines(z[c(1,nrow(z)),PosRNA], rep(i,2), col=col.legend, lty=3, lwd=0.2)		)		
-				text(rep(z[nrow(z),PosRNA],3),z[1,yy]+(c(3,4,5)-viro.min)*scale,c("1e3","1e4","1e5"),cex=cex.txt, col=col.legend)
+				z		<- ph.viro.timeline[J(x)]	
+				#reset TPeriod because there can be multiple off treatment periods (ie TPeriod==0) and we cannot lump them together in the next line
+				#NOT NEEDED ANY LONGER	set(z, NULL, "TPeriod",cumsum(c(0,as.numeric(abs(diff(z[,TPeriod]))>0))))
+				dummy	<- z[,	{								
+									polygon( c( PosRNA, PosRNA[length(PosRNA)], PosRNA[1] ), c( yylRNA+yy, yy[length(yy)], yy[1] ), border=NA, col=col[1]	)	
+							}, by="TPeriod"]								
+				sapply(z[1,yy]+(viro.legend-viro.min)*scale,function(i)		lines(z[c(1,nrow(z)),PosRNA], rep(i,2), col=col.legend, lty=3, lwd=0.2)		)		
+				text(rep(z[nrow(z),PosRNA],3),z[1,yy]+(viro.legend-viro.min)*scale,paste("1e",viro.legend,sep=''),cex=cex.txt, col=col.legend)
+				#stop()
 			})
 }
 ######################################################################################
-hivc.treeannotator.get.viro.timeline<- function(ph, df, df.viro, youngest.tip.ctime, end.ctime=2013.3)
+hivc.treeannotator.get.viro.timeline<- function(ph, df, df.viro, youngest.tip.ctime, df.treatment=NULL, end.ctime=2013.3)
 {
 	setkey(df, FASTASampleCode)
-	tmp				<- df[J(ph$tip.label)][, list(tip=seq_along(ph$tip.label), FASTASampleCode=FASTASampleCode, Patient=Patient, DateDied=DateDied)]		
-	ans				<- merge(subset(df.viro, select=c(Patient, PosRNA, lRNA)), tmp, all.y=1, by="Patient")
-	set(ans,NULL,"PosRNA",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosRNA]))
-	set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))				
-	set(ans,which(is.na(ans[,DateDied])), "DateDied", youngest.tip.ctime - end.ctime)				
-	ans				<- ans[,list(PosRNA=c(PosRNA,DateDied[1]), lRNA=c(lRNA,tail(lRNA,1))),by="tip"]
-	setkey(ans,tip)
+	if(is.null(df.treatment))		#prepare a single viral load timeline without treatment periods
+	{
+		tmp				<- df[J(ph$tip.label)][, list(tip=seq_along(ph$tip.label), FASTASampleCode=FASTASampleCode, Patient=Patient, DateDied=DateDied)]		
+		ans				<- merge(subset(df.viro, select=c(Patient, PosRNA, lRNA)), tmp, all.y=1, by="Patient")
+		set(ans,NULL,"PosRNA",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosRNA]))
+		set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))				
+		set(ans,which(is.na(ans[,DateDied])), "DateDied", youngest.tip.ctime - end.ctime)				
+		ans				<- ans[,list(PosRNA=c(PosRNA,DateDied[1]), lRNA=c(lRNA,tail(lRNA,1), TPeriod=0, NoDrug=0)),by="tip"]
+		setkey(ans,tip)
+	}
+	else							#prepare a single viral load timeline with treatment periods
+	{
+		#as above except TPeriod=NA
+		tmp				<- df[J(ph$tip.label)][, list(tip=seq_along(ph$tip.label), FASTASampleCode=FASTASampleCode, Patient=Patient, DateDied=DateDied)]		
+		ans				<- merge(subset(df.viro, select=c(Patient, PosRNA, lRNA)), tmp, all.y=1, by="Patient")
+		set(ans,NULL,"PosRNA",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosRNA]))
+		set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))				
+		set(ans,which(is.na(ans[,DateDied])), "DateDied", youngest.tip.ctime - end.ctime)				
+		ans				<- ans[,list(Patient= rep(Patient[1], length(Patient)+1), PosRNA=c(PosRNA,DateDied[1]), lRNA=c(lRNA,tail(lRNA,1))),by="tip"]
+		#prepare subset of df.treatment
+		tmp				<- merge(subset(df.treatment, select=c(Patient, StartTime, StopTime, NoDrug)), unique(subset(ans,select=Patient)), all.y=1, by="Patient")	
+		set(tmp,NULL,"StartTime",	youngest.tip.ctime - hivc.db.Date2numeric(tmp[,StartTime]))
+		set(tmp,NULL,"StopTime",	youngest.tip.ctime - hivc.db.Date2numeric(tmp[,StopTime]))
+		set(tmp, which( tmp[,StopTime==min(StopTime, na.rm=1)] ), "StopTime", youngest.tip.ctime - 2013.3)
+		ans				<- merge(tmp, ans, by="Patient", allow.cartesian=1)
+		tmp				<- which(ans[,is.na(StartTime)])
+		set(ans,tmp,"StartTime",youngest.tip.ctime - 2013.3)
+		set(ans,tmp,"StopTime",youngest.tip.ctime - 2013.3)
+		set(ans,tmp,"NoDrug",0L)
+		#now have all treatments and viral loads measures togethers
+		ans					<- ans[,	{
+											x		<- data.table(StartTime, StopTime, NoDrug, tip, PosRNA,  lRNA)											
+											#select outside any treatment period
+											tmp		<- subset(x, PosRNA>max(StartTime))								#handle no drug before first treatment
+											tmp		<- rbind(tmp, subset(x, PosRNA<min(StopTime)) )					#handle no drug after stop treatment
+											if(nrow(tmp))
+											{
+												setkey(tmp, PosRNA)
+												tmp		<- unique(tmp)
+												set(tmp,NULL,"NoDrug",0L)
+												#select only those viral loads within a particular treatment period
+												tmp		<- rbind(tmp, subset(x, StartTime>=PosRNA & PosRNA>=StopTime))												
+											}
+											else
+												tmp		<- subset(x, StartTime>=PosRNA & PosRNA>=StopTime)
+											#assign integer value to different treatment periods
+											setkey(tmp, NoDrug, StartTime)
+											tmp2	<- subset(unique(tmp), select=c(StartTime, NoDrug))[order(-StartTime, NoDrug)]
+											tmp2	<- tmp2[, list(StartTime=StartTime, NoDrug=NoDrug, TPeriod=seq_along(NoDrug))]
+											tmp		<- merge(tmp, tmp2, all.x=1, by=c("StartTime", "NoDrug"))											
+											tmp		<- subset(tmp[order(-PosRNA)], select=c(PosRNA,  lRNA, NoDrug, TPeriod))
+											#add endpoints for each treatment period
+											tmp2	<- subset(tmp, TPeriod>min(TPeriod))[,  list(PosRNA=PosRNA[1], lRNA=lRNA[1] ),by=TPeriod]
+											set(tmp2, NULL, "TPeriod", tmp2[,TPeriod]-1)
+											tmp2	<- merge(tmp2, unique(subset(tmp, select=c(TPeriod, NoDrug))), by="TPeriod")
+											tmp		<- rbind(tmp, subset(tmp2, select=c(PosRNA,  lRNA, NoDrug, TPeriod)))
+											tmp
+										},by="tip"]
+		ans					<- ans[order(tip, -PosRNA, TPeriod)]		
+	}
 	ans
 }
 ######################################################################################
