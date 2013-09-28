@@ -270,6 +270,204 @@ hivc.db.reset.inaccurateNegT<- function(df, nacc.dy.dy= 1, nacc.mody.mo= 0, nacc
 	df
 }
 ######################################################################################
+hivc.db.getplot.newdiagnosesbyCD4<- function(df, plot.file=NULL, plot.file.p=NULL, plot.ylab=NULL, verbose=1)
+{
+	set(df, NULL, "AnyPos_T1", hivc.db.Date2numeric(df[,AnyPos_T1]))
+	df[,AnyPos_yr:=	floor(df[,AnyPos_T1])]
+	df[,CD4_T1bin:= my.aggregate(df[,CD4_T1], c(-Inf, 200, 350, 500, Inf))]
+	#
+	t.newdiag			<- table( df[,AnyPos_yr,CD4_T1bin] )
+	rownames(t.newdiag)	<- c("<200","200-349","350-499",">=500")	
+	if(!is.null(plot.file))
+	{
+		cols				<- brewer.pal(nrow(t.newdiag),"Set1")
+		if(verbose)	cat(paste("\nplot file prop to ",plot.file))
+		pdf(file=plot.file, width=5, height=4)
+		par(mar=c(4,6,0.5,0.5))
+		my.barplot.table(t.newdiag, 0.4, "year", plot.ylab, cols, x.baseline=0, xax=as.numeric(colnames(t.newdiag)), legend.loc="topleft")
+		dev.off()
+	}
+	#
+	p.newdiag			<- t.newdiag / matrix(rep(apply(t.newdiag,2,sum), each=nrow(t.newdiag)), nrow(t.newdiag), ncol(t.newdiag))
+	if(!is.null(plot.file.p))
+	{
+		if(verbose)	cat(paste("\nplot file prop to ",plot.file.p))
+		pdf(file=plot.file.p, width=5, height=4)
+		par(mar=c(4,6,0.5,0.5))
+		cols				<- brewer.pal(nrow(p.newdiag),"Set1")
+		my.barplot.table(p.newdiag, 0.4, "year", paste("%",plot.ylab), cols, x.baseline=0, xax=as.numeric(colnames(p.newdiag)), legend.loc=NULL)
+		dev.off()
+	}
+	list( t.newdiag=t.newdiag, p.newdiag=p.newdiag)
+}
+######################################################################################
+hivc.db.getplot.livingbyCD4<- function(df, df.immu, plot.file, plot.file.p, plot.ylab, db.endtime=2013.3, db.diff.lastcontact2died=0.5, db.diff.lastcontact2now= 2.3, verbose=1)
+{
+	#
+	set(df, NULL, "AnyPos_T1", hivc.db.Date2numeric(df[,AnyPos_T1]))
+	set(df, NULL, "DateDied", hivc.db.Date2numeric(df[,DateDied]))
+	set(df, NULL, "DateLastContact", hivc.db.Date2numeric(df[,DateLastContact]))
+	set(df, NULL, "AnyT_T1", hivc.db.Date2numeric(df[,AnyT_T1]))
+	df[,DateEnd:= DateDied]
+	#compute DateEnd, either death or lost contact
+	tmp				<- which( df[, (DateDied-DateLastContact)>db.diff.lastcontact2died] )
+	if(verbose)	cat(paste("\n(DateDied-DateLastContact)>db.diff.lastcontact2died for n=",length(tmp)))
+	set(df, tmp, "DateEnd", df[tmp,DateLastContact])
+	tmp				<- which(df[, is.na(DateDied) & (db.endtime-DateLastContact)>db.diff.lastcontact2now])
+	if(verbose)	cat(paste("\n(db.endtime-DateLastContact)>db.diff.lastcontact2now for n=",length(tmp)))
+	set(df, tmp, "DateEnd", df[tmp,DateLastContact])
+	tmp				<- which(is.na(df[,DateLastContact]))
+	if(verbose)	cat(paste("\nnumber patients with missing DateLastContact n=",length(tmp)))
+	tmp				<- which(is.na(df[,DateEnd]))
+	if(verbose)	cat(paste("\nnumber patients still alive n=",length(tmp)))
+	set(df, tmp,"DateEnd",db.endtime)
+	df[, AnyPos_yr:= floor(AnyPos_T1)]
+	df[, DateEnd_yr:= floor(DateEnd)]
+	#
+	set(df, which(is.na(df[,AnyT_T1])), "AnyT_T1", max(df[,DateEnd_yr])+1)
+	#
+	df				<- subset(df, select=c(Patient, AnyPos_T1, CD4_T1, isAcute, AnyT_T1, DateEnd, AnyPos_yr, DateEnd_yr))	
+	#compute patients alive in year Db_yr 
+	tmp				<- seq.int(min(df[, AnyPos_yr]),max(df[, DateEnd_yr]))
+	tmp				<- lapply(tmp, function(x)
+			{				
+				tmp	<- subset(df, AnyPos_yr<=x & DateEnd_yr>=x)
+				cbind(tmp,data.table(Db_yr=rep(x,nrow(tmp))))
+			})
+	df				<- rbindlist(tmp)
+	setkey(df, Patient)	
+	#compute proportions of patients in recent, undiagnosed by CD4 count, treated per year	
+	df	<- df[,	{
+				x	<- data.table(Patient, AnyPos_T1, isAcute,  AnyT_T1, Db_yr, DateEnd_yr)
+				#x	<- subset(df, Patient=="M10833", select=c(Patient, AnyPos_T1, isAcute,  AnyT_T1, Db_yr, DateEnd_yr))
+				z	<- merge(x, df.immu, by="Patient")
+				z	<- subset(z, floor(PosCD4)==Db_yr)
+				tmp	<- setdiff( seq.int(x[,floor(AnyPos_T1)[1]], x[,DateEnd_yr[1]]), unique(z[,Db_yr]) )	#years for which no CD4 count available
+				if(length(tmp))
+					x	<- rbind(z,data.table(Patient=x[,Patient[1]], AnyPos_T1= x[,AnyPos_T1[1]], isAcute=x[,isAcute[1]], AnyT_T1=x[,AnyT_T1[1]], Db_yr=tmp, DateEnd_yr=x[,DateEnd_yr[1]],   PosCD4= tmp+.5, CD4=NA)) 
+				else
+					x	<- z
+				
+				tmp<- x[, 	{									
+							tmp		<- min(Db_yr[1]+1,AnyT_T1[1])-max(Db_yr[1],AnyPos_T1[1])
+							Acute_p	<- ifelse(!is.na(isAcute[1]) && isAcute[1]=="Yes" && floor(AnyPos_T1[1])==Db_yr, tmp, 0)
+							AnyT_p	<- min(1,max(0,Db_yr[1]+1-AnyT_T1[1]))
+							CD4_p	<- ifelse((is.na(isAcute[1]) || isAcute[1]!="Yes") && floor(AnyT_T1[1])>=Db_yr, tmp, 0)
+							#print(Acute_p); print(AnyT_p); print(CD4_p)
+							tmp2	<- which(PosCD4<=AnyT_T1)
+							CD4_med	<- ifelse(length(tmp2),median(CD4[tmp2]), NA_real_)
+							#print(CD4_yr)
+							list(Patient=Patient[1], Acute_p=Acute_p, CD4_med=CD4_med, AnyT_p=AnyT_p, NotYetT_p=CD4_p )
+						},by=Db_yr]
+				tmp
+			},by=Patient]
+	df[,CD4_medbin:= my.aggregate(df[,CD4_med], c(-Inf, 200, 350, 500, Inf))]	
+	set(df, which(is.na(df[,CD4_medbin])), "CD4_medbin", "unknown")
+	#take sum for each stratification of interest
+	t.living	<- df[,	{				
+				CD4_b200_n<- which(CD4_medbin=="-Inf,200")
+				CD4_200_n<- which(CD4_medbin=="200,350")
+				CD4_350_n<- which(CD4_medbin=="350,500")
+				CD4_500_n<- which(CD4_medbin=="500,Inf")
+				CD4_NA_n<- which(CD4_medbin=="unknown")
+				list(Acute_n=sum(Acute_p), T_n=sum(AnyT_p), CD4_b200_n=sum(NotYetT_p[CD4_b200_n]), CD4_200_n=sum(NotYetT_p[CD4_200_n]), CD4_350_n=sum(NotYetT_p[CD4_350_n]), CD4_500_n=sum(NotYetT_p[CD4_500_n]), CD4_NA_n=sum(NotYetT_p[CD4_NA_n]))	
+			},by=Db_yr]
+	setkey(t.living, Db_yr)
+	tmp					<- t.living[,Db_yr]
+	t.living			<- t( as.matrix(subset(t.living, select=c(Acute_n, CD4_b200_n, CD4_200_n, CD4_350_n, CD4_500_n, CD4_NA_n, T_n))) )
+	colnames(t.living)	<- tmp
+	rownames(t.living)	<- c("Acute","<200","200-349","350-499",">=500","unknown","Treated")
+	
+	if(!is.null(plot.file))
+	{
+		cols				<- brewer.pal(nrow(t.living),"Set1")
+		if(verbose)	cat(paste("\nplot file prop to ",plot.file))
+		pdf(file=plot.file, width=5, height=4)
+		par(mar=c(4,6,0.5,0.5))
+		my.barplot.table(t.living, 0.4, "year", plot.ylab, cols, x.baseline=0, xax=as.numeric(colnames(t.living)), legend.loc="topleft")
+		dev.off()
+	}
+	p.living			<- t.living / matrix(rep(apply(t.living,2,sum), each=nrow(t.living)), nrow(t.living), ncol(t.living))
+	if(!is.null(plot.file.p))
+	{
+		if(verbose)	cat(paste("\nplot file prop to ",plot.file.p))
+		pdf(file=plot.file.p, width=5, height=4)
+		par(mar=c(4,6,0.5,0.5))
+		cols				<- brewer.pal(nrow(p.living),"Set1")
+		my.barplot.table(p.living, 0.4, "year", paste("%",plot.ylab), cols, x.baseline=0, xax=as.numeric(colnames(p.living)), legend.loc=NULL)
+		dev.off()
+	}
+	list(t.living=t.living,p.living=p.living)
+}
+######################################################################################
+hivc.db.getplot.livingbyexposure<- function(df, plot.file, plot.file.p, plot.ylab, db.endtime=2013.3, db.diff.lastcontact2died=0.5, db.diff.lastcontact2now= 2.3, verbose=1)
+{
+	#simplify risk group 
+	set(df,which(df[,Trm=="SXCH"]),"Trm","OTH")
+	set(df,which(df[,Trm=="PREG"]),"Trm","OTH")
+	set(df,which(df[,Trm=="NEEACC"]),"Trm","OTH")
+	set(df,which(df[,Trm=="BLOOD"]),"Trm","OTH")
+	set(df,which(df[,Trm=="HETfa"]),"Trm","HET")	
+	set(df,which(is.na(df[,Trm])),"Trm","unknown")	
+	set(df, NULL, "Trm", factor(df[,Trm]))
+	#
+	set(df, NULL, "AnyPos_T1", hivc.db.Date2numeric(df[,AnyPos_T1]))
+	set(df, NULL, "DateDied", hivc.db.Date2numeric(df[,DateDied]))
+	set(df, NULL, "DateLastContact", hivc.db.Date2numeric(df[,DateLastContact]))
+	df[,DateEnd:= DateDied]
+	#compute DateEnd, either death or lost contact
+	tmp				<- which( df[, (DateDied-DateLastContact)>db.diff.lastcontact2died] )
+	if(verbose)	cat(paste("\n(DateDied-DateLastContact)>db.diff.lastcontact2died for n=",length(tmp)))
+	set(df, tmp, "DateEnd", df[tmp,DateLastContact])
+	tmp				<- which(df[, is.na(DateDied) & (db.endtime-DateLastContact)>db.diff.lastcontact2now])
+	if(verbose)	cat(paste("\n(db.endtime-DateLastContact)>db.diff.lastcontact2now for n=",length(tmp)))
+	set(df, tmp, "DateEnd", df[tmp,DateLastContact])
+	tmp				<- which(is.na(df[,DateLastContact]))
+	if(verbose)	cat(paste("\nnumber patients with missing DateLastContact n=",length(tmp)))
+	tmp				<- which(is.na(df[,DateEnd]))
+	if(verbose)	cat(paste("\nnumber patients still alive n=",length(tmp)))
+	set(df, tmp,"DateEnd",db.endtime)
+	df				<- subset(df,select=c(Patient, AnyPos_T1, Trm, DateEnd))	
+	df[, AnyPos_yr:= floor(AnyPos_T1)]
+	df[, DateEnd_yr:= floor(DateEnd)]
+	#compute patients alive in year Db_yr 
+	tmp				<- seq.int(min(df[, AnyPos_yr]),max(df[, DateEnd_yr]))
+	tmp				<- lapply(tmp, function(x)
+			{				
+				tmp	<- subset(df, AnyPos_yr<=x & DateEnd_yr>=x)
+				cbind(tmp,data.table(Db_yr=rep(x,nrow(tmp))))
+			})
+	df				<- rbindlist(tmp)
+	#
+	t.living			<- table(df[,Db_yr,Trm])
+	rownames(t.living)[rownames(t.living)=="BI"]<- "Bi"
+	rownames(t.living)[rownames(t.living)=="HET"]<- "Het"
+	rownames(t.living)[rownames(t.living)=="IDU"]<- "DU"
+	rownames(t.living)[rownames(t.living)=="OTH"]<- "other"	
+	t.living	<- t.living[c("MSM","Bi",setdiff(rownames(t.living),c("MSM","Bi","unknown")),"unknown"),]
+	#	
+	if(!is.null(plot.file))
+	{
+		cols				<- brewer.pal(nrow(t.living),"Set2")
+		if(verbose)	cat(paste("\nplot file prop to ",plot.file))
+		pdf(file=plot.file, width=5, height=4)
+		par(mar=c(4,6,0.5,0.5))
+		my.barplot.table(t.living, 0.4, "year", plot.ylab, cols, x.baseline=0, xax=as.numeric(colnames(t.living)), legend.loc="topleft")
+		dev.off()
+	}		
+	p.living			<- t.living / matrix(rep(apply(t.living,2,sum), each=nrow(t.living)), nrow(t.living), ncol(t.living))
+	if(!is.null(plot.file.p))
+	{
+		if(verbose)	cat(paste("\nplot file prop to ",plot.file.p))
+		pdf(file=plot.file.p, width=5, height=4)
+		par(mar=c(4,6,0.5,0.5))
+		cols				<- brewer.pal(nrow(p.living),"Set2")
+		my.barplot.table(p.living, 0.4, "year", paste("%",plot.ylab), cols, x.baseline=0, xax=as.numeric(colnames(p.living)), legend.loc=NULL)
+		dev.off()
+	}
+	list(t.living=t.living,p.living=p.living)
+}
+######################################################################################
 hivc.db.Date2numeric<- function( x )
 {
 	x	<- as.POSIXlt(x)
@@ -1251,8 +1449,9 @@ hivc.treeannotator.get.clusterprob<- function(ph.beast, beastlabel.idx.clu=1, be
 }
 ######################################################################################
 #	end.ctime=2013.3; cex.nodelabel=0.5; cex.tiplabel=0.5; file=NULL; pdf.width=7; pdf.height=20
-hivc.treeannotator.plot<- function(ph, youngest.tip.ctime, df.all, df.viro, df.immu, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=NULL, pdf.width=7, pdf.height=20)
+hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all, df.viro, df.immu, df.treatment=NULL, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=NULL, pdf.width=7, pdf.height=20)
 {		
+	require(RColorBrewer)
 	if(class(file)=="character")
 		pdf(file, width=pdf.width, height=pdf.height)
 	par(mar=c(0,0,0,0))
@@ -1274,7 +1473,7 @@ hivc.treeannotator.plot<- function(ph, youngest.tip.ctime, df.all, df.viro, df.i
 	hivc.treeannotator.plot.viro.timeline(ph, ph.viro.timeline, viro.min= log10(300), width.yinch= 0.15, add.yinch= 0.005, col.bg= cols[c(5,10,12)], col.legend= cols[6], cex.txt= 0.2)
 	# add CD4 timeline
 	ph.immu.timeline	<- hivc.treeannotator.get.immu.timeline(ph, df.all, df.immu, youngest.tip.ctime, end.ctime=2013.3)
-	hivc.treeannotator.plot.immu.timeline(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, immu.legend= c(200, 350, 500, immu.max), width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2)
+	hivc.treeannotator.plot.immu.timeline(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2)
 	# re-plot phylogeny
 	ph$node.label		<- as.numeric(sapply( strsplit( ph$node.label, '_' ), function(x)	x[1] ))
 	hivc.phy.plotupon(ph, show.tip.label=0, show.node.label=1, cex=cex.nodelabel)

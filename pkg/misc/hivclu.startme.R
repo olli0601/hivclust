@@ -43,7 +43,7 @@ CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
 INST		<<- paste(CODE.HOME,"inst",sep='/')
 HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
-HOME		<<- "/Users/Oliver/duke/2013_HIV_Hue/UKCA_1309"
+#HOME		<<- "/Users/Oliver/duke/2013_HIV_Hue/UKCA_1309"
 #HOME		<<- "/work/or105/UKCA_1309"
 #HOME		<<- "/Users/Stephane/Desktop/CASCADE_phylo/hivclust"
 #HOME		<<- "/home/koelle/or7/phylody"
@@ -62,15 +62,15 @@ default.fun		<- "project.hivc.examl"
 #default.fun	<- "project.hivc.test"
 default.fun		<- "project.hivc.Excel2dataframe"
 #default.fun	<- "project.hivc.check"
-default.fun		<- "project.hivc.collectpatientdata"
+#default.fun		<- "project.hivc.collectpatientdata"
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
-default.fun		<- "project.bezemer2013a.figs"
+#default.fun		<- "project.bezemer2013a.figs"
 #default.fun		<-"project.bezemer2013b.rates"
-#default.fun		<- "project.hivc.clustering"
-default.fun	<- "project.hivc.beast"
+default.fun		<- "project.hivc.clustering"
+#default.fun	<- "project.hivc.beast"
 #default.fun	<- "hivc.prog.get.clustering.precompute"
 #default.fun	<- "project.gccontent"
-default.fun 	<- "hivc.proj.pipeline"
+#default.fun 	<- "hivc.proj.pipeline"
 #default.fun 	<- "hivc.prog.remove.resistancemut"
 #default.fun 	<- "hivc.prog.BEAST.evalpoolrun"
 ###############################################################################
@@ -137,6 +137,15 @@ my.fade.col<-function(col,alpha=0.5)
 	return(rgb(col2rgb(col)[1]/255,col2rgb(col)[2]/255,col2rgb(col)[3]/255,alpha))
 }
 
+my.aggregate<- function(x, bins)
+{
+	bins	<- cbind(bins[-length(bins)],bins[-1])			
+	ans		<- numeric(length(x))
+	for(i in seq_len(nrow(bins)))
+		ans[which(x<bins[i,2] & x>=bins[i,1])]<- i
+	factor(ans, levels=seq_len(nrow(bins)), labels=apply(bins,1,function(z) paste(z,collapse=',')))		
+}
+
 my.intersect.n<- function( list.to.intersect )
 {
 	if(length(list.to.intersect)==2)
@@ -173,6 +182,24 @@ print.v<- function(x,cut=3,digits=4,prefix= "simu_",print.char= TRUE, as.R= TRUE
 	}
 	if(print.char) print(tmp)
 	tmp
+}
+
+my.barplot.table<- function(x, xh, xlab, ylab, cols, x.baseline=0, xax=as.numeric(colnames(x)), legend.loc=NULL)
+{
+	z		<- rbind( rep(x.baseline, ncol(x)), apply(x, 2, cumsum) )
+	xlim	<- range(xax)
+	ylim	<- range(z)
+	
+	plot(1,1,type='n',bty='n',xlab=xlab,ylab=ylab, xlim=xlim, ylim=ylim)
+	lapply(2:nrow(z), function(i)
+			{
+				lapply(seq_len(ncol(z)), function(j)
+						{
+							polygon(	c(xax[j]-xh,xax[j]+xh,xax[j]+xh,xax[j]-xh),		c(rep(z[i-1,j],2),rep(z[i,j],2)), border=NA, col=cols[i-1] 	)
+						})
+			} )
+	if(!is.null(legend.loc))
+		legend(legend.loc, fill= cols, legend=rownames(x), border=NA, bty='n')
 }
 
 plot.2D.dens<- function(x,y,xlab,ylab,xlim=NA,ylim=NA,nbin=NA,width.infl=2,n.hists=5,method="gauss", palette= "topo", persp.theta= -30, persp.phi= 30, zero.abline=TRUE, ...)
