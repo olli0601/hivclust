@@ -3229,240 +3229,162 @@ project.hivc.beast<- function(dir.name= DATA)
 	}
 }
 ######################################################################################
+project.ukca.TPTN.bootstrapvalues<- function(dir.name= DATA)
+{
+	require(ape)
+	require(data.table)
+	require(RColorBrewer)
+	
+	indir				<- paste(DATA,"tmp",sep='/')
+	infile				<- "UKCA_2013_07_TNTPHIVnGTR_examlbs100"
+	insignat			<- "Mon_Sep_22_17/23/46_2013"		
+	file				<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".newick",sep='')
+	plot.file			<- paste(indir,'/',infile,"_preclust_distbs_",gsub('/',':',insignat),".pdf", sep='')
+	ph					<- read.tree(file)
+	ph$node.label		<- as.numeric(ph$node.label)/100
+	ph$nodel.label[1]	<- 0
+	ph$node.label[3]	<- 0.01		#little phylo cleaning hack ;-)
+	ph.mrca				<- mrca(ph)
+	dist.brl.casc		<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
+	
+	infile				<- "UKCA_2013_07_B_true_pos"
+	file				<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".csv",sep='')
+	df.tp				<- as.data.table(read.csv(file, header=F, sep=' ', col.names=c("tip1","tip2")))		
+	set(df.tp,NULL,"tip1", as.character(df.tp[,tip1]))
+	set(df.tp,NULL,"tip2", as.character(df.tp[,tip2]))
+	if(verbose)	cat(paste("\nNumber of TP pairs read, n=",nrow(df.tp)))
+	df.tp				<- subset(df.tp, df.tp[,tip1]%in%rownames(ph.mrca)  &  df.tp[,tip2]%in%rownames(ph.mrca))
+	if(verbose)	cat(paste("\nNumber of TP pairs with tips in ph, n=",nrow(df.tp)))
+	
+	infile				<- "UKCA_2013_07_B_true_neg"
+	file				<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".csv",sep='')
+	df.tn				<- as.data.table(read.csv(file, header=F, sep=' ', col.names=c("tip1","tip2")))		
+	set(df.tn,NULL,"tip1", as.character(df.tn[,tip1]))
+	set(df.tn,NULL,"tip2", as.character(df.tn[,tip2]))
+	if(verbose)	cat(paste("\nNumber of TN pairs read, n=",nrow(df.tn)))		
+	df.tn				<- subset(df.tn, df.tn[,tip1]%in%rownames(ph.mrca)  &  df.tn[,tip2]%in%rownames(ph.mrca))
+	if(verbose)	cat(paste("\nNumber of TN pairs with tips in ph, n=",nrow(df.tn)))
+	
+	#set MRCAs
+	df.tn[,dummy:=seq_len(nrow(df.tn))]
+	df.tp[,dummy:=seq_len(nrow(df.tp))]
+	df.tn				<- df.tn[, list(tip1=tip1, tip2=tip2, mrca= ph.mrca[tip1,tip2]),by="dummy"]
+	df.tp				<- df.tp[, list(tip1=tip1, tip2=tip2, mrca= ph.mrca[tip1,tip2]),by="dummy"]
+	
+	bs.linked.bypatient	<- df.tp
+	bs.unlinkedpairs	<- df.tn		
+	
+	hivc.phy.get.TP.and.TN.bootstrapvalues(ph, bs.linked.bypatient, ph.mrca=ph.mrca ,df.seqinfo=NULL, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=NULL, dist.brl=NULL, thresh.brl=0.096, plot.file=plot.file, verbose= 1)	
+}
+######################################################################################
+project.athena.TPTN.bootstrapvalues<- function(dir.name= DATA)
+{	
+	require(ape)
+	require(data.table)
+	require(RColorBrewer)
+	
+	verbose		<- 1
+	resume		<- 1
+	
+	# load sequences
+	indir								<- paste(dir.name,"tmp",sep='/')
+	infile								<- "ATHENA_2013_03_CurAll+LANL_Sequences"			
+	insignat							<- "Sat_Jun_16_17/23/46_2013"
+	file								<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')			
+	load(file)		
+	#
+	# precompute clustering stuff		
+	#
+	patient.n	<- 15700
+	indir		<- paste(DATA,"tmp",sep='/')		
+	infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+	insignat	<- "Sat_Jun_16_17/23/46_2013"
+	infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"			
+	insignat	<- "Thu_Aug_01_17/05/23_2013"
+	indircov	<- paste(DATA,"derived",sep='/')
+	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"							
+	argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
+	argv		<<- unlist(strsplit(argv,' '))
+	clu.pre		<- hivc.prog.get.clustering.precompute()
+	
+	load(paste(indir,'/',"mrcas.R",sep=''))
+	
+	outfile				<- paste(infile,"preclust",sep='_')
+	
+	
+	dist.brl			<- clu.pre$dist.brl.casc
+	linked.bypatient	<- clu.pre$linked.bypatient
+	unlinked			<- clu.pre$ph.unlinked
+	unlinked.byspace	<- clu.pre$unlinked.byspace
+	unlinked.bytime		<- clu.pre$unlinked.bytime
+	unlinked.info		<- clu.pre$ph.unlinked.info
+	ph					<- clu.pre$ph
+	df.seqinfo			<- clu.pre$df.seqinfo
+	#ph.mrca			<- mrca(ph)		#probably fastest
+	thresh.brl			<- 0.096
+	plot.file			<- paste(indir,'/',outfile,"_distbs_",gsub('/',':',insignat),".pdf", sep='')
+	
+	#prepare data.tables with mrca		
+	bs.unlinkedpairs	<- lapply(unlinked.bytime, function(x)
+			{						
+				set(x, NULL, "query.FASTASampleCode", as.character(x[,query.FASTASampleCode]))
+				set(x, NULL, "FASTASampleCode", as.character(x[,FASTASampleCode]))
+				ans					<- merge(x, x[, list(mrca= ph.mrca[query.FASTASampleCode,FASTASampleCode]) ,by=FASTASampleCode],by="FASTASampleCode")
+				setnames(ans, c("FASTASampleCode","query.FASTASampleCode"), c("tip2","tip1"))
+				subset(ans, select=c(tip1, tip2, mrca))
+			})
+	bs.unlinkedpairs	<- rbindlist(bs.unlinkedpairs)
+	#
+	unlinked.byspace[,dummy:=seq_len(nrow(unlinked.byspace))]
+	set(unlinked.byspace, NULL, "FASTASampleCode", as.character(unlinked.byspace[,FASTASampleCode]))	
+	seq.indb			<- colnames(ph.mrca)[ which( substr(colnames(ph.mrca),1,2)!="TN" & substr(colnames(ph.mrca),1,8)!="PROT+P51" ) ]
+	bs.unlinked.byspace	<- unlinked.byspace[,	list(tip1=FASTASampleCode,tip2=seq.indb, mrca= ph.mrca[seq.indb,FASTASampleCode]), by="dummy"]
+	#
+	setkey(linked.bypatient,Patient)
+	bs.linked.bypatient	<- linked.bypatient[, {
+				tmp					<- match(FASTASampleCode, ph$tip.label)
+				ans					<- t(combn(tmp, 2 ))
+				ans					<- cbind(ans, apply(ans, 1, function(z)  ph.mrca[z[1],z[2]]))
+				data.table(tip1=ans[,1], tip2=ans[,2], mrca=ans[,3])
+			}, by="Patient"]
+	#	get bootstrap values
+	ph.mrca				<- mrca(ph)
+	tmp					<- hivc.phy.get.TP.and.TN.bootstrapvalues(ph,  bs.linked.bypatient, ph.mrca=ph.mrca, clu.pre$df.seqinfo, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=bs.unlinked.byspace, dist.brl=clu.pre$dist.brl.casc, thresh.brl=0.096, plot.file=paste(indir,'/',outfile,"_distbs_",gsub('/',':',insignat),".pdf"), verbose= 1)	
+	#	further analysis of those with pairs with PosSeq.diff==0		
+	if(0)
+	{
+		bs.linked.bypatient.eqPosSeqT		<- subset(bs.linked.bypatient, PosSeqT.diff==0)
+		# compute raw genetic distance between sequences
+		indir								<- paste(dir.name,"tmp",sep='/')
+		infile								<- "ATHENA_2013_03_CurAll+LANL_Sequences"			
+		insignat							<- "Sat_Jun_16_17/23/46_2013"
+		file								<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')			
+		load(file)
+		#dist.dna( rbind( seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip1], ], seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip2], ]), model="raw", as.matrix=1)
+		#tmp		<- hivc.seq.dist( rbind( seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip1], ], seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip2], ]) )
+		dummy	<- 0
+		tmp		<- sapply(seq_len(nrow(bs.linked.bypatient.eqPosSeqT)),function(i)
+				{
+					1 - .C("hivc_dist_ambiguous_dna", seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip1], ], seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip2], ], ncol(seq.PROT.RT), dummy )[[4]]
+				})
+		bs.linked.bypatient.eqPosSeqT[,dist:=tmp]
+		#
+		#	conclusion: despite identical sequences, BS can be suprisingly low! Unclear if this improves with more BS replications
+		#
+		save(bs.linked.bypatient.eqPosSeqT, file="/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/notes/20130917_ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100_poorBSvalues.R")
+	}
+}
+######################################################################################
 project.hivc.clustering<- function(dir.name= DATA)
 {
 	require(ape)
 	require(data.table)
 	require(RColorBrewer)
 	
-	if(1)	#plot composition of selected MSM clusters
+	if(0)	#plot composition of selected MSM clusters
 	{
 		hivc.prog.eval.clustering.bias()
-	}
-	if(0)	#get distribution of BS for TN and TP
-	{		
-		verbose		<- 1
-		resume		<- 1
-		
-		# load sequences
-		indir								<- paste(dir.name,"tmp",sep='/')
-		infile								<- "ATHENA_2013_03_CurAll+LANL_Sequences"			
-		insignat							<- "Sat_Jun_16_17/23/46_2013"
-		file								<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')			
-		load(file)		
-		#
-		# precompute clustering stuff		
-		#
-		patient.n	<- 15700
-		indir		<- paste(DATA,"tmp",sep='/')		
-		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
-		insignat	<- "Sat_Jun_16_17/23/46_2013"
-		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"			
-		insignat	<- "Thu_Aug_01_17/05/23_2013"
-		indircov	<- paste(DATA,"derived",sep='/')
-		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"							
-		argv		<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
-		argv		<<- unlist(strsplit(argv,' '))
-		clu.pre		<- hivc.prog.get.clustering.precompute()
-	
-		load(paste(indir,'/',"mrcas.R",sep=''))
-		
-		outfile				<- paste(infile,"preclust",sep='_')
-		
-		
-		dist.brl			<- clu.pre$dist.brl.casc
-		linked.bypatient	<- clu.pre$linked.bypatient
-		unlinked			<- clu.pre$ph.unlinked
-		unlinked.byspace	<- clu.pre$unlinked.byspace
-		unlinked.bytime		<- clu.pre$unlinked.bytime
-		unlinked.info		<- clu.pre$ph.unlinked.info
-		ph					<- clu.pre$ph
-		df.seqinfo			<- clu.pre$df.seqinfo
-		#ph.mrca			<- mrca(ph)		#probably fastest
-		thresh.brl			<- 0.096
-		plot.file			<- paste(indir,'/',outfile,"_distbs_",gsub('/',':',insignat),".pdf", sep='')
-
-		hivc.phy.get.TP.and.TN.bootstrapvalues(clu.pre$ph, clu.pre$df.seqinfo, clu.pre$linked.bypatient, clu.pre$ph.unlinked, dist.brl=clu.pre$dist.brl.casc, thresh.brl=0.096, plot.file=paste(indir,'/',outfile,"_distbs_",gsub('/',':',insignat),".pdf"), verbose= 1)
-		
-hivc.phy.get.TP.and.TN.bootstrapvalues<- function(ph, linked.bypatient, df.seqinfo=NULL, unlinked.bytime=NULL, unlinked.byspace=NULL, dist.brl=NULL, thresh.brl=NULL, plot.file=NULL, verbose= 1)	
-{
-	require(phangorn)
-	require(RColorBrewer)	
-		
-	# fastest to precompute MRCAs
-	if(verbose)	cat(paste("\nCompute MRCA matrix"))
-	ph.mrca				<- mrca(ph)		
-	#
-	# compute bootstrap values between all unlinked dead/seroneg pairs
-	#
-	if(!is.null(unlinked.bytime))
-	{
-		if(verbose)	cat(paste("\nCompute bootstrap values between all unlinked dead/seroneg pairs"))
-		bs.unlinked			<- lapply(unlinked.bytime, function(x)
-								{						
-									set(x, NULL, "query.FASTASampleCode", as.character(x[,query.FASTASampleCode]))
-									set(x, NULL, "FASTASampleCode", as.character(x[,FASTASampleCode]))
-									ans					<- merge(x, x[, list(mrca= ph.mrca[query.FASTASampleCode,FASTASampleCode]) ,by=FASTASampleCode],by="FASTASampleCode")
-									setnames(ans, c("FASTASampleCode","query.FASTASampleCode"), c("tip2","tip1"))
-									subset(ans, select=c(tip1, tip2, mrca))
-								})
-		bs.unlinked			<- rbindlist(bs.unlinked)
-		bs.unlinked[,dummy:=seq_len(nrow(bs.unlinked))]
-		setkey(bs.unlinked, mrca)
-		tmp					<- unique(bs.unlinked)	
-		tmp					<- tmp[, list( mrca=mrca, ntips= sapply( Descendants(ph, mrca, type="tips"), length) )	]		
-		tmp					<- subset(tmp,ntips<=2)
-		tmp					<- merge(bs.unlinked, tmp, by="mrca")
-		bs.unlinkedpairs	<- subset(tmp, select=c(tip1, tip2, mrca))
-		tmp					<- ph$node.label[ bs.unlinkedpairs[,mrca]-Ntip(ph) ]
-		bs.unlinkedpairs[, mrca.bs:=tmp]	
-		bs.unlinkedpairs[, bs:=mrca.bs]
-	}
-	else
-		bs.unlinkedpairs	<- NULL
-	#
-	# compute bootstrap values between all unlinked by space (no restricted to pairs)
-	#	
-	if(!is.null(unlinked.byspace))
-	{
-		if(verbose)	cat(paste("\nCompute bootstrap values between all unlinked by space (not restricted to pairs)"))
-		unlinked.byspace[,dummy:=seq_len(nrow(unlinked.byspace))]
-		set(unlinked.byspace, NULL, "FASTASampleCode", as.character(unlinked.byspace[,FASTASampleCode]))	
-		seq.indb			<- colnames(ph.mrca)[ which( substr(colnames(ph.mrca),1,2)!="TN" & substr(colnames(ph.mrca),1,8)!="PROT+P51" ) ]
-		bs.unlinked.byspace	<- unlinked.byspace[,	list(tip1=FASTASampleCode,tip2=seq.indb, mrca= ph.mrca[seq.indb,FASTASampleCode]), by="dummy"]
-		setkey(bs.unlinked.byspace, mrca)
-		tmp					<- unique(bs.unlinked.byspace)	
-		tmp[, dummy:=seq_len(nrow(tmp))]
-		tmp[, mrca.bs:=ph$node.label[ tmp[,mrca]-Ntip(ph) ]]	
-		tmp					<- tmp[, 	{													
-											z			<- Ancestors(ph,mrca)													
-											anc.bs		<- ph$node.label[ z-Ntip(ph) ]
-											anc.brl		<- dist.brl[ z-Ntip(ph) ]
-											z2		<- which( !as.logical(cumsum( as.numeric( anc.brl>=thresh.brl ) )) )
-											list(	mrca=mrca, mrca.bs=mrca.bs,
-													amrca.bs= ifelse(length(z),max(anc.bs),0), 
-													amrca.bs.brl=ifelse(length(z2),max(anc.bs[ z2 ]),0))													
-										}, by="dummy"]
-		# compute "bs" from "mrca.bs","amrca.bs","amrca.bs.brl"									
-		tmp[,bs:=apply( rbind( tmp[, mrca.bs], tmp[,amrca.bs]), 2, max)]		
-		tmp[,bs2:=apply( rbind( tmp[, mrca.bs], tmp[,amrca.bs.brl]), 2, max)]
-		if(verbose)	cat(paste("\nnumber of bs.unlinked pairs for which brl threshold restricts the bootstrap value, n=",nrow(subset(tmp,bs2>bs)) ))
-		bs.unlinked.byspace	<- merge(bs.unlinked.byspace, subset(tmp, select=c(mrca, bs)), by="mrca")
-	}
-	else
-		bs.unlinked.byspace	<- NULL
-	#
-	# compute bootstrap values between all within patient pairs
-	#
-	if(verbose)	cat(paste("\nCompute bootstrap values between all within patient pairs"))
-	setkey(linked.bypatient,Patient)	
-	# get all pairs of within patient seqs
-	bs.linked.bypatient	<- linked.bypatient[, {
-													tmp					<- match(FASTASampleCode, ph$tip.label)
-													ans					<- t(combn(tmp, 2 ))
-													ans					<- cbind(ans, apply(ans, 1, function(z)  ph.mrca[z[1],z[2]]))
-													data.table(tip1=ans[,1], tip2=ans[,2], mrca=ans[,3])
-												}, by="Patient"]
-	# compute bootstrap values between all within patient sequences by Patient
-	tmp					<- ph$node.label[ bs.linked.bypatient[,mrca]-Ntip(ph) ]
-	bs.linked.bypatient[,mrca.bs:=tmp]
-	bs.linked.bypatient[,dummy:=seq_len(nrow(bs.linked.bypatient))]
-	setkey(bs.linked.bypatient,dummy)	
-	tmp					<- bs.linked.bypatient[, {													
-													tmp			<- Ancestors(ph,mrca)													
-													anc.bs		<- ph$node.label[ tmp-Ntip(ph) ]
-													anc.brl		<- dist.brl[ tmp-Ntip(ph) ]
-													tmp2		<- which( !as.logical(cumsum( as.numeric( anc.brl>=thresh.brl ) )) )
-													list(	amrca.bs= ifelse(length(tmp),max(anc.bs),0), 
-															amrca.bs.brl=ifelse(length(tmp2),max(anc.bs[ tmp2 ]),0))													
-													}, by="dummy"]
-	bs.linked.bypatient<- merge(bs.linked.bypatient, tmp, by="dummy")																						
-	# compute "bs" from "mrca.bs","amrca.bs","amrca.bs.brl"									
-	tmp					<- apply( rbind( bs.linked.bypatient[, mrca.bs], bs.linked.bypatient[,amrca.bs]), 2, max)		
-	tmp2				<- apply( rbind( bs.linked.bypatient[, mrca.bs], bs.linked.bypatient[,amrca.bs.brl]), 2, max)
-	if(verbose)	cat(paste("\nnumber of bs.linked.bypatient pairs for which brl threshold restricts the bootstrap value, n=",length(which(tmp2>tmp))))
-	bs.linked.bypatient[, bs:=tmp]
-	# compute BS category
-	tmp					<- round(bs.linked.bypatient[, bs]*20,d=0)/2
-	bs.linked.bypatient[, bs.cat:=tmp]
-	set(bs.linked.bypatient,which(bs.linked.bypatient[, bs.cat==0]),"bs.cat",0.5)
-	#
-	set(bs.linked.bypatient, NULL, "tip1", ph$tip.label[ bs.linked.bypatient[,tip1] ])
-	set(bs.linked.bypatient, NULL, "tip2", ph$tip.label[ bs.linked.bypatient[,tip2] ])
-	#
-	# compute time between the two within patient sequences
-	#
-	if(!is.null(df.seqinfo))
-	{
-		if(verbose)	cat(paste("\nAdding time difference between seq sampling times"))
-		tmp					<- data.table( tip1.PosSeqT= df.seqinfo[bs.linked.bypatient[,tip1],PosSeqT][,PosSeqT], tip2.PosSeqT= df.seqinfo[bs.linked.bypatient[,tip2],PosSeqT][,PosSeqT])
-		tmp[, PosSeqT.diff:=tmp[, abs(as.numeric(difftime(tip1.PosSeqT, tip2.PosSeqT, units="days")))/365]]			
-		bs.linked.bypatient	<- cbind(bs.linked.bypatient, tmp)
-		bs.linked.bypatient	<- subset(bs.linked.bypatient, select=c(Patient, tip1, tip2, bs, bs.cat, PosSeqT.diff))
-	}
-	else
-		bs.linked.bypatient	<- subset(bs.linked.bypatient, select=c(Patient, tip1, tip2, bs, bs.cat))
-	#
-	# plot boostrap histogram with BS
-	#	
-	if(!is.null(plot.file) & !is.null(df.seqinfo))
-	{
-		breaks.n	<- 20
-		if(verbose)	cat(paste("\nPlotting BS distribution to file",file))
-		pdf(width=5,height=6,file=plot.file)
-		def.par 	<- par(no.readonly = TRUE)
-		layout( matrix(c(1,1,1,2),ncol=1,nrow=4) )
-		par(mar=c(0.5,4,0.5,0.5))		
-		cols		<- c(sapply(brewer.pal(4,"Paired"), function(x)  my.fade.col(x, 1))[1:2], "transparent")
-		border		<- c("transparent","transparent","black")
-		hist(bs.linked.bypatient[,bs], breaks=breaks.n, main='', xlab="", border=border[1], col=cols[1], xaxt='n', freq=1, add=0)		
-		hist(subset(bs.linked.bypatient, PosSeqT.diff<1.5)[,bs],breaks=breaks.n, border=border[2], add=1, col=cols[2], freq=1)
-		if(!is.null(bs.unlinked.byspace))
-			hist(bs.unlinked.byspace[,bs], breaks=breaks.n, main='', xlab="", border=border[3], col=cols[3], xaxt='n', freq=1, add=1)
-		legend("topright", bty='n', border=border, legend=c("all pairs of within patient sequences","pairs of within patient sequences\n with difference in time of sampling < 18 mo","all pairs with geographically distant seq"), fill=cols)
-		
-		tmp			<- bs.linked.bypatient[, list(prop.recent= length(which(PosSeqT.diff<1.5))/length(PosSeqT.diff) ),by=bs.cat]
-		setkey(tmp, bs.cat)
-		
-		par(mar=c(5,4,0.5,0.5))
-		plot(1,1,type='n',xlim=range(bs.linked.bypatient[,bs]),ylim=c(0,1),xlab="bootstrap",ylab='prop',bty='n')
-		polygon(c(range(bs.linked.bypatient[,bs]),rev(range(bs.linked.bypatient[,bs]))), c(0,0,1,1), col=cols[1], border=NA)
-		sapply(seq_len(nrow(tmp)),function(i)
-				{										 
-					polygon(c(tmp[i,bs.cat]/10-0.05,tmp[i,bs.cat]/10,tmp[i,bs.cat]/10,tmp[i,bs.cat]/10-0.05),c(0,0,rep(tmp[i,prop.recent],2)), border=NA, col=cols[2])
-				})
-		par(def.par)
-		dev.off()
-	}
-	
-	list(bs.linked.bypatient=bs.linked.bypatient, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=bs.unlinked.byspace)
-}
-		
-		if(0)
-		{
-			bs.linked.bypatient.eqPosSeqT		<- subset(bs.linked.bypatient, PosSeqT.diff==0)
-			# compute raw genetic distance between sequences
-			indir								<- paste(dir.name,"tmp",sep='/')
-			infile								<- "ATHENA_2013_03_CurAll+LANL_Sequences"			
-			insignat							<- "Sat_Jun_16_17/23/46_2013"
-			file								<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')			
-			load(file)
-			#dist.dna( rbind( seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip1], ], seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip2], ]), model="raw", as.matrix=1)
-			#tmp		<- hivc.seq.dist( rbind( seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip1], ], seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip2], ]) )
-			dummy	<- 0
-			tmp		<- sapply(seq_len(nrow(bs.linked.bypatient.eqPosSeqT)),function(i)
-					{
-						1 - .C("hivc_dist_ambiguous_dna", seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip1], ], seq.PROT.RT[bs.linked.bypatient.eqPosSeqT[i,tip2], ], ncol(seq.PROT.RT), dummy )[[4]]
-					})
-			bs.linked.bypatient.eqPosSeqT[,dist:=tmp]
-			#
-			#	conclusion: despite identical sequences, BS can be suprisingly low! Unclear if this improves with more BS replications
-			#
-			save(bs.linked.bypatient.eqPosSeqT, file="/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/notes/20130917_ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100_poorBSvalues.R")
-		}
-		
-		
-	}
+	}	
 	if(0)	#min brl to get a transmission cascade from brl matrix
 	{
 		brlmat	<- matrix( c(0,0.1,0.1, 	0.1,0,0.2,	0.1,0.2,0), ncol=3, nrow=3)
@@ -4638,7 +4560,31 @@ hivc.prog.get.clustering.precompute<- function()
 		#
 		#	get and plot distribution of bootstrap values for TP and TN pairs
 		#
-		tmp								<- hivc.phy.get.TP.and.TN.bootstrapvalues(ph, linked.bypatient, df.seqinfo, unlinked.bytime, unlinked.byspace, dist.brl=dist.brl.casc, thresh.brl=0.096, plot.file=paste(outdir,'/',outfile,"_distbs_",gsub('/',':',outsignat),".pdf",sep=''), verbose=verbose)		
+		ph.mrca				<- mrca(ph)
+		#	prepare data.tables with mrca: dead/seroneg TN pairs		
+		bs.unlinkedpairs	<- lapply(unlinked.bytime, function(x)
+								{						
+									set(x, NULL, "query.FASTASampleCode", as.character(x[,query.FASTASampleCode]))
+									set(x, NULL, "FASTASampleCode", as.character(x[,FASTASampleCode]))
+									ans					<- merge(x, x[, list(mrca= ph.mrca[query.FASTASampleCode,FASTASampleCode]) ,by=FASTASampleCode],by="FASTASampleCode")
+									setnames(ans, c("FASTASampleCode","query.FASTASampleCode"), c("tip2","tip1"))
+									subset(ans, select=c(tip1, tip2, mrca))
+								})
+		bs.unlinkedpairs	<- rbindlist(bs.unlinkedpairs)
+		#	prepare data.tables with mrca: geographically distant seqs and any indb seq
+		unlinked.byspace[,dummy:=seq_len(nrow(unlinked.byspace))]
+		set(unlinked.byspace, NULL, "FASTASampleCode", as.character(unlinked.byspace[,FASTASampleCode]))	
+		seq.indb			<- colnames(ph.mrca)[ which( substr(colnames(ph.mrca),1,2)!="TN" & substr(colnames(ph.mrca),1,8)!="PROT+P51" ) ]
+		bs.unlinked.byspace	<- unlinked.byspace[,	list(tip1=FASTASampleCode,tip2=seq.indb, mrca= ph.mrca[seq.indb,FASTASampleCode]), by="dummy"]
+		#	prepare data.tables with mrca: within patient TP pairs
+		setkey(linked.bypatient,Patient)
+		bs.linked.bypatient	<- linked.bypatient[, {
+														tmp					<- match(FASTASampleCode, ph$tip.label)
+														ans					<- t(combn(tmp, 2 ))
+														ans					<- cbind(ans, apply(ans, 1, function(z)  ph.mrca[z[1],z[2]]))
+														data.table(tip1=ans[,1], tip2=ans[,2], mrca=ans[,3])
+													}, by="Patient"]		
+		tmp								<- hivc.phy.get.TP.and.TN.bootstrapvalues(ph, bs.linked.bypatient, ph.mrca=ph.mrca, df.seqinfo=df.seqinfo, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=bs.unlinked.byspace, dist.brl=dist.brl.casc, thresh.brl=0.096, plot.file=paste(outdir,'/',outfile,"_distbs_",gsub('/',':',outsignat),".pdf",sep=''), verbose=verbose)		
 		bs.linked.bypatient				<- tmp[["bs.linked.bypatient"]] 
 		bs.unlinkedpairs				<- tmp[["bs.unlinkedpairs"]]
 		bs.unlinked.byspace				<- tmp[["bs.unlinked.byspace"]]

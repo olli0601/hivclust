@@ -3507,6 +3507,161 @@ hivc.phy.splittip<- function(x, splitlabel)
 	ans
 }		
 ######################################################################################
+hivc.phy.get.TP.and.TN.bootstrapvalues<- function(ph, bs.linked.bypatient, ph.mrca=NULL, df.seqinfo=NULL, bs.unlinkedpairs=NULL, bs.unlinked.byspace=NULL, dist.brl=NULL, thresh.brl=NULL, plot.file=NULL, verbose= 1)	
+{
+	require(phangorn)
+	require(RColorBrewer)
+	if(is.null(ph.mrca))
+		ph.mrca				<- mrca(ph)
+	if(any(is.na(ph$node.label)))	stop("Found unexpected NA in ph$node.label")
+	#
+	# compute bootstrap values between all unlinked dead/seroneg pairs
+	#
+	if(!is.null(bs.unlinkedpairs))
+	{
+		if(verbose)	cat(paste("\nCompute bootstrap values between all unlinked dead/seroneg pairs"))
+		bs.unlinkedpairs[,dummy:=seq_len(nrow(bs.unlinkedpairs))]
+		setkey(bs.unlinkedpairs, mrca)
+		tmp					<- unique(bs.unlinkedpairs)	
+		tmp					<- tmp[, list( mrca=mrca, ntips= sapply( Descendants(ph, mrca, type="tips"), length) )	]		
+		tmp					<- subset(tmp,ntips<=2)
+		tmp					<- merge(bs.unlinkedpairs, tmp, by="mrca")
+		bs.unlinkedpairs	<- subset(tmp, select=c(tip1, tip2, mrca))
+		if(verbose)	cat(paste("\nFound unlinked dead/seroneg pairs, n=",nrow(bs.unlinkedpairs)))
+		tmp					<- ph$node.label[ bs.unlinkedpairs[,mrca]-Ntip(ph) ]
+		bs.unlinkedpairs[, mrca.bs:=tmp]	
+		bs.unlinkedpairs[, bs:=mrca.bs]
+	}
+	else
+		bs.unlinkedpairs	<- NULL
+	#
+	# compute bootstrap values between all unlinked by space (no restricted to pairs)
+	#	
+	if(!is.null(bs.unlinked.byspace))
+	{
+		if(verbose)	cat(paste("\nCompute bootstrap values between all unlinked by space (not restricted to pairs)"))
+		setkey(bs.unlinked.byspace, mrca)
+		tmp					<- unique(bs.unlinked.byspace)	
+		tmp[, dummy:=seq_len(nrow(tmp))]
+		tmp[, mrca.bs:=ph$node.label[ tmp[,mrca]-Ntip(ph) ]]	
+		tmp					<- tmp[, 	{													
+					z			<- Ancestors(ph,mrca)													
+					anc.bs		<- ph$node.label[ z-Ntip(ph) ]
+					anc.brl		<- dist.brl[ z-Ntip(ph) ]
+					z2		<- which( !as.logical(cumsum( as.numeric( anc.brl>=thresh.brl ) )) )
+					list(	mrca=mrca, mrca.bs=mrca.bs,
+							amrca.bs= ifelse(length(z),max(anc.bs),0), 
+							amrca.bs.brl=ifelse(length(z2),max(anc.bs[ z2 ]),0))													
+				}, by="dummy"]
+		# compute "bs" from "mrca.bs","amrca.bs","amrca.bs.brl"									
+		tmp[,bs:=apply( rbind( tmp[, mrca.bs], tmp[,amrca.bs]), 2, max)]		
+		tmp[,bs2:=apply( rbind( tmp[, mrca.bs], tmp[,amrca.bs.brl]), 2, max)]
+		if(verbose)	cat(paste("\nnumber of bs.unlinked pairs for which brl threshold restricts the bootstrap value, n=",nrow(subset(tmp,bs2>bs)) ))
+		bs.unlinked.byspace	<- merge(bs.unlinked.byspace, subset(tmp, select=c(mrca, bs)), by="mrca")
+	}
+	else
+		bs.unlinked.byspace	<- NULL
+	#
+	# compute bootstrap values between all within patient pairs
+	#
+	if(verbose)	cat(paste("\nCompute bootstrap values between all TP pairs"))	
+	# compute bootstrap values between all within patient sequences by Patient
+	tmp					<- ph$node.label[ bs.linked.bypatient[,mrca]-Ntip(ph) ]
+	bs.linked.bypatient[,mrca.bs:=tmp]
+	bs.linked.bypatient[,dummy:=seq_len(nrow(bs.linked.bypatient))]
+	setkey(bs.linked.bypatient,dummy)	
+	tmp					<- bs.linked.bypatient[, {													
+				tmp			<- Ancestors(ph,mrca)		
+				anc.bs		<- ph$node.label[ tmp-Ntip(ph) ]
+				anc.brl		<- dist.brl[ tmp-Ntip(ph) ]
+				tmp2		<- which( !as.logical(cumsum( as.numeric( anc.brl>=thresh.brl ) )) )
+				list(	amrca.bs= ifelse(length(tmp),max(anc.bs),0), 
+						amrca.bs.brl=ifelse(length(tmp2),max(anc.bs[ tmp2 ]),0))													
+			}, by="dummy"]
+	bs.linked.bypatient<- merge(bs.linked.bypatient, tmp, by="dummy")	
+	if(verbose)	cat(paste("\nFound bootstrap values between TP pairs, n=",nrow(bs.linked.bypatient)))
+	# compute "bs" from "mrca.bs","amrca.bs","amrca.bs.brl"									
+	tmp					<- apply( rbind( bs.linked.bypatient[, mrca.bs], bs.linked.bypatient[,amrca.bs]), 2, max)		
+	tmp2				<- apply( rbind( bs.linked.bypatient[, mrca.bs], bs.linked.bypatient[,amrca.bs.brl]), 2, max)
+	if(verbose)	cat(paste("\nnumber of TP pairs for which brl threshold restricts the bootstrap value, n=",length(which(tmp2>tmp))))
+	bs.linked.bypatient[, bs:=tmp]
+	# compute BS category
+	tmp					<- round(bs.linked.bypatient[, bs]*20,d=0)/2
+	bs.linked.bypatient[, bs.cat:=tmp]
+	set(bs.linked.bypatient,which(bs.linked.bypatient[, bs.cat==0]),"bs.cat",0.5)
+	#
+	if(class(bs.linked.bypatient[,tip1])!="character")
+		set(bs.linked.bypatient, NULL, "tip1", ph$tip.label[ bs.linked.bypatient[,tip1] ])
+	if(class(bs.linked.bypatient[,tip2])!="character")
+		set(bs.linked.bypatient, NULL, "tip2", ph$tip.label[ bs.linked.bypatient[,tip2] ])
+	#
+	# compute time between the two within patient sequences
+	#
+	if(!is.null(df.seqinfo))
+	{
+		if(verbose)	cat(paste("\nAdding time difference between seq sampling times"))
+		tmp					<- data.table( tip1.PosSeqT= df.seqinfo[bs.linked.bypatient[,tip1],PosSeqT][,PosSeqT], tip2.PosSeqT= df.seqinfo[bs.linked.bypatient[,tip2],PosSeqT][,PosSeqT])
+		tmp[, PosSeqT.diff:=tmp[, abs(as.numeric(difftime(tip1.PosSeqT, tip2.PosSeqT, units="days")))/365]]			
+		bs.linked.bypatient	<- cbind(bs.linked.bypatient, tmp)
+		bs.linked.bypatient	<- subset(bs.linked.bypatient, select=c(Patient, tip1, tip2, bs, bs.cat, PosSeqT.diff))
+	}
+	else
+		bs.linked.bypatient	<- subset(bs.linked.bypatient, select=c(Patient, tip1, tip2, bs, bs.cat))
+	#
+	# plot boostrap histogram with BS
+	#	
+	if(!is.null(plot.file) & "PosSeqT.diff"%in%colnames(bs.linked.bypatient))
+	{
+		breaks.n	<- 20
+		if(verbose)	cat(paste("\nPlotting BS distribution with PosSeqT.diff to file",file))
+		pdf(width=5,height=6,file=plot.file)
+		def.par 	<- par(no.readonly = TRUE)		
+		layout( matrix(c(1,1,1,2),ncol=1,nrow=4) )
+		par(mar=c(0.5,4,0.5,0.5))		
+		cols		<- c(sapply(brewer.pal(4,"Paired"), function(x)  my.fade.col(x, 1))[1:2], "transparent")
+		border		<- c("transparent","transparent","black")
+		hist(bs.linked.bypatient[,bs], breaks=breaks.n, main='', xlab="", border=border[1], col=cols[1], xaxt='n', freq=1, add=0)		
+		hist(subset(bs.linked.bypatient, PosSeqT.diff<1.5)[,bs],breaks=breaks.n, border=border[2], add=1, col=cols[2], freq=1)
+		if(!is.null(bs.unlinked.byspace))
+			hist(bs.unlinked.byspace[,bs], breaks=breaks.n, main='', xlab="", border=border[3], col=cols[3], xaxt='n', freq=1, add=1)
+		legend("topright", bty='n', border=border, legend=c("all pairs of within patient sequences","pairs of within patient sequences\n with difference in time of sampling < 18 mo","all pairs with geographically distant seq"), fill=cols)
+		
+		tmp			<- bs.linked.bypatient[, list(prop.recent= length(which(PosSeqT.diff<1.5))/length(PosSeqT.diff) ),by=bs.cat]
+		setkey(tmp, bs.cat)
+		
+		par(mar=c(5,4,0.5,0.5))
+		plot(1,1,type='n',xlim=range(bs.linked.bypatient[,bs]),ylim=c(0,1),xlab="bootstrap",ylab='prop',bty='n')
+		polygon(c(range(bs.linked.bypatient[,bs]),rev(range(bs.linked.bypatient[,bs]))), c(0,0,1,1), col=cols[1], border=NA)
+		sapply(seq_len(nrow(tmp)),function(i)
+				{										 
+					polygon(c(tmp[i,bs.cat]/10-0.05,tmp[i,bs.cat]/10,tmp[i,bs.cat]/10,tmp[i,bs.cat]/10-0.05),c(0,0,rep(tmp[i,prop.recent],2)), border=NA, col=cols[2])
+				})
+		par(def.par)
+		dev.off()
+	}
+	if(!is.null(plot.file) & !"PosSeqT.diff"%in%colnames(bs.linked.bypatient))
+	{
+		breaks.n	<- 20
+		if(verbose)	cat(paste("\nPlotting BS distribution without PosSeqT.diff to file",file))
+		pdf(width=5,height=6,file=plot.file)
+		par(mar=c(5,4,0.5,0.5))		
+		cols		<- c(sapply(brewer.pal(4,"Paired"), function(x)  my.fade.col(x, 1))[1], "transparent")
+		border		<- c("transparent","transparent","black")
+		hist(bs.linked.bypatient[,bs], breaks=breaks.n, main='', xlab="bootstrap", border=border[1], col=cols[1], freq=1, add=0)
+		if(is.null(bs.unlinked.byspace))
+			legend	<- c("all pairs of within patient sequences")
+		else
+		{
+			hist(bs.unlinked.byspace[,bs], breaks=breaks.n, main='', xlab="", border=border[2], col=cols[2], xaxt='n', freq=1, add=1)
+			legend	<- c("all pairs of within patient sequences","all pairs with geographically distant seq")
+		}
+		legend("topright", bty='n', border=border[seq_along(legend)], legend=legend, fill=cols[seq_along(legend)])
+		dev.off()
+	}
+	
+	list(bs.linked.bypatient=bs.linked.bypatient, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=bs.unlinked.byspace)
+}
+######################################################################################
 hivc.phy.get.TP.and.TN<- function(ph, df.all, use.seroneg.as.is= 0, verbose= 1)
 {
 	#

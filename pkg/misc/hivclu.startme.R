@@ -43,7 +43,7 @@ CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
 INST		<<- paste(CODE.HOME,"inst",sep='/')
 HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
-#HOME		<<- "/Users/Oliver/duke/2013_HIV_Hue/UKCA_1309"
+HOME		<<- "/Users/Oliver/duke/2013_HIV_Hue/UKCA_1309"
 #HOME		<<- "/work/or105/UKCA_1309"
 #HOME		<<- "/Users/Stephane/Desktop/CASCADE_phylo/hivclust"
 #HOME		<<- "/home/koelle/or7/phylody"
