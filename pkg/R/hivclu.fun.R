@@ -479,8 +479,10 @@ hivc.db.Date2numeric<- function( x )
 #	get BEAST taxon labels:		cluster	FASTASampleCode	NegT	AnyPosT	SeqT  -> turn date into numerical format
 hivc.beast.addBEASTLabel<- function( df )
 {
+	df	<- merge(df, df[,list(clu.AnyPos_TL=max(AnyPos_T1)),by="cluster"])
+	df	<- merge(df, df[,list(PosSeqTadj= max(PosSeqT, clu.AnyPos_TL)),by="FASTASampleCode"], by="FASTASampleCode")			
 	tmp	<- df[,		{
-						z	<- as.POSIXlt(c(NegT, AnyPos_T1, PosSeqT))
+						z	<- as.POSIXlt(c(NegT, AnyPos_T1, PosSeqT, PosSeqTadj))
 						tmp	<- z$year + 1900
 						z	<- tmp + round( z$yday / ifelse((tmp%%4==0 & tmp%%100!=0) | tmp%%400==0,366,365), d=3 )												
 						list(BEASTlabel= paste(c(cluster, z, FASTASampleCode), collapse='_', sep=''))
@@ -518,13 +520,14 @@ hivc.beast.poolclusters<- function(cluphy.df, pool.ntip= 130, pool.includealways
 }	
 ######################################################################################
 #	add taxa and alignment in bxml from BEASTlabels in df and alignment in seq.PROT.RT
-#	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; beast.alignment.dataType= "nucleotide"
+#	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; beast.alignment.dataType= "nucleotide"; xml.resetTipDate2LastDiag=1
 hivc.beast.add.seq<- function(bxml, df, seq.PROT.RT, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", beast.alignment.dataType= "nucleotide", verbose=1)
 {			
 	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
 	
 	#	add sequence taxa
 	tmp.label	<- df[,BEASTlabel]	
+	if(verbose)	cat(paste("\nsetting tip date to time at pos x in label, x=", beast.label.datepos))
 	tmp.date	<- sapply( strsplit(tmp.label, beast.label.sep, fixed=1), function(x) x[beast.label.datepos] )
 	dummy		<- newXMLCommentNode(text="The list of taxa to be analysed (can also include dates/ages).", parent=bxml.beast, doc=bxml, addFinalizer=T)
 	dummy		<- newXMLCommentNode(text=paste("ntax=",nrow(df),sep=''), parent=bxml.beast, doc=bxml, addFinalizer=T)	
@@ -550,23 +553,7 @@ hivc.beast.add.seq<- function(bxml, df, seq.PROT.RT, beast.label.datepos= 4, bea
 				dummy	<- newXMLTextNode(text=tmp, parent=seq, doc=bxml,addFinalizer=T)
 				seq
 			})	
-	if(verbose)	cat(paste("\nadded new alignments, n=", xmlSize(seqalign)))
-	#	replace sequence taxa
-	#bxml.seqtaxa	<- getNodeSet(bxml, "//taxa[@id='taxa']")
-	#if(length(bxml.seqtaxa)!=1)	stop("unexpected length of taxa[@id='taxa'")
-	#bxml.seqtaxa	<- bxml.seqtaxa[[1]]
-	#if(verbose)	cat(paste("\nremoving BEAST seq taxa, n=", xmlSize(bxml.seqtaxa)))
-	#dummy			<- replaceNodes(bxml.seqtaxa, seqtaxa)
-	#bxml.seqtaxa	<- getNodeSet(bxml, "//taxa[@id='taxa']")[[1]]
-	#if(verbose)	cat(paste("\nreplaced BEAST seq taxa with new seq taxa, n=", xmlSize(bxml.seqtaxa)))
-	#	replace alignment -- removeChildren crashed
-	#bxml.ali		<- getNodeSet(bxml, "//alignment[@id='alignment']")
-	#if(length(bxml.ali)!=1)	stop("unexpected length of alignment[@id='alignment'")
-	#bxml.ali		<- bxml.ali[[1]]
-	#if(verbose)	cat(paste("\nremoving BEAST alignment, n=", xmlSize(bxml.ali)))
-	#dummy			<- replaceNodes(bxml.ali, seqalign)
-	#bxml.ali		<- getNodeSet(bxml, "//alignment[@id='alignment']")[[1]]
-	#if(verbose)	cat(paste("\nreplaced BEAST alignment with new alignments, n=", xmlSize(bxml.ali)))
+	if(verbose)	cat(paste("\nadded new alignments, n=", xmlSize(seqalign)))	
 	bxml
 }	
 ######################################################################################
@@ -679,7 +666,7 @@ hivc.beast.writeNexus4Beauti<- function( seq.DNAbin.matrix, df, ph=NULL, file=NU
 }
 ######################################################################################
 #	create xml file from btemplate and seq.PROT.RT, using seq in df 
-# 	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; verbose=1; xml.prior4tipstem="uniform"
+# 	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; verbose=1; xml.prior4tipstem="uniform"; xml.resetTipDate2LastDiag=1
 hivc.beast.get.xml<- function(btemplate, seq.PROT.RT, df, file, ph=NULL, xml.monophyly4clusters=0, xml.prior4tipstem=NA, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
 {
 	
@@ -738,7 +725,7 @@ hivc.beast.get.xml<- function(btemplate, seq.PROT.RT, df, file, ph=NULL, xml.mon
 	dummy		<- hivc.beast.adjust.rootheightprior(bxml, df, verbose=verbose)
 	#	for tips, add taxon sets and tmrcaStatistics
 	if(!is.na(xml.prior4tipstem))
-		dummy	<- hivc.beast.add.taxonsets4tips(bxml, df, xml.prior4stem=xml.prior4tipstem, log=1, verbose=1)
+		dummy	<- hivc.beast.add.taxonsets4tips(bxml, df, xml.prior4stem=xml.prior4tipstem, beast.label.datepos=beast.label.datepos, log=1, verbose=1)
 
 	#	for clusters, add taxon sets and tmrcaStatistics 
 	dummy		<- hivc.beast.add.taxonsets4clusters(bxml, df, xml.monophyly4clusters=xml.monophyly4clusters, verbose=verbose)		
@@ -884,11 +871,12 @@ hivc.beast.get.tmrcaStatistic<- function(bxml, btaxonsets, treeModel.id, include
 }	
 ######################################################################################
 #	For each tip: construct a prior for the corresponding tmrcaStatistics
-hivc.beast.get.tipPrior<- function(bxml, df, btmrcaStatistics.tips, xml.prior4stem="uniform", verbose=1)
+hivc.beast.get.tipPrior<- function(bxml, df, btmrcaStatistics.tips, xml.prior4stem="uniform", beast.label.negpos=2, beast.label.diagpos=3, beast.label.datepos=4, verbose=1)
 {
 	if(xml.prior4stem!="uniform")	stop("unexpected xml.tipprior")
 	#
-	df.height	<- t( sapply( strsplit(df[,BEASTlabel],'_',fixed=1), function(x)  as.numeric( x[2:4]) ) )
+	if(verbose)	cat(paste("\nuse tip date found at pos x in label, x=", beast.label.datepos))
+	df.height	<- t( sapply( strsplit(df[,BEASTlabel],'_',fixed=1), function(x)  as.numeric( x[c(beast.label.negpos, beast.label.diagpos, beast.label.datepos)]) ) )
 	df.height	<- data.table(BEASTlabel=df[,BEASTlabel], NegT=df.height[,1], AnyPos_T1=df.height[,2], PosSeqT=df.height[,3])
 	tmp			<- max( df.height[, PosSeqT])		#TODO should this be height or length ?
 	df.height	<- df.height[, list(BEASTlabel=BEASTlabel, NegT=tmp-NegT, AnyPos_T1=tmp-AnyPos_T1, PosSeqT=tmp-PosSeqT)]
@@ -907,7 +895,7 @@ hivc.beast.get.tipPrior<- function(bxml, df, btmrcaStatistics.tips, xml.prior4st
 }
 ######################################################################################
 #	For each tip: add a taxonset, tmrcaStatistic, prior for the tmrcaStatistics and potentially a reference to fileLog to 'bxml'
-hivc.beast.add.taxonsets4tips<- function(bxml, df, xml.prior4stem="uniform", log=1, verbose=1)
+hivc.beast.add.taxonsets4tips<- function(bxml, df, xml.prior4stem="uniform", beast.label.datepos=4, log=1, verbose=1)
 {
 	bxml.treeModel.id			<- unlist(xpathApply(bxml, "//treeModel[@id]", xmlGetAttr, "id"))
 	
@@ -916,7 +904,7 @@ hivc.beast.add.taxonsets4tips<- function(bxml, df, xml.prior4stem="uniform", log
 	#get tmrcaStatistic for each tip
 	btmrcaStatistics.tips		<- hivc.beast.get.tmrcaStatistic(bxml, btaxonsets.tips, bxml.treeModel.id, includeStem="true") 		
 	#get prior for each tip stem
-	bprior.tips					<- hivc.beast.get.tipPrior(bxml, df, btmrcaStatistics.tips, xml.prior4stem=xml.prior4stem, verbose=1)
+	bprior.tips					<- hivc.beast.get.tipPrior(bxml, df, btmrcaStatistics.tips, xml.prior4stem=xml.prior4stem, beast.label.datepos=beast.label.datepos, verbose=1)
 		
 	#	modify from template
 	bxml.beast					<- getNodeSet(bxml, "//beast")[[1]]
