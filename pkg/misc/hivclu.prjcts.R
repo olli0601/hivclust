@@ -4728,22 +4728,23 @@ hivc.prog.BEAST.evalpoolrun<- function()
 	file.immu			<- paste(indircov,"/ATHENA_2013_03_Immu.R",sep='/')
 	file.treatment		<- paste(indircov,"/ATHENA_2013_03_Regimens.R",sep='/')
 		
-	indir				<- paste(DATA,"beast/beast_130908",sep='/')
+	indir				<- paste(DATA,"beast/beast_131004",sep='/')
 	#indir				<- paste(DATA,"tmp",sep='/')	
 	infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg"
 	insignat			<- "Tue_Aug_26_09/13/47_2013"
 	infilexml.opt		<- "txs4clu"
 	#infilexml.opt		<- "mph4clu"
+	infilexml.opt		<- "mph4cluLdTd"
 	infilexml.template	<- "um22rhG202018"
-	#infilexml.template	<- "um182rhU2045"	
+	infilexml.template	<- "um182rhU2045ay"	
 	
 	plot						<- 1
 	verbose						<- 1
 	resume						<- 0
 	pool.n						<- 3	
 	beastlabel.idx.clu			<- 1
-	beastlabel.idx.hivs			<- 4
-	beastlabel.idx.samplecode	<- 5	
+	beastlabel.idx.hivs			<- ifelse(grepl("LdTd",infilexml.opt),5,4)
+	beastlabel.idx.samplecode	<- 6	
 	
 	if(exists("argv"))
 	{
@@ -5281,14 +5282,16 @@ hivc.proj.pipeline<- function()
 		#infilexml.template	<- "rhU65rho906"
 		#infilexml.template	<- "rhU65rho909"	
 		#infilexml.template	<- "um181rhU2045"
-		infilexml.template	<- "um182rhU2045"
+		#infilexml.template	<- "um182rhU2045"
 		#infilexml.template	<- "um183rhU2045"
 		#infilexml.template	<- "um182us45"
 		#infilexml.template	<- "um182us60"
-		infilexml.template	<- "um182rhU2045ay"
+		#infilexml.template	<- "um182rhU2045ay"
+		infilexml.template	<- "um232rhU2045"
+		infilexml.template	<- "um232rhU2045ay"
 		#infilexml.opt		<- "txs4clu"
 		#infilexml.opt		<- "txs4clufx03"
-		infilexml.opt		<- "mph4clu"
+		#infilexml.opt		<- "mph4clu"
 		#infilexml.opt		<- "mph4clumph4tu"
 		#infilexml.opt		<- "mph4clufx03"
 		infilexml.opt		<- "mph4cluLdTd"
