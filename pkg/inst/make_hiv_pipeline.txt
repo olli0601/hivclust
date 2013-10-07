@@ -74,3 +74,10 @@ g++ jphmm_balls.cpp -o jphmm_balls
 g++ jphmm_regions.cpp -o jphmm_regions
 
 git clone git://git.code.sf.net/p/phylopart/code phylopart-code
+
+
+tar xvfz 3seq_v1.10812.tgz
+cd 3seq_v1.10812
+tar xvfz PVT_COMPACT_700.tgz
+make -DPVT="/Users/Oliver/git/hivclust/pkg/inst/PVT_COMPACT_700"
+

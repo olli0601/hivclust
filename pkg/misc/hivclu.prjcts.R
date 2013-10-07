@@ -4612,7 +4612,7 @@ hivc.prog.get.clustering.precompute<- function()
 					dist.brl.max=dist.brl.max, dist.brl.med=dist.brl.med, dist.brl.casc=dist.brl.casc, 
 					ph.node.bs=ph.node.bs, ph.linked=ph.linked, ph.unlinked.info=ph.unlinked.info, ph.unlinked=ph.unlinked, 
 					df.seqinfo=df.seqinfo, unlinked.byspace=unlinked.byspace, unlinked.bytime=unlinked.bytime, linked.bypatient=linked.bypatient#,
-					#bs.linked.bypatient=bs.linked.bypatient, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace
+					bs.linked.bypatient=bs.linked.bypatient, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace
 					)
 	ans				
 }
@@ -4897,8 +4897,8 @@ hivc.prog.BEAST.poolrunxml<- function()
 	resume				<- 1
 	verbose				<- 1
 	hpc.walltime		<- 171
-	hpc.ncpu			<- 1
-	hpc.mem				<- "760mb"
+	hpc.ncpu			<- 4
+	hpc.mem				<- "1800mb"
 
 	if(exists("argv"))
 	{
@@ -5231,7 +5231,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}	
-	if(0)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
+	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
 	{	
 		resume		<- 1
 		verbose		<- 1
@@ -5240,6 +5240,7 @@ hivc.proj.pipeline<- function()
 		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
 		insignat	<- "Sat_Jun_16_17/23/46_2013"
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs500"
 		insignat	<- "Thu_Aug_01_17/05/23_2013"		
 		
 		#seq covariates
@@ -5266,7 +5267,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(1)	#run BEAST POOL
+	if(0)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
