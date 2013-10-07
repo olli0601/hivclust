@@ -72,6 +72,7 @@ default.fun		<- "project.hivc.clustering"
 #default.fun	<- "project.gccontent"
 default.fun 	<- "hivc.proj.pipeline"
 #default.fun 	<- "hivc.prog.remove.resistancemut"
+#default.fun 	<- "hivc.prog.BEAST.poolrunxml"
 #default.fun 	<- "hivc.prog.BEAST.evalpoolrun"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))

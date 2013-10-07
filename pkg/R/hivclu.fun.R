@@ -477,10 +477,20 @@ hivc.db.Date2numeric<- function( x )
 }
 ######################################################################################
 #	get BEAST taxon labels:		cluster	FASTASampleCode	NegT	AnyPosT	SeqT  -> turn date into numerical format
-hivc.beast.addBEASTLabel<- function( df )
+hivc.beast.addBEASTLabel<- function( df, df.resetTipDate=NA )
 {
-	df	<- merge(df, df[,list(clu.AnyPos_TL=max(AnyPos_T1)),by="cluster"])
-	df	<- merge(df, df[,list(PosSeqTadj= max(PosSeqT, clu.AnyPos_TL)),by="FASTASampleCode"], by="FASTASampleCode")			
+	if(is.na(df.resetTipDate))
+		df[,dummy:=NA]
+	else if(df.resetTipDate=="LdTd")
+		df	<- merge(df, df[,list(dummy=max(AnyPos_T1)),by="cluster"])
+	else if(df.resetTipDate=="LsTd")
+		df	<- merge(df, df[,list(dummy=max(PosSeqT)),by="cluster"])
+	else if(df.resetTipDate=="UmTd")
+		df[,dummy:=max(df[,PosSeqT])]
+	else
+		stop("Unexpected df.resetTipDate")
+	df	<- merge(df, df[,list(PosSeqTadj= max(PosSeqT, dummy, na.rm=T)),by="FASTASampleCode"], by="FASTASampleCode")
+	
 	tmp	<- df[,		{
 						z	<- as.POSIXlt(c(NegT, AnyPos_T1, PosSeqT, PosSeqTadj))
 						tmp	<- z$year + 1900
@@ -488,7 +498,7 @@ hivc.beast.addBEASTLabel<- function( df )
 						list(BEASTlabel= paste(c(cluster, z, FASTASampleCode), collapse='_', sep=''))
 					}, by="FASTASampleCode"]
 	df	<- merge(df, tmp, by="FASTASampleCode")
-	df
+	subset(df,select=-which(colnames(df)=="dummy"))	
 }
 ######################################################################################
 #	pool clusters into sets containing roughly 'pool.ntip' sequences
@@ -667,7 +677,7 @@ hivc.beast.writeNexus4Beauti<- function( seq.DNAbin.matrix, df, ph=NULL, file=NU
 ######################################################################################
 #	create xml file from btemplate and seq.PROT.RT, using seq in df 
 # 	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; verbose=1; xml.prior4tipstem="uniform"; xml.resetTipDate2LastDiag=1
-hivc.beast.get.xml<- function(btemplate, seq.PROT.RT, df, file, ph=NULL, xml.monophyly4clusters=0, xml.prior4tipstem=NA, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
+hivc.beast.get.xml<- function(btemplate, seq.PROT.RT, df, file, ph=NULL, xml.monophyly4clusters=0, xml.prior4tipstem=NA, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.usingDates="true", beast.date.units= "years", verbose=1)
 {
 	
 	bxml		<- newXMLDoc(addFinalizer=T)
@@ -686,7 +696,7 @@ hivc.beast.get.xml<- function(btemplate, seq.PROT.RT, df, file, ph=NULL, xml.mon
 			})
 	#	add startingTree
 	if(!is.null(ph))		#	add startingTree if provided
-		dummy	<- hivc.beast.add.startingtree(bxml, ph, df)		
+		dummy	<- hivc.beast.add.startingtree(bxml, ph, df, beast.usingDates=beast.usingDates)		
 	else					#	otherwise copy upgmaTree
 	{
 		dummy		<- sapply(seq.int( which( xmlSApply(bt.beast, xmlName)=="constantSize" )-2, which( xmlSApply(bt.beast, xmlName)=="upgmaTree" ) ), function(i)
@@ -784,7 +794,7 @@ hivc.beast.get.taxonsets4tips	<- function(bxml, df)
 ######################################################################################
 # 	extract starting tree from 'ph' by tips in 'df'. Only keeps tree topology and resets branch lengths so that the maximum root distance is 'beast.rootHeight'
 #	beast.rootHeight= 35; beast.usingDates= "false"; beast.newickid= "startingTree"
-hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= 35, beast.usingDates= "true", beast.newickid= "startingTree", beast.brlunits="years", verbose=1)
+hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= 35, beast.usingDates="true", beast.newickid= "startingTree", beast.brlunits="years", verbose=1)
 {
 	require(adephylo)
 	if(verbose) cat(paste("\ncreate startingTree with root height=",beast.rootHeight))

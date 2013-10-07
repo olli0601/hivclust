@@ -4983,8 +4983,13 @@ hivc.prog.BEAST.poolrunxml<- function()
 	xml.monophyly4clusters			<- ifelse(grepl("mph4clu",infilexml.opt),1,0)		
 	pool.includealwaysbeforeyear	<- ifelse(grepl("fx03",infilexml.opt),2003, NA)
 	xml.prior4tipstem				<- ifelse(grepl("mph4tu",infilexml.opt),"uniform",NA)
-	xml.resetTipDate2LastDiag		<- ifelse(grepl("LdTd",infilexml.opt),1,0)
-			
+	df.resetTipDate					<- NA
+	if(grepl("LdTd",infilexml.opt))				df.resetTipDate<- "LdTd"
+	else if(grepl("LsTd",infilexml.opt))		df.resetTipDate<- "LsTd"
+	else if(grepl("UmTd",infilexml.opt))		df.resetTipDate<- "UmTd"
+	#case NoTd is dealt with below
+	#
+	#
 	if(verbose)
 	{
 		print(indir)
@@ -5006,7 +5011,7 @@ hivc.prog.BEAST.poolrunxml<- function()
 		print(infilexml.template)
 		print(xml.monophyly4clusters)
 		print(xml.prior4tipstem)
-		print(xml.resetTipDate2LastDiag)
+		print(df.resetTipDate)
 	}	
 	#
 	#	load sequences
@@ -5029,7 +5034,7 @@ hivc.prog.BEAST.poolrunxml<- function()
 	tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=0.8) )
 	cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
 	if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))
-	cluphy.df				<- hivc.beast.addBEASTLabel( cluphy.df )
+	cluphy.df				<- hivc.beast.addBEASTLabel( cluphy.df, df.resetTipDate=df.resetTipDate )
 	#
 	#	create sets of cluster pools for BEAST
 	#
@@ -5056,8 +5061,9 @@ hivc.prog.BEAST.poolrunxml<- function()
 				#print( unique(df[,cluster]) )
 				#	get xml file 
 				outfile				<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')
-				beast.label.datepos	<- ifelse(xml.resetTipDate2LastDiag, 5, 4)
-				bxml				<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, ph=ph, xml.monophyly4clusters=xml.monophyly4clusters, xml.prior4tipstem=xml.prior4tipstem, beast.label.datepos=beast.label.datepos, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
+				beast.label.datepos	<- ifelse(!is.na(df.resetTipDate), 5, 4)
+				beast.usingDates	<- ifelse(grepl("NoTd",infilexml.opt), "false", "true")
+				bxml				<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, ph=ph, xml.monophyly4clusters=xml.monophyly4clusters, xml.prior4tipstem=xml.prior4tipstem, beast.label.datepos=beast.label.datepos, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", beast.usingDates=beast.usingDates, verbose=1)
 				getNodeSet(bxml, "//*[@id='tmrca(c1)']")		
 				#	write xml file
 				file				<- paste(outdir,'/',outfile,".xml",sep='')
@@ -5231,7 +5237,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}	
-	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
+	if(0)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
 	{	
 		resume		<- 1
 		verbose		<- 1
@@ -5267,7 +5273,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(0)	#run BEAST POOL
+	if(1)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -5289,13 +5295,16 @@ hivc.proj.pipeline<- function()
 		#infilexml.template	<- "um182us60"
 		#infilexml.template	<- "um182rhU2045ay"
 		infilexml.template	<- "um232rhU2045"
-		infilexml.template	<- "um232rhU2045ay"
+		#infilexml.template	<- "um232rhU2045ay"
 		#infilexml.opt		<- "txs4clu"
 		#infilexml.opt		<- "txs4clufx03"
 		#infilexml.opt		<- "mph4clu"
 		#infilexml.opt		<- "mph4clumph4tu"
 		#infilexml.opt		<- "mph4clufx03"
 		infilexml.opt		<- "mph4cluLdTd"
+		infilexml.opt		<- "mph4cluUmTd"
+		infilexml.opt		<- "mph4cluLsTd"
+		infilexml.opt		<- "mph4cluNoTd"
 	
 		outdir				<- indir
 		outsignat			<- "Tue_Aug_26_09/13/47_2013"
