@@ -3380,7 +3380,7 @@ project.hivc.clustering<- function(dir.name= DATA)
 	require(ape)
 	require(data.table)
 	require(RColorBrewer)
-	
+		
 	if(0)	#plot composition of selected MSM clusters
 	{
 		hivc.prog.eval.clustering.bias()
@@ -5213,6 +5213,21 @@ hivc.proj.pipeline<- function()
 		infile	<- "ATHENA_2013_03_All+LANL_Sequences_Sat_Jun_16_17:23:46_2013.fasta"
 		cmd		<- hivc.cmd.clustalo(indir, infile, signat='', outdir=outdir)
 		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1)
+	}
+	if(1)	#find potential recombinants
+	{
+		indir		<- paste(DATA,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences100"
+		insignat	<- "Thu_Aug_01_17/05/23_2013"		
+		cmd			<- hivc.cmd.recomb.3seq(infile=paste(indir,'/',infile,'_',gsub('/',':',insignat),".phylip",sep=''), outfile=paste(indir,'/',infile,'_',gsub('/',':',insignat),".3seq",sep=''), recomb.3seq.siglevel=0.1, nproc=1, verbose=1)
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=100, hpc.q="pqeph", hpc.mem="3850mb",  hpc.nproc=1)
+		cat(cmd)
+		
+		outdir		<- indir
+		outfile		<- paste("r3seq",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')									
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		stop()
 	}
 	if(0)	#extract first sequences for each patient as available from ATHENA data set
 	{

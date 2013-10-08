@@ -76,7 +76,8 @@ g++ jphmm_regions.cpp -o jphmm_regions
 git clone git://git.code.sf.net/p/phylopart/code phylopart-code
 
 
-tar xvfz 3seq_v1.10812.tgz
-cd 3seq_v1.10812
-tar xvfz PVT_COMPACT_700.tgz
-make CCFLAGS=-DPVT=\"/Users/Oliver/git/hivclust/pkg/inst/PVT_COMPACT_700\"
+unzip 3seq_v1.10812_or.zip
+cd 3seq_v1.10812_or
+make CCFLAGS=-DPVT='\"/work/or105/libs/hivclust/pkg/inst"'
+sudo cp 3Seq $BIN/3Seq
+cd ..
