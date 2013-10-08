@@ -5214,7 +5214,7 @@ hivc.proj.pipeline<- function()
 		cmd		<- hivc.cmd.clustalo(indir, infile, signat='', outdir=outdir)
 		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1)
 	}
-	if(1)	#find potential recombinants
+	if(0)	#find potential recombinants
 	{
 		indir		<- paste(DATA,"tmp",sep='/')		
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
@@ -5252,7 +5252,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}	
-	if(0)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
+	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
 	{	
 		resume		<- 1
 		verbose		<- 1

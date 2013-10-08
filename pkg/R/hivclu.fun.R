@@ -3611,7 +3611,7 @@ hivc.phy.get.TP.and.TN.bootstrapvalues<- function(ph, bs.linked.bypatient, ph.mr
 	if(!is.null(plot.file) & "PosSeqT.diff"%in%colnames(bs.linked.bypatient))
 	{
 		breaks.n	<- 20
-		if(verbose)	cat(paste("\nPlotting BS distribution with PosSeqT.diff to file",file))
+		if(verbose)	cat(paste("\nPlotting BS distribution with PosSeqT.diff to file",plot.file))
 		pdf(width=5,height=6,file=plot.file)
 		def.par 	<- par(no.readonly = TRUE)		
 		layout( matrix(c(1,1,1,2),ncol=1,nrow=4) )
@@ -3640,7 +3640,7 @@ hivc.phy.get.TP.and.TN.bootstrapvalues<- function(ph, bs.linked.bypatient, ph.mr
 	if(!is.null(plot.file) & !"PosSeqT.diff"%in%colnames(bs.linked.bypatient))
 	{
 		breaks.n	<- 20
-		if(verbose)	cat(paste("\nPlotting BS distribution without PosSeqT.diff to file",file))
+		if(verbose)	cat(paste("\nPlotting BS distribution without PosSeqT.diff to file",plot.file))
 		pdf(width=5,height=6,file=plot.file)
 		par(mar=c(5,4,0.5,0.5))		
 		cols		<- c(sapply(brewer.pal(4,"Paired"), function(x)  my.fade.col(x, 1))[1], "transparent")

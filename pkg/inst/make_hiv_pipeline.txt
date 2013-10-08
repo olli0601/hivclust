@@ -78,6 +78,6 @@ git clone git://git.code.sf.net/p/phylopart/code phylopart-code
 
 unzip 3seq_v1.10812_or.zip
 cd 3seq_v1.10812_or
-make CCFLAGS=-DPVT='\"/work/or105/libs/hivclust/pkg/inst"'
-sudo cp 3Seq $BIN/3Seq
+make CCFLAGS=-m32 LFLAGS=-m32 PTFLAGS=-DPVT='\"/work/or105/libs/hivclust/pkg/inst\"'
+sudo cp 3seq /home/or105/bin/3seq
 cd ..
