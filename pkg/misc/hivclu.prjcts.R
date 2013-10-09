@@ -4733,8 +4733,8 @@ hivc.prog.BEAST.evalpoolrun<- function()
 	infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg"
 	insignat			<- "Tue_Aug_26_09/13/47_2013"
 	infilexml.opt		<- "txs4clu"
-	#infilexml.opt		<- "mph4clu"
-	infilexml.opt		<- "mph4cluLdTd"
+	infilexml.opt		<- "mph4clu"
+	#infilexml.opt		<- "mph4cluLdTd"
 	infilexml.template	<- "um22rhG202018"
 	infilexml.template	<- "um182rhU2045ay"	
 	
@@ -4806,7 +4806,7 @@ hivc.prog.BEAST.evalpoolrun<- function()
 		#	read annotated mcc trees
 		#
 		tmp			<- list.files(indir, pattern=paste(".nex$",sep=''))
-		tmp			<- tmp[ grepl(infilexml.template, tmp) & grepl(infilexml.opt, tmp) & grepl(gsub('/',':',insignat), tmp) ]
+		tmp			<- tmp[ grepl(paste('_',infilexml.template,'_',sep=''), tmp) & grepl(paste('_',infilexml.opt,'_',sep=''), tmp) & grepl(gsub('/',':',insignat), tmp) ]
 		if(verbose)	cat(paste("\nFound files matching input args, n=", length(tmp)))
 		#		
 		if(length(tmp)==pool.n)
@@ -4888,18 +4888,21 @@ hivc.prog.BEAST.poolrunxml<- function()
 	outdir				<- indir
 	outsignat			<- "Tue_Aug_26_09/13/47_2013"
 		
-	opt.brl				<- "dist.brl.casc" 
-	thresh.brl			<- 0.096
-	thresh.bs			<- 0.8
-	pool.ntip			<- 130
-	infilexml.opt		<- "mph4cluLdTd"
-	infilexml.template	<- "standard"
+	opt.brl					<- "dist.brl.casc" 
+	thresh.brl				<- 0.096
+	thresh.bs				<- 0.8
+	pool.ntip				<- 130
+	beast.mcmc.chainLength	<- 100000000
+	infilexml.opt			<- "mph4cluLdTd"
+	infilexml.template		<- "standard"	
+	
 	resume				<- 1
 	verbose				<- 1
 	hpc.walltime		<- 171
 	hpc.ncpu			<- 4
 	hpc.mem				<- "1800mb"
 
+	
 	if(exists("argv"))
 	{
 		tmp<- na.omit(sapply(argv,function(arg)
@@ -4982,7 +4985,8 @@ hivc.prog.BEAST.poolrunxml<- function()
 	
 	xml.monophyly4clusters			<- ifelse(grepl("mph4clu",infilexml.opt),1,0)		
 	pool.includealwaysbeforeyear	<- ifelse(grepl("fx03",infilexml.opt),2003, NA)
-	xml.prior4tipstem				<- ifelse(grepl("mph4tu",infilexml.opt),"uniform",NA)
+	xml.prior4tipstem				<- ifelse(grepl("u4tip",infilexml.opt),"uniform",NA)
+	xml.taxon4tipstem				<- ifelse(	any(sapply(c("u4tip","tx4tip"), function(x) grepl(x,infilexml.opt))),	1, 0)
 	df.resetTipDate					<- NA
 	if(grepl("LdTd",infilexml.opt))				df.resetTipDate<- "LdTd"
 	else if(grepl("LsTd",infilexml.opt))		df.resetTipDate<- "LsTd"
@@ -5010,6 +5014,7 @@ hivc.prog.BEAST.poolrunxml<- function()
 		print(infilexml.opt)
 		print(infilexml.template)
 		print(xml.monophyly4clusters)
+		print(xml.taxon4tipstem)
 		print(xml.prior4tipstem)
 		print(df.resetTipDate)
 	}	
@@ -5063,7 +5068,7 @@ hivc.prog.BEAST.poolrunxml<- function()
 				outfile				<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')
 				beast.label.datepos	<- ifelse(!is.na(df.resetTipDate), 5, 4)
 				beast.usingDates	<- ifelse(grepl("NoTd",infilexml.opt), "false", "true")
-				bxml				<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, ph=ph, xml.monophyly4clusters=xml.monophyly4clusters, xml.prior4tipstem=xml.prior4tipstem, beast.label.datepos=beast.label.datepos, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", beast.usingDates=beast.usingDates, verbose=1)
+				bxml				<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, ph=ph, xml.monophyly4clusters=xml.monophyly4clusters, xml.taxon4tipstem=xml.taxon4tipstem, xml.prior4tipstem=xml.prior4tipstem, beast.label.datepos=beast.label.datepos, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", beast.usingDates=beast.usingDates, beast.mcmc.chainLength=beast.mcmc.chainLength, verbose=1)
 				getNodeSet(bxml, "//*[@id='tmrca(c1)']")		
 				#	write xml file
 				file				<- paste(outdir,'/',outfile,".xml",sep='')
@@ -5252,7 +5257,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}	
-	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
+	if(0)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
 	{	
 		resume		<- 1
 		verbose		<- 1
@@ -5288,7 +5293,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(0)	#run BEAST POOL
+	if(1)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -5304,22 +5309,26 @@ hivc.proj.pipeline<- function()
 		#infilexml.template	<- "rhU65rho906"
 		#infilexml.template	<- "rhU65rho909"	
 		#infilexml.template	<- "um181rhU2045"
-		#infilexml.template	<- "um182rhU2045"
+		infilexml.template	<- "um182rhU2045"
 		#infilexml.template	<- "um183rhU2045"
 		#infilexml.template	<- "um182us45"
 		#infilexml.template	<- "um182us60"
 		#infilexml.template	<- "um182rhU2045ay"
-		infilexml.template	<- "um232rhU2045"
+		#infilexml.template	<- "um232rhU2045"
 		#infilexml.template	<- "um232rhU2045ay"
 		#infilexml.opt		<- "txs4clu"
 		#infilexml.opt		<- "txs4clufx03"
 		#infilexml.opt		<- "mph4clu"
-		#infilexml.opt		<- "mph4clumph4tu"
+		#infilexml.opt		<- "mph4clutx4tip"
 		#infilexml.opt		<- "mph4clufx03"
-		infilexml.opt		<- "mph4cluLdTd"
-		infilexml.opt		<- "mph4cluUmTd"
-		infilexml.opt		<- "mph4cluLsTd"
-		infilexml.opt		<- "mph4cluNoTd"
+		#infilexml.opt		<- "mph4cluLdTd"
+		#infilexml.opt		<- "mph4cluUmTd"
+		#infilexml.opt		<- "mph4cluLsTd"
+		#infilexml.opt		<- "mph4cluNoTd"
+		#infilexml.opt		<- "mph4cluu4tipLdTd"
+		infilexml.opt		<- "mph4clutx4tipLdTd"
+		infilexml.opt		<- "mph4clutx4tipLsTd"
+		infilexml.opt		<- "mph4clutx4tip"
 	
 		outdir				<- indir
 		outsignat			<- "Tue_Aug_26_09/13/47_2013"
