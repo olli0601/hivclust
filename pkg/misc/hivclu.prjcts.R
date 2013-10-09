@@ -4604,7 +4604,7 @@ hivc.prog.get.clustering.precompute<- function()
 		if(verbose)	cat(paste("write to file",file))
 		save(	ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, 
 				df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  
-				bs.linked.bypatient, bs.unlinked, file=file )
+				bs.linked.bypatient, bs.unlinkedpairs, bs.unlinked.byspace, file=file )
 		#save(ph, dist.brl.max, dist.brl.med, dist.brl.casc, ph.node.bs, ph.linked, ph.unlinked.info, ph.unlinked, df.seqinfo, unlinked.byspace, unlinked.bytime, linked.bypatient,  file=file )		
 	}
 	
@@ -5288,7 +5288,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(1)	#run BEAST POOL
+	if(0)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
