@@ -5257,7 +5257,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}	
-	if(0)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
+	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
 	{	
 		resume		<- 1
 		verbose		<- 1
@@ -5266,7 +5266,7 @@ hivc.proj.pipeline<- function()
 		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
 		insignat	<- "Sat_Jun_16_17/23/46_2013"
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"
-		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs500"
+		#infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs500"
 		insignat	<- "Thu_Aug_01_17/05/23_2013"		
 		
 		#seq covariates
@@ -5293,7 +5293,7 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
-	if(1)	#run BEAST POOL
+	if(0)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -5309,12 +5309,12 @@ hivc.proj.pipeline<- function()
 		#infilexml.template	<- "rhU65rho906"
 		#infilexml.template	<- "rhU65rho909"	
 		#infilexml.template	<- "um181rhU2045"
-		infilexml.template	<- "um182rhU2045"
+		#infilexml.template	<- "um182rhU2045"
 		#infilexml.template	<- "um183rhU2045"
 		#infilexml.template	<- "um182us45"
 		#infilexml.template	<- "um182us60"
 		#infilexml.template	<- "um182rhU2045ay"
-		#infilexml.template	<- "um232rhU2045"
+		infilexml.template	<- "um232rhU2045"
 		#infilexml.template	<- "um232rhU2045ay"
 		#infilexml.opt		<- "txs4clu"
 		#infilexml.opt		<- "txs4clufx03"
@@ -5328,7 +5328,7 @@ hivc.proj.pipeline<- function()
 		#infilexml.opt		<- "mph4cluu4tipLdTd"
 		infilexml.opt		<- "mph4clutx4tipLdTd"
 		infilexml.opt		<- "mph4clutx4tipLsTd"
-		infilexml.opt		<- "mph4clutx4tip"
+		#infilexml.opt		<- "mph4clutx4tip"
 	
 		outdir				<- indir
 		outsignat			<- "Tue_Aug_26_09/13/47_2013"
