@@ -675,6 +675,47 @@ hivc.beast.writeNexus4Beauti<- function( seq.DNAbin.matrix, df, ph=NULL, file=NU
 	ans
 }
 ######################################################################################
+#	read tip stem samples after burn in from log file and return upper left points of a histogram of the Monte Carlo sample
+hivc.beast.read.log2tstem<- function(file.log, file.xml, beastlabel.idx.samplecode=6, burn.in= 5e6, breaks.n= 30, verbose=0)
+{
+	require(data.table)
+	require(XML)	
+	if(verbose)	cat(paste("\nReading file ",file.log))
+	df.log	<- read.delim2(file.log, header = TRUE, sep = "\t", quote="\"", dec=".", fill = TRUE, comment.char="#")
+	df.log	<- as.data.table(df.log)		
+	if(verbose)	cat(paste("\nRead log file with ncol=", ncol(df.log)))
+	tmp		<- c("state", colnames(df.log)[ grepl("tstem", colnames(df.log)) ] )
+	if(length(tmp)==1)
+	{
+		if(verbose)	cat(paste("\nNo tstem found, return NA"))
+		return( data.table( FASTASampleCode=NA, tstem= NA, density= NA ) )
+	}
+	df.log	<- subset( df.log, state>burn.in, select=tmp )
+	if(verbose)	cat(paste("\nFound tstem data for n=", ncol(df.log)-1))
+	#	translate tips back into FASTASampleCode
+	if(verbose)	cat(paste("\nReading file ",file.xml))
+	bxml				<- xmlTreeParse(file.xml, useInternalNodes=TRUE, addFinalizer = TRUE)
+	tmp					<- regexpr("tip[0-9]+",colnames(df.log))
+	if(!length(which(tmp>0)))
+	{
+		if(verbose)	cat(paste("\nNo tip tstem found, return NA"))
+		return( data.table( FASTASampleCode=NA, tstem= NA, density= NA ) )
+	}	
+	log.tips			<- sapply(seq_along(tmp)[tmp>0], function(i)	substr(colnames(df.log)[i],tmp[i],tmp[i]+attr(tmp,"match.length")[i]-1)		)
+	log.FASTASampleCode	<- sapply(log.tips, function(x) unlist( xpathApply(bxml, paste("//taxa[@id='",x,"']/taxon",sep=''), xmlGetAttr, "idref") )	)
+	log.FASTASampleCode	<- sapply( strsplit(log.FASTASampleCode, '_'), function(x) x[beastlabel.idx.samplecode])		
+	setnames(df.log, colnames(df.log)[tmp>0], log.FASTASampleCode)
+	#	compute histograms for each tip stem
+	ans		<- lapply(log.FASTASampleCode, function(x)
+			{
+				#x<- "R11-11357"
+				tmp	<- hist( as.numeric(unlist( df.log[, x, with=0] )), breaks=breaks.n, plot=0 )
+				data.table( FASTASampleCode=x, tstem= tmp$breaks, density= c(tmp$density,0) )										
+			})
+	if(verbose)	cat(paste("\nProcessed tstem data for tips n=", length(log.FASTASampleCode)))
+	ans	<- rbindlist(ans)
+}
+######################################################################################
 #	create xml file from btemplate and seq.PROT.RT, using seq in df 
 # 	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; verbose=1; xml.prior4tipstem="uniform"; xml.resetTipDate2LastDiag=1
 hivc.beast.get.xml<- function(	btemplate, seq.PROT.RT, df, file, ph=NULL, xml.monophyly4clusters=0, xml.taxon4tipstem=0, xml.prior4tipstem=NA, 
@@ -1387,7 +1428,7 @@ hivc.phy.plotupon<- function (x, type = "phylogram", use.edge.length = TRUE, nod
 				cex = cex)
 }
 ######################################################################################
-hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.hivs=4, beastlabel.idx.samplecode=5, verbose=1)
+hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.hivs=4, beastlabel.idx.samplecode=5, verbose=1, debug=0)
 {
 	#	get root height for final tree in calendar time
 	ph.tip.ctime	<- sapply(ph.beast, function(x) max( as.numeric( sapply(strsplit(x$tip.label,'_'), function(x)	x[beastlabel.idx.hivs] ) ) ))			
@@ -1407,6 +1448,7 @@ hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel
 				tmp					<- tmp[, list(node.label= paste(round(posterior,d=3),round(height_median,d=3), round(height_95_HPD_MIN,d=3), round(height_95_HPD_MAX,d=3), sep='_')),by="node"]
 				x$node.label		<- tmp[,node.label]
 				x$node.label.format	<- "posterior height_median height_95_HPD_MIN height_95_HPD_MAX"
+				x$beast.label		<- x$tip.label
 				#
 				#	extract rooted ExaML clusters
 				#
@@ -1426,9 +1468,11 @@ hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel
 			})
 	clu.subtrees	<- eval(parse(text= paste("c(",paste('clu.subtrees[[',seq_along(clu.subtrees),']]', sep='',collapse=','),")",sep='') ))
 	if(verbose)	cat(paste("\nFound ExaML clusters in treeannotator files, number of clusters is n=", length(clu.subtrees) ))
-	#clu.subtrees	<- lapply(1:3, function(i) clu.subtrees[[i]] )
+	if(debug)
+		clu.subtrees	<- lapply(1:3, function(i) clu.subtrees[[i]] )
 	#	join all clusters 
 	cluphy				<- eval(parse(text=paste('clu.subtrees[[',seq_along(clu.subtrees),']]', sep='',collapse='+')))
+	cluphy$beast.label	<- cluphy$beast.label[seq_len(Ntip(cluphy))]
 	if(verbose)	cat(paste("\nFound ExaML clusters in treeannotator files, number of sequences is n=", Ntip(cluphy) ))
 	list(cluphy=cluphy, ph.tip.ctime=ph.tip.ctime, ph.root.ctime=ph.root.ctime)
 }
@@ -1470,8 +1514,8 @@ hivc.treeannotator.get.clusterprob<- function(ph.beast, beastlabel.idx.clu=1, be
 	clu.df
 }
 ######################################################################################
-#	end.ctime=2013.3; cex.nodelabel=0.5; cex.tiplabel=0.5; file=NULL; pdf.width=7; pdf.height=20
-hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all, df.viro, df.immu, df.treatment=NULL, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=NULL, pdf.width=7, pdf.height=20)
+#	ph<- cluphy; end.ctime=2013.3; cex.nodelabel=0.5; cex.tiplabel=0.5; file=NULL; pdf.width=7; pdf.height=20
+hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all, df.viro, df.immu, df.treatment=NULL, df.tstem=NULL, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=NULL, pdf.width=7, pdf.height=20)
 {		
 	require(RColorBrewer)
 	if(class(file)=="character")
@@ -1486,13 +1530,19 @@ hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all
 	hivc.treeannotator.plot.ctimeline(ph, youngest.tip.ctime, end.ctime, add.yinch= 0.5)
 	# add BEAST TMRCA 95% credibility interval
 	ph.nodeheighthpds	<- hivc.treeannotator.nodelabels.getnodeheightHPD(ph, youngest.tip.ctime)
+	#do not plot the BEAST TMRCA 95% credibility interval for those nodes for which more data than the 95% interval is available
+	if(!is.null(df.tstem))	
+		ph.nodeheighthpds	<- subset( ph.nodeheighthpds, !node%in%unique(df.tstem[,mrca]) )
 	hivc.treeannotator.plot.hpdbars(ph, ph.nodeheighthpds, col=cols[1], lwd=4)
 	# add NegT and AnyPos_T1
 	ph.seronodeheight	<- hivc.treeannotator.sero.getnodeheight.range(ph, df.all, youngest.tip.ctime)
-	hivc.treeannotator.plot.seronodeheightrange(ph, ph.seronodeheight, add.yinch= -0.025, width.yinch= 0.05, width.yinch.past.AnyPos_T1= 0, col=cols[2])
+	hivc.treeannotator.plot.seronodeheightrange(ph, ph.seronodeheight, add.yinch= -0.03, width.yinch= 0.03, width.yinch.past.AnyPos_T1= 0, col=cols[2])
 	# add lRNA timeline
 	ph.viro.timeline	<- hivc.treeannotator.get.viro.timeline(ph, df.all, df.viro, youngest.tip.ctime, df.treatment=df.treatment)
 	hivc.treeannotator.plot.viro.timeline(ph, ph.viro.timeline, viro.min= log10(300), width.yinch= 0.15, add.yinch= 0.005, col.bg= cols[c(5,10,12)], col.legend= cols[6], cex.txt= 0.2)
+	# add BEAST posterior density of TMRCAs where available
+	if(!is.null(df.tstem))
+		hivc.treeannotator.plot.tipstem.timeline(ph, youngest.tip.ctime, df.tstem, width.yinch=0.1, add.yinch=0.005, col.bg=cols[1] )		
 	# add CD4 timeline
 	ph.immu.timeline	<- hivc.treeannotator.get.immu.timeline(ph, df.all, df.immu, youngest.tip.ctime, end.ctime=2013.3)
 	hivc.treeannotator.plot.immu.timeline(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2)
@@ -1508,6 +1558,26 @@ hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all
 	
 	if(class(file)=="character")
 		dev.off()				
+}
+######################################################################################
+hivc.treeannotator.plot.tipstem.timeline<- function(ph, youngest.tip.ctime, df.tstem, width.yinch=0.15, add.yinch=0, col.bg="grey75", density=30, lwd=0.5)
+{
+	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)
+	set(df.tstem, NULL, "tstem", youngest.tip.ctime - df.tstem[,tstem])
+	set(df.tstem, NULL, "tstem", max(node.depth.edgelength(ph)) - df.tstem[,tstem])
+	df.tstem[, yyi:= density]
+	setkey(df.tstem, tip)
+	df.tstem<- merge(df.tstem, df.tstem[,	list(scale=yinch(width.yinch)/max(yyi))	,by="tip"], by="tip")	
+	set(df.tstem, NULL, "yyi",  df.tstem[,yyi*scale])
+	df.tstem[, yy:= yinch(add.yinch)+lastPP$yy[df.tstem[,tip]]]
+	df.tstem[, col:=col.bg]
+	setkey(df.tstem, tip)
+	dummy<- sapply( unique(df.tstem[,tip]), function(x)
+			{
+				z		<- df.tstem[J(x)]
+				setkey(z, tstem)
+				polygon( c( z[,tstem],z[nrow(z),tstem] ), z[1,yy]+c( z[,yyi],0 ), border=z[1,col], col=z[1,col], density=density, lwd=lwd )  				
+			})
 }
 ######################################################################################
 hivc.treeannotator.plot.ctimeline<- function(ph, youngest.tip.ctime, end.ctime, col.bg= c(my.fade.col("black",0.15),"transparent"), col.txt= c(my.fade.col("black",1),"transparent"), cex.txt= 0.5, add.yinch= 0.5)

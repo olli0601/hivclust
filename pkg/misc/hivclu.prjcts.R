@@ -3185,17 +3185,29 @@ project.hivc.beast<- function(dir.name= DATA)
 	}
 	if(0)	#get distribution of TMRCAs of tip nodes for a particular BEAST run
 	{
-		indir				<- paste(DATA,"beast/beast_130908",sep='/')		
+		indir				<- paste(DATA,"beast/beast_131011",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg"
 		insignat			<- "Tue_Aug_26_09/13/47_2013"
-		infilexml.opt		<- "txs4clu"
-		infilexml.template	<- "um22rhG202018"
+		infilexml.opt		<- "mph4clutx4tipLdTd"
+		infilexml.template	<- "um232rhU2045"
 		verbose				<- 1
-		pool.n				<- 1
 		
-		argv				<<- hivc.cmd.beast.evalrun(indir, infile, insignat, infilexml.opt, infilexml.template, pool.n, verbose=verbose)
-		argv				<<- unlist(strsplit(argv,' '))
-		hivc.prog.BEAST.evalpoolrun()
+		
+		tmp			<- list.files(indir, pattern=paste(".log$",sep=''))
+		files		<- tmp[ grepl(paste('_',infilexml.template,'_',sep=''), tmp) & grepl(paste('_',infilexml.opt,'_',sep=''), tmp) & grepl(gsub('/',':',insignat), tmp) ]
+		if(verbose)	cat(paste("\nFound files matching input args, n=", length(files)))
+		
+		#	read length of tip stems
+		df.tstem	<- lapply( seq_along(files), function(i)
+					{
+						file.log	<- files[i]
+						if(verbose)	cat(paste("\nprocess file,", file.log))
+						file.log	<- paste(indir,file.log,sep='/')
+						file.xml	<- paste(substr(file.log,1,nchar(file.log)-3), "xml", sep='')
+						if(verbose)	cat(paste("\nand file,", file.xml))
+						hivc.beast.read.log2tstem(file.log, file.xml, beastlabel.idx.samplecode=6, burn.in= 5e6, breaks.n= 30, verbose=1)					
+					})
+		df.tstem<- rbindlist( df.tstem )		
 	}
 	if(1)	#plot BEAST clusters
 	{					
@@ -4728,22 +4740,24 @@ hivc.prog.BEAST.evalpoolrun<- function()
 	file.immu			<- paste(indircov,"/ATHENA_2013_03_Immu.R",sep='/')
 	file.treatment		<- paste(indircov,"/ATHENA_2013_03_Regimens.R",sep='/')
 		
-	indir				<- paste(DATA,"beast/beast_131004",sep='/')
+	indir				<- paste(DATA,"beast/beast_131011",sep='/')
 	#indir				<- paste(DATA,"tmp",sep='/')	
 	infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_beast_seroneg"
 	insignat			<- "Tue_Aug_26_09/13/47_2013"
 	infilexml.opt		<- "txs4clu"
 	infilexml.opt		<- "mph4clu"
+	infilexml.opt		<- "mph4clutx4tipLdTd"
+	infilexml.template	<- "um232rhU2045"	
 	#infilexml.opt		<- "mph4cluLdTd"
-	infilexml.template	<- "um22rhG202018"
-	infilexml.template	<- "um182rhU2045ay"	
+	#infilexml.template	<- "um22rhG202018"
+	#infilexml.template	<- "um182rhU2045ay"	
 	
 	plot						<- 1
 	verbose						<- 1
 	resume						<- 0
 	pool.n						<- 3	
 	beastlabel.idx.clu			<- 1
-	beastlabel.idx.hivs			<- ifelse(grepl("LdTd",infilexml.opt),5,4)
+	beastlabel.idx.hivs			<- ifelse(any(sapply(c("LdTd","LsTd"), function(x) grepl(x,infilexml.opt))),	5,	4)
 	beastlabel.idx.samplecode	<- 6	
 	
 	if(exists("argv"))
@@ -4806,22 +4820,35 @@ hivc.prog.BEAST.evalpoolrun<- function()
 		#	read annotated mcc trees
 		#
 		tmp			<- list.files(indir, pattern=paste(".nex$",sep=''))
-		tmp			<- tmp[ grepl(paste('_',infilexml.template,'_',sep=''), tmp) & grepl(paste('_',infilexml.opt,'_',sep=''), tmp) & grepl(gsub('/',':',insignat), tmp) ]
-		if(verbose)	cat(paste("\nFound files matching input args, n=", length(tmp)))
+		file.nex	<- tmp[ grepl(paste('_',infilexml.template,'_',sep=''), tmp) & grepl(paste('_',infilexml.opt,'_',sep=''), tmp) & grepl(gsub('/',':',insignat), tmp) ]
+		if(verbose)	cat(paste("\nFound .nex files matching input args, n=", length(file.nex)))
+		tmp			<- list.files(indir, pattern=paste(".log$",sep=''))
+		file.log	<- tmp[ grepl(paste('_',infilexml.template,'_',sep=''), tmp) & grepl(paste('_',infilexml.opt,'_',sep=''), tmp) & grepl(gsub('/',':',insignat), tmp) ]
+		if(verbose)	cat(paste("\nFound .log files matching input args, n=", length(file.log)))		
 		#		
-		if(length(tmp)==pool.n)
+		if(length(file.nex)==pool.n)
 		{
-			ph.beast		<- lapply(tmp, function(x)		hivc.treeannotator.read(paste(indir,x,sep='/'), verbose=verbose)		)
+			#	read treeannotator .nex file
+			ph.beast		<- lapply(file.nex, function(x)		hivc.treeannotator.read(paste(indir,x,sep='/'), verbose=verbose)		)
 			if(verbose)	cat(paste("\nRead trees matching input args, n=", length(ph.beast)))
-		
-			#load all patient covariates
+			#	read length of tip stems
+			file.log		<- sapply(file.log, function(x)					paste(indir,x,sep='/') )
+			file.xml		<- sapply(file.log, function(x)					paste(substr(x,1,nchar(x)-3), "xml", sep='') )			
+			df.tstem		<- lapply(seq_along(file.log), function(i)		hivc.beast.read.log2tstem(file.log[i], file.xml[i], beastlabel.idx.samplecode=6, burn.in= 5e6, breaks.n= 30, verbose=1)		)
+			df.tstem		<- rbindlist( df.tstem )
+			#	load all patient covariates
 			load(file.cov)								
-			#
-			
-			tmp				<- hivc.treeannotator.get.phy(ph.beast, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode)
+			#			
+			tmp				<- hivc.treeannotator.get.phy(ph.beast, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, debug=0)
 			cluphy			<- tmp$cluphy 
 			ph.tip.ctime	<- tmp$ph.tip.ctime 				
 			ph.root.ctime	<- tmp$ph.root.ctime
+			#	convert tstem time into calendar time
+			tmp				<- data.table( FASTASampleCode=cluphy$tip.label, tip=seq_along(cluphy$tip.label), mrca= Ancestors(cluphy, seq_along(cluphy$tip.label), type="parent")-Ntip(cluphy) )			 
+			df.tstem		<- merge( df.tstem, tmp, by="FASTASampleCode" )			
+			set(df.tstem, NULL, "tstem", df.tstem[, max(ph.tip.ctime)-tstem])
+			df.tstem		<- subset(df.tstem, select=c(tip, mrca, tstem, density))
+			#
 			cluphy.df		<- hivc.treeannotator.get.clusterprob(ph.beast, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.samplecode=beastlabel.idx.samplecode)
 			cluphy.df		<- merge(cluphy.df, df.all, by="FASTASampleCode")
 			cluphy.tmrca	<- hivc.treeannotator.get.tmrcas(ph.beast, beastlabel.idx.hivs=beastlabel.idx.hivs) 						
@@ -4865,7 +4892,7 @@ hivc.prog.BEAST.evalpoolrun<- function()
 				#youngest.tip.ctime	<- 2010.46
 				file				<- paste(indir,'/',infile,'_',infilexml.template,'_',infilexml.opt,"_mcc_",gsub('/',':',insignat),".pdf",sep='')
 				if(verbose)	cat(paste("\nplotting dated clusters to file", file ))
-				dummy				<- hivc.treeannotator.plot(cluphy, ph.root.ctime, youngest.tip.ctime, df.all, df.viro, df.immu, df.treatment, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=file, pdf.width=7, pdf.height=150)
+				dummy				<- hivc.treeannotator.plot(cluphy, ph.root.ctime, youngest.tip.ctime, df.all, df.viro, df.immu, df.treatment=df.treatment, df.tstem=df.tstem, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=file, pdf.width=7, pdf.height=150)
 			}
 		}
 		else if(verbose)	
@@ -5087,8 +5114,7 @@ hivc.prog.BEAST.poolrunxml<- function()
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
 				cat(cmd)
 				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
-				hivc.cmd.hpccaller(outdir, outfile, cmd)
-				Sys.sleep(1)
+				hivc.cmd.hpccaller(outdir, outfile, cmd)				
 			})		
 }
 ######################################################################################
@@ -5219,19 +5245,31 @@ hivc.proj.pipeline<- function()
 		cmd		<- hivc.cmd.clustalo(indir, infile, signat='', outdir=outdir)
 		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1)
 	}
-	if(0)	#find potential recombinants
+	if(1)	#find potential recombinants
 	{
 		indir		<- paste(DATA,"tmp",sep='/')		
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
-		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences100"
-		insignat	<- "Thu_Aug_01_17/05/23_2013"		
-		cmd			<- hivc.cmd.recomb.3seq(infile=paste(indir,'/',infile,'_',gsub('/',':',insignat),".phylip",sep=''), outfile=paste(indir,'/',infile,'_',gsub('/',':',insignat),".3seq",sep=''), recomb.3seq.siglevel=0.1, nproc=1, verbose=1)
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=100, hpc.q="pqeph", hpc.mem="3850mb",  hpc.nproc=1)
-		cat(cmd)
+		#infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences100"
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
 		
-		outdir		<- indir
-		outfile		<- paste("r3seq",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')									
-		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		batch.n			<- 100		#for 1e4 sequences, does about 100 in 25hrs, so request 100 batches for walltime 25 expected + 10hrs grace
+		file			<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+		load(file)
+		batch.seq		<- round(seq.int(0,nrow(seq.PROT.RT),len=batch.n),d=0)
+		batch.seq		<- rbind(batch.seq[-length(batch.seq)], batch.seq[-1]-1)
+		batch.seq		<- batch.seq[,1:10]	#test run
+		file			<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".phylip",sep='')
+		lapply(seq_len(ncol(batch.seq)),function(j)
+				{
+					
+					cmd			<- hivc.cmd.recomb.3seq(infile=file, outfile=paste(indir,'/',infile,'_',batch.seq[1,j],'-',batch.seq[2,j],'_',gsub('/',':',insignat),".3seq",sep=''), recomb.3seq.siglevel=0.1, nproc=1, recomb.3seq.testvsall.beginatseq=batch.seq[1,j], recomb.3seq.testvsall.endatseq=batch.seq[2,j], verbose=1)
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=35, hpc.q="pqeph", hpc.mem="3850mb",  hpc.nproc=1)
+					cat(cmd)
+					outdir		<- indir
+					outfile		<- paste("r3seq",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')									
+					hivc.cmd.hpccaller(outdir, outfile, cmd)			
+				})
+		
 		stop()
 	}
 	if(0)	#extract first sequences for each patient as available from ATHENA data set

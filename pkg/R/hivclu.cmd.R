@@ -129,16 +129,19 @@ hivc.cmd.blast<- function(indir, infile, insignat, dbdir, dbfile, dbsignat, outd
 
 #generate 3seq command
 #' @export
-hivc.cmd.recomb.3seq<- function(infile, outfile=paste(infile,".3s.rec",sep=''), recomb.3seq.siglevel=0.1, prog= PR.RECOMB.3SEQ, nproc=1, verbose=1)
+hivc.cmd.recomb.3seq<- function(infile, outfile=paste(infile,".3s.rec",sep=''), recomb.3seq.siglevel=0.1, recomb.3seq.testvsall.beginatseq=NA, recomb.3seq.testvsall.endatseq=NA, prog= PR.RECOMB.3SEQ, nproc=1, verbose=1)
 {
 	cmd<- "#######################################################
 # start: run 3Seq
 #######################################################"
-	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
-				
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))				
 	#default commands
 	cmd<- paste(cmd,prog,sep=" ")	
-	cmd<- paste(cmd, " -x ",infile," -id ",outfile, sep='' )
+	cmd<- paste(cmd, " -x ",infile," -id ",outfile, sep='' )	
+	if(!is.na(recomb.3seq.testvsall.beginatseq))
+		cmd<- paste(cmd, " -b",recomb.3seq.testvsall.beginatseq, sep='' )
+	if(!is.na(recomb.3seq.testvsall.endatseq))
+		cmd<- paste(cmd, " -e",recomb.3seq.testvsall.endatseq, sep='' )	
 	cmd<- paste(cmd, " -hs -t",recomb.3seq.siglevel, sep='')					
 	#verbose stuff
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
@@ -612,4 +615,5 @@ hivc.cmd.hpccaller<- function(outdir, outfile, cmd)
 	cmd<- paste("qsub",file)
 	cat( cmd )
 	cat( system(cmd, intern=TRUE) )	
+	Sys.sleep(1)
 }
