@@ -568,7 +568,7 @@ hivc.beast.add.seq<- function(bxml, df, seq.PROT.RT, beast.label.datepos= 4, bea
 }	
 ######################################################################################
 #	Read a BEAST treeannotator file. The node.label is set to a data.table that contains the SIMMAP annotation for the interior nodes in the newick tree.
-hivc.treeannotator.read<- function(file, verbose=1) 
+hivc.treeannotator.read<- function(file, add.to.tiplabel=NA, rate.multiplier=NA, round.digit=NA, verbose=1) 
 {
 	require(data.table)
 	require(ape)
@@ -606,6 +606,23 @@ hivc.treeannotator.read<- function(file, verbose=1)
 				eval(parse(text=paste("data.table(",ans,")",sep='')))				
 			})
 	df.beast	<- rbindlist(tab)[-1,]
+	if(!is.na(rate.multiplier))
+	{
+		tmp	<- colnames(df.beast)[grepl("rate",colnames(df.beast))]
+		sapply(tmp, function(x)		set(df.beast, NULL, x, as.numeric(unlist(df.beast[,x,with=F]))*rate.multiplier)			)		
+	}
+	if(!any(is.na(round.digit)))
+	{
+		if(length(round.digit)!=ncol(df.beast))
+			round.digit<- rep(round.digit[1], ncol(df.beast))
+		tmp	<- colnames(df.beast)
+		sapply(seq_along(tmp), function(i)  
+				{
+					if(class(df.beast[[i]])=="numeric")			
+						set(df.beast, NULL, tmp[i], round(as.numeric(unlist(df.beast[,tmp[i],with=F])), d=round.digit[i]))				
+				})
+	}
+	
 	tmp			<- length(which(df.beast[,!is.na(posterior)]))
 	if(verbose)	cat(paste("\nFound annotated nodes, n=", tmp))
 	if(verbose)	cat(paste("\nFound annotated tips, n=", nrow(df.beast)-tmp))	
@@ -650,6 +667,15 @@ hivc.treeannotator.read<- function(file, verbose=1)
 	tmp					<- read.tree(text=tmp)
 	ph[["node.label"]]	<- cbind(data.table(node=Ntip(ph) + seq_len(Nnode(ph))), df.beast[as.numeric( tmp$node.label ),])
 	setkey(ph[["node.label"]], node)
+		
+	if(!any(is.na(add.to.tiplabel)))
+	{
+		if(length(intersect(add.to.tiplabel,colnames(df.beast)))!=length(add.to.tiplabel))
+			stop("Cannot find add.to.tiplabel")
+		tmp				<- as.matrix(subset( df.beast[as.numeric( tmp$tip.label ),], select=add.to.tiplabel, with=F))
+		tmp				<- cbind(ph$tip.label, tmp)
+		ph$tip.label	<- apply(tmp, 1, function(x) paste(x,collapse='_'))		
+	}	
 	
 	ph
 }
@@ -1428,12 +1454,24 @@ hivc.phy.plotupon<- function (x, type = "phylogram", use.edge.length = TRUE, nod
 				cex = cex)
 }
 ######################################################################################
-hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.hivs=4, beastlabel.idx.samplecode=5, verbose=1, debug=0)
+hivc.treeannotator.get.rates<- function(ph, tip.df, nodelabel.idx.edgewidth=5)
+{
+	tmp				<- as.numeric( sapply( strsplit(ph$node.label,'_'),function(x)	x[nodelabel.idx.edgewidth] ) )	
+	rates.df		<- data.table(node=seq_len(Nnode(ph))+Ntip(ph), rate=tmp)
+	ans				<- rbind(rates.df, subset(tip.df, select=c(node, rate)))
+	#set(ans, which(is.na(ans[,rate])),"rate",mean(ans[,rate],na.rm=1))
+	setkey(ans,node)
+	ans
+}
+######################################################################################
+hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.hivs=4, beastlabel.idx.samplecode=5, beastlabel.idx.rate=6, verbose=1, debug=0)
 {
 	#	get root height for final tree in calendar time
 	ph.tip.ctime	<- sapply(ph.beast, function(x) max( as.numeric( sapply(strsplit(x$tip.label,'_'), function(x)	x[beastlabel.idx.hivs] ) ) ))			
 	ph.root.ctime	<- min( sapply(seq_along(ph.beast), function(i)	ph.tip.ctime[i]-max(node.depth.edgelength(ph.beast[[i]]))	) )
-	
+	#	extract tip label information
+	tip.df			<- lapply(ph.beast, function(x) hivc.treeannotator.tiplabel2df(x, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate) )
+	#	prepare cluster subtrees
 	clu.subtrees	<- lapply( seq_along(ph.beast), function(i)
 			{				
 				x<- ph.beast[[i]]
@@ -1441,21 +1479,19 @@ hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel
 				tmp					<- ph.tip.ctime[i]								
 				#subset(x$node.label, node==147, select=c(node, height_median, height_95_HPD_MIN, height_95_HPD_MAX, posterior))
 				tmp					<- x$node.label[, list(	node=node, 
-								height_median=ph.tip.ctime[i]-height_median, 
-								height_95_HPD_MIN=ph.tip.ctime[i]-height_95_HPD_MAX, 
-								height_95_HPD_MAX=ph.tip.ctime[i]-height_95_HPD_MIN, 
-								posterior=posterior)]			
-				tmp					<- tmp[, list(node.label= paste(round(posterior,d=3),round(height_median,d=3), round(height_95_HPD_MIN,d=3), round(height_95_HPD_MAX,d=3), sep='_')),by="node"]
-				x$node.label		<- tmp[,node.label]
-				x$node.label.format	<- "posterior height_median height_95_HPD_MIN height_95_HPD_MAX"
-				x$beast.label		<- x$tip.label
+															height_median=ph.tip.ctime[i]-height_median, 
+															height_95_HPD_MIN=ph.tip.ctime[i]-height_95_HPD_MAX, 
+															height_95_HPD_MAX=ph.tip.ctime[i]-height_95_HPD_MIN, 
+															rate_median=rate_median,
+															posterior=posterior)]			
+				tmp					<- tmp[, list(node.label= paste(posterior,height_median, height_95_HPD_MIN, height_95_HPD_MAX, rate_median, sep='_')),by="node"]
+				x$node.label		<- tmp[, node.label]
+				x$node.label.format	<- "posterior height_median height_95_HPD_MIN height_95_HPD_MAX rate_median"				
 				#
 				#	extract rooted ExaML clusters
-				#
-				tmp			<- t( sapply(strsplit(x$tip.label,'_'), function(x)	x[c(beastlabel.idx.clu,beastlabel.idx.samplecode)] ) )
-				clu.df		<- data.table(cluster=tmp[,1], FASTASampleCode=tmp[,2], tip=seq_along(x$tip.label) )
-				x$tip.label	<- clu.df[, FASTASampleCode]
-				tmp			<- clu.df[,list(node=getMRCA(x,tip)),by=cluster]
+				#								
+				x$tip.label	<- tip.df[[i]][, FASTASampleCode]
+				tmp			<- tip.df[[i]][, list(node=getMRCA(x,FASTASampleCode)),by=cluster]
 				clu.subtrees<- lapply(tmp[,node], function(z)
 						{	
 							ans						<- extract.clade(x, z, root.edge= 1, interactive = FALSE)
@@ -1471,10 +1507,14 @@ hivc.treeannotator.get.phy<- function(ph.beast, beastlabel.idx.clu=1, beastlabel
 	if(debug)
 		clu.subtrees	<- lapply(1:3, function(i) clu.subtrees[[i]] )
 	#	join all clusters 
-	cluphy				<- eval(parse(text=paste('clu.subtrees[[',seq_along(clu.subtrees),']]', sep='',collapse='+')))
-	cluphy$beast.label	<- cluphy$beast.label[seq_len(Ntip(cluphy))]
+	cluphy				<- eval(parse(text=paste('clu.subtrees[[',seq_along(clu.subtrees),']]', sep='',collapse='+')))	
 	if(verbose)	cat(paste("\nFound ExaML clusters in treeannotator files, number of sequences is n=", Ntip(cluphy) ))
-	list(cluphy=cluphy, ph.tip.ctime=ph.tip.ctime, ph.root.ctime=ph.root.ctime)
+	#	retain tip info for those tip labels in cluphy
+	tip.df			<- rbindlist(tip.df)	
+	tip.df			<- merge(data.table(FASTASampleCode=cluphy$tip.label), tip.df, by="FASTASampleCode")
+	tip.df			<- cbind(tip.df, node=seq_len(Ntip(cluphy)))
+
+	list(cluphy=cluphy, ph.tip.df=tip.df, ph.tip.ctime=ph.tip.ctime, ph.root.ctime=ph.root.ctime)
 }
 ######################################################################################
 hivc.treeannotator.get.tmrcas<- function(ph.beast, beastlabel.idx.hivs=4)
@@ -1497,6 +1537,12 @@ hivc.treeannotator.get.tmrcas<- function(ph.beast, beastlabel.idx.hivs=4)
 	ph.trmca	<- rbindlist( ph.trmca )
 }
 ######################################################################################
+hivc.treeannotator.tiplabel2df<- function(x, beastlabel.idx.clu=1, beastlabel.idx.hivn=2, beastlabel.idx.hivd=3, beastlabel.idx.hivs=4, beastlabel.idx.samplecode=5, beastlabel.idx.rate=6)
+{
+	tmp		<- t( sapply(strsplit(x$tip.label,'_'), function(z)	z[c(beastlabel.idx.clu,beastlabel.idx.hivn, beastlabel.idx.hivd, beastlabel.idx.hivs, beastlabel.idx.samplecode, beastlabel.idx.rate)] ) )
+	data.table(cluster=tmp[,1], NegT= tmp[,2], AnyPos_T1= tmp[,3], TipT= tmp[,4], FASTASampleCode=tmp[,5], rate=tmp[,6] )				
+}	
+######################################################################################
 hivc.treeannotator.get.clusterprob<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.samplecode=5, verbose=1)
 {
 	#	for each of the clusters, compute the posterior probability of a common MRCA
@@ -1514,8 +1560,22 @@ hivc.treeannotator.get.clusterprob<- function(ph.beast, beastlabel.idx.clu=1, be
 	clu.df
 }
 ######################################################################################
+hivc.treeannotator.get.edgewidth<- function(ph, rates.df, scale.edgewidth= 12)
+{
+	if(is.null(rates.df))
+		rates.df<- data.table(node=Nnode(ph,internal.only=0), rate=NA)
+	
+	edge.width	<- merge(rates.df, data.table(node=ph$edge[,2], edge=seq_len(nrow(ph$edge))), all.y=1, by="node")
+	edge.width[, width:=edge.width[,rate]/mean(edge.width[,rate], na.rm=1)]
+	set(edge.width, NULL, "width", (edge.width[,width]-1)*scale.edgewidth + 1)
+	set(edge.width, which(edge.width[,is.na(width)]), "width", 1)
+	set(edge.width, which(edge.width[,width<0.1]), "width", 0.1)
+	setkey(edge.width, edge)
+	edge.width
+}
+######################################################################################
 #	ph<- cluphy; end.ctime=2013.3; cex.nodelabel=0.5; cex.tiplabel=0.5; file=NULL; pdf.width=7; pdf.height=20
-hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all, df.viro, df.immu, df.treatment=NULL, df.tstem=NULL, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=NULL, pdf.width=7, pdf.height=20)
+hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all, df.viro, df.immu, df.treatment=NULL, df.tstem=NULL, df.rates=NULL, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=NULL, pdf.width=7, pdf.height=20)
 {		
 	require(RColorBrewer)
 	if(class(file)=="character")
@@ -1525,6 +1585,7 @@ hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all
 	cols			<- brewer.pal(12,"Paired")
 	ph.xlim			<- end.ctime-ph.root.ctime+ c(-22,6)
 	ph.ylim			<- c(1,Ntip(ph)) + c(-1,1)			
+	
 	plot(ph, x.lim=ph.xlim, y.lim= ph.ylim, show.tip.label=0, edge.color = 0, tip.color = 0)
 	# add calendar timeline			
 	hivc.treeannotator.plot.ctimeline(ph, youngest.tip.ctime, end.ctime, add.yinch= 0.5)
@@ -1548,7 +1609,11 @@ hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all
 	hivc.treeannotator.plot.immu.timeline(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2)
 	# re-plot phylogeny
 	ph$node.label		<- as.numeric(sapply( strsplit( ph$node.label, '_' ), function(x)	x[1] ))
-	hivc.phy.plotupon(ph, show.tip.label=0, show.node.label=1, cex=cex.nodelabel)
+	edge.width			<- hivc.treeannotator.get.edgewidth(ph, df.rates, scale.edgewidth= 8)
+	hivc.phy.plotupon(ph, show.tip.label=0, show.node.label=1, cex=cex.nodelabel, edge.width=edge.width[,width],)
+	# add rate labels			
+	if(!is.null(df.rates))	
+		hivc.treeannotator.plot.rates(ph, edge.width, add.xinch=-0.1, cex.rate=0.3)
 	# add tip labels			
 	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=c("CountryInfection","Trm","Sex","isAcute","lRNA.early","Patient","RegionHospital") )				
 	tmp					<- rep( max(node.depth.edgelength(ph)) - (youngest.tip.ctime-ceiling(end.ctime)), Ntip(ph))
@@ -1558,6 +1623,13 @@ hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all
 	
 	if(class(file)=="character")
 		dev.off()				
+}
+######################################################################################
+hivc.treeannotator.plot.rates<- function(ph, edge.width, add.xinch=-0.1, cex.rate=0.5)
+{
+	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)	
+	tmp	<- edge.width[, list(xx= lastPP$xx[ ph$edge[edge,1] ]+xinch(add.xinch), yy= mean( lastPP$yy[ ph$edge[edge,] ] ), rate=rate), by="edge"]
+	text(tmp[,xx], tmp[,yy], tmp[,rate], cex=cex.rate)
 }
 ######################################################################################
 hivc.treeannotator.plot.tipstem.timeline<- function(ph, youngest.tip.ctime, df.tstem, width.yinch=0.15, add.yinch=0, col.bg="grey75", density=30, lwd=0.5)
@@ -2014,6 +2086,14 @@ hivc.seq.rm.drugresistance<- function(char.matrix, dr, verbose=1, rtn.DNAbin=1)
 	else
 		return( char.matrix )
 }	
+
+#' @export
+hivc.seq.unique<- function(seq.DNAbin.matrix)
+{
+	x<- as.character(seq.DNAbin.matrix)
+	x<- apply(x, 1, function(z) paste(z,collapse=''))
+	seq.DNAbin.matrix[!duplicated(x),]			
+}
 
 #' @export
 hivc.seq.dist<- function(seq.DNAbin.matrix, verbose=1)
@@ -2818,7 +2898,7 @@ hivc.clu.getplot.potentialsuperinfections<- function(ph, clustering, cluphy.df, 
 		hivc.clu.plot.tiplabels( seq_len(Ntip(cluphy)), cluphy.tiplabels$text, cluphy.tiplabels$col, cex=cex.tiplabel, adj=adj.tiplabel, add.xinch=0, add.yinch=0 )
 		dev.off()
 	}
-	list(cluphy=cluphy, cluphy.subtrees=cluphy.merged)
+	list(cluphy=cluphy, cluphy.subtrees=cluphy.merged, cluphy.df=cluphy.df)
 }	
 ######################################################################################
 hivc.clu.getplot.female2female<- function( ph, clustering, df.cluinfo, plot.file=NA )

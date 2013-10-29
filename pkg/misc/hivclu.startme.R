@@ -67,13 +67,14 @@ default.fun		<- "project.hivc.Excel2dataframe"
 #default.fun		<- "project.bezemer2013a.figs"
 #default.fun		<-"project.bezemer2013b.rates"
 default.fun		<- "project.hivc.clustering"
-default.fun	<- "project.hivc.beast"
+#default.fun	<- "project.hivc.beast"
 #default.fun	<- "hivc.prog.get.clustering.precompute"
 #default.fun	<- "project.gccontent"
 default.fun 	<- "hivc.proj.pipeline"
 #default.fun 	<- "hivc.prog.remove.resistancemut"
 #default.fun 	<- "hivc.prog.BEAST.poolrunxml"
 #default.fun 	<- "hivc.prog.BEAST.evalpoolrun"
+default.fun 	<- "hivc.pipeline.recombination"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -323,8 +324,10 @@ if(length(args))
 					CLUST					= "hivc.prog.get.clustering",
 					CLUSTTPTN				= "hivc.prog.get.clustering.TPTN",
 					CLUSTMSM				= "hivc.prog.get.clustering.MSM",
-					BEASTPOOLRUN			= "hivc.prog.BEASTpoolrunxml",
-					BEASTEVALRUN			= "hivc.prog.BEAST.evalpoolrun"
+					BEASTPOOLRUN			= "hivc.prog.BEAST.generate.xml",
+					BEASTEVALRUN			= "hivc.prog.BEAST.evalpoolrun",
+					RECOMB.PROCESS3SEQOUT	= "hivc.prog.recombination.process.3SEQ.output",
+					RECOMB.CHECKCANDIDATES	= "hivc.prog.recombination.check.candidates"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)

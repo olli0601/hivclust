@@ -1350,11 +1350,12 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 	library(data.table)
 	library(hivclust)
 	
-	indir		<- outdir		<- paste(DATA,"tmp",sep='/')
-	infile		<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
-	signat.out	<- signat.in	<- "Sat_May_11_14/23/46_2013"
-	verbose		<- resume		<- 1
-	bs			<- 0
+	indir				<- outdir		<- paste(DATA,"tmp",sep='/')
+	infile				<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
+	signat.out			<- signat.in	<- "Sat_May_11_14/23/46_2013"
+	verbose				<- resume		<- 1
+	opt.bootstrap.by	<- "codon"
+	bs					<- 0
 	
 	if(exists("argv"))
 	{
@@ -1390,6 +1391,10 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 						{	switch(substr(arg,2,10),
 									bootstrap= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) bs<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,3),
+									by= return(substr(arg,5,nchar(arg))),NA)	}))
+		if(length(tmp)>0) opt.bootstrap.by<- tmp[1]
 	}
 	if(1)
 	{
@@ -1401,16 +1406,20 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 		print(verbose)
 		print(resume)
 		print(bs)
+		print(opt.bootstrap.by)
 		print(signat.in)
 		print(signat.out)
 	}
+	if(!opt.bootstrap.by%in%c("nucleotide","codon"))	stop("Unexpected opt.bootstrap.by")		
 	pattern 	<- paste(infile,"_",gsub('/',':',signat.out),".phylip.",sprintf("%03d",bs),sep='')
 	file		<- list.files(path=outdir, pattern=pattern, full.names=1)
 	if(!resume || !length(file))	
 	{					
 		file		<- paste(outdir,"/",infile,"_",gsub('/',':',signat.out),".R",sep='')
 		if(verbose) cat(paste("\nread",file))
-		load(file)
+		tmp			<- load(file)
+		if(length(tmp)!=1)	stop("Unexpected lenght of loaded objects")
+		eval(parse(text=paste("seq.PROT.RT<- ",tmp,sep='')))		
 		print(seq.PROT.RT)
 		#print(bs)
 		if(bs)		#keep bs0 intact
@@ -1421,10 +1430,17 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 			while(any.eq)
 			{
 				j			<- j+1
-				bs.blocks.n	<- floor( ncol(seq.PROT.RT )/3)
-				bs.blocks.s	<- sample(seq_len(bs.blocks.n),bs.blocks.n,replace=1)-1
-				bs.seq.s	<- as.numeric( sapply(bs.blocks.s,function(x)		3*x+c(1,2,3)		) )
-				seq.BS		<- seq.PROT.RT[,bs.seq.s]
+				if(opt.bootstrap.by=="codon")
+				{
+					bs.blocks.n	<- floor( ncol(seq.PROT.RT )/3)
+					bs.blocks.s	<- sample(seq_len(bs.blocks.n),bs.blocks.n,replace=T)-1
+					bs.seq.s	<- as.numeric( sapply(bs.blocks.s,function(x)		3*x+c(1,2,3)		) )
+				}
+				else if(opt.bootstrap.by=="nucleotide")
+				{
+					bs.seq.s	<- sample(seq_len(ncol(seq.PROT.RT )),ncol(seq.PROT.RT ),replace=T)
+				}
+				seq.BS		<- seq.PROT.RT[,bs.seq.s]				
 				if(check.any.bs.identical)
 				{
 					if(verbose) cat(paste("\ncheck for identity proposed boostrap seq alignment no",j))
@@ -3181,7 +3197,7 @@ project.hivc.beast<- function(dir.name= DATA)
 		argv		<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		cat(argv)
 		argv		<<- unlist(strsplit(argv,' '))
-		hivc.prog.BEAST.poolrunxml()		
+		hivc.prog.BEAST.generate.xml()		
 	}
 	if(0)	#get distribution of TMRCAs of tip nodes for a particular BEAST run
 	{
@@ -3397,6 +3413,29 @@ project.hivc.clustering<- function(dir.name= DATA)
 	{
 		hivc.prog.eval.clustering.bias()
 	}	
+	if(1)
+	{
+		hivc.prog.recombination.checkcandidates()
+		stop()
+		
+		#
+		#	load sequences and create FASTA file to inspect recombinants manually
+		#
+		set(df.recomb, NULL, "dummy", seq_len(nrow(df.recomb)))
+		x				<- subset(df.recomb, parentpair==2)
+		tmp				<- x[, list(FASTASampleCode= c(parent1, parent2, child)),by="dummy"][,FASTASampleCode]
+		tmp				<- seq.PROT.RT[unique(tmp),]
+		file		<- paste(indir,"/SuspiciousNNNRun_3seq.phylip",sep='')		
+		hivc.seq.write.dna.phylip(tmp, file)
+		#
+		tmp				<- df.recomb[, list(FASTASampleCode= c(parent1, parent2, child)),by="dummy"][,FASTASampleCode]
+		tmp				<- seq.PROT.RT[tmp,]
+		file		<- paste(indir,'/',infile,"_3seq_", gsub('/',':',insignat),".fasta",sep='')
+		write.dna(tmp, file, format= "fasta" )
+		x	<- subset(df.recomb, parentpair==2)
+		
+	#
+	}
 	if(0)	#min brl to get a transmission cascade from brl matrix
 	{
 		brlmat	<- matrix( c(0,0.1,0.1, 	0.1,0,0.2,	0.1,0.2,0), ncol=3, nrow=3)
@@ -3978,13 +4017,18 @@ project.hivc.clustering.selectparticularclusters<- function()
 		tmp			<- subset(df.cluinfo[,list(clu.is.bwpat=length(unique(Patient))>1),by="cluster"], clu.is.bwpat, cluster )
 		df.cluinfo	<- merge(tmp, df.cluinfo, by="cluster", all.x=1)
 		#
-		#plot merged clusters that have shared patients
+		# plot merged clusters that have shared patients
 		#
 		outdir			<- indir
-		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"sharingpatclu",sep='')
+		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"sharingpatclu2",sep='')
 		outsignat		<- insignat									
 		tmp				<- hivc.clu.getplot.potentialsuperinfections(clu.pre$ph, clu$clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep='') )		 		
-		
+		# identify potential superinfections by name
+		cluphy.df		<- tmp$cluphy.
+		cluphy.df		<- subset(cluphy.df, select=c(cluster, FASTASampleCode, Patient, PosSeqT))
+		tmp				<- cluphy.df[, list(count= length(unique(cluster)), cluster=cluster, FASTASampleCode=FASTASampleCode, PosSeqT=PosSeqT),by="Patient"]
+		tmp				<- subset(tmp,count>1)
+		unique(tmp[,Patient])
 	}
 	if(1)
 	{	
@@ -4005,7 +4049,12 @@ project.hivc.clustering.selectparticularclusters<- function()
 		outfile					<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectexplosive",sep='')
 		outsignat				<- insignat									
 		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=10, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
-		cluphy					<- tmp$cluphy
+		cluphy					<- tmp$cluphy		
+		cluphy.df				<- subset(cluphy.df, select=c(cluster, FASTASampleCode, Patient,    PosSeqT,   DateBorn, Sex,  CountryBorn, CountryInfection, RegionHospital))			
+		outfile					<- paste(DATA,'/',"tmp",'/',infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectexplosive.csv",sep='')
+		write.table(cluphy.df, file=outfile, sep=",", row.names=F)
+		outfile					<- paste(DATA,'/',"tmp",'/',infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_selectexplosive.R",sep='')
+		save(cluphy.df, file=outfile)
 		#
 		#2) plot clusters with 		npat>4 	very small acute	small brl / npat 	--> explosive for targeted testing -- non - acute
 		#
@@ -4202,6 +4251,373 @@ project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 				})			
 	}
 }
+######################################################################################
+hivc.prog.recombination.process.3SEQ.output<- function()
+{	
+	verbose		<- 1
+	resume		<- 1
+	indir		<- paste(DATA,"tmp",sep='/')		
+	infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"			
+	insignat	<- "Thu_Aug_01_17/05/23_2013"
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]	
+		#		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]		
+	}	
+	if(verbose)
+	{
+		print(verbose)
+		print(resume)
+		print(indir)		
+		print(infile)			
+		print(insignat)			
+	}
+	file		<- paste(indir,'/',infile,'_', gsub('/',':',insignat),".R",sep='')
+	if(verbose)	cat(paste("\nload file ",file))			
+	load(file)
+	#loaded seq.PROT.RT
+	if(resume)
+	{
+		file		<- paste(indir,'/',infile,"_3seq_", gsub('/',':',insignat),".R",sep='')		
+		options(show.error.messages = FALSE)		
+		if(verbose)	cat(paste("\ntry to resume file ",file))
+		readAttempt<-	try(suppressWarnings(load(file)))
+		options(show.error.messages = TRUE)
+		if(!inherits(readAttempt, "try-error") && verbose)	cat(paste("\nresumed file ",file))			
+	}
+	if(!resume || inherits(readAttempt, "try-error"))
+	{
+		if(verbose)	cat(paste("\ngenerate file ",file))			
+		tmp			<- list.files(indir, pattern="3seq$")
+		files		<- tmp[grepl(infile, tmp, fixed=1) & grepl(gsub('/',':',insignat), tmp)]
+		tmp			<- sapply(strsplit(files,'_'), function(x) rev(x)[6] )		#see if filename has '_xx-xx_' string at pos 6 from end  
+		files		<- files[grepl('-', tmp)]		
+		if(verbose)	cat(paste("\nFound 3seq output files matching infile and insignat, n=",length(files)))
+		#	figure out if any consecutive files are missing
+		tmp			<- tmp[grepl('-', tmp)]
+		df.seqchunks<- as.data.table( t( sapply( strsplit(tmp, '-'), as.numeric) ) )
+		setnames(df.seqchunks, c("V1","V2"), c("start","end"))
+		setkey(df.seqchunks, start)
+		tmp			<- subset(df.seqchunks, df.seqchunks[-1,start]-1 != df.seqchunks[-nrow(df.seqchunks),end] )
+		if(nrow(tmp)){		print(tmp); stop("Found missing sequence chunks")		}
+		#	determine non-empty files and number of columns		
+		tmp			<- sapply(files, function(x)
+				{
+					tmp	<- count.fields(paste(indir, '/', x, sep=''), skip=1, sep='\t')
+					ifelse(length(tmp), max(tmp), 0)			
+				})
+		col.max		<- max(tmp)		
+		files		<- files[tmp>0]
+		if(verbose)	cat(paste("\nFound non-empty 3seq files, n=",length(files)))
+		#	read non-empty files
+		col.names		<- c("parent1","parent2","child","m","n","k","p","[p_max]","HS?","log(p)","DS(p)","DS(p)","min_rec_length")
+		if(col.max>length(col.names))
+			col.names	<- c(col.names, paste("bp",seq_len( col.max-length(col.names) ),sep=''))
+		df.recomb		<- lapply(files, function(x)
+				{	
+					if(verbose)	cat(paste("\nprocess file", x))
+					tmp					<- read.delim(paste(indir, '/', x, sep=''), skip=1, header=0, fill=1, col.names=col.names, stringsAsFactors=0, strip.white=T)					
+					as.data.table(tmp)			
+				})
+		df.recomb		<- rbindlist(df.recomb)
+		#	extract FASTASampleCodes from job output
+		tmp				<- df.recomb[, list(m1= regexpr("-[",parent1,fixed=1), m2=regexpr("-[",parent2,fixed=1), mc=regexpr("-[",child,fixed=1)) ]
+		if(any(tmp<1))	stop("Unexpected parent1 or parent2. Parsing error?")
+		df.recomb		<- cbind( df.recomb, tmp )
+		df.recomb[,dummy:=seq_len(nrow(df.recomb))]
+		set(df.recomb, NULL, "parent1", df.recomb[,substr(parent1, 1, m1-1), by="dummy"][,V1])
+		set(df.recomb, NULL, "parent2", df.recomb[,substr(parent2, 1, m2-1), by="dummy"][,V1])
+		set(df.recomb, NULL, "child", df.recomb[,substr(child, 1, mc-1), by="dummy"][,V1])
+		#	extract unique recombinants from job output
+		setkey(df.recomb,child)
+		df.recomb		<- unique(df.recomb)
+		if(verbose)	cat(paste("\nFound recombinant sequences, n=",nrow(df.recomb)))
+		#	order parents
+		tmp				<- df.recomb[, {
+					z<- sort(c(parent1, parent2))
+					list(parent1=z[1], parent2=z[2])
+				} ,by="dummy"]
+		df.recomb		<- df.recomb[, setdiff( colnames(df.recomb), c("parent1","parent2","p","X.p_max.","HS.","DS.p.","m1","m2","mc") ), with=F]
+		df.recomb		<- merge(tmp, df.recomb, by="dummy")
+		#	check if triplets are unique
+		tmp				<- df.recomb[, {
+					z<- sort(c(parent1, parent2, child))
+					list(parent1=z[1], parent2=z[2], child=z[3])
+				} ,by="dummy"]
+		setkeyv(tmp, c("parent1","parent2","child"))
+		tmp				<- unique(tmp)
+		if(nrow(tmp)<nrow(df.recomb))	warning("triplets in df.recomb not unique")
+		#
+		tmp				<- subset(df.recomb, select=c(parent1,parent2,child))
+		setkey(tmp, parent1, parent2)
+		tmp				<- unique(tmp)
+		tmp[, parentpair:=seq_len(nrow(tmp))]				
+		if(verbose)	cat(paste("\nNumber of unique parent pairs, n=",nrow(tmp)))
+		#
+		tmp				<- unique(c(df.recomb[, parent1], df.recomb[, parent2]))
+		if(verbose)	cat(paste("\nNumber of unique parent sequences, n=",length(tmp)))
+		#
+		if(length(unique(df.recomb[,child]))!=nrow(df.recomb))	stop("Unexpected duplicate children - select parents with smallest p?")
+		#
+		tmp				<- subset(df.recomb, select=c(parent1,parent2))
+		setkey(tmp, parent1, parent2)
+		tmp				<- unique(tmp)
+		tmp[, parentpair:=seq_len(nrow(tmp))]				
+		if(verbose)	cat(paste("\nNumber of unique parent pairs, n=",nrow(tmp)))
+		df.recomb		<- merge(df.recomb, tmp, by=c("parent1","parent2"))
+		setnames(df.recomb,c("log.p.","DS.p..1"),c("logp","adjp"))
+		#	candidate breakpoints bp1 etc are all overlapping, consider only bp1 for simplicity	
+		#	evaluate midpoint of breapoint regions		
+		tmp<- strsplit(df.recomb[,bp1], ',')
+		if(any(sapply(tmp, length )!=2)) 	stop("\nunexpected bp1: missing ','")		
+		df.recomb[, bp1.1:= sapply(tmp, "[", 1)]
+		df.recomb[, bp1.2:= sapply(tmp, "[", 2)]
+		set(df.recomb, NULL, "bp1.1", round( sapply(strsplit(df.recomb[,bp1.1], '-'), function(x)	mean(as.numeric(x))	) ) )
+		set(df.recomb, NULL, "bp1.2", round( sapply(strsplit(df.recomb[,bp1.2], '-'), function(x)	min(as.numeric(x))	) ) )
+		df.recomb	<- merge(df.recomb, df.recomb[, list(child.len=max(which(as.character(seq.PROT.RT[child,])!='-'))), by="dummy"], by="dummy" )
+		if(any(df.recomb[, child.len-bp1.2]<0))	stop("\nunexpected breakpoint past end of child sequence")
+		df.recomb[, child.start:= 1]
+		tmp			<- which( df.recomb[, bp1.1<10] )
+		set(df.recomb, tmp, "child.start", df.recomb[tmp, bp1.1])
+		tmp			<- which( df.recomb[, child.len-bp1.2<25] )
+		set(df.recomb, tmp, "child.len", as.integer(df.recomb[tmp, bp1.2]))
+		#	save potential recombinants
+		file		<- paste(indir,'/',infile,"_3seq_", gsub('/',':',insignat),".R",sep='')
+		if(verbose)	cat(paste("\nSave candidate triplets to",file))
+		save(df.recomb, file=file)		
+	}
+	df.recomb
+}
+######################################################################################
+hivc.prog.recombination.check.candidates<- function()
+{	
+	verbose		<- 1
+	resume		<- 1
+	indir		<- paste(DATA,"tmp",sep='/')		
+	infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"			
+	insignat	<- "Thu_Aug_01_17/05/23_2013"
+	
+	id			<- 1
+	seq.select.n<- 15
+	bs.from		<- 0
+	bs.to		<- 499
+	bs.n		<- 500
+	
+	hpc.walltime<- 24
+	hpc.mem		<- "600mb"
+	hpc.nproc	<- 1		
+	hpc.q		<- "pqeph"
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]	
+		#		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									tripletid= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) id<- tmp[1]
+	}	
+	if(verbose)
+	{
+		print(verbose)
+		print(resume)
+		print(indir)		
+		print(infile)			
+		print(insignat)
+		print(id)
+		print(seq.select.n)
+		print(bs.from)
+		print(bs.to)
+		print(bs.n)		
+	}
+	file		<- paste(indir,'/',infile,'_', gsub('/',':',insignat),".R",sep='')
+	if(verbose)	cat(paste("\nload file ",file))			
+	load(file)
+	#	loaded seq.PROT.RT
+	file		<- paste(indir,'/',infile,"_3seq_", gsub('/',':',insignat),".R",sep='')		
+	options(show.error.messages = FALSE)		
+	if(verbose)	cat(paste("\ntry to load file ",file))
+	readAttempt	<-	try(suppressWarnings(load(file)))
+	options(show.error.messages = TRUE)
+	if(inherits(readAttempt, "try-error"))	stop(paste("\nCannot find 3SEQ file, run hivc.prog.recombination.process.3SEQ.output?, file=",file))			
+	#	loaded df.recomb
+	
+	#
+	#	process triplet for dummy id	
+	#
+	seq.select.n<- seq.select.n * 2
+	df.recomb	<- subset(df.recomb, dummy==id)
+	if(verbose)	cat(paste("\nprocess triplet number",id))
+	if(verbose)	print(df.recomb)
+	#	create sequence matrices corresponding to the two breakpoint regions 
+	seq.in		<- seq.PROT.RT[,seq.int(df.recomb[,bp1.1],df.recomb[,bp1.2])]
+	seq.out		<- if(df.recomb[,child.start]<df.recomb[,bp1.1]-1) seq.int(df.recomb[,child.start],df.recomb[,bp1.1]-1) else numeric(0) 
+	seq.out		<- if(df.recomb[,bp1.2]+1<df.recomb[,child.len]) c(seq.out,seq.int(df.recomb[,bp1.2]+1, df.recomb[,child.len]))	else 	seq.out
+	seq.out		<- seq.PROT.RT[,seq.out]
+	#	select background sequences for child based on sequence similarity
+	if(verbose)	cat(paste("\ncompute genetic distances for parent1 parent2 child"))
+	tmp				<- which( rownames(seq.PROT.RT)==df.recomb[,child] )		
+	dummy			<- 0				
+	seq.dist					<- 1 - sapply(seq_len(nrow(seq.in))[-tmp],function(i){		.C("hivc_dist_ambiguous_dna", seq.in[tmp,], seq.in[i,], ncol(seq.in), dummy )[[4]]			})	
+	seq.dist[is.nan(seq.dist)]	<- Inf
+	seq.df			<- data.table( FASTASampleCode=rownames(seq.in)[-tmp] , dist=seq.dist, group="child", region="in" ) 		
+	seq.dist					<- 1 - sapply(seq_len(nrow(seq.out))[-tmp],function(i){		.C("hivc_dist_ambiguous_dna", seq.out[tmp,], seq.out[i,], ncol(seq.out), dummy )[[4]]			})	
+	seq.dist[is.nan(seq.dist)]	<- Inf
+	seq.df			<- rbind(seq.df, data.table( FASTASampleCode=rownames(seq.out)[-tmp] , dist=seq.dist, group="child", region="out" )) 
+	#	select background sequences for parent1 based on sequence similarity
+	tmp				<- which( rownames(seq.PROT.RT)==df.recomb[,parent1] )				
+	seq.dist					<- 1 - sapply(seq_len(nrow(seq.in))[-tmp],function(i){		.C("hivc_dist_ambiguous_dna", seq.in[tmp,], seq.in[i,], ncol(seq.in), dummy )[[4]]			})	
+	seq.dist[is.nan(seq.dist)]	<- Inf
+	seq.df			<- rbind(seq.df,data.table( FASTASampleCode=rownames(seq.in)[-tmp] , dist=seq.dist, group="parent1", region="in" )) 		
+	seq.dist					<- 1 - sapply(seq_len(nrow(seq.out))[-tmp],function(i){		.C("hivc_dist_ambiguous_dna", seq.out[tmp,], seq.out[i,], ncol(seq.out), dummy )[[4]]			})	
+	seq.dist[is.nan(seq.dist)]	<- Inf
+	seq.df			<- rbind(seq.df, data.table( FASTASampleCode=rownames(seq.out)[-tmp] , dist=seq.dist, group="parent1", region="out" )) 
+	#	select background sequences for parent2 based on sequence similarity
+	tmp				<- which( rownames(seq.PROT.RT)==df.recomb[,parent2] )				
+	seq.dist					<- 1 - sapply(seq_len(nrow(seq.in))[-tmp],function(i){		.C("hivc_dist_ambiguous_dna", seq.in[tmp,], seq.in[i,], ncol(seq.in), dummy )[[4]]			})	
+	seq.dist[is.nan(seq.dist)]	<- Inf
+	seq.df			<- rbind(seq.df,data.table( FASTASampleCode=rownames(seq.in)[-tmp] , dist=seq.dist, group="parent2", region="in" )) 		
+	seq.dist					<- 1 - sapply(seq_len(nrow(seq.out))[-tmp],function(i){		.C("hivc_dist_ambiguous_dna", seq.out[tmp,], seq.out[i,], ncol(seq.out), dummy )[[4]]			})	
+	seq.dist[is.nan(seq.dist)]	<- Inf
+	seq.df			<- rbind(seq.df, data.table( FASTASampleCode=rownames(seq.out)[-tmp] , dist=seq.dist, group="parent2", region="out" ))
+	#	first pass:
+	#	select closest FASTASampleCode by group and region to verify recombination breakpoint by phylogenetic incongruence
+	setkeyv(seq.df, c("group","region","dist"))
+	seq.df			<- subset(seq.df, dist>0)
+	if(verbose)	cat(paste("\nFound related sequences with dist>0, n=",nrow(seq.df)))
+	seq.df			<- seq.df[, {
+				tmp<- which.min(dist)
+				list(dist= dist[tmp], group=group[tmp], region=region[tmp])
+			}, by=c("region","FASTASampleCode")]		
+	if(verbose)	cat(paste("\ndetermined which available sequences are closest by group and region"))
+	if(verbose)	print( seq.df[	,	list(n=length(FASTASampleCode)) ,by=c("group","region")] )
+	seq.df			<- seq.df[	,	{
+				tmp<- min(seq.select.n, length(FASTASampleCode))
+				list(FASTASampleCode=FASTASampleCode[seq_len(tmp)], dist=dist[seq_len(tmp)])
+			}, by=c("group","region")]
+	seq.select.n	<- seq.select.n/2
+	#	create alignment of 3*seq.select.n unique sequences for 'in' region
+	#	seq.in 		contains triplet
+	#	seq.in.df 	does not contain triplet
+	if(verbose)	cat(paste("\nSelect sequences for recombinant region 'in'"))
+	tmp						<- c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child], subset( seq.df, region=='in' )[,FASTASampleCode] )
+	seq.in					<- seq.in[tmp,]
+	seq.in					<- hivc.seq.unique(seq.in)
+	seq.in.df				<- merge( data.table(FASTASampleCode=rownames(seq.in)), subset(seq.df,region=="in"), by="FASTASampleCode" )
+	setkey(seq.in.df, dist)
+	if(nrow(seq.in.df)<seq.select.n*3/2)	cat(paste("\ncan only select less than the requested number of sequences, n=",nrow(seq.in.df)))
+	seq.in.order			<- seq.in.df[	,	list(n=length(FASTASampleCode)) ,by=c("group")]		
+	seq.in.order			<- seq.in.order[order(n),]
+	overflow				<- 0
+	ans						<- data.table(FASTASampleCode=NA, group=NA, region=NA, dist=NA)
+	for(x in seq.in.order[,group])
+	{			
+		#print(x)
+		tmp			<- subset(seq.in.df, group==x)
+		#print(tmp)
+		ans			<- rbind(tmp[seq_len( min(seq.select.n+overflow, nrow(tmp)) ),], ans )
+		overflow	<- ifelse(seq.select.n+overflow<nrow(tmp), 0, seq.select.n+overflow-nrow(tmp))
+	}
+	if(overflow>0)	stop("unexpected overflow>0")
+	seq.in.df		<- ans[-nrow(ans),]
+	setkey(seq.in.df, group)		
+	seq.in			<- seq.in[c( df.recomb[,parent1], df.recomb[,parent2], df.recomb[,child], seq.in.df[, FASTASampleCode] ),]
+	rownames(seq.in)<- c( paste("tparent1",df.recomb[,parent1],sep='-'), paste("tparent2",df.recomb[,parent2],sep='-'), paste("tchild",df.recomb[,child],sep='-'), seq.in.df[,list(label=paste(group,FASTASampleCode,sep='-')), by="FASTASampleCode"][,label] )
+	#	save
+	file		<- paste(indir,'/',infile,"_3seqcheck_id",id,"_rIn_",gsub('/',':',insignat),".R",sep='')
+	if(verbose) cat(paste("\nsave to ",file))
+	save(seq.in, file=file)		
+	#	create alignment of 3*seq.select.n unique sequences for 'out' region
+	#	seq.out 		contains triplet
+	#	seq.out.df	 	does not contain triplet
+	if(verbose)	cat(paste("\nSelect sequences for recombinant region 'out'"))
+	tmp						<- c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child], subset( seq.df, region=='out' )[,FASTASampleCode] )
+	seq.out					<- seq.out[tmp,]
+	seq.out					<- hivc.seq.unique(seq.out)
+	seq.out.df				<- merge( data.table(FASTASampleCode=rownames(seq.out)), subset(seq.df,region=="out"), by="FASTASampleCode" )
+	setkey(seq.out.df, dist)
+	if(nrow(seq.out.df)<seq.select.n*3/2)	cat(paste("\ncan only select less than the requested number of sequences, n=",nrow(seq.out.df)))
+	seq.out.order			<- seq.out.df[	,	list(n=length(FASTASampleCode)) ,by=c("group")]		
+	seq.out.order			<- seq.out.order[order(n),]
+	overflow				<- 0
+	ans						<- data.table(FASTASampleCode=NA, group=NA, region=NA, dist=NA)
+	for(x in seq.out.order[,group])
+	{			
+		#print(x)
+		tmp			<- subset(seq.out.df, group==x)
+		#print(tmp)
+		ans			<- rbind(tmp[seq_len( min(seq.select.n+overflow, nrow(tmp)) ),], ans )
+		overflow	<- ifelse(seq.select.n+overflow<nrow(tmp), 0, seq.select.n+overflow-nrow(tmp))
+	}
+	if(overflow>0)	stop("unexpected overflow>0")
+	seq.out.df		<- ans[-nrow(ans),]
+	setkey(seq.out.df, group)		
+	seq.out			<- seq.out[c( df.recomb[,parent1], df.recomb[,parent2], df.recomb[,child], seq.out.df[, FASTASampleCode] ),]
+	rownames(seq.out)<- c( paste("tparent1",df.recomb[,parent1],sep='-'), paste("tparent2",df.recomb[,parent2],sep='-'), paste("tchild",df.recomb[,child],sep='-'), seq.out.df[,list(label=paste(group,FASTASampleCode,sep='-')), by="FASTASampleCode"][,label] )
+	#	save
+	file		<- paste(indir,'/',infile,"_3seqcheck_id",id,"_rOut_",gsub('/',':',insignat),".R",sep='')
+	if(verbose) cat(paste("\nsave to ",file))
+	save(seq.out, file=file)
+	#
+	#	run bootstrap ExaML for regions 'in' and 'out', all boostraps on one processor
+	#				
+	infile.exa	<- paste(infile,"_3seqcheck_id",id,"_rIn",sep='')		
+	cmd			<- hivc.cmd.examl.bootstrap(indir, infile.exa, gsub('/',':',insignat),gsub('/',':',insignat), bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, outdir=indir, opt.bootstrap.by="nucleotide", resume=1, verbose=1)
+	infile.exa	<- paste(infile,"_3seqcheck_id",id,"_rOut",sep='')		
+	cmd			<- c(cmd, hivc.cmd.examl.bootstrap(indir, infile.exa, gsub('/',':',insignat),gsub('/',':',insignat), bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, outdir=indir, opt.bootstrap.by="nucleotide", resume=1, verbose=1))
+	#
+	if(verbose) cat(paste("\ncreated ExaML bootstrap runs, n=",length(cmd)))
+	cmd			<- paste(cmd,collapse='\n')
+	#cat(cmd)
+	if(verbose) cat(paste("\nqsub ExaML bootstrap runs, hpc.walltime=",hpc.walltime," hpc.mem=",hpc.mem," hpc.nproc=",hpc.nproc," hpc.q=",hpc.q))
+	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem, hpc.nproc=hpc.nproc)
+	signat		<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+	outdir		<- paste(DATA,"tmp",sep='/')
+	outfile		<- paste("3sc",signat,"qsub",sep='.')
+	#cat(cmd)			
+	hivc.cmd.hpccaller(outdir, outfile, cmd)
+	Sys.sleep(1)
+}		
 ######################################################################################
 hivc.prog.eval.clustering.bias<- function()
 {
@@ -4733,6 +5149,7 @@ hivc.prog.remove.resistancemut<- function()
 ######################################################################################
 hivc.prog.BEAST.evalpoolrun<- function()
 {	
+	require(phangorn)
 	indircov			<- paste(DATA,"derived",sep='/')	
 	infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"			
 	file.cov			<- paste(indircov,"/",infilecov,".R",sep='')
@@ -4746,8 +5163,9 @@ hivc.prog.BEAST.evalpoolrun<- function()
 	insignat			<- "Tue_Aug_26_09/13/47_2013"
 	infilexml.opt		<- "txs4clu"
 	infilexml.opt		<- "mph4clu"
-	infilexml.opt		<- "mph4clutx4tipLdTd"
-	infilexml.template	<- "um232rhU2045"	
+	infilexml.opt		<- "mph4clutx4tip"
+	infilexml.template	<- "um232rhU2045"
+	infilexml.template	<- "um182rhU2045"
 	#infilexml.opt		<- "mph4cluLdTd"
 	#infilexml.template	<- "um22rhG202018"
 	#infilexml.template	<- "um182rhU2045ay"	
@@ -4759,6 +5177,7 @@ hivc.prog.BEAST.evalpoolrun<- function()
 	beastlabel.idx.clu			<- 1
 	beastlabel.idx.hivs			<- ifelse(any(sapply(c("LdTd","LsTd"), function(x) grepl(x,infilexml.opt))),	5,	4)
 	beastlabel.idx.samplecode	<- 6	
+	beastlabel.idx.rate			<- 7
 	
 	if(exists("argv"))
 	{
@@ -4829,7 +5248,7 @@ hivc.prog.BEAST.evalpoolrun<- function()
 		if(length(file.nex)==pool.n)
 		{
 			#	read treeannotator .nex file
-			ph.beast		<- lapply(file.nex, function(x)		hivc.treeannotator.read(paste(indir,x,sep='/'), verbose=verbose)		)
+			ph.beast		<- lapply(file.nex, function(x)		hivc.treeannotator.read(paste(indir,x,sep='/'), add.to.tiplabel=c("rate_median"), rate.multiplier=1e3, round.digit=2, verbose=verbose)		)
 			if(verbose)	cat(paste("\nRead trees matching input args, n=", length(ph.beast)))
 			#	read length of tip stems
 			file.log		<- sapply(file.log, function(x)					paste(indir,x,sep='/') )
@@ -4838,16 +5257,26 @@ hivc.prog.BEAST.evalpoolrun<- function()
 			df.tstem		<- rbindlist( df.tstem )
 			#	load all patient covariates
 			load(file.cov)								
-			#			
-			tmp				<- hivc.treeannotator.get.phy(ph.beast, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, debug=0)
+			#	build single tree from pooled runs
+			tmp				<- hivc.treeannotator.get.phy(ph.beast, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate, debug=0)
 			cluphy			<- tmp$cluphy 
 			ph.tip.ctime	<- tmp$ph.tip.ctime 				
 			ph.root.ctime	<- tmp$ph.root.ctime
+			#	extract rates		
+			rates.df		<- hivc.treeannotator.get.rates(cluphy, tmp$ph.tip.df, nodelabel.idx.edgewidth=5)
 			#	convert tstem time into calendar time
 			tmp				<- data.table( FASTASampleCode=cluphy$tip.label, tip=seq_along(cluphy$tip.label), mrca= Ancestors(cluphy, seq_along(cluphy$tip.label), type="parent")-Ntip(cluphy) )			 
 			df.tstem		<- merge( df.tstem, tmp, by="FASTASampleCode" )			
 			set(df.tstem, NULL, "tstem", df.tstem[, max(ph.tip.ctime)-tstem])
 			df.tstem		<- subset(df.tstem, select=c(tip, mrca, tstem, density))
+			#	get length of 95% TMRCAs of tip stems
+			cluphy.tstem	<- df.tstem[,	{
+												x<- data.table(tstem, density)
+												x[,dummy:=-density]
+												setkey(x,dummy)			
+												x[,cdensity:= cumsum(x[,density]/sum(x[,density]))]							
+												list(height_95_diff= diff(range(subset(x, cdensity<0.95, tstem))) )							
+											},	by="tip"]			
 			#
 			cluphy.df		<- hivc.treeannotator.get.clusterprob(ph.beast, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.samplecode=beastlabel.idx.samplecode)
 			cluphy.df		<- merge(cluphy.df, df.all, by="FASTASampleCode")
@@ -4857,17 +5286,32 @@ hivc.prog.BEAST.evalpoolrun<- function()
 			#
 			file		<- paste(indir,'/',infile,'_',infilexml.template,'_',infilexml.opt,"_mcc_",gsub('/',':',insignat),".R",sep='')
 			if(verbose)	cat(paste("\nSave mcc tree objects to file",file))
-			save(cluphy, cluphy.tmrca, cluphy.df, file=file)			
+			save(cluphy, cluphy.tmrca, cluphy.df, cluphy.tstem, file=file)			
 			#
-			#	plot tip TMRCAs
+			#	plot cluster TMRCAs
 			#
 			if(plot)
 			{
 				tmp			<- sort(cluphy.tmrca[, height_95_diff])	
+				file		<- paste(indir,'/',infile,'_',infilexml.template,'_',infilexml.opt,"_mcc_clutmrca_",gsub('/',':',insignat),".pdf",sep='')
+				if(verbose)	cat(paste("\nPlot cluster TMRCAs to file",file))
+				pdf(file,width=7,height=7)
+				plot( tmp, seq_len(nrow(cluphy.tmrca)), type="l", xlab='width of 95% interval of TMRCA of clusters', ylab='#MRCA of clusters', bty='n' )
+				tmp			<- quantile(tmp, prob=c(0.25,0.5,0.8,0.9,0.95))
+				legend("bottomright",bty='n',border=NA,legend=paste( apply(rbind(names(tmp), round(tmp,d=2)),2,function(x) paste(x,collapse='=',sep='')), collapse=', ',sep=''))
+				legend("topleft",bty='n',border=NA,legend=paste(infilexml.template,infilexml.opt,sep='_'))
+				dev.off()
+			}
+			#
+			#	plot tip stem TMRCAs
+			#
+			if(plot)
+			{
+				tmp			<- sort(cluphy.tstem[, height_95_diff])	
 				file		<- paste(indir,'/',infile,'_',infilexml.template,'_',infilexml.opt,"_mcc_tiptmrca_",gsub('/',':',insignat),".pdf",sep='')
 				if(verbose)	cat(paste("\nPlot tip TMRCAs to file",file))
 				pdf(file,width=7,height=7)
-				plot( tmp, seq_len(nrow(cluphy.tmrca)), type="l", xlab='width of 95% interval of TMRCA of tips', ylab='#MRCA of tips', bty='n' )
+				plot( tmp, seq_len(nrow(cluphy.tstem)), type="l", xlab='width of 95% interval of TMRCA of tips', ylab='#MRCA of tips', bty='n' )
 				tmp			<- quantile(tmp, prob=c(0.25,0.5,0.8,0.9,0.95))
 				legend("bottomright",bty='n',border=NA,legend=paste( apply(rbind(names(tmp), round(tmp,d=2)),2,function(x) paste(x,collapse='=',sep='')), collapse=', ',sep=''))
 				legend("topleft",bty='n',border=NA,legend=paste(infilexml.template,infilexml.opt,sep='_'))
@@ -4892,7 +5336,7 @@ hivc.prog.BEAST.evalpoolrun<- function()
 				#youngest.tip.ctime	<- 2010.46
 				file				<- paste(indir,'/',infile,'_',infilexml.template,'_',infilexml.opt,"_mcc_",gsub('/',':',insignat),".pdf",sep='')
 				if(verbose)	cat(paste("\nplotting dated clusters to file", file ))
-				dummy				<- hivc.treeannotator.plot(cluphy, ph.root.ctime, youngest.tip.ctime, df.all, df.viro, df.immu, df.treatment=df.treatment, df.tstem=df.tstem, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=file, pdf.width=7, pdf.height=150)
+				dummy				<- hivc.treeannotator.plot(cluphy, ph.root.ctime, youngest.tip.ctime, df.all, df.viro, df.immu, df.treatment=df.treatment, df.tstem=df.tstem, df.rates=rates.df, end.ctime=2013.3, cex.nodelabel=0.5, cex.tiplabel=0.5, file=file, pdf.width=7, pdf.height=150)
 			}
 		}
 		else if(verbose)	
@@ -4900,7 +5344,7 @@ hivc.prog.BEAST.evalpoolrun<- function()
 	}
 }
 ######################################################################################
-hivc.prog.BEAST.poolrunxml<- function()
+hivc.prog.BEAST.generate.xml<- function()
 {	
 	require(XML)
 	
@@ -5123,11 +5567,12 @@ hivc.prog.get.geneticdist<- function()
 	library(bigmemory)
 	library(ape)
 	
-	indir	<- outdir<- paste(DATA,"tmp",sep='/')
-	infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
-	resume	<- verbose <- 1	
-	signat 	<- "Wed_May__1_17/08/15_2013"
-	gd.max	<- 0.045 	
+	indir		<- outdir<- paste(DATA,"tmp",sep='/')
+	infile		<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
+	resume		<- verbose <- 1	
+	signat 		<- "Wed_May__1_17/08/15_2013"
+	gd.max		<- NA
+	out.phylip	<- 0
 	if(exists("argv"))
 	{
 		tmp<- na.omit(sapply(argv,function(arg)
@@ -5169,37 +5614,34 @@ hivc.prog.get.geneticdist<- function()
 		print(gd.max)
 	}	
 	
-	pattern 	<- paste(infile,"_Gd",gd.max*1000,"_",gsub('/',':',signat),".R",sep='')
-	file		<- list.files(path=outdir, pattern=pattern, full.names=1)
-	if(!resume || !length(file))
+	tmp			<- list.files(outdir, pattern=paste(".gdm$",sep=''))		
+	file		<- tmp[ grepl(paste(infile,'_',sep=''), tmp) & grepl(gsub('/',':',signat), tmp) ]
+	if(verbose)	cat(paste("\nFound .gdm files matching input args, n=", length(file)))	
+	if(resume)
 	{
-		#extract sequences and store as phylip
-		#see if gdm file is already there
-		pattern 	<- gsub('/',':',paste(signat,".gdm$",sep=''))		
-		file		<- list.files(path=outdir, pattern=pattern, full.names=1)		
-		if(!resume || !length(file))	
-		{		
-			if(verbose)	cat(paste("\ncreate gdm file"))
-			file				<- paste(indir,"/",infile,"_",gsub('/',':',signat),".R",sep='')
-			if(verbose)	cat(paste("\nload",file))
-			load(file)
-			str(seq.PROT.RT)		
+		if(verbose)	cat(paste("\nloading",file))
+		gd.bigmat			<- read.big.matrix(file, has.row.names=1, sep=',', type="char")		
+	}
+	if(!resume || !length(file))
+	{		
+		if(verbose)	cat(paste("\ncreate gdm file"))
+		file				<- paste(indir,"/",infile,"_",gsub('/',':',signat),".R",sep='')
+		if(verbose)	cat(paste("\nload",file))
+		load(file)
+		str(seq.PROT.RT)		
 			#tmp				<- tmp[1:10,]
-			gd.bigmat			<- hivc.seq.dist(  seq.PROT.RT )
-			file				<- paste(outdir,"/",infile,"_",gsub('/',':',signat),".gdm",sep='')
-			if(verbose) cat(paste("\nwrite to",file))
-			write.big.matrix(gd.bigmat, file, row.names= 1, col.names=0, sep=',')		
-			#gd.bigmat.d 		<- describe( gd.bigmat )
-			#file				<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat),".gdm",sep='')		
-			#dput(gd.bigmat.d, file=file)
-		}
-		else 
-		{
-			if(verbose)	cat(paste("\nloading",file))
-			gd.bigmat			<- read.big.matrix(file, has.row.names=1, sep=',', type="char")
-		}
-		stop()
-		#now have pairwise genetic distances in gd.bigmat
+		gd.bigmat			<- hivc.seq.dist(  seq.PROT.RT )
+		file				<- paste(outdir,"/",infile,"_",gsub('/',':',signat),".gdm",sep='')
+		if(verbose) cat(paste("\nwrite to",file))
+		write.big.matrix(gd.bigmat, file, row.names= 1, col.names=0, sep=',')		
+		#gd.bigmat.d 		<- describe( gd.bigmat )
+		#file				<- paste(outdir,"/ATHENA_2013_03_FirstAliSequences_PROTRT_",gsub('/',':',signat),".gdm",sep='')		
+		#dput(gd.bigmat.d, file=file)
+	}
+	if(!is.na(gd.max))
+	{
+		if(verbose)	cat(paste("\nselect sequences with at least one other sequence within gd.max",gd.max))
+		#	now have pairwise genetic distances in gd.bigmat
 		gd.bigmat.min	<- sapply(seq.int(1,nrow(gd.bigmat)-1),function(i)
 								{
 									tmp<- which.min(gd.bigmat[i,])
@@ -5214,38 +5656,27 @@ hivc.prog.get.geneticdist<- function()
 		if(verbose)	cat(paste("\nload",file))
 		load(file)
 		seq.PROT.RT.gd	<- seq.PROT.RT[ rownames(gd.bigmat)[gd.seqs], ]
-		
+		#	save selected sequences in R
 		file 			<- paste(outdir,"/",infile,"_Gd",gd.max*1000,"_",gsub('/',':',signat),".R",sep='')		
-		save(seq.PROT.RT.gd, file=file)
+		save(seq.PROT.RT.gd, file=file)		
+		#	save selected sequences in phylip
+		if(out.phylip)
+		{
+			file 			<- paste(outdir,"/",infile,"_Gd",gd.max*1000,"_",gsub('/',':',signat),".phylip",sep='')
+			if(verbose) cat(paste("\nwrite to ",file))
+			hivc.seq.write.dna.phylip(seq.PROT.RT.gd, file=file)
+		}
 	}
 	else
 	{
-		if(verbose)	cat(paste("\nloading",file))
-		load(file)
+		seq.PROT.RT.gd<- NULL		
 	}
-	#now have seq.PROT.RT.gd
-	file			<- paste(outdir,"/ATHENA_2013_03_Gd",gd.max*1000,"Sequences_PROTRT_",gsub('/',':',signat),".phylip",sep='')
-	if(verbose) cat(paste("\nwrite to ",file))
-	hivc.seq.write.dna.phylip(seq.PROT.RT.gd, file=file)								
+	list(gd.bigmat=gd.bigmat, seq.PROT.RT.gd=seq.PROT.RT.gd)						
 }
 
-hivc.proj.pipeline<- function()
+hivc.pipeline.recombination<- function()
 {
-	dir.name<- DATA		 
-	signat.in	<- "Wed_May__1_17/08/15_2013"
-	signat.out	<- "Wed_May__1_17/08/15_2013"		
-	cmd			<- ''
-
-	if(0)	#align sequences in fasta file with Clustalo
-	{
-		indir	<- paste(dir.name,"tmp",sep='/')
-		outdir	<- paste(dir.name,"tmp",sep='/')
-		infile	<- "ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_Wed_May__1_17:08:15_2013.fasta"
-		infile	<- "ATHENA_2013_03_All+LANL_Sequences_Sat_Jun_16_17:23:46_2013.fasta"
-		cmd		<- hivc.cmd.clustalo(indir, infile, signat='', outdir=outdir)
-		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1)
-	}
-	if(1)	#find potential recombinants
+	if(0)	#generate candidate recombinants	- 	this is computationally expensive
 	{
 		indir		<- paste(DATA,"tmp",sep='/')		
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
@@ -5257,44 +5688,106 @@ hivc.proj.pipeline<- function()
 		load(file)
 		batch.seq		<- round(seq.int(0,nrow(seq.PROT.RT),len=batch.n),d=0)
 		batch.seq		<- rbind(batch.seq[-length(batch.seq)], batch.seq[-1]-1)
-		batch.seq		<- batch.seq[,1:10]	#test run
+		#batch.seq		<- batch.seq[,1:10]	#test run
 		file			<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".phylip",sep='')
 		lapply(seq_len(ncol(batch.seq)),function(j)
-				{
-					
-					cmd			<- hivc.cmd.recomb.3seq(infile=file, outfile=paste(indir,'/',infile,'_',batch.seq[1,j],'-',batch.seq[2,j],'_',gsub('/',':',insignat),".3seq",sep=''), recomb.3seq.siglevel=0.1, nproc=1, recomb.3seq.testvsall.beginatseq=batch.seq[1,j], recomb.3seq.testvsall.endatseq=batch.seq[2,j], verbose=1)
+				{					
+					cmd			<- hivc.cmd.recombination.run.3seq(infile=file, outfile=paste(indir,'/',infile,'_',batch.seq[1,j],'-',batch.seq[2,j],'_',gsub('/',':',insignat),".3seq",sep=''), recomb.3seq.siglevel=0.1, nproc=1, recomb.3seq.testvsall.beginatseq=batch.seq[1,j], recomb.3seq.testvsall.endatseq=batch.seq[2,j], verbose=1)
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=35, hpc.q="pqeph", hpc.mem="3850mb",  hpc.nproc=1)
 					cat(cmd)
 					outdir		<- indir
 					outfile		<- paste("r3seq",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')									
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
-				})
-		
+				})		
 		stop()
 	}
-	if(0)	#extract first sequences for each patient as available from ATHENA data set
+	if(1)	#validate candidate recombinants
 	{
-		indir		<- paste(dir.name,"tmp",sep='/')
-		infile		<- "ATHENA_2013_03_SeqMaster.R"		
-		outdir		<- paste(dir.name,"tmp",sep='/')
-		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
+		indir		<- paste(DATA,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		resume		<- 1
+		
+		argv				<<-	hivc.cmd.recombination.process.3SEQ.output(indir, infile, insignat, resume=resume, verbose=1) 
+		argv				<<- unlist(strsplit(argv,' '))
+		df.recomb			<- hivc.prog.recombination.process.3SEQ.output()	
+		
+		triplets			<- seq_len(nrow(df.recomb))
+		i<- 1
+		argv				<<- hivc.cmd.recombination.check.candidates(indir, infile, insignat, triplets[i], resume=resume, verbose=1)
+		argv				<<- unlist(strsplit(argv,' '))
+		hivc.prog.recombination.check.candidates()		#this starts ExaML for the ith triplet
 	}
-	if(0)	#compute raw pairwise genetic distances accounting correctly for ambiguous IUPAC nucleotides 
-	{				
-		gd.max		<- 0.045
+}
+
+hivc.pipeline.ExaML<- function()
+{
+	if(0)	#compute one ExaML tree, no bootstrapping
+	{		
+		indir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
+		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
+	}
+	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over initial starting trees to start ML search.
+	{
+		bs.from	<- 0
+		bs.to	<- 0
+		bs.n	<- 100
 		signat.in	<- "Sat_May_11_14/23/46_2013"
 		signat.out	<- "Sat_May_11_14/23/46_2013"				
-		indir		<- paste(dir.name,"tmp",sep='/')
-		infile		<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
-		outdir		<- paste(dir.name,"tmp",sep='/')
-		cmd			<- paste(cmd,hivc.cmd.get.geneticdist(indir, infile, signat.out, gd.max, outdir=outdir),sep='', resume=0)
+		indir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
+		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRTCD3"
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		cmd		<- hivc.cmd.examl.bsstarttree(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
+		#check if we have all bs.n files. if yes, combine and cleanup
 		
-		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')					
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q="pqeph")
-		cat(cmd)
-		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		outdir	<- paste(dir.name,"tmp",sep='/')							
+		lapply(cmd, function(x)
+				{				
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("pipeline",signat,"qsub",sep='.')
+					cat(x)
+					#hivc.cmd.hpccaller(outdir, outfile, x)
+					#Sys.sleep(1)
+				})
+		stop()
+	}
+	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
+	{
+		bs.from		<- 0
+		bs.to		<- 0
+		bs.n		<- 100
+		
+		indir		<- paste(dir.name,"tmp",sep='/')
+		#infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences"
+		#signat.in	<- "Sat_Jun_16_17:23:46_2013"								
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+		signat.in	<- "Thu_Aug_01_17/05/23_2013"	
+		#infile		<- "UKCA_2013_07_TNTPHIVnGTR"
+		#signat.in	<- "Mon_Sep_22_17/23/46_2013"
+		
+		outdir		<- paste(dir.name,"tmp",sep='/')
+		cmd			<- hivc.cmd.examl.bootstrap(indir,infile,gsub('/',':',signat.in),gsub('/',':',signat.in),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
+		outdir		<- paste(dir.name,"tmp",sep='/')							
+		lapply(cmd, function(x)
+				{				
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q=NA, hpc.mem="3850mb", hpc.nproc=8)
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("exa",signat,"qsub",sep='.')
+					cat(x)					
+					hivc.cmd.hpccaller(outdir, outfile, x)
+					Sys.sleep(1)
+				})
 		stop()
 	}	
+}
+
+hivc.pipeline.clustering<- function()
+{	
 	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
 	{	
 		resume		<- 1
@@ -5316,7 +5809,7 @@ hivc.proj.pipeline<- function()
 		opt.brl		<- "dist.brl.casc" 
 		thresh.brl	<- 0.096
 		thresh.bs	<- 0.8		
-
+		
 		cmd			<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov)		
 		cmd			<- paste(cmd, hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=resume),sep='')
 		cmd			<- paste(cmd, hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.max", patient.n=patient.n, resume=resume),sep='')
@@ -5331,6 +5824,10 @@ hivc.proj.pipeline<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
 	}
+}
+
+hivc.pipeline.BEAST<- function()
+{
 	if(0)	#run BEAST POOL
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
@@ -5367,7 +5864,7 @@ hivc.proj.pipeline<- function()
 		infilexml.opt		<- "mph4clutx4tipLdTd"
 		infilexml.opt		<- "mph4clutx4tipLsTd"
 		#infilexml.opt		<- "mph4clutx4tip"
-	
+		
 		outdir				<- indir
 		outsignat			<- "Tue_Aug_26_09/13/47_2013"
 		
@@ -5383,71 +5880,51 @@ hivc.proj.pipeline<- function()
 		
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))
-		hivc.prog.BEAST.poolrunxml()		
+		hivc.prog.BEAST.generate.xml()		
 		stop()
 	}
-	if(0)	#compute one ExaML tree, no bootstrapping
-	{		
-		indir	<- paste(dir.name,"tmp",sep='/')
-		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
-		outdir	<- paste(dir.name,"tmp",sep='/')
-		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
-		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
-	}
-	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
+}
+
+hivc.proj.pipeline<- function()
+{
+	stop()
+	dir.name<- DATA		 
+	signat.in	<- "Wed_May__1_17/08/15_2013"
+	signat.out	<- "Wed_May__1_17/08/15_2013"		
+	cmd			<- ''
+
+	if(0)	#align sequences in fasta file with Clustalo
 	{
-		bs.from		<- 0
-		bs.to		<- 0
-		bs.n		<- 100
-								
+		indir	<- paste(dir.name,"tmp",sep='/')
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_Wed_May__1_17:08:15_2013.fasta"
+		infile	<- "ATHENA_2013_03_All+LANL_Sequences_Sat_Jun_16_17:23:46_2013.fasta"
+		cmd		<- hivc.cmd.clustalo(indir, infile, signat='', outdir=outdir)
+		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1)
+	}	
+	if(0)	#extract first sequences for each patient as available from ATHENA data set
+	{
 		indir		<- paste(dir.name,"tmp",sep='/')
-		#infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences"
-		#signat.in	<- "Sat_Jun_16_17:23:46_2013"								
-		#infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
-		#signat.in	<- "Thu_Aug_01_17/05/23_2013"	
-		infile		<- "UKCA_2013_07_TNTPHIVnGTR"
-		signat.in	<- "Mon_Sep_22_17/23/46_2013"
-		
+		infile		<- "ATHENA_2013_03_SeqMaster.R"		
 		outdir		<- paste(dir.name,"tmp",sep='/')
-		cmd			<- hivc.cmd.examl.bootstrap(indir,infile,gsub('/',':',signat.in),gsub('/',':',signat.in),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
-		outdir		<- paste(dir.name,"tmp",sep='/')							
-		lapply(cmd, function(x)
-				{				
-					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q=NA, hpc.mem="3850mb", hpc.nproc=8)
-					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-					outfile	<- paste("exa",signat,"qsub",sep='.')
-					cat(x)					
-					hivc.cmd.hpccaller(outdir, outfile, x)
-					Sys.sleep(1)
-				})
-		stop()
+		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
-	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over initial starting trees to start ML search.
-	{
-		bs.from	<- 0
-		bs.to	<- 0
-		bs.n	<- 100
-		signat.in	<- "Sat_May_11_14/23/46_2013"
-		signat.out	<- "Sat_May_11_14/23/46_2013"				
-		indir	<- paste(dir.name,"tmp",sep='/')
-		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
-		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRTCD3"
-		outdir	<- paste(dir.name,"tmp",sep='/')
-		cmd		<- hivc.cmd.examl.bsstarttree(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
-		#check if we have all bs.n files. if yes, combine and cleanup
-			
-		outdir	<- paste(dir.name,"tmp",sep='/')							
-		lapply(cmd, function(x)
-				{				
-					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
-					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-					outfile	<- paste("pipeline",signat,"qsub",sep='.')
-					cat(x)
-					#hivc.cmd.hpccaller(outdir, outfile, x)
-					#Sys.sleep(1)
-				})
+	if(0)	#compute raw pairwise genetic distances accounting correctly for ambiguous IUPAC nucleotides 
+	{				
+		gd.max		<- 0.045
+		indir		<- paste(DATA,"tmp",sep='/')
+		#infile		<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
+		#insignat	<- "Sat_May_11_14/23/46_2013"				
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		cmd			<- hivc.cmd.get.geneticdist(indir, infile, insignat, gd.max, outdir=indir)
+		
+		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')					
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q="pqeph")
+		cat(cmd)
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
-	}
+	}	
 	
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 	outdir	<- paste(dir.name,"tmp",sep='/')

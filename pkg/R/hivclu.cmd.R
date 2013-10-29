@@ -44,6 +44,12 @@ PR.EXAML.BSCREATE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBOOTSTR
 PR.RECOMB.3SEQ	<- "3seq"
 
 #' @export
+PR.RECOMB.PROCESS3SEQOUTPUT	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeRECOMB.PROCESS3SEQOUT",sep='/')
+
+#' @export
+PR.RECOMB.CHECKCANDIDATES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeRECOMB.CHECKCANDIDATES",sep='/')
+
+#' @export
 PR.EXAML.PARSER	<- "ExaML-parser"
 
 #' @export
@@ -129,7 +135,7 @@ hivc.cmd.blast<- function(indir, infile, insignat, dbdir, dbfile, dbsignat, outd
 
 #generate 3seq command
 #' @export
-hivc.cmd.recomb.3seq<- function(infile, outfile=paste(infile,".3s.rec",sep=''), recomb.3seq.siglevel=0.1, recomb.3seq.testvsall.beginatseq=NA, recomb.3seq.testvsall.endatseq=NA, prog= PR.RECOMB.3SEQ, nproc=1, verbose=1)
+hivc.cmd.recombination.run.3seq<- function(infile, outfile=paste(infile,".3s.rec",sep=''), recomb.3seq.siglevel=0.1, recomb.3seq.testvsall.beginatseq=NA, recomb.3seq.testvsall.endatseq=NA, prog= PR.RECOMB.3SEQ, nproc=1, verbose=1)
 {
 	cmd<- "#######################################################
 # start: run 3Seq
@@ -149,6 +155,44 @@ hivc.cmd.recomb.3seq<- function(infile, outfile=paste(infile,".3s.rec",sep=''), 
 # end: run 3Seq
 #######################################################\n",sep='')
 	cmd			
+}
+
+#process 3seq output
+#' @export
+hivc.cmd.recombination.process.3SEQ.output<- function(indir, infile, insignat, prog= PR.RECOMB.PROCESS3SEQOUTPUT, resume=1, verbose=1)
+{
+	cmd<- "#######################################################
+# start: run hivc.prog.recombination.process.3SEQ.output
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
+	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd<- paste(cmd,"#######################################################
+# end: run hivc.prog.recombination.process.3SEQ.output
+#######################################################\n",sep='')
+	cmd	
+}
+
+#check 3seq candidate recombinants
+#' @export
+hivc.cmd.recombination.check.candidates<- function(indir, infile, insignat, triplet.id, prog= PR.RECOMB.CHECKCANDIDATES, resume=1, verbose=1)
+{
+	cmd<- "#######################################################
+# start: hivc.prog.recombination.check.candidates
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
+	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat," -tripletid=",triplet.id,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd<- paste(cmd,"#######################################################
+# end: hivc.prog.recombination.check.candidates
+#######################################################\n",sep='')
+	cmd	
 }
 
 #generate clustalo command
@@ -279,14 +323,17 @@ hivc.cmd.preclustering<- function(indir, infile, insignat, indircov, infilecov, 
 hivc.cmd.get.geneticdist<- function(indir, infile, signat, gd.max, outdir=indir, prog= PR.GENDISTMAT, resume=1, verbose=1)
 {
 	cmd<- "#######################################################
-# compute geneticdist
+# start: compute genetic distance matrix of sequence alignment
 #######################################################"
 	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
 	#default commands
 	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
 	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir," -signat=",signat," -maxgd=",gd.max,sep='')
 	#verbose stuff
-	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd<- paste(cmd,"#######################################################
+# end: compute genetic distance matrix of sequence alignment
+#######################################################\n",sep='')
 	cmd
 }
 
@@ -369,12 +416,12 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 
 #' @export
 #' 	creates a shell command to create a new bootstrap alignment over codon positions of an input alignment 
-hivc.cmd.examl.bsalignment<- function(indir, infile, signat.in, signat.out, bs.id, outdir=indir, prog.bscreate= PR.EXAML.BSCREATE, resume=0, verbose=1)
+hivc.cmd.examl.bsalignment<- function(indir, infile, signat.in, signat.out, bs.id, outdir=indir, prog.bscreate= PR.EXAML.BSCREATE, opt.bootstrap.by="codon",resume=0, verbose=1)
 {
 	cmd			<- paste("#######################################################
 # start: create and check bootstrap alignment
 #######################################################\n",sep='')
-	cmd			<- paste(cmd,prog.bscreate," -resume=",resume," -bootstrap=",bs.id,sep='')
+	cmd			<- paste(cmd,prog.bscreate," -resume=",resume," -bootstrap=",bs.id," -by=",opt.bootstrap.by,sep='')
 	cmd			<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir,sep='')
 	cmd			<- paste(cmd," -insignat=",signat.in," -outsignat=",signat.out,sep='')
 	cmd			<- paste(cmd,"\n#######################################################
@@ -384,7 +431,7 @@ hivc.cmd.examl.bsalignment<- function(indir, infile, signat.in, signat.out, bs.i
 }
 
 #' @export
-hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.to=99, bs.n=bs.to-bs.from+ifelse(bs.from==0,1,0),outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, args.examl="-m GAMMA -D", prog.supportadder=PR.EXAML.BS, tmpdir.prefix="examl", resume=1, verbose=1)
+hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.to=99, bs.n=bs.to-bs.from+ifelse(bs.from==0,1,0), outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, opt.bootstrap.by="codon", args.examl="-m GAMMA -D", prog.supportadder=PR.EXAML.BS, tmpdir.prefix="examl", resume=1, verbose=1)
 {
 	hpcsys		<- hivc.get.hpcsys()
 	#hpcsys		<- "cx1.hpc.ic.ac.uk"
@@ -396,7 +443,7 @@ hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.fro
 				cmd			<- ''
 				if(hpcsys=="debug")						#my MAC - don t use scratch
 				{
-					cmd		<- paste(cmd,hivc.cmd.examl.bsalignment(indir, infile, signat.in, signat.out, bs.id[i], outdir=indir, verbose=verbose),sep='\n')
+					cmd		<- paste(cmd,hivc.cmd.examl.bsalignment(indir, infile, signat.in, signat.out, bs.id[i], opt.bootstrap.by=opt.bootstrap.by, outdir=indir, verbose=verbose),sep='\n')
 					cmd		<- paste(cmd,hivc.cmd.examl(indir, infile, signat.in, signat.out, outdir=outdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='\n')
 				}
 				else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
@@ -407,7 +454,7 @@ hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.fro
 					cmd		<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
 					tmp		<- paste(indir,'/',infile,'_',gsub('/',':',signat.in),".R",sep='')
 					cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
-					cmd		<- paste(cmd,hivc.cmd.examl.bsalignment(tmpdir, infile, signat.in, signat.out, bs.id[i], outdir=tmpdir, verbose=verbose),sep='\n')
+					cmd		<- paste(cmd,hivc.cmd.examl.bsalignment(tmpdir, infile, signat.in, signat.out, bs.id[i], opt.bootstrap.by=opt.bootstrap.by, outdir=tmpdir, verbose=verbose),sep='\n')
 					cmd		<- paste(cmd,hivc.cmd.examl(tmpdir, infile, signat.in, signat.out, outdir=tmpdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='\n')
 					cmd		<- paste(cmd,"cp -f ",tmpdir,"/* ", outdir,'\n',sep='')
 				}				
