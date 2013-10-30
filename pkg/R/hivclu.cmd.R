@@ -463,7 +463,7 @@ hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.fro
 # start: check if all ExaML boostrap trees have been computed and if yes create ExaML bootstrap tree
 #######################################################",sep='')	
 				cmd			<- paste(cmd,"\nCWD=$(pwd)\n",sep='')
-				cmd			<- paste(cmd,"cd ",outdir,sep='')
+				cmd			<- paste(cmd,"cd ",outdir,sep='') 
 				cmd			<- paste(cmd,paste("\necho \'check if all bootstrap samples have been computed\'",sep=''))
 				tmp			<- paste("\nif [ $(find . -name 'ExaML_result*' | wc -l) -eq ",bs.n," ]; then",sep='')
 				cmd			<- paste(cmd,tmp,sep='')
