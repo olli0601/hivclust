@@ -484,7 +484,7 @@ hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.fro
 				cmd			<- paste(cmd,paste("\n\tmv RAxML_bipartitions.",infile,'_',signat.out,".supporttree ",infile,"_examlbs",bs.n,'_',signat.out,".newick",sep=''),sep='')				
 				cmd			<- paste(cmd,paste("\n\trm RAxML_bipartitionsBranchLabels.",infile,'_',signat.out,".supporttree",sep=''),sep='')
 				cmd			<- paste(cmd,paste("\n\trm ExaML_result.",infile,'_',signat.out,".bstree",sep=''),sep='')								
-				cmd			<- paste(cmd,paste("\n\ttar -zcf ",infile,'_examlout_',signat.out,".tar.gz  ExaML_result.",infile,'_',signat.out,".* ExaML_info.",infile,'_',signat.out,".*",sep=''),sep='')
+				cmd			<- paste(cmd,paste("\n\ttar -zcf --force-local ",infile,'_examlout_',signat.out,".tar.gz  ExaML_result.",infile,'_',signat.out,".* ExaML_info.",infile,'_',signat.out,".*",sep=''),sep='')
 				cmd			<- paste(cmd,paste("\n\trm ExaML_result.",infile,'_',signat.out,".* ExaML_info.",infile,'_',signat.out,".*",sep=''),sep='')
 				cmd			<- paste(cmd,paste("\n\techo \'end cleanup\'",sep=''))
 				cmd			<- paste(cmd,"\nfi",sep='')
