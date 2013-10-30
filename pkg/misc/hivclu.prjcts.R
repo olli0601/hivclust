@@ -4628,7 +4628,7 @@ hivc.prog.recombination.check.candidates<- function()
 	file		<- paste(indir,'/',infile,"_3seqcheck_id",id,"_rOut_",gsub('/',':',insignat),".R",sep='')
 	if(verbose) cat(paste("\nsave to ",file))
 	save(seq.out, file=file)
-	if(0)
+	if(1)
 	{
 		#
 		#	run bootstrap ExaML for regions 'in' and 'out', all boostraps on one processor
