@@ -5740,6 +5740,7 @@ hivc.pipeline.recombination<- function()
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
 		insignat	<- "Thu_Aug_01_17/05/23_2013"
 		resume		<- 1
+		verbose		<- 1
 		
 		argv				<<-	hivc.cmd.recombination.process.3SEQ.output(indir, infile, insignat, resume=resume, verbose=1) 
 		argv				<<- unlist(strsplit(argv,' '))
