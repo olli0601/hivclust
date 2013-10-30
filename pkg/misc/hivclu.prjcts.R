@@ -4420,10 +4420,10 @@ hivc.prog.recombination.check.candidates<- function()
 	id			<- 1
 	seq.select.n<- 15
 	bs.from		<- 0
-	bs.to		<- 2
-	bs.n		<- 3
+	bs.to		<- 499
+	bs.n		<- 500
 	
-	hpc.walltime<- 24
+	hpc.walltime<- 12
 	hpc.mem		<- "600mb"
 	hpc.nproc	<- 1		
 	hpc.q		<- "pqeph"
