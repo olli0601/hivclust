@@ -508,7 +508,6 @@ hivc.cmd.examl.bootstrap.on.one.machine<- function(indir, infile, signat.in, sig
 	cmd			<- paste(cmd,paste("\n\tmv RAxML_bipartitions.",infile,'_',signat.out,".supporttree ",infile,"_examlbs",bs.n,'_',signat.out,".newick",sep=''),sep='')				
 	cmd			<- paste(cmd,paste("\n\trm RAxML_bipartitionsBranchLabels.",infile,'_',signat.out,".supporttree",sep=''),sep='')
 	cmd			<- paste(cmd,paste("\n\trm ExaML_result.",infile,'_',signat.out,".bstree",sep=''),sep='')									
-	cmd			<- paste(cmd,paste("\n\trm ExaML_result.",infile,'_',signat.out,".* ExaML_info.",infile,'_',signat.out,".*",sep=''),sep='')
 	cmd			<- paste(cmd,paste("\n\techo \'end cleanup\'",sep=''))
 	#copy bstree to outdir
 	cmd			<- paste(cmd,paste("\n\tcp -f ",infile,"_examlbs",bs.n,'_',signat.out,".newick",' ',outdir,sep=''),sep='')
