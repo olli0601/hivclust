@@ -4513,7 +4513,7 @@ hivc.prog.recombination.check.candidates<- function()
 	infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"			
 	insignat	<- "Thu_Aug_01_17/05/23_2013"
 	
-	id			<- 21
+	id			<- 51
 	seq.select.n<- 10
 	bs.from		<- 0
 	bs.to		<- 499
@@ -4610,7 +4610,7 @@ hivc.prog.recombination.check.candidates<- function()
 		seq.out		<- if(df.recomb[,child.start]<df.recomb[,bp1.1]-1) seq.int(df.recomb[,child.start],df.recomb[,bp1.1]-1) else numeric(0) 
 		seq.out		<- if(df.recomb[,bp1.2]+1<df.recomb[,child.len]) c(seq.out,seq.int(df.recomb[,bp1.2]+1, df.recomb[,child.len]))	else 	seq.out
 		seq.out		<- seq.PROT.RT[,seq.out]
-		seq.select.f<- ifelse(min(ncol(seq.out),ncol(seq.in))<150, 5, 5)
+		seq.select.f<- ifelse(min(ncol(seq.out),ncol(seq.in))<150, 10, 10)
 		if(verbose)	cat(paste("\nsetting inflation factor to",seq.select.f))
 		seq.select.n<- seq.select.n * seq.select.f
 		#	select background sequences for child based on sequence similarity
@@ -5898,12 +5898,12 @@ hivc.pipeline.recombination<- function()
 		resume		<- 0
 		verbose		<- 1
 		
-		argv				<<-	hivc.cmd.recombination.process.3SEQ.output(indir, infile, insignat, resume=resume, verbose=1) 
+		argv				<<-	hivc.cmd.recombination.process.3SEQ.output(indir, infile, insignat, resume=1, verbose=1) 
 		argv				<<- unlist(strsplit(argv,' '))
 		df.recomb			<- hivc.prog.recombination.process.3SEQ.output()	
 		
 		triplets			<- seq_len(nrow(df.recomb))
-		triplets			<- 1:nrow(df.recomb)[1]
+		triplets			<- 51:nrow(df.recomb)
 		dummy	<- lapply(triplets, function(i)
 				{					
 					if(verbose)	cat(paste("\nprocess triplet number",i,"\n"))
