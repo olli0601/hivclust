@@ -327,7 +327,8 @@ if(length(args))
 					BEASTPOOLRUN			= "hivc.prog.BEAST.generate.xml",
 					BEASTEVALRUN			= "hivc.prog.BEAST.evalpoolrun",
 					RECOMB.PROCESS3SEQOUT	= "hivc.prog.recombination.process.3SEQ.output",
-					RECOMB.CHECKCANDIDATES	= "hivc.prog.recombination.check.candidates"
+					RECOMB.CHECKCANDIDATES	= "hivc.prog.recombination.check.candidates",
+					RECOMB.PLOTINCONGRUENCE	= "hivc.prog.recombination.plot.incongruence"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)

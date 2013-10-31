@@ -3413,11 +3413,16 @@ project.hivc.clustering<- function(dir.name= DATA)
 	{
 		hivc.prog.eval.clustering.bias()
 	}	
-	if(1)
+	if(0)
 	{
 		hivc.prog.recombination.checkcandidates()
+	}
+	if(1)
+	{
+		hivc.prog.recombination.plot.incgruence()
 		stop()
 		
+			
 		#
 		#	load sequences and create FASTA file to inspect recombinants manually
 		#
@@ -4409,17 +4414,107 @@ hivc.prog.recombination.process.3SEQ.output<- function()
 	df.recomb
 }
 ######################################################################################
-hivc.prog.recombination.check.candidates<- function()
-{	
+hivc.prog.recombination.plot.incongruence<- function()
+{
+	require(RColorBrewer)
 	require(ape)
+	
 	verbose		<- 1
 	resume		<- 1
 	indir		<- paste(DATA,"tmp",sep='/')		
 	infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"			
 	insignat	<- "Thu_Aug_01_17/05/23_2013"
 	
-	id			<- 43
-	seq.select.n<- 15
+	id			<- 1		
+	bs.n		<- 500
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]	
+		#		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									tripletid= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) id<- tmp[1]
+	}	
+	if(verbose)
+	{
+		print(verbose)		
+		print(indir)		
+		print(infile)			
+		print(insignat)
+		print(id)		
+		print(bs.n)		
+	}
+	cols				<- brewer.pal(6,"Paired")
+	#	read tree corresponding to 'in' recombinant region
+	file				<- paste(indir,'/',infile,"_3seqcheck_id",id,"_rIn_examlbs",bs.n,'_',gsub('/',':',insignat),".newick",sep='')
+	if(verbose)	cat(paste("\nRead file", file))
+	ph.in				<- ladderize( read.tree(file) )		
+	tmp					<- as.numeric( ph.in$node.label )
+	tmp[is.na(tmp)]		<- 0 
+	ph.in$node.label	<- tmp/100
+	#	read tree corresponding to 'out' recombinant region
+	file				<- paste(indir,'/',infile,"_3seqcheck_id",id,"_rOut_examlbs",bs.n,'_',gsub('/',':',insignat),".newick",sep='')
+	if(verbose)	cat(paste("\nRead file", file))
+	ph.out				<- ladderize( read.tree(file) )		
+	tmp					<- as.numeric( ph.out$node.label )
+	tmp[is.na(tmp)]		<- 0 
+	ph.out$node.label	<- tmp/100
+	#	plot both phylogenies side by side	
+	file				<- paste(indir,'/',infile,"_3seqcheck_id",id,"_examlbs",bs.n,'_',gsub('/',':',insignat),".pdf",sep='')
+	if(verbose)	cat(paste("\nPlot both phylogenies to", file))
+	pattern				<- c("^in_parent1","^out_parent1","^in_parent2","^out_parent2","^in_child","^out_child")
+	pdf(file, width=8, height=6)
+	def.par 			<- par(no.readonly = TRUE)
+	layout(matrix(c(1,1,2,2), 2, 2))		
+	tip.color			<- rep("black", Ntip(ph.in))	
+	for(i in seq_along(pattern))
+	{
+		tmp						<- which( grepl(pattern[i],ph.in$tip) )
+		if(length(tmp))	
+			tip.color[ tmp ]	<- cols[i]
+	}	
+	plot(ph.in, show.node.label=T, no.margin=T, cex=0.6, tip.color=tip.color)
+	tip.color			<- rep("black", Ntip(ph.out))	
+	for(i in seq_along(pattern))
+	{
+		tmp						<- which( grepl(pattern[i],ph.out$tip) )
+		if(length(tmp))	
+			tip.color[ tmp ]	<- cols[i]
+	}	
+	plot(ph.out, show.node.label=T, no.margin=T, cex=0.6, tip.color=tip.color)
+	par(def.par)
+	dev.off()
+}
+######################################################################################
+hivc.prog.recombination.check.candidates<- function()
+{	
+	require(ape)
+	verbose		<- 1
+	resume		<- 0
+	indir		<- paste(DATA,"tmp",sep='/')		
+	infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"			
+	insignat	<- "Thu_Aug_01_17/05/23_2013"
+	
+	id			<- 21
+	seq.select.n<- 10
 	bs.from		<- 0
 	bs.to		<- 499
 	bs.n		<- 500
@@ -4515,7 +4610,7 @@ hivc.prog.recombination.check.candidates<- function()
 		seq.out		<- if(df.recomb[,child.start]<df.recomb[,bp1.1]-1) seq.int(df.recomb[,child.start],df.recomb[,bp1.1]-1) else numeric(0) 
 		seq.out		<- if(df.recomb[,bp1.2]+1<df.recomb[,child.len]) c(seq.out,seq.int(df.recomb[,bp1.2]+1, df.recomb[,child.len]))	else 	seq.out
 		seq.out		<- seq.PROT.RT[,seq.out]
-		seq.select.f<- ifelse(min(ncol(seq.out),ncol(seq.in))<150, 100, 4)
+		seq.select.f<- ifelse(min(ncol(seq.out),ncol(seq.in))<150, 5, 5)
 		if(verbose)	cat(paste("\nsetting inflation factor to",seq.select.f))
 		seq.select.n<- seq.select.n * seq.select.f
 		#	select background sequences for child based on sequence similarity
@@ -4549,24 +4644,88 @@ hivc.prog.recombination.check.candidates<- function()
 		setkeyv(seq.df, c("group","region","dist"))
 		seq.df			<- subset(seq.df, dist>0)
 		if(verbose)	cat(paste("\nFound related sequences with dist>0, n=",nrow(seq.df)))
+		#	for each group and region, select the n closest sequence names (non-unique)
+		seq.df			<- seq.df[	,	list(FASTASampleCode=FASTASampleCode[seq_len(seq.select.n)], dist=dist[seq_len(seq.select.n)]), by=c("group","region")]
+		#	keep each sequence name once, for the group it is closest to		
 		seq.df			<- seq.df[, {
-					tmp<- which.min(dist)
-					list(dist= dist[tmp], group=group[tmp], region=region[tmp])
-				}, by=c("region","FASTASampleCode")]		
-		if(verbose)	cat(paste("\ndetermined which available sequences are closest by group and region"))
+										tmp<- which.min(dist)
+										list(dist= dist[tmp], group=group[tmp], region=region[tmp])
+									}, by=c("FASTASampleCode")]
+		setkeyv(seq.df, c("group","region","dist"))					
+		if(verbose)	cat(paste("\ndetermined candidates for balancing filler sequences, n=",nrow(seq.df)))
+		#	select unique sequences
+		tmp				<- c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child], seq.df[, FASTASampleCode] )
+		tmp				<- hivc.seq.unique(seq.in[tmp,])
+		seq.df			<- merge( data.table(FASTASampleCode=rownames(tmp)), seq.df, by="FASTASampleCode" )
+		tmp				<- c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child], seq.df[, FASTASampleCode] )
+		tmp				<- hivc.seq.unique(seq.out[tmp,])
+		seq.df			<- merge( data.table(FASTASampleCode=rownames(tmp)), seq.df, by="FASTASampleCode" )
+		seq.df			<- subset(seq.df, !FASTASampleCode%in%c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child] ) )		
+		if(verbose)	cat(paste("\nfound candidates for filler sequences that are unique on both recombinant regions, n=",nrow(seq.df)))
 		if(verbose)	print( seq.df[	,	list(n=length(FASTASampleCode)) ,by=c("group","region")] )
-		seq.df			<- seq.df[	,	{
-					tmp<- min(seq.select.n, length(FASTASampleCode))
-					list(FASTASampleCode=FASTASampleCode[seq_len(tmp)], dist=dist[seq_len(tmp)])
-				}, by=c("group","region")]
-		seq.select.n	<- seq.select.n/seq.select.f
-		#	create alignment of 3*seq.select.n unique sequences for 'in' region
-		#	seq.in 		contains triplet
-		#	seq.in.df 	does not contain triplet
-		if(verbose)	cat(paste("\nSelect sequences for recombinant region 'in'"))
-		tmp						<- c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child], subset( seq.df, region=='in' )[,FASTASampleCode] )
-		seq.in					<- seq.in[tmp,]
-		tmp						<- hivc.seq.unique(seq.in)
+		#		
+		seq.select.n	<- seq.select.n/seq.select.f 
+		#	select 'seq.select.n' unique filler sequences for 'in' region, balancing by group as much as possible
+		if(verbose)	cat(paste("\nSelect filler sequences for recombinant region 'in'"))
+		tmp						<- subset( seq.df, region=='in' )[,FASTASampleCode]
+		tmp						<- hivc.seq.unique(seq.in[tmp ,])
+		seq.in.df				<- merge( data.table(FASTASampleCode=rownames(tmp)), subset(seq.df,region=="in"), by="FASTASampleCode" )
+		setkey(seq.in.df, dist)
+		if(nrow(seq.in.df)<seq.select.n)	cat(paste("\ncan only select less than the requested number of sequences, n=",nrow(seq.in.df)))
+		tmp						<- rbind( seq.in.df, data.table(FASTASampleCode=NA, dist=NA, group=c("child","parent1","parent2"), region=NA) )
+		seq.in.order			<- tmp[	,	list(n=length(na.omit(FASTASampleCode))) ,by=c("group")]		
+		seq.in.order			<- seq.in.order[order(n),]
+		overflow				<- 0
+		ans						<- data.table(FASTASampleCode=NA, dist=NA, group=NA, region=NA)
+		for(x in seq.in.order[,group])
+		{			
+			#print(x)
+			tmp					<- subset(seq.in.df, group==x)
+			#print(tmp)
+			ans					<- rbind(tmp[seq_len( min(seq.select.n+overflow, nrow(tmp)) ),], ans )
+			overflow			<- ifelse(seq.select.n+overflow<nrow(tmp), 0, seq.select.n+overflow-nrow(tmp))
+		}
+		if(overflow>0)	stop("unexpected overflow>0")
+		seq.in.df				<- ans[-nrow(ans),]
+		if(verbose)	cat(paste("\nSelected balancing sequences for recombinant region 'in', n=",nrow(seq.in.df)))
+		if(verbose)	print( seq.in.df[	,	list(n=length(FASTASampleCode)) ,by=c("group","region")] )
+		#
+		#	select 'seq.select.n' unique filler sequences for 'out' region, balancing by group as much as possible
+		#
+		if(verbose)	cat(paste("\nSelect sequences for recombinant region 'out'"))
+		tmp						<- subset( seq.df, region=='out' )[,FASTASampleCode] 
+		tmp						<- hivc.seq.unique(seq.out[tmp,])		
+		seq.out.df				<- merge( data.table(FASTASampleCode=rownames(tmp)), subset(seq.df,region=="out"), by="FASTASampleCode" )
+		setkey(seq.out.df, dist)
+		if(nrow(seq.out.df)<seq.select.n)	cat(paste("\ncan only select less than the requested number of sequences, n=",nrow(seq.out.df)))
+		tmp						<- rbind( seq.out.df, data.table(FASTASampleCode=NA, dist=NA, group=c("child","parent1","parent2"), region=NA) )
+		seq.out.order			<- tmp[	,	list(n=length(FASTASampleCode)) ,by=c("group")]		
+		seq.out.order			<- seq.out.order[order(n),]
+		overflow				<- 0
+		ans						<- data.table(FASTASampleCode=NA, dist=NA, group=NA, region=NA)		
+		for(x in seq.out.order[,group])
+		{			
+			#print(x)
+			tmp					<- subset(seq.out.df, group==x)
+			#print(tmp)
+			ans					<- rbind(tmp[seq_len( min(seq.select.n+overflow, nrow(tmp)) ),], ans )
+			overflow			<- ifelse(seq.select.n+overflow<nrow(tmp), 0, seq.select.n+overflow-nrow(tmp))
+		}
+		if(overflow>0)	stop("unexpected overflow>0")
+		seq.out.df				<- ans[-nrow(ans),]
+		if(verbose)	cat(paste("\nSelected balancing sequences for recombinant region 'out', n=",nrow(seq.out.df)))
+		if(verbose)	print( seq.out.df[	,	list(n=length(FASTASampleCode)) ,by=c("group","region")] )
+		#	combine unique filler sequences
+		seq.df					<- rbind( seq.in.df, seq.out.df )
+		if(verbose)	cat(paste("\nSelected balancing set of closest filler sequences"))
+		if(verbose)	print( seq.df[	,	list(n=length(FASTASampleCode)) ,by=c("group","region")] )		
+		if( length(unique( seq.df[, FASTASampleCode] ))!=nrow(seq.df) )		stop("Unexpected non-unique sequence names")
+		if( nrow(hivc.seq.unique( seq.in[ seq.df[, FASTASampleCode], ] ))!=nrow(seq.df) ) stop("Unexpected non-unique 'in' sequences")
+		if( nrow(hivc.seq.unique( seq.out[ seq.df[, FASTASampleCode], ] ))!=nrow(seq.df) ) stop("Unexpected non-unique 'out' sequences")
+		#	could be that the triplet sequences are not unique among each other 
+		#	if so, make change to one of the triplet sequences
+		seq.select				<- c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child], seq.df[, FASTASampleCode] )
+		tmp						<- hivc.seq.unique( seq.in[ seq.select, ] )
 		if( !length(setdiff(c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child] ),rownames(tmp))) )
 			seq.in				<- tmp
 		if( length(setdiff(c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child] ),rownames(tmp))) )
@@ -4576,41 +4735,11 @@ hivc.prog.recombination.check.candidates<- function()
 			seq.in				<- as.character(seq.in)
 			seq.in[tmp,1]		<- ifelse(seq.in[tmp,1]=='t','c',ifelse(seq.in[tmp,1]=='c','t',ifelse(seq.in[tmp,1]=='a','g','a')))
 			seq.in				<- as.DNAbin(seq.in)
-			tmp					<- hivc.seq.unique(seq.in)
-			if( length(setdiff(c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child] ),rownames(tmp))) )	stop("Unexpected missing triplet sequence")
+			tmp					<- hivc.seq.unique( seq.in[ seq.select, ] )
+			if( length(setdiff(c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child] ),rownames(tmp))) )	stop("Unexpected duplicate for 'in'")
 			seq.in				<- tmp
-		}	
-		seq.in.df				<- merge( data.table(FASTASampleCode=rownames(seq.in)), subset(seq.df,region=="in"), by="FASTASampleCode" )
-		setkey(seq.in.df, dist)
-		if(nrow(seq.in.df)<seq.select.n)	cat(paste("\ncan only select less than the requested number of sequences, n=",nrow(seq.in.df)))
-		seq.in.order			<- seq.in.df[	,	list(n=length(FASTASampleCode)) ,by=c("group")]		
-		seq.in.order			<- seq.in.order[order(n),]
-		overflow				<- 0
-		ans						<- data.table(FASTASampleCode=NA, group=NA, region=NA, dist=NA)
-		for(x in seq.in.order[,group])
-		{			
-			#print(x)
-			tmp			<- subset(seq.in.df, group==x)
-			#print(tmp)
-			ans			<- rbind(tmp[seq_len( min(seq.select.n+overflow, nrow(tmp)) ),], ans )
-			overflow	<- ifelse(seq.select.n+overflow<nrow(tmp), 0, seq.select.n+overflow-nrow(tmp))
-		}
-		if(overflow>0)	stop("unexpected overflow>0")
-		seq.in.df		<- ans[-nrow(ans),]
-		setkey(seq.in.df, group)	
-		tmp				<- c( df.recomb[,parent1], df.recomb[,parent2], df.recomb[,child], seq.in.df[, FASTASampleCode] )
-		seq.in			<- seq.in[tmp,]
-		rownames(seq.in)<- c( paste("tparent1",df.recomb[,parent1],sep='-'), paste("tparent2",df.recomb[,parent2],sep='-'), paste("tchild",df.recomb[,child],sep='-'), seq.in.df[,list(label=paste(group,FASTASampleCode,sep='-')), by="FASTASampleCode"][,label] )
-		#	save
-		file		<- paste(indir,'/',infile,"_3seqcheck_id",id,"_rIn_",gsub('/',':',insignat),".R",sep='')
-		if(verbose) cat(paste("\nsave to ",file))
-		save(seq.in, file=file)		
-		#	create alignment of 3*seq.select.n unique sequences for 'out' region
-		#	seq.out 		contains triplet
-		#	seq.out.df	 	does not contain triplet
-		if(verbose)	cat(paste("\nSelect sequences for recombinant region 'out'"))
-		tmp						<- c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child], subset( seq.df, region=='out' )[,FASTASampleCode] )
-		seq.out					<- seq.out[tmp,]
+		}			
+		seq.out					<- seq.out[seq.select,]
 		tmp						<- hivc.seq.unique(seq.out)
 		if( !length(setdiff(c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child] ),rownames(tmp))) )
 			seq.out				<- tmp
@@ -4621,32 +4750,19 @@ hivc.prog.recombination.check.candidates<- function()
 			seq.out				<- as.character(seq.out)
 			seq.out[tmp,1]		<- ifelse(seq.out[tmp,1]=='t','c',ifelse(seq.out[tmp,1]=='c','t',ifelse(seq.out[tmp,1]=='a','g','a')))
 			seq.out				<- as.DNAbin(seq.out)
-			tmp					<- hivc.seq.unique(seq.out)
-			if( length(setdiff(c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child] ),rownames(tmp))) )	stop("Unexpected missing triplet sequence")
+			tmp					<- hivc.seq.unique(seq.out[seq.select,])
+			if( length(setdiff(c( df.recomb[,parent1],df.recomb[,parent2],df.recomb[,child] ),rownames(tmp))) )	stop("Unexpected duplicate for 'out'")
 			seq.out				<- tmp
 		}
-		seq.out.df				<- merge( data.table(FASTASampleCode=rownames(seq.out)), subset(seq.df,region=="out"), by="FASTASampleCode" )
-		setkey(seq.out.df, dist)
-		if(nrow(seq.out.df)<seq.select.n)	cat(paste("\ncan only select less than the requested number of sequences, n=",nrow(seq.out.df)))
-		seq.out.order			<- seq.out.df[	,	list(n=length(FASTASampleCode)) ,by=c("group")]		
-		seq.out.order			<- seq.out.order[order(n),]
-		overflow				<- 0
-		ans						<- data.table(FASTASampleCode=NA, group=NA, region=NA, dist=NA)
-		for(x in seq.out.order[,group])
-		{			
-			#print(x)
-			tmp			<- subset(seq.out.df, group==x)
-			#print(tmp)
-			ans			<- rbind(tmp[seq_len( min(seq.select.n+overflow, nrow(tmp)) ),], ans )
-			overflow	<- ifelse(seq.select.n+overflow<nrow(tmp), 0, seq.select.n+overflow-nrow(tmp))
-		}
-		if(overflow>0)	stop("unexpected overflow>0")
-		seq.out.df		<- ans[-nrow(ans),]
-		setkey(seq.out.df, group)
-		tmp				<- c( df.recomb[,parent1], df.recomb[,parent2], df.recomb[,child], seq.out.df[, FASTASampleCode] )
-		seq.out			<- seq.out[tmp,]
-		rownames(seq.out)<- c( paste("tparent1",df.recomb[,parent1],sep='-'), paste("tparent2",df.recomb[,parent2],sep='-'), paste("tchild",df.recomb[,child],sep='-'), seq.out.df[,list(label=paste(group,FASTASampleCode,sep='-')), by="FASTASampleCode"][,label] )
+		if(any(rownames(seq.in)!=rownames(seq.out)))	stop("Unexpected unequal sequences selected")
+		#	reset rownames
+		tmp						<- c( paste(c("tparent1","tparent2","tchild"),seq.select[1:3],sep='_'), seq.df[,list(label= paste(region,group,FASTASampleCode,sep='_')), by="FASTASampleCode"][,label] )
+		rownames(seq.in)		<- tmp
+		rownames(seq.out)		<- tmp
 		#	save
+		file		<- paste(indir,'/',infile,"_3seqcheck_id",id,"_rIn_",gsub('/',':',insignat),".R",sep='')
+		if(verbose) cat(paste("\nsave to ",file))
+		save(seq.in, file=file)		
 		file		<- paste(indir,'/',infile,"_3seqcheck_id",id,"_rOut_",gsub('/',':',insignat),".R",sep='')
 		if(verbose) cat(paste("\nsave to ",file))
 		save(seq.out, file=file)
@@ -4677,6 +4793,8 @@ hivc.prog.recombination.check.candidates<- function()
 		if(!is.null(cmd))
 		{
 			cmd			<- paste(cmd,collapse='\n')
+			cmd			<- paste(cmd,hivc.cmd.recombination.plot.incongruence(indir, infile, gsub('/',':',insignat), id, verbose=1),sep='')
+				
 			#cat(cmd)
 			if(verbose) cat(paste("\nqsub ExaML bootstrap runs, hpc.walltime=",hpc.walltime," hpc.mem=",hpc.mem," hpc.nproc=",hpc.nproc," hpc.q=",hpc.q))
 			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem, hpc.nproc=hpc.nproc)
@@ -5777,7 +5895,7 @@ hivc.pipeline.recombination<- function()
 		indir		<- paste(DATA,"tmp",sep='/')		
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
 		insignat	<- "Thu_Aug_01_17/05/23_2013"
-		resume		<- 1
+		resume		<- 0
 		verbose		<- 1
 		
 		argv				<<-	hivc.cmd.recombination.process.3SEQ.output(indir, infile, insignat, resume=resume, verbose=1) 
@@ -5785,9 +5903,9 @@ hivc.pipeline.recombination<- function()
 		df.recomb			<- hivc.prog.recombination.process.3SEQ.output()	
 		
 		triplets			<- seq_len(nrow(df.recomb))
-		triplets			<- 3:nrow(df.recomb)[1]
+		triplets			<- 1:nrow(df.recomb)[1]
 		dummy	<- lapply(triplets, function(i)
-				{
+				{					
 					if(verbose)	cat(paste("\nprocess triplet number",i,"\n"))
 					argv				<<- hivc.cmd.recombination.check.candidates(indir, infile, insignat, i, resume=resume, verbose=1)
 					argv				<<- unlist(strsplit(argv,' '))

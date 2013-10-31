@@ -50,6 +50,9 @@ PR.RECOMB.PROCESS3SEQOUTPUT	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -
 PR.RECOMB.CHECKCANDIDATES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeRECOMB.CHECKCANDIDATES",sep='/')
 
 #' @export
+PR.RECOMB.PLOTINCONGRUENCE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeRECOMB.PLOTINCONGRUENCE",sep='/')
+
+#' @export
 PR.EXAML.PARSER	<- "ExaML-parser"
 
 #' @export
@@ -191,6 +194,23 @@ hivc.cmd.recombination.check.candidates<- function(indir, infile, insignat, trip
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
 	cmd<- paste(cmd,"#######################################################
 # end: hivc.prog.recombination.check.candidates
+#######################################################\n",sep='')
+	cmd	
+}
+
+hivc.cmd.recombination.plot.incongruence<- function(indir, infile, insignat, triplet.id, prog= PR.RECOMB.PLOTINCONGRUENCE, verbose=1)
+{
+	cmd<- "#######################################################
+# start: hivc.prog.recombination.plot.incongruence
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,prog," -v=",verbose,sep='')
+	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat," -tripletid=",triplet.id,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd<- paste(cmd,"#######################################################
+# end: hivc.prog.recombination.plot.incongruence
 #######################################################\n",sep='')
 	cmd	
 }
