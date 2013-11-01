@@ -3314,11 +3314,11 @@ hivc.clu.plot.tiplabels<- function (tip, text, col, xx=NULL, adj = c(-0.05, 0.5)
 	text(coord["xx",], coord["yy",], text, cex=cex)
 }
 ######################################################################################
-hivc.clu.plot<- function(	ph, clu, edge.col.basic="black", show.node.label= T, file=NULL,  
+hivc.clu.plot<- function(	ph, clu, edge.col.basic="black", show.node.label= T, show.tip.label=F, file=NULL,  
 							highlight.edge.of.tiplabel=NULL, highlight.edge.of.tiplabel.col="red", 
 							highlight.cluster=NULL, highlight.cluster.col="red",							
 							pdf.scaley=10, pdf.width= 7, pdf.height=pdf.scaley*7, pdf.off=1, pdf.xlim=NULL,
-							cex.nodelabel=0.5, cex.edge.incluster=1, cex.edge.outcluster= cex.edge.incluster/3)
+							cex.nodelabel=0.5, cex.edge.incluster=1, cex.edge.outcluster= cex.edge.incluster/3, no.margin=T, ...)
 {
 	require(colorspace)	
 	clu.edge							<- clu[ ph$edge[,1] ]
@@ -3349,8 +3349,8 @@ hivc.clu.plot<- function(	ph, clu, edge.col.basic="black", show.node.label= T, f
 	clu.edge.lty[clu.edge!=1]			<- 1
 	if(class(file)=="character")
 		pdf(file,width=pdf.width,height=pdf.height)
-	par(mar=c(0,0,0,0))
-	plot.coordinates					<- plot(ph, show.tip.label=F, show.node.label=show.node.label, cex=cex.nodelabel, edge.color=clu.edge.col, edge.width=clu.edge.width, edge.lty=clu.edge.lty, x.lim=pdf.xlim)
+	if(no.margin) 	par(mar=c(0,0,0,0))
+	plot.coordinates					<- plot(ph, show.tip.label=show.tip.label, show.node.label=show.node.label, cex=cex.nodelabel, edge.color=clu.edge.col, edge.width=clu.edge.width, edge.lty=clu.edge.lty, x.lim=pdf.xlim, ...)
 	if(class(file)=="character" && pdf.off)
 		dev.off()
 	plot.coordinates

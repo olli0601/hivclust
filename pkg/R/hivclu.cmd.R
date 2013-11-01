@@ -198,7 +198,7 @@ hivc.cmd.recombination.check.candidates<- function(indir, infile, insignat, trip
 	cmd	
 }
 
-hivc.cmd.recombination.plot.incongruence<- function(indir, infile, insignat, triplet.id, prog= PR.RECOMB.PLOTINCONGRUENCE, verbose=1)
+hivc.cmd.recombination.plot.incongruence<- function(indir, infile, insignat, triplet.id=NA, prog= PR.RECOMB.PLOTINCONGRUENCE, opt.select=NA,verbose=1)
 {
 	cmd<- "#######################################################
 # start: hivc.prog.recombination.plot.incongruence
@@ -206,7 +206,11 @@ hivc.cmd.recombination.plot.incongruence<- function(indir, infile, insignat, tri
 	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
 	#default commands
 	cmd<- paste(cmd,prog," -v=",verbose,sep='')
-	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat," -tripletid=",triplet.id,sep='')
+	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat, sep='')
+	if(!is.na(opt.select))
+		cmd<- paste(cmd," -select=",opt.select,sep='')
+	if(!is.na(triplet.id))
+		cmd<- paste(cmd," -tripletid=",triplet.id,sep='')
 	#verbose stuff
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
 	cmd<- paste(cmd,"#######################################################
