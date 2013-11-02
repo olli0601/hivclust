@@ -4895,7 +4895,7 @@ hivc.prog.recombination.check.candidates<- function()
 			ans					<- rbind(tmp[seq_len( min(seq.select.n+overflow, nrow(tmp)) ),], ans )
 			overflow			<- ifelse(seq.select.n+overflow<nrow(tmp), 0, seq.select.n+overflow-nrow(tmp))
 		}
-		if(overflow>0)	stop("unexpected overflow>0")
+		if(overflow>0)	cat(paste("\nNot as many filler sequences as requested for recombinant region 'in', n=",nrow(seq.out.df)))
 		seq.in.df				<- ans[-nrow(ans),]
 		if(verbose)	cat(paste("\nSelected balancing sequences for recombinant region 'in', n=",nrow(seq.in.df)))
 		if(verbose)	print( seq.in.df[	,	list(n=length(FASTASampleCode)) ,by=c("group","region")] )
@@ -4921,7 +4921,7 @@ hivc.prog.recombination.check.candidates<- function()
 			ans					<- rbind(tmp[seq_len( min(seq.select.n+overflow, nrow(tmp)) ),], ans )
 			overflow			<- ifelse(seq.select.n+overflow<nrow(tmp), 0, seq.select.n+overflow-nrow(tmp))
 		}
-		if(overflow>0)	stop("unexpected overflow>0")
+		if(overflow>0)	cat(paste("\nNot as many filler sequences as requested for recombinant region 'out', n=",nrow(seq.out.df)))
 		seq.out.df				<- ans[-nrow(ans),]
 		if(verbose)	cat(paste("\nSelected balancing sequences for recombinant region 'out', n=",nrow(seq.out.df)))
 		if(verbose)	print( seq.out.df[	,	list(n=length(FASTASampleCode)) ,by=c("group","region")] )
@@ -6112,7 +6112,7 @@ hivc.pipeline.recombination<- function()
 		df.recomb			<- hivc.prog.recombination.process.3SEQ.output()	
 		
 		triplets			<- seq_len(nrow(df.recomb))
-		triplets			<- 129#:nrow(df.recomb)
+		triplets			<- 147:nrow(df.recomb)
 		dummy	<- lapply(triplets, function(i)
 				{					
 					if(verbose)	cat(paste("\nprocess triplet number",i,"\n"))
