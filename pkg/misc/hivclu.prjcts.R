@@ -6122,6 +6122,23 @@ hivc.pipeline.recombination<- function()
 				})
 		stop()
 	}
+	if(1)	#process validation step to produce plots
+	{
+		indir		<- paste(DATA,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		resume		<- 0
+		verbose		<- 1
+		
+		argv				<<- hivc.cmd.recombination.plot.incongruence(indir, infile, insignat, triplet.id=NA, opt.select="ng2", verbose=1)
+		argv				<<- unlist(strsplit(argv,' '))
+		hivc.prog.recombination.plot.incongruence()		
+		
+		argv				<<- hivc.cmd.recombination.plot.incongruence(indir, infile, insignat, triplet.id=NA, opt.select="g2", verbose=1)
+		argv				<<- unlist(strsplit(argv,' '))
+		hivc.prog.recombination.plot.incongruence()
+		
+	}
 	if(0)	#	collect likely recombinants or those likely confounding the phylogeny		-- 	identified by eye
 	{
 		verbose				<- 1
@@ -6137,6 +6154,9 @@ hivc.pipeline.recombination<- function()
 									subset( df.recomb, triplet.id==55 )[,parent2],"R09-26706","R11-12152","R12-15108",		#others cluster in addition
 									subset( df.recomb, triplet.id==48 )[,parent2],"2007G319",								#others cluster in addition
 									subset( df.recomb, triplet.id==112 )[,child],
+									subset( df.recomb, triplet.id==129 )[,child],
+									subset( df.recomb, triplet.id==148 )[,child],		#length only 50
+									subset( df.recomb, triplet.id==135 )[,child],
 									subset( df.recomb, triplet.id==102 )[,child],		#likely confounding
 									subset( df.recomb, triplet.id==85 )[,child],
 									subset( df.recomb, triplet.id==81 )[,child],		#likely confounding
@@ -6208,7 +6228,7 @@ hivc.pipeline.ExaML<- function()
 	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
 	{
 		bs.from		<- 0
-		bs.to		<- 0
+		bs.to		<- 250
 		bs.n		<- 500
 		
 		indir		<- paste(dir.name,"tmp",sep='/')
@@ -6227,7 +6247,7 @@ hivc.pipeline.ExaML<- function()
 		outdir		<- paste(dir.name,"tmp",sep='/')							
 		lapply(cmd, function(x)
 				{				
-					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q=NA, hpc.mem="3850mb", hpc.nproc=8)
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q="pqeph", hpc.mem="3850mb", hpc.nproc=8)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("exa",signat,"qsub",sep='.')
 					cat(x)					
