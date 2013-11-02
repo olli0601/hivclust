@@ -493,7 +493,8 @@ hivc.cmd.examl.bootstrap.on.one.machine<- function(indir, infile, signat.in, sig
 	cmd			<- paste(cmd,"\nCWD=$(pwd)\n",sep='')
 	cmd			<- paste(cmd,"cd ",tmpdir,sep='') 
 	cmd			<- paste(cmd,paste("\necho \'check if all bootstrap samples have been computed\'",sep=''))
-	tmp			<- paste("\nif [ $(find . -name 'ExaML_result.",infile,'_',gsub('/',':',signat.in),".finaltree*' | wc -l) -eq ",bs.n," ]; then",sep='')
+	#compute bs tree even when some errors	
+	tmp			<- paste("\nif [ $(find . -name 'ExaML_result.",infile,'_',gsub('/',':',signat.in),".finaltree*' | wc -l) -gt ",round(bs.n*0.95)," ]; then",sep='')
 	cmd			<- paste(cmd,tmp,sep='')
 	cmd			<- paste(cmd,paste("\n\techo \'all bootstrap samples computed -- find best tree and add bootstrap support values\'",sep=''))				
 	tmp			<- c(	paste("ExaML_result.",infile,'_',signat.out,".finaltree",sep=''), 	paste("ExaML_result.",infile,'_',signat.out,".bstree",sep=''))

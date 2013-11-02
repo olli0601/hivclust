@@ -4728,7 +4728,7 @@ hivc.prog.recombination.check.candidates<- function()
 	bs.to		<- 499
 	bs.n		<- 500
 	
-	hpc.walltime<- 12
+	hpc.walltime<- 36
 	hpc.mem		<- "600mb"
 	hpc.nproc	<- 1		
 	hpc.q		<- "pqeph"
@@ -6111,7 +6111,7 @@ hivc.pipeline.recombination<- function()
 		df.recomb			<- hivc.prog.recombination.process.3SEQ.output()	
 		
 		triplets			<- seq_len(nrow(df.recomb))
-		triplets			<- 51:nrow(df.recomb)
+		triplets			<- 129:nrow(df.recomb)
 		dummy	<- lapply(triplets, function(i)
 				{					
 					if(verbose)	cat(paste("\nprocess triplet number",i,"\n"))
@@ -6168,6 +6168,7 @@ hivc.pipeline.recombination<- function()
 
 hivc.pipeline.ExaML<- function()
 {
+	dir.name<- DATA
 	if(0)	#compute one ExaML tree, no bootstrapping
 	{		
 		indir	<- paste(dir.name,"tmp",sep='/')
