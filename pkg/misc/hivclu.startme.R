@@ -74,8 +74,8 @@ default.fun 	<- "hivc.proj.pipeline"
 #default.fun 	<- "hivc.prog.remove.resistancemut"
 #default.fun 	<- "hivc.prog.BEAST.poolrunxml"
 #default.fun 	<- "hivc.prog.BEAST.evalpoolrun"
-#default.fun 	<- "hivc.pipeline.recombination"
-default.fun 	<- "hivc.pipeline.ExaML"
+default.fun 	<- "hivc.pipeline.recombination"
+#default.fun 	<- "hivc.pipeline.ExaML"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{

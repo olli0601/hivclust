@@ -4411,37 +4411,38 @@ hivc.prog.recombination.process.3SEQ.output<- function()
 		if(verbose)	cat(paste("\nSave candidate triplets to",file))
 		save(df.recomb, file=file)		
 	}
-	#
-	#	get candidate recombinant sequences
-	#
-	df.recombseq	<- data.table( FASTASampleCode= unique( c(df.recomb[, parent1], df.recomb[, parent2], df.recomb[, child]) ) )
-	df.recombseq	<- df.recombseq[ , 	{
-											tmp<- subset(df.recomb, parent1==FASTASampleCode | parent2==FASTASampleCode | child==FASTASampleCode )
-											list( n.triplets=nrow(tmp), min.p=min(tmp[,adjp]), med.p=median(tmp[,adjp]), triplet.id=tmp[,triplet.id] )
-										} , by="FASTASampleCode"]
-	setkey(df.recombseq, n.triplets, FASTASampleCode)
-	#plot( df.recombseq[,n.triplets], df.recombseq[,min.p], pch=18 )
-	
-	#
-	#determine how many other triplet sequences there are for an m candidate
-	#
-	df.mrecombseq	<- subset(df.recombseq, n.triplets>2)[, {
-				tmp			<- triplet.id
-				tmp			<- subset(df.recomb, triplet.id%in%tmp)
-				triplet.seq	<- setdiff( unique( c(tmp[, parent1], tmp[, parent2], tmp[, child]) ), FASTASampleCode)
-				list( triplet.seq=triplet.seq, triplet.seq.n=length(triplet.seq)  )
-			}, by="FASTASampleCode"]
-	df.mrecombbp	<- subset(df.recombseq, n.triplets>2)[, {
-				tmp			<- triplet.id
-				tmp			<- subset(df.recomb, triplet.id%in%tmp)
-				list( bp1= tmp[,bp1], bp1.1= tmp[,bp1.1], bp1.2= tmp[,bp1.2] )																	
-			}, by="FASTASampleCode"]														
-	setkeyv(df.mrecombbp, c("FASTASampleCode", "bp1.1", "bp1.2"))												
-	#	breakpoints among mrecombinants are not necessarily the same
-	print(df.mrecombbp, n=250)										
-	
-	
-	
+	if(0)
+	{
+		setnames(df.recomb, "dummy", "triplet.id")
+		#
+		#	get candidate recombinant sequences
+		#
+		df.recombseq	<- data.table( FASTASampleCode= unique( c(df.recomb[, parent1], df.recomb[, parent2], df.recomb[, child]) ) )
+		df.recombseq	<- df.recombseq[ , 	{
+												tmp<- subset(df.recomb, parent1==FASTASampleCode | parent2==FASTASampleCode | child==FASTASampleCode )
+												list( n.triplets=nrow(tmp), min.p=min(tmp[,adjp]), med.p=median(tmp[,adjp]), triplet.id=tmp[,triplet.id] )
+											} , by="FASTASampleCode"]
+		setkey(df.recombseq, n.triplets, FASTASampleCode)
+		#plot( df.recombseq[,n.triplets], df.recombseq[,min.p], pch=18 )
+		
+		#
+		#determine how many other triplet sequences there are for an m candidate
+		#
+		df.mrecombseq	<- subset(df.recombseq, n.triplets>2)[, {
+					tmp			<- triplet.id
+					tmp			<- subset(df.recomb, triplet.id%in%tmp)
+					triplet.seq	<- setdiff( unique( c(tmp[, parent1], tmp[, parent2], tmp[, child]) ), FASTASampleCode)
+					list( triplet.seq=triplet.seq, triplet.seq.n=length(triplet.seq)  )
+				}, by="FASTASampleCode"]
+		df.mrecombbp	<- subset(df.recombseq, n.triplets>2)[, {
+					tmp			<- triplet.id
+					tmp			<- subset(df.recomb, triplet.id%in%tmp)
+					list( bp1= tmp[,bp1], bp1.1= tmp[,bp1.1], bp1.2= tmp[,bp1.2] )																	
+				}, by="FASTASampleCode"]														
+		setkeyv(df.mrecombbp, c("FASTASampleCode", "bp1.1", "bp1.2"))												
+		#	breakpoints among mrecombinants are not necessarily the same
+		print(df.mrecombbp, n=250)										
+	}
 	df.recomb
 }
 ######################################################################################
@@ -6111,7 +6112,7 @@ hivc.pipeline.recombination<- function()
 		df.recomb			<- hivc.prog.recombination.process.3SEQ.output()	
 		
 		triplets			<- seq_len(nrow(df.recomb))
-		triplets			<- 129:nrow(df.recomb)
+		triplets			<- 129#:nrow(df.recomb)
 		dummy	<- lapply(triplets, function(i)
 				{					
 					if(verbose)	cat(paste("\nprocess triplet number",i,"\n"))
@@ -6119,6 +6120,7 @@ hivc.pipeline.recombination<- function()
 					argv				<<- unlist(strsplit(argv,' '))
 					hivc.prog.recombination.check.candidates()		#this starts ExaML for the ith triplet			
 				})
+		stop()
 	}
 	if(0)	#	collect likely recombinants or those likely confounding the phylogeny		-- 	identified by eye
 	{
