@@ -6228,7 +6228,7 @@ hivc.pipeline.ExaML<- function()
 	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
 	{
 		bs.from		<- 0
-		bs.to		<- 250
+		bs.to		<- 0
 		bs.n		<- 500
 		
 		indir		<- paste(dir.name,"tmp",sep='/')
@@ -6250,7 +6250,8 @@ hivc.pipeline.ExaML<- function()
 					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q="pqeph", hpc.mem="3850mb", hpc.nproc=8)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("exa",signat,"qsub",sep='.')
-					cat(x)					
+					cat(x)		
+					stop()
 					hivc.cmd.hpccaller(outdir, outfile, x)
 					Sys.sleep(1)
 				})

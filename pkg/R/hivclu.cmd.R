@@ -387,6 +387,13 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 # start: compute ExaML tree
 #######################################################"
 	cmd<- paste(cmd,paste("\necho \'run ",prog.parser,"\'\n",sep=''))
+	#if output files are found and resume, don t do anything
+	if(resume)
+	{
+		cmd		<- paste(cmd,"resumeResult=$([ -s ",outdir,'/ExaML_result.',infile,'_',signat.in,".finaltree.",args.starttree.bsid," ])\n", sep='')
+		cmd		<- paste(cmd,"resumeInfo=$([ -s ",outdir,'/ExaML_info.',infile,'_',signat.in,".finaltree.",args.starttree.bsid," ])\n", sep='')
+		cmd		<- paste(cmd,"[ $resumeResult -a resumeInfo ] && exit 1\n",sep='')
+	}
 	#default commands for parser					
 	cmd			<- paste(cmd,"CWDEXAML=$(pwd)\n",sep='')
 	cmd			<- paste(cmd,"cd ",outdir,'\n',sep='')
@@ -538,31 +545,46 @@ cmd			<- paste(cmd,"\n#######################################################
 hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.to=99, bs.n=bs.to-bs.from+ifelse(bs.from==0,1,0), outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, opt.bootstrap.by="codon", args.examl="-m GAMMA -D", prog.supportadder=PR.EXAML.BS, tmpdir.prefix="examl", resume=1, verbose=1)
 {
 	hpcsys			<- hivc.get.hpcsys()
-	#hpcsys			<- "cx1.hpc.ic.ac.uk"
+	hpcsys			<- "cx1.hpc.ic.ac.uk"
 	#create number of seeds for the number of runs being processed, which could be less than bs.n
 	bs.id			<- seq.int(bs.from,bs.to)
 	bs.seeds		<- floor( runif(length(bs.id), 1e4, 1e5-1) )
 	tmpdir.prefix	<- paste(tmpdir.prefix,'_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
 	lapply(seq_along(bs.seeds), function(i)
 			{
-				cmd			<- ''
+				cmd			<- ''				
 				if(hpcsys=="debug")						#my MAC - don t use scratch
 				{
 					cmd		<- paste(cmd,hivc.cmd.examl.bsalignment(indir, infile, signat.in, signat.out, bs.id[i], opt.bootstrap.by=opt.bootstrap.by, outdir=indir, verbose=verbose),sep='\n')
 					cmd		<- paste(cmd,hivc.cmd.examl(indir, infile, signat.in, signat.out, outdir=outdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='\n')
 				}
 				else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
-				{
-					cmd		<- paste(cmd,"\nCWD=$(pwd)\n",sep='')
+				{										
+					if(resume)
+					{
+						cmd	<- paste(cmd,"\nnoResult=$([ ! -s ",outdir,'/ExaML_result.',infile,'_',signat.in,".finaltree.",sprintf("%03d",bs.id[i])," ])", sep='')
+						cmd	<- paste(cmd,"\nnoInfo=$([ ! -s ",outdir,'/ExaML_info.',infile,'_',signat.in,".finaltree.",sprintf("%03d",bs.id[i])," ])", sep='')
+						cmd	<- paste(cmd,"\nif [ $noResult -o noInfo ]; then\n",sep='')
+						cmd	<- paste(cmd,"#######################################################
+# start: not indented if statement -- don t do anything if ExaML output exists already
+#######################################################",sep='')
+					}					
+					cmd		<- paste(cmd,"CWD=$(pwd)\n",sep='\n')
 					cmd		<- paste(cmd,"echo $CWD\n",sep='')
 					tmpdir	<- paste("$CWD/",tmpdir.prefix,sep='')
 					cmd		<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
 					tmp		<- paste(indir,'/',infile,'_',gsub('/',':',signat.in),".R",sep='')
-					cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
+					cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,sep='')
 					cmd		<- paste(cmd,hivc.cmd.examl.bsalignment(tmpdir, infile, signat.in, signat.out, bs.id[i], opt.bootstrap.by=opt.bootstrap.by, outdir=tmpdir, verbose=verbose),sep='\n')
 					cmd		<- paste(cmd,hivc.cmd.examl(tmpdir, infile, signat.in, signat.out, outdir=tmpdir, prog.parser= prog.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='\n')
 					cmd		<- paste(cmd,"cp -f ",tmpdir,"/ExaML_result.",infile,'_',gsub('/',':',signat.in),".finaltree.",sprintf("%03d",bs.id[i]),' ', outdir,'\n',sep='')
-					cmd		<- paste(cmd,"cp -f ",tmpdir,"/ExaML_info.",infile,'_',gsub('/',':',signat.in),".finaltree.",sprintf("%03d",bs.id[i]),' ', outdir,'\n',sep='')					
+					cmd		<- paste(cmd,"cp -f ",tmpdir,"/ExaML_info.",infile,'_',gsub('/',':',signat.in),".finaltree.",sprintf("%03d",bs.id[i]),' ', outdir,'\n',sep='')
+					if(resume)
+					{
+					cmd		<- paste(cmd,"#######################################################
+# end: not indented if statement -- don t do anything if ExaML output exists already
+#######################################################\nfi\n",sep='')					
+					}
 				}				
 				cmd			<- paste(cmd,"#######################################################
 # start: check if all ExaML boostrap trees have been computed and if yes create ExaML bootstrap tree
