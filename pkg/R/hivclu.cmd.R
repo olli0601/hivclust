@@ -566,7 +566,7 @@ hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.fro
 						cmd	<- paste(cmd,"[ ! -s ",outdir,'/ExaML_result.',infile,'_',signat.in,".finaltree.",sprintf("%03d",bs.id[i])," ]", sep='')
 						cmd	<- paste(cmd," || ", sep='')
 						cmd	<- paste(cmd,"[ ! -s ",outdir,'/ExaML_info.',infile,'_',signat.in,".finaltree.",sprintf("%03d",bs.id[i])," ];", sep='')
-						cmd	<- paste(cmd,"then\n",sep='')
+						cmd	<- paste(cmd," then\n",sep='')
 						cmd	<- paste(cmd,"#######################################################
 # start: not indented if statement -- don t do anything if ExaML output exists already
 #######################################################",sep='')
