@@ -545,7 +545,7 @@ cmd			<- paste(cmd,"\n#######################################################
 hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.from=0, bs.to=99, bs.n=bs.to-bs.from+ifelse(bs.from==0,1,0), outdir=indir, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, opt.bootstrap.by="codon", args.examl="-m GAMMA -D", prog.supportadder=PR.EXAML.BS, tmpdir.prefix="examl", resume=1, verbose=1)
 {
 	hpcsys			<- hivc.get.hpcsys()
-	hpcsys			<- "cx1.hpc.ic.ac.uk"
+	#hpcsys			<- "cx1.hpc.ic.ac.uk"
 	#create number of seeds for the number of runs being processed, which could be less than bs.n
 	bs.id			<- seq.int(bs.from,bs.to)
 	bs.seeds		<- floor( runif(length(bs.id), 1e4, 1e5-1) )
@@ -583,7 +583,7 @@ hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.fro
 					{
 					cmd		<- paste(cmd,"#######################################################
 # end: not indented if statement -- don t do anything if ExaML output exists already
-#######################################################\nfi\n",sep='')					
+#######################################################\nelse\n\techo 'resumed bootstrap number ",bs.id[i],"'\nfi\n",sep='')					
 					}
 				}				
 				cmd			<- paste(cmd,"#######################################################
