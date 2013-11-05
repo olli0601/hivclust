@@ -392,7 +392,7 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 	{
 		cmd		<- paste(cmd,"resumeResult=$([ -s ",outdir,'/ExaML_result.',infile,'_',signat.in,".finaltree.",args.starttree.bsid," ])\n", sep='')
 		cmd		<- paste(cmd,"resumeInfo=$([ -s ",outdir,'/ExaML_info.',infile,'_',signat.in,".finaltree.",args.starttree.bsid," ])\n", sep='')
-		cmd		<- paste(cmd,"[ $resumeResult -a resumeInfo ] && exit 1\n",sep='')
+		cmd		<- paste(cmd,"[ $resumeResult -a $resumeInfo ] && exit 1\n",sep='')
 	}
 	#default commands for parser					
 	cmd			<- paste(cmd,"CWDEXAML=$(pwd)\n",sep='')
@@ -564,7 +564,7 @@ hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.fro
 					{
 						cmd	<- paste(cmd,"\nnoResult=$([ ! -s ",outdir,'/ExaML_result.',infile,'_',signat.in,".finaltree.",sprintf("%03d",bs.id[i])," ])", sep='')
 						cmd	<- paste(cmd,"\nnoInfo=$([ ! -s ",outdir,'/ExaML_info.',infile,'_',signat.in,".finaltree.",sprintf("%03d",bs.id[i])," ])", sep='')
-						cmd	<- paste(cmd,"\nif [ $noResult -o noInfo ]; then\n",sep='')
+						cmd	<- paste(cmd,"\nif [ $noResult -o $noInfo ]; then\n",sep='')
 						cmd	<- paste(cmd,"#######################################################
 # start: not indented if statement -- don t do anything if ExaML output exists already
 #######################################################",sep='')
