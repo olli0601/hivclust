@@ -6250,8 +6250,7 @@ hivc.pipeline.ExaML<- function()
 					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q="pqeph", hpc.mem="3850mb", hpc.nproc=8)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("exa",signat,"qsub",sep='.')
-					cat(x)		
-					stop()
+					#cat(x)		
 					hivc.cmd.hpccaller(outdir, outfile, x)
 					Sys.sleep(1)
 				})
@@ -6272,6 +6271,9 @@ hivc.pipeline.clustering<- function()
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"
 		#infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs500"
 		insignat	<- "Thu_Aug_01_17/05/23_2013"		
+		infile		<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences_examlbs500"	
+		insignat	<- "Fri_Nov_01_16/07/23_2013"
+		
 		
 		#seq covariates
 		indircov	<- paste(dir.name,"derived",sep='/')
