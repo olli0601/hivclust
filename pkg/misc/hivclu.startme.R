@@ -49,7 +49,7 @@ HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
 #HOME		<<- "/home/koelle/or7/phylody"
 #HOME		<<- "/work/or105/ATHENA_2013"
 DATA		<<- paste(HOME,"data",sep='/')
-NABC.DEBUG	<<- 0
+HIVC.DEBUG	<<- 1
 LIB.LOC		<<- NULL
 #LIB.LOC		<<- paste(CODE.HOME,"../",sep='')
 EPS			<<- 1e-12
@@ -139,6 +139,15 @@ my.make.documentation<- function()
 my.fade.col<-function(col,alpha=0.5)
 {
 	return(rgb(col2rgb(col)[1]/255,col2rgb(col)[2]/255,col2rgb(col)[3]/255,alpha))
+}
+
+my.dumpframes<- function()
+{
+	geterrmessage()
+	dump.frames()
+	cat(paste("\nmy.dumpframes dump 'last.dump' to file",paste(DATA,paste("debug_",paste(strsplit(date(),' ')[[1]],collapse='_'),".rda\n",sep=''),sep='/')))
+	save(last.dump, file=paste(DATA,paste("debug_",paste(strsplit(date(),' ')[[1]],collapse='_'),".rda",sep=''),sep='/'))
+	q()
 }
 
 my.aggregate<- function(x, bins)
@@ -339,12 +348,12 @@ if(length(args))
 								debug= 1,
 								NA)
 					}))		
-	if(length(tmp)!=0)	NABC.DEBUG<<- tmp[1]	
+	if(length(tmp)!=0)	HIVC.DEBUG<<- tmp[1]	
 	argv<<- args
 }
 ###############################################################################
-if(NABC.DEBUG)	options(error= my.dumpframes)	
+if(HIVC.DEBUG)	options(error= my.dumpframes)	
 require(abc.n)
-cat(paste("\nhivclu.startme.R: ",ifelse(NABC.DEBUG,"debug",""),"call",default.fun,"\n"))
+cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	
-cat("\nhivclu: ",ifelse(NABC.DEBUG,"debug","")," end\n")
+cat("\nhivclu: ",ifelse(HIVC.DEBUG,"debug","")," end\n")

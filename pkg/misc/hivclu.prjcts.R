@@ -5347,6 +5347,7 @@ hivc.prog.get.clustering.precompute<- function()
 		ph.node.bs[is.na(ph.node.bs)]	<- 0
 		ph.node.bs						<- ph.node.bs/100
 		ph$node.label					<- ph.node.bs
+		stop()
 		if(1)
 		{
 			#
@@ -6265,7 +6266,7 @@ hivc.pipeline.clustering<- function()
 		resume		<- 1
 		verbose		<- 1
 		#seq project
-		indir		<- paste(dir.name,"tmp",sep='/')		
+		indir		<- paste(DATA,"tmp",sep='/')		
 		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
 		insignat	<- "Sat_Jun_16_17/23/46_2013"
 		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"
@@ -6276,7 +6277,7 @@ hivc.pipeline.clustering<- function()
 		
 		
 		#seq covariates
-		indircov	<- paste(dir.name,"derived",sep='/')
+		indircov	<- paste(DATA,"derived",sep='/')
 		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
 		#default clustering tptn		
 		patient.n	<- 15700
@@ -6294,7 +6295,7 @@ hivc.pipeline.clustering<- function()
 		
 		cat(cmd)
 		#stop()
-		outdir		<- paste(dir.name,"tmp",sep='/')
+		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("clust",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		stop()
