@@ -3837,26 +3837,32 @@ hivc.phy.get.TP.and.TN.bootstrapvalues<- function(ph, bs.linked.bypatient, ph.mr
 hivc.phy.get.TP.and.TN<- function(ph, df.all, use.seroneg.as.is= 0, verbose= 1)
 {
 	#
-	# exctract geographically distant seqs that are assumed to be truly unlinked to NL seqs
+	# exctract geographically distant seqs that tips in 'ph' and that are assumed to be truly unlinked to NL seqs
 	#
 	tmp					<- ph$tip.label[ substr(ph$tip.label,1,2)=="TN" ]
 	unlinked.byspace	<- data.table(FASTASampleCode=tmp, key="FASTASampleCode")		
 	#
 	# extract list of truly linked sample codes
 	#
-	tmp					<- subset(df.all[, length(FASTASampleCode)>1, by=Patient], V1==T, select=Patient)
-	linked.bypatient	<- merge(tmp, df.all, all.x=1, by="Patient")
+	tmp					<- merge(df.all, data.table(FASTASampleCode=ph$tip.label), by="FASTASampleCode")	
+	tmp					<- subset(tmp[, length(FASTASampleCode)>1, by=Patient], V1==T, select=Patient)		#patients for which more than one sequence is available
+	linked.bypatient	<- merge(tmp, merge(df.all, data.table(FASTASampleCode=ph$tip.label), by="FASTASampleCode"), by="Patient")
 	setkey(linked.bypatient, "FASTASampleCode")
-	linked.bypatient	<- subset(linked.bypatient, select=c(Patient, FASTASampleCode, PosSeqT))					
+	linked.bypatient	<- subset(linked.bypatient, select=c(Patient, FASTASampleCode, PosSeqT))	
 	#
 	# extract list of truly unlinked sample codes by temporal separation
 	#
-	df.dead						<- subset(df.all, !is.na(DateDied))	
+	df.dead					<- subset(df.all, !is.na(DateDied))
+	if(verbose) cat(paste("\nnumber of dead HIV+ individuals",nrow(df.dead)))
+	df.dead					<- merge(df.dead, data.table(FASTASampleCode=ph$tip.label), by="FASTASampleCode")
+	if(verbose) cat(paste("\nnumber of dead HIV+ individuals in 'ph'",nrow(df.dead)))
 	setkey(df.dead, DateDied)	
 	#extract seroconverters
-	df.serocon.acc				<- subset(df.all, NegT_Acc=="Yes" & NegT>=df.dead[1,DateDied],)
+	
+	tmp							<- df.dead[1,DateDied]
+	df.serocon.acc				<- subset(df.all, NegT_Acc=="Yes" & NegT>=tmp)
 	#add seroconverters with inaccurate info
-	df.serocon.nacc				<- subset(df.all, NegT_Acc=="No" & !is.na(NegT) & NegT>=df.dead[1,DateDied], )
+	df.serocon.nacc				<- subset(df.all, NegT_Acc=="No" & !is.na(NegT) & NegT>=tmp )
 	if(!use.seroneg.as.is)
 	{
 		df.serocon.nacc.dy			<- subset(df.serocon.nacc, as.POSIXlt(NegT)$mday==15, )						#for inaccurate days, we (conservatively) assume the patient was only seronegative at the start of the month
@@ -3877,20 +3883,24 @@ hivc.phy.get.TP.and.TN<- function(ph, df.all, use.seroneg.as.is= 0, verbose= 1)
 		}
 		df.serocon.nacc					<- rbind(df.serocon.nacc.dy, df.serocon.nacc.mody)
 	}
-	df.serocon					<- rbind(df.serocon.acc, df.serocon.nacc)		
+	df.serocon					<- rbind(df.serocon.acc, df.serocon.nacc)
+	set(df.serocon, NULL, "FASTASampleCode", as.character(df.serocon[,FASTASampleCode]))
 	if(verbose) cat(paste("\nnumber of seroconverters with at least 1 preceeding dead HIV+",nrow(df.serocon)))
-	#for each seq of seroconverter, extract HIV+ seqs that are dead before seroconversion
+	df.serocon					<- merge(df.serocon, data.table(FASTASampleCode=ph$tip.label), by="FASTASampleCode")
+	if(verbose) cat(paste("\nnumber of seroconverters in 'ph' with at least 1 preceeding dead HIV+",nrow(df.serocon)))
+	#for each seq of seroconverter, extract HIV+ seqs that are dead before seroconversion	
 	if( any(as.logical(df.serocon[,is.na(NegT)])) )	warning("Found accurate seroconverters with missing NegT")		
 	setkey(df.serocon,NegT)
 	unlinked.bytime				<- lapply(seq_len(nrow(df.serocon)), function(i)
 				{
-					tmp				<- subset(df.dead, DateDied<=df.serocon[i,NegT],select=c(Patient,FASTASampleCode,DateDied))
+					tmp				<- df.serocon[i,NegT]
+					tmp				<- subset(df.dead, DateDied<=tmp,select=c(Patient,FASTASampleCode,DateDied))
 					tmp2			<- rep(df.serocon[i,FASTASampleCode],nrow(tmp))
 					tmp[,query.FASTASampleCode:= tmp2]
 					setkey(tmp,"FASTASampleCode")
 					tmp					
 				})
-	names(unlinked.bytime)	<- df.serocon[,FASTASampleCode]											
+	names(unlinked.bytime)		<- df.serocon[,FASTASampleCode]											
 	#
 	#plot number of unlinked HIV+ by date (this date is when someone else is still seroneg)
 	#
@@ -3916,7 +3926,7 @@ hivc.phy.get.TP.and.TN<- function(ph, df.all, use.seroneg.as.is= 0, verbose= 1)
 	# get TN for seroneg: convert unlinked.bytime from SampleCode to ph node index and add truly unlinked.byspace
 	#
 	df.tips							<- data.table(Node=seq_len(Ntip(ph)), FASTASampleCode=ph$tip.label, key="FASTASampleCode" )
-	unlinked.byspace				<- merge(unlinked.byspace, df.tips, all.x=1, by="FASTASampleCode")
+	unlinked.byspace				<- merge(unlinked.byspace, df.tips, by="FASTASampleCode")
 	setkey(unlinked.byspace,"Node")
 	ph.unlinked.bytime				<- lapply(unlinked.bytime, function(x)
 				{
@@ -3962,7 +3972,7 @@ hivc.phy.get.TP.and.TN<- function(ph, df.all, use.seroneg.as.is= 0, verbose= 1)
 	#
 	#	get data table of all linked ATHENA seqs
 	#
-	ph.linked						<- merge(linked.bypatient, df.tips, all.x=1)
+	ph.linked						<- merge(linked.bypatient, df.tips)
 	ph.linked						<- subset(ph.linked, select=c(FASTASampleCode, Patient, Node))
 	ph.linked						<- merge(ph.linked, ph.linked[, length(FASTASampleCode), by=Patient], all.x=1, by="Patient")
 	setnames(ph.linked, "V1","nTP")

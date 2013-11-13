@@ -132,7 +132,7 @@ project.hivc.check.DateRes.after.HIVPosTest<- function(dir.name= DATA, verbose=1
 					tmp$TimeToSeq[tmp$TimeToSeq<1]<- 1
 					#cumsum(phase) / nrow
 					#print( cumsum( as.numeric( tmp$HIVPhase==1 ) ) )
-					#stop()
+					#quit("no")
 					tmp		<- cbind( tmp[ with(tmp, order(TimeToSeq)), ], seq_len(nrow(tmp)) )
 					counts	<- t(ddply(tmp, .(HIVPhase), function(x)
 							{								
@@ -163,7 +163,7 @@ project.hivc.check.DateRes.after.HIVPosTest<- function(dir.name= DATA, verbose=1
 					#p<- 	p+geom_line(aes(col=HIVPhase))
 					#p<-		p+geom_area(position = "fill")	
 					#print(p)					
-					stop()
+					quit("no")
 				}												
 				list(patient.laterHIVPos=patient.laterHIVPos)
 			})
@@ -418,7 +418,7 @@ project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 	df.living		<- unique(df.living)
 	tmp				<- hivc.db.getplot.livingbyexposure(df.living, plot.file=paste(dir.name,"/derived/",file.out.name,"_Seen4CareByExpGroup.pdf",sep=''), plot.ylab="Seen for care with HIV-1 subtype B,\n seq available", db.endtime=2013.3, db.diff.lastcontact2died=0.5, db.diff.lastcontact2now= 2.3, verbose=1)
 	
-	stop()
+	quit("no")
 	#
 	#compute coverage of all data covariates
 	#
@@ -432,7 +432,7 @@ project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 	df			<- unique(df)
 	df.covbypat	<- hivc.db.getcoverage(df)							
 	
-	stop()
+	quit("no")
 	#
 	#compute file All1stPatientCovariates
 	#
@@ -1272,7 +1272,7 @@ project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=
 		file		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
 		cat(paste("\nsave to", file))
 		save(df, file=file)
-		stop()
+		quit("no")
 	}
 	if(0)
 	{
@@ -2105,7 +2105,7 @@ hivc.prog.get.allseq<- function()
 			if(verbose)	cat(paste("\nwrite fasta file to",file))
 			write.dna(seq.PROT.RT, file=file, format="fasta", colsep='', colw=ncol(seq.PROT.RT), blocksep=0)						
 		}
-		stop()				
+		quit("no")				
 	}
 	else
 	{
@@ -2503,7 +2503,7 @@ project.hivc.clustering.get.linked.and.unlinked<- function(dir.name= DATA)
 			polygon(c(x,c(x[length(x)],x[1])), c(y+y2,y2,y2), border=NA, col="grey60" )
 			legend("topleft",bty='n',fill=c("blue","grey60"),legend=c("by space","by time"),border=NA)						
 		}
-		stop()
+		quit("no")
 	}
 	if(0)	#extract unlinked pairs by temporal separation -- this is version Fri_May_24_12/59/06_2013
 	{
@@ -2605,7 +2605,7 @@ project.hivc.clustering.get.linked.and.unlinked<- function(dir.name= DATA)
 			file						<- paste(outdir,paste(outfile,"_Unlinked",unlinked.closest.n,'_',gsub('/',':',outsignat),".R",sep=''),sep='/')
 		if(verbose) cat(paste("\nwrite unlinked pairs to file",file))
 		save(unlinked.bytime, df.serocon, df.all, file=file)		
-		stop()
+		quit("no")
 	}
 }
 ######################################################################################
@@ -5336,7 +5336,7 @@ hivc.prog.get.clustering.precompute<- function()
 	if(!resume || inherits(readAttempt, "try-error"))
 	{	
 		file							<- paste(indir,paste(infile,'_',gsub('/',':',insignat),".newick",sep=''),sep='/')
-		if(verbose) cat(paste("read phylo from file",file))		
+		if(verbose) cat(paste("\nread phylo from file",file))		
 		ph								<- ladderize( read.tree(file) )
 		gc()
 		#
@@ -5347,7 +5347,6 @@ hivc.prog.get.clustering.precompute<- function()
 		ph.node.bs[is.na(ph.node.bs)]	<- 0
 		ph.node.bs						<- ph.node.bs/100
 		ph$node.label					<- ph.node.bs
-		stop()
 		if(1)
 		{
 			#
@@ -6298,7 +6297,7 @@ hivc.pipeline.clustering<- function()
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("clust",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
-		stop()
+		quit("no")
 	}
 }
 
@@ -6357,7 +6356,7 @@ hivc.pipeline.BEAST<- function()
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))
 		hivc.prog.BEAST.generate.xml()		
-		stop()
+		quit("no")
 	}
 }
 
@@ -6399,7 +6398,7 @@ hivc.proj.pipeline<- function()
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q="pqeph")
 		cat(cmd)
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
-		stop()
+		quit("no")
 	}	
 	
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
@@ -6434,6 +6433,6 @@ project.hivc.test<- function()
 		gd<- .C("hivc_dist_ambiguous_dna", x, y, length(x), tmp )[[4]]
 		print(gd)
 	}
-	stop()
+	quit("no")
 }
 
