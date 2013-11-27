@@ -49,7 +49,7 @@ HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
 #HOME		<<- "/home/koelle/or7/phylody"
 #HOME		<<- "/work/or105/ATHENA_2013"
 DATA		<<- paste(HOME,"data",sep='/')
-HIVC.DEBUG	<<- 1
+HIVC.DEBUG	<<- 0
 LIB.LOC		<<- NULL
 #LIB.LOC		<<- paste(CODE.HOME,"../",sep='')
 EPS			<<- 1e-12
@@ -76,7 +76,8 @@ default.fun		<- "project.hivc.Excel2dataframe"
 #default.fun 	<- "hivc.prog.BEAST.evalpoolrun"
 #default.fun 	<- "hivc.pipeline.recombination"
 #default.fun 	<- "hivc.pipeline.ExaML"
-default.fun		<- "hivc.pipeline.clustering"
+default.fun 	<- "hivc.pipeline.BEAST"
+#default.fun		<- "hivc.pipeline.clustering"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -331,7 +332,7 @@ if(length(args))
 					FIRSTSEQ				= "hivc.prog.get.firstseq",
 					BOOTSTRAPSEQ			= "hivc.prog.get.bootstrapseq",
 					GENDISTMAT				= "hivc.prog.get.geneticdist",
-					PRECLUST				= "hivc.prog.precompute.clustering",
+					PRECLUST				= "hivc.prog.get.clustering.precompute",
 					CLUST					= "hivc.prog.get.clustering",
 					CLUSTTPTN				= "hivc.prog.get.clustering.TPTN",
 					CLUSTMSM				= "hivc.prog.get.clustering.MSM",

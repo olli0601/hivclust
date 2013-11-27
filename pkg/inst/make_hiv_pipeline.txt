@@ -81,3 +81,13 @@ cd 3seq_v1.10812_or
 make PTFLAGS=-DPVT='\"/work/or105/libs/hivclust/pkg/inst/\"'
 sudo cp 3seq /home/or105/bin/3seq
 cd ..
+
+INSTALL BEAST2
+follow instructions in BEAST Eclipse setup
+I had to install JavaHL through MacPorts
+but check out http://beast2.googlecode.com/svn/trunk/beast2-read-only
+and name the JAVA project 'beast2'
+then right click in Eclipse/beast2 build.xml and RunAs->AntBuild
+
+beast -strict -working -threads 1 
+java -Xms64m -Xmx256m -jar lib/beast.jar XMLFILR

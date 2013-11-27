@@ -5742,6 +5742,192 @@ hivc.prog.BEAST.evalpoolrun<- function()
 	}
 }
 ######################################################################################
+hivc.prog.BEAST2.generate.xml<- function()
+{	
+	require(XML)
+	
+	indir				<- paste(DATA,"tmp",sep='/')		
+	infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+	insignat			<- "Thu_Aug_01_17/05/23_2013"
+	indircov			<- paste(DATA,"derived",sep='/')
+	infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infiletree			<- paste(infile,"examlbs100",sep="_")
+	infilexml			<- paste(infile,'_',"bdsky",'_',"seroneg",sep='')
+	
+	outdir				<- indir
+	outsignat			<- "Tue_Aug_26_09/13/47_2013"
+	
+	opt.brl					<- "dist.brl.casc" 
+	thresh.brl				<- 0.096
+	thresh.bs				<- 0.8
+	pool.ntip				<- 130
+	beast.mcmc.chainLength	<- 100000000
+	infilexml.opt			<- "standard"
+	infilexml.template		<- "standard"	
+	
+	resume				<- 1
+	verbose				<- 1
+	hpc.walltime		<- 171
+	hpc.ncpu			<- 4
+	hpc.mem				<- "1800mb"
+	
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									indircov= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indircov<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									infilecov= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilecov<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,11),
+									infiletree= return(substr(arg,13,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infiletree<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									infilexml= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									outsignat= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outsignat<- tmp[1]				
+		#		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,8),
+									opt.brl= return(substr(arg,10,nchar(arg))),NA)	}))
+		if(length(tmp)>0) opt.brl<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									thresh.bs= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) thresh.bs<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,11),
+									thresh.brl= return(as.numeric(substr(arg,13,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) thresh.brl<- tmp[1]
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									pool.ntip= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) pool.ntip<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,14),
+									infilexml.opt= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.opt<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.template<- tmp[1]
+	}	
+	
+	#	load complete tree to generate starting tree
+	file					<- paste(indir,'/',infiletree,'_',gsub('/',':',insignat),".R",sep='')
+	if(verbose)	cat(paste("\nload complete tree to generate starting tree from file",file))
+	load(file)	#load object 'ph'
+	
+	xml.monophyly4clusters			<- ifelse(grepl("mph4clu",infilexml.opt),1,0)		
+	pool.includealwaysbeforeyear	<- ifelse(grepl("fx03",infilexml.opt),2003, NA)
+	xml.prior4tipstem				<- ifelse(grepl("u4tip",infilexml.opt),"uniform",NA)
+	xml.taxon4tipstem				<- ifelse(	any(sapply(c("u4tip","tx4tip"), function(x) grepl(x,infilexml.opt))),	1, 0)
+	df.resetTipDate					<- NA
+	if(grepl("LdTd",infilexml.opt))				df.resetTipDate<- "LdTd"
+	else if(grepl("LsTd",infilexml.opt))		df.resetTipDate<- "LsTd"
+	else if(grepl("UmTd",infilexml.opt))		df.resetTipDate<- "UmTd"
+	#case NoTd is dealt with below
+	#
+	#
+	if(verbose)
+	{
+		print(indir)
+		print(infile)
+		print(insignat)
+		print(indircov)
+		print(infilecov)
+		print(infiletree)
+		print(infilexml)
+		print(outdir)		
+		print(outsignat)
+		print(resume)
+		print(opt.brl)
+		print(thresh.brl)
+		print(thresh.bs)
+		print(pool.ntip)
+		print(pool.includealwaysbeforeyear)
+		print(infilexml.opt)
+		print(infilexml.template)
+		print(xml.monophyly4clusters)
+		print(xml.taxon4tipstem)
+		print(xml.prior4tipstem)
+		print(df.resetTipDate)
+	}	
+	#
+	#	load sequences
+	#
+	file		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+	if(verbose)	cat(paste("\nload sequences from file",file))
+	load( file )
+	#print( seq.PROT.RT )	
+	#
+	#	load msm clusters
+	#
+	argv		<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=resume)
+	argv		<<- unlist(strsplit(argv,' '))		
+	msm			<- hivc.prog.get.clustering.MSM()	
+	#
+	#	select seroconverters
+	#
+	df.cluinfo				<- msm$df.cluinfo
+	tmp						<- df.cluinfo[,	list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], fNegT=length(which(!is.na(NegT))) / clu.ntip[1]),by="cluster"]										
+	tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=0.8) )
+	cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
+	if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))
+	cluphy.df				<- hivc.beast.addBEASTLabel( cluphy.df, df.resetTipDate=df.resetTipDate )
+	#
+	#	create sets of cluster pools for BEAST
+	#
+	df.clupool				<- hivc.beast.poolclusters(cluphy.df, pool.ntip= pool.ntip, pool.includealwaysbeforeyear=pool.includealwaysbeforeyear, verbose=1)			
+	#
+	#	create nexus file for now	
+	#
+	dummy					<- lapply(seq_len(length(df.clupool$pool.df)), function(pool.id)
+		{
+			df					<- df.clupool$pool.df[[pool.id]]
+			setkey(df, cluster)
+			outfile				<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')
+			outfile				<- paste(indir,'/',outfile,".nex",sep='')
+			tmp					<- seq.PROT.RT[df[, FASTASampleCode],]		
+			rownames(tmp)		<- df[, BEASTlabel]
+			dummy				<- hivc.seq.write.dna.nexus(tmp, file=outfile )			
+		})
+}
+######################################################################################
 hivc.prog.BEAST.generate.xml<- function()
 {	
 	require(XML)
@@ -5955,6 +6141,7 @@ hivc.prog.BEAST.generate.xml<- function()
 				cmd			<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
 				cat(cmd)
+				stop()
 				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)				
 			})		
@@ -6303,7 +6490,7 @@ hivc.pipeline.clustering<- function()
 
 hivc.pipeline.BEAST<- function()
 {
-	if(0)	#run BEAST POOL
+	if(0)	#run BEAST 1.7.5 GMRF skyline
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -6358,6 +6545,27 @@ hivc.pipeline.BEAST<- function()
 		hivc.prog.BEAST.generate.xml()		
 		quit("no")
 	}
+	if(0)		#generate BEAST2 BDSKYline xml file
+	{
+		hivc.prog.BEAST2.generate.xml()
+	}
+	if(1)		#run BEAST2 BDSKYline
+	{
+		indir				<- paste(DATA,"tmp",sep='/')
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_standard"
+		insignat			<- "Tue_Aug_26_09/13/47_2013"
+		hpc.ncpu			<- 1
+
+		cmd					<- hivc.cmd.beast2.runxml(indir, infile, insignat, hpc.ncpu=hpc.ncpu, prog.opt.Xmx="1200m")
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=24, hpc.mem="1200mb")
+		
+		cat(cmd)
+		signat		<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+		outdir		<- paste(DATA,"tmp",sep='/')
+		outfile		<- paste("b2",signat,"qsub",sep='.')					
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+	}
+	
 }
 
 hivc.proj.pipeline<- function()
