@@ -42,7 +42,7 @@ ExaML-raxml:
 	
 EXAML-parsimonator:	
 	echo $(CWD)
-	git clone http://github.com/stamatak/Parsimonator-1.0.2.git
+	git clone https://github.com/stamatak/Parsimonator-1.0.2.git
 	make -C Parsimonator-1.0.2 -f Makefile.SSE3.gcc
 	mv $(CWD)/Parsimonator-1.0.2/parsimonator-SSE3 $(EXTERNAL_CODE)/ExaML-parsimonator 	
 	rm -rf Parsimonator-1.0.2
