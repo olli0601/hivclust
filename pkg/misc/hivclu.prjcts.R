@@ -1,5 +1,3 @@
-#mememto mori
-#odi et amo
 #' @export
 HIVC.COUNTRY.TABLE<- data.table(matrix(c(	"AG","ANTIGUA AND BARBUDA",		"AL","ALBANIA",		"AN", "ANTILLES", "AO","ANGOLA",	"AR","ARGENTINA",	"AT","AUSTRIA",		"AU","AUSTRALIA",				
 						"BB","BARBADOS",	"BE","BELGIUM",	"BG","BULGARIA",	"BR","BRAZIL",	"CA","CANADA",	"CH","SWITZERLAND",		"CI","COTE D'IVOIRE",	"CL","CHILE",	
@@ -4251,7 +4249,7 @@ project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 		lapply(cmd,function(x)
 				{
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-					outfile	<- paste("clustalo",signat,"qsub",sep='.')					
+					outfile	<- paste("clustalo",signat,sep='.')					
 					hiv.cmd.hpccaller(outdir, outfile, x)			
 				})			
 	}
@@ -5009,7 +5007,7 @@ hivc.prog.recombination.check.candidates<- function()
 			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem, hpc.nproc=hpc.nproc)
 			signat		<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 			outdir		<- paste(DATA,"tmp",sep='/')
-			outfile		<- paste("3sc",signat,"qsub",sep='.')
+			outfile		<- paste("3sc",signat,sep='.')
 			#cat(cmd)			
 			hivc.cmd.hpccaller(outdir, outfile, cmd)
 			Sys.sleep(1)
@@ -6142,7 +6140,7 @@ hivc.prog.BEAST.generate.xml<- function()
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
 				cat(cmd)
 				stop()
-				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
+				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)				
 			})		
 }
@@ -6281,7 +6279,7 @@ hivc.pipeline.recombination<- function()
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=35, hpc.q="pqeph", hpc.mem="3850mb",  hpc.nproc=1)
 					cat(cmd)
 					outdir		<- indir
-					outfile		<- paste("r3seq",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')									
+					outfile		<- paste("r3seq",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')									
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
 				})		
 		stop()
@@ -6405,7 +6403,7 @@ hivc.pipeline.ExaML<- function()
 				{				
 					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-					outfile	<- paste("pipeline",signat,"qsub",sep='.')
+					outfile	<- paste("pipeline",signat,sep='.')
 					cat(x)
 					#hivc.cmd.hpccaller(outdir, outfile, x)
 					#Sys.sleep(1)
@@ -6436,8 +6434,8 @@ hivc.pipeline.ExaML<- function()
 				{				
 					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q="pqeph", hpc.mem="3850mb", hpc.nproc=8)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-					outfile	<- paste("exa",signat,"qsub",sep='.')
-					#cat(x)		
+					outfile	<- paste("exa",signat,sep='.')
+					#cat(x)
 					hivc.cmd.hpccaller(outdir, outfile, x)
 					Sys.sleep(1)
 				})
@@ -6482,7 +6480,7 @@ hivc.pipeline.clustering<- function()
 		cat(cmd)
 		#stop()
 		outdir		<- paste(DATA,"tmp",sep='/')
-		outfile		<- paste("clust",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')
+		outfile		<- paste("clust",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		quit("no")
 	}
@@ -6562,7 +6560,7 @@ hivc.pipeline.BEAST<- function()
 		cat(cmd)
 		signat		<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 		outdir		<- paste(DATA,"tmp",sep='/')
-		outfile		<- paste("b2",signat,"qsub",sep='.')					
+		outfile		<- paste("b2",signat,sep='.')					
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 	}
 	
@@ -6602,7 +6600,7 @@ hivc.proj.pipeline<- function()
 		insignat	<- "Thu_Aug_01_17/05/23_2013"
 		cmd			<- hivc.cmd.get.geneticdist(indir, infile, insignat, gd.max, outdir=indir)
 		
-		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),"qsub",sep='.')					
+		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')					
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q="pqeph")
 		cat(cmd)
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
@@ -6611,7 +6609,7 @@ hivc.proj.pipeline<- function()
 	
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 	outdir	<- paste(dir.name,"tmp",sep='/')
-	outfile	<- paste("pipeline",signat,"qsub",sep='.')					
+	outfile	<- paste("pipeline",signat,sep='.')					
 	lapply(cmd, function(x)
 			{				
 				#x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")

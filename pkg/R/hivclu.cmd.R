@@ -41,7 +41,7 @@ PR.CLUSTMSM		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeCLUSTMSM",se
 PR.EXAML.BSCREATE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBOOTSTRAPSEQ",sep='/')
 
 #' @export
-PR.RECOMB.3SEQ	<- "3seq"
+PR.RECOMB.3SEQ	<- system.file(package="hivclust", "ext", "3seq") 
 
 #' @export
 PR.RECOMB.PROCESS3SEQOUTPUT	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeRECOMB.PROCESS3SEQOUT",sep='/')
@@ -53,16 +53,16 @@ PR.RECOMB.CHECKCANDIDATES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -ex
 PR.RECOMB.PLOTINCONGRUENCE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeRECOMB.PLOTINCONGRUENCE",sep='/')
 
 #' @export
-PR.EXAML.PARSER	<- "ExaML-parser"
+PR.EXAML.PARSER	<- system.file(package="hivclust", "ext", "ExaML-parser") 
 
 #' @export
-PR.EXAML.STARTTREE	<- "ExaML-parsimonator"
+PR.EXAML.STARTTREE	<- system.file(package="hivclust", "ext", "ExaML-parsimonator")
 
 #' @export
-PR.EXAML.EXAML	<- "examl"
+PR.EXAML.EXAML	<- system.file(package="hivclust", "ext", "examl")
 
 #' @export
-PR.EXAML.BS		<- "ExaML-raxml"
+PR.EXAML.BS		<- system.file(package="hivclust", "ext", "ExaML-raxml")
 
 #' @export
 PR.BEAST		<- {tmp<- c("/Applications/BEAST_1.7.5/bin/beast","beast"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp } 
@@ -77,7 +77,8 @@ PR.BEASTEVALRUN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEASTEVAL
 PR.BEASTPOOLRUN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEASTPOOLRUN",sep='/')
 
 #' @export
-PR.BEAST2		<- {tmp<- c("/Applications/BEAST_2.1.0/lib/beast.jar","/work/or105/libs/BEAST/lib/beast.jar"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp } 
+# PR.BEAST2		<- {tmp<- c("/Applications/BEAST_2.1.0/lib/beast.jar","/work/or105/libs/BEAST/lib/beast.jar"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp }
+PR.BEAST2		<- {tmp<- c("/Users/Oliver/workspace_sandbox/beast2/build/dist/beast.jar","/work/or105/libs/BEAST/lib/beast.jar"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp } 
 
 #' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
@@ -786,10 +787,10 @@ hivc.cmd.beast2.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST2,
 
 #add additional high performance computing information 
 #' @export
-hivc.cmd.hpcwrapper<- function(cmd, domain.name= hivc.get.hpcsys(), hpc.walltime=24, hpc.mem=HPC.MEM, hpc.nproc=HPC.NPROC[domain.name], hpc.q=NA)
+hivc.cmd.hpcwrapper<- function(cmd, hpcsys= hivc.get.hpcsys(), hpc.walltime=24, hpc.mem=HPC.MEM, hpc.nproc=HPC.NPROC[hpcsys], hpc.q=NA)
 {
 	wrap<- "#!/bin/sh"	
-	if(1 || domain.name==HPC.CX1.IMPERIAL)
+	if(hpcsys==HPC.CX1.IMPERIAL)
 	{				
 		tmp	<- paste("#PBS -l walltime=",hpc.walltime,":59:59,pcput=",hpc.walltime,":45:00",sep='')
 		wrap<- paste(wrap, tmp, sep='\n')		
@@ -799,14 +800,11 @@ hivc.cmd.hpcwrapper<- function(cmd, domain.name= hivc.get.hpcsys(), hpc.walltime
 		if(!is.na(hpc.q))
 			wrap<- paste(wrap, paste("#PBS -q",hpc.q), sep='\n\n')
 		wrap<- paste(wrap, HPC.LOAD, sep='\n')
-		#tmp	<- paste("export PATH=$PATH:",HPC.BIN,sep='')
-		#wrap<- paste(wrap, tmp, sep='\n')
-
 	}
-	else if(tmp=='')
-		cat(paste("\ndetected no HPC system and no hpcwrapper generated, domain name is",tmp))
+	else if(hpcsys=='debug')
+		cat(paste("\ndetected no HPC system and no hpcwrapper generated, domain name is",hpcsys))
 	else
-		stop(paste("unknown hpc system with domain name",tmp))
+		stop(paste("unknown hpc system with domain name",hpcsys))
 	
 	cmd<- lapply(seq_along(cmd),function(i){	paste(wrap,cmd[[i]],sep='\n')	})
 	if(length(cmd)==1)
@@ -818,11 +816,22 @@ hivc.cmd.hpcwrapper<- function(cmd, domain.name= hivc.get.hpcsys(), hpc.walltime
 #' @export
 hivc.cmd.hpccaller<- function(outdir, outfile, cmd)
 {
-	file<- paste(outdir,outfile,sep='/')
-	cat(paste("\nwrite cmd to",file,"\n"))
-	cat(cmd,file=file)
-	cmd<- paste("qsub",file)
-	cat( cmd )
-	cat( system(cmd, intern=TRUE) )	
-	Sys.sleep(1)
+	if( nchar( Sys.which("qsub") ) )
+	{
+		file	<- paste(outdir,'/',outfile,'.qsub',sep='')
+		cat(paste("\nwrite HPC script to",file,"\n"))
+		cat(cmd,file=file)
+		cmd		<- paste("qsub",file)
+		cat( cmd )
+		cat( system(cmd, intern=TRUE) )
+		Sys.sleep(1)
+	}
+	else
+	{
+		file	<- paste(outdir,'/',outfile,'.sh',sep='')
+		cat(paste("\nwrite Shell script to\n",file,"\nStart this shell file manually\n"))
+		cat(cmd,file=file)
+		Sys.chmod(file, mode = "777")		
+	}
+	
 }
