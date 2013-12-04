@@ -6551,13 +6551,18 @@ hivc.pipeline.BEAST<- function()
 	{
 		indir				<- paste(DATA,"tmp",sep='/')
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_standard"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS4"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS6"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS8"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS10"
 		insignat			<- "Tue_Aug_26_09/13/47_2013"
 		hpc.ncpu			<- 1
 
 		cmd					<- hivc.cmd.beast2.runxml(indir, infile, insignat, hpc.ncpu=hpc.ncpu, prog.opt.Xmx="1200m")
-		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=24, hpc.mem="1200mb")
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=72, hpc.mem="1200mb")
 		
 		cat(cmd)
+		stop()
 		signat		<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("b2",signat,sep='.')					
