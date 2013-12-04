@@ -1,9 +1,10 @@
-DEST= /Users/Oliver/Library/R/2.15/library/hivclust
+DEST= $(R_LIBS_USER)/hivclust
 EXTERNAL_CODE= $(DEST)/ext
 CWD= $$(pwd)
 
 all:	
-	echo $(CWD)
+	echo "current directory is "$(CWD)
+	echo "destination directory for external code is "$(EXTERNAL_CODE)
 	mkdir -p $(EXTERNAL_CODE)
 	@echo "*********************************************** "
 	@echo "********* BUILDING 3seq *********************** "
