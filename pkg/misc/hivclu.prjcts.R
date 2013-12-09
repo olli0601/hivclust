@@ -6555,6 +6555,9 @@ hivc.pipeline.BEAST<- function()
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS6"
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS8"
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS10"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxS4"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxS5"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxS8"
 		insignat			<- "Tue_Aug_26_09/13/47_2013"
 		hpc.ncpu			<- 1
 
