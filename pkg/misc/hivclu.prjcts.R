@@ -5877,7 +5877,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		print(opt.brl)
 		print(thresh.brl)
 		print(thresh.bs)
-		print(pool.ntip)		
+		print(pool.ntip)		 
 		print(infilexml.opt)
 		print(infilexml.template)
 	}
