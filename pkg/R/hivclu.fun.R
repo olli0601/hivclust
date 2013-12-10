@@ -742,6 +742,236 @@ hivc.beast.read.log2tstem<- function(file.log, file.xml, beastlabel.idx.sampleco
 	ans	<- rbindlist(ans)
 }
 ######################################################################################
+hivc.beast2.add.alignment<- function(bxml, seq.PROT.RT, df, beast2.spec, verbose=1)
+{
+	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	dummy		<- newXMLCommentNode(text="The sequence alignment.", parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLCommentNode(text=paste("ntax=",nrow(df)," nchar=",ncol(seq.PROT.RT),sep=''), parent=bxml.beast, doc=bxml, addFinalizer=T)	
+	seqalign	<- newXMLNode("data", attrs= list(id=beast2.spec$alignment.id, name="alignment", dataType=beast2.spec$alignment.dataType, missing=beast2.spec$alignment.missing), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- lapply( seq_len(nrow(df)), function(i)
+			{
+				tmp		<- which( rownames(seq.PROT.RT)==df[i, FASTASampleCode] )
+				if(length(tmp)!=1)	stop("unexpected row in seq.PROT.RT selected")
+				tmp		<- paste(as.character(seq.PROT.RT[tmp,])[1,],collapse='',sep='')										
+				seq		<- newXMLNode("sequence", attrs=list(id= df[i, BEASTlabel], taxon=df[i, BEASTlabel], value=tmp), parent=seqalign, doc=bxml, addFinalizer=T)
+				seq
+			})	
+	if(verbose)	cat(paste("\nadded new alignment with sequences, n=", xmlSize(seqalign)))
+	bxml
+}
+######################################################################################
+hivc.beast2.add.datetrait<- function(bxml, df, beast2.spec, verbose=1)	
+{			
+	tmp			<- df[,BEASTlabel]	
+	if(verbose)	cat(paste("\nsetting tip date to time at pos x in label, x=", beast2.spec$beast.label.datepos))
+	tmp			<- sapply( strsplit(tmp, beast2.spec$beast.label.sep, fixed=1), function(x) paste(paste(x,collapse=beast2.spec$beast.label.sep,sep=''),'=',x[beast2.spec$beast.label.datepos],sep='') )
+	
+	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	dummy		<- newXMLCommentNode(text="The tip dates.", parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLCommentNode(text=paste("ntax=",nrow(df),sep=''), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	
+	seqtrait	<- newXMLNode("trait", attrs= list(id=paste("dateTrait.t",beast2.spec$alignment.id,sep=':'), 
+					spec= beast2.spec$datetrait.spec,
+					units= beast2.spec$datetrait.units,
+					traitname= beast2.spec$datetrait.traitname, 
+					value=paste(tmp, collapse=", ",sep='')), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	if(verbose)	cat(paste("\nadded new date trait for sequences, n=", length(tmp)))
+	#define taxonset in here
+	seqtaxa		<- newXMLNode("taxa", attrs= list(id=paste("TaxonSet.t",beast2.spec$alignment.id,sep=':'), spec=beast2.spec$datetrait.taxa.spec), parent=seqtrait, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLNode("alignment", attrs= list(idref=beast2.spec$alignment.id), parent=seqtaxa, doc=bxml, addFinalizer=T)
+	bxml
+}	
+######################################################################################
+hivc.beast2.add.tree<- function(bxml, beast2.spec, verbose=verbose)
+{
+	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	beast.tree	<- newXMLNode("tree", attrs= list(id=beast2.spec$tree.id, name=beast2.spec$tree.id, trait=paste('@',"dateTrait.t:",beast2.spec$alignment.id,sep='')), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLNode("taxonset", attrs= list(idref=paste("TaxonSet",beast2.spec$tree.taxonset,sep='.t:')), parent=beast.tree, doc=bxml, addFinalizer=T)
+	if(verbose)	cat(paste("\nadded trees for taxonsets, n=", length(beast2.spec$tree.taxonset)))
+	bxml
+}
+######################################################################################
+hivc.beast2.add.treemodel.bdsky<- function(bxml, beast2.spec, verbose=1)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	beast.treemodel	<- newXMLNode("BirthDeathSkylineModel", attrs= list(	id=beast2.spec$treemodel.id, 
+					name=beast2.spec$treemodel.id, 
+					tree=paste('@',beast2.spec$tree.id,sep=''),
+					spec=beast2.spec$bdsky.spec,
+					intervalNumber=as.character(beast2.spec$bdsky.intervalNumber)), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(	id=beast2.spec$bdsky.sprop.id, 
+					name="samplingProportion",
+					dimension=beast2.spec$bdsky.intervalNumber,
+					lower=as.character(beast2.spec$bdsky.sprop.lower),
+					upper=as.character(beast2.spec$bdsky.sprop.upper),
+					value=paste(beast2.spec$bdsky.sprop.value, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(	id=beast2.spec$bdsky.R0.id, 
+					name="R0",
+					dimension=beast2.spec$bdsky.intervalNumber,
+					lower=as.character(beast2.spec$bdsky.R0.lower),
+					upper=as.character(beast2.spec$bdsky.R0.upper),
+					value=paste(beast2.spec$bdsky.R0.value, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)											
+	dummy			<- newXMLNode("parameter", attrs= list(	id=beast2.spec$bdsky.notInf.id, 
+					name="becomeUninfectiousRate",
+					dimension=beast2.spec$bdsky.intervalNumber,
+					lower=as.character(beast2.spec$bdsky.notInf.lower),
+					upper=as.character(beast2.spec$bdsky.notInf.upper),
+					value=paste(beast2.spec$bdsky.notInf.value, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(	id=beast2.spec$bdsky.origin.id, 
+					name="origin",
+					lower=as.character(beast2.spec$bdsky.origin.lower),
+					upper=as.character(beast2.spec$bdsky.origin.upper),
+					value=paste(beast2.spec$bdsky.origin.value)), parent=beast.treemodel, doc=bxml, addFinalizer=T)
+	tmp				<- rep("false",4)
+	tmp[which(!sapply(c(beast2.spec$bdsky.R0.changepoint.id[1],beast2.spec$bdsky.notInf.changepoint.id[1],beast2.spec$bdsky.sprop.changepoint.id[1]),is.null))]		<- "true"
+	dummy			<- newXMLNode("reverseTimeArrays", attrs= list(	id=beast2.spec$bdsky.reverseTimeArrays.id, 
+																	spec=beast2.spec$bdsky.reverseTimeArrays.spec,
+																	value=paste(tmp, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)
+	if(!is.null(beast2.spec$bdsky.R0.changepoint.id[1]))												
+		dummy		<- newXMLNode("parameter", attrs= list(	id=beast2.spec$bdsky.R0.changepoint.id, 
+						name="birthRateChangeTimes",
+						value=paste(beast2.spec$bdsky.R0.changepoint.value, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)
+	
+	if(!is.null(beast2.spec$bdsky.notInf.changepoint.id[1]))												
+		dummy		<- newXMLNode("parameter", attrs= list(	id=beast2.spec$bdsky.notInf.changepoint.id, 
+						name="deathRateChangeTimes",
+						value=paste(beast2.spec$bdsky.notInf.changepoint.value, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)
+	if(!is.null(beast2.spec$bdsky.sprop.changepoint.id[1]))												
+		dummy		<- newXMLNode("parameter", attrs= list(	id=beast2.spec$bdsky.sprop.changepoint.id, 
+						name="samplingRateChangeTimes",
+						value=paste(beast2.spec$bdsky.sprop.changepoint.value, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)
+	if(verbose)	cat(paste("\nadded BDSKY tree models for taxonsets, n=", length(beast2.spec$tree.taxonset)))
+	bxml	
+}
+######################################################################################
+hivc.beast2.init.xml<- function( beast2.spec=NULL, verbose=1)
+{
+	bxml		<- newXMLDoc(addFinalizer=T)
+	bxml.beast	<- newXMLNode("beast", attrs=list(beautitemplate='HIVCLUST', beautistatus='', version="2.0", namespace=paste(beast2.spec$namespace,sep='',collapse=':')), doc=bxml, addFinalizer=T)	
+	dummy		<- newXMLNode("map", attrs= list(name="Beta"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.Beta, parent=dummy, doc=bxml,addFinalizer=T)
+	dummy		<- newXMLNode("map", attrs= list(name="Exponential"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.Exponential, parent=dummy, doc=bxml,addFinalizer=T)
+	dummy		<- newXMLNode("map", attrs= list(name="InverseGamma"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.InverseGamma, parent=dummy, doc=bxml,addFinalizer=T)
+	dummy		<- newXMLNode("map", attrs= list(name="LogNormal"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.LogNormal, parent=dummy, doc=bxml,addFinalizer=T)
+	dummy		<- newXMLNode("map", attrs= list(name="Gamma"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.Gamma, parent=dummy, doc=bxml,addFinalizer=T)
+	dummy		<- newXMLNode("map", attrs= list(name="Uniform"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.Uniform, parent=dummy, doc=bxml,addFinalizer=T)
+	dummy		<- newXMLNode("map", attrs= list(name="prior"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.prior, parent=dummy, doc=bxml,addFinalizer=T)
+	dummy		<- newXMLNode("map", attrs= list(name="LaplaceDistribution"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.Laplace, parent=dummy, doc=bxml,addFinalizer=T)
+	dummy		<- newXMLNode("map", attrs= list(name="OneOnX"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.OneOnX, parent=dummy, doc=bxml,addFinalizer=T)
+	dummy		<- newXMLNode("map", attrs= list(name="Normal"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.Normal, parent=dummy, doc=bxml,addFinalizer=T)
+	bxml
+}	
+######################################################################################
+hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.length=20e6, bdsky.intervalNumber=4)
+{
+	beast2.spec<- list()
+	beast2.spec$namespace			<- c("beast.core","beast.evolution.alignment","beast.evolution.tree.coalescent","beast.core.util","beast.evolution.nuc","beast.evolution.operators","beast.evolution.sitemodel","beast.evolution.substitutionmodel","beast.evolution.likelihood")
+	beast2.spec$xml.dir				<- xml.dir		
+	beast2.spec$xml.filename		<- xml.filename
+	beast2.spec$map.Beta			<- "beast.math.distributions.Beta"
+	beast2.spec$map.Exponential		<- "beast.math.distributions.Exponential"			
+	beast2.spec$map.InverseGamma	<- "beast.math.distributions.InverseGamma"
+	beast2.spec$map.LogNormal		<- "beast.math.distributions.LogNormalDistributionModel"
+	beast2.spec$map.Gamma			<- "beast.math.distributions.Gamma"
+	beast2.spec$map.Uniform			<- "beast.math.distributions.Uniform"
+	beast2.spec$map.prior			<- "beast.math.distributions.Prior"
+	beast2.spec$map.Laplace			<- "beast.math.distributions.LaplaceDistribution"
+	beast2.spec$map.OneOnX			<- "beast.math.distributions.OneOnX"
+	beast2.spec$map.Normal			<- "beast.math.distributions.Normal"
+	beast2.spec$mcmc.length			<- mcmc.length
+	beast2.spec$beast.label.datepos	<- 4
+	beast2.spec$beast.label.sep		<- '_'
+	beast2.spec$alignment.dataType	<- 'nucleotide'
+	beast2.spec$alignment.id		<- 'ds'
+	beast2.spec$alignment.missing	<- "-?"
+	beast2.spec$tree.taxonset		<- beast2.spec$alignment.id
+	beast2.spec$tree.id				<- paste('Tree',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$sequence.totalcount	<- 4
+	beast2.spec$datetrait.spec		<- "beast.evolution.tree.TraitSet"
+	beast2.spec$datetrait.taxa.spec	<- "TaxonSet"
+	beast2.spec$datetrait.units		<- "year"
+	beast2.spec$datetrait.traitname	<- "date"
+	beast2.spec$treemodel			<- "BirthDeathSkylineModel"
+	beast2.spec$treemodel.id		<- paste("birthDeath",beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$bdsky.spec			<- "BirthDeathSkylineModel"
+	beast2.spec$bdsky.intervalNumber<- bdsky.intervalNumber
+	beast2.spec$bdsky.origin.id		<- paste('originS',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$bdsky.origin.value	<- rep(35, length(beast2.spec$bdsky.origin.id))
+	beast2.spec$bdsky.origin.lower	<- 0.0
+	beast2.spec$bdsky.origin.upper	<- 1000.0
+	beast2.spec$bdsky.sprop.id		<- paste('samplingProportionS',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$bdsky.sprop.value	<- rep(0.4, beast2.spec$bdsky.intervalNumber)
+	beast2.spec$bdsky.sprop.lower	<- 0.0
+	beast2.spec$bdsky.sprop.upper	<- 1.0
+	beast2.spec$bdsky.R0.id			<- paste('R0S',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$bdsky.R0.value		<- rep(1.2, beast2.spec$bdsky.intervalNumber)
+	beast2.spec$bdsky.R0.lower		<- 0.0
+	beast2.spec$bdsky.R0.upper		<- 10.0
+	beast2.spec$bdsky.notInf.id		<- paste('becomeUninfectiousRateS',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$bdsky.notInf.value	<- rep(0.1, beast2.spec$bdsky.intervalNumber)
+	beast2.spec$bdsky.notInf.lower	<- 0.0
+	beast2.spec$bdsky.notInf.upper	<- 10.0
+	beast2.spec$bdsky.reverseTimeArrays.id		<- paste('reverseTimeArrays',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$bdsky.reverseTimeArrays.spec	<- "parameter.BooleanParameter"
+	beast2.spec$bdsky.sprop.changepoint.id		<- paste('samplingRateChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$bdsky.sprop.changepoint.value	<- c(9.596, 5.596, 1.596, 0.)
+	beast2.spec$bdsky.R0.changepoint.id			<- paste('birthRateChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$bdsky.R0.changepoint.value		<- c(9.596, 5.596, 1.596, 0.)
+	beast2.spec$bdsky.notInf.changepoint.id		<- paste('deathRateChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.)
+	beast2.spec
+}
+######################################################################################
+hivc.beast2.get.xml<- function(	bxml.template, seq.PROT.RT, df, beast2.spec, ph=NULL, verbose=1)
+{	
+	require(XML)
+	#	init XML
+	bxml		<- hivc.beast2.init.xml( beast2.spec, verbose=verbose)
+	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]	
+	#	add alignment	
+	dummy		<- hivc.beast2.add.alignment(bxml, seq.PROT.RT, df, beast2.spec, verbose=verbose)
+	#	add tip dates
+	dummy		<- hivc.beast2.add.datetrait(bxml, df, beast2.spec, verbose=verbose)
+	#	add tree for alignment
+	dummy		<- hivc.beast2.add.tree(bxml, beast2.spec, verbose=verbose)
+	#	add BDSKY model for tree
+	dummy		<- hivc.beast2.add.treemodel.bdsky(bxml, beast2.spec, verbose=verbose)
+	#	copy siteModel from template
+	tmp			<- getNodeSet(bxml.template, "//siteModel")
+	if(length(tmp)!=1) stop("unexpected number of //siteModel")
+	dummy<- addChildren( bxml.beast, xmlClone( tmp[[1]], addFinalizer=T, doc=bxml ) )
+	if(verbose)	cat(paste("\nadded siteModel from template, size=", xmlSize(tmp[[1]])))
+	#	copy run from template
+	tmp			<- getNodeSet(bxml.template, "//run")
+	if(length(tmp)!=1) stop("unexpected number of //run")
+	dummy		<- addChildren( bxml.beast, xmlClone( tmp[[1]], addFinalizer=T, doc=bxml ) )
+	if(verbose)	cat(paste("\nadded run from template, size=", xmlSize(tmp[[1]])))
+	#	reset output fileNames
+	bxml.onodes	<- getNodeSet(bxml, "//*[@fileName]")
+	tmp			<- sapply(bxml.onodes, function(x) xmlGetAttr(x,"fileName"))	
+	tmp			<- sapply(strsplit(tmp,'.',fixed=1), function(x)	paste(beast2.spec$xml.filename, '.', rev(x)[1], sep=''))		
+	dummy		<- sapply(seq_along(bxml.onodes), function(i){		xmlAttrs(bxml.onodes[[i]])["fileName"]<- tmp[i]		})
+	if(verbose)	cat(paste("\nchanged trunk filename to", beast2.spec$xml.filename))
+	#	reset chain length and logEvery
+	bxml.onodes	<- getNodeSet(bxml, "//*[@chainLength]")
+	dummy		<- sapply(seq_along(bxml.onodes), function(i){		xmlAttrs(bxml.onodes[[i]])["chainLength"]<- sprintf("%d",beast2.spec$mcmc.length)		})
+	if(verbose)	cat(paste("\nchanged chain length to", beast2.spec$mcmc.length))
+	bxml.onodes	<- getNodeSet(bxml, "//*[@logEvery]")
+	dummy		<- sapply(seq_along(bxml.onodes), function(i){		xmlAttrs(bxml.onodes[[i]])["logEvery"]<- sprintf("%d",round(beast2.spec$mcmc.length/1e4))		})
+	if(verbose)	cat(paste("\nchanged logEvery to", round(beast2.spec$mcmc.length/1e4)))
+	
+	bxml	
+}
+######################################################################################
 #	create xml file from btemplate and seq.PROT.RT, using seq in df 
 # 	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; verbose=1; xml.prior4tipstem="uniform"; xml.resetTipDate2LastDiag=1
 hivc.beast.get.xml<- function(	btemplate, seq.PROT.RT, df, file, ph=NULL, xml.monophyly4clusters=0, xml.taxon4tipstem=0, xml.prior4tipstem=NA, 

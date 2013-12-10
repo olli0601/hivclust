@@ -5751,7 +5751,6 @@ hivc.prog.BEAST2.generate.xml<- function()
 	infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
 	infiletree			<- paste(infile,"examlbs100",sep="_")
 	infilexml			<- paste(infile,'_',"bdsky",'_',"seroneg",sep='')
-	
 	outdir				<- indir
 	outsignat			<- "Tue_Aug_26_09/13/47_2013"
 	
@@ -5759,15 +5758,15 @@ hivc.prog.BEAST2.generate.xml<- function()
 	thresh.brl				<- 0.096
 	thresh.bs				<- 0.8
 	pool.ntip				<- 130
-	beast.mcmc.chainLength	<- 100000000
+	beast.mcmc.length		<- 25e6
 	infilexml.opt			<- "standard"
-	infilexml.template		<- "standard"	
+	infilexml.template		<- "hky"	
 	
 	resume				<- 1
 	verbose				<- 1
-	hpc.walltime		<- 171
-	hpc.ncpu			<- 4
-	hpc.mem				<- "1800mb"
+	hpc.walltime		<- 71
+	hpc.ncpu			<- 1
+	hpc.mem				<- "1200mb"
 	
 	
 	if(exists("argv"))
@@ -5845,22 +5844,24 @@ hivc.prog.BEAST2.generate.xml<- function()
 		if(length(tmp)>0) infilexml.template<- tmp[1]
 	}	
 	
-	#	load complete tree to generate starting tree
-	file					<- paste(indir,'/',infiletree,'_',gsub('/',':',insignat),".R",sep='')
-	if(verbose)	cat(paste("\nload complete tree to generate starting tree from file",file))
-	load(file)	#load object 'ph'
-	
-	xml.monophyly4clusters			<- ifelse(grepl("mph4clu",infilexml.opt),1,0)		
-	pool.includealwaysbeforeyear	<- ifelse(grepl("fx03",infilexml.opt),2003, NA)
-	xml.prior4tipstem				<- ifelse(grepl("u4tip",infilexml.opt),"uniform",NA)
-	xml.taxon4tipstem				<- ifelse(	any(sapply(c("u4tip","tx4tip"), function(x) grepl(x,infilexml.opt))),	1, 0)
-	df.resetTipDate					<- NA
-	if(grepl("LdTd",infilexml.opt))				df.resetTipDate<- "LdTd"
-	else if(grepl("LsTd",infilexml.opt))		df.resetTipDate<- "LsTd"
-	else if(grepl("UmTd",infilexml.opt))		df.resetTipDate<- "UmTd"
-	#case NoTd is dealt with below
-	#
-	#
+	#	modify beast2.spec depending on infilexml.opt
+	if(grepl("S4p",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=4)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.)
+	}
+	else if(grepl("S5p",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 7.596, 5.596, 1.596, 0.)
+	}
+	else if(grepl("S8p",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=8)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 8.596, 7.596, 6.596, 5.596, 1.596, 0.596, 0.)
+	}
+	else stop("unknown infilexml.opt")
+	#		
 	if(verbose)
 	{
 		print(indir)
@@ -5876,15 +5877,16 @@ hivc.prog.BEAST2.generate.xml<- function()
 		print(opt.brl)
 		print(thresh.brl)
 		print(thresh.bs)
-		print(pool.ntip)
-		print(pool.includealwaysbeforeyear)
+		print(pool.ntip)		
 		print(infilexml.opt)
 		print(infilexml.template)
-		print(xml.monophyly4clusters)
-		print(xml.taxon4tipstem)
-		print(xml.prior4tipstem)
-		print(df.resetTipDate)
-	}	
+	}
+	#
+	#	load complete tree to generate starting tree
+	#
+	#file					<- paste(indir,'/',infiletree,'_',gsub('/',':',insignat),".R",sep='')
+	#if(verbose)	cat(paste("\nload complete tree to generate starting tree from file",file))
+	#load(file)	#load object 'ph'	
 	#
 	#	load sequences
 	#
@@ -5906,24 +5908,48 @@ hivc.prog.BEAST2.generate.xml<- function()
 	tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=0.8) )
 	cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
 	if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))
-	cluphy.df				<- hivc.beast.addBEASTLabel( cluphy.df, df.resetTipDate=df.resetTipDate )
+	cluphy.df				<- hivc.beast.addBEASTLabel( cluphy.df )
 	#
 	#	create sets of cluster pools for BEAST
 	#
-	df.clupool				<- hivc.beast.poolclusters(cluphy.df, pool.ntip= pool.ntip, pool.includealwaysbeforeyear=pool.includealwaysbeforeyear, verbose=1)			
+	df.clupool				<- hivc.beast.poolclusters(cluphy.df, pool.ntip= pool.ntip, verbose=1)
 	#
-	#	create nexus file for now	
+	#	load xml template file
+	#	
+	file			<- paste(CODE.HOME,"/data/BEAST2_template_bdsky_",infilexml.template,".xml",sep='')	
+	bxml.template	<- xmlTreeParse(file, useInternalNodes=TRUE, addFinalizer = TRUE)			
 	#
-	dummy					<- lapply(seq_len(length(df.clupool$pool.df)), function(pool.id)
-		{
-			df					<- df.clupool$pool.df[[pool.id]]
-			setkey(df, cluster)
-			outfile				<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')
-			outfile				<- paste(indir,'/',outfile,".nex",sep='')
-			tmp					<- seq.PROT.RT[df[, FASTASampleCode],]		
-			rownames(tmp)		<- df[, BEASTlabel]
-			dummy				<- hivc.seq.write.dna.nexus(tmp, file=outfile )			
-		})
+	#	create BEAST2 XML file	
+	#
+	bfile			<- lapply(seq_len(length(df.clupool$pool.df)), function(pool.id)
+						{
+							df							<- df.clupool$pool.df[[pool.id]]
+							setkey(df, cluster)
+							#outfile				<- paste(indir,'/',outfile,".nex",sep='')
+							#tmp					<- seq.PROT.RT[df[, FASTASampleCode],]		
+							#rownames(tmp)		<- df[, BEASTlabel]
+							#dummy				<- hivc.seq.write.dna.nexus(tmp, file=outfile )
+							beast2.spec$xml.dir			<- indir
+							beast2.spec$xml.filename	<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')
+							beast2.xml					<- hivc.beast2.get.xml( bxml.template, seq.PROT.RT, df, beast2.spec, ph=NULL, verbose=1)			
+							file						<- paste(beast2.spec$xml.dir,'/',beast2.spec$xml.filename,".xml", sep='')
+							if(verbose)	cat(paste("\nwrite xml file to",file))
+							saveXML(beast2.xml, file=file)
+							paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,sep='')
+						})
+	#
+	#	generate BEAST commands and run
+	#
+	sapply(bfile, function(x)
+			{
+				cmd			<- hivc.cmd.beast2.runxml(indir, x, outsignat, hpc.ncpu=hpc.ncpu, prog.opt.Xmx="1200m", hpc.tmpdir.prefix="beast2")
+				#cmd		<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
+				cat(cmd)				
+				outfile		<- paste("b2",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+				hivc.cmd.hpccaller(outdir, outfile, cmd)
+				stop()
+			})
 }
 ######################################################################################
 hivc.prog.BEAST.generate.xml<- function()
@@ -6543,11 +6569,33 @@ hivc.pipeline.BEAST<- function()
 		hivc.prog.BEAST.generate.xml()		
 		quit("no")
 	}
-	if(0)		#generate BEAST2 BDSKYline xml file
+	if(1)		#generate BEAST2 BDSKYline xml file
 	{
+		indir				<- paste(DATA,"tmp",sep='/')		
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat			<- "Thu_Aug_01_17/05/23_2013"
+		indircov			<- paste(DATA,"derived",sep='/')
+		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		infiletree			<- paste(infile,"examlbs100",sep="_")
+		infilexml			<- paste(infile,'_',"bdsky",'_',"seroneg",sep='')
+		outdir				<- indir
+		outsignat			<- "Tue_Aug_26_09/13/47_2013"		
+		opt.brl				<- "dist.brl.casc" 
+		thresh.brl			<- 0.096
+		thresh.bs			<- 0.8
+		pool.ntip			<- 130		
+		resume				<- 1
+		verbose				<- 1
+		
+		infilexml.template	<- "hky"
+		infilexml.opt		<- "S4p"
+		infilexml.opt		<- "S5p"
+		infilexml.opt		<- "S8p"
+		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
+		argv				<<- unlist(strsplit(argv,' '))		
 		hivc.prog.BEAST2.generate.xml()
 	}
-	if(1)		#run BEAST2 BDSKYline
+	if(0)		#run BEAST2 BDSKYline
 	{
 		indir				<- paste(DATA,"tmp",sep='/')
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_standard"

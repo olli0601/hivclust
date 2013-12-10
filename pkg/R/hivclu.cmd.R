@@ -764,7 +764,7 @@ hivc.cmd.beast2.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST2,
 	if(hpcsys=="debug")						#my MAC - don t use scratch
 	{		
 		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,"java -Xms",prog.opt.Xms," -Xmx",prog.opt.Xmx," -jar ",prog.beast[hpcsys]," -overwrite -working ",tmp,'\n',sep='')
+		cmd		<- paste(cmd,"java -Xms",prog.opt.Xms," -Xmx",prog.opt.Xmx," -jar ",prog.beast[hpcsys]," -overwrite -working -threads ",hpc.ncpu," ",tmp,'\n',sep='')
 	}
 	else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
 	{
@@ -789,7 +789,8 @@ hivc.cmd.beast2.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST2,
 #' @export
 hivc.cmd.hpcwrapper<- function(cmd, hpcsys= hivc.get.hpcsys(), hpc.walltime=24, hpc.mem=HPC.MEM, hpc.nproc=HPC.NPROC[hpcsys], hpc.q=NA)
 {
-	wrap<- "#!/bin/sh"	
+	wrap<- "#!/bin/sh"
+	#hpcsys<- HPC.CX1.IMPERIAL
 	if(hpcsys==HPC.CX1.IMPERIAL)
 	{				
 		tmp	<- paste("#PBS -l walltime=",hpc.walltime,":59:59,pcput=",hpc.walltime,":45:00",sep='')
