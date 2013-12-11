@@ -23,6 +23,10 @@ all:
 	@echo "*********************************************** "	
 	make examl	
 	@echo "*********************************************** "
+	@echo "********* BUILDING BEAST/2.1.0 **************** "
+	@echo "*********************************************** "	
+	make beast.jar		
+	@echo "*********************************************** "
 	@echo "********* BUILDING HIVCLUST R PACKAGE ********* "
 	@echo "*********************************************** "			
 	MAKEFLAGS="SHLIB_CXXLD=g++ CXX=g++" R CMD SHLIB -o hivc.so *.cpp
@@ -57,3 +61,7 @@ examl:
 	mv $(CWD)/ExaML/examl/examl $(EXTERNAL_CODE)/ExaML-examl
 	rm -rf ExaML
 	mv $(EXTERNAL_CODE)/ExaML-examl $(EXTERNAL_CODE)/examl
+	
+beast.jar:
+	echo $(CWD)
+	mv 	../inst/beast.jar $(EXTERNAL_CODE)/beast.jar

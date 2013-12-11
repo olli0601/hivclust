@@ -29,19 +29,6 @@
 	</substModel>
 </siteModel>
 
-    
-<map name="Beta">beast.math.distributions.Beta</map>
-<map name="Exponential">beast.math.distributions.Exponential</map>
-<map name="InverseGamma">beast.math.distributions.InverseGamma</map>
-<map name="LogNormal">beast.math.distributions.LogNormalDistributionModel</map>
-<map name="Gamma">beast.math.distributions.Gamma</map>
-<map name="Uniform">beast.math.distributions.Uniform</map>
-<map name="prior">beast.math.distributions.Prior</map>
-<map name="LaplaceDistribution">beast.math.distributions.LaplaceDistribution</map>
-<map name="OneOnX">beast.math.distributions.OneOnX</map>
-<map name="Normal">beast.math.distributions.Normal</map>
-
-
 <run chainLength="20000000" id="mcmc" spec="MCMC">
     <state id="state" storeEvery="5000">
         <stateNode idref='Tree.t:ds'/>
@@ -56,7 +43,7 @@
         <stateNode dimension="246" id="rateCategories.c:ds" spec="parameter.IntegerParameter">1</stateNode>
     </state>
 
-    <init estimate="false" id="RandomTree.t:ds" initial="@Tree.t:ds" spec="beast.evolution.tree.RandomTree" taxa="@ds">
+    <init estimate="false" id="RandomTree.t:ds" initial="@Tree.t:ds" spec="beast.evolution.tree.RandomTree" taxa="@ds" taxonset="@TaxonSet.t:ds">
         <populationModel id="ConstantPopulation0.t:ds" spec="ConstantPopulation">
             <parameter id="randomPopSize.t:ds" name="popSize">1.0</parameter>
         </populationModel>
@@ -65,26 +52,8 @@
     <distribution id="posterior" spec="util.CompoundDistribution">
         <distribution id="prior" spec="util.CompoundDistribution">
             <distribution R0="@R0S.t:ds" becomeUninfectiousRate="@becomeUninfectiousRateS.t:ds" id="BirthDeathSkySerial.t:ds" intervalNumber="4" origin="@originS.t:ds" samplingProportion="@samplingProportionS.t:ds" spec="beast.evolution.speciation.BirthDeathSkylineModel" tree="@Tree.t:ds">                
-            </distribution>
-            <prior id="R0PriorS.t:ds" name="distribution" x="@R0S.t:ds">
-                <Gamma id="Gamma.0" name="distr">
-                    <parameter estimate="false" id="RealParameter.0" name="alpha">1.5</parameter>
-                    <parameter estimate="false" id="RealParameter.01" name="beta">1.5</parameter>
-                </Gamma>
-            </prior>
-            <prior id="becomeUninfectiousRatePriorS.t:ds" name="distribution" x="@becomeUninfectiousRateS.t:ds">
-                <OneOnX id="OneOnX.0" name="distr"/>
-            </prior>
-            <prior id="origRootPriorS.t:ds" name="distribution" x="@originS.t:ds">
-                <Uniform id="Uniform.0" lower="20.0" name="distr" upper="40.0"/>
-            </prior>
-            <prior id="samplingProportionPriorS.t:ds" name="distribution" x="@samplingProportionS.t:ds">
-                <Beta id="Beta.0" name="distr" offset="0.2">
-                    <parameter id="RealParameter.04" lower="0.0" name="alpha" upper="0.0">1.0</parameter>
-                    <parameter id="RealParameter.05" lower="0.0" name="beta" upper="0.0">1.0</parameter>
-                </Beta>
-            </prior>
-	    <prior id="KappaPrior.s:ds" name="distribution" x="@kappa.s:ds">
+            </distribution>            
+            <prior id="KappaPrior.s:ds" name="distribution" x="@kappa.s:ds">
                 <Gamma id="Gamma.01" name="distr">
                     <parameter estimate="false" id="RealParameter.02" name="alpha">11.0</parameter>
                     <parameter estimate="false" id="RealParameter.03" name="beta">1.0</parameter>

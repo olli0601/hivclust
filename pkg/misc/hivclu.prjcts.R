@@ -5860,6 +5860,27 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=8)
 		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 8.596, 7.596, 6.596, 5.596, 1.596, 0.596, 0.)
 	}
+	else if(grepl("s0106",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.2, 0.7, 0.6, 0.6)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.1/0","Uniform/0.1/1.0","Uniform/0.6/1.0","Uniform/0.5/1.0","Uniform/0.5/1.0")	
+	}
+	else if(grepl("s00106",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.01, 0.2, 0.7, 0.6, 0.6)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Uniform/0.1/1.0","Uniform/0.6/1.0","Uniform/0.5/1.0","Uniform/0.5/1.0")	
+	}	
+	else if(grepl("s0108",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.8, 0.8)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Uniform/0.4/1.0","Uniform/0.8/1.0","Uniform/0.7/1.0","Uniform/0.7/1.0")	
+	}		
 	else stop("unknown infilexml.opt")
 	#		
 	if(verbose)
@@ -6589,8 +6610,11 @@ hivc.pipeline.BEAST<- function()
 		
 		infilexml.template	<- "hky"
 		infilexml.opt		<- "S4p"
-		infilexml.opt		<- "S5p"
-		infilexml.opt		<- "S8p"
+		#infilexml.opt		<- "S5p"
+		#infilexml.opt		<- "S8p"
+		infilexml.opt		<- "s0106"
+		#infilexml.opt		<- "s0108"
+		#infilexml.opt		<- "s00106"
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))		
 		hivc.prog.BEAST2.generate.xml()

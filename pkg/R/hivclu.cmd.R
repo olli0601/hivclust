@@ -78,7 +78,7 @@ PR.BEASTPOOLRUN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEASTPOOL
 
 #' @export
 # PR.BEAST2		<- {tmp<- c("/Applications/BEAST_2.1.0/lib/beast.jar","/work/or105/libs/BEAST/lib/beast.jar"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp }
-PR.BEAST2		<- {tmp<- c("/Users/Oliver/workspace_sandbox/beast2/build/dist/beast.jar","/work/or105/libs/BEAST/lib/beast.jar"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp } 
+PR.BEAST2		<- {tmp<- c("/Users/Oliver/workspace_sandbox/beast2/build/dist/beast.jar",system.file(package="hivclust", "ext", "beast.jar")); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp } 
 
 #' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}

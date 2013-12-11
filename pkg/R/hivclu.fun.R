@@ -847,9 +847,11 @@ hivc.beast2.add.treemodel.bdsky<- function(bxml, beast2.spec, verbose=1)
 hivc.beast2.init.xml<- function( beast2.spec=NULL, verbose=1)
 {
 	bxml		<- newXMLDoc(addFinalizer=T)
-	bxml.beast	<- newXMLNode("beast", attrs=list(beautitemplate='HIVCLUST', beautistatus='', version="2.0", namespace=paste(beast2.spec$namespace,sep='',collapse=':')), doc=bxml, addFinalizer=T)	
+	bxml.beast	<- newXMLNode("beast", attrs=list(beautitemplate='HIVCLUST', beautistatus='', version="2.0", namespace=paste(beast2.spec$namespace,sep='',collapse=':')), doc=bxml, addFinalizer=T)
 	dummy		<- newXMLNode("map", attrs= list(name="Beta"), parent=bxml.beast, doc=bxml, addFinalizer=T)
 	dummy		<- newXMLTextNode(beast2.spec$map.Beta, parent=dummy, doc=bxml,addFinalizer=T)
+	dummy		<- newXMLNode("map", attrs= list(name="ExcludablePrior"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(beast2.spec$map.ExcludablePrior, parent=dummy, doc=bxml,addFinalizer=T)
 	dummy		<- newXMLNode("map", attrs= list(name="Exponential"), parent=bxml.beast, doc=bxml, addFinalizer=T)
 	dummy		<- newXMLTextNode(beast2.spec$map.Exponential, parent=dummy, doc=bxml,addFinalizer=T)
 	dummy		<- newXMLNode("map", attrs= list(name="InverseGamma"), parent=bxml.beast, doc=bxml, addFinalizer=T)
@@ -871,6 +873,88 @@ hivc.beast2.init.xml<- function( beast2.spec=NULL, verbose=1)
 	bxml
 }	
 ######################################################################################
+hivc.beast2.get.prior<- function(args, parent, parentid, bxml)
+{
+	args	<- strsplit(args,'/')[[1]]
+	if(args[1]=="Uniform")
+		prior	<- newXMLNode("Uniform", attrs= list( id= paste('U',parentid,sep='-'), name="distr", lower=args[2], upper=args[3]), parent=parent, doc=bxml, addFinalizer=T)											
+	else if(args[1]=="OneOnX")
+		prior	<- newXMLNode("OneOnX", attrs= list( id= paste('OneOnX.',parentid,sep=''), name="distr"), parent=parent, doc=bxml, addFinalizer=T)
+	else if(args[1]=="Exponential")
+	{
+		prior	<- newXMLNode("Exponential", attrs= list( id= paste('Exponential',parentid,sep='-'), name="distr", offset=args[3]), parent=parent, doc=bxml, addFinalizer=T)
+		dummy	<- newXMLNode("parameter", attrs= list( id= paste('pExponential',parentid,sep='-'), name="mean", value=args[2], estimate="false"), parent=prior, doc=bxml, addFinalizer=T)
+	}
+	else if(args[1]=="Beta")
+	{
+		prior	<- newXMLNode("Beta", attrs= list( id= paste('Beta',parentid,sep='-'), name="distr", offset=args[4]), parent=parent, doc=bxml, addFinalizer=T)
+		dummy	<- newXMLNode("parameter", attrs= list( id= paste('pBeta1',parentid,sep='-'), lower="0.0", upper="10.0", name="alpha", value=args[2], estimate="false"), parent=prior, doc=bxml, addFinalizer=T)
+		dummy	<- newXMLNode("parameter", attrs= list( id= paste('pBeta2',parentid,sep='-'), lower="0.0", upper="10.0", name="beta", value=args[3], estimate="false"), parent=prior, doc=bxml, addFinalizer=T)
+	}
+	else if(args[1]=="Gamma")
+	{
+		prior	<- newXMLNode("Gamma", attrs= list( id= paste('Gamma',parentid,sep='-'), name="distr", offset=args[4]), parent=parent, doc=bxml, addFinalizer=T)
+		dummy	<- newXMLNode("parameter", attrs= list( id= paste('pGamma1',parentid,sep='-'), name="alpha",  value=args[2], estimate="false"), parent=prior, doc=bxml, addFinalizer=T)
+		dummy	<- newXMLNode("parameter", attrs= list( id= paste('pGamma2',parentid,sep='-'), name="beta",  value=args[3], estimate="false"), parent=prior, doc=bxml, addFinalizer=T)
+	}
+	else	stop("prior not implemented")	
+	prior
+}
+######################################################################################
+hivc.beast2.add.bdsky.serialpriors<- function(bxml, beast2.spec, verbose=1)
+{
+	bxml.prior	<- getNodeSet(bxml, "//*[@id='prior']")
+	if(length(bxml.prior)!=1)	stop("unexpected length of bxml.prior")
+	bxml.prior	<- bxml.prior[[1]]	
+	dummy		<- newXMLCommentNode(text="start: serial BDSKY priors.", parent=bxml.prior, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLCommentNode(text="The origin prior.", parent=bxml.prior, doc=bxml, addFinalizer=T)	
+	tmp			<- newXMLNode("prior", attrs= list(	id=paste("sprior",beast2.spec$bdsky.origin.id,sep='-'),
+													name="distribution",
+													x= paste('@',beast2.spec$bdsky.origin.id,sep='')), parent=bxml.prior, doc=bxml, addFinalizer=T)	
+	dummy		<- hivc.beast2.get.prior(beast2.spec$bdsky.origin.prior, tmp, xmlAttrs(tmp)["id"], bxml)
+	dummy		<- newXMLCommentNode(text="The serial samplingProb priors.", parent=bxml.prior, doc=bxml, addFinalizer=T)
+	dummy		<- lapply(seq_len(beast2.spec$bdsky.intervalNumber), function(serial.id)
+			{
+				tmp				<- rep(0,beast2.spec$bdsky.intervalNumber)
+				tmp[serial.id]	<- 1
+				serialwrapper	<- newXMLNode("distribution", attrs= list(	id=paste("sprior",serial.id,beast2.spec$bdsky.sprop.id,sep='-'),
+								name="distribution",
+								x= paste('@',beast2.spec$bdsky.sprop.id,sep=''),
+								xInclude=paste(tmp, collapse=' ',sep=''), 					
+								spec= beast2.spec$bdsky.prior.spec), parent=bxml.prior, doc=bxml, addFinalizer=T)
+				dummy			<- hivc.beast2.get.prior(beast2.spec$bdsky.sprop.prior[serial.id], serialwrapper, xmlAttrs(serialwrapper)["id"], bxml)				
+			})
+	if(verbose)	cat(paste("\nadded serial samplingProb priors, n=", length(dummy)))
+	dummy		<- newXMLCommentNode(text="The serial R0 priors.", parent=bxml.prior, doc=bxml, addFinalizer=T)
+	dummy		<- lapply(seq_len(beast2.spec$bdsky.intervalNumber), function(serial.id)
+			{
+				tmp				<- rep(0,beast2.spec$bdsky.intervalNumber)
+				tmp[serial.id]	<- 1
+				serialwrapper	<- newXMLNode("distribution", attrs= list(	id=paste("sprior",serial.id,beast2.spec$bdsky.R0.id,sep='-'),
+								name="distribution",
+								x= paste('@',beast2.spec$bdsky.R0.id,sep=''),
+								xInclude=paste(tmp, collapse=' ',sep=''), 					
+								spec= beast2.spec$bdsky.prior.spec), parent=bxml.prior, doc=bxml, addFinalizer=T)
+				dummy			<- hivc.beast2.get.prior(beast2.spec$bdsky.R0.prior[serial.id], serialwrapper, xmlAttrs(serialwrapper)["id"], bxml)				
+			})												
+	if(verbose)	cat(paste("\nadded serial R0 priors, n=", length(dummy)))
+	dummy		<- newXMLCommentNode(text="The serial becomingUninfectious priors.", parent=bxml.prior, doc=bxml, addFinalizer=T)
+	dummy		<- lapply(seq_len(beast2.spec$bdsky.intervalNumber), function(serial.id)
+			{
+				tmp				<- rep(0,beast2.spec$bdsky.intervalNumber)
+				tmp[serial.id]	<- 1
+				serialwrapper	<- newXMLNode("distribution", attrs= list(	id=paste("sprior",serial.id,beast2.spec$bdsky.notInf.id,sep='-'),
+								name="distribution",
+								x= paste('@',beast2.spec$bdsky.notInf.id,sep=''),
+								xInclude=paste(tmp, collapse=' ',sep=''), 					
+								spec= beast2.spec$bdsky.prior.spec), parent=bxml.prior, doc=bxml, addFinalizer=T)
+				dummy			<- hivc.beast2.get.prior(beast2.spec$bdsky.notInf.prior[serial.id], serialwrapper, xmlAttrs(serialwrapper)["id"], bxml)				
+			})	
+	if(verbose)	cat(paste("\nadded serial becomingUninfectious priors, n=", length(dummy)))
+	dummy		<- newXMLCommentNode(text="end: serial BDSKY priors.", parent=bxml.prior, doc=bxml, addFinalizer=T)
+	bxml.prior
+}
+######################################################################################
 hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.length=20e6, bdsky.intervalNumber=4)
 {
 	beast2.spec<- list()
@@ -878,7 +962,8 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$xml.dir				<- xml.dir		
 	beast2.spec$xml.filename		<- xml.filename
 	beast2.spec$map.Beta			<- "beast.math.distributions.Beta"
-	beast2.spec$map.Exponential		<- "beast.math.distributions.Exponential"			
+	beast2.spec$map.Exponential		<- "beast.math.distributions.Exponential"
+	beast2.spec$map.ExcludablePrior	<- "beast.math.distributions.ExcludablePrior"
 	beast2.spec$map.InverseGamma	<- "beast.math.distributions.InverseGamma"
 	beast2.spec$map.LogNormal		<- "beast.math.distributions.LogNormalDistributionModel"
 	beast2.spec$map.Gamma			<- "beast.math.distributions.Gamma"
@@ -903,23 +988,28 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$treemodel			<- "BirthDeathSkylineModel"
 	beast2.spec$treemodel.id		<- paste("birthDeath",beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.spec			<- "BirthDeathSkylineModel"
+	beast2.spec$bdsky.prior.spec	<- "beast.math.distributions.ExcludablePrior"
 	beast2.spec$bdsky.intervalNumber<- bdsky.intervalNumber
 	beast2.spec$bdsky.origin.id		<- paste('originS',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.origin.value	<- rep(35, length(beast2.spec$bdsky.origin.id))
 	beast2.spec$bdsky.origin.lower	<- 0.0
 	beast2.spec$bdsky.origin.upper	<- 1000.0
+	beast2.spec$bdsky.origin.prior	<- "Uniform/20.0/40.0"
 	beast2.spec$bdsky.sprop.id		<- paste('samplingProportionS',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.sprop.value	<- rep(0.4, beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.sprop.lower	<- 0.0
 	beast2.spec$bdsky.sprop.upper	<- 1.0
+	beast2.spec$bdsky.sprop.prior	<- rep("Uniform/0.2/1.0",beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.R0.id			<- paste('R0S',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.R0.value		<- rep(1.2, beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.R0.lower		<- 0.0
 	beast2.spec$bdsky.R0.upper		<- 10.0
+	beast2.spec$bdsky.R0.prior		<- rep("Gamma/1.5/1.5/0",beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.notInf.id		<- paste('becomeUninfectiousRateS',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.notInf.value	<- rep(0.1, beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.notInf.lower	<- 0.0
 	beast2.spec$bdsky.notInf.upper	<- 10.0
+	beast2.spec$bdsky.notInf.prior	<- rep("OneOnX/0",beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.reverseTimeArrays.id		<- paste('reverseTimeArrays',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.reverseTimeArrays.spec	<- "parameter.BooleanParameter"
 	beast2.spec$bdsky.sprop.changepoint.id		<- paste('samplingRateChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
@@ -955,6 +1045,8 @@ hivc.beast2.get.xml<- function(	bxml.template, seq.PROT.RT, df, beast2.spec, ph=
 	if(length(tmp)!=1) stop("unexpected number of //run")
 	dummy		<- addChildren( bxml.beast, xmlClone( tmp[[1]], addFinalizer=T, doc=bxml ) )
 	if(verbose)	cat(paste("\nadded run from template, size=", xmlSize(tmp[[1]])))
+	#	add BDSKY prior
+	dummy		<- hivc.beast2.add.bdsky.serialpriors(bxml, beast2.spec, verbose=verbose)
 	#	reset output fileNames
 	bxml.onodes	<- getNodeSet(bxml, "//*[@fileName]")
 	tmp			<- sapply(bxml.onodes, function(x) xmlGetAttr(x,"fileName"))	
