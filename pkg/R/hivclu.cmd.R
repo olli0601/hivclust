@@ -77,8 +77,10 @@ PR.BEASTEVALRUN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEASTEVAL
 PR.BEASTPOOLRUN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEASTPOOLRUN",sep='/')
 
 #' @export
-# PR.BEAST2		<- {tmp<- c("/Applications/BEAST_2.1.0/lib/beast.jar","/work/or105/libs/BEAST/lib/beast.jar"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp }
-PR.BEAST2		<- {tmp<- c(system.file(package="hivclust", "ext", "beast.jar"),system.file(package="hivclust", "ext", "beast.jar")); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp } 
+PR.BEAST2		<- system.file(package="hivclust", "ext", "beast2.jar") 
+
+#' @export
+PR.BEAST2SA		<- system.file(package="hivclust", "ext", "beast2-SA.jar")
 
 #' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
@@ -760,11 +762,11 @@ hivc.cmd.beast2.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST2,
 #######################################################"	
 	hpcsys	<- hivc.get.hpcsys()
 	#hpcsys<- "cx1.hpc.ic.ac.uk"
-	cmd		<- paste(cmd,paste("\necho \'run ",prog.beast[hpcsys],"\'\n",sep=''))
+	cmd		<- paste(cmd,paste("\necho \'run ",prog.beast,"\'\n",sep=''))
 	if(hpcsys=="debug")						#my MAC - don t use scratch
 	{		
 		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,"java -Xms",prog.opt.Xms," -Xmx",prog.opt.Xmx," -jar ",prog.beast[hpcsys]," -overwrite -working -threads ",hpc.ncpu," ",tmp,'\n',sep='')
+		cmd		<- paste(cmd,"java -Xms",prog.opt.Xms," -Xmx",prog.opt.Xmx," -jar ",prog.beast," -overwrite -working -threads ",hpc.ncpu," ",tmp,'\n',sep='')
 	}
 	else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
 	{
@@ -775,10 +777,10 @@ hivc.cmd.beast2.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST2,
 		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
 		cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
 		tmp		<- paste(tmpdir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,"java -Xms",prog.opt.Xms," -Xmx",prog.opt.Xmx," -jar ",prog.beast[hpcsys]," -working -threads ",hpc.ncpu," ",tmp,'\n',sep='')	
+		cmd		<- paste(cmd,"java -Xms",prog.opt.Xms," -Xmx",prog.opt.Xmx," -jar ",prog.beast," -working -threads ",hpc.ncpu," ",tmp,'\n',sep='')	
 		cmd		<- paste(cmd,"cp -f ",tmpdir,"/* ", indir,'\n',sep='')		
 	}
-	cmd		<- paste(cmd,"echo \'end ",prog.beast[hpcsys],"\'\n",sep='')
+	cmd		<- paste(cmd,"echo \'end ",prog.beast,"\'\n",sep='')
 	cmd		<- paste(cmd,"#######################################################
 # end: run BEAST2
 #######################################################\n",sep='')

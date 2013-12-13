@@ -25,7 +25,11 @@ all:
 	@echo "*********************************************** "
 	@echo "********* BUILDING BEAST/2.1.0 **************** "
 	@echo "*********************************************** "	
-	make beast.jar		
+	make beast2.jar		
+	@echo "*********************************************** "
+	@echo "********* BUILDING BEAST/2.sampled ancestors ** "
+	@echo "*********************************************** "	
+	make beast2-SA.jar			
 	@echo "*********************************************** "
 	@echo "********* BUILDING HIVCLUST R PACKAGE ********* "
 	@echo "*********************************************** "			
@@ -62,6 +66,10 @@ examl:
 	rm -rf ExaML
 	mv $(EXTERNAL_CODE)/ExaML-examl $(EXTERNAL_CODE)/examl
 	
-beast.jar:
+beast2.jar:
 	echo $(CWD)
-	mv 	../inst/beast.jar $(EXTERNAL_CODE)/beast.jar
+	mv 	../inst/beast2.jar $(EXTERNAL_CODE)/beast2.jar
+	
+beast2-SA.jar:
+	echo $(CWD)
+	mv 	../inst/beast2-SA.jar $(EXTERNAL_CODE)/beast2-SA.jar	

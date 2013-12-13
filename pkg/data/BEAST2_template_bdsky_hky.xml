@@ -6,16 +6,14 @@
 	<taxonset idref="TaxonSet.ds"/>
 </tree>
 
-<BirthDeathSkylineModel spec="BirthDeathSkylineModel" id="birthDeath" tree="@Tree.t:ds" intervalNumber="4">
-        <parameter name="origin" id="originS.t:ds" lower="0.0" upper="1000.0" value="35.0"/>
-        <parameter dimension="4" name="samplingProportionS" id="samplingProportionS.t:ds" lower="0.0" upper="1.0" value="0.4"/>		
-        <parameter dimension="4" name="becomeUninfectiousRateS" id="becomeUninfectiousRateS.t:ds" lower="0.0" upper="10.0" value="0.1"/>
-	<parameter dimension="4" name="R0S" id="R0S.t:ds" lower="0.0" upper="10.0" value="1.2"/>
-	<reverseTimeArrays spec="parameter.BooleanParameter" name="reverseTimeArrays.t:ds" id="reverseTimeArrays.t:ds" value="true true true false"/>
-	<parameter name="samplingRateChangeTimes" id="samplingRateChangeTimes.t:ds" value="9.596 5.596 1.596 0."/>
-	<parameter name="deathRateChangeTimes" id="deathRateChangeTimes.t:ds" value="9.596 5.596 1.596 0."/>
-	<parameter name="birthRateChangeTimes" id="birthRateChangeTimes.t:ds" value="9.596 5.596 1.596 0."/>
-</BirthDeathSkylineModel>
+<branchRateModel id="RelaxedClock.c:ds" spec="beast.evolution.branchratemodel.UCRelaxedClockModel" tree="@Tree.t:ds">
+	<parameter id="ucldMean.c:ds" name="clock.rate" value="0.002"/>      	
+	<parameter name="rateCategories" dimension="246" id="rateCategories.c:ds" spec="parameter.IntegerParameter" value="1"/>
+        <LogNormal id="LogNormalDistributionModel.c:ds" meanInRealSpace="true" name="distr">
+              <parameter id="RealParameter.09" lower="0.0" name="M" upper="1.0" value="1.0"/>
+	      <parameter id="ucldStdev.c:ds" lower="0.0" name="S" upper="5.0" value="0.3" />
+        </LogNormal>
+</branchRateModel>
 
 <siteModel gammaCategoryCount="6" id="SiteModel.s:ds" spec="SiteModel">
 	<parameter estimate="false" id="mutationRate.s:ds" name="mutationRate" value="1.0"/>
@@ -29,18 +27,29 @@
 	</substModel>
 </siteModel>
 
+<BirthDeathSkylineModel spec="beast.evolution.speciation.BirthDeathSkylineModel" id="birthDeath" tree="@Tree.t:ds" intervalNumber="4">
+        <parameter name="origin" id="originS.t:ds" lower="0.0" upper="1000.0" value="35.0"/>
+        <parameter dimension="4" name="samplingProportionS" id="samplingProportionS.t:ds" lower="0.0" upper="1.0" value="0.4"/>		
+        <parameter dimension="4" name="becomeUninfectiousRateS" id="becomeUninfectiousRateS.t:ds" lower="0.0" upper="10.0" value="0.1"/>
+	<parameter dimension="4" name="R0S" id="R0S.t:ds" lower="0.0" upper="10.0" value="1.2"/>
+	<reverseTimeArrays spec="parameter.BooleanParameter" name="reverseTimeArrays.t:ds" id="reverseTimeArrays.t:ds" value="true true true false"/>
+	<parameter name="samplingRateChangeTimes" id="samplingRateChangeTimes.t:ds" value="9.596 5.596 1.596 0."/>
+	<parameter name="deathRateChangeTimes" id="deathRateChangeTimes.t:ds" value="9.596 5.596 1.596 0."/>
+	<parameter name="birthRateChangeTimes" id="birthRateChangeTimes.t:ds" value="9.596 5.596 1.596 0."/>
+</BirthDeathSkylineModel>
+
 <run chainLength="20000000" id="mcmc" spec="MCMC">
     <state id="state" storeEvery="5000">
-        <stateNode idref='Tree.t:ds'/>
-	<stateNode idref="originS.t:ds"/>
-	<stateNode idref="R0S.t:ds"/>
-	<stateNode idref="becomeUninfectiousRateS.t:ds"/>
-	<stateNode idref="samplingProportionS.t:ds"/>
-        <stateNode idref="kappa.s:ds"/>
-        <stateNode idref="freqParameter.s:ds"/>
-        <parameter id="ucldMean.c:ds" name="stateNode">0.002</parameter>
-        <parameter id="ucldStdev.c:ds" lower="0.0" name="stateNode" upper="5.0">0.3</parameter>
-        <stateNode dimension="246" id="rateCategories.c:ds" spec="parameter.IntegerParameter">1</stateNode>
+      <stateNode idref='Tree.t:ds'/>
+      <stateNode idref="originS.t:ds"/>
+      <stateNode idref="R0S.t:ds"/>
+      <stateNode idref="becomeUninfectiousRateS.t:ds"/>
+      <stateNode idref="samplingProportionS.t:ds"/>
+      <stateNode idref="kappa.s:ds"/>
+      <stateNode idref="freqParameter.s:ds"/>
+      <stateNode idref="ucldMean.c:ds"/>
+      <stateNode idref="ucldStdev.c:ds"/>
+      <stateNode idref="rateCategories.c:ds"/>
     </state>
 
     <init estimate="false" id="RandomTree.t:ds" initial="@Tree.t:ds" spec="beast.evolution.tree.RandomTree" taxa="@ds" taxonset="@TaxonSet.t:ds">
@@ -50,9 +59,7 @@
     </init>
 
     <distribution id="posterior" spec="util.CompoundDistribution">
-        <distribution id="prior" spec="util.CompoundDistribution">
-            <distribution R0="@R0S.t:ds" becomeUninfectiousRate="@becomeUninfectiousRateS.t:ds" id="BirthDeathSkySerial.t:ds" intervalNumber="4" origin="@originS.t:ds" samplingProportion="@samplingProportionS.t:ds" spec="beast.evolution.speciation.BirthDeathSkylineModel" tree="@Tree.t:ds">                
-            </distribution>            
+        <distribution id="prior" spec="util.CompoundDistribution">		
             <prior id="KappaPrior.s:ds" name="distribution" x="@kappa.s:ds">
                 <Gamma id="Gamma.01" name="distr">
                     <parameter estimate="false" id="RealParameter.02" name="alpha">11.0</parameter>
@@ -69,16 +76,10 @@
                 <Exponential id="Exponential.0" name="distr">
                     <parameter estimate="false" id="RealParameter.08" name="mean">0.3333</parameter>
                 </Exponential>
-            </prior>
+            </prior>	    
         </distribution>
         <distribution id="likelihood" spec="util.CompoundDistribution">
-            <distribution data="@ds" id="treeLikelihood.ds" spec="TreeLikelihood" tree="@Tree.t:ds" siteModel="@SiteModel.s:ds">                
-		<branchRateModel clock.rate="@ucldMean.c:ds" id="RelaxedClock.c:ds" rateCategories="@rateCategories.c:ds" spec="beast.evolution.branchratemodel.UCRelaxedClockModel" tree="@Tree.t:ds">
-                    <LogNormal S="@ucldStdev.c:ds" id="LogNormalDistributionModel.c:ds" meanInRealSpace="true" name="distr">
-                        <parameter estimate="false" id="RealParameter.09" lower="0.0" name="M" upper="1.0">1.0</parameter>
-                    </LogNormal>
-</branchRateModel>
-            </distribution>
+	    <distribution data="@ds" id="treeLikelihood.ds" spec="TreeLikelihood" tree="@Tree.t:ds" siteModel="@SiteModel.s:ds" branchRateModel="@RelaxedClock.c:ds"/>            
         </distribution>
     </distribution>
 
@@ -139,7 +140,7 @@
         <log idref="ucldMean.c:ds"/>
         <log idref="ucldStdev.c:ds"/>
         <log branchratemodel="@RelaxedClock.c:ds" id="rate.c:ds" spec="beast.evolution.branchratemodel.RateStatistic" tree="@Tree.t:ds"/>
-        <log idref="BirthDeathSkySerial.t:ds"/>
+        <log idref="prior-birthDeath.t:ds"/>
         <log idref="originS.t:ds"/>
         <log idref="samplingProportionS.t:ds"/> 
 	<log idref="samplingRateChangeTimes.t:ds"/>    

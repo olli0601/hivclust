@@ -3783,6 +3783,19 @@ project.hivc.clustering<- function(dir.name= DATA)
 		stop()
 	}
 	if(0)
+	{
+		#check BEEHIVE sequences
+		indircov	<- paste(DATA,"derived",sep='/')
+		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"							
+		load(paste(indircov,'/',infilecov,".R",sep=''))
+		
+		df.bee		<- as.data.table(read.csv("~/duke/2013_HIV_NL/ATHENA_2013/data/BEEHIVE1_data.csv", stringsAsFactors=0))
+		setnames(df.bee,"mcode","Patient")
+		df.bee		<- merge(df.all, subset(df.bee,select=Patient), by="Patient")
+		save(df.bee, file="~/duke/2013_HIV_NL/ATHENA_2013/data/BEEHIVE1_data.R")
+		
+	}
+	if(0)
 	{		
 		verbose		<- 1
 		resume		<- 1
@@ -5750,7 +5763,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 	indircov			<- paste(DATA,"derived",sep='/')
 	infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
 	infiletree			<- paste(infile,"examlbs100",sep="_")
-	infilexml			<- paste(infile,'_',"bdsky",'_',"seroneg",sep='')
+	infilexml			<- paste(infile,'_',"seroneg",sep='')	
 	outdir				<- indir
 	outsignat			<- "Tue_Aug_26_09/13/47_2013"
 	
@@ -5760,14 +5773,13 @@ hivc.prog.BEAST2.generate.xml<- function()
 	pool.ntip				<- 130
 	beast.mcmc.length		<- 25e6
 	infilexml.opt			<- "standard"
-	infilexml.template		<- "hky"	
+	infilexml.template		<- "bdsky_hky"	
 	
 	resume				<- 1
 	verbose				<- 1
 	hpc.walltime		<- 71
 	hpc.ncpu			<- 1
 	hpc.mem				<- "1200mb"
-	
 	
 	if(exists("argv"))
 	{
@@ -5887,7 +5899,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
 		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.8, 0.8)
 		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Uniform/0.8/1.0","Uniform/0.2/1.0","Beta/2.5/4.0/0")	
-	}
+	}	
 	else if(grepl("s424",infilexml.opt))
 	{
 		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
@@ -5901,9 +5913,27 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
 		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.8, 0.8)
 		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.01/0","Uniform/0.8/1.0","Uniform/0.2/1.0","Beta/2.5/4.0/0")	
-	}	
+	}
+	else if(grepl("s184",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.6, 0.3)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Uniform/0.2/1.0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")	
+	}
 	else stop("unknown infilexml.opt")
 	#		
+	if(grepl("sasky",infilexml.template))
+	{
+		beast2.spec$treemodel			<- "SampledAncestorSkylineModel"
+		prog.beast						<- PR.BEAST2SA
+	}
+	if(grepl("bdsky",infilexml.template))
+	{
+		beast2.spec$treemodel			<- "BirthDeathSkylineModel"
+		prog.beast						<- PR.BEAST2
+	}
+	#	
 	if(verbose)
 	{
 		print(indir)
@@ -5922,7 +5952,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		print(pool.ntip)		 
 		print(infilexml.opt)
 		print(infilexml.template)
-	}
+	}	
 	#
 	#	load complete tree to generate starting tree
 	#
@@ -5958,7 +5988,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 	#
 	#	load xml template file
 	#	
-	file			<- paste(CODE.HOME,"/data/BEAST2_template_bdsky_",infilexml.template,".xml",sep='')	
+	file			<- paste(CODE.HOME,"/data/BEAST2_template_",infilexml.template,".xml",sep='')
 	bxml.template	<- xmlTreeParse(file, useInternalNodes=TRUE, addFinalizer = TRUE)			
 	#
 	#	create BEAST2 XML file	
@@ -5984,14 +6014,14 @@ hivc.prog.BEAST2.generate.xml<- function()
 	#
 	sapply(bfile, function(x)
 			{
-				cmd			<- hivc.cmd.beast2.runxml(indir, x, outsignat, hpc.ncpu=hpc.ncpu, prog.opt.Xmx="1200m", hpc.tmpdir.prefix="beast2")
+				cmd			<- hivc.cmd.beast2.runxml(indir, x, outsignat, hpc.ncpu=hpc.ncpu, prog.beast=prog.beast, prog.opt.Xmx="1200m", hpc.tmpdir.prefix="beast2")
 				#cmd		<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
 				cat(cmd)				
 				outfile		<- paste("b2",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
 				stop()
-			})
+			})	
 }
 ######################################################################################
 hivc.prog.BEAST.generate.xml<- function()
@@ -6619,7 +6649,7 @@ hivc.pipeline.BEAST<- function()
 		indircov			<- paste(DATA,"derived",sep='/')
 		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
 		infiletree			<- paste(infile,"examlbs100",sep="_")
-		infilexml			<- paste(infile,'_',"bdsky",'_',"seroneg",sep='')
+		infilexml			<- paste(infile,'_',"seroneg",sep='')
 		outdir				<- indir
 		outsignat			<- "Tue_Aug_26_09/13/47_2013"		
 		opt.brl				<- "dist.brl.casc" 
@@ -6629,7 +6659,8 @@ hivc.pipeline.BEAST<- function()
 		resume				<- 1
 		verbose				<- 1
 		
-		infilexml.template	<- "hky"
+		#infilexml.template	<- "bdsky_hky"
+		infilexml.template	<- "sasky_hky"
 		infilexml.opt		<- "S4p"
 		#infilexml.opt		<- "S5p"
 		#infilexml.opt		<- "S8p"
@@ -6639,6 +6670,7 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "s124"
 		infilexml.opt		<- "s024"
 		infilexml.opt		<- "s424"
+		infilexml.opt		<- "s184"
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))		
 		hivc.prog.BEAST2.generate.xml()
