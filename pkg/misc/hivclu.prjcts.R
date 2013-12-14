@@ -6695,7 +6695,7 @@ hivc.pipeline.BEAST<- function()
 		resume				<- 1
 		verbose				<- 1
 		
-		#infilexml.template	<- "bdsky_hky"
+		#infilexml.template	<- "bdsky_hky" 
 		infilexml.template	<- "sasky_hky"
 		infilexml.opt		<- "S4p"
 		#infilexml.opt		<- "S5p"
