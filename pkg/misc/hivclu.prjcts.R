@@ -5930,6 +5930,33 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$sasky.r.value					<- c(0.1, 0.2, 0.5, 0.7, 0.7)
 		beast2.spec$sasky.r.prior					<- c("Uniform/0.0/0.5","Uniform/0.0/0.5","Uniform/0.0/1.0","Uniform/0.5/0.8","Uniform/0.5/1.0")
 	}
+	else if(grepl("d999",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.6, 0.3)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Uniform/0.2/1.0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(9, 9, 9, 9, 9)
+		beast2.spec$bdsky.notInf.prior				<- c("Exponential/0.11/0","Exponential/0.11/0","Exponential/0.11/0","Exponential/0.11/0","Exponential/0.11/0")
+	}
+	else if(grepl("d774",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.6, 0.3)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Uniform/0.2/1.0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(7, 7, 7, 4, 4)
+		beast2.spec$bdsky.notInf.prior				<- c("Exponential/0.14/0","Exponential/0.14/0","Exponential/0.14/0","Exponential/0.25/0","Exponential/0.25/0")
+	}
+	else if(grepl("d543",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.6, 0.3)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Uniform/0.2/1.0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
+		beast2.spec$bdsky.notInf.prior				<- c("Exponential/0.2/0","Exponential/0.25/0","Exponential/0.25/0","Exponential/0.33/0","Exponential/0.33/0")
+	}	
 	else stop("unknown infilexml.opt")
 	#		
 	if(grepl("sasky",infilexml.template))
@@ -6681,6 +6708,9 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "s424"
 		infilexml.opt		<- "s184"
 		infilexml.opt		<- "sartest"
+		infilexml.opt		<- "d999"
+		infilexml.opt		<- "d774"
+		infilexml.opt		<- "d543"
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))		
 		hivc.prog.BEAST2.generate.xml()
