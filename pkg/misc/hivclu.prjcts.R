@@ -5958,7 +5958,10 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.notInf.prior				<- c("Exponential/0.2/0","Exponential/0.25/0","Exponential/0.25/0","Exponential/0.33/0","Exponential/0.33/0")
 	}	
 	else stop("unknown infilexml.opt")
-	#		
+	#		 
+	#
+	#
+	#
 	if(grepl("sasky",infilexml.template))
 	{
 		beast2.spec$treemodel			<- "SampledAncestorSkylineModel"
@@ -6695,7 +6698,7 @@ hivc.pipeline.BEAST<- function()
 		resume				<- 1
 		verbose				<- 1
 		
-		#infilexml.template	<- "bdsky_hky" 
+		infilexml.template	<- "bdsky_hky" 
 		infilexml.template	<- "sasky_hky"
 		infilexml.opt		<- "S4p"
 		#infilexml.opt		<- "S5p"
