@@ -5968,7 +5968,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$sasky.r.value					<- c(0.9, 0.5, 0.5, 0.5, 0.5)
 		beast2.spec$sasky.r.prior					<- c("Beta/2/1/0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0")
 	}
-	else if(grepl("dg543r7",infilexml.opt))
+	else if(grepl("r7dg543",infilexml.opt))
 	{
 		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
 		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
@@ -5979,7 +5979,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$sasky.r.value					<- c(0.9, 0.5, 0.5, 0.5, 0.5)
 		beast2.spec$sasky.r.prior					<- c("Beta/2/1/0","Uniform/0.0/0.7","Uniform/0.0/0.7","Uniform/0.0/0.7","Uniform/0.0/0.7")
 	}
-	else if(grepl("dg543r5",infilexml.opt))
+	else if(grepl("r5dg543",infilexml.opt))
 	{
 		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
 		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
@@ -6748,8 +6748,8 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "d774"
 		infilexml.opt		<- "d543"
 		infilexml.opt		<- "dg543"
-		infilexml.opt		<- "dg543r7"
-		infilexml.opt		<- "dg543r5"
+		infilexml.opt		<- "r7dg543"
+		infilexml.opt		<- "r5dg543"
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))		
 		hivc.prog.BEAST2.generate.xml()
