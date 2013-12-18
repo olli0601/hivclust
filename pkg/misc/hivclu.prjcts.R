@@ -5969,6 +5969,18 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
 		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/70.0"
 	}
+	else if(grepl("ori150",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.1, 0.6, 0.6, 0.3)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/4.0/3.0/0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
+		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
+		beast2.spec$sasky.r.value					<- rep(0.05, 5)
+		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
+		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/150.0"
+	}
 	else stop("unknown infilexml.opt")
 	#		 
 	#
@@ -6737,6 +6749,7 @@ hivc.pipeline.BEAST<- function()
 		#infilexml.opt		<- "ori50"
 		#infilexml.opt		<- "ori60"
 		infilexml.opt		<- "ori70"
+		infilexml.opt		<- "ori150"
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))		
 		hivc.prog.BEAST2.generate.xml()
