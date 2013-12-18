@@ -968,6 +968,12 @@ hivc.beast2.get.prior<- function(args, parent, parentid, bxml)
 		dummy	<- newXMLNode("parameter", attrs= list( id= paste('pGamma1',parentid,sep='-'), name="alpha",  value=args[2], estimate="false"), parent=prior, doc=bxml, addFinalizer=T)
 		dummy	<- newXMLNode("parameter", attrs= list( id= paste('pGamma2',parentid,sep='-'), name="beta",  value=args[3], estimate="false"), parent=prior, doc=bxml, addFinalizer=T)
 	}
+	else if(args[1]=="LogNormal")
+	{
+		prior	<- newXMLNode("LogNormal", attrs= list( id= paste('LogNormal',parentid,sep='-'), name="distr", offset=args[4], meanInRealSpace=args[5]), parent=parent, doc=bxml, addFinalizer=T)
+		dummy	<- newXMLNode("parameter", attrs= list( id= paste('pLogNormal1',parentid,sep='-'), name="mean",  value=args[2], estimate="false"), parent=prior, doc=bxml, addFinalizer=T)
+		dummy	<- newXMLNode("parameter", attrs= list( id= paste('pLogNormal2',parentid,sep='-'), name="stdev",  value=args[3], estimate="false"), parent=prior, doc=bxml, addFinalizer=T)
+	}
 	else	stop("prior not implemented")	
 	prior
 }

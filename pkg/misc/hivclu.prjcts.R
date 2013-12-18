@@ -2607,6 +2607,66 @@ project.hivc.clustering.get.linked.and.unlinked<- function(dir.name= DATA)
 	}
 }
 ######################################################################################
+project.hivc.clustering.compare.NoDR.to.NoRecombNoDR<- function()
+{	
+	verbose		<- 1
+	resume		<- 1
+	patient.n	<- 15700; 	thresh.brl<- 0.096; 	thresh.bs<- 0.8
+	indircov	<- paste(DATA,"derived",sep='/')
+	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"									
+	#
+	# get clusters for No Drug resistance mutations, single linkage criterion		
+	#		
+	indir			<- paste(DATA,"tmp",sep='/')		
+	infile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs500"			
+	insignat		<- "Thu_Aug_01_17/05/23_2013"
+	#
+	argv			<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
+	argv			<<- unlist(strsplit(argv,' '))
+	ndr.clu.pre		<- hivc.prog.get.clustering.precompute()
+	#
+	argv			<<- hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=resume)
+	argv			<<- unlist(strsplit(argv,' '))
+	ndr.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=clu.pre)
+	#			
+	argv			<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl="dist.brl.casc", thresh.brl, thresh.bs, resume=resume)				 
+	argv			<<- unlist(strsplit(argv,' '))
+	ndr.clu			<- hivc.prog.get.clustering()
+	#
+	# get clusters for No Recombination + No Drug resistance mutations, single linkage criterion		
+	#						
+	infile			<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences_examlbs500"			
+	insignat		<- "Fri_Nov_01_16/07/23_2013"
+	#
+	argv			<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
+	argv			<<- unlist(strsplit(argv,' '))
+	nrc.clu.pre		<- hivc.prog.get.clustering.precompute()
+	#
+	argv			<<- hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=resume)
+	argv			<<- unlist(strsplit(argv,' '))
+	nrc.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=clu.pre)
+	#			
+	argv			<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl="dist.brl.casc", thresh.brl, thresh.bs, resume=resume)				 
+	argv			<<- unlist(strsplit(argv,' '))
+	nrc.clu			<- hivc.prog.get.clustering()
+	#
+	#	compare distribution of bootstrap values
+	#
+	hist( ndr.clu.pre$ph.node.bs )
+	hist( nrc.clu.pre$ph.node.bs, border="blue", add=1 )
+	#
+	#	compare TP
+	#
+	ndr.clu.tptn$tp.by.all
+	nrc.clu.tptn$tp.by.all
+	#
+	#	compare FP
+	#
+	ndr.clu.tptn$fpn.by.sum
+	nrc.clu.tptn$fpn.by.sum		
+	#
+}
+######################################################################################
 project.hivc.clustering.computeclusterstatistics.fordistbrl<- function(thresh, clusters, with.withinpatientclu=0, dist.brl="dist.brl.med")
 {
 	#select clusters for analysis
@@ -2856,6 +2916,8 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 ######################################################################################
 hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 {
+	require(RColorBrewer)
+	require(colorspace)
 	indir		<- paste(DATA,"tmp",sep='/')		
 	infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"			
 	insignat	<- "Thu_Aug_01_17/05/23_2013"
@@ -3417,27 +3479,12 @@ project.hivc.clustering<- function(dir.name= DATA)
 	}
 	if(1)
 	{
-		hivc.prog.recombination.plot.incgruence()
-		stop()
+		project.hivc.clustering.compare.NoDR.to.NoRecombNoDR()
 		
-			
-		#
-		#	load sequences and create FASTA file to inspect recombinants manually
-		#
-		set(df.recomb, NULL, "dummy", seq_len(nrow(df.recomb)))
-		x				<- subset(df.recomb, parentpair==2)
-		tmp				<- x[, list(FASTASampleCode= c(parent1, parent2, child)),by="dummy"][,FASTASampleCode]
-		tmp				<- seq.PROT.RT[unique(tmp),]
-		file		<- paste(indir,"/SuspiciousNNNRun_3seq.phylip",sep='')		
-		hivc.seq.write.dna.phylip(tmp, file)
-		#
-		tmp				<- df.recomb[, list(FASTASampleCode= c(parent1, parent2, child)),by="dummy"][,FASTASampleCode]
-		tmp				<- seq.PROT.RT[tmp,]
-		file		<- paste(indir,'/',infile,"_3seq_", gsub('/',':',insignat),".fasta",sep='')
-		write.dna(tmp, file, format= "fasta" )
-		x	<- subset(df.recomb, parentpair==2)
+		file		<- paste(DATA,"/tmp/","ATHENA_2013_03_NoRCDRAll+LANL_Sequences","_",gsub('/',':',"Fri_Nov_01_16/07/23_2013"),".R",sep='')
+		if(verbose) cat(paste("\nread",file))
+		tmp			<- load(file)
 		
-	#
 	}
 	if(0)	#min brl to get a transmission cascade from brl matrix
 	{
@@ -3488,189 +3535,6 @@ project.hivc.clustering<- function(dir.name= DATA)
 		clu.idx			<- clustering[["clu.idx"]]-Ntip(ph)
 		print(clu.idx)
 		print(ph.node.bs[clu.idx])
-		stop()
-	}
-	if(0)	#clustering on ATHENA tree
-	{
-		opt.dist.brl	<- "dist.brl.max"
-		opt.dist.brl	<- "dist.brl.casc"
-		opt.dist.brl	<- "dist.brl.med"
-		if(1)
-		{
-			#read tree, get boostrap values and patristic distances between leaves
-			infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_preclustlink"
-			signat.in	<- "Sat_Jun_16_17/23/46_2013"			
-			file		<- paste(dir.name,"tmp",paste(infile,'_',gsub('/',':',signat.in),".R",sep=''),sep='/')
-			cat(paste("load file",file))		
-			load(file)
-		}
-		else
-		{
-			stop(paste("cannot find file",infile))
-		}
-		dist.brl			<- switch(	opt.dist.brl, 
-										"dist.brl.max"		= dist.brl.max,
-										"dist.brl.med"		= dist.brl.med,
-										"dist.brl.casc"		= dist.brl.casc,
-										NA)		
-		thresh.bs			<- 0.85
-		thresh.brl			<- 0.06				
-		clustering			<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
-		
-		#print(clustering)		
-	
-		#for each tip, collect 'Patient' and 'TN or PROT+P51 or ATHENA'
-		indir				<- paste(dir.name,"tmp",sep='/')
-		infile				<- "ATHENA_2013_03_Unlinked_and_Linked"
-		insignat			<- "Sat_Jun_16_17/23/46_2013"
-		file				<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
-		if(verbose) cat(paste("\nread linked and unlinked from file",file))
-		load(file)								
-		df.seqinfo			<- merge( data.table(FASTASampleCode= ph$tip.label, Node=seq_along(ph$tip.label), key="FASTASampleCode"), subset(df.seqinfo,select=c(FASTASampleCode, Patient)), all.x=1, by="FASTASampleCode")
-		tmp					<- rep("NL", Ntip(ph))
-		tmp[ df.seqinfo[,substr(FASTASampleCode,1,2)=="TN"] ]		<- "FRGNTN"
-		tmp[ df.seqinfo[,substr(FASTASampleCode,1,8)=="PROT+P51"] ]	<- "FRGN"
-		df.seqinfo[,InAthena:=tmp]
-				
-		#for each tip, collect seq data 
-		indir				<- paste(dir.name,"derived",sep='/')
-		infile				<- "ATHENA_2013_03_AllSeqPatientCovariates"		
-		file				<- paste(indir,'/',infile,".R",sep='')
-		if(verbose) cat(paste("\nread patient data from file",file))
-		load(file)
-		df.seqinfo			<- merge(df.seqinfo, df.all, all.x=1, by="FASTASampleCode")
-		setnames(df.seqinfo,"Patient.x","Patient")
-		df.seqinfo			<- subset( df.seqinfo,select=-7 )
-				
-		#focus now only on some seq data entries:
-		df.seqinfo			<- subset(df.seqinfo, select=c(Node, FASTASampleCode, InAthena, CountryInfection, Patient, Trm, Sex, PosSeqT , NegT, AnyPos_T1, RegionHospital))	
-		#merge InAthena CountryInfection
-		tmp					<- which(df.seqinfo[,InAthena=="NL"])
-		set(df.seqinfo, tmp, "InAthena", df.seqinfo[tmp,CountryInfection])
-		df.seqinfo			<- subset( df.seqinfo,select=-4 )
-		setnames(df.seqinfo,"InAthena","CountryInfection")
-		
-		#add clustering to data table
-		setkey(df.seqinfo, Node)
-		tmp					<- clustering[["clu.mem"]][seq_len(Ntip(ph))]
-		df.seqinfo[,"cluster":=tmp]
-		
-		outfile				<- paste("ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100_clustPHY_",opt.dist.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,sep='')
-		outsignat			<- "Sat_Jun_16_17/23/46_2013"
-		file				<- paste(dir.name,"tmp",paste(outfile,"_clusterinfo_",gsub('/',':',outsignat),".R",sep=''),sep='/')
-		cat(paste("write cluster info to file",file))
-		save(df.seqinfo, file=file)
-		
-		
-		#set colors CountryInfection
-		tmp					<- rep("transparent",nrow(df.seqinfo))
-		df.seqinfo[,CountryInfection.col:=tmp]
-		set(df.seqinfo, which(df.seqinfo[,CountryInfection=="NL"]), "CountryInfection.col", "#EF9708")
-		#set colors Patient
-		tmp					<- unique( df.seqinfo[,Patient] )
-		tmp2				<- diverge_hcl(length(tmp), h = c(246, 40), c = 96, l = c(85, 90))		
-		tmp					<- data.table(Patient=tmp, Patient.col=tmp2, key="Patient")
-		df.seqinfo			<- merge(  df.seqinfo, tmp, all.x=1, by="Patient" )
-		#set colors Sex
-		tmp					<- rep("transparent",nrow(df.seqinfo))
-		df.seqinfo[,Sex.col:=tmp]						
-		set(df.seqinfo, which(df.seqinfo[,Sex=="M"]), "Sex.col", "#EF9708")
-		#set colors MSM or BI
-		tmp					<- rep("transparent",nrow(df.seqinfo))
-		df.seqinfo[,Trm.col:=tmp]						
-		set(df.seqinfo, which(df.seqinfo[,Trm%in%c("MSM","BI")]), "Trm.col", "#EF9708")
-		#set colors RegionHospital
-		tmp					<- unique( df.seqinfo[,RegionHospital] )		
-		tmp2				<- c("transparent",brewer.pal(length(tmp)-1, "Dark2"))
-		tmp					<- data.table(RegionHospital=tmp, RegionHospital.col=tmp2, key="RegionHospital")
-		df.seqinfo			<- merge(  df.seqinfo, tmp, all.x=1, by="RegionHospital" )		
-		#set colors time		
-		tmp					<- range( range(df.seqinfo[, NegT],na.rm=1), range(df.seqinfo[, AnyPos_T1],na.rm=1) )
-		tmp					<- as.POSIXlt( seq.Date(tmp[1],tmp[2]+365,by="years") )$year
-		tmp2				<- heat_hcl(length(tmp), h = c(0, -100), l = c(75, 40), c = c(40, 80), power = 1)
-		yearcols			<- data.table(Year=tmp, Year.col=tmp2)
-		#set colors PosSeqT
-		tmp					<- data.table(PosSeqT= unique( df.seqinfo[,PosSeqT] ), key="PosSeqT" )
-		tmp2				<- tmp[, as.POSIXlt(PosSeqT)$year]
-		tmp[,"Year":=tmp2]
-		tmp					<- subset( merge(tmp, yearcols, all.x=1, by="Year"), select=c(PosSeqT,Year.col))
-		setnames(tmp,"Year.col","PosSeqT.col")
-		df.seqinfo			<- merge(  df.seqinfo, tmp, all.x=1, by="PosSeqT" )
-		#set colors NegT
-		tmp					<- data.table(NegT= unique( df.seqinfo[,NegT] ), key="NegT" )
-		tmp2				<- tmp[, as.POSIXlt(NegT)$year]
-		tmp[,"Year":=tmp2]
-		tmp					<- subset( merge(tmp, yearcols, all.x=1, by="Year"), select=c(NegT,Year.col))
-		setnames(tmp,"Year.col","NegT.col")
-		df.seqinfo			<- merge(  df.seqinfo, tmp, all.x=1, by="NegT" )
-		#set colors AnyPos_T1
-		tmp					<- data.table(AnyPos_T1= unique( df.seqinfo[,AnyPos_T1] ), key="AnyPos_T1" )
-		tmp2				<- tmp[, as.POSIXlt(AnyPos_T1)$year]
-		tmp[,"Year":=tmp2]
-		tmp					<- subset( merge(tmp, yearcols, all.x=1, by="Year"), select=c(AnyPos_T1,Year.col))
-		setnames(tmp,"Year.col","AnyPos_T1.col")
-		df.seqinfo			<- merge(  df.seqinfo, tmp, all.x=1, by="AnyPos_T1" )									
-		
-		#convert time to string
-		set(df.seqinfo,NULL,"AnyPos_T1",substr(as.character( df.seqinfo[,AnyPos_T1] ),1,7))
-		set(df.seqinfo,NULL,"NegT",substr(as.character( df.seqinfo[,NegT] ),1,7))
-		set(df.seqinfo,NULL,"PosSeqT",substr(as.character( df.seqinfo[,PosSeqT] ),1,7))
-				
-		#handle missing entries
-		setkey(df.seqinfo, Patient)
-		tmp					<- which(is.na(df.seqinfo[,Patient]))
-		set(df.seqinfo, tmp, "Patient", '')
-		set(df.seqinfo, tmp, "Patient.col", "transparent")
-		tmp					<- which(is.na(df.seqinfo[,RegionHospital]))
-		set(df.seqinfo, tmp, "RegionHospital", '-')
-		set(df.seqinfo, tmp, "RegionHospital.col", "transparent")		
-		tmp					<- which(is.na(df.seqinfo[,CountryInfection]))
-		set(df.seqinfo, tmp, "CountryInfection", "--")
-		set(df.seqinfo, tmp, "CountryInfection.col", "transparent")				
-		tmp					<- which(is.na(df.seqinfo[,Trm]))
-		set(df.seqinfo, tmp, "Trm", '')
-		set(df.seqinfo, tmp, "Trm.col", "transparent")
-		tmp					<- which(is.na(df.seqinfo[,Sex]))
-		set(df.seqinfo, tmp, "Sex", '')
-		set(df.seqinfo, tmp, "Sex.col", "transparent")
-		tmp					<- which(is.na(df.seqinfo[,AnyPos_T1]))
-		set(df.seqinfo, tmp, "AnyPos_T1", "-------")
-		set(df.seqinfo, NULL, "AnyPos_T1", paste("HIV+:",df.seqinfo[,AnyPos_T1],sep=''))
-		set(df.seqinfo, tmp, "AnyPos_T1.col", "transparent")
-		tmp					<- which(is.na(df.seqinfo[,NegT]))
-		set(df.seqinfo, tmp, "NegT", "-------")
-		set(df.seqinfo, NULL, "NegT", paste("HIV-:",df.seqinfo[,NegT],sep=''))
-		set(df.seqinfo, tmp, "NegT.col", "transparent")
-		tmp					<- which(is.na(df.seqinfo[,PosSeqT]))
-		set(df.seqinfo, tmp, "PosSeqT", "-------")
-		set(df.seqinfo, NULL, "PosSeqT", paste("HIVS:",df.seqinfo[,PosSeqT],sep=''))
-		set(df.seqinfo, tmp, "PosSeqT.col", "transparent")
-		
-		setkey(df.seqinfo, Node)				
-		#select text and col matrix 
-		text				<- t( as.matrix( subset(df.seqinfo,select=c(CountryInfection, Trm, Sex, NegT, AnyPos_T1, PosSeqT, Patient, RegionHospital)) ) )
-		col					<- t( as.matrix( subset(df.seqinfo,select=c(CountryInfection.col, Trm.col, Sex.col, NegT.col, AnyPos_T1.col, PosSeqT.col, Patient.col, RegionHospital.col)) ) )
-						
-		clu.onlytp			<- hivc.clu.truepos(clustering, ph.linked, Ntip(ph))$clu.onlytp
-		#double check 'clu.onlytp' 
-		if(0)
-		{
-			dummy<- sapply(clu.onlytp[,clu], function(i)
-				{
-					tmp<- which( clustering[["clu.mem"]]==i)
-					tmp<- tmp[tmp<Ntip(ph)]
-					tmp<- merge( data.table(FASTASampleCode= ph$tip.label[ tmp ]), df.seqinfo, by="FASTASampleCode" )
-					if( length(unique(tmp[,Patient]))!=1 )
-						print(tmp) 					
-				})
-		}
-		
-		#plot tree to file
-		file		<- paste(dir.name,"tmp",paste(outfile,'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')
-		cat(paste("write tree to file",file))
-		hivc.clu.plot(ph, clustering[["clu.mem"]], file=file, pdf.scaley=25, pdf.off=0, highlight.cluster= list( clu.onlytp[,clu] ), highlight.cluster.col="grey50", highlight.edge.of.tiplabel=c("TN","PROT+P51"), highlight.edge.of.tiplabel.col= c("red","blue"), cex.nodelabel=0.1 )
-		hivc.clu.plot.tiplabels( seq_len(Ntip(ph)), text, col, cex=0.12, adj=c(-0.15,0.5), add.xinch=0, add.yinch=0 )
-		dev.off()
 		stop()
 	}
 	if(0)
@@ -3915,12 +3779,6 @@ project.hivc.clustering<- function(dir.name= DATA)
 		
 		stop()
 		
-	}
-	if(0)	#investigate various cluster size distributions by size etc
-	{	
-		#project.hivc.clustering.computeclusterstatistics(with.withinpatientclu=1)
-		project.hivc.clustering.computeclusterstatistics(with.withinpatientclu=0)		
-		stop()
 	}
 	if(0)	#count how many unlinked pairs in clustering
 	{		
@@ -6001,6 +5859,54 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$sasky.r.value					<- c(0.05, 0.05, 0.05, 0.05, 0.05)
 		beast2.spec$sasky.r.prior					<- c("Uniform/0.0/0.1","Uniform/0.0/0.1","Uniform/0.0/0.1","Uniform/0.0/0.1","Uniform/0.0/0.1")
 	}
+	else if(grepl("ori40",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.1, 0.6, 0.6, 0.3)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/4.0/3.0/0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
+		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
+		beast2.spec$sasky.r.value					<- rep(0.05, 5)
+		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
+		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/40.0"
+	}
+	else if(grepl("ori50",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.1, 0.6, 0.6, 0.3)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/4.0/3.0/0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
+		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
+		beast2.spec$sasky.r.value					<- rep(0.05, 5)
+		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
+		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/50.0"
+	}	
+	else if(grepl("ori60",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.1, 0.6, 0.6, 0.3)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/4.0/3.0/0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
+		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
+		beast2.spec$sasky.r.value					<- rep(0.05, 5)
+		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
+		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/60.0"
+	}
+	else if(grepl("ori70",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.1, 0.6, 0.6, 0.3)
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/4.0/3.0/0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
+		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
+		beast2.spec$sasky.r.value					<- rep(0.05, 5)
+		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
+		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/70.0"
+	}
 	else stop("unknown infilexml.opt")
 	#		 
 	#
@@ -6762,6 +6668,10 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "r7543"
 		infilexml.opt		<- "r5543"
 		infilexml.opt		<- "r1543"
+		#infilexml.opt		<- "ori40"
+		#infilexml.opt		<- "ori50"
+		#infilexml.opt		<- "ori60"
+		infilexml.opt		<- "ori70"
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))		
 		hivc.prog.BEAST2.generate.xml()
