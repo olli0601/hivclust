@@ -2509,6 +2509,20 @@ hivc.seq.find<- function(char.matrix, pos0= NA, from= c(), verbose=1)
 	query.yes	
 }
 
+hivc.seq.length<- function(seq.DNAbin.mat, exclude=c('-','?'))
+{
+	counts	<- apply(seq.DNAbin.mat,1,function(x) base.freq(x, freq=1, all=1))
+	apply(counts[ !rownames(counts)%in%exclude, ],2,sum)
+}
+
+hivc.seq.proportion.ambiguous<- function(seq.DNAbin.mat, exclude=c('-','?'))
+{
+	counts	<- apply(seq.DNAbin.mat,1,function(x) base.freq(x, freq=1, all=1))
+	len		<- apply(counts[ !rownames(counts)%in%exclude, ],2,sum)
+	pa		<- apply(counts[c("r", "m", "w", "s", "k", "y", "v", "h", "d", "b"),],2,sum)
+	pa/len
+}
+
 hivc.seq.gc.content<- function(seq.DNAbin.mat)
 {	
 	rna.gc.fraction.n		<- c('a','c','g','t',	'r','m','w','s',	'k','y','v','h',		'd','b','n','-','?')
@@ -4242,13 +4256,13 @@ hivc.phy.get.TP.and.TN.bootstrapvalues<- function(ph, bs.linked.bypatient, ph.mr
 	bs.linked.bypatient[,dummy:=seq_len(nrow(bs.linked.bypatient))]
 	setkey(bs.linked.bypatient,dummy)	
 	tmp					<- bs.linked.bypatient[, {													
-				tmp			<- Ancestors(ph,mrca)		
-				anc.bs		<- ph$node.label[ tmp-Ntip(ph) ]
-				anc.brl		<- dist.brl[ tmp-Ntip(ph) ]
-				tmp2		<- which( !as.logical(cumsum( as.numeric( anc.brl>=thresh.brl ) )) )
-				list(	amrca.bs= ifelse(length(tmp),max(anc.bs),0), 
-						amrca.bs.brl=ifelse(length(tmp2),max(anc.bs[ tmp2 ]),0))													
-			}, by="dummy"]
+													tmp			<- Ancestors(ph,mrca)		
+													anc.bs		<- ph$node.label[ tmp-Ntip(ph) ]
+													anc.brl		<- dist.brl[ tmp-Ntip(ph) ]
+													tmp2		<- which( !as.logical(cumsum( as.numeric( anc.brl>=thresh.brl ) )) )
+													list(	amrca.bs= ifelse(length(tmp),max(anc.bs),0), 
+															amrca.bs.brl=ifelse(length(tmp2),max(anc.bs[ tmp2 ]),0))													
+												}, by="dummy"]
 	bs.linked.bypatient<- merge(bs.linked.bypatient, tmp, by="dummy")	
 	if(verbose)	cat(paste("\nFound bootstrap values between TP pairs, n=",nrow(bs.linked.bypatient)))
 	# compute "bs" from "mrca.bs","amrca.bs","amrca.bs.brl"									

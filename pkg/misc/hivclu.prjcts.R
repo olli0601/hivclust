@@ -243,6 +243,72 @@ project.hivc.get.geneticdist.from.sdc<- function(dir.name= DATA)
 	print(tmp)
 }
 ######################################################################################
+project.hivc.seq.dataset.mDR.mRC.mSH.pLANL<- function()	
+{
+	require(data.table)
+	require(phangorn)
+	
+	file		<- paste(DATA,"/tmp/","ATHENA_2013_03_NoRCDRAll+LANL_Sequences","_",gsub('/',':',"Fri_Nov_01_16/07/23_2013"),".R",sep='')
+	if(verbose) cat(paste("\nread",file))
+	tmp			<- load(file)
+	seq.len		<- hivc.seq.length(seq.PROT.RT)		
+	hist(seq.len, breaks=20)
+	seq.amb		<- hivc.seq.proportion.ambiguous(seq.PROT.RT)
+	hist(seq.amb, breaks=40)
+	
+	
+	#
+	# get clusters for No Recombination + No Drug resistance mutations, single linkage criterion		
+	#						
+	infilecov		<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infile			<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences_examlbs500"			
+	insignat		<- "Fri_Nov_01_16/07/23_2013"		
+	argv			<<- hivc.cmd.preclustering(paste(DATA,"/tmp",sep=''), infile, insignat, paste(DATA,"/derived",sep=''), infilecov, resume=1)				 
+	argv			<<- unlist(strsplit(argv,' '))
+	nrc.clu.pre		<- hivc.prog.get.clustering.precompute()
+	#
+	ph				<- nrc.clu.pre$ph
+	ph.node.bs		<- as.numeric(ph$node.label)
+	
+	seq.stat		<- data.table(FASTASampleCode=names(seq.len), tip:=match(seq.stat[,FASTASampleCode],ph$tip.label), length=seq.len, pamb=seq.amb)
+	seq.stat		<- seq.stat[,	{
+				tmp		<- Ancestors(ph, tip, type='all') - Ntip(ph)
+				list(bs.mx=max(ph.node.bs[tmp]), length=length, pamb=pamb, tip=tip)			
+			},by=FASTASampleCode]		
+	seq.short		<- subset(seq.stat, length<400)
+	seq.long		<- subset(seq.stat, length>=400)
+	seq.short.nfrgn	<- subset(seq.short,substr(seq.short[,FASTASampleCode],1,2)!="TN")		
+	seq.closefrgn	<- subset(seq.stat, substr(seq.stat[,FASTASampleCode],1,8)=="PROT+P51") 
+	seq.tn			<- subset(seq.stat, substr(seq.stat[,FASTASampleCode],1,2)=="TN")	
+	
+	hist(seq.short[,bs.mx], breaks=20)			
+	hist(seq.long[,bs.mx], breaks=20)
+	hist(seq.short.nfrgn[,bs.mx], breaks=20)
+	hist(seq.closefrgn[,bs.mx], breaks=20)
+	#	-> longer sequences have larger bootstrap
+	#	-> short ATHENA sequences have small bootstap
+	#	-> almost all short sequences (500 / 548 ) are TN.	so TNs might not cluster simply because they are short. restrict TNs to foreign sequences > 600
+	#	-> all PROT+P51 sequences are long, and do not cluster as well as the NL sequences
+	seq.athena.exclude	<- subset(seq.short.nfrgn, bs.mx<0.6 )[, FASTASampleCode]		
+	#			
+	indir		<- paste(DATA,"tmp",sep='/')		
+	infile		<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences"	
+	insignat	<- "Fri_Nov_01_16/07/23_2013"
+	outfile		<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"	
+	outsignat	<- "Wed_Dec_18_11/37/00_2013"		
+	
+	file		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+	load(file)
+	#	exclude short ATHENA sequences that have BS<0.6 in pilot run AND all TN sequences because they are <400 nt
+	seq.keep	<- setdiff(rownames(seq.PROT.RT), seq.athena.exclude)
+	seq.keep	<- seq.keep[ substr(seq.keep,1,2)!="TN" ]				
+	seq.PROT.RT	<- seq.PROT.RT[seq.keep,]
+	if(verbose)	cat(paste("\nnumber of long sequences, n=",nrow(seq.PROT.RT)))
+	file		<- paste(indir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')
+	if(verbose)	cat(paste("\nsave new file to",file))
+	save(seq.PROT.RT, file=file)
+}				
+######################################################################################
 project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 {	
 	require(data.table)		
@@ -3480,11 +3546,7 @@ project.hivc.clustering<- function(dir.name= DATA)
 	if(1)
 	{
 		project.hivc.clustering.compare.NoDR.to.NoRecombNoDR()
-		
-		file		<- paste(DATA,"/tmp/","ATHENA_2013_03_NoRCDRAll+LANL_Sequences","_",gsub('/',':',"Fri_Nov_01_16/07/23_2013"),".R",sep='')
-		if(verbose) cat(paste("\nread",file))
-		tmp			<- load(file)
-		
+		project.hivc.seq.dataset.mDR.mRC.mSH.pLANL()
 	}
 	if(0)	#min brl to get a transmission cascade from brl matrix
 	{
@@ -6500,7 +6562,7 @@ hivc.pipeline.ExaML<- function()
 	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
 	{
 		bs.from		<- 0
-		bs.to		<- 0
+		bs.to		<- 100
 		bs.n		<- 500
 		
 		indir		<- paste(dir.name,"tmp",sep='/')
@@ -6508,8 +6570,10 @@ hivc.pipeline.ExaML<- function()
 		#signat.in	<- "Sat_Jun_16_17:23:46_2013"								
 		#infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
 		#signat.in	<- "Thu_Aug_01_17/05/23_2013"	
-		infile		<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences"	
-		signat.in	<- "Fri_Nov_01_16/07/23_2013"
+		#infile		<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences"	
+		#signat.in	<- "Fri_Nov_01_16/07/23_2013"
+		infile		<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		signat.in	<- "Wed_Dec_18_11/37/00_2013"
 		
 		#infile		<- "UKCA_2013_07_TNTPHIVnGTR"
 		#signat.in	<- "Mon_Sep_22_17/23/46_2013"
@@ -6519,7 +6583,8 @@ hivc.pipeline.ExaML<- function()
 		outdir		<- paste(dir.name,"tmp",sep='/')							
 		lapply(cmd, function(x)
 				{				
-					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q="pqeph", hpc.mem="3850mb", hpc.nproc=8)
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q=NA, hpc.mem="3850mb", hpc.nproc=8)
+					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q="pqeph", hpc.mem="3850mb", hpc.nproc=8)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("exa",signat,sep='.')
 					#cat(x)
