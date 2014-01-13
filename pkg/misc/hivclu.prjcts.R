@@ -2699,6 +2699,13 @@ project.hivc.clustering.compare.NoDR.to.NoRecombNoDR<- function()
 	argv			<<- unlist(strsplit(argv,' '))
 	ndr.clu			<- hivc.prog.get.clustering()
 	#
+	# get clusters for No Recombination + No Drug resistance mutations + No short sequences, single linkage criterion		
+	#						
+	infile			<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500"			
+	insignat		<- "Wed_Dec_18_11/37/00_2013"
+	
+	
+	#
 	# get clusters for No Recombination + No Drug resistance mutations, single linkage criterion		
 	#						
 	infile			<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences_examlbs500"			
@@ -3534,7 +3541,7 @@ project.hivc.clustering<- function(dir.name= DATA)
 	require(ape)
 	require(data.table)
 	require(RColorBrewer)
-		
+stop()		
 	if(0)	#plot composition of selected MSM clusters
 	{
 		hivc.prog.eval.clustering.bias()
@@ -5921,7 +5928,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$sasky.r.value					<- c(0.05, 0.05, 0.05, 0.05, 0.05)
 		beast2.spec$sasky.r.prior					<- c("Uniform/0.0/0.1","Uniform/0.0/0.1","Uniform/0.0/0.1","Uniform/0.0/0.1","Uniform/0.0/0.1")
 	}
-	else if(grepl("ori40",infilexml.opt))
+	else if(grepl("ori",infilexml.opt))
 	{
 		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
 		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
@@ -5930,57 +5937,13 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
 		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
 		beast2.spec$sasky.r.value					<- rep(0.05, 5)
-		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
-		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/40.0"
-	}
-	else if(grepl("ori50",infilexml.opt))
-	{
-		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
-		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
-		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.1, 0.6, 0.6, 0.3)
-		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/4.0/3.0/0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
-		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
-		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
-		beast2.spec$sasky.r.value					<- rep(0.05, 5)
-		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
-		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/50.0"
+		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)		
+		beast2.spec$bdsky.origin.prior				<- as.numeric(substr(infilexml.opt,4,nchar(infilexml.opt)))		
+		beast2.spec$bdsky.origin.prior				<- paste("Uniform/",min(20,beast2.spec$bdsky.origin.prior-20),"/",beast2.spec$bdsky.origin.prior,sep='')
+print(beast2.spec$bdsky.origin.prior	)
+		stop()
+		
 	}	
-	else if(grepl("ori60",infilexml.opt))
-	{
-		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
-		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
-		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.1, 0.6, 0.6, 0.3)
-		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/4.0/3.0/0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
-		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
-		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
-		beast2.spec$sasky.r.value					<- rep(0.05, 5)
-		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
-		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/60.0"
-	}
-	else if(grepl("ori70",infilexml.opt))
-	{
-		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
-		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
-		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.1, 0.6, 0.6, 0.3)
-		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/4.0/3.0/0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
-		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
-		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
-		beast2.spec$sasky.r.value					<- rep(0.05, 5)
-		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
-		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/70.0"
-	}
-	else if(grepl("ori150",infilexml.opt))
-	{
-		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5)
-		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
-		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.1, 0.6, 0.6, 0.3)
-		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/4.0/3.0/0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
-		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
-		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
-		beast2.spec$sasky.r.value					<- rep(0.05, 5)
-		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)
-		beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/150.0"
-	}
 	else stop("unknown infilexml.opt")
 	#		 
 	#
@@ -6622,6 +6585,8 @@ hivc.pipeline.clustering<- function()
 		insignat	<- "Thu_Aug_01_17/05/23_2013"		
 		infile		<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences_examlbs500"	
 		insignat	<- "Fri_Nov_01_16/07/23_2013"
+		infile		<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500"	
+		insignat	<- "Wed_Dec_18_11/37/00_2013"
 		
 		
 		#seq covariates
@@ -6642,7 +6607,7 @@ hivc.pipeline.clustering<- function()
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="15850mb",  hpc.nproc=1)
 		
 		cat(cmd)
-		#stop()
+		stop()
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("clust",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
@@ -6749,7 +6714,6 @@ hivc.pipeline.BEAST<- function()
 		#infilexml.opt		<- "ori50"
 		#infilexml.opt		<- "ori60"
 		infilexml.opt		<- "ori70"
-		infilexml.opt		<- "ori150"
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))		
 		hivc.prog.BEAST2.generate.xml()
