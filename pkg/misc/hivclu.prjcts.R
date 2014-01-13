@@ -5939,10 +5939,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$sasky.r.value					<- rep(0.05, 5)
 		beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/0.1",5)		
 		beast2.spec$bdsky.origin.prior				<- as.numeric(substr(infilexml.opt,4,nchar(infilexml.opt)))		
-		beast2.spec$bdsky.origin.prior				<- paste("Uniform/",min(20,beast2.spec$bdsky.origin.prior-20),"/",beast2.spec$bdsky.origin.prior,sep='')
-print(beast2.spec$bdsky.origin.prior	)
-		stop()
-		
+		beast2.spec$bdsky.origin.prior				<- paste("Uniform/",min(20,beast2.spec$bdsky.origin.prior-20),"/",beast2.spec$bdsky.origin.prior,sep='')		
 	}	
 	else stop("unknown infilexml.opt")
 	#		 
@@ -6043,7 +6040,7 @@ print(beast2.spec$bdsky.origin.prior	)
 				cmd			<- hivc.cmd.beast2.runxml(indir, x, outsignat, hpc.ncpu=hpc.ncpu, prog.beast=prog.beast, prog.opt.Xmx="1200m", hpc.tmpdir.prefix="beast2")
 				#cmd		<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
-				cat(cmd)				
+				cat(cmd)
 				outfile		<- paste("b2",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
 				stop()
@@ -6710,10 +6707,10 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "r7543"
 		infilexml.opt		<- "r5543"
 		infilexml.opt		<- "r1543"
-		#infilexml.opt		<- "ori40"
+		infilexml.opt		<- "ori40"
 		#infilexml.opt		<- "ori50"
 		#infilexml.opt		<- "ori60"
-		infilexml.opt		<- "ori70"
+		#infilexml.opt		<- "ori70"
 		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
 		argv				<<- unlist(strsplit(argv,' '))		
 		hivc.prog.BEAST2.generate.xml()

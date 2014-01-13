@@ -85,11 +85,11 @@
         </distribution>
     </distribution>
 
-	    <operator id='treeScaler.t:ds' spec='ScaleOperatorForFakeSATrees' scaleFactor=".95" weight="3" tree="@Tree.t:ds"/>
+	    <!-- <operator id='treeScaler.t:ds' spec='ScaleOperatorForFakeSATrees' scaleFactor=".95" weight="3" tree="@Tree.t:ds"/> -->
 	    <!-- <operator id='treeScaler.t:ds' spec='ScaleOperatorForFakeSATrees' scaleFactor=".5" weight="3" tree="@Tree.t:ds"/> -->
-	    <operator id="treeRootScaler.t:ds" rootOnly="true" scaleFactor="0.95" spec="ScaleOperator" tree="@Tree.t:ds" weight="1.0"/>
+	    <!-- <operator id="treeRootScaler.t:ds" rootOnly="true" scaleFactor="0.95" spec="ScaleOperator" tree="@Tree.t:ds" weight="1.0"/> -->
 	    <!-- <operator id="treeRootScaler.t:ds" rootOnly="true" scaleFactor="0.5" spec="ScaleOperator" tree="@Tree.t:ds" weight="3.0"/> -->
-	    <operator id="UniformOperator.t:ds" spec="Uniform" tree="@Tree.t:ds" weight="30.0"/>
+	    <!-- <operator id="UniformOperator.t:ds" spec="Uniform" tree="@Tree.t:ds" weight="30.0"/> -->
 	    <operator id="SubtreeSlide.t:ds" spec="SubtreeSlide" tree="@Tree.t:ds" weight="15.0"/>
 	    <operator id="narrow.t:ds" spec="Exchange" tree="@Tree.t:ds" weight="15.0"/>
 	    <operator id="wide.t:ds" isNarrow="false" spec="Exchange" tree="@Tree.t:ds" weight="3.0"/>
@@ -100,10 +100,10 @@
 	    <operator id="CategoriesRandomWalk.c:ds" parameter="@rateCategories.c:ds" spec="IntRandomWalkOperator" weight="10.0" windowSize="1"/>
 	    <operator id="CategoriesSwapOperator.c:ds" intparameter="@rateCategories.c:ds" spec="SwapOperator" weight="10.0"/>
 	    <operator id="CategoriesUniform.c:ds" parameter="@rateCategories.c:ds" spec="UniformOperator" weight="10.0"/>
-	    <operator id="relaxedUpDownOperator.c:ds" scaleFactor="0.75" spec="UpDownOperator" weight="3.0">
+	    <!-- <operator id="relaxedUpDownOperator.c:ds" scaleFactor="0.75" spec="UpDownOperator" weight="3.0">
         	<parameter idref="ucldMean.c:ds" name="up"/>
 	        <tree idref="Tree.t:ds" name="down"/>
-	    </operator>
+	    </operator> -->
 	    <operator id="becomeUninfectiousRateScalerS.t:ds" parameter="@becomeUninfectiousRateS.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
 	    <operator id="samplingScalerS.t:ds" parameter="@samplingProportionS.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
 	    <operator id="R0ScalerS.t:ds" parameter="@R0S.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
