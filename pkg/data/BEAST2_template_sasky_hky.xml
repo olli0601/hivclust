@@ -85,45 +85,36 @@
         </distribution>
     </distribution>
 
-	    <!-- <operator id='treeScaler.t:ds' spec='ScaleOperatorForFakeSATrees' scaleFactor=".95" weight="3" tree="@Tree.t:ds"/> -->
-	    <!-- <operator id='treeScaler.t:ds' spec='ScaleOperatorForFakeSATrees' scaleFactor=".5" weight="3" tree="@Tree.t:ds"/> -->
-	    <!-- <operator id="treeRootScaler.t:ds" rootOnly="true" scaleFactor="0.95" spec="ScaleOperator" tree="@Tree.t:ds" weight="1.0"/> -->
-	    <!-- <operator id="treeRootScaler.t:ds" rootOnly="true" scaleFactor="0.5" spec="ScaleOperator" tree="@Tree.t:ds" weight="3.0"/> -->
-	    <!-- <operator id="UniformOperator.t:ds" spec="Uniform" tree="@Tree.t:ds" weight="30.0"/> -->
-	    <operator id="SubtreeSlide.t:ds" spec="SubtreeSlide" tree="@Tree.t:ds" weight="15.0"/>
-	    <operator id="narrow.t:ds" spec="Exchange" tree="@Tree.t:ds" weight="15.0"/>
-	    <operator id="wide.t:ds" isNarrow="false" spec="Exchange" tree="@Tree.t:ds" weight="3.0"/>
-	    <operator id="WilsonBalding.t:ds" spec="WilsonBalding" tree="@Tree.t:ds" weight="3.0"/>
-	    <operator id="KappaScaler.s:ds" parameter="@kappa.s:ds" scaleFactor="0.5" spec="ScaleOperator" weight="0.1"/>
-	    <operator id="ucldMeanScaler.c:ds" parameter="@ucldMean.c:ds" scaleFactor="0.5" spec="ScaleOperator" weight="1.0"/>
-	    <operator id="ucldStdevScaler.c:ds" parameter="@ucldStdev.c:ds" scaleFactor="0.5" spec="ScaleOperator" weight="3.0"/>
-	    <operator id="CategoriesRandomWalk.c:ds" parameter="@rateCategories.c:ds" spec="IntRandomWalkOperator" weight="10.0" windowSize="1"/>
-	    <operator id="CategoriesSwapOperator.c:ds" intparameter="@rateCategories.c:ds" spec="SwapOperator" weight="10.0"/>
-	    <operator id="CategoriesUniform.c:ds" parameter="@rateCategories.c:ds" spec="UniformOperator" weight="10.0"/>
-	    <!-- <operator id="relaxedUpDownOperator.c:ds" scaleFactor="0.75" spec="UpDownOperator" weight="3.0">
+	<operator id="KappaScaler.s:ds" parameter="@kappa.s:ds" scaleFactor="0.5" spec="ScaleOperator" weight="0.1"/>
+	<operator id="ucldMeanScaler.c:ds" parameter="@ucldMean.c:ds" scaleFactor="0.5" spec="ScaleOperator" weight="1.0"/>
+	<operator id="ucldStdevScaler.c:ds" parameter="@ucldStdev.c:ds" scaleFactor="0.5" spec="ScaleOperator" weight="3.0"/>
+	<operator id="CategoriesRandomWalk.c:ds" parameter="@rateCategories.c:ds" spec="IntRandomWalkOperator" weight="10.0" windowSize="1"/>
+	<operator id="CategoriesSwapOperator.c:ds" intparameter="@rateCategories.c:ds" spec="SwapOperator" weight="10.0"/>
+	<operator id="CategoriesUniform.c:ds" parameter="@rateCategories.c:ds" spec="UniformOperator" weight="10.0"/>
+	<!-- <operator id="relaxedUpDownOperator.c:ds" scaleFactor="0.75" spec="UpDownOperator" weight="3.0">
         	<parameter idref="ucldMean.c:ds" name="up"/>
 	        <tree idref="Tree.t:ds" name="down"/>
-	    </operator> -->
-	    <operator id="becomeUninfectiousRateScalerS.t:ds" parameter="@becomeUninfectiousRateS.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
-	    <operator id="samplingScalerS.t:ds" parameter="@samplingProportionS.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
-	    <operator id="R0ScalerS.t:ds" parameter="@R0S.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
-	    <operator id="updownBDS.t:ds" scaleFactor="0.75" spec="UpDownOperator" weight="10.0">
+	</operator> -->
+	<operator id="becomeUninfectiousRateScalerS.t:ds" parameter="@becomeUninfectiousRateS.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
+	<operator id="samplingScalerS.t:ds" parameter="@samplingProportionS.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
+	<operator id="R0ScalerS.t:ds" parameter="@R0S.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
+	<operator id="updownBDS.t:ds" scaleFactor="0.75" spec="UpDownOperator" weight="10.0">
         	<parameter idref="R0S.t:ds" name="up"/>
 	        <parameter idref="becomeUninfectiousRateS.t:ds" name="down"/>
-	    </operator>
-	    <operator id="origScalerS.t:ds" parameter="@originS.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="3.0"/>
-	    <!-- <operator id="origScalerS.t:ds" parameter="@originS.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="1.0"/> -->
-	    <operator delta="0.01" id="FrequenciesExchanger.s:ds" spec="DeltaExchangeOperator" weight="0.1" parameter="@freqParameter.s:ds">
-	    </operator>
-	     <operator id='rOperator' spec='ScaleOperator' scaleFactor=".9" weight="1" parameter="@r.t:ds"/>
-
+	</operator>
+	<operator id="origScalerS.t:ds" parameter="@originS.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="3.0"/>
+	<!-- <operator id="origScalerS.t:ds" parameter="@originS.t:ds" scaleFactor="0.75" spec="ScaleOperator" weight="1.0"/> -->	
+	<operator delta="0.01" id="FrequenciesExchanger.s:ds" spec="DeltaExchangeOperator" weight="0.1" parameter="@freqParameter.s:ds"/>
+	<operator id='rOperator' spec='ScaleOperator' scaleFactor=".9" weight="1" parameter="@r.t:ds"/>
         <operator spec='TreeDimensionJump' weight="10" tree="@Tree.t:ds" becomeNoninfectiousAfterSamplingProbability="@r.t:ds"/> 
         <operator spec='WilsonBaldingForFakeSampledAncestorTrees' weight="10" tree="@Tree.t:ds" becomeNoninfectiousAfterSamplingProbability ="@r.t:ds"/>
         <operator spec='ExchangeForFakeSampledAncestorTrees' isNarrow="false" weight="10" tree="@Tree.t:ds"/>
         <operator spec='ExchangeForFakeSampledAncestorTrees' weight="10" tree="@Tree.t:ds"/>
         <operator spec='UniformForFakeSATrees' weight="20" tree="@Tree.t:ds"/>
-	
-		<logger fileName="blah.log" id="tracelog" logEvery="10000" mode="autodetect" model="@posterior" sanitiseHeaders="true" sort="smart">			<log idref="posterior"/>
+	<operator id='rootScaler' spec='ScaleOperatorForFakeSATrees' scaleFactor=".95" weight="1" tree="@Tree.t:ds" rootOnly='true'/>
+	<operator id='treeScaler' spec='ScaleOperatorForFakeSATrees' scaleFactor=".95" weight="3" tree="@Tree.t:ds"/>
+
+	<logger fileName="blah.log" id="tracelog" logEvery="10000" mode="autodetect" model="@posterior" sanitiseHeaders="true" sort="smart">			<log idref="posterior"/>
 		        <log idref="likelihood"/>
 		        <log idref="prior"/>
 		        <log id="TreeHeight.t:ds" spec="beast.evolution.tree.TreeHeightLogger" tree="@Tree.t:ds"/>
@@ -153,17 +144,17 @@
 		            <parameter idref="becomeUninfectiousRateS.t:ds"/>
 		            <parameter idref="samplingProportionS.t:ds"/>
 		        </log>
-		</logger>	
-		<logger id="screenlog" logEvery="5000000" mode="autodetect">
+	</logger>	
+	<logger id="screenlog" logEvery="5000000" mode="autodetect">
 		 <log idref="posterior"/>
 		 <log arg="@posterior" id="ESS.0" spec="util.ESS"/>
 	         <log idref="likelihood"/>
         	 <log idref="prior"/>
-		</logger>		
-		<logger fileName="blah.trees" id="treelog.t:ds" logEvery="10000" mode="tree">
+	</logger>		
+	<logger fileName="blah.trees" id="treelog.t:ds" logEvery="10000" mode="tree">
 			<log branchratemodel="@RelaxedClock.c:ds" id="TreeWithMetaDataLogger.t:ds" spec="beast.evolution.tree.TreeWithMetaDataLogger" tree="@Tree.t:ds"/>
 			<!-- <tree idref="Tree.t:ds" name="log"/> -->
-		</logger>
+	</logger>
 </run>
 
 </beast>

@@ -93,45 +93,40 @@
         </distribution>
     </distribution>
 
-	    <!-- <operator id='treeScaler.t:ds_1' spec='ScaleOperatorForFakeSATrees' scaleFactor=".95" weight="3" tree="@Tree.t:ds_1"/> -->
-	    <!-- <operator id='treeScaler.t:ds_1' spec='ScaleOperatorForFakeSATrees' scaleFactor=".5" weight="3" tree="@Tree.t:ds_1"/> -->
-	    <!-- <operator id="treeRootScaler.t:ds_1" rootOnly="true" scaleFactor="0.95" spec="ScaleOperator" tree="@Tree.t:ds_1" weight="1.0"/> -->
-	    <!-- <operator id="treeRootScaler.t:ds_1" rootOnly="true" scaleFactor="0.5" spec="ScaleOperator" tree="@Tree.t:ds_1" weight="3.0"/> -->
-	    <!-- <operator id="UniformOperator.t:ds_1" spec="Uniform" tree="@Tree.t:ds_1" weight="30.0"/> -->
-	    <operator id="SubtreeSlide.t:ds_1" spec="SubtreeSlide" tree="@Tree.t:ds_1" weight="15.0"/>
-	    <operator id="narrow.t:ds_1" spec="Exchange" tree="@Tree.t:ds_1" weight="15.0"/>
-	    <operator id="wide.t:ds_1" isNarrow="false" spec="Exchange" tree="@Tree.t:ds_1" weight="3.0"/>
-	    <operator id="WilsonBalding.t:ds_1" spec="WilsonBalding" tree="@Tree.t:ds_1" weight="3.0"/>
-	    <operator id="KappaScaler.s:ds_1" parameter="@kappa.s:ds_1" scaleFactor="0.5" spec="ScaleOperator" weight="0.1"/>
-	    <operator id="KappaScaler.s:ds_2" parameter="@kappa.s:ds_2" scaleFactor="0.5" spec="ScaleOperator" weight="0.1"/>
-	    <operator id="ucldMeanScaler.c:ds_1" parameter="@ucldMean.c:ds_1" scaleFactor="0.5" spec="ScaleOperator" weight="1.0"/>
-	    <operator id="ucldStdevScaler.c:ds_1" parameter="@ucldStdev.c:ds_1" scaleFactor="0.5" spec="ScaleOperator" weight="3.0"/>
-	    <operator id="CategoriesRandomWalk.c:ds_1" parameter="@rateCategories.c:ds_1" spec="IntRandomWalkOperator" weight="10.0" windowSize="1"/>
-	    <operator id="CategoriesSwapOperator.c:ds_1" intparameter="@rateCategories.c:ds_1" spec="SwapOperator" weight="10.0"/>
-	    <operator id="CategoriesUniform.c:ds_1" parameter="@rateCategories.c:ds_1" spec="UniformOperator" weight="10.0"/>
-	    <!-- <operator id="relaxedUpDownOperator.c:ds_1" scaleFactor="0.75" spec="UpDownOperator" weight="3.0">
+	   
+	<operator id="KappaScaler.s:ds_1" parameter="@kappa.s:ds_1" scaleFactor="0.5" spec="ScaleOperator" weight="0.1"/>
+	<operator id="KappaScaler.s:ds_2" parameter="@kappa.s:ds_2" scaleFactor="0.5" spec="ScaleOperator" weight="0.1"/>
+	<operator id="ucldMeanScaler.c:ds_1" parameter="@ucldMean.c:ds_1" scaleFactor="0.5" spec="ScaleOperator" weight="1.0"/>
+	<operator id="ucldStdevScaler.c:ds_1" parameter="@ucldStdev.c:ds_1" scaleFactor="0.5" spec="ScaleOperator" weight="3.0"/>
+	<operator id="CategoriesRandomWalk.c:ds_1" parameter="@rateCategories.c:ds_1" spec="IntRandomWalkOperator" weight="10.0" windowSize="1"/>
+	<operator id="CategoriesSwapOperator.c:ds_1" intparameter="@rateCategories.c:ds_1" spec="SwapOperator" weight="10.0"/>
+	<operator id="CategoriesUniform.c:ds_1" parameter="@rateCategories.c:ds_1" spec="UniformOperator" weight="10.0"/>
+	<!-- <operator id="relaxedUpDownOperator.c:ds_1" scaleFactor="0.75" spec="UpDownOperator" weight="3.0">
         	<parameter idref="ucldMean.c:ds_1" name="up"/>
 	        <tree idref="Tree.t:ds_1" name="down"/>
-	    </operator> -->
-	    <operator id="becomeUninfectiousRateScalerS.t:ds_1" parameter="@becomeUninfectiousRateS.t:ds_1" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
-	    <operator id="samplingScalerS.t:ds_1" parameter="@samplingProportionS.t:ds_1" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
-	    <operator id="R0ScalerS.t:ds_1" parameter="@R0S.t:ds_1" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
-	    <operator id="updownBDS.t:ds_1" scaleFactor="0.75" spec="UpDownOperator" weight="10.0">
+	</operator> -->
+	<operator id="becomeUninfectiousRateScalerS.t:ds_1" parameter="@becomeUninfectiousRateS.t:ds_1" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
+	<operator id="samplingScalerS.t:ds_1" parameter="@samplingProportionS.t:ds_1" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
+	<operator id="R0ScalerS.t:ds_1" parameter="@R0S.t:ds_1" scaleFactor="0.75" spec="ScaleOperator" weight="10.0"/>
+	<operator id="updownBDS.t:ds_1" scaleFactor="0.75" spec="UpDownOperator" weight="10.0">
         	<parameter idref="R0S.t:ds_1" name="up"/>
 	        <parameter idref="becomeUninfectiousRateS.t:ds_1" name="down"/>
-	    </operator>
-	    <operator id="origScalerS.t:ds_1" parameter="@originS.t:ds_1" scaleFactor="0.75" spec="ScaleOperator" weight="3.0"/>
-	    <!-- <operator id="origScalerS.t:ds_1" parameter="@originS.t:ds_1" scaleFactor="0.75" spec="ScaleOperator" weight="1.0"/> -->
-	    <operator delta="0.01" id="FrequenciesExchanger.s:ds_1" spec="DeltaExchangeOperator" weight="0.1" parameter="@freqParameter.s:ds_1"/>
-	   <operator delta="0.01" id="FrequenciesExchanger.s:ds_2" spec="DeltaExchangeOperator" weight="0.1" parameter="@freqParameter.s:ds_2"/>
-	     <operator id='rOperator' spec='ScaleOperator' scaleFactor=".9" weight="1" parameter="@r.t:ds_1"/>
-
+	</operator>
+	<operator id="origScalerS.t:ds_1" parameter="@originS.t:ds_1" scaleFactor="0.75" spec="ScaleOperator" weight="3.0"/>
+	<!-- <operator id="origScalerS.t:ds_1" parameter="@originS.t:ds_1" scaleFactor="0.75" spec="ScaleOperator" weight="1.0"/> -->
+	<operator delta="0.01" id="FrequenciesExchanger.s:ds_1" spec="DeltaExchangeOperator" weight="0.1" parameter="@freqParameter.s:ds_1"/>
+	<operator delta="0.01" id="FrequenciesExchanger.s:ds_2" spec="DeltaExchangeOperator" weight="0.1" parameter="@freqParameter.s:ds_2"/>
+	<operator id='rOperator' spec='ScaleOperator' scaleFactor=".9" weight="1" parameter="@r.t:ds_1"/>
         <operator spec='TreeDimensionJump' weight="10" tree="@Tree.t:ds_1" becomeNoninfectiousAfterSamplingProbability="@r.t:ds_1"/> 
         <operator spec='WilsonBaldingForFakeSampledAncestorTrees' weight="10" tree="@Tree.t:ds_1" becomeNoninfectiousAfterSamplingProbability ="@r.t:ds_1"/>
         <operator spec='ExchangeForFakeSampledAncestorTrees' isNarrow="false" weight="10" tree="@Tree.t:ds_1"/>
         <operator spec='ExchangeForFakeSampledAncestorTrees' weight="10" tree="@Tree.t:ds_1"/>
         <operator spec='UniformForFakeSATrees' weight="20" tree="@Tree.t:ds_1"/>
+	<operator id='rootScaler' spec='ScaleOperatorForFakeSATrees' scaleFactor=".95" weight="1" tree="@Tree.t:ds_1" rootOnly='true'/>
+	<operator id='treeScaler' spec='ScaleOperatorForFakeSATrees' scaleFactor=".95" weight="3" tree="@Tree.t:ds_1"/>
 	
+
+
 		<logger fileName="blah.log" id="tracelog" logEvery="10000" mode="autodetect" model="@posterior" sanitiseHeaders="true" sort="smart">			<log idref="posterior"/>
 		        <log idref="likelihood"/>
 		        <log idref="prior"/>

@@ -765,8 +765,8 @@ hivc.beast2.add.alignment<- function(bxml, beast2.spec, verbose=1)
 	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
 	dummy		<- newXMLCommentNode(text="The sequence alignments.", parent=bxml.beast, doc=bxml, addFinalizer=T)
 	if(length(beast2.spec$alignment.filter)==1 && is.na(beast2.spec$alignment.filter))
-	{
-		dummy	<- newXMLNode("alignment", attrs= list(id=beast2.spec$alignment.id, data=paste('@',beast2.spec$data.id,sep='')), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	{		
+		dummy	<- newXMLCommentNode(text="The <alignment> is the <data> block if there is no alignment filter.", parent=bxml.beast, doc=bxml, addFinalizer=T)
 		dummy	<- newXMLNode("taxa", attrs= list(id=paste("TaxonSet.t",beast2.spec$alignment.id,sep=':'), spec=beast2.spec$alignment.taxa.spec, alignment=paste('@',beast2.spec$alignment.id,sep='')), parent=bxml.beast, doc=bxml, addFinalizer=T)
 	}
 	else	
@@ -1143,17 +1143,22 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$map.Normal						<- "beast.math.distributions.Normal"
 	beast2.spec$mcmc.length						<- mcmc.length
 	beast2.spec$beast.label.datepos				<- 4
-	beast2.spec$beast.label.sep					<- '_'	
-	beast2.spec$data.id							<- 'data'
+	beast2.spec$beast.label.sep					<- '_'		
 	beast2.spec$data.missing					<- "-?"
 	beast2.spec$data.dataType					<- 'nucleotide'
 	beast2.spec$alignment.spec					<- "FilteredAlignment"
 	beast2.spec$alignment.taxa.spec				<- "TaxonSet"
 	beast2.spec$alignment.filter				<- alignment.filter
 	if(length(alignment.filter)==1 && is.na(alignment.filter))
+	{
+		beast2.spec$data.id						<- 'ds'
 		beast2.spec$alignment.id				<- 'ds'
+	}
 	else
-		beast2.spec$alignment.id				<- paste('ds', seq_along(beast2.spec$alignment.filter), sep='_')	
+	{
+		beast2.spec$data.id						<- 'data'
+		beast2.spec$alignment.id				<- paste('ds', seq_along(beast2.spec$alignment.filter), sep='_')
+	}
 	beast2.spec$tree.taxonset					<- beast2.spec$alignment.id[1]
 	beast2.spec$tree.id							<- paste('Tree',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$sequence.totalcount				<- 4
