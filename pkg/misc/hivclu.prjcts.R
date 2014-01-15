@@ -5909,8 +5909,8 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.6, 0.3)
 		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Uniform/0.2/1.0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
 		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
-		beast2.spec$bdsky.notInf.prior				<- c("Gamma/5/0.03/0.1","Gamma/5/0.03/0.1","Exponential/0.25/0","Gamma/5/0.05/0.1","Exponential/0.33/0")
-		
+		#beast2.spec$bdsky.notInf.prior				<- c("Gamma/5/0.03/0.1","Gamma/5/0.03/0.1","Exponential/0.25/0","Gamma/5/0.05/0.1","Exponential/0.33/0")
+		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
 		beast2.spec$sasky.r.prior					<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) / 100
 		beast2.spec$sasky.r.value					<- rep( beast2.spec$sasky.r.prior / 2, 5 )
 		beast2.spec$sasky.r.prior					<- rep( paste("Uniform/0.0/",beast2.spec$sasky.r.prior,sep=''), 5 )
