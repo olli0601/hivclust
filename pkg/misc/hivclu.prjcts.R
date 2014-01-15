@@ -5339,7 +5339,11 @@ hivc.prog.get.clustering.precompute<- function()
 		unlinked.byspace[,dummy:=seq_len(nrow(unlinked.byspace))]
 		set(unlinked.byspace, NULL, "FASTASampleCode", as.character(unlinked.byspace[,FASTASampleCode]))	
 		seq.indb			<- colnames(ph.mrca)[ which( substr(colnames(ph.mrca),1,2)!="TN" & substr(colnames(ph.mrca),1,8)!="PROT+P51" ) ]
-		bs.unlinked.byspace	<- unlinked.byspace[,	list(tip1=FASTASampleCode,tip2=seq.indb, mrca= ph.mrca[seq.indb,FASTASampleCode]), by="dummy"]
+		if(nrow(unlinked.byspace))
+			bs.unlinked.byspace	<- unlinked.byspace[,	list(tip1=FASTASampleCode,tip2=seq.indb, mrca= ph.mrca[seq.indb,FASTASampleCode]), by="dummy"]
+		else
+			bs.unlinked.byspace	<- NULL
+		
 		#	prepare data.tables with mrca: within patient TP pairs
 		setkey(linked.bypatient,Patient)
 		bs.linked.bypatient	<- linked.bypatient[, {
@@ -6572,6 +6576,7 @@ hivc.pipeline.ExaML<- function()
 
 hivc.pipeline.clustering<- function()
 {	
+	stop()
 	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
 	{	
 		resume		<- 1

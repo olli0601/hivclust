@@ -4478,7 +4478,7 @@ hivc.phy.get.TP.and.TN<- function(ph, df.all, use.seroneg.as.is= 0, verbose= 1)
 	setkey(unlinked.byspace,"Node")
 	ph.unlinked.bytime				<- lapply(unlinked.bytime, function(x)
 				{
-					tmp	<- merge(x, df.tips, all.x=1)
+					tmp	<- merge(x, df.tips, all.x=1,by="FASTASampleCode")
 					tmp2<- tmp[1,query.FASTASampleCode]
 					tmp	<- rbind( subset(tmp, select=c(FASTASampleCode,Node)), unlinked.byspace )
 					tmp2<- rep(tmp2, nrow(tmp))
@@ -4490,12 +4490,14 @@ hivc.phy.get.TP.and.TN<- function(ph, df.all, use.seroneg.as.is= 0, verbose= 1)
 	#
 	# get TN for seropos: use only unlinked.byspace
 	#
-	ph.seroneg						<- merge( data.table(FASTASampleCode=names(ph.unlinked.bytime)), df.tips, by="FASTASampleCode", all.x=1)		
-	ph.seropos						<- subset( df.tips[,c(2,1), with=F], !FASTASampleCode%in%names(ph.unlinked.bytime) 
+	ph.seroneg						<- merge( data.table(FASTASampleCode=names(unlinked.bytime)), df.tips, by="FASTASampleCode", all.x=1)		
+	ph.seropos						<- subset( df.tips[,c(2,1), with=F], !FASTASampleCode%in%names(unlinked.bytime) 
 														& 	substr(FASTASampleCode,1,2)!="TN"
 														&	substr(FASTASampleCode,1,8)!="PROT+P51"
-														)			
-	ph.unlinked.byspace				<- lapply(seq_len(nrow(ph.seropos)), function(i)
+														)
+	if(nrow(unlinked.byspace))		
+	{
+		ph.unlinked.byspace			<- lapply(seq_len(nrow(ph.seropos)), function(i)
 			{
 				tmp	<- unlinked.byspace
 				tmp2<- rep(ph.seropos[i,FASTASampleCode], nrow(tmp))
@@ -4503,13 +4505,19 @@ hivc.phy.get.TP.and.TN<- function(ph, df.all, use.seroneg.as.is= 0, verbose= 1)
 				setkey(tmp, Node)
 				tmp
 			})
-	names(ph.unlinked.byspace)		<- ph.seropos[,FASTASampleCode]
+		names(ph.unlinked.byspace)	<- ph.seropos[,FASTASampleCode]
+	}
+	else 
+		ph.unlinked.byspace			<- NULL
 	#
 	# put all unlinked ATHENA seqs together and sort by Node
 	#
 	ph.unlinked						<- c(ph.unlinked.byspace, ph.unlinked.bytime)
 	names(ph.unlinked)				<- c(names(ph.unlinked.byspace),names(ph.unlinked.bytime))
-	ph.unlinked.info				<- rbind(ph.seropos,ph.seroneg)		
+	if(nrow(unlinked.byspace))			
+		ph.unlinked.info			<- rbind(ph.seropos,ph.seroneg)		
+	else	
+		ph.unlinked.info			<- ph.seroneg
 	setkey(ph.unlinked.info, "Node")
 	ph.unlinked						<- lapply(ph.unlinked.info[,FASTASampleCode], function(i){		ph.unlinked[[i]]	})
 	names(ph.unlinked)				<- ph.unlinked.info[,FASTASampleCode]
