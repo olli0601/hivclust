@@ -5902,7 +5902,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$sasky.r.value					<- c(0.9, 0.5, 0.5, 0.5, 0.5)
 		beast2.spec$sasky.r.prior					<- c("Beta/2/1/0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0")
 	}
-	else if(grepl("r7543",infilexml.opt))
+	else if(grepl("r543",infilexml.opt))
 	{
 		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter)
 		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
@@ -5910,30 +5910,12 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Uniform/0.2/1.0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
 		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
 		beast2.spec$bdsky.notInf.prior				<- c("Gamma/5/0.03/0.1","Gamma/5/0.03/0.1","Exponential/0.25/0","Gamma/5/0.05/0.1","Exponential/0.33/0")
-		beast2.spec$sasky.r.value					<- c(0.5, 0.5, 0.5, 0.5, 0.5)
-		beast2.spec$sasky.r.prior					<- c("Uniform/0.0/0.7","Uniform/0.0/0.7","Uniform/0.0/0.7","Uniform/0.0/0.7","Uniform/0.0/0.7")
-	}
-	else if(grepl("r5543",infilexml.opt))
-	{
-		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter)
-		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
-		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.6, 0.3)
-		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Uniform/0.2/1.0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
-		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
-		beast2.spec$bdsky.notInf.prior				<- c("Gamma/5/0.03/0.1","Gamma/5/0.03/0.1","Exponential/0.25/0","Gamma/5/0.05/0.1","Exponential/0.33/0")
-		beast2.spec$sasky.r.value					<- c(0.4, 0.4, 0.4, 0.4, 0.4)
-		beast2.spec$sasky.r.prior					<- c("Uniform/0.0/0.5","Uniform/0.0/0.5","Uniform/0.0/0.5","Uniform/0.0/0.5","Uniform/0.0/0.5")
-	}
-	else if(grepl("r1543",infilexml.opt))
-	{
-		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter)
-		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
-		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.6, 0.3)
-		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Uniform/0.2/1.0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
-		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
-		beast2.spec$bdsky.notInf.prior				<- c("Gamma/5/0.03/0.1","Gamma/5/0.03/0.1","Exponential/0.25/0","Gamma/5/0.05/0.1","Exponential/0.33/0")
-		beast2.spec$sasky.r.value					<- c(0.05, 0.05, 0.05, 0.05, 0.05)
-		beast2.spec$sasky.r.prior					<- c("Uniform/0.0/0.1","Uniform/0.0/0.1","Uniform/0.0/0.1","Uniform/0.0/0.1","Uniform/0.0/0.1")
+		
+		beast2.spec$sasky.r.prior					<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) / 100
+		beast2.spec$sasky.r.value					<- rep( beast2.spec$sasky.r.prior / 2, 5 )
+		beast2.spec$sasky.r.prior					<- rep( paste("Uniform/0.0/",beast2.spec$sasky.r.prior,sep=''), 5 )
+		print(beast2.spec$sasky.r.prior)
+		stop()
 	}
 	else if(grepl("ori",infilexml.opt))
 	{
@@ -6576,7 +6558,6 @@ hivc.pipeline.ExaML<- function()
 
 hivc.pipeline.clustering<- function()
 {	
-	stop()
 	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
 	{	
 		resume		<- 1
@@ -6713,10 +6694,9 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "d774"
 		infilexml.opt		<- "d543"
 		infilexml.opt		<- "dg543"
-		infilexml.opt		<- "r7543"
-		infilexml.opt		<- "r5543"
-		infilexml.opt		<- "r1543"
-		infilexml.opt		<- "ori40"
+		infilexml.opt		<- "r54350"
+		infilexml.opt		<- "r54399"
+		#infilexml.opt		<- "ori40"
 		#infilexml.opt		<- "ori50"
 		#infilexml.opt		<- "ori60"
 		#infilexml.opt		<- "ori70"

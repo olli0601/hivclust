@@ -61,13 +61,13 @@
 		<distribution id="prior" spec="util.CompoundDistribution">
 			<prior id="KappaPrior.s:ds_1" name="distribution" x="@kappa.s:ds_1">
 		                <Gamma id="Gamma.01" name="distr">
-                		    <parameter estimate="false" id="RealParameter.02" name="alpha">11.0</parameter>
+                		    <parameter estimate="false" id="RealParameter.02" name="alpha">7.0</parameter>
 		                    <parameter estimate="false" id="RealParameter.03" name="beta">1.0</parameter>
                 		</Gamma>
 		        </prior>
 		       <prior id="KappaPrior.s:ds_2" name="distribution" x="@kappa.s:ds_2">
 		                <Gamma id="Gamma.01_3" name="distr">
-                		    <parameter estimate="false" id="RealParameter.02_3" name="alpha">11.0</parameter>
+                		    <parameter estimate="false" id="RealParameter.02_3" name="alpha">15.0</parameter>
 		                    <parameter estimate="false" id="RealParameter.03_3" name="beta">1.0</parameter>
                 		</Gamma>
 		       </prior>            
