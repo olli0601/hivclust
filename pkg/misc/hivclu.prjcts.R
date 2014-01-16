@@ -5935,8 +5935,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
 		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.9, 0.6, 0.3)		
 		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/9.0/5.0/0","Beta/4.0/3.0/0","Beta/2.5/4.0/0")
-		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
-		#beast2.spec$bdsky.notInf.prior				<- c("Gamma/5/0.03/0.1","Gamma/5/0.03/0.1","Exponential/0.25/0","Gamma/5/0.05/0.1","Exponential/0.33/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
 		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true","LogNormal/0.25/0.8/0.1/true","LogNormal/0.3/0.8/0.1/true","LogNormal/0.5/1.2/0.1/true","LogNormal/0.5/1.2/0.1/true")
 		beast2.spec$sasky.r.prior					<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) / 100
 		beast2.spec$sasky.r.value					<- rep( beast2.spec$sasky.r.prior / 2, 5 )
@@ -5954,6 +5953,18 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$sasky.r.prior					<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) / 100
 		beast2.spec$sasky.r.value					<- rep( beast2.spec$sasky.r.prior / 2, 5 )
 		beast2.spec$sasky.r.prior					<- rep( paste("Uniform/0.0/",beast2.spec$sasky.r.prior,sep=''), 5 )
+	}
+	else if(grepl("rbe4",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2, 0.2)		
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/9.0/5.0/0","Beta/4.0/16.0/0","Beta/4.0/16.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
+		beast2.spec$sasky.notInf.prior				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) / 100
+		beast2.spec$sasky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true", rep( paste("LogNormal/",beast2.spec$sasky.notInf.prior,"/0.8/0.1/true",sep=''), 4) )				
+		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )
 	}
 	else stop("unknown infilexml.opt")
 	#		 
@@ -6723,6 +6734,9 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "r54399"
 		infilexml.opt		<- "run210"
 		infilexml.opt		<- "rbe910"
+		infilexml.opt		<- "rbe415"
+		infilexml.opt		<- "rbe420"
+		infilexml.opt		<- "rbe425"
 		#infilexml.opt		<- "ori40"
 		#infilexml.opt		<- "ori50"
 		#infilexml.opt		<- "ori60"
