@@ -2673,7 +2673,7 @@ project.hivc.clustering.get.linked.and.unlinked<- function(dir.name= DATA)
 	}
 }
 ######################################################################################
-project.hivc.clustering.compare.NoDR.to.NoRecombNoDR<- function()
+project.hivc.clustering.compare.NoDR.to.NoRecombNoDR.to.NoShort<- function()
 {	
 	verbose		<- 1
 	resume		<- 1
@@ -2693,18 +2693,11 @@ project.hivc.clustering.compare.NoDR.to.NoRecombNoDR<- function()
 	#
 	argv			<<- hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=resume)
 	argv			<<- unlist(strsplit(argv,' '))
-	ndr.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=clu.pre)
+	ndr.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=ndr.clu.pre)
 	#			
 	argv			<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl="dist.brl.casc", thresh.brl, thresh.bs, resume=resume)				 
 	argv			<<- unlist(strsplit(argv,' '))
 	ndr.clu			<- hivc.prog.get.clustering()
-	#
-	# get clusters for No Recombination + No Drug resistance mutations + No short sequences, single linkage criterion		
-	#						
-	infile			<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500"			
-	insignat		<- "Wed_Dec_18_11/37/00_2013"
-	
-	
 	#
 	# get clusters for No Recombination + No Drug resistance mutations, single linkage criterion		
 	#						
@@ -2723,20 +2716,135 @@ project.hivc.clustering.compare.NoDR.to.NoRecombNoDR<- function()
 	argv			<<- unlist(strsplit(argv,' '))
 	nrc.clu			<- hivc.prog.get.clustering()
 	#
+	# get clusters for No Recombination + No Drug resistance mutations + No short sequences, single linkage criterion		
+	#						
+	infile			<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500"			
+	insignat		<- "Wed_Dec_18_11/37/00_2013"
+	#
+	argv			<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
+	argv			<<- unlist(strsplit(argv,' '))
+	nsh.clu.pre		<- hivc.prog.get.clustering.precompute()
+	#
+	argv			<<- hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=resume)
+	argv			<<- unlist(strsplit(argv,' '))
+	nsh.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=nsh.clu.pre)
+	#			
+	argv			<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl="dist.brl.casc", thresh.brl, thresh.bs, resume=resume)				 
+	argv			<<- unlist(strsplit(argv,' '))
+	nsh.clu			<- hivc.prog.get.clustering()		
+	
+	seq.n	<- c( Ntip( ndr.clu.pre$ph ), Ntip( nrc.clu.pre$ph ), Ntip( nsh.clu.pre$ph ))
+	
+	bs.small		<- 0.5
+	bs.ok			<- 0.7
+	bs.large		<- 0.95
+	bs.su			<- matrix( c(
+								c( length( which( ndr.clu.pre$ph.node.bs<bs.small ) ), length( which( nrc.clu.pre$ph.node.bs<bs.small ) ), length( which( nsh.clu.pre$ph.node.bs<bs.small ) ) ),
+								c( length( which( ndr.clu.pre$ph.node.bs>bs.ok ) ), length( which( nrc.clu.pre$ph.node.bs>bs.ok ) ), length( which( nsh.clu.pre$ph.node.bs>bs.ok ) ) ),
+								c( length( which( ndr.clu.pre$ph.node.bs>bs.large ) ), length( which( nrc.clu.pre$ph.node.bs>bs.large ) ), length( which( nsh.clu.pre$ph.node.bs>bs.large ) ) ) 
+								), byrow=1, nrow=3, ncol=3, dimnames=list(c(),c("nDR","nDRRC","nDRRCSH"))	)
+	bs.su			<- cbind( as.data.table(bs.su), info=c('bs.small','bs.ok','bs.large'))
+	bs.su[,nDRRC-nDRRCSH] 
+	#
 	#	compare distribution of bootstrap values
 	#
-	hist( ndr.clu.pre$ph.node.bs )
+	dir.name	<- paste( DATA,'tmp',sep='/' )
+	file		<- paste( dir.name, 'ATHENA_2013_03_compare_-DR-RC-SH_seqdatasets.pdf', sep='/')
+	cat(paste("\nplot to file",file))
+	pdf(file, 5, 5)
+	hist( ndr.clu.pre$ph.node.bs, main='', xlab='bootstrap score' )
 	hist( nrc.clu.pre$ph.node.bs, border="blue", add=1 )
+	hist( nsh.clu.pre$ph.node.bs, border="red", add=1 )
+	legend( "topright", border=NA, bty='n', fill= c('black','blue','red'), legend=c("-DR","-DR -RC","-DR -RC -SH" ))
+	dev.off()
+	#	compare TP, TN on a common set, use the one from -DR -RC -SH
+	#
+	# 	need to reset ph.unlinked[[i]]	ph.unlinked.info	ph.linked		miss NodeIdx in ph.unlinked.info
+	ref						<- nsh.clu.pre
+	ref$ph.unlinked.info	<- ref$ph.unlinked.info[, -c(2,3), with=0]	
+	ref$ph.linked			<- ref$ph.linked[,-3,with=0]
+	#
+	#	-DR
+	#
+	run						<- ndr.clu.pre
+	run.tips				<- data.table(Node=seq_len(Ntip(run$ph)), FASTASampleCode=run$ph$tip.label, key="FASTASampleCode" )
+	run$ph.unlinked.info	<- merge( run.tips, ref$ph.unlinked.info, by="FASTASampleCode" )	
+	run$ph.linked			<- merge( run.tips, ref$ph.linked, by="FASTASampleCode" )	
+	run$ph.unlinked			<- lapply(seq_along(ref$ph.unlinked),function(i)
+		{
+			ref$ph.unlinked[[i]]	<- ref$ph.unlinked[[i]][,-2,with=0]
+			z						<- merge( run.tips, ref$ph.unlinked[[i]], by="FASTASampleCode")
+			setkey(z, Node)
+			z
+		})
+	names(run$ph.unlinked)	<- names(ref$ph.unlinked)
+	tmp						<- data.table(FASTASampleCode=names(run$ph.unlinked), NodeIdx= seq_along(run$ph.unlinked) )
+	run$ph.unlinked.info	<- merge(tmp, run$ph.unlinked.info, by="FASTASampleCode" )	
+	#	re-run tptn	
+	infile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs500"			
+	insignat		<- "Thu_Aug_01_17/05/23_2013"
+	argv			<<- hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=0)
+	argv			<<- unlist(strsplit(argv,' '))
+	ndr.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=run)
+	#
+	#	-DR -RC
+	#
+	run						<- nrc.clu.pre
+	run.tips				<- data.table(Node=seq_len(Ntip(run$ph)), FASTASampleCode=run$ph$tip.label, key="FASTASampleCode" )
+	run$ph.unlinked.info	<- merge( run.tips, ref$ph.unlinked.info, by="FASTASampleCode" )	
+	run$ph.linked			<- merge( run.tips, ref$ph.linked, by="FASTASampleCode" )	
+	run$ph.unlinked			<- lapply(seq_along(ref$ph.unlinked),function(i)
+			{
+				ref$ph.unlinked[[i]]	<- ref$ph.unlinked[[i]][,-2,with=0]
+				z						<- merge( run.tips, ref$ph.unlinked[[i]], by="FASTASampleCode")
+				setkey(z, Node)
+				z
+			})
+	names(run$ph.unlinked)	<- names(ref$ph.unlinked)
+	tmp						<- data.table(FASTASampleCode=names(run$ph.unlinked), NodeIdx= seq_along(run$ph.unlinked) )
+	run$ph.unlinked.info	<- merge(tmp, run$ph.unlinked.info, by="FASTASampleCode" )
+	#	re-run tptn	
+	infile			<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences_examlbs500"			
+	insignat		<- "Fri_Nov_01_16/07/23_2013"
+	argv			<<- hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=0)
+	argv			<<- unlist(strsplit(argv,' '))
+	nrc.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=run)	
 	#
 	#	compare TP
 	#
-	ndr.clu.tptn$tp.by.all
-	nrc.clu.tptn$tp.by.all
+	tptn.cmp		<- lapply( c('0.8','0.95'), function(bs)
+			{
+				tmp	<- list( 	data.table( run='-DR',tp= as.numeric(ndr.clu.tptn$tp.by.all[bs, ]), bs=as.numeric(bs), brl=as.numeric(colnames(ndr.clu.tptn$tp.by.all)) ), 
+						data.table( run='-DR -RC',tp= as.numeric(nrc.clu.tptn$tp.by.all[bs, ]), bs=as.numeric(bs), brl=as.numeric(colnames(nrc.clu.tptn$tp.by.all)) ),
+						data.table( run='-DR -RC -SH',tp= as.numeric(nsh.clu.tptn$tp.by.all[bs, ]), bs=as.numeric(bs), brl=as.numeric(colnames(nsh.clu.tptn$tp.by.all)) )		)
+				tmp	<- do.call('rbind',tmp)						
+			})
+	tptn.cmp		<- do.call('rbind',tptn.cmp)
+	#
+	file		<- paste( dir.name, 'ATHENA_2013_03_compare_-DR-RC-SH_tp.pdf', sep='/')
+	cat(paste("\nplot to file",file))
+	pdf(file, 5, 5)	
+	ltys	<- c(3,1)
+	cols	<- c('red','blue')
+	runs	<- c('-DR -RC','-DR -RC -SH')
+	bss		<- c(0.8, 0.95)
+	plot(bty='n',type='n',1,1,xlab="Branch length cut-off",ylab="% of within patient seq in same cluster",xlim=c(0.02,0.125),ylim=range(c(1,tptn.cmp[,tp])))	
+	dummy	<- sapply(seq_along(bss), function(j)
+			{
+				sapply(seq_along(runs), function(i)
+						{
+							lines( subset(tptn.cmp,run==runs[i] & bs==bss[j], )[, brl], subset(tptn.cmp,run==runs[i] & bs==bss[j], )[, tp], lty=ltys[i], col=cols[j] )			
+						})				
+			})
+	legend("topright", bty='n', lty=ltys, legend=runs)
+	legend("topleft", bty='n', border=NA, fill=cols, legend=paste('bootstrap= ',bss*100,'%',sep=''))
+	dev.off()
 	#
 	#	compare FP
 	#
 	ndr.clu.tptn$fpn.by.sum
-	nrc.clu.tptn$fpn.by.sum		
+	nrc.clu.tptn$fpn.by.sum	
+	nsh.clu.tptn$fpn.by.sum	
 	#
 }
 ######################################################################################
@@ -3066,6 +3174,8 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 		argv	<<- unlist(strsplit(argv,' '))
 		clu.pre	<- hivc.prog.get.clustering.precompute()
 	}
+	else
+		cat(paste("\nuse input clu.pre"))
 	dist.brl	<- switch(	opt.brl, 
 							"dist.brl.max"		= clu.pre$dist.brl.max,
 							"dist.brl.med"		= clu.pre$dist.brl.med,
@@ -3161,6 +3271,9 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 		file			<- paste(outdir, '/', outfile, '_', gsub('/',':',outsignat),".R", sep='')
 		save(clusters,clusters.nbwpat,clusters.dbwpat,clusters.nseq,file=file)
 	}
+	else
+		df.cluinfo						<- copy(clu.pre$df.seqinfo)
+	
 	clusters.cov.epidemic	<- clusters.nbwpat / patient.n
 	clusters.cov.patindb	<- clusters.nbwpat / length(unique(subset(df.cluinfo,!is.na(Patient))[,Patient]))	
 	clusters.cov.seqindb	<- clusters.nseq / nrow( subset( df.cluinfo, 	substr(FASTASampleCode, 1, 2)!="TN" & substr(FASTASampleCode, 1, 8)!="PROT+P51" ) )
@@ -5184,7 +5297,7 @@ hivc.prog.get.clustering<- function()
 		clusters.tp			<- hivc.clu.truepos(clustering, ph.linked, Ntip(ph), verbose= 0)								
 		missed.df			<- copy( df.seqinfo )
 		plotfile			<- paste(outdir,paste(outfile,"_missedtp_",gsub('/',':',outsignat),".pdf",sep=''),sep='/')
-		hivc.clu.plot.withinpatientseq.not.samecluster(clu.pre$ph, clustering, clusters.tp, missed.df, plotfile)
+		hivc.clu.plot.withinpatientseq.not.samecluster(ph, clustering, clusters.tp, missed.df, plotfile)
 		#
 		#	compute TN clusters
 		#		
@@ -5961,8 +6074,8 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2, 0.2)		
 		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/9.0/5.0/0","Beta/4.0/16.0/0","Beta/4.0/16.0/0")
 		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)
-		beast2.spec$sasky.notInf.prior				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) / 100
-		beast2.spec$sasky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true", rep( paste("LogNormal/",beast2.spec$sasky.notInf.prior,"/0.8/0.1/true",sep=''), 4) )				
+		beast2.spec$bdsky.notInf.prior				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) / 100
+		beast2.spec$bdsky.notInf.prior				<- c("LogNormal/0.2/0.6/0.1/true", rep( paste("LogNormal/",beast2.spec$bdsky.notInf.prior,"/0.8/0.1/true",sep=''), 4) )				
 		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
 		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )
 	}
