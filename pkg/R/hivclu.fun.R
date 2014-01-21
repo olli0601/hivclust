@@ -12,7 +12,7 @@ HIVC.db.locktime	<-  as.Date("30/03/2013", format="%d/%m/%Y")
 
 ######################################################################################
 #' @export
-hivc.seq.read.GenBank<- function (access.nb, seq.names = access.nb, species.names = TRUE, gene.names = FALSE, as.character = FALSE, attributes= c("origin")) 
+seq.read.GenBank<- function (access.nb, seq.names = access.nb, species.names = TRUE, gene.names = FALSE, as.character = FALSE, attributes= c("origin")) 
 {
 	require(ape)
 	N <- length(access.nb)
@@ -697,7 +697,7 @@ hivc.beast.writeNexus4Beauti<- function( seq.DNAbin.matrix, df, ph=NULL, file=NU
 		ph.start$tip.label	<- df[ph.start$tip.label,][,BEASTlabel]		
 	}
 	#	produce nexus text			
-	ans<- hivc.seq.write.dna.nexus(seq.DNAbin.matrix, ph=ph.start, file=file)
+	ans<- seq.write.dna.nexus(seq.DNAbin.matrix, ph=ph.start, file=file)
 	ans
 }
 ######################################################################################
@@ -758,6 +758,63 @@ hivc.beast2.add.data<- function(bxml, seq.PROT.RT, df, beast2.spec, verbose=1)
 			})	
 	if(verbose)	cat(paste("\nadded new sequences, n=", xmlSize(seqalign)))
 	bxml
+}
+######################################################################################
+#	df<- cluphy.df
+hivc.beast2.poolclusters.mincnts<- function(df, beast2.spec, verbose=1)
+{
+	if(verbose) cat(paste("\npool evenly across clu.AnyPos_T1 and fill sequences so that min cnts requested per time period is met"))
+	pool.ntip		<- beast2.spec$pool.ntip
+	cnts.requested	<- beast2.spec$pool.cnts.requested
+	breaks			<- c(Inf, beast2.spec$bdsky.sprop.changepoint.value)
+	#	add tip heights and tip periods to cluphy.df
+	tmp				<- df[, max(PosSeqT)]
+	tmp				<- as.numeric( df[, difftime(tmp, PosSeqT, units='days') / 365] )	
+	df				<- merge( df, data.table(TipHeight=tmp, TipPeriod=as.character(cut(tmp, breaks, right=FALSE)), FASTASampleCode=df[,FASTASampleCode]), by='FASTASampleCode')	
+	#	first attempt of pooling
+	clu.df			<- df[, list(clu.ntip=clu.ntip[1], clu.AnyPos_T1=clu.AnyPos_T1[1]), by="cluster"]
+	df.mxclu		<- clu.df[, { tmp<- c(which.min(clu.AnyPos_T1),which.max(clu.AnyPos_T1)); list(cluster= cluster[tmp])}]		
+	setkey(df, clu.AnyPos_T1)
+	pool.n			<- ceiling( sum( clu.df[,clu.ntip] ) / pool.ntip )
+	tmp				<- lapply( seq_len(pool.n), function(x)	seq.int(x,nrow(clu.df),by=pool.n) )
+	#	select the clusters evenly across clu.AnyPos_T1 and always add the earliest and latest cluster
+	pool.df			<- lapply(seq_along(tmp), function(i) unique(rbind(subset(clu.df[tmp[[i]],], select=cluster), df.mxclu)) )		
+	pool.df			<- lapply(seq_along(tmp), function(i) merge(pool.df[[i]], df, by="cluster") )
+	#	compute the intial numbers of selected sequences per time period
+	cnts			<- sapply(seq_along(pool.df), function(i)	table( pool.df[[i]][,TipPeriod])		)
+	if(verbose)		print(cnts)
+	if( any( na.omit(rowSums(cnts)<cnts.requested) ) )	
+		stop('total number of sequences is smaller than cnts.requested')
+	#	compute the number of sequences to be added
+	setkey(df, FASTASampleCode)	
+	cnts							<- cnts.requested - cnts
+	cnts[is.na(cnts)|cnts<=0]		<- 0
+	#	add sequences to pool	
+	for(i in seq_along(pool.df))
+		for(j in seq_len(nrow(cnts)))
+			if(cnts[j,i]>0)
+			{
+				cat(paste('\nadding sequences to pool',i,'for period',rownames(cnts)[j]))
+				#	only if cnts>0
+				#	determine clusters that can be added
+				pool.df.notin			<- setdiff( subset(df,TipPeriod==rownames(cnts)[j])[,FASTASampleCode], pool.df[[i]][,FASTASampleCode] )
+				clu.df.notin			<- unique( subset( df[pool.df.notin,], select=cluster) )
+				clu.df.notin			<- merge(df, clu.df.notin, by='cluster')
+				clu.df.notin			<- clu.df.notin[, list(clu.ntipperiod=length(which(TipPeriod==rownames(cnts)[j]))), by=cluster]	
+				#	determine clusters that will be added
+				tmp						<- clu.df.notin[,tail(which(cumsum(clu.ntipperiod)<cnts[j,i]),1)[1]+1,]
+				clu.df.notin			<- clu.df.notin[ seq_len( min( nrow(clu.df.notin), tmp ) ), ]
+				#	add clusters
+				pool.df[[i]]			<- rbind( pool.df[[i]], merge( df, subset(clu.df.notin, select=cluster), by='cluster') )
+				tmp						<- cnts.requested - as.numeric( table( pool.df[[i]][,TipPeriod]) )
+				tmp[is.na(tmp)|tmp<0]	<- 0 
+				cnts[,i]				<- tmp
+				cat(paste('\nnew number of sequences in pool',i,'is',nrow(pool.df[[i]])))
+			}
+	#	compute the final numbers of selected sequences per time period
+	cnts	<- sapply(seq_along(pool.df), function(i)	table( pool.df[[i]][,TipPeriod])		)
+	if(verbose)		print(cnts)
+	list(pool.df=pool.df, pool.ntip=pool.ntip)
 }
 ######################################################################################
 hivc.beast2.add.alignment<- function(bxml, beast2.spec, verbose=1)
@@ -1130,6 +1187,8 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$namespace						<- c("beast.core","beast.evolution.alignment","beast.evolution.tree.coalescent","beast.core.util","beast.evolution.nuc","beast.evolution.operators","beast.evolution.sitemodel","beast.evolution.substitutionmodel","beast.evolution.likelihood","beast.evolution.speciation","beast.core.parameter")
 	beast2.spec$xml.dir							<- xml.dir		
 	beast2.spec$xml.filename					<- xml.filename
+	beast2.spec$pool.cnts.requested				<- rep(NA, bdsky.intervalNumber)
+	beast2.spec$pool.ntip						<- 130
 	beast2.spec$map.Beta						<- "beast.math.distributions.Beta"
 	beast2.spec$map.Exponential					<- "beast.math.distributions.Exponential"
 	beast2.spec$map.ExcludablePrior				<- "beast.math.distributions.ExcludablePrior"
@@ -2471,7 +2530,7 @@ print(x)
 }
 
 #' @export
-hivc.seq.create.referencepairs<- function(dir.name= DATA)
+seq.create.referencepairs<- function(dir.name= DATA)
 {
 	if(0)	#generate ATHENA_2013_hptn052.rda
 	{
@@ -2509,7 +2568,7 @@ hivc.seq.create.referencepairs<- function(dir.name= DATA)
 }
 
 #' @export
-hivc.seq.write.dna.nexus<- function(seq.DNAbin.mat, ph=NULL, file=NULL, nexus.format="DNA",nexus.gap='-', nexus.missing='?', nexus.interleave="NO")
+seq.write.dna.nexus<- function(seq.DNAbin.mat, ph=NULL, file=NULL, nexus.format="DNA",nexus.gap='-', nexus.missing='?', nexus.interleave="NO")
 {		
 	tmp		<- cbind( rownames(seq.DNAbin.mat), apply( as.character( seq.DNAbin.mat ), 1, function(x) paste(x,sep='',collapse='')  ) )
 	tmp		<- apply(tmp, 1, function(x) paste(x, collapse='\t', sep=''))
@@ -2527,7 +2586,7 @@ hivc.seq.write.dna.nexus<- function(seq.DNAbin.mat, ph=NULL, file=NULL, nexus.fo
 }		
 
 #' @export
-hivc.seq.write.dna.phylip<- function(seq.DNAbin.mat, file)
+seq.write.dna.phylip<- function(seq.DNAbin.mat, file)
 {		
 	tmp<- cbind( rownames(seq.DNAbin.mat), apply( as.character( seq.DNAbin.mat ), 1, function(x) paste(x,sep='',collapse='')  ) )
 	tmp<- paste(t(tmp),collapse='\n',sep='')	
@@ -2535,7 +2594,7 @@ hivc.seq.write.dna.phylip<- function(seq.DNAbin.mat, file)
 	cat(tmp, file=file)
 }
 
-hivc.seq.find<- function(char.matrix, pos0= NA, from= c(), verbose=1)
+seq.find<- function(char.matrix, pos0= NA, from= c(), verbose=1)
 {
 	if(is.na(pos0)) 	stop("start position of token to be replaced is missing")
 	if(!length(from))	stop("token to be replaced is missing")
@@ -2544,13 +2603,13 @@ hivc.seq.find<- function(char.matrix, pos0= NA, from= c(), verbose=1)
 	query.yes	
 }
 
-hivc.seq.length<- function(seq.DNAbin.mat, exclude=c('-','?'))
+seq.length<- function(seq.DNAbin.mat, exclude=c('-','?'))
 {
 	counts	<- apply(seq.DNAbin.mat,1,function(x) base.freq(x, freq=1, all=1))
 	apply(counts[ !rownames(counts)%in%exclude, ],2,sum)
 }
 
-hivc.seq.proportion.ambiguous<- function(seq.DNAbin.mat, exclude=c('-','?'))
+seq.proportion.ambiguous<- function(seq.DNAbin.mat, exclude=c('-','?'))
 {
 	counts	<- apply(seq.DNAbin.mat,1,function(x) base.freq(x, freq=1, all=1))
 	len		<- apply(counts[ !rownames(counts)%in%exclude, ],2,sum)
@@ -2558,7 +2617,7 @@ hivc.seq.proportion.ambiguous<- function(seq.DNAbin.mat, exclude=c('-','?'))
 	pa/len
 }
 
-hivc.seq.gc.content<- function(seq.DNAbin.mat)
+seq.gc.content<- function(seq.DNAbin.mat)
 {	
 	rna.gc.fraction.n		<- c('a','c','g','t',	'r','m','w','s',	'k','y','v','h',		'd','b','n','-','?')
 	rna.gc.fraction			<- c( 0, 1, 1, 0,		0.5, 0.5, 0, 1, 	1/2, 1/2, 2/3, 1/3,		1/3,2/3, 1/4, 0, 0)		#this fraction assumes that U is synonymous with T and that U does not occur in the code
@@ -2568,7 +2627,7 @@ hivc.seq.gc.content<- function(seq.DNAbin.mat)
 }
 
 #slight modification of blastSequences() in pkg annotate
-hivc.seq.blast<- function (x, database = "nr", hitListSize = "10", filter = "L", expect = "10", program = "blastn", organism= "HIV-1") 
+seq.blast<- function (x, database = "nr", hitListSize = "10", filter = "L", expect = "10", program = "blastn", organism= "HIV-1") 
 {
 	baseUrl <- "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi"
 	query <- paste("QUERY=", as.character(x), "&DATABASE=", database, "&ORGANISM=", organism,
@@ -2600,7 +2659,7 @@ hivc.seq.blast<- function (x, database = "nr", hitListSize = "10", filter = "L",
 }
 
 #slight modification of read.blast() in pkg RFLPtools; expects blast was run with -outfmt 6
-hivc.seq.blast.read<- function (file, sep = "\t") 
+seq.blast.read<- function (file, sep = "\t") 
 {
 	require(data.table)
 	x <- read.table(file = file, header = FALSE, sep = sep, quote = "\"", dec = ".", fill = TRUE, comment.char = "", stringsAsFactors = FALSE)
@@ -2611,13 +2670,13 @@ hivc.seq.blast.read<- function (file, sep = "\t")
 }
 
 #' @export
-hivc.seq.rm.drugresistance<- function(char.matrix, dr, verbose=1, rtn.DNAbin=1)
+seq.rm.drugresistance<- function(char.matrix, dr, verbose=1, rtn.DNAbin=1)
 {
 	if(verbose)	cat(paste("\nchecking for drug resistance mutations, n=",nrow(dr)))
 	tmp	<- rep(0, nrow(dr))
 	for(i in seq_len(nrow(dr)))
 	{		
-		query.yes	<- hivc.seq.find(char.matrix, dr[i,Alignment.nuc.pos], unlist(strsplit(unlist(dr[i,Mutant.NTs]),'')))
+		query.yes	<- seq.find(char.matrix, dr[i,Alignment.nuc.pos], unlist(strsplit(unlist(dr[i,Mutant.NTs]),'')))
 		if(length(query.yes))
 		{
 			if(verbose)	
@@ -2636,7 +2695,7 @@ hivc.seq.rm.drugresistance<- function(char.matrix, dr, verbose=1, rtn.DNAbin=1)
 }	
 
 #' @export
-hivc.seq.unique<- function(seq.DNAbin.matrix)
+seq.unique<- function(seq.DNAbin.matrix)
 {
 	x<- as.character(seq.DNAbin.matrix)
 	x<- apply(x, 1, function(z) paste(z,collapse=''))
@@ -2644,7 +2703,7 @@ hivc.seq.unique<- function(seq.DNAbin.matrix)
 }
 
 #' @export
-hivc.seq.dist<- function(seq.DNAbin.matrix, verbose=1)
+seq.dist<- function(seq.DNAbin.matrix, verbose=1)
 {
 	if(0)
 	{
@@ -2679,7 +2738,7 @@ hivc.seq.dist<- function(seq.DNAbin.matrix, verbose=1)
 	ans
 }
 
-hivc.seq.replace<- function(seq.DNAbin.matrix, code.from='?', code.to='n', verbose=0)
+seq.replace<- function(seq.DNAbin.matrix, code.from='?', code.to='n', verbose=0)
 {
 	seq.DNAbin.matrix	<- as.character(seq.DNAbin.matrix)		
 	seq.DNAbin.matrix	<- apply(seq.DNAbin.matrix, 2, function(col) 		gsub(code.from,code.to,col,fixed=1)			)	
@@ -2687,7 +2746,7 @@ hivc.seq.replace<- function(seq.DNAbin.matrix, code.from='?', code.to='n', verbo
 }
 
 #' @export
-hivc.seq.rmgaps<- function(seq.DNAbin.matrix, rm.only.col.gaps=1, verbose=0)
+seq.rmgaps<- function(seq.DNAbin.matrix, rm.only.col.gaps=1, verbose=0)
 {
 	seq.DNAbin.matrix		<- as.character(seq.DNAbin.matrix)		
 	if(!rm.only.col.gaps)
@@ -2716,7 +2775,7 @@ hivc.seq.rmgaps<- function(seq.DNAbin.matrix, rm.only.col.gaps=1, verbose=0)
 #' @export
 hivc.clu.geneticdist.cutoff<- function(dir.name= DATA, plot=1, verbose=1, level.retain.unlinked=0.05)
 {	
-	refpairs			<- hivc.seq.create.referencepairs(dir.name)
+	refpairs			<- seq.create.referencepairs(dir.name)
 	refpairs			<- lapply(refpairs,function(x) x*100)
 	
 	xlim				<- range(c(refpairs[[1]], refpairs[[2]]))
