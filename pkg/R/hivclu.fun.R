@@ -802,7 +802,8 @@ hivc.beast2.poolclusters.mincnts<- function(df, beast2.spec, verbose=1)
 				clu.df.notin			<- merge(df, clu.df.notin, by='cluster')
 				clu.df.notin			<- clu.df.notin[, list(clu.ntipperiod=length(which(TipPeriod==rownames(cnts)[j]))), by=cluster]	
 				#	determine clusters that will be added
-				tmp						<- clu.df.notin[,tail(which(cumsum(clu.ntipperiod)<cnts[j,i]),1)[1]+1,]
+				tmp						<- clu.df.notin[,tail(which(cumsum(clu.ntipperiod)<cnts[j,i]),1),]
+				tmp						<- ifelse(length(tmp), tmp[1]+1, 1)
 				clu.df.notin			<- clu.df.notin[ seq_len( min( nrow(clu.df.notin), tmp ) ), ]
 				#	add clusters
 				pool.df[[i]]			<- rbind( pool.df[[i]], merge( df, subset(clu.df.notin, select=cluster), by='cluster') )
