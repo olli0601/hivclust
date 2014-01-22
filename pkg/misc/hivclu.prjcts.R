@@ -6092,6 +6092,22 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
 		beast2.spec$pool.cnts.requested				<- c(NA, beast2.spec$pool.cnts.requested, 70, 50, NA)				
 	}
+	else if(grepl("pfn6",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter)
+		beast2.spec$pool.fNegT						<- 0.6
+		beast2.spec$pool.ntip						<- 200
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2, 0.2)		
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/9.0/5.0/0","Beta/4.0/16.0/0","Beta/4.0/16.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
+		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",5)				
+		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )
+		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
+		beast2.spec$pool.cnts.requested				<- c(NA, beast2.spec$pool.cnts.requested, max(beast2.spec$pool.cnts.requested,70), max(50,beast2.spec$pool.cnts.requested), NA)				
+	}
+	
 	else stop("unknown infilexml.opt")
 	#		 
 	#
@@ -6153,7 +6169,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 	#
 	df.cluinfo				<- msm$df.cluinfo
 	tmp						<- df.cluinfo[,	list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], fNegT=length(which(!is.na(NegT))) / clu.ntip[1]),by="cluster"]										
-	tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=0.8) )
+	tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=beast2.spec$pool.fNegT) )
 	cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
 	if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))
 	cluphy.df				<- hivc.beast.addBEASTLabel( cluphy.df )
@@ -6164,6 +6180,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		df.clupool			<- hivc.beast2.poolclusters.mincnts(cluphy.df, beast2.spec, verbose=1)
 	else
 		df.clupool			<- hivc.beast.poolclusters(cluphy.df, pool.ntip= beast2.spec$pool.ntip, verbose=1)
+	#print( sapply(seq_along(df.clupool$pool.df), function(i)	nrow(df.clupool$pool.df[[i]])) )
 	#
 	#	load xml template file
 	#	
@@ -6839,7 +6856,7 @@ hivc.pipeline.BEAST<- function()
 		opt.brl				<- "dist.brl.casc" 
 		thresh.brl			<- 0.096
 		thresh.bs			<- 0.8
-		pool.ntip			<- 130		
+		pool.ntip			<- NA		
 		resume				<- 1
 		verbose				<- 1
 		
@@ -6869,8 +6886,11 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "rbe420"
 		infilexml.opt		<- "rbe425"
 		infilexml.opt		<- "pmct15"
-		#infilexml.opt		<- "pmct25"
-		#infilexml.opt		<- "pmct35"		
+		infilexml.opt		<- "pmct25"
+		infilexml.opt		<- "pmct35"
+		infilexml.opt		<- "pfn635"
+		#infilexml.opt		<- "pfn670"
+		#infilexml.opt		<- "pfn6100"
 		#infilexml.opt		<- "ori40"
 		#infilexml.opt		<- "ori50"
 		#infilexml.opt		<- "ori60"

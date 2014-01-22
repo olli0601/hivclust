@@ -1190,6 +1190,7 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$xml.filename					<- xml.filename
 	beast2.spec$pool.cnts.requested				<- rep(NA, bdsky.intervalNumber)
 	beast2.spec$pool.ntip						<- 130
+	beast2.spec$pool.fNegT						<- 0.8
 	beast2.spec$map.Beta						<- "beast.math.distributions.Beta"
 	beast2.spec$map.Exponential					<- "beast.math.distributions.Exponential"
 	beast2.spec$map.ExcludablePrior				<- "beast.math.distributions.ExcludablePrior"

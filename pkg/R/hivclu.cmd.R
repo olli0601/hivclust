@@ -269,7 +269,9 @@ hivc.cmd.beast.poolrunxml<- function(indir, infile, insignat, indircov, infileco
 	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
 	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov,sep='')
 	cmd<- paste(cmd," -infilexml=",infilexml," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -infiletree=",infiletree," -outdir=",indir," -outsignat=",outsignat,sep='')
-	cmd<- paste(cmd," -pool.ntip=",pool.ntip," -thresh.brl=",thresh.brl," -thresh.bs=",thresh.bs," -opt.brl=",opt.brl,sep='')
+	cmd<- paste(cmd," -thresh.brl=",thresh.brl," -thresh.bs=",thresh.bs," -opt.brl=",opt.brl,sep='')
+	if(!is.na(pool.ntip))
+		cmd<- paste(cmd," -pool.ntip=",pool.ntip,sep='')
 	#verbose stuff
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
 	cmd	
