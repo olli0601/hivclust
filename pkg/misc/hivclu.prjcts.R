@@ -6107,7 +6107,38 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
 		beast2.spec$pool.cnts.requested				<- c(NA, beast2.spec$pool.cnts.requested, max(beast2.spec$pool.cnts.requested,70), max(50,beast2.spec$pool.cnts.requested), NA)				
 	}
-	
+	else if(grepl("piv4",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=4, alignment.filter=alignment.filter)
+		beast2.spec$pool.fNegT						<- 0.6
+		beast2.spec$pool.ntip						<- 200
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2)		
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/9.0/5.0/0","Beta/4.0/16.0/0")
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3)		
+		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",4)				
+		beast2.spec$sasky.r.value					<- rep( 0.5, 4 )
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 4 )
+		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
+		beast2.spec$pool.cnts.requested				<- c(max(50,beast2.spec$pool.cnts.requested), max(beast2.spec$pool.cnts.requested,70), beast2.spec$pool.cnts.requested,  NA )				
+	}
+	else if(grepl("rfn6",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter)
+		beast2.spec$pool.fNegT						<- 0.6
+		beast2.spec$pool.ntip						<- 200
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2, 0.2)		
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Beta/9.0/5.0/0","Beta/4.0/16.0/0","Beta/4.0/16.0/0")
+		beast2.spec$bdsky.R0.prior					<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) / 100
+		beast2.spec$bdsky.R0.prior					<- c("Gamma/1.5/1.5/0", rep(paste("Gamma/2.3/",beast2.spec$bdsky.R0.prior,"/0.7",sep=''),4))
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
+		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",5)				
+		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )
+		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
+		beast2.spec$pool.cnts.requested				<- c(NA, 70, 70, 50, NA)				
+	}
 	else stop("unknown infilexml.opt")
 	#		 
 	#
@@ -6891,6 +6922,10 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "pfn635"
 		#infilexml.opt		<- "pfn670"
 		#infilexml.opt		<- "pfn6100"
+		infilexml.opt		<- "piv470"
+		infilexml.opt		<- "piv490"
+		infilexml.opt		<- "rfn615"
+		infilexml.opt		<- "rfn635"
 		#infilexml.opt		<- "ori40"
 		#infilexml.opt		<- "ori50"
 		#infilexml.opt		<- "ori60"
