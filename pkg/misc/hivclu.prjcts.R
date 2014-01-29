@@ -6137,6 +6137,36 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
 		beast2.spec$pool.cnts.requested				<- c(NA, 35, 70, 50, NA)				
 	}
+	else if(grepl("rsu8",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2, 0.2)		
+		beast2.spec$bdsky.sprop.prior				<- c("Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0")
+		beast2.spec$bdsky.R0.prior					<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) / 100
+		beast2.spec$bdsky.R0.prior					<- c("Gamma/1.5/1.5/0", rep(paste("Gamma/2.3/",beast2.spec$bdsky.R0.prior,"/0.7",sep=''),4))
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
+		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",5)				
+		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )
+		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
+		beast2.spec$pool.cnts.requested				<- c(NA, 35, 70, 50, NA)				
+	}
+	else if(grepl("rse8",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter)
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2, 0.2)		
+		beast2.spec$bdsky.sprop.prior				<- c("Exponential/0.01/0","Exponential/0.1/0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0")
+		beast2.spec$bdsky.R0.prior					<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) / 100
+		beast2.spec$bdsky.R0.prior					<- c("Gamma/1.5/1.5/0", rep(paste("Gamma/2.3/",beast2.spec$bdsky.R0.prior,"/0.7",sep=''),4))
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
+		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",5)				
+		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )
+		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
+		beast2.spec$pool.cnts.requested				<- c(NA, 35, 70, 50, NA)				
+	}
 	else stop("unknown infilexml.opt")
 	#		 
 	#
@@ -6227,12 +6257,12 @@ hivc.prog.BEAST2.generate.xml<- function()
 							#rownames(tmp)		<- df[, BEASTlabel]
 							#dummy				<- seq.write.dna.nexus(tmp, file=outfile )
 							beast2.spec$xml.dir			<- indir
-							beast2.spec$xml.filename	<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')
+							beast2.spec$xml.filename	<- paste(infilexml,'-',beast2.spec$pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')
 							beast2.xml					<- hivc.beast2.get.xml( bxml.template, seq.PROT.RT, df, beast2.spec, ph=NULL, verbose=1)			
 							file						<- paste(beast2.spec$xml.dir,'/',beast2.spec$xml.filename,".xml", sep='')
 							if(verbose)	cat(paste("\nwrite xml file to",file))
 							saveXML(beast2.xml, file=file)
-							paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,sep='')
+							paste(infilexml,'-',beast2.spec$pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,sep='')
 						})
 	#
 	#	generate BEAST commands and run
@@ -6924,6 +6954,10 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "piv490"
 		infilexml.opt		<- "rfn815"
 		infilexml.opt		<- "rfn835"
+		infilexml.opt		<- "rse815"
+		infilexml.opt		<- "rse835"
+		infilexml.opt		<- "rsu815"
+		infilexml.opt		<- "rsu835"		
 		#infilexml.opt		<- "ori40"
 		#infilexml.opt		<- "ori50"
 		#infilexml.opt		<- "ori60"
