@@ -7,10 +7,6 @@ all:
 	echo "destination directory for external code is "$(EXTERNAL_CODE)
 	mkdir -p $(EXTERNAL_CODE)
 	@echo "*********************************************** "
-	@echo "********* BUILDING 3seq *********************** "
-	@echo "*********************************************** "	
-	make 3seq		
-	@echo "*********************************************** "
 	@echo "********* BUILDING standard-RAxML ************* "
 	@echo "*********************************************** "	
 	make ExaML-raxml	

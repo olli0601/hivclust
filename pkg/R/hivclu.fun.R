@@ -753,7 +753,7 @@ hivc.beast2.add.data<- function(bxml, seq.PROT.RT, df, beast2.spec, verbose=1)
 				tmp		<- which( rownames(seq.PROT.RT)==df[i, FASTASampleCode] )
 				if(length(tmp)!=1)	stop("unexpected row in seq.PROT.RT selected")
 				tmp		<- paste(as.character(seq.PROT.RT[tmp,])[1,],collapse='',sep='')										
-				seq		<- newXMLNode("sequence", attrs=list(id= df[i, BEASTlabel], taxon=df[i, BEASTlabel], value=tmp), parent=seqalign, doc=bxml, addFinalizer=T)
+				seq		<- newXMLNode("sequence", attrs=list(id= paste('seq',df[i, BEASTlabel],sep=''), taxon=df[i, BEASTlabel], value=tmp), parent=seqalign, doc=bxml, addFinalizer=T)
 				seq
 			})	
 	if(verbose)	cat(paste("\nadded new sequences, n=", xmlSize(seqalign)))
@@ -1021,6 +1021,98 @@ hivc.beast2.init.xml<- function( beast2.spec=NULL, verbose=1)
 	bxml
 }	
 ######################################################################################
+hivc.beast2.add.tiplogstem<- function(bxml, beast2.spec, verbose=0)
+{
+	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	taxons		<- xpathApply(bxml.beast, "//sequence", xmlGetAttr, "taxon")
+	if(verbose)	cat(paste("\nadd taxonsets for tips, n=", length(taxons)))
+	#	add taxonsets	
+	tmp			<- newXMLCommentNode(text="Tip Taxonsets, used to log the tip stem height", doc=bxml, addFinalizer=T)
+	tmp			<- c(tmp, lapply(seq_along(taxons), function(i)
+					{				
+						taxonset	<- newXMLNode("taxonset", attrs= list(	id=paste(beast2.spec$tip.taxonset.id.prefix,i,sep=''), spec=beast2.spec$taxonset.spec ), doc=bxml, addFinalizer=T)
+						if(length(getNodeSet(bxml, paste("//taxon[@id='",taxons[[i]],"']",sep=''))))
+							dummy	<- newXMLNode("taxon", attrs= list(	idref=taxons[[i]], spec=beast2.spec$taxon.spec ), parent=taxonset, doc=bxml, addFinalizer=T)
+						else
+							dummy	<- newXMLNode("taxon", attrs= list(	id=taxons[[i]], spec=beast2.spec$taxon.spec ), parent=taxonset, doc=bxml, addFinalizer=T)
+						taxonset
+					}))	
+	dummy		<- addChildren(bxml.beast, tmp, at= tail(which(xmlSApply(bxml.beast, xmlName)=="data"),1) )
+	#	add MRCA priors	
+	if(verbose)	cat(paste("\nadd MRCA priors for tips, n=", length(taxons)))
+	bxml.prior	<- getNodeSet(bxml, "//*[@id='prior']")
+	if(length(bxml.prior)!=1)	stop("unexpected length of bxml.prior")
+	bxml.prior	<- bxml.prior[[1]]	
+	dummy		<- newXMLCommentNode(text="start: Tip Taxonset priors, used to log the tip stem height", parent=bxml.prior, doc=bxml, addFinalizer=T)
+	dummy		<- lapply(seq_along(taxons), function(i)
+			{
+				newXMLNode("distribution", attrs= list(	id=paste(beast2.spec$tip.prior.id.prefix,i,sep=''), taxonset=paste('@',beast2.spec$tip.taxonset.id.prefix,i,sep=''), useOriginate='true', monophyletic='false', tree=paste('@',beast2.spec$tree.id,sep=''), spec=beast2.spec$mrca.prior.spec ), parent=bxml.prior, doc=bxml, addFinalizer=T)
+			})
+	dummy		<- newXMLCommentNode(text="end: Tip Taxonset priors, used to log the tip stem height", parent=bxml.prior, doc=bxml, addFinalizer=T)
+	if(verbose)	cat(paste("\nadd tracelog for stem of tips, n=", length(taxons)))
+	#	add log entry to tracelog
+	bxml.log	<- getNodeSet(bxml, "//logger[@id='tracelog']")
+	if(length(bxml.log)!=1)	stop("unexpected length of bxml.log")
+	bxml.log	<- bxml.log[[1]]
+	dummy		<- newXMLCommentNode(text="start: Tip Taxonset log entries, used to log the tip stem height", parent=bxml.log, doc=bxml, addFinalizer=T)
+	dummy		<- lapply(seq_along(taxons), function(i)
+			{
+				newXMLNode("log", attrs= list(	idref=paste(beast2.spec$tip.prior.id.prefix,i,sep='')	), parent=bxml.log, doc=bxml, addFinalizer=T)
+			})
+	dummy		<- newXMLCommentNode(text="end: Tip Taxonset log entries, used to log the tip stem height", parent=bxml.log, doc=bxml, addFinalizer=T)
+	bxml.beast
+}
+######################################################################################
+hivc.beast2.add.cluster.taxonsets<- function(bxml, df, beast2.spec, verbose=0)
+{
+	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	clusters	<- df[,unique(cluster)]	
+	if(verbose)	cat(paste("\nadd taxonsets for clusters, n=", length( clusters )))
+	#	add taxonsets	
+	tmp			<- newXMLCommentNode(text="start: The cluster taxonsets, used to log their TMRCA or to enforce monophyly", doc=bxml, addFinalizer=T)
+	tmp			<- c(tmp, lapply(clusters, function(clu)
+					{				
+						taxonset	<- newXMLNode("taxonset", attrs= list(	id=paste(beast2.spec$cluster.taxonset.id.prefix,clu,sep=''), spec=beast2.spec$taxonset.spec ), doc=bxml, addFinalizer=T)
+						dummy		<- sapply( subset(df, cluster==clu)[, BEASTlabel], function(x)
+								{
+									if(length(getNodeSet(bxml, paste("//taxon[@id='",x,"']",sep=''))))									
+										newXMLNode("taxon", attrs= list(	idref=x, spec=beast2.spec$taxon.spec ), parent=taxonset, doc=bxml, addFinalizer=T)
+									else
+										newXMLNode("taxon", attrs= list(	id=x, spec=beast2.spec$taxon.spec ), parent=taxonset, doc=bxml, addFinalizer=T)
+								})										
+						taxonset
+					}))	
+	tmp			<- c(tmp, newXMLCommentNode(text="end: The cluster taxonsets, used to log their TMRCA or to enforce monophyly", doc=bxml, addFinalizer=T))
+	dummy		<- addChildren(bxml.beast, tmp, at= tail(which(xmlSApply(bxml.beast, xmlName)=="data"),1) )
+	#	add MRCA priors	
+	if(verbose)	cat(paste("\nadd MRCA priors for clusters, n=", length(clusters)))
+	bxml.prior	<- getNodeSet(bxml, "//*[@id='prior']")
+	if(length(bxml.prior)!=1)	stop("unexpected length of bxml.prior")
+	bxml.prior	<- bxml.prior[[1]]	
+	dummy		<- newXMLCommentNode(text="start: Cluster taxonset priors, used to log their TMRCA or to enforce monophyly", parent=bxml.prior, doc=bxml, addFinalizer=T)
+	dummy		<- lapply(clusters, function(clu)
+			{
+				newXMLNode("distribution", attrs= list(	id=paste(beast2.spec$cluster.prior.id.prefix,clu,sep=''), taxonset=paste('@',beast2.spec$cluster.taxonset.id.prefix,clu,sep=''), useOriginate='false', monophyletic=beast2.spec$cluster.monophyletic, tree=paste('@',beast2.spec$tree.id,sep=''), spec=beast2.spec$mrca.prior.spec ), parent=bxml.prior, doc=bxml, addFinalizer=T)
+			})
+	dummy		<- newXMLCommentNode(text="end: Cluster taxonset priors, used to log their TMRCA or to enforce monophyly", parent=bxml.prior, doc=bxml, addFinalizer=T)
+	if(verbose)	cat(paste("\nadd tracelog for cluster tmrca=", beast2.spec$cluster.monophyletic))
+	if(beast2.spec$cluster.monophyletic=='true')
+	{
+		if(verbose)	cat(paste("\nadd tracelog for cluster tmrca, n=", length(clusters)))				
+		#	add log entry to tracelog
+		bxml.log	<- getNodeSet(bxml, "//logger[@id='tracelog']")
+		if(length(bxml.log)!=1)	stop("unexpected length of bxml.log")
+		bxml.log	<- bxml.log[[1]]
+		dummy		<- newXMLCommentNode(text="start: Cluster taxonset log entries, used to log their TMRCA", parent=bxml.log, doc=bxml, addFinalizer=T)
+		dummy		<- lapply(clusters, function(clu)
+				{
+					newXMLNode("log", attrs= list(	idref=paste(beast2.spec$cluster.prior.id.prefix,clu,sep='')	), parent=bxml.log, doc=bxml, addFinalizer=T)
+				})
+		dummy		<- newXMLCommentNode(text="end: Cluster taxonset log entries, used to log their TMRCA", parent=bxml.log, doc=bxml, addFinalizer=T)		
+	}
+	bxml.beast	
+}
+######################################################################################
 hivc.beast2.get.prior<- function(args, parent, parentid, bxml)
 {
 	args	<- strsplit(args,'/')[[1]]
@@ -1112,6 +1204,30 @@ hivc.beast2.add.bdsky.serialpriors<- function(bxml, beast2.spec, verbose=1)
 	bxml.prior
 }
 ######################################################################################
+hivc.beast2.add.startingtree.random<- function(bxml, beast2.spec, verbose=0)
+{
+	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	if(verbose)	cat(paste('\nadd random starting tree'))
+	dummy		<- newXMLCommentNode(text=paste("Random starting tree"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	tmp			<- newXMLNode("init", attrs= list(	id=beast2.spec$starttree.id, estimate='false', initial=beast2.spec$tree.id, 
+					taxa=paste('@',beast2.spec$rndstarttree.taxonset,sep=''), taxonset=paste('@TaxonSet.t:',beast2.spec$rndstarttree.taxonset,sep='')), parent=bxml.beast, doc=bxml, addFinalizer=T)		
+	tmp			<- newXMLNode("populationModel", attrs= list(	id=paste('ConstantPopulation',beast2.spec$tree.id,sep=''), spec='ConstantPopulation'	), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp			<- newXMLNode("parameter", attrs= list(	id=paste('PopSize',beast2.spec$tree.id,sep=''), name='popSize', value='1.0'), parent=tmp, doc=bxml, addFinalizer=T)
+	bxml.beast
+}
+######################################################################################
+hivc.beast2.add.startingtree.newick<- function(bxml, beast2.spec, verbose=0)
+{
+	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	if(verbose)	cat(paste('\nadd newick starting tree'))
+	dummy		<- newXMLCommentNode(text=paste("start: Newick starting tree"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	tmp			<- newXMLNode("init", attrs= list(	id=beast2.spec$starttree.id, initial=beast2.spec$tree.id, IsLabelledNewick=beast2.spec$starttree.islabelledtree, spec=beast2.spec$starttree.spec), parent=bxml.beast, doc=bxml, addFinalizer=T)		
+	tmp			<- newXMLNode("input", attrs= list(name='newick'), parent=tmp, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLTextNode(text=beast2.spec$starttree.newick, parent=tmp, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLCommentNode(text=paste("end: Newick starting tree"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	bxml.beast
+}
+######################################################################################
 hivc.beast2.add.sasky.serialpriors<- function(bxml, beast2.spec, verbose=1)
 {
 	bxml.prior	<- getNodeSet(bxml, "//*[@id='prior']")
@@ -1182,7 +1298,23 @@ hivc.beast2.add.sasky.serialpriors<- function(bxml, beast2.spec, verbose=1)
 	bxml.prior
 }
 ######################################################################################
-hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.length=20e6, bdsky.intervalNumber=4, alignment.filter=NA)
+hivc.beast2.get.startingtree<- function(ph, df, beast2.spec, verbose=1)
+{
+	require(adephylo)
+	if(verbose) cat(paste("\ncreate startingTree with root height=",beast2.spec$starttree.rootHeight))
+	tmp					<- match( setdiff( ph$tip.label, df[,FASTASampleCode] ), ph$tip.label)
+	ph.start			<- drop.tip(ph, tmp)		
+	ph.start$node.label	<- NULL
+	setkey(df, FASTASampleCode)
+	ph.start$tip.label	<- df[ph.start$tip.label,][,BEASTlabel]
+	if(verbose) cat(paste("\nselected tips for startingTree, n=",Ntip(ph.start)))
+	#	adjust rootHeight to 'beast.rootHeight'	
+	ph.start$edge.length<- ph.start$edge.length	*	beast2.spec$starttree.rootHeight / max(distRoot(ph.start))
+	if(verbose) cat(paste("\nadjusted root height=",max(distRoot(ph.start))))	
+	write.tree( ph.start )		
+}
+######################################################################################
+hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.length=20e6, bdsky.intervalNumber=4, alignment.filter=NA, tip.log.stem=FALSE, cluster.monophyletic=FALSE)
 {
 	beast2.spec<- list()	
 	beast2.spec$namespace						<- c("beast.core","beast.evolution.alignment","beast.evolution.tree.coalescent","beast.core.util","beast.evolution.nuc","beast.evolution.operators","beast.evolution.sitemodel","beast.evolution.substitutionmodel","beast.evolution.likelihood","beast.evolution.speciation","beast.core.parameter")
@@ -1210,6 +1342,9 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$alignment.spec					<- "FilteredAlignment"
 	beast2.spec$alignment.taxa.spec				<- "TaxonSet"
 	beast2.spec$alignment.filter				<- alignment.filter
+	beast2.spec$taxon.spec						<- "Taxon"
+	beast2.spec$taxonset.spec					<- "TaxonSet"	
+	beast2.spec$mrca.prior.spec					<- "beast.math.distributions.MRCAPrior"
 	if(length(alignment.filter)==1 && is.na(alignment.filter))
 	{
 		beast2.spec$data.id						<- 'ds'
@@ -1274,8 +1409,23 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$sasky.r.changepoint.id			<- paste('rChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$sasky.r.changepoint.value		<- c(9.596, 5.596, 1.596, 0.)		
 	beast2.spec$compoundprior.spec				<- "util.CompoundDistribution"
+	beast2.spec$tip.log.stem					<- tip.log.stem
+	beast2.spec$tip.taxonset.id.prefix			<- 'tip'
+	beast2.spec$tip.prior.id.prefix				<- 'tipprior'
+	beast2.spec$cluster.taxonset.id.prefix		<- 'c'
+	beast2.spec$cluster.prior.id.prefix			<- 'cprior'
+	beast2.spec$cluster.monophyletic			<- ifelse(cluster.monophyletic, 'true', 'false')
+	beast2.spec$starttree.rootHeight			<- 35
+	beast2.spec$starttree.usingDates			<- 'true'
+	beast2.spec$starttree.brlunits				<- 'years'
+	beast2.spec$starttree.islabelledtree		<- 'true'
+	beast2.spec$starttree.id					<- paste('Starting',beast2.spec$tree.id,sep='')	
+	beast2.spec$starttree.newick				<- NA
+	beast2.spec$starttree.spec					<- 'beast.util.TreeParser'	
+	beast2.spec$rndstarttree.taxonset			<- beast2.spec$tree.taxonset
+	beast2.spec$rndstarttree.spec				<- 'beast.evolution.tree.RandomTree'
 	beast2.spec
-}
+} 
 ######################################################################################
 hivc.beast2.get.xml<- function(	bxml.template, seq.PROT.RT, df, beast2.spec, ph=NULL, verbose=1)
 {	
@@ -1293,7 +1443,12 @@ hivc.beast2.get.xml<- function(	bxml.template, seq.PROT.RT, df, beast2.spec, ph=
 	if(beast2.spec$treemodel=="BirthDeathSkylineModel")
 		dummy	<- hivc.beast2.add.tree(bxml, beast2.spec, verbose=verbose)
 	if(beast2.spec$treemodel=="SampledAncestorSkylineModel")
-		dummy	<- hivc.beast2.add.satree(bxml, beast2.spec, verbose=verbose)	
+		dummy	<- hivc.beast2.add.satree(bxml, beast2.spec, verbose=verbose)
+	#	add initial tree
+	if(is.na(beast2.spec$starttree.newick))
+		dummy	<- hivc.beast2.add.startingtree.random(bxml, beast2.spec, verbose=verbose)
+	if(!is.na(beast2.spec$starttree.newick))
+		dummy	<- hivc.beast2.add.startingtree.newick(bxml, beast2.spec, verbose=verbose)	
 	#	add tree model
 	if(beast2.spec$treemodel=="BirthDeathSkylineModel")
 		dummy	<- hivc.beast2.add.treemodel.bdsky(bxml, beast2.spec, verbose=verbose)
@@ -1332,7 +1487,15 @@ hivc.beast2.get.xml<- function(	bxml.template, seq.PROT.RT, df, beast2.spec, ph=
 	if(verbose)	cat(paste("\nchanged chain length to", beast2.spec$mcmc.length))
 	bxml.onodes	<- getNodeSet(bxml, "//*[@logEvery]")
 	dummy		<- sapply(seq_along(bxml.onodes), function(i){		xmlAttrs(bxml.onodes[[i]])["logEvery"]<- sprintf("%d",round(beast2.spec$mcmc.length/1e4))		})
-	if(verbose)	cat(paste("\nchanged logEvery to", round(beast2.spec$mcmc.length/1e4)))
+	if(verbose)	cat(paste("\nchanged logEvery to", round(beast2.spec$mcmc.length/1e4)))	
+	#	add logs for height of tip stem
+	if(verbose)	cat(paste("\nadd log for height of tip stems=", beast2.spec$tip.log.stem))
+	if(beast2.spec$tip.log.stem)
+		dummy	<- hivc.beast2.add.tiplogstem(bxml, beast2.spec, verbose=verbose)
+	#	add cluster taxonsets
+	if(verbose)	cat(paste("\nadd taxonsets for clusters=", beast2.spec$cluster.monophyletic))
+	if(beast2.spec$cluster.monophyletic)
+		dummy	<- hivc.beast2.add.cluster.taxonsets(bxml, df, beast2.spec, verbose=verbose)
 	
 	bxml	
 }
