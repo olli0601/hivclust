@@ -2677,13 +2677,13 @@ project.hivc.clustering.compare.NoDR.to.NoRecombNoDR.to.NoShort<- function()
 {	
 	verbose		<- 1
 	resume		<- 1
-	patient.n	<- 15700; 	thresh.brl<- 0.096; 	thresh.bs<- 0.8
+	patient.n	<- 15700; 	thresh.brl<- 0.096; 	thresh.bs<- 0.8;	opt.brl<- "dist.brl.casc" 
 	indircov	<- paste(DATA,"derived",sep='/')
-	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"									
+	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	indir		<- paste(DATA,"tmp",sep='/')
 	#
 	# get clusters for No Drug resistance mutations, single linkage criterion		
-	#		
-	indir			<- paste(DATA,"tmp",sep='/')		
+	#					
 	infile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs500"			
 	insignat		<- "Thu_Aug_01_17/05/23_2013"
 	#
@@ -2732,6 +2732,10 @@ project.hivc.clustering.compare.NoDR.to.NoRecombNoDR.to.NoShort<- function()
 	argv			<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl="dist.brl.casc", thresh.brl, thresh.bs, resume=resume)				 
 	argv			<<- unlist(strsplit(argv,' '))
 	nsh.clu			<- hivc.prog.get.clustering()		
+	#
+	argv			<<- hivc.cmd.clustering.msm(indir, infile, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=resume)
+	argv			<<- unlist(strsplit(argv,' '))		
+	nsh.msm			<- hivc.prog.get.clustering.MSM()		
 	
 	seq.n	<- c( Ntip( ndr.clu.pre$ph ), Ntip( nrc.clu.pre$ph ), Ntip( nsh.clu.pre$ph ))
 	
@@ -3415,10 +3419,33 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 ######################################################################################
 project.hivc.beast<- function(dir.name= DATA)
 {
+	stop()
 	require(ape)
 	require(data.table)
 	require(RColorBrewer)
 	require(XML)
+	if(1)
+	{
+		indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
+		infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
+		insignat				<- "Tue_Aug_26_09:13:47_2013"
+		infilexml.opt			<- "rsu815"
+		infilexml.template		<- "sasky_sdr06"
+		
+		argv		<<- hivc.cmd.beast2.getclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, burnin=5e6, outdir=indir, outsignat=insignat, prog= PR.BEAST2CLUTREES, verbose=1, resume=1)
+		argv		<<- unlist(strsplit(argv,' '))
+		hivc.prog.BEAST2.get.cluster.trees()		
+
+		argv		<<- hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, outdir=indir, outsignat=insignat, prog= PR.BEAST2CLUPOSTERIOR, verbose=1, resume=0)
+		argv		<<- unlist(strsplit(argv,' '))
+		hivc.prog.BEAST2.process.cluster.trees()
+
+		indircov	<- paste(DATA,"derived",sep='/')	
+		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"					
+		argv		<<- hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, outdir=indir, outsignat=insignat, prog=PR.BEAST2.PLOTCLUTREES, resume=1, verbose=1)
+		argv		<<- unlist(strsplit(argv,' '))
+		hivc.prog.BEAST2.plot.cluster.trees()
+	}
 	if(0)	#get BEAST nexus file for seroconverters
 	{		
 		indir			<- paste(DATA,"tmp",sep='/')		
@@ -3516,7 +3543,7 @@ project.ukca.TPTN.bootstrapvalues<- function(dir.name= DATA)
 	plot.file			<- paste(indir,'/',infile,"_preclust_distbs_",gsub('/',':',insignat),".pdf", sep='')
 	ph					<- read.tree(file)
 	ph$node.label		<- as.numeric(ph$node.label)/100
-	ph$nodel.label[1]	<- 0
+	ph$node.label[1]	<- 0
 	ph$node.label[3]	<- 0.01		#little phylo cleaning hack ;-)
 	ph.mrca				<- mrca(ph)
 	dist.brl.casc		<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
@@ -5797,6 +5824,627 @@ hivc.prog.BEAST.evalpoolrun<- function()
 	}
 }
 ######################################################################################
+hivc.prog.BEAST2.plot.cluster.trees<- function()
+{
+	require(ape)
+	require(data.table)
+	require(hivclust)
+	#	program options
+	opt.topo.posterior.cprob	<- 0.75
+	beastlabel.idx.clu			<- 1
+	beastlabel.idx.hivn			<- 2
+	beastlabel.idx.hivd			<- 3
+	beastlabel.idx.hivs			<- 4
+	beastlabel.idx.samplecode	<- 6
+	beastlabel.idx.rate			<- NA
+	#	input files
+	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
+	infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
+	insignat				<- "Tue_Aug_26_09:13:47_2013"
+	infilexml.opt			<- "rsu815"
+	infilexml.template		<- "sasky_sdr06"
+	indircov				<- paste(DATA,"derived",sep='/')	
+	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"			
+	#
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]	
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,14),
+									infilexml.opt= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.opt<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.template<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									indircov= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indircov<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									infilecov= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilecov<- tmp[1]		
+		#
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									outsignat= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outsignat<- tmp[1]				
+		#		
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]		
+	}
+	#
+	file.cov				<- paste(indircov,"/",infilecov,".R",sep='')
+	file.viro				<- paste(indircov,"/ATHENA_2013_03_Viro.R",sep='/')
+	file.immu				<- paste(indircov,"/ATHENA_2013_03_Immu.R",sep='/')
+	file.treatment			<- paste(indircov,"/ATHENA_2013_03_Regimens.R",sep='/')
+	outdir					<- indir
+	outfile					<- paste(infile,infilexml.template,infilexml.opt, sep='_')
+	outsignat				<- insignat	
+	#
+	if(verbose)
+	{
+		print(resume)
+		print(indir)		
+		print(infile)
+		print(insignat)
+		print(infilexml.opt)
+		print(infilexml.template)
+		print(indircov)
+		print(infilecov)
+		print(outdir)
+		print(outfile)
+		print(outsignat)
+	}
+	#	load patient demographic data	(loads df.all)
+	load(file.cov)		
+	#	load patient RNA
+	load(file.viro)
+	df.viro				<- df				
+	#	load patient CD4				
+	load(file.immu)
+	df.immu				<- df
+	#	load patient regimen
+	load(file.treatment)
+	df.treatment		<- df		
+	#	collect files containing dated cluster phylogenies
+	files		<- list.files(indir)
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('_cluposterior_[0-9]+',x) & grepl('R$',x) ) ]		
+	if(!length(files))	stop('no input files matching criteria')
+	tmp			<- regmatches( files, regexpr('_cluposterior_[0-9]+',files)) 
+	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+	file.info	<- data.table(file=files, cluster=cluster)
+	setkey(file.info, cluster)
+	#
+	#	for each cluster
+	#	plot dated cluster phylogenies that together have 'opt.topo.posterior.cprob' posterior prob with clinical data points 
+	#
+	dummy<- lapply(seq_len(nrow(file.info)), function(i)
+			{
+				#	load dated cluster phylogenies
+				file			<- paste(indir, file.info[i,file], sep='/')
+				cat(paste('\nload file',file))
+				tmp				<- load(file)
+				#	start: remove in updated saves		
+				#set(mph.node.ctime,NULL,'q',round(mph.node.ctime[,q],d=3))
+				#mph.node.ctime	<- mph.node.ctime[,	{
+				#			tmp<- setdiff(seq_along(q),which(duplicated(q))-1)
+				#			if(length(tmp)==1)	
+				#				ans	<- list(cluster= rep(cluster[tmp],2), q=q[tmp]+c(-0.001,0), cdf=c(0.,1.))
+				#			else
+				#				ans	<- list(cluster= cluster[tmp], q=q[tmp], cdf=cdf[tmp])
+				#			ans
+				#		},by=c('equal.to','node')]
+				#	end:remove in updated saves	
+				#	get pdf from cdf of node calendar times
+				mph.node.ctime	<- mph.node.ctime[, list(cluster=cluster, q=q, pdf=c(0,diff(cdf)/diff(q)), cdf=cdf),by=c('equal.to','node')]
+				#
+				topo.info		<- lapply( strsplit(names(ph.consensus),'_'), function(x)		data.table(cluster=x[1], mph.i=x[2], prob=x[3])	)
+				topo.info		<- do.call('rbind',topo.info)
+				topo.info[,ph.i:=seq_along(ph.consensus)]
+				set(topo.info, NULL, 'cluster', as.numeric( regmatches(topo.info[, cluster], regexpr('[0-9]+',topo.info[, cluster])) ))
+				set(topo.info, NULL, 'mph.i', as.numeric( regmatches(topo.info[, mph.i], regexpr('[0-9]+',topo.info[, mph.i])) ))
+				set(topo.info, NULL, 'prob', as.numeric( regmatches(topo.info[, prob], regexpr('[0-1].?[0-9]*',topo.info[, prob])) ))
+				topo.info[, sort:= -prob]
+				setkey(topo.info, sort)		
+				topo.info[, cprob:= cumsum( topo.info[, prob] )]						
+				#	select a subset of topologies for plotting
+				if(nrow(topo.info)>5)
+					topo.info	<- rbind( subset( topo.info, cprob<opt.topo.posterior.cprob ), topo.info[which(cprob>=opt.topo.posterior.cprob)[1], ])
+				#	plot all topologies into a single pdf
+				file				<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_cluposterior+clinical_',topo.info[1,cluster],".pdf",sep='')
+				cat(paste('\nplot dated cluster phylogenies with clinical data to file',file))
+				pdf(file=file, w=5, h=5)				
+				dummy		<- sapply( seq_len(nrow(topo.info)), function(topo.i)
+						{
+							#
+							#	for each dated cluster phylogeny
+							#
+							cat(paste('\nplot topology',topo.i))
+							cluphy				<- ph.consensus[[ topo.info[topo.i, ph.i] ]]
+							cluphy.prob			<- topo.info[topo.i, prob]
+							cluphy.info			<- hivc.treeannotator.tiplabel2df(cluphy, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+							cluphy.info[, tip:=match( cluphy.info[,BEASTlabel],cluphy$tip.label )]
+							cluphy$tip.label	<- cluphy.info[, FASTASampleCode]							
+							cluphy.node.ctime	<- subset(mph.node.ctime, equal.to==topo.info[topo.i, mph.i] & node!=0)
+							cluphy.root.ctime	<- cluphy.info[1,TipT]-node.depth.edgelength(cluphy)[1] 							
+							cluphy.tip.ctime	<- cluphy.info[, TipT]											
+							dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.prob, cluphy.root.ctime, cluphy.tip.ctime, df.node.ctime=copy(cluphy.node.ctime), df.rates=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20)					
+						})
+				dev.off()
+			})
+}
+######################################################################################
+hivc.prog.BEAST2.process.cluster.trees<- function()
+{
+	require(ape)
+	require(data.table)
+	require(hivclust)
+	#	program options
+	resume						<- TRUE
+	verbose						<- TRUE
+	beastlabel.idx.clu			<- 1
+	beastlabel.idx.hivn			<- 2
+	beastlabel.idx.hivd			<- 3
+	beastlabel.idx.hivs			<- 4
+	beastlabel.idx.samplecode	<- 6
+	beastlabel.idx.rate			<- NA	
+	#	input files		
+	indir					<- paste(DATA,"tmp",sep='/')
+	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
+	infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
+	insignat				<- "Tue_Aug_26_09:13:47_2013"
+	infilexml.opt			<- "rsu815"
+	infilexml.template		<- "sasky_sdr06"
+	outdir					<- indir
+	outfile					<- paste(infile,infilexml.template,infilexml.opt, sep='_')
+	outsignat				<- insignat
+	#
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]	
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,14),
+									infilexml.opt= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.opt<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.template<- tmp[1]
+		#
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									outsignat= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outsignat<- tmp[1]				
+		#		
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]		
+	}	
+	if(verbose)
+	{
+		print(resume)
+		print(indir)		
+		print(infile)
+		print(insignat)
+		print(infilexml.opt)
+		print(infilexml.template)
+		print(outdir)
+		print(outfile)
+		print(outsignat)
+	}
+	#
+	files		<- list.files(indir)
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('_clutrees_[0-9]+',x) & grepl('R$',x) ) ]		
+	if(!length(files))	stop('no input files matching criteria')
+	tmp			<- regmatches( files, regexpr('_clutrees_[0-9]+',files)) 
+	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+	file.info	<- data.table(file=files, cluster=cluster)
+	setkey(file.info, cluster)
+	#
+	dummy		<- lapply(seq_len(nrow(file.info)), function(i)
+			{			
+				if(resume)
+				{
+					file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_cluposterior_',clu,'.R',sep='')
+					options(show.error.messages = FALSE)		
+					readAttempt		<- try(suppressWarnings(load(file)))
+					if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))					
+					options(show.error.messages = TRUE)							
+				}
+				if(!resume || inherits(readAttempt, "try-error"))
+				{
+					clu				<- file.info[i,cluster]
+					file			<- paste(indir,'/',file.info[i,file],sep='')
+					cat(paste("\nload file",file))
+					options(show.error.messages = FALSE)		
+					readAttempt		<- try(suppressWarnings(load(file)))
+					if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))
+					if(inherits(readAttempt, "try-error"))	stop(paste("\ncould not read file",file))
+					options(show.error.messages = TRUE)		
+					#
+					#	for each cluster, extract indices of sequentially distinct topologies and their frequency
+					#
+					cat(paste('\nprocess cluster=',clu,'with #tips=',Ntip(mph.clu[[1]])))
+					tmp				<- hivc.beast2.extract.distinct.topologies(mph.clu)
+					mph.clu.dtopo	<- tmp$dtopo
+					mph.clu.itopo	<- tmp$itopo					
+					suppressWarnings( mph.clu.dtopo[, cluster:= clu ] )
+					suppressWarnings( mph.clu.itopo[, cluster:= clu ] )
+					setkey(mph.clu.dtopo, freq)
+					#
+					#for each topology, check if tips are in same order and if edges are in same order
+					#if not the latter, see https://www.mail-archive.com/r-sig-phylo@r-project.org/msg02997.html
+					#
+					cat(paste('\ncheck tip and edge order'))
+					mph.topo.info	<- mph.clu.itopo[,	{
+								tmp				<- mph.clu[[ mph.i[1] ]]$tip.label
+								tmp				<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$tip.label) )
+								tips.in.order	<- all(tmp)
+								tmp				<- mph.clu[[ mph.i[1] ]]$edge[,2]
+								tmp				<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$edge[,2]) )
+								edges.in.order	<- all(tmp)
+								tmp				<- mph.clu[[ mph.i[1] ]]$edge[,1]
+								tmp				<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$edge[,1]) )
+								nodes.in.order	<- all(tmp)								
+								list(tips.in.order= tips.in.order, edges.in.order=edges.in.order, nodes.in.order=nodes.in.order)
+							}, by='equal.to']
+					if( mph.topo.info[, any(!tips.in.order)] ) stop('unexpected: tips not in order')
+					if( mph.topo.info[, any(!nodes.in.order)] ) stop('unexpected: nodes not in order')
+					if( mph.topo.info[, any(!edges.in.order)] ) stop('unexpected: edges not in order')
+					#
+					#	tips and edges in same order, so very easy to summarize node heights of each topology
+					#
+					cat(paste('\ncalculate node calendar times'))
+					mph.info		<- hivc.treeannotator.tiplabel2df(mph.clu[[1]], beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+					mph.info[, tip:=match( mph.info[, BEASTlabel], mph.clu[[1]]$tip.label)]
+					if(1)
+					{
+						tmp	<- node.depth.edgelength( mph.clu[[ mph.clu.dtopo[1, mph.i] ]] )
+						tmp	<- mph.info[1,TipT]-tmp[1] + tmp
+						tmp	<- tmp[seq_len(nrow(mph.info))] - mph.info[,TipT]
+						if( any( abs(tmp)>EPS ) ) warning('branch lengths do not add up to tip times')
+					}
+					mph.node.ctime	<- mph.clu.itopo[,	{					
+															node	<- c(seq.int(from=Ntip(mph.clu[[1]])+1, to=Nnode(mph.clu[[1]], internal=FALSE)),0)
+															tmp		<- sapply( mph.i, function(i)
+																	{
+																		depth	<- c( node.depth.edgelength( mph.clu[[ i ]] ), -mph.clu[[ i ]]$root.edge )
+																		tmp		<- which.max(depth)
+																		depth	<- depth-depth[tmp]+subset(mph.info, tip==tmp)[, TipT]
+																		depth[ seq.int(from=Ntip(mph.clu[[ i ]])+1, to=length(depth)) ]																		
+																	})
+															tmp		<- apply(tmp, 1, quantile, probs=seq(0,1,by=0.1))		
+															list( q= round(as.numeric(tmp),d=3), cdf=seq(0,1,by=0.1), node=rep(node, each=11) )					
+														}, by='equal.to']													
+					mph.node.ctime	<- mph.node.ctime[,	{
+															tmp<- setdiff(seq_along(q),which(duplicated(q))-1)
+															if(tmp[1]!=1)
+																tmp[1]<- 1
+															if(length(tmp)==1)	
+																ans	<- list(cluster= rep(cluster[tmp],2), q=q[tmp]+c(-0.001,0), cdf=c(0.,1.))
+															else
+																ans	<- list(cluster= cluster[tmp], q=q[tmp], cdf=cdf[tmp])
+															ans
+														},by=c('equal.to','node')]
+					mph.node.ctime		<- mph.node.ctime[, {
+																tmp<- c(0,diff(cdf)/diff(q))
+																list(cluster=cluster, q=q, pdf=tmp/sum(tmp), cdf=cdf)
+															},by=c('equal.to','node')]					
+					mph.node.ctime[, cluster:=clu]
+					#
+					#	tips and edges in same order, so very easy to summarize brls of each topology
+					#
+					cat(paste('\ncalculate brl.cdf'))
+					mph.brl.cdf		<- mph.clu.itopo[,	{					
+															edge.of	<- c(mph.clu[[ mph.i[1] ]]$edge[,2], 0)
+															tmp		<- sapply( mph.i, function(i)	c( mph.clu[[ i ]]$edge.length, mph.clu[[ i ]]$root.edge)  )
+															tmp		<- apply(tmp, 1, quantile, probs=seq(0,1,by=0.1))		
+															list( q= round(as.numeric(tmp),d=4), cdf=seq(0,1,by=0.1), edge.of=rep(edge.of, each=11) )					
+														}, by='equal.to']	
+					mph.brl.cdf		<- mph.brl.cdf[,	{
+															tmp<- setdiff(seq_along(q),which(duplicated(q))-1)
+															if(tmp[1]!=1)
+																tmp[1]	<- 1
+															if(length(tmp)==1)	
+																ans		<- list(cluster= rep(cluster[tmp],2), q=q[tmp]+c(-0.001,0), cdf=c(0.,1.))
+															else
+																ans		<- list(cluster= cluster[tmp], q=q[tmp], cdf=cdf[tmp])
+															ans
+														},by=c('equal.to','edge.of')]
+					mph.brl.cdf		<- mph.brl.cdf[, {
+														tmp	<- c(0,diff(cdf)/diff(q))
+														list(cluster=cluster, q=q, pdf=tmp/sum(tmp), cdf=cdf)	
+													},by=c('equal.to','edge.of')]							
+					mph.brl.cdf[, cluster:= clu]
+					#
+					#	tips and edges in same order, so very easy to compute the prob that a tip is an internal node
+					#
+					cat(paste('\ncalculate SA.cnt'))
+					mph.SA.cnt		<- mph.clu.itopo[,	{
+								mph.topo.ntip	<- Ntip(mph.clu[[ mph.i[1] ]])
+								mph.topo.tipn	<- mph.clu[[ mph.i[1] ]]$tip.label
+								mph.topo.itip	<- which( mph.clu[[ mph.i[1] ]]$edge[,2] <= mph.topo.ntip )
+								tmp				<- sapply( mph.i, function(i)	mph.clu[[ i ]]$edge.length[mph.topo.itip]  )
+								list(tip=mph.topo.tipn, SA.freq= apply(tmp, 1, function(x) length(which(x==0.))), n= length(mph.i) )																						
+							}, by='equal.to']
+					mph.SA.cnt[, cluster:= clu]
+					#
+					#	generate consensus tree with mean brls
+					#
+					mph.brl.m		<- mph.clu.itopo[,	{					
+															edge.of	<- c(mph.clu[[ mph.i[1] ]]$edge[,2], 0)
+															tmp		<- sapply( mph.i, function(i)	c( mph.clu[[ i ]]$edge.length, mph.clu[[ i ]]$root.edge)  )
+															tmp		<- apply(tmp, 1, median)		
+															list( m= round(as.numeric(tmp),d=4), edge.of=edge.of )					
+														}, by='equal.to']		
+					ph.consensus	<- lapply(seq_len(nrow(mph.clu.dtopo)), function(j)
+							{
+								cluphy					<- mph.clu[[ mph.clu.dtopo[j, mph.i] ]]
+								median.edge.length		<- subset( mph.brl.m, equal.to==mph.clu.dtopo[j, mph.i] )
+								if(!all( median.edge.length[-nrow(median.edge.length), edge.of]==cluphy$edge[,2] ))	stop('unexpected edge order')
+								cluphy$edge.length		<- median.edge.length[-nrow(median.edge.length), m]
+								cluphy$root.edge		<- median.edge.length[nrow(median.edge.length), m]
+								cluphy
+							})					 
+					names(ph.consensus)	<- paste('cluster=',clu,'_mph.i=', mph.clu.dtopo[,mph.i],'_prob=',mph.clu.dtopo[,dens], sep='')
+					#
+					#	save
+					#
+					file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_cluposterior_',clu,'.R',sep='')					
+					cat(paste("\nsave ph.consensus, mph.SA.cnt, mph.brl.cdf, mph.node.ctime, mph.clu.dtopo, mph.clu.itopo to file",file))
+					save(ph.consensus, mph.SA.cnt, mph.brl.cdf, mph.clu.dtopo, mph.clu.itopo, mph.node.ctime, file=file)
+				}								
+			})
+}
+######################################################################################
+hivc.prog.BEAST2.get.cluster.trees<- function()
+{
+	require(ape)
+	require(data.table)
+	require(hivclust)
+	#	program options
+	opt.burnin					<- 5e6		
+	opt.save.cluster.nexfile	<- FALSE
+	resume						<- TRUE
+	verbose						<- TRUE
+	beastlabel.idx.clu			<- 1
+	beastlabel.idx.hivn			<- 2
+	beastlabel.idx.hivd			<- 3
+	beastlabel.idx.hivs			<- 4
+	beastlabel.idx.samplecode	<- 6
+	beastlabel.idx.rate			<- NA
+	#	input files		
+	indir					<- paste(DATA,"tmp",sep='/')
+	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
+	infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
+	insignat				<- "Tue_Aug_26_09:13:47_2013"
+	infilexml.opt			<- "rsu815"
+	infilexml.template		<- "sasky_sdr06"
+	outdir					<- indir
+	outfile					<- paste(infile,infilexml.template,infilexml.opt, sep='_')
+	outsignat				<- insignat
+	#
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]	
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,14),
+									infilexml.opt= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.opt<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.template<- tmp[1]
+		#
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									outsignat= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outsignat<- tmp[1]				
+		#		
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									burnin= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) opt.burnin<- tmp[1]
+		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]		
+	}	
+	if(verbose)
+	{
+		print(opt.burnin)		
+		print(opt.save.cluster.nexfile)
+		print(resume)
+		print(beastlabel.idx.clu)
+		print(beastlabel.idx.hivn)
+		print(beastlabel.idx.hivd)
+		print(beastlabel.idx.hivs)
+		print(beastlabel.idx.samplecode)
+		print(beastlabel.idx.rate)
+		print(indir)		
+		print(infile)
+		print(insignat)
+		print(infilexml.opt)
+		print(infilexml.template)
+		print(outdir)
+		print(outfile)
+		print(outsignat)
+	}
+	# read log files and return mean TMRCA and file specific TMRCA
+	files		<- list.files(indir)
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('log$',x) ) ]
+	files		<- paste(indir, files, sep='/')				
+	df.th		<- hivc.beast2out.get.log.evolrate(files, opt.burnin=opt.burnin)
+	
+	#	read tree files	- this takes a while
+	#	do this one by one as reading all in one go is too mem intensive
+	files		<- list.files(indir)
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('trees$',x) ) ]
+	files		<- paste(indir, files, sep='/')				
+	dummy		<- lapply(seq_along(files), function(i)
+			{
+				file					<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','trees_',i,'.R',sep='')
+				if(resume)
+				{
+					options(show.error.messages = FALSE)		
+					readAttempt		<- try(suppressWarnings(load(file)))
+					if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))					
+					options(show.error.messages = TRUE)							
+				}
+				if(!resume || inherits(readAttempt, "try-error"))
+				{
+					opt.rescale.edge.length	<- df.th[i, ucldMean.mean / ucldMean.mean.i]
+					cat(paste("\nread file ",files[i]))
+					mph						<- hivc.beast2out.read.trees(files[i], opt.rescale.edge.length=opt.rescale.edge.length, opt.burnin=opt.burnin)					
+					cat(paste('\nsave mph to file=',file))
+					save(mph, file=file)					
+				}
+				mph						<- NULL
+				gc()				
+			})
+	
+	#	for each cluster, extract monophyletic subtrees corresponding to clusters
+	dummy		<- lapply(seq_along(files), function(i)
+			{
+				if(resume)
+				{
+					tmp			<- list.files(outdir)
+					tmp			<- tmp[ sapply(tmp, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',outsignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl(paste('_trees_',i,'_clu_[0-9]+',sep=''),x) & grepl('.R$',x) ) ]
+					tmp			<- length(tmp)
+				}
+				if(!resume || !tmp )
+				{
+					file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','trees_',i,'.R',sep='')
+					cat(paste("\nload file",file))
+					options(show.error.messages = FALSE)		
+					readAttempt		<- try(suppressWarnings(load(file)))
+					if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))
+					if(inherits(readAttempt, "try-error"))	stop(paste("\ncould not read file",file))
+					options(show.error.messages = TRUE)		
+					mph.info		<- hivc.treeannotator.tiplabel2df(mph[[1]], beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+					mph.by.clu		<- hivc.beast2out.extract.cluster.trees(mph, mph.info)
+					mph				<- NULL					
+					#for each cluster, produce R and possibly nexus tree file
+					dummy			<- lapply(seq_along(mph.by.clu), function(clu)
+							{
+								file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','trees_',i,'_clu_',names(mph.by.clu)[clu],'.R',sep='')
+								mph.clu	<- mph.by.clu[[clu]]
+								cat(paste("\nsave mph.clu to file",file))
+								save(mph.clu, file=file)
+								if(opt.save.cluster.nexfile)
+								{
+									file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','trees_',i,'_clu_',names(mph.by.clu)[clu],'.nex',sep='')
+									cat(paste("\nsave mph.clu to file",file))
+									write.nexus(mph.clu, file=file)					
+								}
+								
+							})
+					dummy			<- NULL
+					gc()	
+				}					
+			})
+	
+	#	pool overlapping cluster trees  
+	files		<- list.files(indir)
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('_trees_[0-9]+',x) & grepl('_clu_[0-9]+',x) & grepl('R$',x) ) ]
+	#
+	tmp			<- regexpr('_clu_[0-9]+',files)
+	if(any(tmp<0))	stop('unexpected _clu_ files')
+	tmp			<- regmatches( files, tmp) 
+	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+	tmp			<- regmatches( files, regexpr('_trees_[0-9]+',files)) 
+	run.id		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+	mphpc.info	<- data.table(file=files, cluster=cluster, run.id=run.id )
+	setkey(mphpc.info, cluster)
+	#
+	dummy	<- lapply( mphpc.info[, unique(cluster)], function(clu)
+			{
+				file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','clutrees_',clu,'.R',sep='')
+				if(resume)
+				{
+					options(show.error.messages = FALSE)		
+					readAttempt		<- try(suppressWarnings(load(file)))
+					if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))					
+					options(show.error.messages = TRUE)		
+				}
+				if(!resume || inherits(readAttempt, "try-error"))
+				{
+					mph.clu			<- hivc.beast2out.pool.cluster.trees( paste(indir, subset(mphpc.info, cluster==clu)[, file], sep='/') )					
+					cat(paste("\nsave mph.clu to file",file))
+					save(mph.clu, file=file)
+				}
+			})
+}
+######################################################################################
 hivc.prog.BEAST2.generate.xml<- function()
 {	
 	require(XML)
@@ -6133,8 +6781,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
 		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",5)				
 		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
-		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )
-		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )		 
 		beast2.spec$pool.cnts.requested				<- c(NA, 35, 70, 50, NA)				
 	}
 	else if(grepl("rsu8",infilexml.opt))
@@ -6148,8 +6795,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
 		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",5)				
 		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
-		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )
-		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )		 
 		beast2.spec$pool.cnts.requested				<- c(NA, 35, 70, 50, NA)				
 	}
 	else if(grepl("rse8",infilexml.opt))
@@ -6163,10 +6809,25 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
 		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",5)				
 		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
-		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )
-		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt))) 
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )		 
 		beast2.spec$pool.cnts.requested				<- c(NA, 35, 70, 50, NA)				
 	}
+	else if(grepl("alsu",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter, cluster.monophyletic=TRUE, cluster.log=FALSE, tip.log.stem=FALSE)
+		beast2.spec$pool.fNegT						<- 0
+		beast2.spec$pool.ntip						<- 150		
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2, 0.2)		
+		beast2.spec$bdsky.sprop.prior				<- c("Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0")
+		beast2.spec$bdsky.R0.prior					<- c("Gamma/1.5/1.5/0", rep(paste("Gamma/2.3/0.15/0.7",sep=''),4))
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
+		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",5)				
+		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )
+		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt)))
+		beast2.spec$pool.cnts.requested				<- c(NA, max(50,beast2.spec$pool.cnts.requested), 70, NA, NA)				
+	}	
 	else stop("unknown infilexml.opt")
 	#		 
 	#
@@ -6900,15 +7561,23 @@ hivc.pipeline.BEAST<- function()
 	}
 	if(1)		#generate BEAST2 BDSKYline xml file
 	{
-		indir				<- paste(DATA,"tmp",sep='/')		
-		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
-		insignat			<- "Thu_Aug_01_17/05/23_2013"
+		indir				<- paste(DATA,"tmp",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
-		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
-		infiletree			<- paste(infile,"examlbs100",sep="_")
-		infilexml			<- paste(infile,'_',"seroneg",sep='')
 		outdir				<- indir
-		outsignat			<- "Tue_Aug_26_09/13/47_2013"		
+		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+
+		#infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		#insignat			<- "Thu_Aug_01_17/05/23_2013"
+		#infiletree			<- paste(infile,"examlbs100",sep="_")
+		infilexml			<- paste(infile,'_',"seroneg",sep='')		
+		outsignat			<- "Tue_Aug_26_09/13/47_2013"
+		
+		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree			<- paste(infile,"examlbs500",sep="_")
+		insignat			<- "Wed_Dec_18_11:37:00_2013"
+		infilexml			<- paste(infile,'_',"all",sep='')
+		outsignat			<- insignat
+		
 		opt.brl				<- "dist.brl.casc" 
 		thresh.brl			<- 0.096
 		thresh.bs			<- 0.8
@@ -6954,6 +7623,7 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "rse815"
 		infilexml.opt		<- "rse835"
 		infilexml.opt		<- "rsu815"
+		infilexml.opt		<- "alsu50"
 		#infilexml.opt		<- "rsu835"		
 		#infilexml.opt		<- "ori40"
 		#infilexml.opt		<- "ori50"

@@ -818,6 +818,185 @@ hivc.beast2.poolclusters.mincnts<- function(df, beast2.spec, verbose=1)
 	list(pool.df=pool.df, pool.ntip=pool.ntip)
 }
 ######################################################################################
+hivc.beast2.extract.distinct.topologies<- function(mph.clu)					
+{
+	#compute if topology between retained mph.clu's is identical (branch lengths may differ)
+	tmp				<- sapply( seq_along(mph.clu)[-1], function(mph.i) all.equal(mph.clu[[mph.i-1]], mph.clu[[mph.i]], use.edge.length=FALSE, use.tip.label=TRUE, index.return=FALSE ) )
+	tmp				<- data.table( mph.i= seq_along(mph.clu)[-1], equal.to.previous= tmp )				
+	#	dtopo -> distinct topologies
+	mph.clu.dtopo	<- data.table( mph.i= c(1, subset(tmp, !equal.to.previous)[, mph.i]), freq= as.vector(table(cumsum(!c(TRUE,tmp[,equal.to.previous])))), collapsed=FALSE	)					
+	#	itopo -> identical topologies 
+	mph.clu.itopo	<- cbind(tmp, equal.to= 1+cumsum(!tmp[,equal.to.previous]))
+	mph.clu.itopo	<- rbind( data.table(mph.i=1, equal.to=1), subset(mph.clu.itopo, select=c(mph.i, equal.to)) )
+	#	select by index
+	set(mph.clu.itopo, NULL, 'equal.to', mph.clu.dtopo[mph.clu.itopo[,equal.to],][,mph.i])
+	#	now select by key				
+	setkey(mph.clu.dtopo, mph.i)
+	#for each sequentially different topology, check if subsequent ones are identical and if yes collapse					
+	while(mph.clu.dtopo[,any(!collapsed)])
+	{
+		cat(paste('\nprogress: number of seq distinct topologies =',nrow(mph.clu.dtopo)))
+		mph.indexrow	<- mph.clu.dtopo[, which(!collapsed)][1]
+		if(mph.indexrow<nrow(mph.clu.dtopo))
+		{
+			mph.index		<- mph.clu.dtopo[mph.indexrow, mph.i]
+			mph.is			<- mph.clu.dtopo[seq.int(mph.indexrow+1,nrow(mph.clu.dtopo)), ][,mph.i]						
+			tmp				<- sapply( mph.is, function(mph.i) all.equal(mph.clu[[mph.index]], mph.clu[[mph.i]], use.edge.length=FALSE, use.tip.label=TRUE, index.return=FALSE ) )
+			topo.duplicates	<- data.table( mph.index= mph.index, mph.i=mph.is, equal.to.index= tmp )
+			topo.duplicates	<- merge( mph.clu.dtopo, subset(topo.duplicates, equal.to.index), by='mph.i' )
+			if(nrow(topo.duplicates))
+			{
+				tmp				<- topo.duplicates[, list(index=seq_len(freq)), by='mph.i']
+				set(mph.clu.itopo, as.integer( tmp[, mph.i+index-1] ), 'equal.to', mph.index)
+				set(mph.clu.dtopo, mph.indexrow, 'freq', mph.clu.dtopo[mph.indexrow, freq] + topo.duplicates[, sum(freq)])							
+				collapsed.i		<- setdiff(mph.clu.dtopo[,mph.i], topo.duplicates[,mph.i])
+				mph.clu.dtopo	<- mph.clu.dtopo[J(collapsed.i),]	
+			}							
+		}
+		set(mph.clu.dtopo, mph.indexrow, 'collapsed', TRUE)
+	}
+	if( mph.clu.dtopo[, sum(freq)]!=length(mph.clu) )	stop('unexpected freq in mph.clu.dtopo')
+	if( !setequal(mph.clu.dtopo[, mph.i], mph.clu.itopo[, unique(equal.to)]) )  stop('unexpected mph.i difference between mph.clu.dtopo and mph.clu.itopo')
+	cat(paste('\nnumber of distinct topologies in mph.clu.dtopo=',nrow(mph.clu.dtopo)))
+	cat(paste('\nnumber of distinct topologies in mph.clu.itopo=',length(unique(mph.clu.itopo[, equal.to]))))
+	
+	mph.clu.dtopo	<- subset(mph.clu.dtopo, select=c(mph.i, freq))	
+	mph.clu.dtopo[, dens:= round(mph.clu.dtopo[, freq]/length(mph.clu),d=3) ]	
+	mph.clu.dtopo[, topo.n:= nrow(mph.clu.dtopo) ]
+	mph.clu.dtopo[, tip.n:= Ntip(mph.clu[[1]]) ]			
+	#	creates warnings because list(DT) creates a copy of the data.table
+	list(dtopo= mph.clu.dtopo, itopo=mph.clu.itopo)
+}
+######################################################################################
+hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatment, ph, ph.prob, ph.root.ctime, ph.tip.ctime, df.node.ctime=NULL, df.rates=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20)
+{
+	require(RColorBrewer)
+	if(class(file)=="character")
+		pdf(file, width=pdf.width, height=pdf.height)
+	par(mar=c(0.2,0.2,0.2,0.2))		
+	youngest.tip.ctime	<- max(ph.tip.ctime)
+	cols				<- brewer.pal(12,"Paired")
+	cols[1]				<- cols[8]			
+	#	get tip labels
+	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=c("CountryInfection","Trm","Sex","isAcute","lRNA.early","Patient","RegionHospital") )	
+	tmp					<- max( apply(ph.tiplabel$text, 2, function(x)  sum(xinch(strwidth(x, units="inches", cex=cex.tiplabel)))  ) )
+	ph.xlim				<- c(-3, ceiling(end.ctime)-ph.root.ctime+max(2.5,tmp))
+	ph.ylim				<- c(1,Ntip(ph)) + c(-1,1)							
+	plot(ph, x.lim=ph.xlim, y.lim= ph.ylim, show.tip.label=0, edge.color = 0, tip.color = 0)		
+	# add calendar timeline
+	hivc.treeannotator.plot.ctimeline(ph, youngest.tip.ctime, end.ctime, add.yinch= 0.5)
+	# add NegT and AnyPos_T1
+	ph.seronodeheight	<- hivc.treeannotator.sero.getnodeheight.range(ph, df.all, youngest.tip.ctime)
+	hivc.treeannotator.plot.seronodeheightrange(ph, ph.seronodeheight, add.yinch= -0.03, width.yinch= 0.03, width.yinch.past.AnyPos_T1= 0, col=cols[2])
+	# add lRNA timeline
+	ph.viro.timeline	<- hivc.treeannotator.get.viro.timeline(ph, df.all, df.viro, youngest.tip.ctime, df.treatment=df.treatment)
+	hivc.treeannotator.plot.viro.timeline(ph, ph.viro.timeline, viro.min= log10(300), width.yinch= 0.15, add.yinch= 0.005, col.bg= cols[c(5,10,12)], col.legend= cols[6], cex.txt= 0.2, lines.lwd=0.1)
+	# add BEAST posterior density of nodes where available
+	if(!is.null(df.node.ctime))
+		hivc.treeannotator.plot.node.ctime(df.node.ctime, ph.root.ctime, width.yinch=0.1, add.yinch=0.005, col.bg=cols[1] )
+	# add CD4 timeline
+	ph.immu.timeline	<- hivc.treeannotator.get.immu.timeline(ph, df.all, df.immu, youngest.tip.ctime, end.ctime=2013.3)
+	hivc.treeannotator.plot.immu.timeline(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2, lines.lwd=0.1)
+	# re-plot phylogeny
+	if(!is.null(ph$node.label))
+		ph$node.label	<- as.numeric(sapply( strsplit( ph$node.label, '_' ), function(x)	x[1] ))
+	edge.width			<- hivc.treeannotator.get.edgewidth(ph, df.rates, scale.edgewidth= 8)
+	hivc.phy.plotupon(ph, show.tip.label=0, show.node.label=ifelse(is.null(ph$node.label),0,1), cex=cex.nodelabel, edge.width=edge.width[,width])
+	# add root edge
+	lastPP <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+	lines(c(-ph$root.edge,0),rep(lastPP$yy[Ntip(ph)+1],2), lwd=edge.width[1,width])		
+	# add rate labels			
+	if(!is.null(df.rates))	
+		hivc.treeannotator.plot.rates(ph, edge.width, add.xinch=-0.1, cex.rate=0.3)
+	# add tip labels								
+	tmp					<- rep( max(node.depth.edgelength(ph)) - (youngest.tip.ctime-ceiling(end.ctime)), Ntip(ph))
+	hivc.clu.plot.tiplabels(seq_len(Ntip(ph)), ph.tiplabel$text, ph.tiplabel$col, xx=tmp, adj = c(-0.05, 0.5), cex=cex.tiplabel, add.xinch= 0.03, add.yinch= 0.02)
+	# add legend	
+	legend("topright", fill= cols[c(1,2,3,5,10,12)], legend=c("SA-BEAST2 TMRCA pdf", "interval [last HIV-, diagnosis]", "CD4 timeline", "VL timeline", "VL timeline under treatment", "VL timeline under treatment"), bty='n', border=NA, cex=cex.tiplabel)
+	legend("bottomright", legend=paste('prob=',ph.prob),bty='n', border=NA, cex=cex.tiplabel*2)
+	if(class(file)=="character")
+		dev.off()	
+}
+######################################################################################
+hivc.beast2out.pool.cluster.trees<- function(files)
+{
+	tmp				<- regmatches( files, regexpr('_trees_[0-9]+',files)) 
+	run				<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+	mph.clu.pool	<- NULL
+	for(i in seq_along(run))
+	{
+		options(show.error.messages = FALSE)		
+		readAttempt		<- try(suppressWarnings(load(files[i])))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",files[i]))
+		if(inherits(readAttempt, "try-error"))	stop(paste("\ncould not read file",files[i]))		
+		names(mph.clu)	<- paste('RUN_',run[i],'_',names(mph.clu),sep='')
+		mph.clu.pool	<- c(mph.clu.pool, mph.clu)			
+	}
+	mph.clu.pool			
+}
+######################################################################################
+hivc.beast2out.extract.cluster.trees<- function(mph, mph.info)
+{
+	mph.clusters		<- unique(mph.info[,cluster])		
+	mph.by.clu			<- lapply(mph.clusters, function(clu)
+			{
+				cat(paste('\nprocess cluster',clu))
+				mph.clu			<- lapply( seq_along(mph), function(mph.i)
+						{
+							clu.seq			<- subset(mph.info, cluster==clu)[,BEASTlabel]					
+							clu.mrca		<- hivc.clu.mrca(mph[[mph.i]], clu.seq)
+							extract.clade( mph[[mph.i]], clu.mrca$mrca, root.edge=clu.mrca$mrca.height, interactive=FALSE )					
+						})	
+				names(mph.clu)	<- names(mph)
+				mph.clu
+			})
+	names(mph.by.clu)	<- mph.clusters
+	mph.by.clu
+}
+######################################################################################
+hivc.beast2out.read.trees<- function(file, opt.rescale.edge.length= 1., opt.burnin=0)
+{
+	mph			<- read.nexus(file)
+	#	remove burn in 
+	tmp			<- regexpr('[0-9]+',names(mph))
+	if(any(tmp<0))	stop('unexpected nexus file without STATE iteration numbers')
+	mph.it		<- as.numeric( regmatches( names(mph), tmp) )
+	mph			<- lapply( which( mph.it>opt.burnin), function(j)	mph[[j]]	)
+	mph.it		<- mph.it[ mph.it > opt.burnin ] 
+	names(mph)	<- paste('STATE_',mph.it,sep='')
+	#	rescale edge lengths
+	if(opt.rescale.edge.length!=1.)	
+		for(j in seq_along(mph)) 
+			mph[[j]]$edge.length	<- mph[[j]]$edge.length * opt.rescale.edge.length
+	mph
+}
+######################################################################################
+hivc.beast2out.get.log.evolrate<- function(files, opt.burnin=opt.burnin)
+{
+	if(!opt.burnin)	warning('burn in equals zero')
+	#	collect posterior TreeHeight samples
+	df.log		<- lapply(seq_along(files), function(i)
+			{
+				file	<- files[i]
+				cat(paste("\nReading file ",file))
+				df.log	<- read.delim2(file, header = TRUE, sep = "\t", quote="\"", dec=".", fill = TRUE, comment.char="#")
+				df.log	<- as.data.table(df.log)
+				if(!'TreeHeight'%in%colnames(df.log)) stop('expect column TreeHeight in log file')
+				if(!'Sample'%in%colnames(df.log)) stop('expect column Sample in log file')
+				if(!'ucldMean'%in%colnames(df.log)) stop('expect column Sample in log file')
+				
+				df.log	<- subset(df.log, Sample>opt.burnin, select=c(Sample, TreeHeight, ucldMean))
+				df.log[, file.i:= i]
+				df.log
+			})
+	df.log		<- do.call('rbind', df.log)
+	#	compute overall mean and file specific mean
+	ans			<- df.log[, list(TreeHeight.mean.i= mean(TreeHeight), ucldMean.mean.i=mean(ucldMean)), by='file.i']
+	ans[,TreeHeight.mean:= mean(TreeHeight.mean.i)]
+	ans[,ucldMean.mean:= mean(ucldMean.mean.i)]
+	ans
+}		
+######################################################################################
 hivc.beast2.add.alignment<- function(bxml, beast2.spec, verbose=1)
 {
 	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
@@ -1095,8 +1274,8 @@ hivc.beast2.add.cluster.taxonsets<- function(bxml, df, beast2.spec, verbose=0)
 				newXMLNode("distribution", attrs= list(	id=paste(beast2.spec$cluster.prior.id.prefix,clu,sep=''), taxonset=paste('@',beast2.spec$cluster.taxonset.id.prefix,clu,sep=''), useOriginate='false', monophyletic=beast2.spec$cluster.monophyletic, tree=paste('@',beast2.spec$tree.id,sep=''), spec=beast2.spec$mrca.prior.spec ), parent=bxml.prior, doc=bxml, addFinalizer=T)
 			})
 	dummy		<- newXMLCommentNode(text="end: Cluster taxonset priors, used to log their TMRCA or to enforce monophyly", parent=bxml.prior, doc=bxml, addFinalizer=T)
-	if(verbose)	cat(paste("\nadd tracelog for cluster tmrca=", beast2.spec$cluster.monophyletic))
-	if(beast2.spec$cluster.monophyletic=='true')
+	if(verbose)	cat(paste("\nadd tracelog for cluster tmrca=", beast2.spec$cluster.log))
+	if(beast2.spec$cluster.log)
 	{
 		if(verbose)	cat(paste("\nadd tracelog for cluster tmrca, n=", length(clusters)))				
 		#	add log entry to tracelog
@@ -1314,7 +1493,7 @@ hivc.beast2.get.startingtree<- function(ph, df, beast2.spec, verbose=1)
 	write.tree( ph.start )		
 }
 ######################################################################################
-hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.length=20e6, bdsky.intervalNumber=4, alignment.filter=NA, tip.log.stem=FALSE, cluster.monophyletic=FALSE)
+hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.length=20e6, bdsky.intervalNumber=4, alignment.filter=NA, tip.log.stem=FALSE, cluster.log=FALSE, cluster.monophyletic=FALSE)
 {
 	beast2.spec<- list()	
 	beast2.spec$namespace						<- c("beast.core","beast.evolution.alignment","beast.evolution.tree.coalescent","beast.core.util","beast.evolution.nuc","beast.evolution.operators","beast.evolution.sitemodel","beast.evolution.substitutionmodel","beast.evolution.likelihood","beast.evolution.speciation","beast.core.parameter")
@@ -1415,6 +1594,7 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$cluster.taxonset.id.prefix		<- 'c'
 	beast2.spec$cluster.prior.id.prefix			<- 'cprior'
 	beast2.spec$cluster.monophyletic			<- ifelse(cluster.monophyletic, 'true', 'false')
+	beast2.spec$cluster.log						<- cluster.log	
 	beast2.spec$starttree.rootHeight			<- 35
 	beast2.spec$starttree.usingDates			<- 'true'
 	beast2.spec$starttree.brlunits				<- 'years'
@@ -2298,7 +2478,7 @@ hivc.treeannotator.get.tmrcas<- function(ph.beast, beastlabel.idx.hivs=4)
 hivc.treeannotator.tiplabel2df<- function(x, beastlabel.idx.clu=1, beastlabel.idx.hivn=2, beastlabel.idx.hivd=3, beastlabel.idx.hivs=4, beastlabel.idx.samplecode=5, beastlabel.idx.rate=6)
 {
 	tmp		<- t( sapply(strsplit(x$tip.label,'_'), function(z)	z[c(beastlabel.idx.clu,beastlabel.idx.hivn, beastlabel.idx.hivd, beastlabel.idx.hivs, beastlabel.idx.samplecode, beastlabel.idx.rate)] ) )
-	data.table(cluster=tmp[,1], NegT= tmp[,2], AnyPos_T1= tmp[,3], TipT= tmp[,4], FASTASampleCode=tmp[,5], rate=tmp[,6] )				
+	data.table(cluster=as.numeric(tmp[,1]), NegT= as.numeric(tmp[,2]), AnyPos_T1= as.numeric(tmp[,3]), TipT= as.numeric(tmp[,4]), FASTASampleCode=tmp[,5], rate=as.numeric(tmp[,6]), BEASTlabel=x$tip.label )				
 }	
 ######################################################################################
 hivc.treeannotator.get.clusterprob<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.samplecode=5, verbose=1)
@@ -2310,7 +2490,7 @@ hivc.treeannotator.get.clusterprob<- function(ph.beast, beastlabel.idx.clu=1, be
 										cluster=as.numeric( sapply( strsplit(x$tip.label,'_'),function(z)  z[beastlabel.idx.clu] ) ),
 										FASTASampleCode=sapply( strsplit(x$tip.label,'_'),function(z)  z[beastlabel.idx.samplecode] )										
 										)
-				ans		<- merge( tmp[, list(node=hivc.clu.mrca(x, x.tip=tip), FASTASampleCode=FASTASampleCode), by=cluster], subset(x$node.label, select=c(node, posterior)), by="node" )
+				ans		<- merge( tmp[, list(node=hivc.clu.mrca(x, x.tip=tip)$mrca, FASTASampleCode=FASTASampleCode), by=cluster], subset(x$node.label, select=c(node, posterior)), by="node" )
 				subset(ans, select=c(cluster, FASTASampleCode, posterior))
 			})
 	clu.df	<- rbindlist(clu.df)		
@@ -2390,6 +2570,25 @@ hivc.treeannotator.plot.rates<- function(ph, edge.width, add.xinch=-0.1, cex.rat
 	text(tmp[,xx], tmp[,yy], tmp[,rate], cex=cex.rate)
 }
 ######################################################################################
+hivc.treeannotator.plot.node.ctime<- function(df.node.ctime, ph.root.ctime, width.yinch=0.1, add.yinch=0.001, col.bg="black", density=30, lwd=0.5)		
+{
+	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)	
+	df.node.ctime[, yyi:=pdf]
+	df.node.ctime[, xx:=q-ph.root.ctime]	
+	setkey(df.node.ctime, node)
+	df.node.ctime	<- merge(df.node.ctime, df.node.ctime[,	list(scale=yinch(width.yinch)/max(yyi))	,by="node"], by="node")
+	set(df.node.ctime, NULL, "yyi",  df.node.ctime[,yyi*scale])
+	df.node.ctime[, yy:= yinch(add.yinch)+lastPP$yy[df.node.ctime[,node]]]
+	df.node.ctime[, col:=col.bg]
+	setkey(df.node.ctime, node)		
+	dummy<- sapply( unique(df.node.ctime[,node]), function(x)
+			{
+				z		<- df.node.ctime[J(x)]
+				setkey(z, xx)
+				polygon( c( z[,xx],z[nrow(z),xx] ), z[1,yy]+c( z[,yyi],0 ), border=z[1,col], col=z[1,col], density=density, lwd=lwd )  				
+			})	
+}
+######################################################################################
 hivc.treeannotator.plot.tipstem.timeline<- function(ph, youngest.tip.ctime, df.tstem, width.yinch=0.15, add.yinch=0, col.bg="grey75", density=30, lwd=0.5)
 {
 	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)
@@ -2410,12 +2609,12 @@ hivc.treeannotator.plot.tipstem.timeline<- function(ph, youngest.tip.ctime, df.t
 			})
 }
 ######################################################################################
-hivc.treeannotator.plot.ctimeline<- function(ph, youngest.tip.ctime, end.ctime, col.bg= c(my.fade.col("black",0.15),"transparent"), col.txt= c(my.fade.col("black",1),"transparent"), cex.txt= 0.5, add.yinch= 0.5)
+hivc.treeannotator.plot.ctimeline<- function(ph, youngest.tip.ctime, end.ctime, col.bg= c(my.fade.col("black",0.15),my.fade.col("black",0.05)), col.txt= c(my.fade.col("black",1),"transparent"), cex.txt= 0.5, add.yinch= 0.5)
 {
-	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)	
-	
-	tmp 	<- seq( max(lastPP$xx) - ( youngest.tip.ctime-floor(youngest.tip.ctime) )+1, min(lastPP$xx), -1 )
-	df.time	<- data.table(ctime= seq( floor(youngest.tip.ctime), by=-1, len= length(tmp) ), xx.u=tmp) 
+	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)			
+	tmp 	<- seq( max(lastPP$xx) - ( youngest.tip.ctime-floor(youngest.tip.ctime) )+1, lastPP$x.lim[1], -1 )
+	df.time	<- data.table(ctime= seq( floor(youngest.tip.ctime), by=-1, len= length(tmp) ), xx.u=tmp)
+	#	if tips don t reach to end.ctime, add more bars
 	if(1+floor(youngest.tip.ctime)<floor(end.ctime))
 	{
 		tmp		<- seq( 1+floor(youngest.tip.ctime),floor(end.ctime),by=1 )
@@ -2423,16 +2622,16 @@ hivc.treeannotator.plot.ctimeline<- function(ph, youngest.tip.ctime, end.ctime, 
 		df.time	<- rbind(tmp, df.time)
 	}
 	df.time	<- cbind( 	df.time[-nrow(df.time), ], 
-						data.table(	xx.l	= df.time[-1,xx.u], 
-									col.bg	= rep(col.bg,ceiling(nrow(df.time)/length(col.bg)))[seq_len(nrow(df.time)-1)],
-									col.txt = rep(col.txt,ceiling(nrow(df.time)/length(col.txt)))[seq_len(nrow(df.time)-1)]		) )
+			data.table(	xx.l	= df.time[-1,xx.u], 
+					col.bg	= rep(col.bg,ceiling(nrow(df.time)/length(col.bg)))[seq_len(nrow(df.time)-1)],
+					col.txt = rep(col.txt,ceiling(nrow(df.time)/length(col.txt)))[seq_len(nrow(df.time)-1)]		) )
 	
 	rect(df.time[,xx.l], lastPP$y.lim[1]-yinch(add.yinch), df.time[,xx.u], lastPP$y.lim[2]+yinch(add.yinch), col=df.time[,col.bg], border=NA)				
 	text(df.time[,xx.l+(xx.u-xx.l)/2.1], lastPP$y.lim[1]-yinch(add.yinch)/4, df.time[,ctime], cex=cex.txt, col=df.time[,col.txt], offset=0)
-	text(df.time[,xx.l+(xx.u-xx.l)/2.1], lastPP$y.lim[2]+yinch(add.yinch)/4, df.time[,ctime], cex=cex.txt, col=df.time[,col.txt], offset=0)
+	text(df.time[,xx.l+(xx.u-xx.l)/2.1], lastPP$y.lim[2]+yinch(add.yinch)/4, df.time[,ctime], cex=cex.txt, col=df.time[,col.txt], offset=0)	
 }
 ######################################################################################
-hivc.treeannotator.plot.immu.timeline<- function(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, immu.legend= c(200, 350, 500, immu.max), width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2)
+hivc.treeannotator.plot.immu.timeline<- function(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, immu.legend= c(200, 350, 500, immu.max), width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2, lines.lwd=0.2)
 {
 	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)
 	set(ph.immu.timeline, NULL, "PosCD4", max(node.depth.edgelength(ph)) - ph.immu.timeline[,PosCD4])
@@ -2448,7 +2647,7 @@ hivc.treeannotator.plot.immu.timeline<- function(ph, ph.immu.timeline, immu.min=
 			{
 				z<- ph.immu.timeline[J(x)]
 				polygon( c( z[,PosCD4], z[nrow(z),PosCD4], z[1,PosCD4] ), c( z[,yy-yyCD4], z[nrow(z),yy], z[1,yy] ), border=NA, col=col.bg	)
-				sapply(z[1,yy]-(immu.legend-immu.min)*scale,function(i)		lines(z[c(1,nrow(z)),PosCD4], rep(i,2), col=col.legend, lty=3, lwd=0.2)		)		
+				sapply(z[1,yy]-(immu.legend-immu.min)*scale,function(i)		lines(z[c(1,nrow(z)),PosCD4], rep(i,2), col=col.legend, lty=3, lwd=lines.lwd)		)		
 				text(rep(z[nrow(z),PosCD4],3),z[1,yy]-(immu.legend-immu.min)*scale,immu.legend,cex=cex.txt, col=col.legend)
 			})
 }
@@ -2467,7 +2666,7 @@ hivc.treeannotator.get.immu.timeline<- function(ph, df, df.immu, youngest.tip.ct
 }
 ######################################################################################
 #	viro.min= log10(300); width.yinch= 0.15; add.yinch= 0.005; col.bg= cols[c(5,9,10)]; col.legend= cols[6]; cex.txt= 0.2
-hivc.treeannotator.plot.viro.timeline<- function(ph, ph.viro.timeline, viro.min= log10(300), viro.legend=c(3,4,5,6), width.yinch= 0.2, add.yinch= 0.005, col.bg= "red", col.legend="red", cex.txt= 0.2)
+hivc.treeannotator.plot.viro.timeline<- function(ph, ph.viro.timeline, viro.min= log10(300), viro.legend=c(3,4,5,6), width.yinch= 0.2, add.yinch= 0.005, col.bg= "red", col.legend="red", cex.txt= 0.2, lines.lwd=0.2)
 {	
 	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)
 	set(ph.viro.timeline, NULL, "PosRNA", max(node.depth.edgelength(ph)) - ph.viro.timeline[,PosRNA])
@@ -2496,7 +2695,7 @@ hivc.treeannotator.plot.viro.timeline<- function(ph, ph.viro.timeline, viro.min=
 				dummy	<- z[,	{								
 									polygon( c( PosRNA, PosRNA[length(PosRNA)], PosRNA[1] ), c( yylRNA+yy, yy[length(yy)], yy[1] ), border=NA, col=col[1]	)	
 							}, by="TPeriod"]								
-				sapply(z[1,yy]+(viro.legend-viro.min)*scale,function(i)		lines(z[c(1,nrow(z)),PosRNA], rep(i,2), col=col.legend, lty=3, lwd=0.2)		)		
+				sapply(z[1,yy]+(viro.legend-viro.min)*scale,function(i)		lines(z[c(1,nrow(z)),PosRNA], rep(i,2), col=col.legend, lty=3, lwd=lines.lwd)		)		
 				text(rep(z[nrow(z),PosRNA],3),z[1,yy]+(viro.legend-viro.min)*scale,paste("1e",viro.legend,sep=''),cex=cex.txt, col=col.legend)
 				#stop()
 			})
@@ -2989,7 +3188,7 @@ hivc.clu.collapse.monophyletic.withinpatientseq<- function(cluphy.subtrees, df.c
 									if(nrow(tmp))	#check if any within patient seqs in this cluster are monophyletic
 									{
 										tmp			<- tmp[,	{
-																	z	<- extract.clade(x, hivc.clu.mrca(x, FASTASampleCode), root.edge=1)
+																	z	<- extract.clade(x, hivc.clu.mrca(x, FASTASampleCode)$mrca, root.edge=1)
 																	list( FASTASampleCode=FASTASampleCode, PosSeqT=PosSeqT, isMonophyletic= Ntip(z)==length(FASTASampleCode), root.edge= z$root.edge)
 																},by="Patient"]
 										tmp			<- subset(tmp, isMonophyletic)
@@ -4175,8 +4374,9 @@ hivc.clu.mrca<- function(ph, tiplabel, x.tip=NULL)
 	if(is.null(x.tip))
 		x.tip	<- match(tiplabel, ph$tip.label)				
 	x.tip.anc	<- lapply(x.tip, function(z) Ancestors(ph, z) )
-	x.tip.jnt	<- my.intersect.n( x.tip.anc )			
-	x.tip.anc[[1]][min(which(x.tip.anc[[1]] %in% x.tip.jnt))]				
+	x.tip.jnt	<- my.intersect.n( x.tip.anc )		
+	x.tip.jnt	<- which(x.tip.anc[[1]] %in% x.tip.jnt)
+	list(mrca= x.tip.anc[[1]][min(x.tip.jnt)], mrca.height=length(x.tip.jnt)-1)					
 }	
 ######################################################################################
 hivc.clu.min.transmission.cascade<- function(brlmat)

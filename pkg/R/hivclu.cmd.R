@@ -83,6 +83,15 @@ PR.BEAST2		<- system.file(package="hivclust", "ext", "beast2.jar")
 PR.BEAST2SA		<- system.file(package="hivclust", "ext", "beast2-SA.jar")
 
 #' @export
+PR.BEAST2CLUTREES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEAST2.CLUTREES",sep='/')
+
+#' @export
+PR.BEAST2CLUPOSTERIOR	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEAST2.CLUPOSTERIOR",sep='/')
+
+#' @export
+PR.BEAST2.PLOTCLUTREES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exeBEAST2.PLOTCLUTREES",sep='/')
+
+#' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
 
 #' @export
@@ -754,6 +763,61 @@ hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, p
 # end: run TREEANNOTATOR
 #######################################################\n",sep='')		
 	cmd
+}
+
+hivc.cmd.beast2.plotclustertrees<- function(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, outdir=indir, outsignat=insignat, prog=PR.BEAST2.PLOTCLUTREES, resume=1, verbose=1)
+{
+	cmd<- "#######################################################
+# start: plot posterior trees for each monophyletic cluster
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
+	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov,sep='')
+	cmd<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -outdir=",indir," -outsignat=",outsignat,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd<- paste(cmd,"#######################################################
+# end: plot posterior trees for each monophyletic cluster
+#######################################################\n",sep='')
+	cmd	
+}
+
+hivc.cmd.beast2.processclustertrees<- function(indir, infile, insignat, infilexml.opt, infilexml.template, outdir=indir, outsignat=insignat, prog= PR.BEAST2CLUPOSTERIOR, verbose=1, resume=1)
+{
+	cmd<- "#######################################################
+# start: process posterior trees for each monophyletic cluster to compute consensus trees, zero branch length probs for tips and posterior branch length cdfs 
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat,sep='')
+	cmd<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template,sep='')
+	cmd<- paste(cmd," -outdir=",outdir," -outsignat=",outsignat,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd<- paste(cmd,"#######################################################
+# end: process posterior trees for each monophyletic cluster to compute consensus trees, zero branch length probs for tips and posterior branch length cdfs
+#######################################################\n",sep='')
+	cmd	
+}
+
+
+hivc.cmd.beast2.getclustertrees<- function(indir, infile, insignat, infilexml.opt, infilexml.template, burnin, outdir=indir, outsignat=insignat, prog= PR.BEAST2CLUTREES, verbose=1, resume=1)
+{
+	cmd<- "#######################################################
+# start: extract posterior trees for each monophyletic cluster from BEAST .trees file after burnin
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat,sep='')
+	cmd<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -burnin=",burnin,sep='')
+	cmd<- paste(cmd," -outdir=",outdir," -outsignat=",outsignat,sep='')
+	#verbose stuff
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd<- paste(cmd,"#######################################################
+# end: extract posterior trees for each monophyletic cluster from BEAST .trees file after burnin
+#######################################################\n",sep='')
+	cmd	
 }
 
 #' @export
