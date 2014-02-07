@@ -1,0 +1,474 @@
+
+######################################################################################
+hivc.pipeline.recombination<- function()
+{
+	if(0)	#generate candidate recombinants	- 	this is computationally expensive
+	{
+		indir		<- paste(DATA,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+		#infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences100"
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		
+		batch.n			<- 100		#for 1e4 sequences, does about 100 in 25hrs, so request 100 batches for walltime 25 expected + 10hrs grace
+		file			<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+		load(file)
+		batch.seq		<- round(seq.int(0,nrow(seq.PROT.RT),len=batch.n),d=0)
+		batch.seq		<- rbind(batch.seq[-length(batch.seq)], batch.seq[-1]-1)
+		#batch.seq		<- batch.seq[,1:10]	#test run
+		file			<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".phylip",sep='')
+		lapply(seq_len(ncol(batch.seq)),function(j)
+				{					
+					cmd			<- hivc.cmd.recombination.run.3seq(infile=file, outfile=paste(indir,'/',infile,'_',batch.seq[1,j],'-',batch.seq[2,j],'_',gsub('/',':',insignat),".3seq",sep=''), recomb.3seq.siglevel=0.1, nproc=1, recomb.3seq.testvsall.beginatseq=batch.seq[1,j], recomb.3seq.testvsall.endatseq=batch.seq[2,j], verbose=1)
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=35, hpc.q="pqeph", hpc.mem="3850mb",  hpc.nproc=1)
+					cat(cmd)
+					outdir		<- indir
+					outfile		<- paste("r3seq",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')									
+					hivc.cmd.hpccaller(outdir, outfile, cmd)			
+				})		
+		stop()
+	}
+	if(1)	#validate candidate recombinants
+	{
+		indir		<- paste(DATA,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		resume		<- 0
+		verbose		<- 1
+		
+		argv				<<-	hivc.cmd.recombination.process.3SEQ.output(indir, infile, insignat, resume=1, verbose=1) 
+		argv				<<- unlist(strsplit(argv,' '))
+		df.recomb			<- hivc.prog.recombination.process.3SEQ.output()	
+		
+		triplets			<- seq_len(nrow(df.recomb))
+		triplets			<- 147:nrow(df.recomb)
+		dummy	<- lapply(triplets, function(i)
+				{					
+					if(verbose)	cat(paste("\nprocess triplet number",i,"\n"))
+					argv				<<- hivc.cmd.recombination.check.candidates(indir, infile, insignat, i, resume=resume, verbose=1)
+					argv				<<- unlist(strsplit(argv,' '))
+					hivc.prog.recombination.check.candidates()		#this starts ExaML for the ith triplet			
+				})
+		stop()
+	}
+	if(1)	#process validation step to produce plots
+	{
+		indir		<- paste(DATA,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		resume		<- 0
+		verbose		<- 1
+		
+		argv				<<- hivc.cmd.recombination.plot.incongruence(indir, infile, insignat, triplet.id=NA, opt.select="ng2", verbose=1)
+		argv				<<- unlist(strsplit(argv,' '))
+		hivc.prog.recombination.plot.incongruence()		
+		
+		argv				<<- hivc.cmd.recombination.plot.incongruence(indir, infile, insignat, triplet.id=NA, opt.select="g2", verbose=1)
+		argv				<<- unlist(strsplit(argv,' '))
+		hivc.prog.recombination.plot.incongruence()
+		
+	}
+	if(0)	#	collect likely recombinants or those likely confounding the phylogeny		-- 	identified by eye
+	{
+		verbose				<- 1
+		
+		argv				<<-	hivc.cmd.recombination.process.3SEQ.output(indir, infile, insignat, resume=1, verbose=1) 
+		argv				<<- unlist(strsplit(argv,' '))
+		df.recomb			<- hivc.prog.recombination.process.3SEQ.output()
+		setnames(df.recomb, "dummy", "triplet.id")
+		setkey(df.recomb, triplet.id)
+		#	collect likely recombinants or those likely confounding the phylogeny
+		recombinants.ng2	<-	c(	subset( df.recomb, triplet.id==60 )[,child],		#likely confounding
+									subset( df.recomb, triplet.id==52 )[,child],		
+									subset( df.recomb, triplet.id==55 )[,parent2],"R09-26706","R11-12152","R12-15108",		#others cluster in addition
+									subset( df.recomb, triplet.id==48 )[,parent2],"2007G319",								#others cluster in addition
+									subset( df.recomb, triplet.id==112 )[,child],
+									subset( df.recomb, triplet.id==129 )[,child],
+									subset( df.recomb, triplet.id==148 )[,child],		#length only 50
+									subset( df.recomb, triplet.id==135 )[,child],
+									subset( df.recomb, triplet.id==102 )[,child],		#likely confounding
+									subset( df.recomb, triplet.id==85 )[,child],
+									subset( df.recomb, triplet.id==81 )[,child],		#likely confounding
+									subset( df.recomb, triplet.id==125 )[,child],		#likely confounding but might be recombinant
+									subset( df.recomb, triplet.id==120 )[,child]	)
+		recombinants.g2		<-	c(	"2006G052", "2007G263", "M3621708072010", "M4048713072011", 
+									"M4203226082011", "R03-14636", "TN_B.HT.2005.05HT_129336.EU439719", "TN_B.HT.2004.04HT_129732.EU439728", "TN_B.PH.2008.08R_01_361.AB587101", "TN_B.ZA.2011.patient_1720_seq_1746.KC423374", "TN_B.ZA.2012.patient_1720_seq_2734.KC423805", "TN_B.DO.2008.HIV_PRRT_PJ01967_48.JN713614",					#these cluster with  M4048713072011									
+									"R11-15440", "R12-00343", "R10-09812",				#these are children of R08-20970
+									"R12-07939" )
+		recombinants		<- c( recombinants.ng2, recombinants.g2 )
+		if(verbose)	cat(paste("\ncollected recombinants or likely confounding sequences, n=",length(recombinants)))
+		#
+		#	save non-recombinant sequence dataset
+		#
+		indir		<- paste(DATA,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"	
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		outfile		<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences"	
+		outsignat	<- "Fri_Nov_01_16/07/23_2013"
+		
+		file		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+		load(file)
+		tmp			<- setdiff(rownames(seq.PROT.RT), recombinants)
+		seq.PROT.RT	<- seq.PROT.RT[tmp,]
+		if(verbose)	cat(paste("\nnumber of sequences without (likely) recombinants, n=",nrow(seq.PROT.RT)))
+		file		<- paste(indir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')
+		if(verbose)	cat(paste("\nsave new file to",file))
+		save(seq.PROT.RT, file=file)
+	}
+}
+######################################################################################
+hivc.pipeline.ExaML<- function()
+{
+	dir.name<- DATA
+	if(0)	#compute one ExaML tree, no bootstrapping
+	{		
+		indir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		cmd		<- paste(cmd,hivc.cmd.examl(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),outdir=outdir,resume=1,verbose=1),sep='')
+		cmd		<- paste(cmd,hivc.cmd.examl.cleanup(outdir),sep='')
+	}
+	if(0)	#compute ExaML trees with bootstrap values. Bootstrap is over initial starting trees to start ML search.
+	{
+		bs.from	<- 0
+		bs.to	<- 0
+		bs.n	<- 100
+		signat.in	<- "Sat_May_11_14/23/46_2013"
+		signat.out	<- "Sat_May_11_14/23/46_2013"				
+		indir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
+		infile	<- "ATHENA_2013_03_FirstCurSequences_PROTRTCD3"
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		cmd		<- hivc.cmd.examl.bsstarttree(indir,infile,gsub('/',':',signat.out),gsub('/',':',signat.out),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
+		#check if we have all bs.n files. if yes, combine and cleanup
+		
+		outdir	<- paste(dir.name,"tmp",sep='/')							
+		lapply(cmd, function(x)
+				{				
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=36, hpc.q="pqeph")
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("pipeline",signat,sep='.')
+					cat(x)
+					#hivc.cmd.hpccaller(outdir, outfile, x)
+					#Sys.sleep(1)
+				})
+		stop()
+	}
+	if(1)	#compute ExaML trees with bootstrap values. Bootstrap is over codon in alignment and over initial starting trees to start ML search.
+	{
+		bs.from		<- 0
+		bs.to		<- 100
+		bs.n		<- 500
+		
+		indir		<- paste(dir.name,"tmp",sep='/')
+		#infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences"
+		#signat.in	<- "Sat_Jun_16_17:23:46_2013"								
+		#infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+		#signat.in	<- "Thu_Aug_01_17/05/23_2013"	
+		#infile		<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences"	
+		#signat.in	<- "Fri_Nov_01_16/07/23_2013"
+		infile		<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		signat.in	<- "Wed_Dec_18_11/37/00_2013"
+		
+		#infile		<- "UKCA_2013_07_TNTPHIVnGTR"
+		#signat.in	<- "Mon_Sep_22_17/23/46_2013"
+		
+		outdir		<- paste(dir.name,"tmp",sep='/')
+		cmd			<- hivc.cmd.examl.bootstrap(indir,infile,gsub('/',':',signat.in),gsub('/',':',signat.in),bs.from=bs.from,bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)				
+		outdir		<- paste(dir.name,"tmp",sep='/')							
+		lapply(cmd, function(x)
+				{				
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q=NA, hpc.mem="3850mb", hpc.nproc=8)
+					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q="pqeph", hpc.mem="3850mb", hpc.nproc=8)
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("exa",signat,sep='.')
+					#cat(x)
+					hivc.cmd.hpccaller(outdir, outfile, x)
+					Sys.sleep(1)
+				})
+		stop()
+	}	
+}
+######################################################################################
+hivc.pipeline.clustering<- function()
+{	
+	if(1)	#clustering: precompute clustering objects, evaluate TPTN, get default clustering, refine to capture MSM transmission
+	{	
+		resume		<- 1
+		verbose		<- 1
+		#seq project
+		indir		<- paste(DATA,"tmp",sep='/')		
+		infile		<- "ATHENA_2013_03_CurAll+LANL_Sequences_examlbs100"
+		insignat	<- "Sat_Jun_16_17/23/46_2013"
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"
+		#infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs500"
+		insignat	<- "Thu_Aug_01_17/05/23_2013"		
+		infile		<- "ATHENA_2013_03_NoRCDRAll+LANL_Sequences_examlbs500"	
+		insignat	<- "Fri_Nov_01_16/07/23_2013"
+		infile		<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500"	
+		insignat	<- "Wed_Dec_18_11/37/00_2013"
+		
+		
+		#seq covariates
+		indircov	<- paste(DATA,"derived",sep='/')
+		infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		#default clustering tptn		
+		patient.n	<- 15700
+		#default clustering	
+		opt.brl		<- "dist.brl.casc" 
+		thresh.brl	<- 0.096
+		thresh.bs	<- 0.8		
+		
+		cmd			<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov)		
+		cmd			<- paste(cmd, hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=resume),sep='')
+		cmd			<- paste(cmd, hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.max", patient.n=patient.n, resume=resume),sep='')
+		cmd			<- paste(cmd, hivc.cmd.clustering(indir, infile, insignat, opt.brl, thresh.brl, thresh.bs, resume=resume),sep='')		
+		cmd			<- paste(cmd, hivc.cmd.clustering.msm(indir, infile, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=resume),sep='')			
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q="pqeph", hpc.mem="15850mb",  hpc.nproc=1)
+		
+		cat(cmd)
+		stop()
+		outdir		<- paste(DATA,"tmp",sep='/')
+		outfile		<- paste("clust",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		quit("no")
+	}
+}
+######################################################################################
+hivc.pipeline.BEAST<- function()
+{
+	if(0)	#run BEAST 1.7.5 GMRF skyline
+	{
+		indir				<- paste(DATA,"tmp",sep='/')		
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat			<- "Thu_Aug_01_17/05/23_2013"
+		indircov			<- paste(DATA,"derived",sep='/')
+		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		infiletree			<- paste(infile,"examlbs100",sep="_")
+		infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
+		#infilexml.template	<- "um22rhU2050"
+		#infilexml.template	<- "um22rhG202018"
+		#infilexml.template	<- "rhU65rho753"
+		#infilexml.template	<- "rhU65rho903"
+		#infilexml.template	<- "rhU65rho906"
+		#infilexml.template	<- "rhU65rho909"	
+		#infilexml.template	<- "um181rhU2045"
+		#infilexml.template	<- "um182rhU2045"
+		#infilexml.template	<- "um183rhU2045"
+		#infilexml.template	<- "um182us45"
+		#infilexml.template	<- "um182us60"
+		#infilexml.template	<- "um182rhU2045ay"
+		infilexml.template	<- "um232rhU2045"
+		#infilexml.template	<- "um232rhU2045ay"
+		#infilexml.opt		<- "txs4clu"
+		#infilexml.opt		<- "txs4clufx03"
+		#infilexml.opt		<- "mph4clu"
+		#infilexml.opt		<- "mph4clutx4tip"
+		#infilexml.opt		<- "mph4clufx03"
+		#infilexml.opt		<- "mph4cluLdTd"
+		#infilexml.opt		<- "mph4cluUmTd"
+		#infilexml.opt		<- "mph4cluLsTd"
+		#infilexml.opt		<- "mph4cluNoTd"
+		#infilexml.opt		<- "mph4cluu4tipLdTd"
+		infilexml.opt		<- "mph4clutx4tipLdTd"
+		infilexml.opt		<- "mph4clutx4tipLsTd"
+		#infilexml.opt		<- "mph4clutx4tip"
+		
+		outdir				<- indir
+		outsignat			<- "Tue_Aug_26_09/13/47_2013"
+		
+		opt.brl				<- "dist.brl.casc" 
+		thresh.brl			<- 0.096
+		thresh.bs			<- 0.8
+		pool.ntip			<- 130		
+		#pool.ntip			<- 150
+		#pool.ntip			<- 190
+		#pool.ntip			<- 400
+		resume				<- 1
+		verbose				<- 1
+		
+		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
+		argv				<<- unlist(strsplit(argv,' '))
+		hivc.prog.BEAST.generate.xml()		
+		quit("no")
+	}
+	if(1)		#generate BEAST2 BDSKYline xml file
+	{
+		indir				<- paste(DATA,"tmp",sep='/')
+		indircov			<- paste(DATA,"derived",sep='/')
+		outdir				<- indir
+		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+
+		#infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		#insignat			<- "Thu_Aug_01_17/05/23_2013"
+		#infiletree			<- paste(infile,"examlbs100",sep="_")
+		#infilexml			<- paste(infile,'_',"seroneg",sep='')		
+		#outsignat			<- "Tue_Aug_26_09/13/47_2013"		
+		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree			<- paste(infile,"examlbs500",sep="_")
+		insignat			<- "Wed_Dec_18_11:37:00_2013"
+		infilexml			<- paste(infile,'_',"all",sep='')
+		outsignat			<- insignat
+		
+		opt.brl				<- "dist.brl.casc" 
+		thresh.brl			<- 0.096
+		thresh.bs			<- 0.8
+		pool.ntip			<- NA		
+		resume				<- 1
+		verbose				<- 1
+		
+		infilexml.template	<- "bdsky_hky" 
+		infilexml.template	<- "sasky_hky"
+		infilexml.template	<- "sasky_sdr06"
+		infilexml.opt		<- "S4p"
+		#infilexml.opt		<- "S5p"
+		#infilexml.opt		<- "S8p"
+		infilexml.opt		<- "s0106"
+		#infilexml.opt		<- "s0108"
+		#infilexml.opt		<- "s00106"
+		infilexml.opt		<- "s124"
+		infilexml.opt		<- "s024"
+		infilexml.opt		<- "s424"
+		infilexml.opt		<- "s184"
+		infilexml.opt		<- "sartest"
+		infilexml.opt		<- "d999"
+		infilexml.opt		<- "d774"
+		infilexml.opt		<- "d543"
+		infilexml.opt		<- "dg543"
+		infilexml.opt		<- "r54350"
+		infilexml.opt		<- "r54399"
+		infilexml.opt		<- "run210"
+		infilexml.opt		<- "rbe910"
+		infilexml.opt		<- "rbe415"
+		infilexml.opt		<- "rbe420"
+		infilexml.opt		<- "rbe425"
+		infilexml.opt		<- "pmct15"
+		infilexml.opt		<- "pmct25"
+		infilexml.opt		<- "pmct35"
+		infilexml.opt		<- "pfn635"
+		#infilexml.opt		<- "pfn670"
+		#infilexml.opt		<- "pfn6100"
+		infilexml.opt		<- "piv470"
+		infilexml.opt		<- "piv490"
+		infilexml.opt		<- "rfn815"
+		infilexml.opt		<- "rfn835"
+		infilexml.opt		<- "rse815"
+		infilexml.opt		<- "rse835"
+		infilexml.opt		<- "rsu815"
+		infilexml.opt		<- "alsu50"
+		#infilexml.opt		<- "rsu835"		
+		#infilexml.opt		<- "ori40"
+		#infilexml.opt		<- "ori50"
+		#infilexml.opt		<- "ori60"
+		#infilexml.opt		<- "ori70"
+		argv				<<- hivc.cmd.beast.poolrunxml(indir, infile, insignat, indircov, infilecov, infiletree, infilexml, outsignat, pool.ntip, infilexml.opt=infilexml.opt, infilexml.template=infilexml.template, opt.brl=opt.brl, thresh.brl=thresh.brl, thresh.bs=thresh.bs, resume=resume, verbose=1)
+		argv				<<- unlist(strsplit(argv,' '))		
+		hivc.prog.BEAST2.generate.xml()
+	}
+	if(0)		#run BEAST2 BDSKYline
+	{
+		indir				<- paste(DATA,"tmp",sep='/')
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_standard"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS4"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS6"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS8"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxGpInvS10"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxS4"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxS5"
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_bdsky_seroneg-130-1_standard_fxS8"
+		insignat			<- "Tue_Aug_26_09/13/47_2013"
+		hpc.ncpu			<- 1
+
+		cmd					<- hivc.cmd.beast2.runxml(indir, infile, insignat, hpc.ncpu=hpc.ncpu, prog.opt.Xmx="1200m")
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=72, hpc.mem="1200mb")
+		
+		cat(cmd)
+		stop()
+		signat		<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+		outdir		<- paste(DATA,"tmp",sep='/')
+		outfile		<- paste("b2",signat,sep='.')					
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+	}
+	
+}
+######################################################################################
+hivc.pipeline.BEASTout<- function()
+{
+	if(1)
+	{
+		indir				<- paste(DATA,"tmp",sep='/')
+		indircov			<- paste(DATA,"derived",sep='/')
+		outdir				<- indir
+		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"		
+		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree			<- paste(infile,"examlbs500",sep="_")
+		insignat			<- "Wed_Dec_18_11:37:00_2013"
+		infilexml			<- paste(infile,'_',"all",sep='')
+		outsignat			<- insignat
+		infilexml.template	<- "sasky_sdr06"
+		infilexml.opt		<- "alsu50"
+
+		cmd			<- hivc.cmd.beast2.getclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, burnin=5e6, verbose=1, resume=1)
+		cmd			<- paste(cmd, hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, verbose=1, resume=1), sep='')
+		cmd			<- paste(cmd, hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, resume=1, verbose=1), sep='')
+		cat(cmd)
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=21, hpc.mem="1200mb")
+		outdir		<- paste(DATA,"tmp",sep='/')
+		outfile		<- paste("b2m.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+	}
+}
+######################################################################################
+hivc.pipeline.various<- function()
+{
+	stop()
+	dir.name<- DATA		 
+	signat.in	<- "Wed_May__1_17/08/15_2013"
+	signat.out	<- "Wed_May__1_17/08/15_2013"		
+	cmd			<- ''
+
+	if(0)	#align sequences in fasta file with Clustalo
+	{
+		indir	<- paste(dir.name,"tmp",sep='/')
+		outdir	<- paste(dir.name,"tmp",sep='/')
+		infile	<- "ATHENA_2013_03_FirstAliSequences_HXB2PROTRT_Wed_May__1_17:08:15_2013.fasta"
+		infile	<- "ATHENA_2013_03_All+LANL_Sequences_Sat_Jun_16_17:23:46_2013.fasta"
+		cmd		<- hivc.cmd.clustalo(indir, infile, signat='', outdir=outdir)
+		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1)
+	}	
+	if(0)	#extract first sequences for each patient as available from ATHENA data set
+	{
+		indir		<- paste(dir.name,"tmp",sep='/')
+		infile		<- "ATHENA_2013_03_SeqMaster.R"		
+		outdir		<- paste(dir.name,"tmp",sep='/')
+		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
+	}
+	if(0)	#compute raw pairwise genetic distances accounting correctly for ambiguous IUPAC nucleotides 
+	{				
+		gd.max		<- 0.045
+		indir		<- paste(DATA,"tmp",sep='/')
+		#infile		<- "ATHENA_2013_03_FirstCurSequences_PROTRT"
+		#insignat	<- "Sat_May_11_14/23/46_2013"				
+		infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+		insignat	<- "Thu_Aug_01_17/05/23_2013"
+		cmd			<- hivc.cmd.get.geneticdist(indir, infile, insignat, gd.max, outdir=indir)
+		
+		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')					
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q="pqeph")
+		cat(cmd)
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		quit("no")
+	}	
+	
+	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+	outdir	<- paste(dir.name,"tmp",sep='/')
+	outfile	<- paste("pipeline",signat,sep='.')					
+	lapply(cmd, function(x)
+			{				
+				#x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
+				cat(x)
+				hivc.cmd.hpccaller(outdir, outfile, x)
+			})							
+}
+
+
+

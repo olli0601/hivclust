@@ -76,8 +76,9 @@ default.fun		<- "project.hivc.Excel2dataframe"
 #default.fun 	<- "hivc.prog.BEAST.evalpoolrun"
 #default.fun 	<- "hivc.pipeline.recombination"
 #default.fun 	<- "hivc.pipeline.ExaML"
-default.fun 	<- "hivc.pipeline.BEAST"
 #default.fun		<- "hivc.pipeline.clustering"
+default.fun 	<- "hivc.pipeline.BEAST"
+#default.fun		<- "hivc.pipeline.BEASTout"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -320,7 +321,7 @@ if(length(args))
 	tmp<- na.omit(sapply(args,function(arg)
 					{
 						switch(substr(arg,2,4),
-								exe= return(substr(arg,5,nchar(arg))),
+								exe= return(substr(arg,6,nchar(arg))),
 								NA)
 					}))
 	if(length(tmp)!=0)
