@@ -54,20 +54,20 @@ LIB.LOC		<<- NULL
 #LIB.LOC		<<- paste(CODE.HOME,"../",sep='')
 EPS			<<- 1e-12
 
-default.fun		<- "my.make.documentation"
-default.fun		<- "project.hivc.clustalo"
-default.fun		<- "project.hivc.examl"
+#default.fun		<- "my.make.documentation"
+#default.fun		<- "project.hivc.clustalo"
+#default.fun		<- "project.hivc.examl"
 #default.fun	<- "hivc.prog.get.geneticdist"
 #default.fun 	<- "hivc.prog.get.allseq"
 #default.fun	<- "project.hivc.test"
-default.fun		<- "project.hivc.Excel2dataframe"
+#default.fun		<- "project.hivc.Excel2dataframe"
 #default.fun	<- "project.hivc.check"
 #default.fun		<- "project.hivc.collectpatientdata"
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
 #default.fun		<- "project.bezemer2013a.figs"
 #default.fun		<-"project.bezemer2013b.rates"
 #default.fun		<- "project.hivc.clustering"
-#default.fun	<- "project.hivc.beast"
+default.fun	<- "project.hivc.beast"
 #default.fun	<- "hivc.prog.get.clustering.precompute"
 #default.fun	<- "project.gccontent"
 #default.fun 	<- "hivc.proj.pipeline"
@@ -77,8 +77,8 @@ default.fun		<- "project.hivc.Excel2dataframe"
 #default.fun 	<- "hivc.pipeline.recombination"
 #default.fun 	<- "hivc.pipeline.ExaML"
 #default.fun		<- "hivc.pipeline.clustering"
-default.fun 	<- "hivc.pipeline.BEAST"
-#default.fun		<- "hivc.pipeline.BEASTout"
+#default.fun 	<- "hivc.pipeline.BEAST"
+default.fun		<- "hivc.pipeline.BEASTout"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{

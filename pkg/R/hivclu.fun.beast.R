@@ -392,21 +392,84 @@ hivc.beast2.extract.distinct.topologies<- function(mph.clu)
 	list(dtopo= mph.clu.dtopo, itopo=mph.clu.itopo)
 }
 ######################################################################################
-hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatment, ph, ph.prob, ph.root.ctime, ph.tip.ctime, df.node.ctime=NULL, df.rates=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20)
+hivc.beast2out.combine.clu.trees<- function(indir, file.info)
 {
+	#	collect consensus tree and further info for plotting
+	tmp			<- lapply(seq_len(nrow(file.info)), function(i)
+			{				
+				#	load dated cluster phylogenies
+				file				<- paste(indir, file.info[i,file], sep='/')
+				cat(paste('\nload file=',file,'i=',i))
+				tmp					<- load(file)
+				topo.map			<- mph.clu.dtopo[which.max(freq),]					
+				tmp					<- which( grepl( paste('mph.i=',topo.map[,mph.i],'_',sep=''), names(ph.consensus) ) )
+				if(length(tmp)!=1)	stop('unexpected ph.consensus index')
+				topo.map.ph			<- ph.consensus[[ tmp ]]
+				topo.map.SA			<- subset(mph.SA.cnt, equal.to==topo.map[,mph.i])
+				set(topo.map.SA, NULL, 'SA.freq', topo.map.SA[,SA.freq/n])													
+				topo.map.nodectime	<- subset(mph.node.ctime, equal.to==topo.map[,mph.i])
+				topo.map			<- merge(subset(topo.map, select=c(cluster, dens)), subset(topo.map.SA, select=c(cluster, tip, SA.freq)), by='cluster')
+				topo.map.nodectime	<- subset(topo.map.nodectime, select=c(cluster, node, q, cdf, pdf))					
+				list(map= topo.map, nodectime=topo.map.nodectime, ph=topo.map.ph)			
+			})
+	cluphy.map					<- do.call('rbind',lapply(tmp, function(x) x$map))
+	cluphy.map.nodectime		<- do.call('rbind',lapply(tmp, function(x) x$nodectime))
+	cluphy.subtrees				<- lapply(tmp, function(x) x$ph)
+	names(cluphy.subtrees)		<- file.info[,cluster]
+	#	determine subtree root times and set the root time of the combined phylogeny to the mean
+	cluphy.subtrees.root.ctime	<- sapply(seq_along(cluphy.subtrees), function(i)
+			{
+				tmp		<- hivc.treeannotator.tiplabel2df(cluphy.subtrees[[i]], beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+				tmp[1,TipT]-node.depth.edgelength(cluphy.subtrees[[i]])[1]-cluphy.subtrees[[i]]$root.edge
+			})
+	cluphy.root.ctime			<- mean(cluphy.subtrees.root.ctime)
+	for(i in seq_along(cluphy.subtrees))
+		cluphy.subtrees[[i]]$root.edge	<- cluphy.subtrees[[i]]$root.edge+cluphy.subtrees.root.ctime[i]-cluphy.root.ctime
+	#	combine subtree phylogenies
+	cluphy						<- hivc.clu.polyphyletic.clusters(cluphy.subtrees=cluphy.subtrees)$cluphy
+	cluphy.info					<- hivc.treeannotator.tiplabel2df(cluphy, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)		
+	cluphy$tip.label			<- cluphy.info[, FASTASampleCode]
+	cluphy.tip.ctime			<- cluphy.info[, TipT]
+	if(cluphy.root.ctime!=cluphy.info[1,TipT]-node.depth.edgelength(cluphy)[1])	stop('unexpected root time of the combined phylogeny')
+	#	need to map nodes from subtrees to nodes in combined phylogeny 
+	cluphy.info					<- merge(cluphy.info, cluphy.info[,	list(mrca= hivc.clu.mrca(cluphy, FASTASampleCode)$mrca),	by='cluster'], by='cluster')		
+	cluphy.vertexmap			<- cluphy.info[,	{
+				tmp		<- cluphy.subtrees[[as.character(cluster)]]
+				list( 	ph.vertex=c(mrca[1], Descendants(cluphy, mrca[1], type="all")), clu.vertex=c(Ntip(tmp)+1, Descendants(tmp, Ntip(tmp)+1, type="all")) )
+			},by='cluster']
+	#	cluphy.vertexmap does not contain time of root to mrca (node 0) and we don t need it.
+	#	cluphy.vertexmap contains tip indices and we don t need those.
+	setnames(cluphy.vertexmap,'clu.vertex','node')
+	cluphy.map.nodectime		<- merge(cluphy.map.nodectime, cluphy.vertexmap, by=c('cluster','node'))
+	set(cluphy.map.nodectime, NULL, 'node', cluphy.map.nodectime[,ph.vertex]) 
+	cluphy.map.nodectime[, ph.vertex:=NULL]				
+	#	set node.label to MAP prob
+	tmp											<- merge( unique(subset(cluphy.info, select=c(cluster, mrca))), unique(subset(cluphy.map, select=c(cluster, dens))), by='cluster' )
+	cluphy$node.label							<- rep('',Nnode(cluphy))
+	cluphy$node.label[tmp[,mrca-Ntip(cluphy)]]	<- as.character(tmp[,dens])		
+	list(cluphy=cluphy, cluphy.subtrees=cluphy.subtrees, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime)
+}
+######################################################################################
+hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatment, ph, ph.root.ctime, ph.tip.ctime, ph.prob=NA, df.node.ctime=NULL, df.rates=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20, pdf.xlim=NULL)
+{
+	#df.all, df.immu, df.viro, df.treatment, 
+	#ph<- cluphy; ph.root.ctime=cluphy.root.ctime; ph.tip.ctime=cluphy.tip.ctime; df.node.ctime=cluphy.map.nodectime;  cex.nodelabel=0.5;  cex.tiplabel=0.5;  file=NULL;  pdf.width=7; pdf.height=120; pdf.xlim=pdf.xlim
 	require(RColorBrewer)
 	if(class(file)=="character")
 		pdf(file, width=pdf.width, height=pdf.height)
-	par(mar=c(0.2,0.2,0.2,0.2))		
+	par(mar=rep(0,4))		
 	youngest.tip.ctime	<- max(ph.tip.ctime)
 	cols				<- brewer.pal(12,"Paired")
 	cols[1]				<- cols[8]			
-	#	get tip labels
-	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=c("CountryInfection","Trm","Sex","isAcute","lRNA.early","Patient","RegionHospital") )	
-	tmp					<- max( apply(ph.tiplabel$text, 2, function(x)  sum(xinch(strwidth(x, units="inches", cex=cex.tiplabel)))  ) )
-	ph.xlim				<- c(-3, ceiling(end.ctime)-ph.root.ctime+max(2.5,tmp))
-	ph.ylim				<- c(1,Ntip(ph)) + c(-1,1)							
-	plot(ph, x.lim=ph.xlim, y.lim= ph.ylim, show.tip.label=0, edge.color = 0, tip.color = 0)		
+	#	get tip labels	
+	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=c("CountryInfection","Trm","Sex","isAcute","lRNA.early","Patient","RegionHospital") )
+	if(is.null(pdf.xlim))
+	{
+		tmp				<- max( apply(ph.tiplabel$text, 2, function(x)  sum(xinch(strwidth(x, units="inches", cex=cex.tiplabel)))  ) )
+		pdf.xlim		<- c(-3, ceiling(end.ctime)-ph.root.ctime+max(2.5,tmp))		
+	}
+	pdf.ylim			<- c(1,Ntip(ph)) + c(-1,1)							
+	plot(ph, x.lim=pdf.xlim, y.lim= pdf.ylim, show.tip.label=0, edge.color = 1, tip.color = 0)		
 	# add calendar timeline
 	hivc.treeannotator.plot.ctimeline(ph, youngest.tip.ctime, end.ctime, add.yinch= 0.5)
 	# add NegT and AnyPos_T1
@@ -437,7 +500,8 @@ hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatm
 	hivc.clu.plot.tiplabels(seq_len(Ntip(ph)), ph.tiplabel$text, ph.tiplabel$col, xx=tmp, adj = c(-0.05, 0.5), cex=cex.tiplabel, add.xinch= 0.03, add.yinch= 0.02)
 	# add legend	
 	legend("topright", fill= cols[c(1,2,3,5,10,12)], legend=c("SA-BEAST2 TMRCA pdf", "interval [last HIV-, diagnosis]", "CD4 timeline", "VL timeline", "VL timeline under treatment", "VL timeline under treatment"), bty='n', border=NA, cex=cex.tiplabel)
-	legend("bottomright", legend=paste('prob=',ph.prob),bty='n', border=NA, cex=cex.tiplabel*2)
+	if(!is.na(ph.prob))
+		legend("bottomright", legend=paste('prob=',ph.prob),bty='n', border=NA, cex=cex.tiplabel*2)
 	if(class(file)=="character")
 		dev.off()	
 }

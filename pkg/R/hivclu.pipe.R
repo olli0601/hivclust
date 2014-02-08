@@ -409,7 +409,7 @@ hivc.pipeline.BEASTout<- function()
 
 		cmd			<- hivc.cmd.beast2.getclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, burnin=5e6, verbose=1, resume=1)
 		cmd			<- paste(cmd, hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, verbose=1, resume=1), sep='')
-		cmd			<- paste(cmd, hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, resume=1, verbose=1), sep='')
+		#cmd			<- paste(cmd, hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, resume=1, verbose=1), sep='')
 		cat(cmd)
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=21, hpc.mem="1200mb")
 		outdir		<- paste(DATA,"tmp",sep='/')

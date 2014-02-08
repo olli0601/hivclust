@@ -3212,7 +3212,7 @@ hivc.prog.BEAST2.plot.cluster.trees<- function()
 				#		},by=c('equal.to','node')]
 				#	end:remove in updated saves	
 				#	get pdf from cdf of node calendar times
-				mph.node.ctime	<- mph.node.ctime[, list(cluster=cluster, q=q, pdf=c(0,diff(cdf)/diff(q)), cdf=cdf),by=c('equal.to','node')]
+				#	mph.node.ctime	<- mph.node.ctime[, list(cluster=cluster, q=q, pdf=c(0,diff(cdf)/diff(q)), cdf=cdf),by=c('equal.to','node')]
 				#
 				topo.info		<- lapply( strsplit(names(ph.consensus),'_'), function(x)		data.table(cluster=x[1], mph.i=x[2], prob=x[3])	)
 				topo.info		<- do.call('rbind',topo.info)
@@ -3244,7 +3244,7 @@ hivc.prog.BEAST2.plot.cluster.trees<- function()
 							cluphy.node.ctime	<- subset(mph.node.ctime, equal.to==topo.info[topo.i, mph.i] & node!=0)
 							cluphy.root.ctime	<- cluphy.info[1,TipT]-node.depth.edgelength(cluphy)[1] 							
 							cluphy.tip.ctime	<- cluphy.info[, TipT]											
-							dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.prob, cluphy.root.ctime, cluphy.tip.ctime, df.node.ctime=copy(cluphy.node.ctime), df.rates=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20)					
+							dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.root.ctime, cluphy.tip.ctime, ph.prob=cluphy.prob, df.node.ctime=copy(cluphy.node.ctime), df.rates=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20)					
 						})
 				dev.off()
 			})

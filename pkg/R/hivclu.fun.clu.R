@@ -810,10 +810,11 @@ hivc.clu.clusterbytrueneg<- function(ph, dist.brl, nodesupport, ph.unlinked.info
 	ans		
 }
 ######################################################################################
-hivc.clu.polyphyletic.clusters<- function(cluphy.df, cluphy.subtrees=NULL, ph=NULL, clustering=NULL, verbose=1, plot.file=NA, pdf.scaley=25, pdf.xlim=NULL, cex.nodelabel=0.2, cex.tiplabel=0.2, adj.tiplabel= c(-0.15,0.5))
+hivc.clu.polyphyletic.clusters<- function(cluphy.df=NULL, cluphy.subtrees=NULL, ph=NULL, clustering=NULL, verbose=1, plot.file=NA, pdf.scaley=25, pdf.xlim=NULL, cex.nodelabel=0.2, cex.tiplabel=0.2, adj.tiplabel= c(-0.15,0.5))
 {
 	if(!is.null(ph) && !is.null(clustering))
 	{
+		if(is.null(cluphy.df))	stop('cluphy.df required when !is.null(ph) && !is.null(clustering)')
 		#get node corresponding to index of selected clusters		
 		cluphy.cluidx				<- clustering[["clu.idx"]][ unique( cluphy.df[,cluster] ) ]		
 		if(any(is.na(cluphy.cluidx)))	stop("unexcpected NA in cluphy.cluidx")
@@ -829,6 +830,7 @@ hivc.clu.polyphyletic.clusters<- function(cluphy.df, cluphy.subtrees=NULL, ph=NU
 	#plot selected clusters
 	if(!is.na(plot.file))
 	{		
+		if(is.null(cluphy.df))	stop('cluphy.df required when !is.na(plot.file)')
 		cluphy.tiplabels						<- hivc.clu.get.tiplabels( cluphy, copy(cluphy.df) )
 		if(verbose) cat(paste("\nwrite tree to file",plot.file))
 		color.except.rootedge					<- rep(1, Nnode(cluphy, internal.only=F))
