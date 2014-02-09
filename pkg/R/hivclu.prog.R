@@ -3271,9 +3271,6 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	insignat				<- "Tue_Aug_26_09:13:47_2013"
 	infilexml.opt			<- "rsu815"
 	infilexml.template		<- "sasky_sdr06"
-	outdir					<- indir
-	outfile					<- paste(infile,infilexml.template,infilexml.opt, sep='_')
-	outsignat				<- insignat
 	#
 	if(exists("argv"))
 	{
@@ -3318,6 +3315,11 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) verbose<- tmp[1]		
 	}	
+	#
+	outdir					<- indir
+	outfile					<- paste(infile,infilexml.template,infilexml.opt, sep='_')
+	outsignat				<- insignat
+	#
 	if(verbose)
 	{
 		print(resume)
@@ -3518,9 +3520,6 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	insignat				<- "Tue_Aug_26_09:13:47_2013"
 	infilexml.opt			<- "rsu815"
 	infilexml.template		<- "sasky_sdr06"
-	outdir					<- indir
-	outfile					<- paste(infile,infilexml.template,infilexml.opt, sep='_')
-	outsignat				<- insignat
 	#
 	if(exists("argv"))
 	{
@@ -3569,7 +3568,12 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 						{	switch(substr(arg,2,2),
 									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) verbose<- tmp[1]		
-	}	
+	}
+	#
+	outdir					<- indir
+	outfile					<- paste(infile,infilexml.template,infilexml.opt, sep='_')
+	outsignat				<- insignat
+	#
 	if(verbose)
 	{
 		print(opt.burnin)		
@@ -3657,7 +3661,6 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 									cat(paste("\nsave mph.clu to file",file))
 									write.nexus(mph.clu, file=file)					
 								}
-								
 							})
 					dummy			<- NULL
 					gc()	
