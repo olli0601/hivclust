@@ -450,9 +450,9 @@ hivc.beast2out.combine.clu.trees<- function(indir, file.info)
 	list(cluphy=cluphy, cluphy.subtrees=cluphy.subtrees, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime)
 }
 ######################################################################################
-hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatment, ph, ph.root.ctime, ph.tip.ctime, ph.prob=NA, df.node.ctime=NULL, df.rates=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20, pdf.xlim=NULL)
+hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatment, ph, ph.root.ctime, ph.tip.ctime, ph.prob=NA, df.node.ctime=NULL, df.rates=NULL, df.tips=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20, pdf.xlim=NULL)
 {
-	#df.all, df.immu, df.viro, df.treatment, 
+	#df.all, df.immu, df.viro, df.treatment, df.tips	<- df.tpairs.plot
 	#ph<- cluphy; ph.root.ctime=cluphy.root.ctime; ph.tip.ctime=cluphy.tip.ctime; df.node.ctime=cluphy.map.nodectime;  cex.nodelabel=0.5;  cex.tiplabel=0.5;  file=NULL;  pdf.width=7; pdf.height=120; pdf.xlim=pdf.xlim
 	require(RColorBrewer)
 	if(class(file)=="character")
@@ -469,7 +469,7 @@ hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatm
 		pdf.xlim		<- c(-3, ceiling(end.ctime)-ph.root.ctime+max(2.5,tmp))		
 	}
 	pdf.ylim			<- c(1,Ntip(ph)) + c(-1,1)							
-	plot(ph, x.lim=pdf.xlim, y.lim= pdf.ylim, show.tip.label=0, edge.color = 1, tip.color = 0)		
+	plot(ph, x.lim=pdf.xlim, y.lim= pdf.ylim, show.tip.label=0, edge.color = 1, tip.color = 0)
 	# add calendar timeline
 	hivc.treeannotator.plot.ctimeline(ph, youngest.tip.ctime, end.ctime, add.yinch= 0.5)
 	# add NegT and AnyPos_T1
@@ -491,7 +491,10 @@ hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatm
 	hivc.phy.plotupon(ph, show.tip.label=0, show.node.label=ifelse(is.null(ph$node.label),0,1), cex=cex.nodelabel, edge.width=edge.width[,width])
 	# add root edge
 	lastPP <- get("last_plot.phylo", envir = .PlotPhyloEnv)
-	lines(c(-ph$root.edge,0),rep(lastPP$yy[Ntip(ph)+1],2), lwd=edge.width[1,width])		
+	lines(c(-ph$root.edge,0),rep(lastPP$yy[Ntip(ph)+1],2), lwd=edge.width[1,width])
+	# plot tick marks
+	if(!is.null(df.tips))
+		hivc.treeannotator.plot.tipmarks(ph, df.tips, add.xinch=0, add.yinch=0)			
 	# add rate labels			
 	if(!is.null(df.rates))	
 		hivc.treeannotator.plot.rates(ph, edge.width, add.xinch=-0.1, cex.rate=0.3)
@@ -1690,6 +1693,16 @@ hivc.treeannotator.plot<- function(ph, ph.root.ctime, youngest.tip.ctime, df.all
 	
 	if(class(file)=="character")
 		dev.off()				
+}
+######################################################################################
+hivc.treeannotator.plot.tipmarks<- function(ph, df.tips, add.xinch=0, add.yinch=0)
+{
+	tmp	<- match(df.tips[, FASTASampleCode], ph$tip.label)
+	if(any(is.na(tmp)))		stop('unexpected missing tip names in ph for df.tips')				
+	lastPP 	<- get("last_plot.phylo", envir = .PlotPhyloEnv)	
+	tmp		<- data.table(xx= lastPP$xx[ tmp ]+xinch(add.xinch), yy= lastPP$yy[ tmp ], tips=tmp)
+	tmp		<- cbind(df.tips, tmp)
+	points(tmp[,xx], tmp[,yy], col=tmp[,col], pch=tmp[,pch], cex=tmp[,cex] )	
 }
 ######################################################################################
 hivc.treeannotator.plot.rates<- function(ph, edge.width, add.xinch=-0.1, cex.rate=0.5)

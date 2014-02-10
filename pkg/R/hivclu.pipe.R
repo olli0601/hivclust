@@ -393,16 +393,14 @@ hivc.pipeline.BEAST<- function()
 ######################################################################################
 hivc.pipeline.BEASTout<- function()
 {
-	if(1)
+	if(0)
 	{
 		indir				<- paste(DATA,"tmp",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
 		outdir				<- indir
 		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"		
-		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree			<- paste(infile,"examlbs500",sep="_")
-		insignat			<- "Wed_Dec_18_11:37:00_2013"
-		infilexml			<- paste(infile,'_',"all",sep='')
+		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"		
+		insignat			<- "Wed_Dec_18_11:37:00_2013"		
 		outsignat			<- insignat
 		infilexml.template	<- "sasky_sdr06"
 		infilexml.opt		<- "alsu50"
@@ -415,6 +413,43 @@ hivc.pipeline.BEASTout<- function()
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("b2m.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
+	}
+	if(1)
+	{
+		indir				<- paste(DATA,"tmp",sep='/')
+		indircov			<- paste(DATA,"derived",sep='/')
+		outdir				<- indir
+		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"		
+		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"		
+		insignat			<- "Wed_Dec_18_11:37:00_2013"		
+		outsignat			<- insignat
+		infilexml.template	<- "sasky_sdr06"
+		infilexml.opt		<- "alsu50"
+
+		#indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
+		#infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
+		#insignat				<- "Tue_Aug_26_09:13:47_2013"
+		#infilexml.opt			<- "rsu815"
+		#infilexml.template		<- "sasky_sdr06"
+		
+		files		<- list.files(indir)
+		files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('_clutrees_[0-9]+',x) & grepl('R$',x) ) ]		
+		if(!length(files))	stop('no input files matching criteria')
+		tmp			<- regmatches( files, regexpr('_clutrees_[0-9]+',files)) 
+		cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+		file.info	<- data.table(file=files, cluster=cluster)
+		setkey(file.info, cluster)
+		
+		dummy		<- sapply( file.info[,unique(cluster)], function(clu)
+				{
+					cmd			<- hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, cluster=clu, verbose=1, resume=1)					
+					cat(cmd)
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=21, hpc.mem="3800mb")
+					outdir		<- paste(DATA,"tmp",sep='/')
+					outfile		<- paste("b2m.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+					hivc.cmd.hpccaller(outdir, outfile, cmd)			
+				})
+		
 	}
 }
 ######################################################################################

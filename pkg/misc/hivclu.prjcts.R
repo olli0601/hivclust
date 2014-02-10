@@ -1861,165 +1861,7 @@ project.hivc.beast<- function(dir.name= DATA)
 	}
 	if(1)	#select single likely transmitter for every recent as in the Brighton study Fisher et al
 	{
-		#	input args
-		indir			<- paste(DATA,"tmp",sep='/')		
-		infile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
-		insignat		<- "Thu_Aug_01_17/05/23_2013"
-		indircov		<- paste(DATA,"derived",sep='/')
-		infilecov		<- "ATHENA_2013_03_AllSeqPatientCovariates"
-		opt.brl			<- "dist.brl.casc" 
-		thresh.brl		<- 0.096
-		thresh.bs		<- 0.8				
-		#	determined from input args
-		infiletree		<- paste(infile,"examlbs100",sep="_")
-		infilexml		<- paste(infile,'_',"beast",'_',"seroneg",sep='')
-		#
-		# 	recent msm 
-		#
-		load(paste(indircov,'/',infilecov,'.R',sep=''))
-		msm.recent		<- subset( df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') & isAcute=='Yes' )
-		cat(paste('\nmsm isAcute==yes: #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
-		# 	recent msm seroconverters
-		msm.recentsc	<- subset( msm.recent, !is.na(NegT))
-		cat(paste('\nmsm isAcute==yes & !is.na(NegT): #seq=',nrow(msm.recentsc),'#patient=',length(msm.recentsc[,unique(Patient)])))
-		#
-		#	load clustering msm
-		#
-		argv			<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=1)
-		argv			<<- unlist(strsplit(argv,' '))		
-		msm				<- hivc.prog.get.clustering.MSM()			
-		clumsm.info		<- msm$df.cluinfo
-		# 	recent individuals in cluster
-		clumsm.recent	<- subset( clumsm.info, isAcute=='Yes' )
-		# 	recent seroconcerverters in cluster
-		clumsm.recentsc	<- subset( clumsm.info, isAcute=='Yes' & !is.na(NegT))
-		cat(paste('\nmsm clustering: #seq=',nrow(clumsm.info),'#patient=',length(clumsm.info[,unique(Patient)]),'#cluster=',length(clumsm.info[,unique(cluster)])))		
-		cat(paste('\nmsm clustering isAcute==yes: #seq=',nrow(clumsm.recent),'#patient=',length(clumsm.recent[,unique(Patient)]),'#cluster=',length(clumsm.recent[,unique(cluster)])))
-		cat(paste('\nmsm clustering isAcute==yes & !is.na(NegT): #seq=',nrow(clumsm.recentsc),'#patient=',length(clumsm.recentsc[,unique(Patient)]),'#cluster=',length(clumsm.recentsc[,unique(cluster)])))
-		#
-		#	make selection
-		#
-		df.select		<- clumsm.recent
-		#
-		#	load sequences
-		#
-		file		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
-		if(verbose)	cat(paste("\nload sequences from file",file))
-		load( file )	# loads seq.PROT.RT
-		
-		#	get potential transmitters
-		setkey(clumsm.info, cluster)
-		df.transmitters	<- clumsm.info[J(df.select[, unique(cluster)]),]
-		df.transmitters	<- subset(df.transmitters, select=c(cluster, Patient, AnyPos_T1, FASTASampleCode))		
-		setnames(df.transmitters, colnames(df.transmitters), paste('t.',colnames(df.transmitters),sep=''))
-		df.tpairs		<- df.select[,	{
-										tmp<- subset(df.transmitters, t.cluster==cluster[1] & t.Patient!=Patient[1] & t.AnyPos_T1<=AnyPos_T1[1])
-										as.list(tmp)
-									}, by=c('cluster','Patient')]							
-		df.tpairs.stat		<- df.tpairs[,list(n.pot.transmitters=length(unique(t.Patient))),by=c('cluster','Patient')]
-		df.tpairs.anypos	<- subset( merge(df.tpairs, df.tpairs.stat, by=c('cluster','Patient')), n.pot.transmitters==1)		
-		cat(paste('\nselected Patients with at least one potential transmitter', nrow(df.tpairs.stat)))
-		tmp				<- table( df.tpairs.stat[,n.pot.transmitters] )
-		print( tmp )
-		print( cumsum( tmp / sum(tmp ) ) )
-		#	compute genetic distances
-		df.tpairs					<- merge(subset(clumsm.info, select=c(Patient, FASTASampleCode)), df.tpairs, by='Patient')		
-		setkey(df.tpairs, cluster)		
-		dummy						<- 0.
-		tmp							<- sapply(seq_len(nrow(df.tpairs)),function(i)		.C("hivc_dist_ambiguous_dna", seq.PROT.RT[df.tpairs.stat[i,FASTASampleCode], ], seq.PROT.RT[df.tpairs.stat[i,t.FASTASampleCode], ], ncol(seq.PROT.RT), dummy )[[4]]		)
-		df.tpairs[, seq.similar:= tmp]
-		df.tpairs					<- df.tpairs[, .SD[seq.similar==max(seq.similar)], by=c('cluster','Patient')]
-		df.tpairs.stat				<- df.tpairs[, list(n.pot.transmitters=length(unique(t.Patient))), by=c('cluster','Patient')]
-		df.tpairs.anypos.seqsim		<- subset( merge(df.tpairs, df.tpairs.stat, by=c('cluster','Patient')), n.pot.transmitters==1) 
-		cat(paste('\nselected Patients with potential transmitter by highest seq similarity', nrow(df.tpairs.stat)))
-		tmp				<- table( df.tpairs.stat[,n.pot.transmitters] )
-		print( tmp )
-		print( cumsum( tmp / sum(tmp ) ) )
-		 
-		df.tpairs.anypos
-		df.tpairs.anypos.seqsim
-		
-		df.tpairs.select	<- subset( df.tpairs.anypos.seqsim, select=c(cluster, FASTASampleCode, t.FASTASampleCode))
-		tmp					<- df.tpairs.select[, list(col=brewer.pal( max(3,length(FASTASampleCode)), 'Pastel2' )[seq_along(FASTASampleCode)]), by='cluster']
-		df.tpairs.select[, col:=tmp[,col]]
-		df.tpairs.select[, pch:=0]
-		df.tpairs.select[, t.pch:=1]
-		df.tpairs.select[, cex:=0.1]
-		df.tpairs.select[, t.cex:=0.3]
-		
-		#list(FASTASampleCode=FASTASampleCode[tmp], t.Patient=t.Patient[tmp], t.AnyPos_T1=t.AnyPos_T1[tmp], t.FASTASampleCode seq.similar)
-		#			
-		#	PROG START
-		#	get MAP cluster for every recent and plot with clinical information
-		#
-		beastlabel.idx.clu			<- 1
-		beastlabel.idx.hivn			<- 2
-		beastlabel.idx.hivd			<- 3
-		beastlabel.idx.hivs			<- 4
-		beastlabel.idx.samplecode	<- 6
-		beastlabel.idx.rate			<- NA		
-		#
-		indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
-		infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
-		insignat				<- "Tue_Aug_26_09:13:47_2013"
-		infilexml.opt			<- "rsu815"
-		infilexml.template		<- "sasky_sdr06"
-		file.cov				<- paste(indircov,"/",infilecov,".R",sep='')
-		file.viro				<- paste(indircov,"/ATHENA_2013_03_Viro.R",sep='/')
-		file.immu				<- paste(indircov,"/ATHENA_2013_03_Immu.R",sep='/')
-		file.treatment			<- paste(indircov,"/ATHENA_2013_03_Regimens.R",sep='/')
-		outdir					<- indir
-		outfile					<- paste(infile,infilexml.template,infilexml.opt, sep='_')
-		outsignat				<- insignat
-					
-		#
-		#	collect files containing dated cluster phylogenies
-		files		<- list.files(indir)
-		files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('_cluposterior_[0-9]+',x) & grepl('R$',x) ) ]		
-		if(!length(files))	stop('no input files matching criteria')
-		tmp			<- regmatches( files, regexpr('_cluposterior_[0-9]+',files)) 
-		cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
-		file.info	<- data.table(file=files, cluster=cluster)
-		setkey(file.info, cluster)
-		#	subset of clusters: those in df.select
-		if(!is.null(df.select))
-			file.info	<- merge(file.info, unique(subset(df.select, select=cluster)), by='cluster')
-		#	combine dated cluster phylogenies
-		tmp						<- hivc.beast2out.combine.clu.trees(indir, file.info)		
-		cluphy					<- tmp$cluphy
-		cluphy.subtrees			<- tmp$cluphy.subtrees
-		cluphy.info				<- tmp$cluphy.info
-		cluphy.map.nodectime	<- tmp$cluphy.map.nodectime
-		#
-		#	prepare plot
-		#
-		#	determine pdf.xlim: subset of timeline that contains the MRCA of all clusters		
-		cluphy.subtrees.root.ctime	<- sapply(seq_along(cluphy.subtrees), function(i)
-				{
-					tmp		<- hivc.treeannotator.tiplabel2df(cluphy.subtrees[[i]], beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
-					tmp[1,TipT]-node.depth.edgelength(cluphy.subtrees[[i]])[1]
-				})		
-		cluphy.subtrees.root.ctime	<- min(cluphy.subtrees.root.ctime)		
-		end.ctime					<- 2013.3
-		pdf.xlim					<- c( cluphy.subtrees.root.ctime-cluphy.root.ctime-1, ceiling(end.ctime)-cluphy.root.ctime )
-		pdf.xlim					<- pdf.xlim+c(0,diff(pdf.xlim)*0.35)
-		#	load patient demographic data	(loads df.all)
-		load(file.cov)				
-		#	load patient RNA
-		load(file.viro)
-		df.viro				<- df				
-		#	load patient CD4				
-		load(file.immu)
-		df.immu				<- df
-		#	load patient regimen
-		load(file.treatment)
-		df.treatment		<- df	
-		#	plot
-		file				<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_posterior+clinical.pdf',sep='')
-		cat(paste('\nplot to file=',file))
-		dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.root.ctime, cluphy.tip.ctime, ph.prob=NA, df.node.ctime=cluphy.map.nodectime, df.rates=NULL, end.ctime=end.ctime,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=file,  pdf.width=7, pdf.height=140, pdf.xlim=pdf.xlim)
-		
-		
+		project.athena.Fisheretal()		
 	}
 	if(0)	#get BEAST nexus file for seroconverters
 	{		
@@ -2151,6 +1993,232 @@ project.ukca.TPTN.bootstrapvalues<- function(dir.name= DATA)
 	bs.unlinkedpairs	<- df.tn		
 	
 	hivc.phy.get.TP.and.TN.bootstrapvalues(ph, bs.linked.bypatient, ph.mrca=ph.mrca ,df.seqinfo=NULL, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=NULL, dist.brl=NULL, thresh.brl=0.096, plot.file=plot.file, verbose= 1)	
+}
+######################################################################################
+project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infiletree)
+{
+	#	fixed input args
+	opt.brl			<- "dist.brl.casc" 
+	thresh.brl		<- 0.096
+	thresh.bs		<- 0.8					
+	#
+	# 	recent msm 
+	#
+	load(paste(indircov,'/',infilecov,'.R',sep=''))
+	msm.recent		<- subset( df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') & isAcute=='Yes' )
+	cat(paste('\nmsm isAcute==yes: #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
+	# 	recent msm seroconverters
+	msm.recentsc	<- subset( msm.recent, !is.na(NegT))
+	cat(paste('\nmsm isAcute==yes & !is.na(NegT): #seq=',nrow(msm.recentsc),'#patient=',length(msm.recentsc[,unique(Patient)])))
+	#
+	#	load clustering msm
+	#
+	argv			<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=1)
+	argv			<<- unlist(strsplit(argv,' '))		
+	msm				<- hivc.prog.get.clustering.MSM()			
+	clumsm.info		<- msm$df.cluinfo
+	# 	recent individuals in cluster
+	clumsm.recent	<- subset( clumsm.info, isAcute=='Yes' )
+	# 	recent seroconcerverters in cluster
+	clumsm.recentsc	<- subset( clumsm.info, isAcute=='Yes' & !is.na(NegT))
+	cat(paste('\nmsm clustering: #seq=',nrow(clumsm.info),'#patient=',length(clumsm.info[,unique(Patient)]),'#cluster=',length(clumsm.info[,unique(cluster)])))		
+	cat(paste('\nmsm clustering isAcute==yes: #seq=',nrow(clumsm.recent),'#patient=',length(clumsm.recent[,unique(Patient)]),'#cluster=',length(clumsm.recent[,unique(cluster)])))
+	cat(paste('\nmsm clustering isAcute==yes & !is.na(NegT): #seq=',nrow(clumsm.recentsc),'#patient=',length(clumsm.recentsc[,unique(Patient)]),'#cluster=',length(clumsm.recentsc[,unique(cluster)])))
+	#
+	#	make selection
+	#
+	list(clumsm.info=clumsm.info, df.select=clumsm.recent)
+}
+######################################################################################
+project.athena.Fisheretal.select.transmitters.by.SmallerAnyPos<- function(clumsm.info, df.denom)
+{
+	df.transmitters	<- clumsm.info[J(df.denom[, unique(cluster)]),]
+	df.transmitters	<- subset(df.transmitters, select=c(cluster, Patient, AnyPos_T1, FASTASampleCode))		
+	setnames(df.transmitters, colnames(df.transmitters), paste('t.',colnames(df.transmitters),sep=''))
+	# 	all possible sequence pairs with diagnosis criterium
+	df.tpairs			<- df.denom[,	{
+				tmp<- subset(df.transmitters, t.cluster==cluster & t.Patient!=Patient[1] & t.AnyPos_T1<=AnyPos_T1[1])
+				as.list(tmp)
+			}, by=c('cluster','FASTASampleCode')]								
+	df.tpairs			<- merge( subset(clumsm.info, select=c(FASTASampleCode, Patient)), df.tpairs, by='FASTASampleCode')
+	cat(paste('\nnumber possible transmission sequence pairs, n=',nrow(df.tpairs)))
+	# 	select unique Infected->pot Transmitter based on this criterium
+	df.tpairs.stat		<- df.tpairs[,list(t.potpat.n=length(unique(t.Patient)), t.potpatseq.n=length(unique(t.FASTASampleCode)) ),by=c('cluster','Patient')]
+	cat(paste('\ntable of #possible transmitter seqs for every infected patient'))
+	tmp					<- table( df.tpairs.stat[,t.potpatseq.n] )
+	print( tmp )
+	print( cumsum( tmp / sum(tmp ) ) )	
+	#	allows for multiple infected seq pointing to same transmitter seq
+	df.tpairs.anypos	<- merge(df.tpairs, subset(df.tpairs.stat, t.potpatseq.n==1), by=c('cluster','Patient'))		
+	cat(paste('\nselected Patients with one potential transmitter', nrow(df.tpairs.anypos)))		
+	subset( df.tpairs.anypos, select=c(cluster, Patient, FASTASampleCode, t.Patient, t.FASTASampleCode) )	
+}
+######################################################################################
+project.athena.Fisheretal.select.transmitters.by.SmallerAnyPos.ClosestSeqSim<- function(clumsm.info, df.denom)
+{
+	indir			<- paste(DATA,"tmp",sep='/')		
+	infile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+	insignat		<- "Thu_Aug_01_17/05/23_2013"		
+	#
+	#	load sequences
+	#
+	file		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".R",sep='')
+	if(verbose)	cat(paste("\nload sequences from file",file))
+	load( file )	# loads seq.PROT.RT
+	
+	#	get potential transmitters
+	df.transmitters				<- clumsm.info[J(df.denom[, unique(cluster)]),]
+	df.transmitters				<- subset(df.transmitters, select=c(cluster, Patient, AnyPos_T1, FASTASampleCode))		
+	setnames(df.transmitters, colnames(df.transmitters), paste('t.',colnames(df.transmitters),sep=''))
+	# 	all possible sequence pairs with diagnosis criterium
+	df.tpairs					<- df.denom[,	{
+				tmp<- subset(df.transmitters, t.cluster==cluster & t.Patient!=Patient[1] & t.AnyPos_T1<=AnyPos_T1[1])
+				as.list(tmp)
+			}, by=c('cluster','FASTASampleCode')]								
+	df.tpairs					<- merge( subset(clumsm.info, select=c(FASTASampleCode, Patient)), df.tpairs, by='FASTASampleCode')
+	cat(paste('\nnumber possible transmission sequence pairs, n=',nrow(df.tpairs)))	
+	#	compute genetic distances
+	dummy						<- 0.
+	tmp							<- sapply(seq_len(nrow(df.tpairs)),function(i)		.C("hivc_dist_ambiguous_dna", seq.PROT.RT[df.tpairs[i,FASTASampleCode], ], seq.PROT.RT[df.tpairs[i,t.FASTASampleCode], ], ncol(seq.PROT.RT), dummy )[[4]]		)
+	df.tpairs[, seq.similar:= tmp]
+	#	select closest transmitter seqs
+	df.tpairs					<- df.tpairs[, .SD[seq.similar==max(seq.similar)], by=c('cluster','FASTASampleCode')]
+	df.tpairs.stat				<- df.tpairs[,list(t.potpat.n=length(unique(t.Patient)), t.potpatseq.n=length(unique(t.FASTASampleCode)) ),by=c('cluster','Patient')]
+	cat(paste('\ntable of #possible transmitter seqs for every infected patient'))
+	tmp							<- table( df.tpairs.stat[,t.potpatseq.n] )
+	print( tmp )
+	print( cumsum( tmp / sum(tmp ) ) )	
+	#	return uniquely identified pot transmitters
+	df.tpairs.anypos.seqsim	<- merge(df.tpairs, subset(df.tpairs.stat, t.potpatseq.n==1), by=c('cluster','Patient'))		
+	cat(paste('\nselected Patients with one potential transmitter', length(df.tpairs.anypos.seqsim[, unique(Patient)])))		
+	subset( df.tpairs.anypos.seqsim, select=c(cluster, Patient, FASTASampleCode, t.Patient, t.FASTASampleCode) )		
+}
+######################################################################################
+project.athena.Fisheretal.get.data.for.selection<- function(df.tpairs, indir, infile, insignat, infilexml.opt, infilexml.template, indircov, infilecov)
+{
+	file.cov				<- paste(indircov,"/",infilecov,".R",sep='')
+	file.viro				<- paste(indircov,"/ATHENA_2013_03_Viro.R",sep='/')
+	file.immu				<- paste(indircov,"/ATHENA_2013_03_Immu.R",sep='/')
+	file.treatment			<- paste(indircov,"/ATHENA_2013_03_Regimens.R",sep='/')		
+	#	load patient demographic data	(loads df.all)
+	load(file.cov)				
+	#	load patient RNA
+	load(file.viro)
+	df.viro				<- df				
+	#	load patient CD4				
+	load(file.immu)
+	df.immu				<- df
+	#	load patient regimen
+	load(file.treatment)
+	df.treatment		<- df	
+	
+	#
+	#	collect files containing dated cluster phylogenies
+	files		<- list.files(indir)
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('_cluposterior_[0-9]+',x) & grepl('R$',x) ) ]		
+	if(!length(files))	stop('no input files matching criteria')
+	tmp			<- regmatches( files, regexpr('_cluposterior_[0-9]+',files)) 
+	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+	file.info	<- data.table(file=files, cluster=cluster)
+	setkey(file.info, cluster)
+	#	subset of clusters: those in df.tpairs.select
+	if(!is.null(df.tpairs))
+		file.info	<- merge(file.info, unique(subset(df.tpairs, select=cluster)), by='cluster')
+	#	combine dated cluster phylogenies
+	clu			<- hivc.beast2out.combine.clu.trees(indir, file.info)		
+	
+	list(clu=clu, df.all=df.all, df.viro=df.viro, df.immu=df.immu, df.treatment=df.treatment)
+}
+######################################################################################
+project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.subtrees, cluphy.map.nodectime, outfile)
+{
+	beastlabel.idx.clu			<- 1
+	beastlabel.idx.hivn			<- 2
+	beastlabel.idx.hivd			<- 3
+	beastlabel.idx.hivs			<- 4
+	beastlabel.idx.samplecode	<- 6
+	beastlabel.idx.rate			<- NA			
+	#
+	#	prepare df.tpairs.select for plotting
+	#
+	if(!is.null(df.tpairs))
+	{
+		df.tpairs.plot		<- subset( df.tpairs, select=c(cluster, FASTASampleCode, t.FASTASampleCode))
+		setkey(df.tpairs.plot, cluster)
+		tmp					<- df.tpairs.plot[, list(col=brewer.pal( max(3,length(FASTASampleCode)), 'Dark2' )[seq_along(FASTASampleCode)]), by='cluster']
+		df.tpairs.plot[, col:=tmp[,col]]
+		df.tpairs.plot[, pch:=0]
+		df.tpairs.plot[, t.pch:=5]
+		df.tpairs.plot[, cex:=0.5]
+		df.tpairs.plot[, t.cex:=1]
+		tmp					<- subset(df.tpairs.plot, select=c(cluster, t.FASTASampleCode, col, t.pch, t.cex))
+		setnames(tmp, c('t.FASTASampleCode', 't.pch', 't.cex'), c('FASTASampleCode', 'pch', 'cex'))
+		df.tpairs.plot		<- rbind( subset(df.tpairs.plot, select=c(cluster, FASTASampleCode, col, pch, cex)), tmp )
+		setkey(df.tpairs.plot, 'cluster','FASTASampleCode')			
+	}		
+	#TODO	
+	df.tpairs.plot	<- merge( df.tpairs.plot, data.table(FASTASampleCode=cluphy$tip.label), by='FASTASampleCode' )
+	#	determine pdf.xlim: subset of timeline that contains the MRCA of all clusters		
+	cluphy.subtrees.root.ctime	<- sapply(seq_along(cluphy.subtrees), function(i)
+			{
+				tmp		<- hivc.treeannotator.tiplabel2df(cluphy.subtrees[[i]], beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+				tmp[1,TipT]-node.depth.edgelength(cluphy.subtrees[[i]])[1]
+			})		
+	cluphy.subtrees.root.ctime	<- min(cluphy.subtrees.root.ctime)		
+	end.ctime					<- 2013.3
+	pdf.xlim					<- c( cluphy.subtrees.root.ctime-cluphy.root.ctime-1, ceiling(end.ctime)-cluphy.root.ctime )
+	pdf.xlim					<- pdf.xlim+c(0,diff(pdf.xlim)*0.35)
+	#	plot	
+	cat(paste('\nplot to file=',outfile))
+	dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.root.ctime, cluphy.tip.ctime, ph.prob=NA, df.node.ctime=cluphy.map.nodectime, df.rates=NULL, df.tips=df.tpairs.plot, end.ctime=end.ctime,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=outfile,  pdf.width=7, pdf.height=140, pdf.xlim=pdf.xlim)	
+}
+######################################################################################
+project.athena.Fisheretal<- function()
+{
+	indir			<- paste(DATA,"tmp",sep='/')		
+	infile			<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+	insignat		<- "Thu_Aug_01_17/05/23_2013"
+	indircov		<- paste(DATA,"derived",sep='/')
+	infilecov		<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infiletree		<- paste(infile,"examlbs100",sep="_")
+	#infilexml		<- paste(infile,'_',"beast",'_',"seroneg",sep='')
+	
+	#
+	#	select infected individuals and return in df.select
+	#
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree)
+	df.denom		<- tmp$df.select
+	clumsm.info		<- tmp$clumsm.info
+	setkey(clumsm.info, cluster)
+	#
+	#	select potential transmitters
+	#
+	df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.SmallerAnyPos(clumsm.info, df.denom)
+	df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.SmallerAnyPos.ClosestSeqSim(clumsm.info, df.denom)
+	#
+	#	get data for selection
+	#
+	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
+	infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
+	insignat				<- "Tue_Aug_26_09:13:47_2013"
+	infilexml.opt			<- "rsu815"
+	infilexml.template		<- "sasky_sdr06"
+	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, indir, infile, insignat, infilexml.opt, infilexml.template, indircov, infilecov)	
+	df.all					<- tmp$df.all
+	df.viro					<- tmp$df.viro
+	df.immu					<- tmp$df.immu
+	df.treatment			<- tmp$df.treatment
+	cluphy					<- tmp$clu$cluphy
+	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
+	cluphy.info				<- tmp$clu$cluphy.info
+	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime	
+	#			
+	#	plot	
+	#	
+	outfile					<- paste(indir,'/',infile, '_', infilexml.template, '_', infilexml.opt, '_', gsub('/',':',insignat), '_', 'pt-anypos.seqsim', '.pdf',sep='')
+	project.athena.Fisheretal.plot.selected.transmitters(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.subtrees, cluphy.map.nodectime, outfile)
+
+	
 }
 ######################################################################################
 project.athena.TPTN.bootstrapvalues<- function(dir.name= DATA)

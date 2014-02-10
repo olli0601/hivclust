@@ -3258,6 +3258,7 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	#	program options
 	resume						<- TRUE
 	verbose						<- TRUE
+	clu							<- NA
 	beastlabel.idx.clu			<- 1
 	beastlabel.idx.hivn			<- 2
 	beastlabel.idx.hivd			<- 3
@@ -3294,6 +3295,10 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 						{	switch(substr(arg,2,19),
 									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
 		if(length(tmp)>0) infilexml.template<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,8),
+									cluster= return(as.numeric(substr(arg,10,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) clu<- tmp[1]
 		#
 		#
 		tmp<- na.omit(sapply(argv,function(arg)
@@ -3331,6 +3336,7 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 		print(outdir)
 		print(outfile)
 		print(outsignat)
+		print(clu)
 	}
 	#
 	files		<- list.files(indir)
@@ -3340,6 +3346,8 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
 	file.info	<- data.table(file=files, cluster=cluster)
 	setkey(file.info, cluster)
+	if(!is.na(clu))
+		file.info	<- subset( file.info, cluster==clu )
 	#
 	dummy		<- lapply(seq_len(nrow(file.info)), function(i)
 			{			

@@ -791,7 +791,7 @@ hivc.cmd.beast2.plotclustertrees<- function(indir, infile, insignat, indircov, i
 	cmd	
 }
 ######################################################################################
-hivc.cmd.beast2.processclustertrees<- function(indir, infile, insignat, infilexml.opt, infilexml.template, outdir=indir, outsignat=insignat, prog= PR.BEAST2CLUPOSTERIOR, verbose=1, resume=1)
+hivc.cmd.beast2.processclustertrees<- function(indir, infile, insignat, infilexml.opt, infilexml.template, outdir=indir, outsignat=insignat, cluster=NA, prog= PR.BEAST2CLUPOSTERIOR, verbose=1, resume=1)
 {
 	cmd<- "#######################################################
 # start: process posterior trees for each monophyletic cluster to compute consensus trees, zero branch length probs for tips and posterior branch length cdfs 
@@ -800,6 +800,8 @@ hivc.cmd.beast2.processclustertrees<- function(indir, infile, insignat, infilexm
 	#default commands
 	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat,sep='')
 	cmd<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template,sep='')
+	if(!is.na(cluster))
+		cmd<- paste(cmd," -cluster=",cluster,sep='')
 	cmd<- paste(cmd," -outdir=",outdir," -outsignat=",outsignat,sep='')
 	#verbose stuff
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
