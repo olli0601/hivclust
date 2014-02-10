@@ -3343,6 +3343,7 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	#
 	dummy		<- lapply(seq_len(nrow(file.info)), function(i)
 			{			
+				clu				<- file.info[i,cluster]
 				if(resume)
 				{
 					file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_cluposterior_',clu,'.R',sep='')
@@ -3352,8 +3353,7 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 					options(show.error.messages = TRUE)							
 				}
 				if(!resume || inherits(readAttempt, "try-error"))
-				{
-					clu				<- file.info[i,cluster]
+				{					
 					file			<- paste(indir,'/',file.info[i,file],sep='')
 					cat(paste("\nload file",file))
 					options(show.error.messages = FALSE)		

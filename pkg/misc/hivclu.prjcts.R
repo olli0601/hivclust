@@ -1939,6 +1939,14 @@ project.hivc.beast<- function(dir.name= DATA)
 		df.tpairs.anypos
 		df.tpairs.anypos.seqsim
 		
+		df.tpairs.select	<- subset( df.tpairs.anypos.seqsim, select=c(cluster, FASTASampleCode, t.FASTASampleCode))
+		tmp					<- df.tpairs.select[, list(col=brewer.pal( max(3,length(FASTASampleCode)), 'Pastel2' )[seq_along(FASTASampleCode)]), by='cluster']
+		df.tpairs.select[, col:=tmp[,col]]
+		df.tpairs.select[, pch:=0]
+		df.tpairs.select[, t.pch:=1]
+		df.tpairs.select[, cex:=0.1]
+		df.tpairs.select[, t.cex:=0.3]
+		
 		#list(FASTASampleCode=FASTASampleCode[tmp], t.Patient=t.Patient[tmp], t.AnyPos_T1=t.AnyPos_T1[tmp], t.FASTASampleCode seq.similar)
 		#			
 		#	PROG START
