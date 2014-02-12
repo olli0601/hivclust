@@ -15,5 +15,5 @@ Collate:
     'hivclu.fun.clu.R'
     'hivclu.fun.database.athena.R'
     'hivclu.fun.seq.R'
-    'hivclu.fun.pipe.R'
-    'hivclu.fun.prog.R'
+    'hivclu.pipe.R'
+    'hivclu.prog.R'

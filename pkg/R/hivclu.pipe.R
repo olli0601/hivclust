@@ -236,7 +236,7 @@ hivc.pipeline.clustering<- function()
 ######################################################################################
 hivc.pipeline.BEAST<- function()
 {
-	if(0)	#run BEAST 1.7.5 GMRF skyline
+	if(1)	#run BEAST 1.7.5 GMRF skyline
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -292,7 +292,7 @@ hivc.pipeline.BEAST<- function()
 		hivc.prog.BEAST.generate.xml()		
 		quit("no")
 	}
-	if(1)		#generate BEAST2 BDSKYline xml file
+	if(0)		#generate BEAST2 BDSKYline xml file
 	{
 		indir				<- paste(DATA,"tmp",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
