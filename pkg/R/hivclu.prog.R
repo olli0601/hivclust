@@ -3273,6 +3273,12 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	infilexml.opt			<- "rsu815"
 	infilexml.template		<- "sasky_sdr06"
 	#
+	indir					<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast_131011"		
+	infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+	insignat				<- "Tue_Aug_26_09:13:47_2013"				
+	infilexml.template		<- "um182rhU2045"
+	infilexml.opt			<- "mph4clutx4tip"	
+	#
 	if(exists("argv"))
 	{
 		tmp<- na.omit(sapply(argv,function(arg)
@@ -3340,7 +3346,7 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	}
 	#
 	files		<- list.files(indir)
-	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('_clutrees_[0-9]+',x) & grepl('R$',x) ) ]		
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''),x, fixed=1) & grepl('_clutrees_[0-9]+',x) & grepl('R$',x) ) ]		
 	if(!length(files))	stop('no input files matching criteria')
 	tmp			<- regmatches( files, regexpr('_clutrees_[0-9]+',files)) 
 	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
@@ -3380,25 +3386,22 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 					suppressWarnings( mph.clu.itopo[, cluster:= clu ] )
 					setkey(mph.clu.dtopo, freq)
 					#
-					#for each topology, check if tips are in same order and if edges are in same order
-					#if not the latter, see https://www.mail-archive.com/r-sig-phylo@r-project.org/msg02997.html
+					#for each topology, check if tips are in same order and if edges are in same order					
 					#
-					cat(paste('\ncheck tip and edge order'))
+					cat(paste('\ncheck tip, node and edge order'))
 					mph.topo.info	<- mph.clu.itopo[,	{
 								tmp				<- mph.clu[[ mph.i[1] ]]$tip.label
-								tmp				<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$tip.label) )
-								tips.in.order	<- all(tmp)
+								tips.in.order	<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$tip.label) )
 								tmp				<- mph.clu[[ mph.i[1] ]]$edge[,2]
-								tmp				<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$edge[,2]) )
-								edges.in.order	<- all(tmp)
+								edges.in.order	<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$edge[,2]) )
 								tmp				<- mph.clu[[ mph.i[1] ]]$edge[,1]
-								tmp				<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$edge[,1]) )
-								nodes.in.order	<- all(tmp)								
-								list(tips.in.order= tips.in.order, edges.in.order=edges.in.order, nodes.in.order=nodes.in.order)
+								nodes.in.order	<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$edge[,1]) )																
+								list(tips.in.order= tips.in.order, edges.in.order=edges.in.order, nodes.in.order=nodes.in.order, mph.i=mph.i[-1])
 							}, by='equal.to']
-					if( mph.topo.info[, any(!tips.in.order)] ) stop('unexpected: tips not in order')
-					if( mph.topo.info[, any(!nodes.in.order)] ) stop('unexpected: nodes not in order')
-					if( mph.topo.info[, any(!edges.in.order)] ) stop('unexpected: edges not in order')
+					mph.topo.info	<- subset( mph.topo.info, !tips.in.order | !edges.in.order | !nodes.in.order )
+					cat(paste('\ntip, node or edges not in order for n=',nrow(mph.topo.info)))
+					for(i in seq_len(nrow(mph.topo.info)))
+						mph.clu[[ mph.topo.info[i,mph.i] ]]<- hivc.phy.reorder( mph.clu[[ mph.topo.info[i,equal.to] ]], mph.clu[[ mph.topo.info[i,mph.i] ]] )
 					#
 					#	tips and edges in same order, so very easy to summarize node heights of each topology
 					#
@@ -3529,6 +3532,13 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	infilexml.opt			<- "rsu815"
 	infilexml.template		<- "sasky_sdr06"
 	#
+	#indir				<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast_131011"		
+	#infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+	#insignat			<- "Tue_Aug_26_09:13:47_2013"				
+	#infilexml.template	<- "um182rhU2045"
+	#infilexml.opt		<- "mph4clutx4tip"
+	#opt.burnin			<- 2e7
+	
 	if(exists("argv"))
 	{
 		tmp<- na.omit(sapply(argv,function(arg)
@@ -3603,16 +3613,22 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 		print(outsignat)
 	}
 	# read log files and return mean TMRCA and file specific TMRCA
-	files		<- list.files(indir)
-	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('log$',x) ) ]
-	files		<- paste(indir, files, sep='/')				
-	df.th		<- hivc.beast2out.get.log.evolrate(files, opt.burnin=opt.burnin)
+	#files		<- list.files(indir)
+	#files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('log$',x) ) ]
+	#files		<- paste(indir, files, sep='/')
+	#if(!length(files))	stop('cannot find files matching criteria')
+	#df.th		<- hivc.beast2out.get.log.evolrate(files, opt.burnin=opt.burnin)
 	
 	#	read tree files	- this takes a while
 	#	do this one by one as reading all in one go is too mem intensive
 	files		<- list.files(indir)
-	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('trees$',x) ) ]
-	files		<- paste(indir, files, sep='/')				
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('trees$',x) ) ]
+	if(!length(files))	stop('cannot find files matching criteria')
+	files		<- paste(indir, files, sep='/')
+	tmp			<- grepl('timetrees$',files)
+	if(any(tmp))
+		files	<- files[tmp]	
+	cat(paste("\nfound files, n=",length(files)))
 	dummy		<- lapply(seq_along(files), function(i)
 			{
 				file					<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','trees_',i,'.R',sep='')
@@ -3625,10 +3641,12 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 				}
 				if(!resume || inherits(readAttempt, "try-error"))
 				{
-					opt.rescale.edge.length	<- df.th[i, ucldMean.mean / ucldMean.mean.i]
+					#opt.rescale.edge.length	<- df.th[i, ucldMean.mean / ucldMean.mean.i]
 					cat(paste("\nread file ",files[i]))
-					mph						<- hivc.beast2out.read.trees(files[i], opt.rescale.edge.length=opt.rescale.edge.length, opt.burnin=opt.burnin)					
+					mph						<- hivc.beast2out.read.trees(files[i], opt.rescale.edge.length=1, opt.burnin=opt.burnin)					
 					cat(paste('\nsave mph to file=',file))
+					tmp						<- hivc.beast2out.tip.date.check(mph[[length(mph)]], fun=hivc.treeannotator.tiplabel2df, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+					if(tmp>2*EPS )	stop('hivc.beast2out.read.trees does not pass random tip date check')						
 					save(mph, file=file)					
 				}
 				mph						<- NULL
@@ -3677,7 +3695,7 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	
 	#	pool overlapping cluster trees  
 	files		<- list.files(indir)
-	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl('_trees_[0-9]+',x) & grepl('_clu_[0-9]+',x) & grepl('R$',x) ) ]
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('_trees_[0-9]+',x) & grepl('_clu_[0-9]+',x) & grepl('R$',x) ) ]
 	#
 	tmp			<- regexpr('_clu_[0-9]+',files)
 	if(any(tmp<0))	stop('unexpected _clu_ files')
@@ -4090,6 +4108,23 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$pool.cnts.requested				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt)))
 		beast2.spec$pool.cnts.requested				<- c(NA, max(50,beast2.spec$pool.cnts.requested), 70, NA, NA)				
 	}	
+	else if(grepl("alrh",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter, cluster.monophyletic=TRUE, cluster.log=FALSE, tip.log.stem=FALSE)
+		beast2.spec$pool.fNegT						<- 0
+		beast2.spec$pool.ntip						<- 150		
+		beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.596, 0.)
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2, 0.2)		
+		beast2.spec$bdsky.sprop.prior				<- c("Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0")
+		beast2.spec$bdsky.R0.prior					<- c("Gamma/1.5/1.5/0", rep(paste("Gamma/2.3/0.15/0.7",sep=''),4))
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
+		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",5)				
+		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )		
+		beast2.spec$pool.cnts.requested				<- c(NA, 50, 70, NA, NA)	
+		beast2.spec$bdsky.origin.prior				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt)))		
+		beast2.spec$bdsky.origin.prior				<- paste("Uniform/",min(20,beast2.spec$bdsky.origin.prior-20),"/",beast2.spec$bdsky.origin.prior,sep='')
+	}	
 	else stop("unknown infilexml.opt")
 	#		 
 	#
@@ -4171,7 +4206,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 	#
 	#	create BEAST2 XML file	
 	#
-	bfile			<- lapply(seq_len(length(df.clupool$pool.df)), function(pool.id)
+	bfile			<- lapply(seq_len(length(df.clupool$pool.df))[1], function(pool.id)
 						{
 							df							<- df.clupool$pool.df[[pool.id]]
 							setkey(df, cluster)							
@@ -4195,7 +4230,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 				cat(cmd)
 				outfile		<- paste("b2",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
-				#stop()
+				stop()
 			})	
 }
 ######################################################################################

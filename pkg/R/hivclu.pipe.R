@@ -269,9 +269,9 @@ hivc.pipeline.BEAST<- function()
 		#infilexml.opt		<- "mph4cluLsTd"
 		#infilexml.opt		<- "mph4cluNoTd"
 		#infilexml.opt		<- "mph4cluu4tipLdTd"
-		infilexml.opt		<- "mph4clutx4tipLdTd"
-		infilexml.opt		<- "mph4clutx4tipLsTd"
-		#infilexml.opt		<- "mph4clutx4tip"
+		#infilexml.opt		<- "mph4clutx4tipLdTd"
+		#infilexml.opt		<- "mph4clutx4tipLsTd"
+		infilexml.opt		<- "mph4clutx4tip"
 		
 		outdir				<- indir
 		outsignat			<- "Tue_Aug_26_09/13/47_2013"
@@ -279,9 +279,9 @@ hivc.pipeline.BEAST<- function()
 		opt.brl				<- "dist.brl.casc" 
 		thresh.brl			<- 0.096
 		thresh.bs			<- 0.8
-		pool.ntip			<- 130		
+		#pool.ntip			<- 130		
 		#pool.ntip			<- 150
-		#pool.ntip			<- 190
+		pool.ntip			<- 190
 		#pool.ntip			<- 400
 		resume				<- 1
 		verbose				<- 1
@@ -319,6 +319,7 @@ hivc.pipeline.BEAST<- function()
 		infilexml.template	<- "bdsky_hky" 
 		infilexml.template	<- "sasky_hky"
 		infilexml.template	<- "sasky_sdr06"
+		infilexml.template	<- "sasky_sdr06fr"
 		infilexml.opt		<- "S4p"
 		#infilexml.opt		<- "S5p"
 		#infilexml.opt		<- "S8p"
@@ -355,6 +356,9 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "rse835"
 		infilexml.opt		<- "rsu815"
 		infilexml.opt		<- "alsu50"
+		infilexml.opt		<- "alrh40"
+		infilexml.opt		<- "alrh80"
+		infilexml.opt		<- "alrh160"
 		#infilexml.opt		<- "rsu835"		
 		#infilexml.opt		<- "ori40"
 		#infilexml.opt		<- "ori50"
@@ -395,17 +399,26 @@ hivc.pipeline.BEASTout<- function()
 {
 	if(0)
 	{
-		indir				<- paste(DATA,"tmp",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
-		outdir				<- indir
-		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"		
+		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		#
+		indir				<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast_131011"		
+		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		insignat			<- "Tue_Aug_26_09:13:47_2013"				
+		infilexml.template	<- "um232rhU2045"
+		infilexml.opt		<- "mph4clutx4tip"
+		burnin				<- 2e7
+		#
+		indir				<- paste(DATA,"tmp",sep='/')							
 		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"		
 		insignat			<- "Wed_Dec_18_11:37:00_2013"		
-		outsignat			<- insignat
 		infilexml.template	<- "sasky_sdr06"
 		infilexml.opt		<- "alsu50"
-
-		cmd			<- hivc.cmd.beast2.getclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, burnin=5e6, verbose=1, resume=1)
+		burnin				<- 5e6
+		#
+		outdir				<- indir
+		outsignat			<- insignat		
+		cmd			<- hivc.cmd.beast2.getclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, burnin=burnin, verbose=1, resume=1)
 		cmd			<- paste(cmd, hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, verbose=1, resume=1), sep='')
 		#cmd			<- paste(cmd, hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, resume=1, verbose=1), sep='')
 		cat(cmd)

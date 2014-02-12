@@ -2057,6 +2057,25 @@ hivc.phy.get.TP.and.TN.bootstrapvalues<- function(ph, bs.linked.bypatient, ph.mr
 	list(bs.linked.bypatient=bs.linked.bypatient, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=bs.unlinked.byspace)
 }
 ######################################################################################
+#reorder y into tip and node indices of x
+hivc.phy.reorder<- function(x, y)
+{
+	ans				<- x
+	require(phytools)					
+	tmp				<- matchNodes(y, x)
+	colnames(tmp)	<- c('from','to')
+	if(!all(diff(tmp[,'from'])==1))	stop('unexpected order of match nodes')
+	tmp				<- rbind( data.table( from=seq_len(Ntip(y)), to=match(y$tip.label, x$tip.label) ), as.data.table(tmp) )
+	setkey(tmp, to)
+	#	sort tmp so that its row index corresponds to the edge index in x	
+	tmp				<- tmp[J(x$edge[,2])]
+	#	now: take the node number in y that corresponds to the end node of edge i=1:n in x, and find the corresponding edge  
+	tmp				<- sapply( tmp[,from], function(z) which(z==y$edge[,2]) )
+	ans$edge.length	<- y$edge.length[tmp]
+	ans$root.edge	<- y$root.edge
+	ans
+}
+######################################################################################
 hivc.phy.get.TP.and.TN<- function(ph, df.all, use.seroneg.as.is= 0, verbose= 1)
 {
 	#

@@ -77,8 +77,10 @@ default.fun	<- "project.hivc.beast"
 #default.fun 	<- "hivc.pipeline.recombination"
 #default.fun 	<- "hivc.pipeline.ExaML"
 #default.fun		<- "hivc.pipeline.clustering"
-#default.fun 	<- "hivc.pipeline.BEAST"
-default.fun		<- "hivc.pipeline.BEASTout"
+default.fun 	<- "hivc.pipeline.BEAST"
+#default.fun		<- "hivc.pipeline.BEASTout"
+#default.fun		<- "project.athena.Fisheretal"
+#default.fun		<- "project.athena.Fisheretal.exact.repro"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{

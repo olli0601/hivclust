@@ -392,7 +392,7 @@ hivc.beast2.extract.distinct.topologies<- function(mph.clu)
 	list(dtopo= mph.clu.dtopo, itopo=mph.clu.itopo)
 }
 ######################################################################################
-hivc.beast2out.combine.clu.trees<- function(indir, file.info)
+hivc.beast2out.combine.clu.trees<- function(indir, file.info, beastlabel.idx.clu=1, beastlabel.idx.hivn=2, beastlabel.idx.hivd=3, beastlabel.idx.hivs=4, beastlabel.idx.samplecode= 6, beastlabel.idx.rate= NA)
 {
 	#	collect consensus tree and further info for plotting
 	tmp			<- lapply(seq_len(nrow(file.info)), function(i)
@@ -424,7 +424,14 @@ hivc.beast2out.combine.clu.trees<- function(indir, file.info)
 			})
 	cluphy.root.ctime			<- mean(cluphy.subtrees.root.ctime)
 	for(i in seq_along(cluphy.subtrees))
-		cluphy.subtrees[[i]]$root.edge	<- cluphy.subtrees[[i]]$root.edge+cluphy.subtrees.root.ctime[i]-cluphy.root.ctime
+		cluphy.subtrees[[i]]$root.edge	<- cluphy.subtrees[[i]]$root.edge+cluphy.subtrees.root.ctime[i]-cluphy.root.ctime	
+	brl.error	<- max( sapply(seq_along(cluphy.subtrees), function(i)
+			{
+				tmp		<- hivc.treeannotator.tiplabel2df(cluphy.subtrees[[i]], beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+				tmp		<- node.depth.edgelength(cluphy.subtrees[[i]])[seq_len(Ntip(cluphy.subtrees[[i]]))]+cluphy.subtrees[[i]]$root.edge+cluphy.root.ctime-tmp[, TipT]
+				max(abs(tmp))
+			}) )
+	if(brl.error>2*EPS)	warning(paste('found brl error, max error=',brl.error))
 	#	combine subtree phylogenies
 	cluphy						<- hivc.clu.polyphyletic.clusters(cluphy.subtrees=cluphy.subtrees)$cluphy
 	cluphy.info					<- hivc.treeannotator.tiplabel2df(cluphy, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)		
@@ -452,8 +459,8 @@ hivc.beast2out.combine.clu.trees<- function(indir, file.info)
 ######################################################################################
 hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatment, ph, ph.root.ctime, ph.tip.ctime, ph.prob=NA, df.node.ctime=NULL, df.rates=NULL, df.tips=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20, pdf.xlim=NULL)
 {
-	#df.all, df.immu, df.viro, df.treatment, df.tips	<- df.tpairs.plot
-	#ph<- cluphy; ph.root.ctime=cluphy.root.ctime; ph.tip.ctime=cluphy.tip.ctime; df.node.ctime=cluphy.map.nodectime;  cex.nodelabel=0.5;  cex.tiplabel=0.5;  file=NULL;  pdf.width=7; pdf.height=120; pdf.xlim=pdf.xlim
+	#df.all, df.immu, df.viro, df.treatment, 
+	#df.tips	<- df.tpairs.plot; ph<- cluphy; ph.root.ctime=cluphy.root.ctime; ph.tip.ctime=cluphy.tip.ctime; df.node.ctime=cluphy.map.nodectime;  cex.nodelabel=0.5;  cex.tiplabel=0.5;  file=NULL;  pdf.width=7; pdf.height=120; pdf.xlim=pdf.xlim
 	require(RColorBrewer)
 	if(class(file)=="character")
 		pdf(file, width=pdf.width, height=pdf.height)
@@ -545,7 +552,16 @@ hivc.beast2out.extract.cluster.trees<- function(mph, mph.info)
 	mph.by.clu
 }
 ######################################################################################
-hivc.beast2out.read.trees<- function(file, opt.rescale.edge.length= 1., opt.burnin=0)
+hivc.beast2out.tip.date.check<- function(ph, fun, ...)
+{	
+	ph.info	<- fun(ph, ...) 
+	ph.info[, tip:= match(ph.info[,BEASTlabel], ph$tip.label)]
+	setkey(ph.info, tip)
+	tmp		<- node.depth.edgelength(ph)[seq_len(Ntip(ph))] 
+	max( abs( ph.info[1,TipT]-tmp[1]+tmp  -  ph.info[,TipT] ) ) 		
+}
+######################################################################################
+hivc.beast2out.read.trees<- function(file, opt.rescale.edge.length= 1., opt.burnin=0 )
 {
 	mph			<- read.nexus(file)
 	#	remove burn in 
@@ -563,27 +579,36 @@ hivc.beast2out.read.trees<- function(file, opt.rescale.edge.length= 1., opt.burn
 }
 ######################################################################################
 hivc.beast2out.get.log.evolrate<- function(files, opt.burnin=opt.burnin)
-{
+{		
 	if(!opt.burnin)	warning('burn in equals zero')
 	#	collect posterior TreeHeight samples
 	df.log		<- lapply(seq_along(files), function(i)
 			{
-				file	<- files[i]
+				file		<- files[i]
 				cat(paste("\nReading file ",file))
-				df.log	<- read.delim2(file, header = TRUE, sep = "\t", quote="\"", dec=".", fill = TRUE, comment.char="#")
-				df.log	<- as.data.table(df.log)
-				if(!'TreeHeight'%in%colnames(df.log)) stop('expect column TreeHeight in log file')
-				if(!'Sample'%in%colnames(df.log)) stop('expect column Sample in log file')
-				if(!'ucldMean'%in%colnames(df.log)) stop('expect column Sample in log file')
-				
-				df.log	<- subset(df.log, Sample>opt.burnin, select=c(Sample, TreeHeight, ucldMean))
+				df.log		<- read.delim2(file, header = TRUE, sep = "\t", quote="\"", dec=".", fill = TRUE, comment.char="#")
+				df.log		<- as.data.table(df.log)
+				is.BEAST2	<- ifelse('Sample'%in%colnames(df.log), 1, 0)
+				cat(paste("\ndetected is.BEAST2=",is.BEAST2))
+				if(is.BEAST2)
+				{					
+					if(!'Sample'%in%colnames(df.log)) stop('expect column Sample in log file')
+					if(!'ucldMean'%in%colnames(df.log)) stop('expect column ucldMean in log file')					
+					df.log	<- subset(df.log, Sample>opt.burnin, select=c(Sample, ucldMean))					
+				}
+				else
+				{
+					if(!'state'%in%colnames(df.log)) stop('expect column state in log file')
+					if(!'ucld.mean'%in%colnames(df.log)) stop('expect column ucld.mean in log file')					
+					df.log	<- subset(df.log, state>opt.burnin, select=c(state, ucld.mean))
+					setnames(df.log, 'ucld.mean','ucldMean')
+				}
 				df.log[, file.i:= i]
 				df.log
 			})
 	df.log		<- do.call('rbind', df.log)
 	#	compute overall mean and file specific mean
-	ans			<- df.log[, list(TreeHeight.mean.i= mean(TreeHeight), ucldMean.mean.i=mean(ucldMean)), by='file.i']
-	ans[,TreeHeight.mean:= mean(TreeHeight.mean.i)]
+	ans			<- df.log[, list(ucldMean.mean.i=mean(ucldMean)), by='file.i']
 	ans[,ucldMean.mean:= mean(ucldMean.mean.i)]
 	ans
 }		
@@ -1610,7 +1635,7 @@ hivc.beast2.add.bdsky.serialpriors<- function(bxml, beast2.spec, verbose=1)
 hivc.treeannotator.tiplabel2df<- function(x, beastlabel.idx.clu=1, beastlabel.idx.hivn=2, beastlabel.idx.hivd=3, beastlabel.idx.hivs=4, beastlabel.idx.samplecode=5, beastlabel.idx.rate=6)
 {
 	tmp		<- t( sapply(strsplit(x$tip.label,'_'), function(z)	z[c(beastlabel.idx.clu,beastlabel.idx.hivn, beastlabel.idx.hivd, beastlabel.idx.hivs, beastlabel.idx.samplecode, beastlabel.idx.rate)] ) )
-	data.table(cluster=as.numeric(tmp[,1]), NegT= as.numeric(tmp[,2]), AnyPos_T1= as.numeric(tmp[,3]), TipT= as.numeric(tmp[,4]), FASTASampleCode=tmp[,5], rate=as.numeric(tmp[,6]), BEASTlabel=x$tip.label )				
+	data.table(cluster=as.numeric(tmp[,1]), NegT= suppressWarnings(as.numeric(tmp[,2])), AnyPos_T1= as.numeric(tmp[,3]), TipT= as.numeric(tmp[,4]), FASTASampleCode=tmp[,5], rate=as.numeric(tmp[,6]), BEASTlabel=x$tip.label )				
 }	
 ######################################################################################
 hivc.treeannotator.get.clusterprob<- function(ph.beast, beastlabel.idx.clu=1, beastlabel.idx.samplecode=5, verbose=1)
