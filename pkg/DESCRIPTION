@@ -11,4 +11,9 @@ License: GPL (>=2)
 LazyLoad: yes
 Collate:
     'hivclu.cmd.R'
-    'hivclu.fun.R'
+    'hivclu.fun.beast.R'
+    'hivclu.fun.clu.R'
+    'hivclu.fun.database.athena.R'
+    'hivclu.fun.seq.R'
+    'hivclu.fun.pipe.R'
+    'hivclu.fun.prog.R'
