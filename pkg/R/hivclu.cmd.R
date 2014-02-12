@@ -115,7 +115,7 @@ hivc.cmd.hpcsys<- function()
 	tmp
 }
 ######################################################################################
-#generate clustalo command
+#' generate clustalo command
 #' @export
 hivc.cmd.blast.makedb<- function(indir, infile, signat=paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''), outdir=indir, with.mask=1, prog.mask= PR.BLASTMASK, prog.makedb=PR.BLASTMAKEDB, nproc=1, verbose=1)
 {
@@ -470,8 +470,8 @@ hivc.cmd.examl<- function(indir, infile, signat.in, signat.out, outdir=indir, pr
 	cmd
 }
 ######################################################################################
-#' @export
-#' 	creates a shell command to create a new bootstrap alignment over codon positions of an input alignment 
+#' 	creates a shell command to create a new bootstrap alignment over codon positions of an input alignment
+#' @export 
 hivc.cmd.examl.bsalignment<- function(indir, infile, signat.in, signat.out, bs.id, outdir=indir, prog.bscreate= PR.EXAML.BSCREATE, opt.bootstrap.by="codon",resume=0, verbose=1)
 {
 	cmd			<- paste("#######################################################
