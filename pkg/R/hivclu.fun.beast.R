@@ -670,7 +670,7 @@ hivc.beast2.add.tree<- function(bxml, beast2.spec, verbose=verbose)
 	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
 	dummy		<- newXMLNode("tree", attrs= list(	id=beast2.spec$tree.id, 													 
 					trait=paste('@',beast2.spec$datetrait.id,sep=''),
-					taxa=paste('@',beast2.spec$tree.taxonset,sep='')), 
+					taxonset=paste('@TaxonSet.t:',beast2.spec$tree.taxonset,sep='')), 
 			parent=bxml.beast, doc=bxml, addFinalizer=T)	
 	if(verbose)	cat(paste("\nadded trees for taxonsets, n=", length(beast2.spec$tree.taxonset)))
 	bxml

@@ -3344,6 +3344,40 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 		print(outsignat)
 		print(clu)
 	}
+	#	pool overlapping cluster trees  
+	files		<- list.files(indir)
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('_trees_[0-9]+',x) & grepl('_clu_[0-9]+',x) & grepl('R$',x) ) ]
+	#
+	tmp			<- regexpr('_clu_[0-9]+',files)
+	if(any(tmp<0))	stop('unexpected _clu_ files')
+	tmp			<- regmatches( files, tmp) 
+	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+	tmp			<- regmatches( files, regexpr('_pool_[0-9]+',files)) 
+	run.id		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+	file.info	<- data.table(file=files, cluster=cluster, run.id=run.id )
+	setkey(file.info, cluster)
+	if(!is.na(clu))
+		file.info	<- subset( file.info, cluster==clu )
+	cat(paste('\nnumber of files to process, n=',nrow(file.info)))
+	#
+	dummy	<- lapply( file.info[, unique(cluster)], function(clu)
+			{
+				file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','clutrees_',clu,'.R',sep='')
+				if(resume)
+				{
+					options(show.error.messages = FALSE)		
+					readAttempt		<- try(suppressWarnings(load(file)))
+					if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))					
+					options(show.error.messages = TRUE)		
+				}
+				if(!resume || inherits(readAttempt, "try-error"))
+				{
+					mph.clu			<- hivc.beast2out.pool.cluster.trees( paste(indir, subset(file.info, cluster==clu)[, file], sep='/') )					
+					cat(paste("\nsave mph.clu to file",file))
+					save(mph.clu, file=file)
+				}
+			})
+	
 	#
 	files		<- list.files(indir)
 	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''),x, fixed=1) & grepl('_clutrees_[0-9]+',x) & grepl('R$',x) ) ]		
@@ -3354,6 +3388,7 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	setkey(file.info, cluster)
 	if(!is.na(clu))
 		file.info	<- subset( file.info, cluster==clu )
+	cat(paste('\nnumber of files to process, n=',nrow(file.info)))
 	#
 	dummy		<- lapply(seq_len(nrow(file.info)), function(i)
 			{			
@@ -3514,6 +3549,7 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	require(data.table)
 	require(hivclust)
 	#	program options
+	opt.pool					<- NA
 	opt.burnin					<- 5e6		
 	opt.save.cluster.nexfile	<- FALSE
 	resume						<- TRUE
@@ -3577,7 +3613,10 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 						{	switch(substr(arg,2,7),
 									burnin= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) opt.burnin<- tmp[1]
-		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,5),
+									pool= return(as.numeric(substr(arg,7,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) opt.pool<- tmp[1]		
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,7),
 									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
@@ -3594,6 +3633,7 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	#
 	if(verbose)
 	{
+		print(opt.pool)
 		print(opt.burnin)		
 		print(opt.save.cluster.nexfile)
 		print(resume)
@@ -3627,11 +3667,13 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	files		<- paste(indir, files, sep='/')
 	tmp			<- grepl('timetrees$',files)
 	if(any(tmp))
-		files	<- files[tmp]	
+		files	<- files[tmp]		
+	if(!is.na(opt.pool))
+		files	<- files[ grepl(paste('_pool_',opt.pool), files) ]
 	cat(paste("\nfound files, n=",length(files)))
 	dummy		<- lapply(seq_along(files), function(i)
 			{
-				file					<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','trees_',i,'.R',sep='')
+				file					<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',i,'.R',sep='')
 				if(resume)
 				{
 					options(show.error.messages = FALSE)		
@@ -3659,12 +3701,12 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 				if(resume)
 				{
 					tmp			<- list.files(outdir)
-					tmp			<- tmp[ sapply(tmp, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',outsignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl(paste('_trees_',i,'_clu_[0-9]+',sep=''),x) & grepl('.R$',x) ) ]
+					tmp			<- tmp[ sapply(tmp, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',outsignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl(paste('_pool_',i,'_clu_[0-9]+',sep=''),x) & grepl('.R$',x) ) ]
 					tmp			<- length(tmp)
 				}
 				if(!resume || !tmp )
 				{
-					file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','trees_',i,'.R',sep='')
+					file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',i,'.R',sep='')
 					cat(paste("\nload file",file))
 					options(show.error.messages = FALSE)		
 					readAttempt		<- try(suppressWarnings(load(file)))
@@ -3677,13 +3719,13 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 					#for each cluster, produce R and possibly nexus tree file
 					dummy			<- lapply(seq_along(mph.by.clu), function(clu)
 							{
-								file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','trees_',i,'_clu_',names(mph.by.clu)[clu],'.R',sep='')
+								file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',i,'_clu_',names(mph.by.clu)[clu],'.R',sep='')
 								mph.clu	<- mph.by.clu[[clu]]
 								cat(paste("\nsave mph.clu to file",file))
 								save(mph.clu, file=file)
 								if(opt.save.cluster.nexfile)
 								{
-									file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','trees_',i,'_clu_',names(mph.by.clu)[clu],'.nex',sep='')
+									file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',i,'_clu_',names(mph.by.clu)[clu],'.nex',sep='')
 									cat(paste("\nsave mph.clu to file",file))
 									write.nexus(mph.clu, file=file)					
 								}
@@ -3691,38 +3733,7 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 					dummy			<- NULL
 					gc()	
 				}					
-			})
-	
-	#	pool overlapping cluster trees  
-	files		<- list.files(indir)
-	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('_trees_[0-9]+',x) & grepl('_clu_[0-9]+',x) & grepl('R$',x) ) ]
-	#
-	tmp			<- regexpr('_clu_[0-9]+',files)
-	if(any(tmp<0))	stop('unexpected _clu_ files')
-	tmp			<- regmatches( files, tmp) 
-	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
-	tmp			<- regmatches( files, regexpr('_trees_[0-9]+',files)) 
-	run.id		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
-	mphpc.info	<- data.table(file=files, cluster=cluster, run.id=run.id )
-	setkey(mphpc.info, cluster)
-	#
-	dummy	<- lapply( mphpc.info[, unique(cluster)], function(clu)
-			{
-				file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_','clutrees_',clu,'.R',sep='')
-				if(resume)
-				{
-					options(show.error.messages = FALSE)		
-					readAttempt		<- try(suppressWarnings(load(file)))
-					if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))					
-					options(show.error.messages = TRUE)		
-				}
-				if(!resume || inherits(readAttempt, "try-error"))
-				{
-					mph.clu			<- hivc.beast2out.pool.cluster.trees( paste(indir, subset(mphpc.info, cluster==clu)[, file], sep='/') )					
-					cat(paste("\nsave mph.clu to file",file))
-					save(mph.clu, file=file)
-				}
-			})
+			})		
 }
 ######################################################################################
 hivc.prog.BEAST2.generate.xml<- function()
@@ -3739,6 +3750,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 	outdir				<- indir
 	outsignat			<- "Tue_Aug_26_09/13/47_2013"
 	
+	opt.burnin				<- 5e6
 	opt.brl					<- "dist.brl.casc" 
 	thresh.brl				<- 0.096
 	thresh.bs				<- 0.8
@@ -4134,11 +4146,13 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$pool.ntip			<- pool.ntip
 	if(grepl("sasky",infilexml.template))
 	{
+		beast2.spec$template			<- infilexml.template
 		beast2.spec$treemodel			<- "SampledAncestorSkylineModel"
 		prog.beast						<- PR.BEAST2SA
 	}
 	if(grepl("bdsky",infilexml.template))
 	{
+		beast2.spec$template			<- infilexml.template
 		beast2.spec$treemodel			<- "BirthDeathSkylineModel"
 		prog.beast						<- PR.BEAST2
 	}
@@ -4201,7 +4215,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 	#
 	#	load xml template file
 	#	
-	file			<- paste(CODE.HOME,"/data/BEAST2_template_",infilexml.template,".xml",sep='')
+	file			<- paste(CODE.HOME,"/data/BEAST2_template_",beast2.spec$template,".xml",sep='')
 	bxml.template	<- xmlTreeParse(file, useInternalNodes=TRUE, addFinalizer = TRUE)			
 	#
 	#	create BEAST2 XML file	
@@ -4211,20 +4225,21 @@ hivc.prog.BEAST2.generate.xml<- function()
 							df							<- df.clupool$pool.df[[pool.id]]
 							setkey(df, cluster)							
 							beast2.spec$xml.dir			<- indir
-							beast2.spec$xml.filename	<- paste(infilexml,'-',beast2.spec$pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')
+							beast2.spec$xml.filename	<- paste(infilexml,'-',beast2.spec$pool.ntip,'_pool_',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',gsub('/',':',outsignat),sep='')
 							beast2.spec$starttree.newick<- hivc.beast2.get.startingtree(ph, df, beast2.spec, verbose=verbose)
 							beast2.xml					<- hivc.beast2.get.xml( bxml.template, seq.PROT.RT, df, beast2.spec, verbose=1)			
 							file						<- paste(beast2.spec$xml.dir,'/',beast2.spec$xml.filename,".xml", sep='')
 							if(verbose)	cat(paste("\nwrite xml file to",file))
 							saveXML(beast2.xml, file=file)
-							paste(infilexml,'-',beast2.spec$pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,sep='')
+							paste(infilexml,'-',beast2.spec$pool.ntip,'_pool_',pool.id,'_',infilexml.template,'_',infilexml.opt,sep='')
 						})
 	#
 	#	generate BEAST commands and run
 	#
-	sapply(bfile, function(x)
+	sapply(seq_along(bfile), function(pool.id)
 			{
-				cmd			<- hivc.cmd.beast2.runxml(indir, x, outsignat, hpc.ncpu=hpc.ncpu, prog.beast=prog.beast, prog.opt.Xmx="1200m", hpc.tmpdir.prefix="beast2")
+				cmd			<- hivc.cmd.beast2.runxml(indir, bfile[[pool.id]], outsignat, hpc.ncpu=hpc.ncpu, prog.beast=prog.beast, prog.opt.Xmx="1200m", hpc.tmpdir.prefix="beast2")
+				cmd			<- paste(cmd, hivc.cmd.beast2.getclustertrees.pipe(indir, infilexml, outsignat, infilexml.opt, infilexml.template, opt.burnin, outdir=indir, outsignat=outsignat, opt.pool=pool.id, verbose=verbose, resume=resume), sep='' )
 				#cmd		<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
 				cat(cmd)
@@ -4249,6 +4264,7 @@ hivc.prog.BEAST.generate.xml<- function()
 	outdir				<- indir
 	outsignat			<- "Tue_Aug_26_09/13/47_2013"
 		
+	opt.burnin				<- 2e7
 	opt.brl					<- "dist.brl.casc" 
 	thresh.brl				<- 0.096
 	thresh.bs				<- 0.8
@@ -4441,15 +4457,16 @@ hivc.prog.BEAST.generate.xml<- function()
 	#
 	#	generate BEAST commands and run
 	#
-	sapply(bfile, function(x)
+	sapply(seq_along(bfile), function(pool.id)
 			{
-				cmd			<- hivc.cmd.beast.runxml(outdir, x, outsignat, hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)				
+				cmd			<- hivc.cmd.beast.runxml(outdir, bfile[[pool.id]], outsignat, hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
+				cmd			<- paste(cmd, hivc.cmd.beast2.getclustertrees.pipe(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, opt.burnin, outdir=outdir, outsignat=outsignat, opt.pool=pool.id, verbose=verbose, resume=resume), sep='' )
 				cmd			<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
 				cat(cmd)
-				stop()
 				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-				hivc.cmd.hpccaller(outdir, outfile, cmd)				
+				hivc.cmd.hpccaller(outdir, outfile, cmd)
+				stop()
 			})		
 }
 ######################################################################################

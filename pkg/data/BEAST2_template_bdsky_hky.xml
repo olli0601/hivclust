@@ -27,17 +27,6 @@
 	</substModel>
 </siteModel>
 
-<BirthDeathSkylineModel spec="beast.evolution.speciation.BirthDeathSkylineModel" id="birthDeath" tree="@Tree.t:ds" intervalNumber="4">
-        <parameter name="origin" id="originS.t:ds" lower="0.0" upper="1000.0" value="35.0"/>
-        <parameter dimension="4" name="samplingProportionS" id="samplingProportionS.t:ds" lower="0.0" upper="1.0" value="0.4"/>		
-        <parameter dimension="4" name="becomeUninfectiousRateS" id="becomeUninfectiousRateS.t:ds" lower="0.0" upper="10.0" value="0.1"/>
-	<parameter dimension="4" name="R0S" id="R0S.t:ds" lower="0.0" upper="10.0" value="1.2"/>
-	<reverseTimeArrays spec="parameter.BooleanParameter" name="reverseTimeArrays.t:ds" id="reverseTimeArrays.t:ds" value="true true true false"/>
-	<parameter name="samplingRateChangeTimes" id="samplingRateChangeTimes.t:ds" value="9.596 5.596 1.596 0."/>
-	<parameter name="deathRateChangeTimes" id="deathRateChangeTimes.t:ds" value="9.596 5.596 1.596 0."/>
-	<parameter name="birthRateChangeTimes" id="birthRateChangeTimes.t:ds" value="9.596 5.596 1.596 0."/>
-</BirthDeathSkylineModel>
-
 <run chainLength="20000000" id="mcmc" spec="MCMC">
     <state id="state" storeEvery="5000">
       <stateNode idref='Tree.t:ds'/>

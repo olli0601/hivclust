@@ -341,6 +341,7 @@ if(length(args))
 					CLUSTMSM				= "hivc.prog.get.clustering.MSM",
 					BEASTPOOLRUN			= "hivc.prog.BEAST.generate.xml",
 					BEASTEVALRUN			= "hivc.prog.BEAST.evalpoolrun",
+					BEAST2.PIPE.CLUTREES	= "hivc.pipeline.BEASTout.get.cluster.trees",
 					BEAST2.CLUTREES			= "hivc.prog.BEAST2.get.cluster.trees",
 					BEAST2.CLUPOSTERIOR		= "hivc.prog.BEAST2.process.cluster.trees",					
 					BEAST2.PLOTCLUTREES		= "hivc.prog.BEAST2.plot.cluster.trees",

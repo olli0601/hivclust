@@ -83,6 +83,9 @@ PR.BEAST2		<- system.file(package="hivclust", "ext", "beast2.jar")
 PR.BEAST2SA		<- system.file(package="hivclust", "ext", "beast2-SA.jar")
 
 #' @export
+PR.BEAST2.CLUTREES.PIPE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.PIPE.CLUTREES",sep='/')
+
+#' @export
 PR.BEAST2CLUTREES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.CLUTREES",sep='/')
 
 #' @export
@@ -811,19 +814,42 @@ hivc.cmd.beast2.processclustertrees<- function(indir, infile, insignat, infilexm
 	cmd	
 }
 ######################################################################################
-hivc.cmd.beast2.getclustertrees<- function(indir, infile, insignat, infilexml.opt, infilexml.template, burnin, outdir=indir, outsignat=insignat, prog= PR.BEAST2CLUTREES, verbose=1, resume=1)
+hivc.cmd.beast2.getclustertrees.pipe<- function(indir, infile, insignat, infilexml.opt, infilexml.template, burnin, outdir=indir, outsignat=insignat, prog= PR.BEAST2.CLUTREES.PIPE, opt.pool=NA, verbose=1, resume=1)
+{
+	cmd<- "#######################################################
+# start: submit new job -- extract posterior trees for each monophyletic cluster from BEAST .trees file after burnin
+#######################################################"
+	cmd		<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd		<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat,sep='')
+	cmd		<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -burnin=",burnin,sep='')
+	#optional commands
+	if(!is.na(opt.pool))
+		cmd	<- paste(cmd," -pool=",opt.pool,sep='')
+	#verbose stuff
+	cmd		<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd		<- paste(cmd,"#######################################################
+# end: submit new job -- extract posterior trees for each monophyletic cluster from BEAST .trees file after burnin
+#######################################################\n",sep='')
+	cmd	
+}
+######################################################################################
+hivc.cmd.beast2.getclustertrees<- function(indir, infile, insignat, infilexml.opt, infilexml.template, burnin, outdir=indir, outsignat=insignat, prog= PR.BEAST2CLUTREES, opt.pool=NA, verbose=1, resume=1)
 {
 	cmd<- "#######################################################
 # start: extract posterior trees for each monophyletic cluster from BEAST .trees file after burnin
 #######################################################"
-	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	cmd		<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
 	#default commands
-	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat,sep='')
-	cmd<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -burnin=",burnin,sep='')
-	cmd<- paste(cmd," -outdir=",outdir," -outsignat=",outsignat,sep='')
+	cmd		<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat,sep='')
+	cmd		<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -burnin=",burnin,sep='')
+	cmd		<- paste(cmd," -outdir=",outdir," -outsignat=",outsignat,sep='')
+	#optional commands
+	if(!is.na(opt.pool))
+		cmd	<- paste(cmd," -pool=",opt.pool,sep='')
 	#verbose stuff
-	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
-	cmd<- paste(cmd,"#######################################################
+	cmd		<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd		<- paste(cmd,"#######################################################
 # end: extract posterior trees for each monophyletic cluster from BEAST .trees file after burnin
 #######################################################\n",sep='')
 	cmd	

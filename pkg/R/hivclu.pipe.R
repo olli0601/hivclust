@@ -254,6 +254,7 @@ hivc.pipeline.BEAST<- function()
 		#infilexml.template	<- "um181rhU2045"
 		#infilexml.template	<- "um182rhU2045"
 		infilexml.template	<- "um192rhU2080"
+		infilexml.template	<- "unhum192rhU2080"
 		#infilexml.template	<- "um183rhU2045"
 		#infilexml.template	<- "um182us45"
 		#infilexml.template	<- "um182us60"
@@ -396,6 +397,87 @@ hivc.pipeline.BEAST<- function()
 	
 }
 ######################################################################################
+hivc.pipeline.BEASTout.get.cluster.trees<- function()
+{
+	require(ape)
+	require(data.table)
+	require(hivclust)
+	#	program options
+	opt.pool					<- NA
+	opt.burnin					<- 5e6			
+	resume						<- TRUE
+	verbose						<- TRUE
+	#	input files			
+	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
+	infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
+	insignat				<- "Tue_Aug_26_09:13:47_2013"
+	infilexml.opt			<- "rsu815"
+	infilexml.template		<- "sasky_sdr06"
+	#
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]	
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,14),
+									infilexml.opt= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.opt<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilexml.template<- tmp[1]
+		#		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									burnin= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) opt.burnin<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,5),
+									pool= return(as.numeric(substr(arg,7,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) opt.pool<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]		
+	}
+	#
+	outdir					<- indir	
+	outsignat				<- insignat
+	#
+	if(verbose)
+	{
+		print(opt.pool)
+		print(opt.burnin)		
+		print(resume)
+		print(indir)		
+		print(infile)
+		print(insignat)
+		print(infilexml.opt)
+		print(infilexml.template)		
+	}
+	
+	cmd			<- hivc.cmd.beast2.getclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, opt.burnin, outdir=indir, outsignat=insignat, prog= PR.BEAST2CLUTREES, opt.pool=opt.pool, verbose=verbose, resume=resume)
+	#cat(cmd)
+	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=21, hpc.mem="3800mb")
+	outdir		<- paste(DATA,"tmp",sep='/')
+	outfile		<- paste("b2m.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
+	hivc.cmd.hpccaller(outdir, outfile, cmd)
+}
+######################################################################################
 hivc.pipeline.BEASTout<- function()
 {
 	if(0)
@@ -418,9 +500,10 @@ hivc.pipeline.BEASTout<- function()
 		burnin				<- 5e6
 		#
 		outdir				<- indir
-		outsignat			<- insignat		
-		cmd			<- hivc.cmd.beast2.getclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, burnin=burnin, verbose=1, resume=1)
-		cmd			<- paste(cmd, hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, verbose=1, resume=1), sep='')
+		outsignat			<- insignat
+		opt.pool			<- 1
+		cmd			<- hivc.cmd.beast2.getclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, burnin=burnin, opt.pool=opt.pool, verbose=1, resume=1)
+		#cmd			<- paste(cmd, hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, verbose=1, resume=1), sep='')
 		#cmd			<- paste(cmd, hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, resume=1, verbose=1), sep='')
 		cat(cmd)
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=21, hpc.mem="3800mb")
