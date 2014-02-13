@@ -655,7 +655,7 @@ hivc.beast2.add.datetrait<- function(bxml, df, beast2.spec, verbose=1)
 hivc.beast2.add.satree<- function(bxml, beast2.spec, verbose=verbose)
 {
 	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
-	if(is.na(beast2.spec$starttree.newick))
+	if(1 || is.na(beast2.spec$starttree.newick))
 	{
 		if(verbose)	cat(paste('\nadd SA tree, initialized with UPGMA clustering'))
 		dummy		<- newXMLNode("tree", attrs= list(	id=beast2.spec$tree.id, 													 

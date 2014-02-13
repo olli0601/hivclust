@@ -894,7 +894,7 @@ hivc.cmd.hpcwrapper<- function(cmd, hpcsys= hivc.cmd.hpcsys(), hpc.walltime=24, 
 {
 	wrap<- "#!/bin/sh"
 	#hpcsys<- HPC.CX1.IMPERIAL
-	if(hpcsys==HPC.CX1.IMPERIAL)
+	if(hpcsys%in%c(HPC.CX1.IMPERIAL,'(none)'))
 	{				
 		tmp	<- paste("#PBS -l walltime=",hpc.walltime,":59:59,pcput=",hpc.walltime,":45:00",sep='')
 		wrap<- paste(wrap, tmp, sep='\n')		
