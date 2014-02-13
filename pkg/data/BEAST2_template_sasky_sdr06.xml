@@ -50,7 +50,11 @@
 		      <stateNode idref="ucldStdev.c:ds_1"/>
 		      <stateNode idref="rateCategories.c:ds_1"/>
 		</state>
-
+    <init spec='beast.evolution.tree.ZeroBranchSARandomTree' id='SARandomTree' nodetype="beast.evolution.tree.ZeroBranchSANode" initial='@Tree.t:ds_1' taxonset='@TaxonSet.t:ds_1'>
+        <populationModel id='ConstantPopulation' spec='ConstantPopulation'>
+            <popSize id='randomPopSize' spec='parameter.RealParameter' value='1'/>
+        </populationModel>
+    </init>
     <distribution id="posterior" spec="util.CompoundDistribution">
 		<distribution id="prior" spec="util.CompoundDistribution">
 			<prior id="KappaPrior.s:ds_1" name="distribution" x="@kappa.s:ds_1">
