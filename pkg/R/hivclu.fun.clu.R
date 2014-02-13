@@ -1204,6 +1204,9 @@ hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early=
 	#set colors isAcute
 	df.info[,isAcute.col:="transparent"]						
 	set(df.info, which(df.info[,isAcute%in%c("Yes","Maybe")]), "isAcute.col", col.Early)
+	#set colors cluster
+	if('cluster'%in%colnames(df.info))
+		df.info[, cluster.col:="transparent"]
 	#
 	#	TIMELINE
 	#
@@ -1294,13 +1297,15 @@ hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early=
 	set(df.info,NULL,"TrImo_bTS", 		as.character( round(df.info[, TrImo_bTS],d=1)))
 	set(df.info,NULL,"TrImo_aTS", 		as.character( round(df.info[, TrImo_aTS],d=1)))
 	#	set CD4_T1
-	set(df.info,NULL,"CD4_T1", 		as.character( round(df.info[, CD4_T1],d=0)))
+	set(df.info,NULL,"CD4_T1", 			as.character( round(df.info[, CD4_T1],d=0)))
 	#	set CD4_TS CD4_bTS CD4_aTS
-	set(df.info,NULL,"CD4_TS", 		as.character( df.info[, CD4_TS]))
+	set(df.info,NULL,"CD4_TS", 			as.character( df.info[, CD4_TS]))
 	set(df.info,NULL,"CD4_bTS", 		as.character( df.info[, CD4_bTS]))
 	set(df.info,NULL,"CD4_aTS", 		as.character( df.info[, CD4_aTS]))
+	if('cluster'%in%colnames(df.info))
+		set(df.info, NULL, "cluster", 	as.character(df.info[,cluster]))		
 	#	set 'Amst' to 'A'
-	set(df.info,NULL,"RegionHospital", 		as.character( df.info[,RegionHospital]))
+	set(df.info,NULL,"RegionHospital", 	as.character( df.info[,RegionHospital]))
 	set(df.info,which(df.info[,RegionHospital=="Amst"]),"RegionHospital",'A')	
 	#
 	#	handle missing entries -- ensure that alignment is OK
@@ -1309,6 +1314,8 @@ hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early=
 	tmp					<- which(is.na(df.info[,Patient]))
 	set(df.info, tmp, "Patient", '')
 	set(df.info, tmp, "Patient.col", "transparent")
+	if('cluster'%in%colnames(df.info))
+		set(df.info, which(is.na(df.info[,cluster])), "cluster", '')	
 	tmp					<- which(is.na(df.info[,RegionHospital]))
 	set(df.info, tmp, "RegionHospital", '-')
 	set(df.info, tmp, "RegionHospital.col", "transparent")		

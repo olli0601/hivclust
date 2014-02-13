@@ -49,13 +49,7 @@
 		      <stateNode idref="ucldMean.c:ds"/>
 		      <stateNode idref="ucldStdev.c:ds"/>
 		      <stateNode idref="rateCategories.c:ds"/>
-		</state>
-
-		<init estimate="false" id="RandomTree.t:ds" initial="@Tree.t:ds" spec="beast.evolution.tree.RandomTree" taxa="@ds" taxonset="@TaxonSet.t:ds">
-		      <populationModel id="ConstantPopulation0.t:ds" spec="ConstantPopulation">
-		            <parameter id="randomPopSize.t:ds" name="popSize">1.0</parameter>
-		      </populationModel>
-		</init>
+		</state>	
 
     <distribution id="posterior" spec="util.CompoundDistribution">
 		<distribution id="prior" spec="util.CompoundDistribution">

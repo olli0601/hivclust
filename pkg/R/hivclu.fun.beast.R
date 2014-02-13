@@ -469,7 +469,7 @@ hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatm
 	cols				<- brewer.pal(12,"Paired")
 	cols[1]				<- cols[8]			
 	#	get tip labels	
-	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=c("CountryInfection","Trm","Sex","isAcute","lRNA.early","Patient","RegionHospital") )
+	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=c("CountryInfection","Trm","Sex","isAcute","lRNA.early","cluster","Patient","RegionHospital") )
 	if(is.null(pdf.xlim))
 	{
 		tmp				<- max( apply(ph.tiplabel$text, 2, function(x)  sum(xinch(strwidth(x, units="inches", cex=cex.tiplabel)))  ) )
@@ -655,12 +655,29 @@ hivc.beast2.add.datetrait<- function(bxml, df, beast2.spec, verbose=1)
 hivc.beast2.add.satree<- function(bxml, beast2.spec, verbose=verbose)
 {
 	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
-	dummy		<- newXMLNode("tree", attrs= list(	id=beast2.spec$tree.id, 													 
-					trait=paste('@',beast2.spec$datetrait.id,sep=''),
-					nodetype=beast2.spec$sasky.tree.nodetype,
-					clusterType=beast2.spec$sasky.tree.clusterType,
-					spec=beast2.spec$sasky.tree.spec,
-					taxa=paste('@',beast2.spec$tree.taxonset,sep='')), parent=bxml.beast, doc=bxml, addFinalizer=T)	
+	if(is.na(beast2.spec$starttree.newick))
+	{
+		if(verbose)	cat(paste('\nadd SA tree, initialized with UPGMA clustering'))
+		dummy		<- newXMLNode("tree", attrs= list(	id=beast2.spec$tree.id, 													 
+						trait=paste('@',beast2.spec$datetrait.id,sep=''),
+						nodetype=beast2.spec$sasky.tree.nodetype,
+						clusterType=beast2.spec$sasky.tree.cluster.type,
+						spec=beast2.spec$sasky.tree.cluster.spec,
+						taxa=paste('@',beast2.spec$tree.taxonset,sep='')), parent=bxml.beast, doc=bxml, addFinalizer=T)			
+	}
+	else
+	{
+		if(verbose)	cat(paste('\nadd SA tree, initialized with newick tree'))
+		bxml.tree	<- newXMLNode("tree", attrs= list(	id=beast2.spec$tree.id, 													 
+						trait=paste('@',beast2.spec$datetrait.id,sep=''),
+						nodetype=beast2.spec$sasky.tree.nodetype,						
+						spec=beast2.spec$sasky.tree.parser.spec,
+						taxa=paste('@',beast2.spec$tree.taxonset,sep='')), parent=bxml.beast, doc=bxml, addFinalizer=T)
+		dummy		<- newXMLCommentNode(text=paste("start: Newick starting tree"), parent=bxml.tree, doc=bxml, addFinalizer=T)				
+		tmp			<- newXMLNode("input", attrs= list(name='newick'), parent=bxml.tree, doc=bxml, addFinalizer=T)
+		dummy		<- newXMLTextNode(text=beast2.spec$starttree.newick, parent=tmp, doc=bxml, addFinalizer=T)
+		dummy		<- newXMLCommentNode(text=paste("end: Newick starting tree"), parent=bxml.tree, doc=bxml, addFinalizer=T)		
+	}
 	if(verbose)	cat(paste("\nadded SA trees for taxonsets, n=", length(beast2.spec$tree.taxonset)))
 	bxml
 }
@@ -1028,26 +1045,28 @@ hivc.beast.add.prior4tips<- function(bxml, df, xml.prior4stem="uniform", beast.l
 ######################################################################################
 hivc.beast2.add.startingtree.random<- function(bxml, beast2.spec, verbose=0)
 {
-	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	bxml.run	<- getNodeSet(bxml, "//run")[[1]]
+	if(length(bxml.run)!=1)	stop("unexpected length of bxml.run")
 	if(verbose)	cat(paste('\nadd random starting tree'))
-	dummy		<- newXMLCommentNode(text=paste("Random starting tree"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLCommentNode(text=paste("Random starting tree"), parent=bxml.run, doc=bxml, addFinalizer=T)
 	tmp			<- newXMLNode("init", attrs= list(	id=beast2.spec$starttree.id, estimate='false', initial=beast2.spec$tree.id, 
-					taxa=paste('@',beast2.spec$rndstarttree.taxonset,sep=''), taxonset=paste('@TaxonSet.t:',beast2.spec$rndstarttree.taxonset,sep='')), parent=bxml.beast, doc=bxml, addFinalizer=T)		
+					taxa=paste('@',beast2.spec$rndstarttree.taxonset,sep=''), taxonset=paste('@TaxonSet.t:',beast2.spec$rndstarttree.taxonset,sep='')), parent=bxml.run, doc=bxml, addFinalizer=T)		
 	tmp			<- newXMLNode("populationModel", attrs= list(	id=paste('ConstantPopulation',beast2.spec$tree.id,sep=''), spec='ConstantPopulation'	), parent=tmp, doc=bxml, addFinalizer=T)
 	tmp			<- newXMLNode("parameter", attrs= list(	id=paste('PopSize',beast2.spec$tree.id,sep=''), name='popSize', value='1.0'), parent=tmp, doc=bxml, addFinalizer=T)
-	bxml.beast
+	bxml
 }
 ######################################################################################
 hivc.beast2.add.startingtree.newick<- function(bxml, beast2.spec, verbose=0)
 {
-	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	bxml.run	<- getNodeSet(bxml, "//run")[[1]]
+	if(length(bxml.run)!=1)	stop("unexpected length of bxml.run")
 	if(verbose)	cat(paste('\nadd newick starting tree'))
-	dummy		<- newXMLCommentNode(text=paste("start: Newick starting tree"), parent=bxml.beast, doc=bxml, addFinalizer=T)
-	tmp			<- newXMLNode("init", attrs= list(	id=beast2.spec$starttree.id, initial=beast2.spec$tree.id, IsLabelledNewick=beast2.spec$starttree.islabelledtree, spec=beast2.spec$starttree.spec), parent=bxml.beast, doc=bxml, addFinalizer=T)		
+	dummy		<- newXMLCommentNode(text=paste("start: Newick starting tree"), parent=bxml.run, doc=bxml, addFinalizer=T)
+	tmp			<- newXMLNode("init", attrs= list(	id=beast2.spec$starttree.id, initial=beast2.spec$tree.id, IsLabelledNewick=beast2.spec$starttree.islabelledtree, spec=beast2.spec$starttree.spec), parent=bxml.run, doc=bxml, addFinalizer=T)		
 	tmp			<- newXMLNode("input", attrs= list(name='newick'), parent=tmp, doc=bxml, addFinalizer=T)
 	dummy		<- newXMLTextNode(text=beast2.spec$starttree.newick, parent=tmp, doc=bxml, addFinalizer=T)
-	dummy		<- newXMLCommentNode(text=paste("end: Newick starting tree"), parent=bxml.beast, doc=bxml, addFinalizer=T)
-	bxml.beast
+	dummy		<- newXMLCommentNode(text=paste("end: Newick starting tree"), parent=bxml.run, doc=bxml, addFinalizer=T)
+	bxml
 }
 ######################################################################################
 hivc.beast2.add.sasky.serialpriors<- function(bxml, beast2.spec, verbose=1)
@@ -1219,10 +1238,11 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.)
 	beast2.spec$bdsky.reverseTimeArrays.id		<- paste('reverseTimeArrays',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.reverseTimeArrays.spec	<- "parameter.BooleanParameter"	
-	beast2.spec$sasky.spec						<- "beast.evolution.speciation.SABDSkylineModel"
-	beast2.spec$sasky.tree.spec					<- "beast.util.ClusterZBSATree"
-	beast2.spec$sasky.tree.nodetype				<- "beast.evolution.tree.ZeroBranchSANode" 
-	beast2.spec$sasky.tree.clusterType			<- "upgma"
+	beast2.spec$sasky.spec						<- "beast.evolution.speciation.SABDSkylineModel"		
+	beast2.spec$sasky.tree.nodetype				<- "beast.evolution.tree.ZeroBranchSANode"
+	beast2.spec$sasky.tree.parser.spec			<- "beast.util.ZeroBranchSATreeParser"
+	beast2.spec$sasky.tree.cluster.spec			<- "beast.util.ClusterZBSATree"
+	beast2.spec$sasky.tree.cluster.type			<- "upgma"
 	beast2.spec$sasky.r.id						<- paste('r',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$sasky.r.value					<- rep(0.5, beast2.spec$bdsky.intervalNumber)
 	beast2.spec$sasky.r.lower					<- 0.0
@@ -1262,19 +1282,15 @@ hivc.beast2.get.xml<- function(	bxml.template, seq.PROT.RT, df, beast2.spec, ph=
 	dummy		<- hivc.beast2.add.alignment(bxml, beast2.spec, verbose=verbose)
 	#	add tip dates
 	dummy		<- hivc.beast2.add.datetrait(bxml, df, beast2.spec, verbose=verbose)
-	#	add tree for alignment
+	#	add tree and starting tree for alignment
 	if(beast2.spec$treemodel=="BirthDeathSkylineModel")
 		dummy	<- hivc.beast2.add.tree(bxml, beast2.spec, verbose=verbose)
 	if(beast2.spec$treemodel=="SampledAncestorSkylineModel")
 		dummy	<- hivc.beast2.add.satree(bxml, beast2.spec, verbose=verbose)
-	#	add initial tree
-	if(is.na(beast2.spec$starttree.newick))
-		dummy	<- hivc.beast2.add.startingtree.random(bxml, beast2.spec, verbose=verbose)
-	if(!is.na(beast2.spec$starttree.newick))
-		dummy	<- hivc.beast2.add.startingtree.newick(bxml, beast2.spec, verbose=verbose)	
-	#	add tree model
+	#	add tree model -- TODO move starting tree into here
 	if(beast2.spec$treemodel=="BirthDeathSkylineModel")
 		dummy	<- hivc.beast2.add.treemodel.bdsky(bxml, beast2.spec, verbose=verbose)
+	#	add tree model and starting tree
 	if(beast2.spec$treemodel=="SampledAncestorSkylineModel")
 		dummy	<- hivc.beast2.add.treemodel.sasky(bxml, beast2.spec, verbose=verbose)	
 	#	copy branchRateModel from template
@@ -1292,6 +1308,11 @@ hivc.beast2.get.xml<- function(	bxml.template, seq.PROT.RT, df, beast2.spec, ph=
 	if(length(tmp)!=1) stop("unexpected number of //run")
 	dummy		<- addChildren( bxml.beast, xmlClone( tmp[[1]], addFinalizer=T, doc=bxml ) )
 	if(verbose)	cat(paste("\nadded run from template, size=", xmlSize(tmp[[1]])))
+	#	add initial tree now if bdsky
+	if(beast2.spec$treemodel=="BirthDeathSkylineModel" && is.na(beast2.spec$starttree.newick))
+		dummy	<- hivc.beast2.add.startingtree.random(bxml, beast2.spec, verbose=verbose)
+	if(beast2.spec$treemodel=="BirthDeathSkylineModel" && !is.na(beast2.spec$starttree.newick))
+		dummy	<- hivc.beast2.add.startingtree.newick(bxml, beast2.spec, verbose=verbose)		
 	#	add tree model prior
 	if(beast2.spec$treemodel=="BirthDeathSkylineModel")
 		dummy	<- hivc.beast2.add.bdsky.serialpriors(bxml, beast2.spec, verbose=verbose)

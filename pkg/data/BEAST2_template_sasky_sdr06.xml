@@ -51,12 +51,6 @@
 		      <stateNode idref="rateCategories.c:ds_1"/>
 		</state>
 
-		<init estimate="false" id="RandomTree.t:ds_1" initial="@Tree.t:ds_1" spec="beast.evolution.tree.RandomTree" taxa="@ds_1" taxonset="@TaxonSet.t:ds_1">
-		      <populationModel id="ConstantPopulation0.t:ds_1" spec="ConstantPopulation">
-		            <parameter id="randomPopSize.t:ds_1" name="popSize">1.0</parameter>
-		      </populationModel>
-		</init>
-
     <distribution id="posterior" spec="util.CompoundDistribution">
 		<distribution id="prior" spec="util.CompoundDistribution">
 			<prior id="KappaPrior.s:ds_1" name="distribution" x="@kappa.s:ds_1">

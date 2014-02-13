@@ -3755,13 +3755,13 @@ hivc.prog.BEAST2.generate.xml<- function()
 	thresh.brl				<- 0.096
 	thresh.bs				<- 0.8
 	pool.ntip				<- NA
-	beast.mcmc.length		<- 25e6
+	beast.mcmc.length		<- 5e7
 	infilexml.opt			<- "rbe420"
 	infilexml.template		<- "sasky_sdr06"	
 	
 	resume				<- 1
 	verbose				<- 1
-	hpc.walltime		<- 71
+	hpc.walltime		<- 120
 	hpc.ncpu			<- 1
 	hpc.mem				<- "1200mb"
 	
@@ -4220,7 +4220,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 	#
 	#	create BEAST2 XML file	
 	#
-	bfile			<- lapply(seq_len(length(df.clupool$pool.df))[1], function(pool.id)
+	bfile			<- lapply(seq_len(length(df.clupool$pool.df)), function(pool.id)
 						{
 							df							<- df.clupool$pool.df[[pool.id]]
 							setkey(df, cluster)							
@@ -4245,7 +4245,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 				cat(cmd)
 				outfile		<- paste("b2",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
-				stop()
+				#stop()
 			})	
 }
 ######################################################################################
