@@ -1277,7 +1277,7 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 	insignat	<- "Thu_Aug_01_17/05/23_2013"
 	indircov	<- paste(DATA,"derived",sep='/')
 	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"							
-	
+		
 	patient.n	<- 15700
 	opt.brl		<- "dist.brl.casc"
 	thresh.brl	<- c(seq(0.02,0.05,0.01),seq(0.06,0.12,0.02),seq(0.16,0.24,0.04))
@@ -4264,6 +4264,7 @@ hivc.prog.BEAST.generate.xml<- function()
 	outdir				<- indir
 	outsignat			<- "Tue_Aug_26_09/13/47_2013"
 		
+	opt.fNegT				<- 0 #0.8
 	opt.burnin				<- 2e7
 	opt.brl					<- "dist.brl.casc" 
 	thresh.brl				<- 0.096
@@ -4413,7 +4414,7 @@ hivc.prog.BEAST.generate.xml<- function()
 	#
 	df.cluinfo				<- msm$df.cluinfo
 	tmp						<- df.cluinfo[,	list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], fNegT=length(which(!is.na(NegT))) / clu.ntip[1]),by="cluster"]										
-	tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=0.8) )
+	tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=opt.fNegT) )
 	cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )
 	if(verbose) cat(paste("\nnumber of selected sequences is n=",nrow(cluphy.df)))
 	cluphy.df				<- hivc.beast.addBEASTLabel( cluphy.df, df.resetTipDate=df.resetTipDate )
@@ -4431,8 +4432,8 @@ hivc.prog.BEAST.generate.xml<- function()
 	#
 	#	load xml template file
 	#	
-	file		<- paste(indir,'/',infilexml,'_',infilexml.template,'_',gsub('/',':',insignat),".xml",sep='')
-	btemplate	<- xmlTreeParse(file, useInternalNodes=TRUE, addFinalizer = TRUE)		
+	file		<- paste(CODE.HOME,"/data/BEAST_template_",infilexml.template,".xml",sep='')
+	btemplate	<- xmlTreeParse(file, useInternalNodes=TRUE, addFinalizer = TRUE)			
 	#
 	#	produce xml files for each cluster pool from template
 	#	
@@ -4460,13 +4461,12 @@ hivc.prog.BEAST.generate.xml<- function()
 	sapply(seq_along(bfile), function(pool.id)
 			{
 				cmd			<- hivc.cmd.beast.runxml(outdir, bfile[[pool.id]], outsignat, hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
-				cmd			<- paste(cmd, hivc.cmd.beast2.getclustertrees.pipe(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, opt.burnin, outdir=outdir, outsignat=outsignat, opt.pool=pool.id, verbose=verbose, resume=resume), sep='' )
+				#cmd			<- paste(cmd, hivc.cmd.beast2.getclustertrees.pipe(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, opt.burnin, outdir=outdir, outsignat=outsignat, opt.pool=pool.id, verbose=verbose, resume=resume), sep='' )
 				cmd			<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
 				cat(cmd)
 				outfile		<- paste("bea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
-				stop()
 			})		
 }
 ######################################################################################

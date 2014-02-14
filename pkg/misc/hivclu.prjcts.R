@@ -1995,17 +1995,54 @@ project.ukca.TPTN.bootstrapvalues<- function(dir.name= DATA)
 	hivc.phy.get.TP.and.TN.bootstrapvalues(ph, bs.linked.bypatient, ph.mrca=ph.mrca ,df.seqinfo=NULL, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=NULL, dist.brl=NULL, thresh.brl=0.096, plot.file=plot.file, verbose= 1)	
 }
 ######################################################################################
-project.athena.Fisheretal.adjust.NegT4Acute<- function(df.denom, clumsm.info, negT.yr.before.pos=1)
+project.athena.Fisheretal.select.TPTN<- function(df.tpairs, indir, insignat, indircov, infilecov, infiletree)
 {
-	tmp		<- which( clumsm.info[, !is.na(isAcute) & isAcute=='Yes' & is.na(NegT)] )	
-	set(clumsm.info, tmp,'NegT', subset(clumsm.info, !is.na(isAcute) & isAcute=='Yes' & is.na(NegT) )[, AnyPos_T1-negT.yr.before.pos] )
-	cat(paste('set NegT for Acute==Yes and NegT missing to one year before AnyPos_T1, n=',length(tmp)))
-	tmp		<- which( df.denom[, !is.na(isAcute) & isAcute=='Yes' & is.na(NegT)] )	
-	set(df.denom, tmp,'NegT', subset(df.denom, !is.na(isAcute) & isAcute=='Yes' & is.na(NegT) )[, AnyPos_T1-negT.yr.before.pos] )
-	list(df.denom=df.denom, clumsm.info=clumsm.info)		
+	require(adephylo)
+	#
+	#	load precomputed true pos pairs and true neg pairs for full population
+	#	
+	argv				<<- hivc.cmd.preclustering(indir, infiletree, insignat, indircov, infilecov, resume=resume)				 
+	argv				<<- unlist(strsplit(argv,' '))
+	msm.pre				<- hivc.prog.get.clustering.precompute()
+	msm.linked			<- msm.pre$ph.linked
+	msm.unlinked.bytime	<- do.call('rbind',msm.pre$unlinked.bytime)
+	#
+	#	select any true negative transmitter for every seroconverter in the denominator population
+	#
+	tmp					<- unique( subset( df.tpairs, select='FASTASampleCode') ) 
+	setnames(tmp, 'FASTASampleCode', 'sc.FASTASampleCode')	
+	setnames(msm.unlinked.bytime, 'query.FASTASampleCode','sc.FASTASampleCode')
+	msm.unlinked.bytime	<- merge(msm.unlinked.bytime, tmp, by='sc.FASTASampleCode')
+	setnames(msm.unlinked.bytime, c('Patient','FASTASampleCode','DateDied'), c('t.Patient','t.FASTASampleCode','t.DateDied'))
+	cat(paste('\nfound viral sequences that are not linked to sequences of denominator group based on Died<NegT, n=',nrow(msm.unlinked.bytime)))
+	#
+	#	select any other within host sequence for every individual in the denominator population as 'true positive'
+	#
+	tmp					<- unique( subset( df.tpairs, select=Patient ) )
+	msm.linked			<- merge( msm.linked, tmp, by='Patient' )
+	cat(paste('\nfound patients in denominator group with multiple sequences that can be taken as truly linked, n=',msm.linked[,length(unique(Patient))]))
+	msm.linked			<- msm.linked[, {
+											tmp<- combn(length(FASTASampleCode),2)
+											list( t.FASTASampleCode= FASTASampleCode[tmp[1,]], FASTASampleCode=FASTASampleCode[tmp[2,]] )					
+										},by='Patient']
+	cat(paste('\nfound viral sequences pairs of patients in denominator group that can be considered linked, n=',nrow(msm.linked)))
+	#
+	#	load full phylogeny and evaluate patristic distances
+	#
+	file	<- paste(indir, '/', infiletree, '_', gsub('/',':',insignat),".R",sep='')
+	load(file)	#loads ph
+	require(adephylo)
+	brl		<- distTips(ph , method='patristic')
+	
+	file	<- paste(indir, '/', infiletree, '_', gsub('/',':',insignat),"_distTips.R",sep='')
+	save(brl, file=file)
+	#
+	#	
+	#	
+	
 }
 ######################################################################################
-project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infiletree)
+project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.AcuteSelect=c('Yes'))
 {
 	#	fixed input args
 	opt.brl			<- "dist.brl.casc" 
@@ -2015,11 +2052,20 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	# 	recent msm 
 	#
 	load(paste(indircov,'/',infilecov,'.R',sep=''))
-	msm.recent		<- subset( df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') & isAcute=='Yes' )
-	cat(paste('\nmsm isAcute==yes: #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
+	#	adjust Acute=='Maybe' by NegT 
+	if(!is.na(adjust.AcuteByNegT))
+	{
+		tmp		<- which( df.all[, (is.na(isAcute) | isAcute=='No') & !is.na(NegT) & AnyPos_T1<=NegT+adjust.AcuteByNegT*365])
+		cat(paste('\nmsm.recent: set Acute==Maybe when NegT is close to AnyPos_T1, n=',length(tmp)))
+		set(df.all, tmp, 'isAcute', 'Maybe')
+	}		
+	msm.recent		<- subset( df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') )
+	setkey(msm.recent, isAcute)
+	msm.recent		<- msm.recent[adjust.AcuteSelect,]
+	cat(paste('\nmsm isAcute: #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
 	# 	recent msm seroconverters
 	msm.recentsc	<- subset( msm.recent, !is.na(NegT))
-	cat(paste('\nmsm isAcute==yes & !is.na(NegT): #seq=',nrow(msm.recentsc),'#patient=',length(msm.recentsc[,unique(Patient)])))
+	cat(paste('\nmsm isAcute & !is.na(NegT): #seq=',nrow(msm.recentsc),'#patient=',length(msm.recentsc[,unique(Patient)])))
 	#
 	#	load clustering msm
 	#
@@ -2042,20 +2088,35 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	set(clumsm.info, NULL, 'PosCD4_TS', hivc.db.Date2numeric(clumsm.info[,PosCD4_TS]))
 	set(clumsm.info, NULL, 'AnyT_T1', hivc.db.Date2numeric(clumsm.info[,AnyT_T1]))
 	set(clumsm.info, NULL, 'clu.AnyPos_T1', hivc.db.Date2numeric(clumsm.info[,clu.AnyPos_T1]))
+	#	adjust Acute=='Maybe' by NegT 
+	if(!is.na(adjust.AcuteByNegT))
+	{
+		tmp		<- which( clumsm.info[, (is.na(isAcute) | isAcute=='No') & !is.na(NegT) & AnyPos_T1<=NegT+adjust.AcuteByNegT])
+		cat(paste('\nclumsm.info: set Acute==Maybe when NegT is close to AnyPos_T1, n=',length(tmp)))
+		set(clumsm.info, tmp, 'isAcute', 'Maybe')
+	}
+	#	adjust missing NegT when Acute=='Yes'
+	if(!is.na(adjust.NegT4Acute))
+	{		
+		tmp		<- which( clumsm.info[, !is.na(isAcute) & isAcute=='Yes' & is.na(NegT)] )	
+		cat(paste('\nset NegT for Acute==Yes and NegT missing to one year before AnyPos_T1, n=',length(tmp)))
+		set(clumsm.info, tmp,'NegT', subset(clumsm.info, !is.na(isAcute) & isAcute=='Yes' & is.na(NegT) )[, AnyPos_T1-adjust.NegT4Acute] )					
+	}	
 	# 	recent individuals in cluster
-	clumsm.recent	<- subset( clumsm.info, isAcute=='Yes' )
+	setkey(clumsm.info, isAcute)	
+	clumsm.recent	<- clumsm.info[adjust.AcuteSelect,] 
 	# 	recent seroconcerverters in cluster
-	clumsm.recentsc	<- subset( clumsm.info, isAcute=='Yes' & !is.na(NegT))
+	clumsm.recentsc	<- subset( clumsm.recent, !is.na(NegT))
 	cat(paste('\nmsm clustering: #seq=',nrow(clumsm.info),'#patient=',length(clumsm.info[,unique(Patient)]),'#cluster=',length(clumsm.info[,unique(cluster)])))		
-	cat(paste('\nmsm clustering isAcute==yes: #seq=',nrow(clumsm.recent),'#patient=',length(clumsm.recent[,unique(Patient)]),'#cluster=',length(clumsm.recent[,unique(cluster)])))
-	cat(paste('\nmsm clustering isAcute==yes & !is.na(NegT): #seq=',nrow(clumsm.recentsc),'#patient=',length(clumsm.recentsc[,unique(Patient)]),'#cluster=',length(clumsm.recentsc[,unique(cluster)])))
+	cat(paste('\nmsm clustering isAcute: #seq=',nrow(clumsm.recent),'#patient=',length(clumsm.recent[,unique(Patient)]),'#cluster=',length(clumsm.recent[,unique(cluster)])))
+	cat(paste('\nmsm clustering isAcute & !is.na(NegT): #seq=',nrow(clumsm.recentsc),'#patient=',length(clumsm.recentsc[,unique(Patient)]),'#cluster=',length(clumsm.recentsc[,unique(cluster)])))
 	#
 	#	make selection
 	#
 	list(clumsm.info=clumsm.info, df.select=clumsm.recent, clumsm.subtrees=msm$cluphy.subtrees, clumsm.ph=msm$cluphy)
 }
 ######################################################################################
-project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos<- function(clumsm.info, df.denom, any.pos.grace.yr= 0.5)
+project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos<- function(clumsm.info, df.denom, any.pos.grace.yr= 0.5, select.if.transmitter.seq.unique=TRUE)
 {
 	df.transmitters	<- clumsm.info[J(df.denom[, unique(cluster)]),]
 	df.transmitters	<- subset(df.transmitters, select=c(cluster, Patient, AnyPos_T1, FASTASampleCode))		
@@ -2074,8 +2135,12 @@ project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos<- function(clums
 	print( tmp )
 	print( cumsum( tmp / sum(tmp ) ) )	
 	#	allows for multiple infected seq pointing to same transmitter seq
-	df.tpairs.anypos	<- merge(df.tpairs, subset(df.tpairs.stat, t.potpatseq.n==1), by=c('cluster','Patient'))		
-	cat(paste('\nselected Patients with one potential transmitter', nrow(df.tpairs.anypos)))		
+	if(select.if.transmitter.seq.unique)		
+		df.tpairs.anypos	<- merge(df.tpairs, subset(df.tpairs.stat, t.potpatseq.n==1), by=c('cluster','Patient'))
+	else
+		df.tpairs.anypos	<- df.tpairs
+	
+	cat(paste('\nselected tpairs: total', nrow(df.tpairs.anypos),' recent #seq=',length(df.tpairs.anypos[,unique(FASTASampleCode)]),'#patient=',length(df.tpairs.anypos[,unique(Patient)]),'#cluster=',length(df.tpairs.anypos[,unique(cluster)])))
 	subset( df.tpairs.anypos, select=c(cluster, Patient, FASTASampleCode, t.Patient, t.FASTASampleCode) )	
 }
 ######################################################################################
@@ -2307,9 +2372,41 @@ project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu,
 	dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.root.ctime, cluphy.tip.ctime, ph.prob=NA, df.node.ctime=cluphy.map.nodectime, df.rates=NULL, df.tips=df.tpairs.plot, end.ctime=end.ctime,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=outfile,  pdf.width=7, pdf.height=140, pdf.xlim=pdf.xlim)	
 }
 ######################################################################################
-project.athena.Fisheretal.get.prob.mrcab4negt<- function(df.tpairs, cluphy, cluphy.info, cluphy.map.nodectime)
+project.athena.Fisheretal.Y.viro<- function(df.tpairs, df.viro, t.period=0.25, lRNA.cutoff= log10(1e3))
 {
-	setkey(df.tpairs, cluster)
+	viro	<- subset( df.viro, select=c(Patient, PosRNA, lRNA) )
+	setnames(viro, 'Patient','t.Patient')
+	viro	<- merge(viro, unique(subset(df.tpairs, select=t.Patient)), by='t.Patient')	
+	set(viro, NULL, 'PosRNA', hivc.db.Date2numeric(viro[,PosRNA]))
+	tmp		<- subset(viro, select=c(t.Patient, PosRNA))[, list(ts=min(PosRNA), te=max(PosRNA)), by='t.Patient']
+	set(tmp, NULL, 'ts', tmp[, floor(ts) + floor( (ts%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(tmp, NULL, 'te', tmp[, floor(te) + floor( (te%%1)*100 %/% (t.period*100) ) * t.period] )
+	tmp		<- tmp[, list(t= seq(ts, te, by=t.period)),by='t.Patient']
+	
+	setnames(tmp, 't.Patient', 'tt.Patient')
+	setkey(tmp, tt.Patient)
+	viro	<- viro[, {
+				z		<- subset(tmp, tt.Patient==t.Patient[1])	
+				if(length(PosRNA)<2)
+				{
+					y	<- rep(NA, nrow(z))
+					y[z[,which( PosRNA<=t+t.period )[1]]]<- lRNA
+				}
+				else
+					y	<- approx(PosRNA , lRNA, xout=z[,t]+t.period/2, yleft=NA_real_, yright=NA_real_, rule=2)$y
+				list(t=z[,t], lRNA=y)
+			},by='t.Patient']
+	set(viro, viro[, which(lRNA<lRNA.cutoff)], 'lRNA', 0.)
+	set(viro, viro[, which(lRNA>=lRNA.cutoff)], 'lRNA', 1.)
+	set(viro, NULL, 'lRNA', as.integer(viro[,lRNA]))
+	viro	<- merge(viro, subset(df.tpairs, select=c(t.Patient,FASTASampleCode,t.FASTASampleCode)), by='t.Patient',allow.cartesian=TRUE)
+	viro	<- subset(viro, select=c(FASTASampleCode, t.FASTASampleCode, t, lRNA))
+	viro
+}
+######################################################################################
+project.athena.Fisheretal.Y.coal.and.inf<- function(df.tpairs, cluphy, cluphy.info, cluphy.map.nodectime, t.period= 0.25 )
+{
+	setkey(df.tpairs, cluster)	
 	#	select tpairs for which dated phylogenies are available
 	tmp					<- setdiff( df.tpairs[,unique(cluster)], cluphy.info[, unique(cluster)] )
 	cat(paste('\nnumber of clusters missing for analysis of pot transmitters, n=',length(tmp)))
@@ -2319,22 +2416,48 @@ project.athena.Fisheretal.get.prob.mrcab4negt<- function(df.tpairs, cluphy, clup
 	tmp					<- df.tpairs[,	list(node=getMRCA(cluphy, c(FASTASampleCode, t.FASTASampleCode))), by=c('FASTASampleCode','t.FASTASampleCode')]
 	if(nrow(tmp)!=nrow(df.tpairs))	stop('unexpected length of tmp')
 	df.tpairs			<- merge(df.tpairs, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))
-	#	compute posterior prob that coalescence is after last NegT
+	#	compute posterior prob that coalescence is after last NegT and before TipT of individual in denominator population
 	tmp					<- unique( subset( clumsm.info, select=c(Patient, NegT)) )
 	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
 	df.tpairs			<- merge(df.tpairs, tmp, by='t.Patient')
 	tmp					<- subset( df.tpairs, select=c(cluster, FASTASampleCode, t.FASTASampleCode, node,  t.NegT) )
-	tmp					<- merge( cluphy.map.nodectime, tmp, by=c('cluster','node'))
-	tmp					<- tmp[,  list(t.prob.coal.after.NegT= 1-approx(q ,cdf, xout=t.NegT[1], yleft=0., yright=1., rule=2)$y) , by=c('cluster','FASTASampleCode','t.FASTASampleCode')]
-	df.tpairs			<- merge(df.tpairs, tmp, by=c('cluster','FASTASampleCode','t.FASTASampleCode'))			
-	if(nrow(subset( df.tpairs, !is.na(t.NegT) & is.na(t.prob.coal.after.NegT) )))	stop('unexpected NA')
+	tmp					<- merge(tmp, subset(cluphy.info, select=c(FASTASampleCode, AnyPos_T1)), by='FASTASampleCode')
+	tmp					<- merge( cluphy.map.nodectime, tmp, by=c('cluster','node'))	
+	coal				<- tmp[,  {
+									z		<- 1-approx(q ,cdf, xout=c(t.NegT[1], AnyPos_T1[1]), yleft=0., yright=1., rule=2)$y									
+									list(coal.after.t.NegT= z[1], coal.after.i.AnyPos_T1=z[2])
+									} , by=c('cluster','FASTASampleCode','t.FASTASampleCode')]
+	#	earliest time of infection: either lowest coal or NegT(infected)
+	tmp					<- merge( subset( df.tpairs, select=c(cluster,  node, FASTASampleCode) ), subset( cluphy.info, select=c(FASTASampleCode, NegT, AnyPos_T1)), by='FASTASampleCode' )
+	inf					<- merge(tmp, cluphy.map.nodectime[, list(min.coalT= min(q)), by=c('cluster','node')], by=c('cluster','node'))
+	tmp					<- inf[,which(is.na(NegT))]
+	set(inf, tmp, 'NegT', inf[tmp, min.coalT])
+	setnames(inf, 'NegT', 'InfT')	
+	#	get list of time periods for every infected
+	set(inf, NULL, 'InfT', inf[, floor(InfT) + floor( (InfT%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(inf, NULL, 'AnyPos_T1', inf[, floor(AnyPos_T1) + floor( (AnyPos_T1%%1)*100 %/% (t.period*100) ) * t.period] )
+	inf					<- inf[, list(InfT= seq(InfT, AnyPos_T1, by=t.period), cluster=cluster, node=node),by='FASTASampleCode']
+	#	evaluated coal at InfT
+	setkey(cluphy.map.nodectime, cluster, node)
+	setnames(inf, c('cluster','node'), c('i.cluster','i.node'))
+	inf					<- inf[, {
+										tmp  <- subset(cluphy.map.nodectime, cluster==i.cluster[1] & node==i.node[1])
+										InfV <- approx(tmp[,q] ,tmp[,cdf], xout=InfT+t.period/2, yleft=0., yright=1., rule=2)$y
+										list(t=InfT, c.inf=InfV)
+									},by='FASTASampleCode']
+	#
+	df.tpairs			<- merge(df.tpairs, coal, by=c('cluster','FASTASampleCode','t.FASTASampleCode'))			
+	if(nrow(subset( df.tpairs, !is.na(t.NegT) & is.na(coal.after.t.NegT) )))	stop('unexpected NA')
+	set(df.tpairs, which(df.tpairs[,is.na(coal.after.t.NegT)]), 'prob.coal.after.t.NegT', 1.) 
 	#	filter df.tpairs based on coalescence
-	df.tpairs.excluded	<- subset(df.tpairs, !is.na(t.NegT) & t.prob.coal.after.NegT<=EPS)
-	df.tpairs			<- subset(df.tpairs, is.na(t.NegT) | t.prob.coal.after.NegT>EPS)	
+	df.tpairs.excluded	<- subset(df.tpairs, coal.after.t.NegT<=EPS)
+	df.tpairs			<- subset(df.tpairs, coal.after.t.NegT>EPS)	
 	cat(paste('\nnumber of tpairs for which t.prob.coal.after.NegT==0, n=',length(df.tpairs.excluded[,unique(Patient)])))
 	cat(paste('\nnumber of tpairs for which t.prob.coal.after.NegT>0, n=',length(df.tpairs[,unique(Patient)])))
-	df.tpairs			<- subset(df.tpairs, select=c(cluster, Patient, FASTASampleCode, t.Patient, t.FASTASampleCode, t.prob.coal.after.NegT))
-	list(df.tpairs=df.tpairs, exluded=df.tpairs.excluded)
+	coal				<- subset(df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, coal.after.t.NegT, coal.after.i.AnyPos_T1))
+	df.tpairs			<- subset(df.tpairs, select=c(cluster, Patient, FASTASampleCode, t.Patient, t.FASTASampleCode))	
+	inf					<- merge( subset(df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode)), inf, by='FASTASampleCode')	
+	list(df.tpairs=df.tpairs, inf=inf, coal=coal, exluded=df.tpairs.excluded)		
 }
 ######################################################################################
 project.athena.Fisheretal.exact.repro<- function()
@@ -2371,15 +2494,11 @@ project.athena.Fisheretal.exact.repro<- function()
 	#
 	#	select infected individuals and return in df.select
 	#
-	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree)
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=0.75, adjust.NegT4Acute=1, adjust.AcuteSelect=c('Yes','Maybe'))
 	df.denom		<- tmp$df.select
 	clumsm.subtrees	<- tmp$clumsm.subtrees
 	clumsm.info		<- tmp$clumsm.info
 	setkey(clumsm.info, cluster)
-	#	add NegT when missing for Acute==Yes: NegT=AnyPos_T1 - 365dy
-	tmp				<- project.athena.Fisheretal.adjust.NegT4Acute(df.denom, clumsm.info)
-	df.denom		<- tmp$df.denom
-	clumsm.info		<- tmp$clumsm.info
 	#
 	#	select potential transmitters on MLE tree
 	#
@@ -2440,51 +2559,58 @@ project.athena.Fisheretal.similar<- function()
 	stop()
 	indir					<- paste(DATA,"tmp",sep='/')		
 	indircov				<- paste(DATA,"derived",sep='/')
-	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
-	#infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
-	#infiletree				<- paste(infile,"examlbs100",sep="_")
-	#insignat				<- "Thu_Aug_01_17/05/23_2013"	
-	#clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
-	#clu.infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
-	#clu.insignat			<- "Tue_Aug_26_09:13:47_2013"
-	#clu.infilexml.opt		<- "rsu815"		
-	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-	infiletree				<- paste(infile,"examlbs500",sep="_")
-	insignat				<- "Wed_Dec_18_11:37:00_2013"				
-	clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alsu50'
-	clu.infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-	clu.insignat			<- "Wed_Dec_18_11:37:00_2013"
-	clu.infilexml.opt		<- "alsu50"
-	clu.infilexml.template	<- "sasky_sdr06"
+	outdir					<- paste(DATA,"fisheretal",sep='/')
+	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	if(1)
+	{
+		infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs100",sep="_")
+		insignat				<- "Thu_Aug_01_17/05/23_2013"	
+		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
+		clu.infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
+		clu.insignat			<- "Tue_Aug_26_09:13:47_2013"
+		clu.infilexml.template	<- "sasky_sdr06"
+		clu.infilexml.opt		<- "rsu815"				
+	}
+	if(1)
+	{
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"				
+		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alsu50'
+		clu.infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		clu.insignat			<- "Wed_Dec_18_11:37:00_2013"
+		clu.infilexml.opt		<- "alsu50"
+		clu.infilexml.template	<- "sasky_sdr06"		
+	}	
 	#
 	#	select infected individuals and return in df.select
 	#
-	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree)
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=0.75, adjust.NegT4Acute=1, adjust.AcuteSelect=c('Yes','Maybe'))	
 	df.denom		<- tmp$df.select
+	clumsm.subtrees	<- tmp$clumsm.subtrees
 	clumsm.info		<- tmp$clumsm.info
+	clumsm.ph		<- tmp$clumsm.ph
 	setkey(clumsm.info, cluster)
-	#	add NegT when missing for Acute==Yes: NegT=AnyPos_T1 - 365dy
-	tmp				<- project.athena.Fisheretal.adjust.NegT4Acute(df.denom, clumsm.info)
-	df.denom		<- tmp$df.denom
-	clumsm.info		<- tmp$clumsm.info
 	#
 	#	select potential transmitters
 	#
+	#df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos(clumsm.info, df.denom, any.pos.grace.yr= 2, select.if.transmitter.seq.unique=FALSE)	
+	df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos.MinBrlMLETree(df.denom, clumsm.subtrees, any.pos.grace.yr= 2)
+	#	plot number of potential transmitters
 	if(0)
 	{
-		df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos(clumsm.info, df.denom, any.pos.grace.yr= 0.25)	
+		tmp				<- merge( subset(df.tpairs, select=Patient), subset(df.denom, select=c(Patient, AnyPos_T1)), by='Patient' )
+		outfile			<- paste(outdir,'/',infile, '_', clu.infilexml.template, '_', clu.infilexml.opt, '_', gsub('/',':',insignat), '_', 'nrecentlyinfected', '.pdf',sep='')
+		pdf(file=outfile, w=5, h=5)
+		par(mar=c(3,5,0.5,0.5))
+		barplot( table( tmp[, round(AnyPos_T1)] ), ylab="# recently infected\n with unique potential transmitter" )
+		dev.off()	
 	}
-	if(0)
-	{
-		df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos.ClosestSeqSim(clumsm.info, df.denom, any.pos.grace.yr= 0.5)	
-	}	
-	if(1)
-	{
-		tmp						<- project.athena.Fisheretal.get.data.for.selection(NULL, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov)
-		cluphy.subtrees			<- tmp$clu$cluphy.subtrees
-		cluphy.info				<- tmp$clu$cluphy.info
-		df.tpairs				<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos.MinBrl(clumsm.info, df.denom, cluphy.subtrees, cluphy.info, any.pos.grace.yr= 0.5)
-	}
+	
+
+
+
 	#
 	#	compute weights: prob that viral lineage coalesces within seroconversion window
 	#
@@ -2492,10 +2618,20 @@ project.athena.Fisheretal.similar<- function()
 	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime
 	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
 	cluphy.info				<- tmp$clu$cluphy.info
-	cluphy					<- tmp$clu$cluphy
-	tmp						<- project.athena.Fisheretal.get.prob.mrcab4negt(df.tpairs, cluphy, cluphy.info, cluphy.map.nodectime)	
-	df.tpairs				<- tmp$df.tpairs	
+	cluphy					<- tmp$clu$cluphy	
+	df.viro					<- tmp$df.viro
+	tmp						<- project.athena.Fisheretal.Y.coal.and.inf(df.tpairs, cluphy, cluphy.info, cluphy.map.nodectime, t.period= 0.25 )
+	df.tpairs				<- tmp$df.tpairs
+	Y.inf					<- tmp$inf
+	Y.coal					<- tmp$coal	
 	df.tpairs.excluded		<- tmp$excluded
+	Y.viro					<- project.athena.Fisheretal.Y.viro(df.tpairs, df.viro, t.period=0.25, lRNA.cutoff= log10(1e3))
+	
+
+	
+	
+	tmp
+	
 	#
 	#	get data for selection
 	#

@@ -236,15 +236,20 @@ hivc.pipeline.clustering<- function()
 ######################################################################################
 hivc.pipeline.BEAST<- function()
 {
-	if(0)	#run BEAST 1.7.5 GMRF skyline
+	if(1)	#run BEAST 1.7.5 GMRF skyline
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
-		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
-		insignat			<- "Thu_Aug_01_17/05/23_2013"
 		indircov			<- paste(DATA,"derived",sep='/')
 		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
-		infiletree			<- paste(infile,"examlbs100",sep="_")
-		infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
+		#infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		#insignat			<- "Thu_Aug_01_17/05/23_2013"		
+		#infiletree			<- paste(infile,"examlbs100",sep="_")
+		#infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
+		infilexml			<- paste(infile,'_',"beast",'_',"all",sep='')
+		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree			<- paste(infile,"examlbs500",sep="_")
+		insignat			<- "Wed_Dec_18_11:37:00_2013"
+		
 		#infilexml.template	<- "um22rhU2050"
 		#infilexml.template	<- "um22rhG202018"
 		#infilexml.template	<- "rhU65rho753"
@@ -254,7 +259,7 @@ hivc.pipeline.BEAST<- function()
 		#infilexml.template	<- "um181rhU2045"
 		#infilexml.template	<- "um182rhU2045"
 		infilexml.template	<- "um192rhU2080"
-		infilexml.template	<- "unhum192rhU2080"
+		#infilexml.template	<- "unhum192rhU2080"
 		#infilexml.template	<- "um183rhU2045"
 		#infilexml.template	<- "um182us45"
 		#infilexml.template	<- "um182us60"
@@ -276,7 +281,7 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "mph4clutx4tip"
 		
 		outdir				<- indir
-		outsignat			<- "Tue_Aug_26_09/13/47_2013"
+		outsignat			<- insignat
 		
 		opt.brl				<- "dist.brl.casc" 
 		thresh.brl			<- 0.096

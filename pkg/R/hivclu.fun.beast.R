@@ -1493,15 +1493,18 @@ hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= 35, beast
 	tmp					<- beast.rootHeight / max(distRoot(ph.start))
 	ph.start$edge.length<- ph.start$edge.length*tmp
 	#	compute adjusted branch lengths for each tip: midpoint within NegT and AnyPos_T1
-	df.length			<- t( sapply( strsplit(df[,BEASTlabel],'_',fixed=1), function(x)  as.numeric( x[2:4]) ) )
-	df.length			<- data.table(BEASTlabel=df[,BEASTlabel], NegT=df.length[,1], AnyPos_T1=df.length[,2], PosSeqT=df.length[,3])
-	tmp					<- max( df.length[, PosSeqT])		#TODO should this be height or length ?
-	df.length			<- df.length[, list(BEASTlabel=BEASTlabel, brl=(AnyPos_T1-NegT)/2+PosSeqT-AnyPos_T1)]
-	setkey(df.length, BEASTlabel)
-	#	adjust stem of each tip to be within NegT and AnyPos_T1
-	tmp							<- sapply(seq_len(Ntip(ph.start)), function(x) which( ph.start$edge[,2]==x ) )
-	ph.start$edge.length[ tmp ]	<- df.length[ph.start$tip.label,][,brl]
-	if(verbose) cat(paste("\nadjusted branch lengths of tips to be within NegT and AnyPos_T1. New root height is",max(distRoot(ph.start))))
+	if(0)
+	{
+		df.length			<- suppressWarnings( t( sapply( strsplit(df[,BEASTlabel],'_',fixed=1), function(x)  as.numeric( x[2:4]) ) ) )
+		df.length			<- data.table(BEASTlabel=df[,BEASTlabel], NegT=df.length[,1], AnyPos_T1=df.length[,2], PosSeqT=df.length[,3])
+		tmp					<- max( df.length[, PosSeqT])		#TODO should this be height or length ?
+		df.length			<- df.length[, list(BEASTlabel=BEASTlabel, brl=(AnyPos_T1-NegT)/2+PosSeqT-AnyPos_T1)]
+		setkey(df.length, BEASTlabel)
+		#	adjust stem of each tip to be within NegT and AnyPos_T1
+		tmp							<- sapply(seq_len(Ntip(ph.start)), function(x) which( ph.start$edge[,2]==x ) )
+		ph.start$edge.length[ tmp ]	<- df.length[ph.start$tip.label,][,brl]
+		if(verbose) cat(paste("\nadjusted branch lengths of tips to be within NegT and AnyPos_T1. New root height is",max(distRoot(ph.start))))
+	}
 	#	write ph.start as newick tree to bxml
 	tmp					<- write.tree( ph.start )	
 	bxml.beast			<- getNodeSet(bxml, "//beast")[[1]]
