@@ -244,9 +244,9 @@ hivc.pipeline.BEAST<- function()
 		#infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
 		#insignat			<- "Thu_Aug_01_17/05/23_2013"		
 		#infiletree			<- paste(infile,"examlbs100",sep="_")
-		#infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')
-		infilexml			<- paste(infile,'_',"beast",'_',"all",sep='')
+		#infilexml			<- paste(infile,'_',"beast",'_',"seroneg",sep='')		
 		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infilexml			<- paste(infile,'_',"beast",'_',"all",sep='')
 		infiletree			<- paste(infile,"examlbs500",sep="_")
 		insignat			<- "Wed_Dec_18_11:37:00_2013"
 		
