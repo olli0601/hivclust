@@ -2561,7 +2561,7 @@ project.athena.Fisheretal.similar<- function()
 	indircov				<- paste(DATA,"derived",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
-	if(1)
+	if(0)
 	{
 		infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs100",sep="_")
