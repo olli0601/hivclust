@@ -539,7 +539,7 @@ hivc.pipeline.BEASTout<- function()
 		files		<- list.files(indir)
 		files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('_pool_[0-9]+',x) & grepl('_clu_[0-9]+',x) & grepl('R$',x) ) ]				
 		if(!length(files))	stop('no input files matching criteria')
-		tmp			<- regmatches( files, regexpr('_clutrees_[0-9]+',files)) 
+		tmp			<- regmatches( files, regexpr('_clu_[0-9]+',files)) 
 		cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
 		file.info	<- data.table(file=files, cluster=cluster)
 		setkey(file.info, cluster)
