@@ -3346,7 +3346,7 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	}
 	#	pool overlapping cluster trees  
 	files		<- list.files(indir)
-	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('_trees_[0-9]+',x) & grepl('_clu_[0-9]+',x) & grepl('R$',x) ) ]
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('_pool_[0-9]+',x) & grepl('_clu_[0-9]+',x) & grepl('R$',x) ) ]
 	#
 	tmp			<- regexpr('_clu_[0-9]+',files)
 	if(any(tmp<0))	stop('unexpected _clu_ files')
