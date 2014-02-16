@@ -78,7 +78,7 @@ default.fun		<- "project.hivc.clustering"
 #default.fun 	<- "hivc.pipeline.ExaML"
 #default.fun		<- "hivc.pipeline.clustering"
 #default.fun 	<- "hivc.pipeline.BEAST"
-#default.fun		<- "hivc.pipeline.BEASTout"
+default.fun		<- "hivc.pipeline.BEASTout"
 #default.fun		<- "project.athena.Fisheretal.similar"
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
 ###############################################################################
