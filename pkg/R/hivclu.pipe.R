@@ -501,7 +501,7 @@ hivc.pipeline.BEASTout<- function()
 		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"		
 		insignat			<- "Wed_Dec_18_11:37:00_2013"		
 		infilexml.template	<- "sasky_sdr06"
-		infilexml.opt		<- "alsu50"
+		infilexml.opt		<- "alrh160"
 		burnin				<- 5e6
 		#
 		outdir				<- indir

@@ -2757,7 +2757,21 @@ project.hivc.clustering<- function(dir.name= DATA)
 	require(ape)
 	require(data.table)
 	require(RColorBrewer)
-stop()		
+	if(1)
+	{
+		require(adephylo)
+		indir			<- paste(DATA, 'tmp', sep='/')
+		infiletree		<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500"
+		insignat		<- "Wed_Dec_18_11:37:00_2013"								
+		file			<- paste(indir, '/', infiletree, '_', gsub('/',':',insignat),".R",sep='')
+		cat(paste('\nget dist tips for file=',file))
+		load(file)	#loads ph		
+		brl				<- distTips(ph , method='patristic')		
+		file			<- paste(indir, '/', infiletree, '_', gsub('/',':',insignat),"_distTips.R",sep='')
+		cat(paste('\nsave dist tips to file=',file))
+		save(brl, file=file)
+		stop()			
+	}	
 	if(0)	#plot composition of selected MSM clusters
 	{
 		hivc.prog.eval.clustering.bias()
