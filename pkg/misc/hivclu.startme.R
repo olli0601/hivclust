@@ -140,6 +140,12 @@ my.make.documentation<- function()
 	roxygenize(CODE.HOME)
 }
 
+#index of row i (i=1..n) and col j (j=1..n) of nxn matrix in a distance object (as.vector of lower triangular matrix)
+my.lower.tri.index<- function(n, i, j)
+{
+	n*(j-1) - j*(j-1)/2 + i-j
+}
+
 my.fade.col<-function(col,alpha=0.5)
 {
 	return(rgb(col2rgb(col)[1]/255,col2rgb(col)[2]/255,col2rgb(col)[3]/255,alpha))

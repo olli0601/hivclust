@@ -518,7 +518,7 @@ hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatm
 ######################################################################################
 hivc.beast2out.pool.cluster.trees<- function(files)
 {
-	tmp				<- regmatches( files, regexpr('_trees_[0-9]+',files)) 
+	tmp				<- regmatches( files, regexpr('_pool_[0-9]+',files)) 
 	run				<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
 	mph.clu.pool	<- NULL
 	for(i in seq_along(run))
@@ -1152,6 +1152,7 @@ hivc.beast2.get.startingtree<- function(ph, df, beast2.spec, verbose=1)
 	#	adjust rootHeight to 'beast.rootHeight'	
 	ph.start$edge.length<- ph.start$edge.length	*	beast2.spec$starttree.rootHeight / max(distRoot(ph.start))
 	if(verbose) cat(paste("\nadjusted root height=",max(distRoot(ph.start))))	
+	if(beast2.spec$starttree.rootHeight>=beast2.spec$bdsky.origin.value)	stop('Detected invalid rootHeight. Must be smaller than origin.value.')
 	write.tree( ph.start )		
 }
 ######################################################################################
@@ -1211,7 +1212,7 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$bdsky.prior.spec				<- "beast.math.distributions.ExcludablePrior"
 	beast2.spec$bdsky.intervalNumber			<- bdsky.intervalNumber
 	beast2.spec$bdsky.origin.id					<- paste('originS',beast2.spec$tree.taxonset,sep='.t:')
-	beast2.spec$bdsky.origin.value				<- rep(35, length(beast2.spec$bdsky.origin.id))
+	beast2.spec$bdsky.origin.value				<- rep(38, length(beast2.spec$bdsky.origin.id))
 	beast2.spec$bdsky.origin.lower				<- 0.0
 	beast2.spec$bdsky.origin.upper				<- 1000.0
 	beast2.spec$bdsky.origin.prior				<- "Uniform/20.0/40.0"

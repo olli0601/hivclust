@@ -3259,6 +3259,7 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	resume						<- TRUE
 	verbose						<- TRUE
 	clu							<- NA
+	opt.max.runs.per.cluster	<- 4
 	beastlabel.idx.clu			<- 1
 	beastlabel.idx.hivn			<- 2
 	beastlabel.idx.hivd			<- 3
@@ -3273,11 +3274,16 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	infilexml.opt			<- "rsu815"
 	infilexml.template		<- "sasky_sdr06"
 	#
-	indir					<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast_131011"		
-	infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
-	insignat				<- "Tue_Aug_26_09:13:47_2013"				
-	infilexml.template		<- "um182rhU2045"
-	infilexml.opt			<- "mph4clutx4tip"	
+	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alrh160_clutrees'
+	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	insignat				<- "Wed_Dec_18_11:37:00_2013"
+	infilexml.opt			<- "alrh160"
+	infilexml.template		<- "sasky_sdr06fr"	
+	#indir					<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast_131011"		
+	#infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+	#insignat				<- "Tue_Aug_26_09:13:47_2013"				
+	#infilexml.template		<- "um182rhU2045"
+	#infilexml.opt			<- "mph4clutx4tip"	
 	#
 	if(exists("argv"))
 	{
@@ -3372,7 +3378,13 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 				}
 				if(!resume || inherits(readAttempt, "try-error"))
 				{
-					mph.clu			<- hivc.beast2out.pool.cluster.trees( paste(indir, subset(file.info, cluster==clu)[, file], sep='/') )					
+					tmp				<- subset(file.info, cluster==clu)[, file]					
+					if(length(tmp)>opt.max.runs.per.cluster)	
+					{
+						cat(paste('\nFound more than',opt.max.runs.per.cluster,'runs for cluster',clu,'Keep only first',opt.max.runs.per.cluster,'of these.'))
+						tmp			<- tmp[seq_len(opt.max.runs.per.cluster)]
+					}
+					mph.clu			<- hivc.beast2out.pool.cluster.trees( paste(indir, tmp, sep='/') )					
 					cat(paste("\nsave mph.clu to file",file))
 					save(mph.clu, file=file)
 				}
@@ -3425,13 +3437,22 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 					#
 					cat(paste('\ncheck tip, node and edge order'))
 					mph.topo.info	<- mph.clu.itopo[,	{
-								tmp				<- mph.clu[[ mph.i[1] ]]$tip.label
-								tips.in.order	<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$tip.label) )
-								tmp				<- mph.clu[[ mph.i[1] ]]$edge[,2]
-								edges.in.order	<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$edge[,2]) )
-								tmp				<- mph.clu[[ mph.i[1] ]]$edge[,1]
-								nodes.in.order	<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$edge[,1]) )																
-								list(tips.in.order= tips.in.order, edges.in.order=edges.in.order, nodes.in.order=nodes.in.order, mph.i=mph.i[-1])
+								if(length(mph.i)==1)
+								{
+									tips.in.order	<- edges.in.order<- nodes.in.order<- TRUE
+									tmp				<- mph.i[1]
+								}
+								else
+								{
+									tmp				<- mph.clu[[ mph.i[1] ]]$tip.label
+									tips.in.order	<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$tip.label) )
+									tmp				<- mph.clu[[ mph.i[1] ]]$edge[,2]
+									edges.in.order	<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$edge[,2]) )
+									tmp				<- mph.clu[[ mph.i[1] ]]$edge[,1]
+									nodes.in.order	<- sapply( mph.i[-1], function(i)	identical( tmp, mph.clu[[ i ]]$edge[,1]) )																
+									tmp				<- mph.i[-1]
+								}
+								list(tips.in.order= tips.in.order, edges.in.order=edges.in.order, nodes.in.order=nodes.in.order, mph.i=tmp)
 							}, by='equal.to']
 					mph.topo.info	<- subset( mph.topo.info, !tips.in.order | !edges.in.order | !nodes.in.order )
 					cat(paste('\ntip, node or edges not in order for n=',nrow(mph.topo.info)))
@@ -3515,24 +3536,37 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 							}, by='equal.to']
 					mph.SA.cnt[, cluster:= clu]
 					#
-					#	generate consensus tree with mean brls
+					#	generate consensus tree: take the posterior tree such that all its branch lengths are closest to the marginal median branch lengths
+					#	if we took the median branch lengths, then the branch lengths might not any longer be consistent with the sampling dates
 					#
-					mph.brl.m		<- mph.clu.itopo[,	{					
-															edge.of	<- c(mph.clu[[ mph.i[1] ]]$edge[,2], 0)
-															tmp		<- sapply( mph.i, function(i)	c( mph.clu[[ i ]]$edge.length, mph.clu[[ i ]]$root.edge)  )
-															tmp		<- apply(tmp, 1, median)		
-															list( m= round(as.numeric(tmp),d=4), edge.of=edge.of )					
-														}, by='equal.to']		
+					mph.brl			<- mph.clu.itopo[,	{					
+															edge.of			<- c(mph.clu[[ mph.i[1] ]]$edge[,2], 0)
+															tmp				<- sapply( mph.i, function(i)	c( mph.clu[[ i ]]$edge.length, mph.clu[[ i ]]$root.edge)  )
+															tmp				<- lapply( seq_len(nrow(tmp)), function(i)		tmp[i,])	
+															names(tmp)		<- paste('edge.of.',edge.of,sep='')
+															tmp																				
+														}, by='equal.to']	
+					tmp				<- mph.brl[,  lapply(.SD, rank, ties.method='random'), by='equal.to']
+					tmp				<- tmp[, list(dist.from.midrank= apply( sapply( .SD, function(x) abs(x-length(edge.of.0)/2) ), 1, sum) ),by='equal.to']
+					mph.brl.mid		<- tmp[, list(mph.ii=which.min(dist.from.midrank)), by='equal.to']
+												
 					ph.consensus	<- lapply(seq_len(nrow(mph.clu.dtopo)), function(j)
-							{
-								cluphy					<- mph.clu[[ mph.clu.dtopo[j, mph.i] ]]
-								median.edge.length		<- subset( mph.brl.m, equal.to==mph.clu.dtopo[j, mph.i] )
-								if(!all( median.edge.length[-nrow(median.edge.length), edge.of]==cluphy$edge[,2] ))	stop('unexpected edge order')
-								cluphy$edge.length		<- median.edge.length[-nrow(median.edge.length), m]
-								cluphy$root.edge		<- median.edge.length[nrow(median.edge.length), m]
-								cluphy
+							{								
+								mph.ii					<- subset(mph.brl.mid, equal.to==mph.clu.dtopo[j, mph.i])[, mph.ii]
+								mph.i					<- subset(mph.clu.itopo, equal.to==mph.clu.dtopo[j, mph.i])[, mph.i]
+								mph.clu[[ mph.i[mph.ii] ]]								
 							})					 
 					names(ph.consensus)	<- paste('cluster=',clu,'_mph.i=', mph.clu.dtopo[,mph.i],'_prob=',mph.clu.dtopo[,dens], sep='')
+					if(0)
+					{
+						mph.info		<- hivc.treeannotator.tiplabel2df(ph.consensus[[1]], beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+						mph.info[, tip:=match( mph.info[, BEASTlabel], ph.consensus[[1]]$tip.label)]
+						
+						tmp	<- node.depth.edgelength( ph.consensus[[1]] )
+						tmp	<- mph.info[1,TipT]-tmp[1] + tmp
+						tmp	<- tmp[seq_len(nrow(mph.info))] - mph.info[,TipT]
+						if( any( abs(tmp)>EPS ) ) warning('branch lengths do not add up to tip times')
+					}
 					#
 					#	save
 					#
