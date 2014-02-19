@@ -485,7 +485,7 @@ hivc.pipeline.BEASTout.get.cluster.trees<- function()
 ######################################################################################
 hivc.pipeline.BEASTout<- function()
 {
-	if(1)
+	if(0)
 	{
 		indircov			<- paste(DATA,"derived",sep='/')
 		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
@@ -520,7 +520,7 @@ hivc.pipeline.BEASTout<- function()
 		outfile		<- paste("b2m.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 	}
-	if(0)
+	if(1)
 	{
 		indir				<- paste(DATA,"tmp",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')

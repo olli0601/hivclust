@@ -2059,6 +2059,56 @@ project.athena.Fisheretal.X.followup<- function(df.tpairs, df.immu, t.period= 0.
 	follow.t	
 }
 ######################################################################################
+project.athena.Fisheretal.X.time.diag2firstVLandCD4<- function(df.tpairs, clumsm.info, df.viro, df.immu, t2.care.t1.q=c(0.25,0.5))
+{
+	#	recent follow up: Max time of follow up either by CD4 or VL within the first 12 months		
+	follow	<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]),unique(subset(clumsm.info, select=c(Patient, AnyPos_T1))),by='Patient' )
+	viro	<- subset( df.viro, select=c(Patient, PosRNA) )
+	viro	<- merge(viro, follow, by='Patient')
+	set(viro, NULL, 'PosRNA', hivc.db.Date2numeric(viro[,PosRNA]))
+	tmp		<- viro[, list(t2.vl.t1= min(PosRNA)-AnyPos_T1[1]) ,by='Patient']	
+	immu	<- subset( df.immu, select=c(Patient, PosCD4) )
+	immu	<- merge(immu, follow, by='Patient')
+	set(immu, NULL, 'PosCD4', hivc.db.Date2numeric(immu[,PosCD4]))
+	immu	<- subset(immu, PosCD4>=AnyPos_T1)
+	follow	<- immu[, list(t2.cd4.t1= min(PosCD4)-AnyPos_T1[1]) ,by='Patient']
+	follow	<- merge(follow, tmp, by='Patient')
+	follow	<- merge(follow, follow[, list(t2.care.t1= max(t2.cd4.t1,t2.vl.t1)), by='Patient'], by='Patient')	
+	tmp		<- cut(follow[, t2.care.t1], breaks=c(0, t2.care.t1.q, follow[, max(t2.care.t1)+1]), right=FALSE, label= c('other',paste('>=',t2.care.t1.q,'y',sep='')))
+	set(follow, NULL, 't2.care.t1', tmp)	
+	tmp		<- round( cumsum(rev(table(follow[,t2.care.t1]))) / nrow(follow), d=3 )
+	cat(paste('\ncumulative right tail probability for recent follow up quantiles ',paste( names(tmp), ' = ',tmp*100, '%',sep='', collapse=', ')))
+	setnames(follow, 'Patient', 't.Patient')
+	follow	<- subset(follow, select=c(t.Patient, t2.care.t1))
+	follow
+}
+######################################################################################
+project.athena.Fisheretal.X.time.diag2suppressed<- function(df.tpairs, clumsm.info, df.viro, lRNA.suppressed= log10(1e3), t2.vl.supp.p=c(0.1, 0.25))
+{
+	#	do category because it is not so easy to deal with those not suppressed otherwise
+	tmp		<- merge( data.table( Patient=df.tpairs[, unique(t.Patient)] ), unique(subset(clumsm.info, select=c(Patient, AnyT_T1, AnyPos_T1))), by='Patient' )
+	viro	<- subset( df.viro, select=c(Patient, PosRNA, lRNA) )
+	tmp2	<- setdiff( tmp[,Patient], viro[, unique(Patient)])
+	cat(paste('\nPotential transmitters for which we have not a single VL',length(tmp2)))
+	if(length(tmp2))	warning('those with missing VL are correctly counted below')
+	
+	viro	<- merge(viro, tmp, by='Patient')	
+	set(viro, NULL, 'PosRNA', hivc.db.Date2numeric(viro[,PosRNA]))
+	setnames(viro, 'Patient', 't.Patient')
+	#	assume we have at least one lRNA for every potential transmitter
+	#	so everyone not in the following subset is either not yet on ART or has not yet suppressed VL
+	viro.supp		<- subset(viro, PosRNA>AnyT_T1 & lRNA<=lRNA.suppressed)	
+	viro.supp		<- viro.supp[, list(t2.vl.supp= min(PosRNA)-AnyPos_T1[1]),by='t.Patient']	
+	#hist(viro[,t2.vl.supp], breaks=50)
+	t2.vl.supp.q	<- round(quantile(viro.supp[,t2.vl.supp], prob=c(0,t2.vl.supp.p,1)), d=3)
+	cat(paste('\nquantiles for time to viral suppression after diagnosis',paste(names(t2.vl.supp.q), t2.vl.supp.q, collapse=', ',sep='=')))
+	tmp				<- cut(viro.supp[,t2.vl.supp], breaks= t2.vl.supp.q, right=FALSE, label= c( paste( '<',t2.vl.supp.p*100,'pc',sep='' ), 'other' ) )
+	set(viro.supp,NULL,'t2.vl.supp',tmp)
+	viro			<- merge( unique( subset(viro, select=t.Patient) ), viro.supp, by='t.Patient', all.x=1 )
+	set(viro,viro[,which(is.na(t2.vl.supp))],'t2.vl.supp','other')
+	viro
+}
+######################################################################################
 project.athena.Fisheretal.X.followup.compareCD4toVL<- function(df.tpairs, df.immu, clumsm.info)
 {
 	follow		<- subset(df.immu, select=c(Patient, PosCD4))
@@ -2549,11 +2599,13 @@ project.athena.Fisheretal.get.data.for.selection<- function(df.tpairs, clu.indir
 	#	subset of clusters: those in df.tpairs.select	
 	if(!is.null(df.tpairs))
 	{
-		tmp					<- setdiff( df.tpairs[,unique(cluster)], file.info[, unique(cluster)] )
+		tmp					<- sort(setdiff( df.tpairs[,unique(cluster)], file.info[, unique(cluster)] ))
 		cat(paste('\nnumber of clusters missing for analysis of pot transmitters, n=',length(tmp)))
+		print(tmp)
 		file.info	<- merge(file.info, unique(subset(df.tpairs, select=cluster)), by='cluster')
 		df.tpairs.reduced	<- merge(df.tpairs, subset(file.info, select=cluster), by='cluster')
 		cat(paste('\nnumber of remaining Patients with one potential transmitter', length(df.tpairs.reduced[, unique(Patient)])))
+		cat(paste('\nnumber of remaining potential transmitter', length(df.tpairs.reduced[, unique(t.Patient)])))
 	}		
 	#	combine dated cluster phylogenies
 	clu			<- hivc.beast2out.combine.clu.trees(clu.indir, file.info)		
@@ -2606,6 +2658,85 @@ project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu,
 	#	plot	
 	cat(paste('\nplot to file=',outfile))
 	dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.root.ctime, cluphy.tip.ctime, ph.prob=NA, df.node.ctime=cluphy.map.nodectime, df.rates=NULL, df.tips=df.tpairs.plot, end.ctime=end.ctime,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=outfile,  pdf.width=7, pdf.height=140, pdf.xlim=pdf.xlim)	
+}
+######################################################################################
+project.athena.Fisheretal.X.incare<- function(df.tpairs, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013.)
+{
+	#	prepare incare timeline for potential transmitters
+	incare		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique( subset(clumsm.info, select=c(Patient, AnyPos_T1, DateDied)) ), by='Patient' )
+	set(incare, NULL, 'AnyPos_T1', incare[, floor(AnyPos_T1) + floor( (AnyPos_T1%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(incare, incare[,which(is.na(DateDied))], 'DateDied', t.endctime)
+	set(incare, NULL, 'DateDied', incare[, floor(DateDied) + floor( (DateDied%%1)*100 %/% (t.period*100) ) * t.period] )	
+	incare.t	<- incare[, list(t= seq(AnyPos_T1, DateDied, by=t.period)),by='Patient']	
+	#	prepare treatment variables for potential transmitters
+	treat		<- subset(df.treatment, select=c(Patient, AnyT_T1, StartTime, StopTime, TrI)) 
+	treat		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), treat, by='Patient' )
+	set(treat, NULL, 'AnyT_T1', hivc.db.Date2numeric(treat[,AnyT_T1]))
+	set(treat, NULL, 'StopTime', hivc.db.Date2numeric(treat[,StopTime]))
+	set(treat, NULL, 'StartTime', hivc.db.Date2numeric(treat[,StartTime]))
+	#	set ever on ART per period t
+	incare.t	<- merge(unique(subset(treat, select=c(Patient, AnyT_T1))), incare.t, by='Patient' )
+	incare.t[, stage:='Diag']
+	set(incare.t, incare.t[, which(AnyT_T1<=t+t.period/2)], 'stage', 'ART.started')
+	#	identify periods t when treatment interrupted
+	treat		<- subset(treat, TrI=='Yes', select=c(Patient, StartTime, StopTime))
+	set(treat, NULL, 'StartTime', treat[, floor(StartTime) + floor( (StartTime%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(treat, NULL, 'StopTime', treat[, floor(StopTime) + floor( (StopTime%%1)*100 %/% (t.period*100) ) * t.period] )
+	#	identify distinct periods t when treatment interrupted
+	treat		<- treat[, {
+				if(length(StartTime)>1)
+				{
+					tmp			<- StopTime[-length(StopTime)]+t.period < StartTime[-1]
+					StartTime	<- StartTime[c(TRUE,tmp)]
+					StopTime	<- StopTime[c(tmp,TRUE)]					
+				}
+				else
+				{
+					StartTime	<- StartTime
+					StopTime	<- StopTime
+				}
+				list(StartTime=StartTime, StopTime=StopTime)
+			} ,by='Patient']
+	treat		<- treat[, list(t= seq(from=StartTime, to=StopTime, by=t.period), ART.interrupted='Yes'), by=c('Patient', 'StartTime')]
+	#	add ART.interrupted time periods to incare.t
+	incare.t	<- merge( subset(incare.t, select=c(Patient, t, stage)), subset(treat, select=c(Patient, t, ART.interrupted)), by=c('Patient','t'), all.x=1)
+	set(incare.t, incare.t[,which(is.na(ART.interrupted))], 'ART.interrupted', 'No')
+	#	compute X: viral load of potential transmitter  	
+	X.viro		<- project.athena.Fisheretal.X.viro(df.tpairs, df.viro, t.period=0.25, lRNA.cutoff=NA)
+	#	compute X: CD4 of potential transmitter
+	X.cd4		<- project.athena.Fisheretal.X.cd4(df.tpairs, df.immu, t.period=0.25)		
+	#	add viro and cd4 time periods to incare.t
+	setnames(incare.t, 'Patient','t.Patient')		
+	incare.t	<- merge(incare.t, X.viro, by=c('t.Patient','t'), all.x=1)
+	incare.t	<- merge(incare.t, X.cd4, by=c('t.Patient','t'), all.x=1)
+	incare.t
+}
+######################################################################################
+project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.imm, t.period=0.25)
+{
+	immu	<- subset( df.immu, select=c(Patient, PosCD4, CD4) )
+	setnames(immu, 'Patient','t.Patient')
+	immu	<- merge(immu, unique(subset(df.tpairs, select=t.Patient)), by='t.Patient')	
+	set(immu, NULL, 'PosCD4', hivc.db.Date2numeric(immu[,PosCD4]))
+	tmp		<- subset(immu, select=c(t.Patient, PosCD4))[, list(ts=min(PosCD4), te=max(PosCD4)), by='t.Patient']
+	set(tmp, NULL, 'ts', tmp[, floor(ts) + floor( (ts%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(tmp, NULL, 'te', tmp[, floor(te) + floor( (te%%1)*100 %/% (t.period*100) ) * t.period] )
+	tmp		<- tmp[, list(t= seq(ts, te, by=t.period)),by='t.Patient']
+	setnames(tmp, 't.Patient', 'tt.Patient')
+	setkey(tmp, tt.Patient)
+	immu	<- immu[, {
+				z		<- subset(tmp, tt.Patient==t.Patient[1])	
+				if(length(PosCD4)<2)
+				{
+					y	<- rep(NA, nrow(z))
+					y[z[,which( PosCD4<=t+t.period )[1]]]<- CD4
+				}
+				else
+					y	<- approx(PosCD4 , CD4, xout=z[,t]+t.period/2, yleft=NA_real_, yright=NA_real_, rule=2)$y
+				list(t=z[,t], CD4=y)
+			},by='t.Patient']
+	set(immu, NULL, 'CD4', immu[, as.integer(round(CD4))])
+	immu		
 }
 ######################################################################################
 project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, lRNA.cutoff= log10(1e3))
@@ -2861,6 +2992,20 @@ project.athena.Fisheretal.similar<- function()
 		dev.off()	
 	}	
 	#
+	#	get time stamped data
+	#
+	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov)	
+	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime
+	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
+	cluphy.info				<- tmp$clu$cluphy.info
+	cluphy					<- tmp$clu$cluphy	
+	df.viro					<- tmp$df.viro
+	df.immu					<- tmp$df.immu
+	df.treatment			<- tmp$df.treatment
+	
+	
+	
+	#
 	#	compute Y score: raw branch length between pot transmitter and infected
 	#
 	file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlraw',sep='')	
@@ -2874,17 +3019,6 @@ project.athena.Fisheretal.similar<- function()
 	file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl.pdf',sep='')
 	Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked	, Y.rawbrl.unlinked, linked.x= 0, plot.file=file)
 	#
-	#	compute Y score: [0,1]: prob that viral lineage coalesces within seroconversion window and [0,1]: infection at time t happens after coalescence within potential transmitter
-	#
-	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov)	
-	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime
-	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
-	cluphy.info				<- tmp$clu$cluphy.info
-	cluphy					<- tmp$clu$cluphy	
-	df.viro					<- tmp$df.viro
-	df.immu					<- tmp$df.immu
-	df.treatment			<- tmp$df.treatment
-	#
 	#	compute X: follow up
 	X.fwup					<- project.athena.Fisheretal.X.followup(df.tpairs, df.immu, t.period= 0.25, t.endctime=2013.0)
 	#tmp					<- project.athena.Fisheretal.X.followup.compareCD4toVL(df.tpairs, df.immu, clumsm.info)
@@ -2892,60 +3026,22 @@ project.athena.Fisheretal.similar<- function()
 	X.tperiod				<- project.athena.Fisheretal.X.calendarperiod(df.tpairs, clumsm.info, t.period= 0.25, c.nperiod= 4)
 	#	compute X: RegionHospital and Exposure group
 	X.Trm					<- project.athena.Fisheretal.X.Trm.Region(df.tpairs, clumsm.info)
-	#	compute X: viral load of potential transmitter  	
-	X.viro					<- project.athena.Fisheretal.X.viro(df.tpairs, df.viro, t.period=0.25, lRNA.cutoff=NA)
-	
-	
-	t.period=0.25
-	t.endctime= 2013.
-	#	prepare incare timeline for potential transmitters
-	incare		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique( subset(clumsm.info, select=c(Patient, AnyPos_T1, DateDied)) ), by='Patient' )
-	set(incare, NULL, 'AnyPos_T1', incare[, floor(AnyPos_T1) + floor( (AnyPos_T1%%1)*100 %/% (t.period*100) ) * t.period] )
-	set(incare, incare[,which(is.na(DateDied))], 'DateDied', t.endctime)
-	set(incare, NULL, 'DateDied', incare[, floor(DateDied) + floor( (DateDied%%1)*100 %/% (t.period*100) ) * t.period] )	
-	incare.t	<- incare[, list(t= seq(AnyPos_T1, DateDied, by=t.period)),by='Patient']	
-	#	prepare treatment variables for potential transmitters
-	treat		<- subset(df.treatment, select=c(Patient, AnyT_T1, StartTime, StopTime, TrI)) 
-	treat		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), treat, by='Patient' )
-	set(treat, NULL, 'AnyT_T1', hivc.db.Date2numeric(treat[,AnyT_T1]))
-	set(treat, NULL, 'StopTime', hivc.db.Date2numeric(treat[,StopTime]))
-	set(treat, NULL, 'StartTime', hivc.db.Date2numeric(treat[,StartTime]))
-	#	set ever on ART per period t
-	incare.t	<- merge(unique(subset(treat, select=c(Patient, AnyT_T1))), incare.t, by='Patient' )
-	incare.t[, stage:='Diag']
-	set(incare.t, incare.t[, which(AnyT_T1<=t+t.period/2)], 'stage', 'ART.started')
-	#	identify periods t when treatment interrupted
-	treat		<- subset(treat, TrI=='Yes', select=c(Patient, StartTime, StopTime))
-	set(treat, NULL, 'StartTime', treat[, floor(StartTime) + floor( (StartTime%%1)*100 %/% (t.period*100) ) * t.period] )
-	set(treat, NULL, 'StopTime', treat[, floor(StopTime) + floor( (StopTime%%1)*100 %/% (t.period*100) ) * t.period] )
-	#	identify distinct periods t when treatment interrupted
-	treat		<- treat[, {
-								if(length(StartTime)>1)
-								{
-									tmp			<- StopTime[-length(StopTime)]+t.period < StartTime[-1]
-									StartTime	<- StartTime[c(TRUE,tmp)]
-									StopTime	<- StopTime[c(tmp,TRUE)]					
-								}
-								else
-								{
-									StartTime	<- StartTime
-									StopTime	<- StopTime
-								}
-								list(StartTime=StartTime, StopTime=StopTime)
-							} ,by='Patient']
-	treat		<- treat[, list(t= seq(from=StartTime, to=StopTime, by=t.period), ART.interrupted='Yes'), by=c('Patient', 'StartTime')]
-	#	add ART.interrupted time periods to incare.t
-	incare.t	<- merge( subset(incare.t, select=c(Patient, t, stage)), subset(treat, select=c(Patient, t, ART.interrupted)), by=c('Patient','t'), all.x=1)
-	set(incare.t, incare.t[,which(is.na(ART.interrupted))], 'ART.interrupted', 'No')
-	#	add viro time periods to incare.t
-	setnames(incare.t, 'Patient','t.Patient')
-
-	incare.t	<- merge(incare.t, X.viro, by=c('t.Patient','t'), all.x=1)
+	#	compute X: InCare
+	X.incare				<- project.athena.Fisheretal.X.incare(df.tpairs, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013.)
 	#	TODO lost M42459 ? --> should be because clusters are missing
-	#	TODO add CD4 by time period for completeness, so that we can easily make any changes as needed later
-
-
-
+	#	compute X: time to first viral suppression from diagnosis	
+	X.t2.vlsupp				<- project.athena.Fisheretal.X.time.diag2suppressed(df.tpairs, clumsm.info, df.viro, lRNA.suppressed= log10(1e3), t2.vl.supp.p=c(0.1, 0.25))
+	#	compute X: time to first VL and first CD4 measurement
+	X.t2.care				<- project.athena.Fisheretal.X.time.diag2firstVLandCD4(df.tpairs, clumsm.info, df.viro, df.immu, t2.care.t1.q=c(0.25,0.5))
+		
+	
+	
+	
+	
+	
+	tmp2	<- setdiff( tmp[,Patient], viro[, unique(Patient)])
+	
+	
 	
 	treat[, length(StartTime), by='Patient']
 	tmp						<- project.athena.Fisheretal.Y.coal.and.inf(df.tpairs, cluphy, cluphy.info, cluphy.map.nodectime, t.period= 0.25 )

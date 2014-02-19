@@ -3547,7 +3547,10 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 															tmp																				
 														}, by='equal.to']	
 					tmp				<- mph.brl[,  lapply(.SD, rank, ties.method='random'), by='equal.to']
-					tmp				<- tmp[, list(dist.from.midrank= apply( sapply( .SD, function(x) abs(x-length(edge.of.0)/2) ), 1, sum) ),by='equal.to']
+					tmp				<- tmp[, 	{
+													z		<- do.call('cbind',lapply( .SD, function(x) abs(x-length(edge.of.0)/2)))
+													list(dist.from.midrank= apply(z, 1, sum) )								
+												},by='equal.to']					
 					mph.brl.mid		<- tmp[, list(mph.ii=which.min(dist.from.midrank)), by='equal.to']
 												
 					ph.consensus	<- lapply(seq_len(nrow(mph.clu.dtopo)), function(j)
