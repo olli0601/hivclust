@@ -609,9 +609,9 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	NA.time			<- c("01/01/1911","01/11/1911","11/11/1911")	
 	MAX.time		<- c("")
 	TR.notyet		<- "30/03/2013"
-	TR.failure 		<- c(21,31,32)
+	TR.failure 		<- c(21, 24, 25, 31, 32, 34, 35, 36) 	#either viro or immu failure, dose escalation, toxicity, new CDC-B/C event, interaction with other medication
 	TR.adherence	<- c(47)
-	TR.patrel		<- c(23, 24, 33, 34, 36)	#either patient s decision, toxicity or interaction with other medication
+	TR.patrel		<- c(23, 33, 42, 43)					#either patient s decision, desired pregnancy
 	#read REGIMEN csv data file and preprocess
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
 	df				<- read.csv(file, stringsAsFactors=FALSE)							
@@ -697,54 +697,28 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	if(verbose)	cat(paste("\nnumber of entries with StartTime==TR.notyet & StopTime!=TR.notyet",length(tmp),"MISCLASSIFIED StartTime - setting to NA"))
 	set(df, tmp, "StartTime", NA)		
 	df						<- subset(df, !is.na(StopTime))
-	if(verbose)	cat(paste("\nnumber of entries with !is.na(StartTime) & !is.na(StopTime), n=",nrow(df)))		
-	#
-	#	TR.interrupted
-	#
-	if(nrow(df[which(is.na(df[,NoDrug]) & StartTime!=TR.notyet),])) stop("unexpected NA in NoDrug when on treatment")
-	tmp								<- rep(0, nrow(df))
-	tmp[ which( df[,NoDrug==0] ) ]	<- 1
-	df[, TrI:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
-	#
-	#	process treatment change reasons
-	#
-	if(any(!is.na(df[, Reason7])))	stop("unexpected !NA after Reason7")
-	df.TrCh.noreason		<- which( df[, is.na(Reason1)&is.na(Reason2)&is.na(Reason3)&is.na(Reason4)&is.na(Reason5)&is.na(Reason6)] )		
-	#	TR.failure
-	tmp						<-	rep(0, nrow(df))
-	tmp[ df.TrCh.noreason ]	<- NA
-	tmp[ which(df[, Reason1%in%TR.failure | Reason2%in%TR.failure | Reason3%in%TR.failure | Reason4%in%TR.failure | Reason5%in%TR.failure | Reason6%in%TR.failure ]) ]<- 1
-	df[, TrCh.failure:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
-	#	TR.adherence
-	tmp						<-	rep(0, nrow(df))
-	tmp[ df.TrCh.noreason ]	<- NA
-	tmp[ which(df[, Reason1%in%TR.adherence | Reason2%in%TR.adherence | Reason3%in%TR.adherence | Reason4%in%TR.adherence | Reason5%in%TR.adherence | Reason6%in%TR.adherence ]) ]<- 1
-	df[, TrCh.adherence:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
-	#	TR.patient related
-	tmp						<-	rep(0, nrow(df))
-	tmp[ df.TrCh.noreason ]	<- NA
-	tmp[ which(df[, Reason1%in%TR.patrel | Reason2%in%TR.patrel | Reason3%in%TR.patrel | Reason4%in%TR.patrel | Reason5%in%TR.patrel | Reason6%in%TR.patrel ]) ]<- 1
-	df[, TrCh.patrel:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
-	#
-	#	removing Patient entries before treatment started
-	#
-	tmp						<- which( df[,is.na(StartTime) & TrI=="Yes"]  )
-	tmp						<- df[tmp,][, df.idx:=tmp] 
-	tmp						<- merge(df, subset(tmp,select=c(Patient,df.idx)), by="Patient")		
-	tmp						<- tmp[, 	{
-				x<- matrix( as.numeric(c(StartTime, StopTime)), ncol=2 )
-				x<- x[order(x[,2]),]
-				list(NAStartTime.canberemoved=which(is.na(x[,1]))==1, df.idx=df.idx[1])					
-			}, by=Patient]
-	tmp						<- subset(tmp, NAStartTime.canberemoved)
-	if(verbose)	cat(paste("\nnumber of entries with is.na(StartTime) & TrI=='Yes' before start of treatment , n=",nrow(tmp),"REMOVE"))
-	set(df, tmp[,df.idx], "StopTime", NA)		
-	df						<- subset(df, !is.na(StopTime))
 	if(verbose)	cat(paste("\nnumber of entries with !is.na(StartTime) & !is.na(StopTime), n=",nrow(df)))
+	#	check NoDrug==0 entries
+	if(verbose)	cat(paste("\nnumber of patients with is.na(NoDrug), n=",nrow(subset( df[, list(select=any(is.na(NoDrug))), by='Patient'], select))))
+	#	remove patients for which all periods have NoDrug==0
+	tmp						<- df[,  list(select=!all(NoDrug==0)) , by='Patient']
+	if(verbose)	cat(paste("\nnumber of patients with all(NoDrug==0), n=",nrow(subset(tmp, !select))))
+	df						<- merge( df, subset(tmp, select, Patient), by='Patient')
+	#	sort by Patient and StopTime 
+	setkey(df, Patient, StopTime)
+	#	for each patient find first periods with NoDrug>0
+	tmp						<- subset( df[, list( select= which(NoDrug>0)[1]>1 ), by='Patient'], select)[, Patient]
+	if(verbose)	cat(paste("\nnumber of patients with ! NoDrug>0 as first StartTime for any patient, n=",length(tmp)))	
+	tmp						<- df[, list( StopTime= StopTime[ seq.int( which(NoDrug>0)[1], length(NoDrug)) ] ), by='Patient']
+	if(verbose)	cat(paste("\nnumber of entries with NoDrug>0 as first StartTime for any patient, n=",nrow(tmp)))
+	df						<- merge(df, tmp, by=c('Patient','StopTime'))	
+	tmp						<- merge( df, subset( df[,list(check= any( is.na(StartTime) & NoDrug==0) ), by='Patient'], check, Patient), by='Patient') 
+	if(verbose)	cat(paste("\nnumber of entries with NoDrug==0 and is.na StartTime, n=",nrow(tmp)))
 	#
-	#	fix inconsistent timings
+	#	fix StartTime>StopTime
 	#
-	tmp		<- which(df[,StartTime>StopTime])		
+	tmp		<- which(df[,StartTime>StopTime])	
+	if(verbose)	cat(paste("\nnumber of entries with StartTime>StopTime, n=",length(tmp)))
 	tmp		<- cbind( tmp, sapply(tmp,function(x)		which(df[, Patient==df[x,Patient] & StopTime==df[x,StartTime]])	) )		#second col contains StopTime
 	for(i in seq_len(nrow(tmp)))
 	{
@@ -775,6 +749,51 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 			set(df,tmp[i,2],"StopTime",z)
 		}		
 	}
+	#	see if we can merge consecutive NoDrug==0 periods	
+	df.nodrug		<- subset(df, NoDrug==0)
+	if(verbose)	cat(paste("\nnumber of entries with NoDrug==0, n=",nrow(tmp)))
+	tmp				<- df.nodrug[, {
+										if(length(StartTime)>1)
+										{
+											tmp			<- StopTime[-length(StopTime)] != StartTime[-1]
+											StartTime	<- StartTime[c(TRUE,tmp)]
+											StopTime	<- StopTime[c(tmp,TRUE)]					
+										}
+										else
+										{
+											StartTime	<- StartTime
+											StopTime	<- StopTime
+										}
+										list(StartTime=StartTime, StopTime=StopTime)
+									} ,by='Patient']
+	if(verbose)	cat(paste("\nnumber of merged entries with NoDrug==0, n=",nrow(tmp)))						
+	#
+	#	TR.interrupted
+	#
+	if(nrow(df[which(is.na(df[,NoDrug]) & StartTime!=TR.notyet),])) stop("unexpected NA in NoDrug when on treatment")
+	tmp								<- rep(0, nrow(df))
+	tmp[ which( df[,NoDrug==0] ) ]	<- 1
+	df[, TrI:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
+	#
+	#	process treatment change reasons
+	#
+	if(any(!is.na(df[, Reason7])))	stop("unexpected !NA after Reason7")
+	df.TrCh.noreason		<- which( df[, is.na(Reason1)&is.na(Reason2)&is.na(Reason3)&is.na(Reason4)&is.na(Reason5)&is.na(Reason6)] )		
+	#	TR.failure
+	tmp						<-	rep(0, nrow(df))
+	tmp[ df.TrCh.noreason ]	<- NA
+	tmp[ which(df[, Reason1%in%TR.failure | Reason2%in%TR.failure | Reason3%in%TR.failure | Reason4%in%TR.failure | Reason5%in%TR.failure | Reason6%in%TR.failure ]) ]<- 1
+	df[, TrCh.failure:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
+	#	TR.adherence
+	tmp						<-	rep(0, nrow(df))
+	tmp[ df.TrCh.noreason ]	<- NA
+	tmp[ which(df[, Reason1%in%TR.adherence | Reason2%in%TR.adherence | Reason3%in%TR.adherence | Reason4%in%TR.adherence | Reason5%in%TR.adherence | Reason6%in%TR.adherence ]) ]<- 1
+	df[, TrCh.adherence:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
+	#	TR.patient related
+	tmp						<-	rep(0, nrow(df))
+	tmp[ df.TrCh.noreason ]	<- NA
+	tmp[ which(df[, Reason1%in%TR.patrel | Reason2%in%TR.patrel | Reason3%in%TR.patrel | Reason4%in%TR.patrel | Reason5%in%TR.patrel | Reason6%in%TR.patrel ]) ]<- 1
+	df[, TrCh.patrel:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
 	#
 	#	get 1st sort by Patient, 2nd sort by StopTime -> treatment history by Patient is now in order
 	#
@@ -813,6 +832,196 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	#
 	file		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
 	if(verbose) cat(paste("\nsave to", file))
+	save(df, file=file)
+}
+######################################################################################
+project.hivc.Excel2dataframe.Regimen.CheckOnVL<- function(dir.name= DATA, verbose=1)
+{
+	file		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
+	load(file)
+	df.treatment<- df
+	file		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
+	load(file)
+	df.v		<- df
+	#	check if VL decreases just before treatment start
+	tmp			<- subset(df.treatment, !is.na(AnyT_T1), select=c(Patient, AnyT_T1, StartTime, StopTime, AnyT_T1_Acc, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel))
+	
+	
+	if(verbose)	cat(paste("\ncheck VL during ART for patients, n=",nrow(tmp)))
+	check		<- merge( subset(df.v, select=c(Patient, PosRNA, RNA, lRNA)), tmp, by='Patient', allow.cartesian=TRUE )
+	check		<- check[, {
+								z<- StartTime<=PosRNA & PosRNA<=StopTime
+								lapply(.SD, '[', z)
+							},  by=c('Patient','PosRNA')]	
+	setkey(check, Patient, PosRNA)	
+	check		<- subset(check,  difftime(PosRNA, AnyT_T1, units='days')>= 0.5)
+	if(verbose)	cat(paste("\nPatients with VL after ART start, n=",check[,length(unique(Patient))]))	
+	#	select patients for which lRNA stays above 4.5 
+	check		<- merge(check, subset( check[, list(select= any(lRNA>4.5)), by='Patient'], select ), by='Patient' )
+	if(verbose)	cat(paste("\nPatients with high VL after ART start, n=",check[,length(unique(Patient))]))
+	
+	check.run	<- check[, list( VLhighrun=max(table(cumsum(c(0,as.numeric(diff(which(lRNA>4.5))!=1))))) ), by='Patient']
+	check1		<- merge(check, subset(check.run, VLhighrun>20, Patient), by='Patient')
+	check1[, length(unique(Patient))]
+	print(check1, n=400)
+	
+	check2		<- merge(check, subset(check.run, VLhighrun>10, Patient), by='Patient')
+	check2[, length(unique(Patient))]	
+	check2		<- check2[,  {
+				tmp<- lRNA>4.5
+				list( 	TrI.na=length(which(is.na(TrI))), TrI.y=length(which(TrI=='Yes')), TrF.na=length(which(is.na(TrCh.failure))), TrF.y=length(which(TrCh.failure=='Yes')),
+						TrA.na=length(which(is.na(TrCh.adherence))), TrA.y=length(which(TrCh.adherence=='Yes')),
+						TrP.na=length(which(is.na(TrCh.patrel))), TrP.y=length(which(TrCh.patrel=='Yes')), Run=length(tmp) )
+			},by='Patient']
+	check2		<- check2[, lapply(.SD,'/',Run), by='Patient']
+	check2[, lapply(.SD,mean), .SDcols=c('TrI.na','TrI.y','TrF.na','TrF.y','TrA.na','TrA.y','TrP.na','TrP.y')]
+	
+	check3		<- merge(check, subset(check.run, VLhighrun<10 & VLhighrun>4, Patient), by='Patient')
+	check3[, length(unique(Patient))]	
+	check3		<- check3[,  {
+				tmp<- lRNA>4.5
+				list( 	TrI.na=length(which(is.na(TrI))), TrI.y=length(which(TrI=='Yes')), TrF.na=length(which(is.na(TrCh.failure))), TrF.y=length(which(TrCh.failure=='Yes')),
+						TrA.na=length(which(is.na(TrCh.adherence))), TrA.y=length(which(TrCh.adherence=='Yes')),
+						TrP.na=length(which(is.na(TrCh.patrel))), TrP.y=length(which(TrCh.patrel=='Yes')), Run=length(tmp) )
+			},by='Patient']
+	check3		<- check3[, lapply(.SD,'/',Run), by='Patient']
+	check3[, lapply(.SD,mean), .SDcols=c('TrI.na','TrI.y','TrF.na','TrF.y','TrA.na','TrA.y','TrP.na','TrP.y')]
+	
+
+	hist( subset( check, !is.na(TrCh.failure) & TrCh.failure=='Yes' )[, lRNA], xlab= 'log10 VL for ART failure', breaks=c(0,3,4,5,7) )
+	hist( subset( check, !is.na(TrI) & TrI=='Yes' )[, lRNA], xlab= 'log10 VL for ART interruption', breaks=c(0,3,4,5,7) )	
+	hist( subset( check, !is.na(TrCh.adherence) & TrCh.adherence=='Yes' )[, lRNA], xlab= 'log10 VL for ART adherence', breaks=c(0,3,4,5,7) )	
+	hist( subset( check, !is.na(TrCh.patrel) & TrCh.patrel=='Yes' )[, lRNA], xlab= 'log10 VL for ART patient request', breaks=c(0,3,4,5,7) )
+	
+	hist( subset( check, !is.na(TrCh.failure) & TrCh.failure=='Yes' & lRNA>2.8)[, lRNA], xlab= 'log10 VL for ART failure', breaks=100 )
+	tmp			<- c( subset( check, !is.na(TrI) & TrI=='Yes' & lRNA>2.8)[, lRNA], subset( check, !is.na(TrCh.adherence) & TrCh.adherence=='Yes' & lRNA>2.8)[, lRNA], subset( check, !is.na(TrCh.patrel) & TrCh.patrel=='Yes' & lRNA>2.8 )[, lRNA] )
+	hist( tmp, xlab= 'log10 VL for ART I/A/P', breaks=100 )
+	
+	check[, lRNAc:= cut(check[,lRNA], breaks=c(0,3,4,5,20), labels=c('S','3-4','4-5','>5'), right=FALSE)]
+	table( subset( check, !is.na(TrI) & TrI=='Yes' )[, lRNAc], xlab= 'log10 VL for ART interruption' )
+}
+######################################################################################
+project.hivc.Excel2dataframe.Regimen.CheckARTStartDate<- function(dir.name= DATA, verbose=1)
+{
+	file		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
+	load(file)
+	df.treatment<- df
+	file		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
+	load(file)
+	df.v		<- df
+	#	check if VL decreases just before treatment start
+	tmp			<- unique(subset(df.treatment, !is.na(AnyT_T1), select=c(Patient, AnyT_T1, AnyT_T1_Acc)))
+	if(verbose)	cat(paste("\ncheck ART start date for patients, n=",nrow(tmp)))
+	check		<- merge( subset(df.v, select=c(Patient, PosRNA, RNA, lRNA)), tmp, by='Patient' )
+	setkey(check, Patient, PosRNA)
+	check		<- subset(check,  difftime(AnyT_T1, PosRNA, units='days')<= 1.25*365 & difftime(PosRNA, AnyT_T1, units='days')<= 0.25*365)	
+	check		<- merge(check, subset( check[, list(select=difftime(AnyT_T1[1], PosRNA[1], units='days')>0), by='Patient'], select, Patient ), by='Patient')	
+	if(verbose)	cat(paste("\nPatients with PosRNA preceeding AnyT_T1, n=",check[,length(unique(Patient))]))
+	tmp			<- check[,  {
+								z<- tail(which( difftime(AnyT_T1[1], PosRNA, units='days')>=0 ),1)
+								list(lRNA.drop.before.ART=lRNA[1] - lRNA[z], lRNA.before.ART=lRNA[z], lRNA1=lRNA[1], drop.day=PosRNA[z], drop.days2ART= difftime(AnyT_T1[1], PosRNA[z], units='days'))					
+							}  ,by='Patient']
+	check		<- merge(check, tmp, by='Patient')
+					
+	check1		<- subset(check, lRNA.drop.before.ART>0.5 & lRNA.before.ART<4 & AnyT_T1_Acc=='NAccD')
+	if(verbose)	cat(paste("\nPatients lRNA.drop.before.ART>0.5 & AnyT_T1_Acc=='NAccD', n=",check1[,length(unique(Patient))]))
+	print(check1[,unique(Patient)])
+	#print(check1,n=500)
+	#	reset AnyT_T1 to drop.day	
+	reset		<- unique( subset(check1, select=c(Patient, AnyT_T1, drop.day)) )	
+	set(reset, reset[,which(Patient=='M10607')], 'drop.day', as.Date('1992-09-15'))
+	set(reset, reset[,which(Patient=='M13163')], 'drop.day', as.Date('1996-12-13'))
+	set(reset, reset[,which(Patient=='M34362')], 'drop.day', as.Date('2007-11-29'))
+	
+	check2		<- subset(check, lRNA.drop.before.ART>0.5 & lRNA.before.ART<4 & AnyT_T1_Acc=='NAccMD')
+	if(verbose)	cat(paste("\nPatients lRNA.drop.before.ART>0.5 & AnyT_T1_Acc=='NAccMD', n=",check2[,length(unique(Patient))]))
+	print(check2[,unique(Patient)])
+	#print(check2,n=500)
+	#	checked manually: reset AnyT_T1 to first PosRNA with VL < 3.44
+	tmp			<- check2[, list(AnyT_T1=AnyT_T1[1], drop.day=min(AnyT_T1[1], PosRNA[which(lRNA<3.44)[1]])), by='Patient']
+	reset		<- rbind(reset, tmp)
+	
+	check3		<- subset(check, lRNA.drop.before.ART>0.5 & lRNA.before.ART<4 & AnyT_T1_Acc=='Acc' & drop.days2ART>0 & drop.days2ART<=30)
+	if(verbose)	cat(paste("\nPatients lRNA.drop.before.ART>0.5 & AnyT_T1_Acc=='Acc', n=",check3[,length(unique(Patient))]))
+	print(check3[,unique(Patient)])
+	#print(check3,n=500)
+	#	M13105 1996-10-14     400 2.602		(don t set min to >3.1)
+	tmp			<- check3[, list(AnyT_T1=AnyT_T1[1], drop.day=min(AnyT_T1[1], PosRNA[which(lRNA<3.09)[1]])), by='Patient']	
+	set(tmp, tmp[,which(Patient=='M11331')], 'drop.day', as.Date('1996-01-18'))
+	set(tmp, tmp[,which(Patient=='M13105')], 'drop.day', as.Date('1996-10-14'))
+	set(tmp, tmp[,which(Patient=='M12882')], 'drop.day', as.Date('1997-01-14'))
+	set(tmp, tmp[,which(Patient=='M15067')], 'drop.day', as.Date('1998-02-24'))
+	set(tmp, tmp[,which(Patient=='M15166')], 'drop.day', as.Date('1998-03-20'))
+	set(tmp, tmp[,which(Patient=='M15178')], 'drop.day', as.Date('2000-04-04'))
+	set(tmp, tmp[,which(Patient=='M15692')], 'drop.day', as.Date('1997-05-02'))
+	set(tmp, tmp[,which(Patient=='M17154')], 'drop.day', as.Date('1999-10-20'))
+	set(tmp, tmp[,which(Patient=='M19100')], 'drop.day', as.Date('2000-10-17'))
+	set(tmp, tmp[,which(Patient=='M19105')], 'drop.day', as.Date('2000-10-17'))
+	set(tmp, tmp[,which(Patient=='M19208')], 'drop.day', as.Date('2000-11-22'))
+	set(tmp, tmp[,which(Patient=='M19233')], 'drop.day', as.Date('2000-11-22'))
+	set(tmp, tmp[,which(Patient=='M20373')], 'drop.day', as.Date('2001-07-19'))
+	set(tmp, tmp[,which(Patient=='M26537')], 'drop.day', as.Date('2002-08-20'))
+	set(tmp, tmp[,which(Patient=='M28831')], 'drop.day', as.Date('2003-09-01'))
+	set(tmp, tmp[,which(Patient=='M29510')], 'drop.day', as.Date('2004-03-25'))
+	set(tmp, tmp[,which(Patient=='M29641')], 'drop.day', as.Date('2006-09-20'))
+	set(tmp, tmp[,which(Patient=='M32779')], 'drop.day', as.Date('2006-05-17'))
+	set(tmp, tmp[,which(Patient=='M33857')], 'drop.day', as.Date('2007-04-05'))
+	set(tmp, tmp[,which(Patient=='M34098')], 'drop.day', as.Date('2011-05-04'))
+	set(tmp, tmp[,which(Patient=='M34416')], 'drop.day', as.Date('2008-08-28'))
+	set(tmp, tmp[,which(Patient=='M34453')], 'drop.day', as.Date('2008-01-14'))
+	set(tmp, tmp[,which(Patient=='M34587')], 'drop.day', as.Date('2007-10-15'))	
+	set(tmp, tmp[,which(Patient=='M34708')], 'drop.day', as.Date('2008-09-26'))
+	set(tmp, tmp[,which(Patient=='M34926')], 'drop.day', as.Date('2009-05-22'))
+	set(tmp, tmp[,which(Patient=='M35398')], 'drop.day', as.Date('2007-11-27'))
+	set(tmp, tmp[,which(Patient=='M36082')], 'drop.day', as.Date('2011-01-07'))
+	set(tmp, tmp[,which(Patient=='M36159')], 'drop.day', as.Date('2008-09-11'))
+	set(tmp, tmp[,which(Patient=='M36619')], 'drop.day', as.Date('2010-09-28'))
+	set(tmp, tmp[,which(Patient=='M37307')], 'drop.day', as.Date('2009-05-14'))
+	set(tmp, tmp[,which(Patient=='M39134')], 'drop.day', as.Date('2011-05-31'))
+	set(tmp, tmp[,which(Patient=='M39188')], 'drop.day', as.Date('2010-09-09'))
+	set(tmp, tmp[,which(Patient=='M40166')], 'drop.day', as.Date('2011-12-15'))	
+	set(tmp, tmp[,which(Patient=='M15184')], 'drop.day', as.Date('1998-03-20'))
+	reset		<- rbind(reset, subset(tmp, !is.na(drop.day))) 
+	
+	check4		<- subset(check, lRNA.drop.before.ART>0.5 & lRNA.before.ART<4 & AnyT_T1_Acc=='Acc' & drop.days2ART>0 & drop.days2ART>30)
+	if(verbose)	cat(paste("\nPatients lRNA.drop.before.ART>0.5 & AnyT_T1_Acc=='Acc' >30, n=",check4[,length(unique(Patient))]))
+	print(check4[,unique(Patient)])
+	#print(check4,n=500)		
+	tmp			<- check4[, list(AnyT_T1=AnyT_T1[1], drop.day=min(AnyT_T1[1], PosRNA[which(lRNA<3.09)[1]])), by='Patient']
+	set(tmp, tmp[,which(Patient=='M14785')], 'drop.day', as.Date('1997-05-14'))
+	set(tmp, tmp[,which(Patient=='M14796')], 'drop.day', as.Date('1997-05-14'))
+	set(tmp, tmp[,which(Patient=='M15151')], 'drop.day', as.Date('1998-03-20'))
+	set(tmp, tmp[,which(Patient=='M15715')], 'drop.day', as.Date('1997-07-08'))
+	set(tmp, tmp[,which(Patient=='M16342')], 'drop.day', as.Date('1998-09-08'))
+	set(tmp, tmp[,which(Patient=='M16378')], 'drop.day', as.Date('1997-10-07'))
+	set(tmp, tmp[,which(Patient=='M16701')], 'drop.day', as.Date('1998-05-07'))
+	set(tmp, tmp[,which(Patient=='M18948')], 'drop.day', as.Date('2000-08-15'))
+	set(tmp, tmp[,which(Patient=='M20546')], 'drop.day', as.Date('2009-03-03'))
+	set(tmp, tmp[,which(Patient=='M20732')], 'drop.day', as.Date('2002-07-01'))
+	set(tmp, tmp[,which(Patient=='M28930')], 'drop.day', as.Date('2004-01-13'))
+	set(tmp, tmp[,which(Patient=='M32484')], 'drop.day', as.Date('2009-06-24'))
+	set(tmp, tmp[,which(Patient=='M35687')], 'drop.day', as.Date('2008-09-02'))
+	set(tmp, tmp[,which(Patient=='M37131')], 'drop.day', as.Date('2009-08-19'))
+	set(tmp, tmp[,which(Patient=='M10623')], 'drop.day', as.Date('1995-02-23'))
+	set(tmp, tmp[,which(Patient=='M17719')], 'drop.day', as.Date('1999-05-20'))	 
+	reset		<- rbind(reset, subset(tmp, !is.na(drop.day)))
+	#
+	reset		<- subset( reset, AnyT_T1!=drop.day )
+	setnames(reset, c('Patient','drop.day'), c('xPatient','new.AnyT_T1'))	
+	#file<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/derived/ATHENA_2013_03_changed_ART_startdate.csv"
+	#tmp			<- merge( subset(check, select=c(Patient, PosRNA, lRNA , AnyT_T1_Acc)), reset, by='Patient' )
+	#write.csv(tmp, file=file)		
+	#
+	for( i in seq_len(nrow(reset)))
+	{
+		cat(paste('\nprocess',i))
+		tmp	<- df.treatment[, which(Patient==reset[i,xPatient])]
+		if(!length(tmp)) stop('could not find Patient')
+		set(df.treatment, tmp, 'AnyT_T1', reset[i,new.AnyT_T1])		
+		set(df.treatment, tmp[1], 'StartTime', reset[i,new.AnyT_T1])
+	}
+	df<- df.treatment
+	file		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
 	save(df, file=file)
 }
 ######################################################################################
@@ -1327,7 +1536,8 @@ project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=
 	}
 	if(0)
 	{
-		project.hivc.Excel2dataframe.Regimen()						
+		project.hivc.Excel2dataframe.Regimen()		
+		project.hivc.Excel2dataframe.Regimen.CheckARTStartDate()	#assume Viro.R is alreaedy there
 	}
 	if(0)
 	{
@@ -2007,6 +2217,7 @@ project.athena.Fisheretal.X.Trm.Region<- function(df.tpairs, clumsm.info)
 	tmp	<- table(t.group[,RegionHospital])
 	cat(paste('\nRegion group categories', paste(names(tmp), tmp, collapse=', ', sep='=')))
 	setnames(t.group, 'Patient','t.Patient')
+	cat(paste('\nReturn X for #t.Patients=',t.group[, length(unique(t.Patient))]))
 	t.group		
 }
 ######################################################################################
@@ -2024,7 +2235,9 @@ project.athena.Fisheretal.X.calendarperiod<- function(df.tpairs, clumsm.info, t.
 	cat(paste('\nGroup min diag times are=',tmp[, paste(min, collapse=', ',sep='')]))
 	cat(paste('\nGroup max diag times are=',tmp[, paste(max, collapse=', ',sep='')]))	
 	i.diag		<- merge(i.diag, subset(i.cgroup, select=c(AnyPos_T1, t.period)), by='AnyPos_T1')
-	subset(i.diag, select=c(Patient, t.period)) 		
+	i.diag		<- merge( subset(i.diag, select=c(Patient, t.period)), unique(subset(df.tpairs, select=c(Patient,t.Patient))), by='Patient')
+	cat(paste('\nReturn X for #t.Patients=',i.diag[, length(unique(t.Patient))]))	
+	i.diag
 }
 ######################################################################################
 project.athena.Fisheretal.X.followup<- function(df.tpairs, df.immu, t.period= 0.25, t.endctime=2013.0)
@@ -2056,6 +2269,7 @@ project.athena.Fisheretal.X.followup<- function(df.tpairs, df.immu, t.period= 0.
 	follow.t		<- follow.t[,	list(fw.up.mx= ifelse(length(which(PosCD4<=t))>1, max(diff(PosCD4[PosCD4<=t])), NA_real_) ),		by=c('Patient','t')]
 	set(follow.t, NULL, 'fw.up.mx', cut( follow.t[, fw.up.mx], breaks=follow.q, labels=c('<75pc','75-95pc','>95pc') )		)
 	setnames(follow.t, c('Patient','fw.up.mx'), c('t.Patient','fw.up'))
+	cat(paste('\nreturn X for #t.Patient=',follow.t[, length(unique(t.Patient))]))	
 	follow.t	
 }
 ######################################################################################
@@ -2080,6 +2294,7 @@ project.athena.Fisheretal.X.time.diag2firstVLandCD4<- function(df.tpairs, clumsm
 	cat(paste('\ncumulative right tail probability for recent follow up quantiles ',paste( names(tmp), ' = ',tmp*100, '%',sep='', collapse=', ')))
 	setnames(follow, 'Patient', 't.Patient')
 	follow	<- subset(follow, select=c(t.Patient, t2.care.t1))
+	cat(paste('\nreturn X for #t.Patient=',follow[, length(unique(t.Patient))]))
 	follow
 }
 ######################################################################################
@@ -2106,6 +2321,7 @@ project.athena.Fisheretal.X.time.diag2suppressed<- function(df.tpairs, clumsm.in
 	set(viro.supp,NULL,'t2.vl.supp',tmp)
 	viro			<- merge( unique( subset(viro, select=t.Patient) ), viro.supp, by='t.Patient', all.x=1 )
 	set(viro,viro[,which(is.na(t2.vl.supp))],'t2.vl.supp','other')
+	cat(paste('\nreturn X for #t.Patient=',viro[, length(unique(t.Patient))]))
 	viro
 }
 ######################################################################################
@@ -2351,6 +2567,9 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	argv			<<- unlist(strsplit(argv,' '))		
 	msm				<- hivc.prog.get.clustering.MSM()
 	clumsm.info		<- msm$df.cluinfo
+	#	update clumsm.info with latest values from df.all
+	clumsm.info		<- merge( df.all, subset(clumsm.info, select=c(FASTASampleCode, cluster, Node, clu.npat, clu.ntip, clu.nFrgnInfection, clu.fPossAcute, clu.AnyPos_T1, clu.bwpat.medbrl)), by='FASTASampleCode')
+	#
 	set(clumsm.info, NULL, 'PosSeqT', hivc.db.Date2numeric(clumsm.info[,PosSeqT]))
 	#set(clumsm.info, NULL, 'DateBorn', hivc.db.Date2numeric(clumsm.info[,DateBorn]))
 	set(clumsm.info, NULL, 'DateDied', hivc.db.Date2numeric(clumsm.info[,DateDied]))
@@ -2613,7 +2832,7 @@ project.athena.Fisheretal.get.data.for.selection<- function(df.tpairs, clu.indir
 	list(clu=clu, df.all=df.all, df.viro=df.viro, df.immu=df.immu, df.treatment=df.treatment, df.tpairs=df.tpairs.reduced)
 }
 ######################################################################################
-project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, outfile)
+project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, file)
 {
 	require(RColorBrewer)
 	beastlabel.idx.clu			<- 1
@@ -2624,12 +2843,13 @@ project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu,
 	beastlabel.idx.rate			<- NA			
 	#
 	#	prepare df.tpairs.select for plotting
-	#
+	#	
 	if(!is.null(df.tpairs))
 	{
 		df.tpairs.plot		<- subset( df.tpairs, select=c(cluster, FASTASampleCode, t.FASTASampleCode))
-		setkey(df.tpairs.plot, cluster)
-		tmp					<- df.tpairs.plot[, list(col=rev(brewer.pal( max(3,length(FASTASampleCode)), 'Dark2' )[seq_along(FASTASampleCode)])), by='cluster']
+		setkey(df.tpairs.plot, cluster)		
+		#tmp					<- df.tpairs.plot[, list(col=rev(brewer.pal( max(3,length(FASTASampleCode)), 'Dark2' )[seq_along(FASTASampleCode)])), by='cluster']
+		tmp					<- df.tpairs.plot[, list(col=rainbow(length(FASTASampleCode))), by='cluster']
 		df.tpairs.plot[, col:=tmp[,col]]
 		df.tpairs.plot[, pch:=0]
 		df.tpairs.plot[, t.pch:=5]
@@ -2656,27 +2876,30 @@ project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu,
 	pdf.xlim					<- c( cluphy.subtrees.root.ctime-cluphy.root.ctime-1, ceiling(end.ctime)-cluphy.root.ctime )
 	pdf.xlim					<- pdf.xlim+c(0,diff(pdf.xlim)*0.35)
 	#	plot	
-	cat(paste('\nplot to file=',outfile))
-	dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.root.ctime, cluphy.tip.ctime, ph.prob=NA, df.node.ctime=cluphy.map.nodectime, df.rates=NULL, df.tips=df.tpairs.plot, end.ctime=end.ctime,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=outfile,  pdf.width=7, pdf.height=140, pdf.xlim=pdf.xlim)	
+	cat(paste('\nplot to file=',file))
+	dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.root.ctime, cluphy.tip.ctime, ph.prob=NA, df.node.ctime=cluphy.map.nodectime, df.rates=NULL, df.tips=df.tpairs.plot, end.ctime=end.ctime,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=file,  pdf.width=7, pdf.height=180, pdf.xlim=pdf.xlim)
+	#dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.root.ctime, cluphy.tip.ctime, ph.prob=NA, df.node.ctime=cluphy.map.nodectime, df.rates=NULL, df.tips=df.tpairs.plot, end.ctime=end.ctime,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=file,  pdf.width=7, pdf.height=14, pdf.xlim=pdf.xlim)
 }
 ######################################################################################
 project.athena.Fisheretal.X.incare<- function(df.tpairs, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013.)
 {
 	#	prepare incare timeline for potential transmitters
 	incare		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique( subset(clumsm.info, select=c(Patient, AnyPos_T1, DateDied)) ), by='Patient' )
+	cat(paste('\nPot transmitters, n=',incare[, length(unique(Patient))]))
 	set(incare, NULL, 'AnyPos_T1', incare[, floor(AnyPos_T1) + floor( (AnyPos_T1%%1)*100 %/% (t.period*100) ) * t.period] )
 	set(incare, incare[,which(is.na(DateDied))], 'DateDied', t.endctime)
 	set(incare, NULL, 'DateDied', incare[, floor(DateDied) + floor( (DateDied%%1)*100 %/% (t.period*100) ) * t.period] )	
 	incare.t	<- incare[, list(t= seq(AnyPos_T1, DateDied, by=t.period)),by='Patient']	
+	incare.t[, stage:='Diag']
 	#	prepare treatment variables for potential transmitters
 	treat		<- subset(df.treatment, select=c(Patient, AnyT_T1, StartTime, StopTime, TrI)) 
 	treat		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), treat, by='Patient' )
 	set(treat, NULL, 'AnyT_T1', hivc.db.Date2numeric(treat[,AnyT_T1]))
 	set(treat, NULL, 'StopTime', hivc.db.Date2numeric(treat[,StopTime]))
 	set(treat, NULL, 'StartTime', hivc.db.Date2numeric(treat[,StartTime]))
+	cat(paste('\nTreatment info available for pot transmitters, n=',treat[, length(unique(Patient))]))
 	#	set ever on ART per period t
-	incare.t	<- merge(unique(subset(treat, select=c(Patient, AnyT_T1))), incare.t, by='Patient' )
-	incare.t[, stage:='Diag']
+	incare.t	<- merge(incare.t, unique(subset(treat, select=c(Patient, AnyT_T1))), by='Patient', all.x=1 )	
 	set(incare.t, incare.t[, which(AnyT_T1<=t+t.period/2)], 'stage', 'ART.started')
 	#	identify periods t when treatment interrupted
 	treat		<- subset(treat, TrI=='Yes', select=c(Patient, StartTime, StopTime))
@@ -2701,14 +2924,18 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, df.viro, df.immu, df.tr
 	#	add ART.interrupted time periods to incare.t
 	incare.t	<- merge( subset(incare.t, select=c(Patient, t, stage)), subset(treat, select=c(Patient, t, ART.interrupted)), by=c('Patient','t'), all.x=1)
 	set(incare.t, incare.t[,which(is.na(ART.interrupted))], 'ART.interrupted', 'No')
+	cat(paste('\nART.interrupted info added for pot transmitters, n=',incare.t[, length(unique(Patient))]))
 	#	compute X: viral load of potential transmitter  	
-	X.viro		<- project.athena.Fisheretal.X.viro(df.tpairs, df.viro, t.period=0.25, lRNA.cutoff=NA)
+	X.viro		<- project.athena.Fisheretal.X.viro(df.tpairs, df.viro, t.period=t.period, lRNA.cutoff=NA)
+	cat(paste('\nVL info available for pot transmitters, n=',X.viro[, length(unique(t.Patient))]))
 	#	compute X: CD4 of potential transmitter
-	X.cd4		<- project.athena.Fisheretal.X.cd4(df.tpairs, df.immu, t.period=0.25)		
+	X.cd4		<- project.athena.Fisheretal.X.cd4(df.tpairs, df.immu, t.period=t.period)
+	cat(paste('\nCD4 info available for pot transmitters, n=',X.cd4[, length(unique(t.Patient))]))
 	#	add viro and cd4 time periods to incare.t
 	setnames(incare.t, 'Patient','t.Patient')		
 	incare.t	<- merge(incare.t, X.viro, by=c('t.Patient','t'), all.x=1)
 	incare.t	<- merge(incare.t, X.cd4, by=c('t.Patient','t'), all.x=1)
+	cat(paste('\nReturn X for #t.Patients=',incare.t[, length(unique(t.Patient))]))	
 	incare.t
 }
 ######################################################################################
@@ -2837,7 +3064,7 @@ project.athena.Fisheretal.exact.repro<- function()
 	indircov				<- paste(DATA,"derived",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
-	if(1)
+	if(0)
 	{
 		infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs100",sep="_")
@@ -2848,21 +3075,22 @@ project.athena.Fisheretal.exact.repro<- function()
 		clu.infilexml.template	<- "sasky_sdr06"
 		clu.infilexml.opt		<- "rsu815"				
 	}
-	if(0)
+	if(1)
 	{
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"				
-		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alsu50'
+		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alrh160'
 		clu.infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		clu.insignat			<- "Wed_Dec_18_11:37:00_2013"
-		clu.infilexml.opt		<- "alsu50"
-		clu.infilexml.template	<- "sasky_sdr06"		
+		clu.infilexml.opt		<- "alrh160"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=Y_D=0.5',sep='_')
 	}	
 	#
 	#	select infected individuals and return in df.select
 	#
-	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=0.75, adjust.NegT4Acute=1, adjust.AcuteSelect=c('Yes','Maybe'))
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=NA, adjust.NegT4Acute=1, adjust.AcuteSelect='Yes')
 	df.denom		<- tmp$df.select
 	clumsm.subtrees	<- tmp$clumsm.subtrees
 	clumsm.info		<- tmp$clumsm.info
@@ -2870,16 +3098,20 @@ project.athena.Fisheretal.exact.repro<- function()
 	#
 	#	select potential transmitters on MLE tree
 	#
-	df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos.MinBrlMLETree(df.denom, clumsm.subtrees, any.pos.grace.yr= 0.5)
-	tmp				<- merge( subset(df.tpairs, select=Patient), subset(clumsm.info, select=c(Patient, AnyPos_T1)), by='Patient' )
-	outfile			<- paste(outdir,'/',infile, '_', clu.infilexml.template, '_', clu.infilexml.opt, '_', gsub('/',':',insignat), '_', 'nrecentlyinfected', '.pdf',sep='')
-	pdf(file=outfile, w=5, h=5)
-	par(mar=c(3,5,0.5,0.5))
-	barplot( table( tmp[, round(AnyPos_T1)] ), ylab="# recently infected\n with unique potential transmitter" )
-	dev.off()
+	df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos.MinBrlMLETree(df.denom, clumsm.subtrees, any.pos.grace.yr= 0.5)	
+	if(0)
+	{
+		tmp				<- merge( subset(df.tpairs, select=Patient), subset(clumsm.info, select=c(Patient, AnyPos_T1)), by='Patient' )
+		outfile			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nrecentlyinfected', '.pdf',sep='')
+		pdf(file=outfile, w=5, h=5)
+		par(mar=c(3,5,0.5,0.5))
+		barplot( table( tmp[, round(AnyPos_T1)] ), ylab="# recently infected\n with unique potential transmitter" )
+		dev.off()		
+	}
 	#
 	#	get clinical data and dated phylogenies for potential transmitters
 	#	
+	#df.tpairs	<- subset(df.tpairs, cluster%in%c(1502,1508,1510))
 	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov)	
 	df.tpairs				<- tmp$df.tpairs
 	df.all					<- tmp$df.all
@@ -2893,29 +3125,32 @@ project.athena.Fisheretal.exact.repro<- function()
 	#	
 	#	plot MLE tree
 	#
-	tmp								<- merge( data.table( cluster=as.numeric( names(clumsm.subtrees) ), clu.i=seq_along(clumsm.subtrees) ), df.tpairs, by='cluster' )
-	df.tpairs.subtrees 				<- lapply( tmp[, unique(clu.i)], function(i)	clumsm.subtrees[[i]] )
-	df.tpairs.mleph					<- hivc.clu.polyphyletic.clusters(cluphy.subtrees=df.tpairs.subtrees)$cluphy
-	
-	df.tpairs.info	<- merge( data.table(FASTASampleCode= df.tpairs.mleph$tip.label), subset(clumsm.info, select=c(FASTASampleCode, Patient, cluster, AnyPos_T1)), by='FASTASampleCode' )
-	df.tpairs.info[, tiplabel:='']
-	tmp				<- which( df.tpairs.info[, FASTASampleCode]%in%df.tpairs[, FASTASampleCode] )
-	set(df.tpairs.info, tmp, 'tiplabel', paste('I',df.tpairs.info[tmp,tiplabel],sep='') )
-	tmp				<- which( df.tpairs.info[, FASTASampleCode]%in%df.tpairs[, t.FASTASampleCode] )
-	set(df.tpairs.info, tmp, 'tiplabel', paste('T',df.tpairs.info[tmp,tiplabel],sep='') )	
-	set(df.tpairs.info, NULL, 'tiplabel', paste(df.tpairs.info[,tiplabel],'_',df.tpairs.info[,Patient],'_clu=',df.tpairs.info[,cluster],'_d=',df.tpairs.info[,AnyPos_T1],sep='') )
-	setkey(df.tpairs.info, FASTASampleCode)
-	df.tpairs.mleph$tip.label		<- df.tpairs.info[df.tpairs.mleph$tip.label, ][, tiplabel]
-	outfile							<- paste(outdir,'/',infile, '_', clu.infilexml.template, '_', clu.infilexml.opt, '_', gsub('/',':',insignat), '_', 'pt_anypos_0.5_minbrl_MLE', '.pdf',sep='')
-	pdf(file=outfile, w=8, h=30)
-	plot.phylo(df.tpairs.mleph, show.node.label=1, cex=0.4, no.margin=1, label.offset=0.005, edge.width=0.5)
-	dev.off()
+	if(0)
+	{
+		tmp								<- merge( data.table( cluster=as.numeric( names(clumsm.subtrees) ), clu.i=seq_along(clumsm.subtrees) ), df.tpairs, by='cluster' )
+		df.tpairs.subtrees 				<- lapply( tmp[, unique(clu.i)], function(i)	clumsm.subtrees[[i]] )
+		df.tpairs.mleph					<- hivc.clu.polyphyletic.clusters(cluphy.subtrees=df.tpairs.subtrees)$cluphy
+		
+		df.tpairs.info	<- merge( data.table(FASTASampleCode= df.tpairs.mleph$tip.label), subset(clumsm.info, select=c(FASTASampleCode, Patient, cluster, AnyPos_T1)), by='FASTASampleCode' )
+		df.tpairs.info[, tiplabel:='']
+		tmp				<- which( df.tpairs.info[, FASTASampleCode]%in%df.tpairs[, FASTASampleCode] )
+		set(df.tpairs.info, tmp, 'tiplabel', paste('I',df.tpairs.info[tmp,tiplabel],sep='') )
+		tmp				<- which( df.tpairs.info[, FASTASampleCode]%in%df.tpairs[, t.FASTASampleCode] )
+		set(df.tpairs.info, tmp, 'tiplabel', paste('T',df.tpairs.info[tmp,tiplabel],sep='') )	
+		set(df.tpairs.info, NULL, 'tiplabel', paste(df.tpairs.info[,tiplabel],'_',df.tpairs.info[,Patient],'_clu=',df.tpairs.info[,cluster],'_d=',df.tpairs.info[,AnyPos_T1],sep='') )
+		setkey(df.tpairs.info, FASTASampleCode)
+		df.tpairs.mleph$tip.label		<- df.tpairs.info[df.tpairs.mleph$tip.label, ][, tiplabel]
+		outfile							<- paste(outdir,'/',infile, '_', clu.infilexml.template, '_', clu.infilexml.opt, '_', gsub('/',':',insignat), '_', 'pt_anypos_0.5_minbrl_MLE', '.pdf',sep='')
+		pdf(file=outfile, w=8, h=30)
+		plot.phylo(df.tpairs.mleph, show.node.label=1, cex=0.4, no.margin=1, label.offset=0.005, edge.width=0.5)
+		dev.off()
+	}	
 	#			
 	#	plot clinical data + dated phylogenies	
 	#	
 	df.all					<- merge(df.all, subset(clumsm.info, select=c(FASTASampleCode, cluster)), by='FASTASampleCode', all.x=1)
-	outfile					<- paste(outdir,'/',infile, '_', clu.infilexml.template, '_', clu.infilexml.opt, '_', gsub('/',':',insignat), '_', 'pt_anypos_0.5_minbrl', '.pdf',sep='')
-	project.athena.Fisheretal.plot.selected.transmitters(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, outfile)
+	file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'pt_anypos_0.5_minmlebrl', '.pdf',sep='')
+	project.athena.Fisheretal.plot.selected.transmitters(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, file)
 	
 	
 }
@@ -2992,7 +3227,7 @@ project.athena.Fisheretal.similar<- function()
 		dev.off()	
 	}	
 	#
-	#	get time stamped data
+	#	get time stamped data (if clusters missing, confine df.tpairs to available clusters)
 	#
 	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov)	
 	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime
@@ -3003,6 +3238,126 @@ project.athena.Fisheretal.similar<- function()
 	df.immu					<- tmp$df.immu
 	df.treatment			<- tmp$df.treatment
 	
+	
+	# check if first ART.start has Interrupted
+	
+	
+	
+	
+	
+	
+	
+	
+	#	compute X: follow up
+	X.fwup					<- project.athena.Fisheretal.X.followup(df.tpairs, df.immu, t.period= 0.25, t.endctime=2013.0)
+	#tmp					<- project.athena.Fisheretal.X.followup.compareCD4toVL(df.tpairs, df.immu, clumsm.info)
+	#	compute X: calendar time period
+	X.tperiod				<- project.athena.Fisheretal.X.calendarperiod(df.tpairs, clumsm.info, t.period= 0.25, c.nperiod= 4)
+	#	compute X: RegionHospital and Exposure group
+	X.Trm					<- project.athena.Fisheretal.X.Trm.Region(df.tpairs, clumsm.info)
+	#	compute X: InCare
+	X.incare				<- project.athena.Fisheretal.X.incare(df.tpairs, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013.)
+	#	TODO lost M42459 ? --> should be because clusters are missing
+	#	compute X: time to first viral suppression from diagnosis	
+	X.t2.vlsupp				<- project.athena.Fisheretal.X.time.diag2suppressed(df.tpairs, clumsm.info, df.viro, lRNA.suppressed= log10(1e3), t2.vl.supp.p=c(0.1, 0.25))
+	#	compute X: time to first VL and first CD4 measurement
+	X.t2.care				<- project.athena.Fisheretal.X.time.diag2firstVLandCD4(df.tpairs, clumsm.info, df.viro, df.immu, t2.care.t1.q=c(0.25,0.5))
+	#	merge all static X that are independent of time periods	
+	tpairs.X	<- merge( df.tpairs, X.tperiod, by=c('Patient','t.Patient'), all.x=1 )
+	tpairs.X	<- merge( tpairs.X, X.Trm, by='t.Patient', all.x=1 )
+	tpairs.X	<- merge( tpairs.X, X.t2.care, by='t.Patient', all.x=1 )
+	tpairs.X	<- merge( tpairs.X, X.t2.vlsupp, by='t.Patient', all.x=1 )
+	
+	X.incare
+	vl.suppressed= log10(1e3)
+	#set stage: ART.interrupted
+	cat(paste('\ncheck\tany(is.na(ART.interrupted))=',X.incare[, any(is.na(ART.interrupted))]))
+	cat(paste('\ncheck\tany(is.na(stage))=',X.incare[, any(is.na(stage))]))
+	subset(X.incare, stage=='Diag' & ART.interrupted=='Yes') 
+	
+	tmp		<- X.incare[, which(ART.interrupted=='Yes')]
+	cat(paste('\nTime periods of potential transmitters with ART.interrupted, n=', length(tmp)))
+	set(X.incare, tmp, 'stage', 'ART.interrupted')
+	tmp		<- X.incare[, which(stage=='ART.started' & !is.na(lRNA) & lRNA<vl.suppressed)]
+	cat(paste('\nTime periods of potential transmitters with ART.started and VL suppressed, n=', length(tmp)))
+	set(X.incare, tmp, 'stage', 'ART.suppressed')
+	
+	
+	check	<- subset(X.incare, stage=='Diag' & !is.na(lRNA) & lRNA<3, select=c(t.Patient, t, lRNA))
+	#	check if VL drops immediately before ART.started and if so reset to ART.started
+	file	<- paste(outdir,'/',"suspicious_drop_before_ART_start.csv", sep='')
+	# swap VLs for these time periods
+	set(X.incare, X.incare[, which(t.Patient=='M14784' & t==1996.75)], 'lRNA', 4.435236)
+	set(X.incare, X.incare[, which(t.Patient=='M14784' & t==1997.00)], 'lRNA', 2.668095)
+	set(X.incare, X.incare[, which(t.Patient=='M14785' & t==1996.75)], 'lRNA', 4.435236)
+	set(X.incare, X.incare[, which(t.Patient=='M14785' & t==1997.00)], 'lRNA', 2.668095)
+			
+	check	<- subset(X.incare, stage=='ART.started')[, list(ART.t1=min(t)) , by='t.Patient']
+	check	<- merge(check, X.incare, by='t.Patient')
+	check	<- subset(check,  t+1.25>=ART.t1 & t-0.25<=ART.t1 & (stage=='ART.started' | (stage=='Diag' & !is.na(lRNA))))
+	check	<- merge( subset( check[, list(select=stage[1]=='Diag') ,by='t.Patient'], select, t.Patient), check, by='t.Patient')
+	check	<- merge( check, check[,  list(lRNA.drop.before.ART=lRNA[1] - lRNA[which(ART.t1==t)-1], lRNA.before.ART=lRNA[which(ART.t1==t)-1], lRNA1=lRNA[1])  ,by='t.Patient'],  by='t.Patient')
+	tmp		<- subset(check, lRNA.drop.before.ART>0.75 & lRNA.before.ART<4 & lRNA1>3.5 & lRNA1<5)
+	setnames(tmp, 't.Patient','Patient')
+	tmp		<- merge(subset(tmp, select=c(Patient,ART.t1,t,stage,lRNA,CD4,lRNA.before.ART)), unique(subset(df.treatment, select=c(Patient, AnyT_T1, AnyT_T1_Acc))), by='Patient')
+	if(!is.na(file))
+		write.csv(tmp, file=file)
+	#subset(tmp, AnyT_T1_Acc!='Acc')
+	#print( subset(tmp, AnyT_T1_Acc=='Acc' & lRNA.before.ART<3), n=900)
+	print( subset(tmp, AnyT_T1_Acc=='Acc'), n=900)
+	#	reset stage to ART.started based on inaccurate therapy start date
+	reset	<- data.table( rPatient=c('M28591','M29090','M30615','M30615','M30738','M30738','M31792','M33172','M33172','M40628','M42348','M32833'), 
+							rt=		c(2004.50, 2005.50, 2008.50, 2008.75, 2009.50, 2009.75, 2008.50, 2010.25, 2010.50, 2011.75, 2012.50, 2009.25))	
+	for( i in seq_len(nrow(reset)))
+		set(X.incare, X.incare[, which(t.Patient==reset[i,rPatient] & t==reset[i,rt])], 'stage', 'ART.started')
+	#	reset stage  to ART.started for accurate therapy start date based on manual inspection     		
+	reset	<- subset(tmp, AnyT_T1_Acc=='Acc' & lRNA.before.ART<3.3 & lRNA<3.3, select=c(Patient, t))
+	setnames(reset, colnames(reset), paste('r',colnames(reset),sep=''))
+	for( i in seq_len(nrow(reset)))
+		set(X.incare, X.incare[, which(t.Patient==reset[i,rPatient] & t==reset[i,rt])], 'stage', 'ART.started')
+	#
+	reset	<- data.table(  rPatient=c('M38336','M38077','M35787','M35752','M34562','M35120','M34555','M33583','M32121','M31635','M31053','M31004'), 
+							rt		=c(2012.25, 2010.75, 2009.50, 2009.50, 2008.75, 2009.25, 2009.25, 2007.75, 2009.00, 2006.75, 2007.00, 2009.50))
+	for( i in seq_len(nrow(reset)))
+		set(X.incare, X.incare[, which(t.Patient==reset[i,rPatient] & t==reset[i,rt])], 'stage', 'ART.started')
+					
+	# check if Diag and Interrupted
+	check	<- subset( X.incare, stage=='Diag' & ART.interrupted=='Yes' )
+	setnames(check, 't.Patient', 'Patient')
+	check	<- merge(check, subset( df.treatment, select=c(Patient, AnyT_T1)), by='Patient')
+	
+
+	# check if first ART.start has Interrupted
+	subset( X.incare, stage=='Diag' & ART.interrupted=='Yes' )
+	
+	
+	
+	
+	
+	
+	 
+	 
+	
+	
+	
+	???? 65:  M30781 2009.25 2009.50 ART.started 2.941140  160        3.566860 2009-09-01         Acc
+	
+	tmp[,length(unique(Patient))]
+	
+	
+	check	<- merge( data.table( t.Patient= check[, unique(t.Patient)] ), X.incare, by='t.Patient' )
+	
+	
+	subset( tmp, lRNA<3 )
+	
+	hist( tmp[, lRNA] )
+	
+	
+	
+	
+	
+	X.fwup	
+	#
 	
 	
 	#
@@ -3019,20 +3374,6 @@ project.athena.Fisheretal.similar<- function()
 	file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl.pdf',sep='')
 	Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked	, Y.rawbrl.unlinked, linked.x= 0, plot.file=file)
 	#
-	#	compute X: follow up
-	X.fwup					<- project.athena.Fisheretal.X.followup(df.tpairs, df.immu, t.period= 0.25, t.endctime=2013.0)
-	#tmp					<- project.athena.Fisheretal.X.followup.compareCD4toVL(df.tpairs, df.immu, clumsm.info)
-	#	compute X: calendar time period
-	X.tperiod				<- project.athena.Fisheretal.X.calendarperiod(df.tpairs, clumsm.info, t.period= 0.25, c.nperiod= 4)
-	#	compute X: RegionHospital and Exposure group
-	X.Trm					<- project.athena.Fisheretal.X.Trm.Region(df.tpairs, clumsm.info)
-	#	compute X: InCare
-	X.incare				<- project.athena.Fisheretal.X.incare(df.tpairs, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013.)
-	#	TODO lost M42459 ? --> should be because clusters are missing
-	#	compute X: time to first viral suppression from diagnosis	
-	X.t2.vlsupp				<- project.athena.Fisheretal.X.time.diag2suppressed(df.tpairs, clumsm.info, df.viro, lRNA.suppressed= log10(1e3), t2.vl.supp.p=c(0.1, 0.25))
-	#	compute X: time to first VL and first CD4 measurement
-	X.t2.care				<- project.athena.Fisheretal.X.time.diag2firstVLandCD4(df.tpairs, clumsm.info, df.viro, df.immu, t2.care.t1.q=c(0.25,0.5))
 		
 	
 	

@@ -3274,16 +3274,20 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	infilexml.opt			<- "rsu815"
 	infilexml.template		<- "sasky_sdr06"
 	#
-	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alrh160_clutrees'
+	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alrh160_pool'
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	insignat				<- "Wed_Dec_18_11:37:00_2013"
 	infilexml.opt			<- "alrh160"
-	infilexml.template		<- "sasky_sdr06fr"	
-	#indir					<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast_131011"		
-	#infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
-	#insignat				<- "Tue_Aug_26_09:13:47_2013"				
-	#infilexml.template		<- "um182rhU2045"
-	#infilexml.opt			<- "mph4clutx4tip"	
+	infilexml.template		<- "sasky_sdr06fr"
+	#
+	if(0)
+	{
+		indir					<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast1pool"		
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"		
+		insignat				<- "Wed_Dec_18_11:37:00_2013"				
+		infilexml.template		<- "um192rhU2080"
+		infilexml.opt			<- "mph4clutx4tip"			
+	}
 	#
 	if(exists("argv"))
 	{
@@ -3402,9 +3406,9 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 		file.info	<- subset( file.info, cluster==clu )
 	cat(paste('\nnumber of files to process, n=',nrow(file.info)))
 	#
-	dummy		<- lapply(seq_len(nrow(file.info)), function(i)
+	dummy		<- lapply(seq_len(nrow(file.info)), function(file.i)
 			{			
-				clu				<- file.info[i,cluster]
+				clu				<- file.info[file.i,cluster]
 				if(resume)
 				{
 					file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_cluposterior_',clu,'.R',sep='')
@@ -3415,7 +3419,7 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 				}
 				if(!resume || inherits(readAttempt, "try-error"))
 				{					
-					file			<- paste(indir,'/',file.info[i,file],sep='')
+					file			<- paste(indir,'/',file.info[file.i,file],sep='')
 					cat(paste("\nload file",file))
 					options(show.error.messages = FALSE)		
 					readAttempt		<- try(suppressWarnings(load(file)))
@@ -3472,17 +3476,19 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 						if( any( abs(tmp)>EPS ) ) warning('branch lengths do not add up to tip times')
 					}
 					mph.node.ctime	<- mph.clu.itopo[,	{					
-															node	<- c(seq.int(from=Ntip(mph.clu[[1]])+1, to=Nnode(mph.clu[[1]], internal=FALSE)),0)
-															tmp		<- sapply( mph.i, function(i)
+															mph.info		<- hivc.treeannotator.tiplabel2df(mph.clu[[ mph.i[1] ]], beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+															mph.info[, tip:=match( mph.info[, BEASTlabel], mph.clu[[ mph.i[1] ]]$tip.label)]															
+															node			<- c(seq.int(from=Ntip(mph.clu[[1]])+1, to=Nnode(mph.clu[[1]], internal=FALSE)),0)
+															tmp				<- sapply( mph.i, function(i)
 																	{
 																		depth	<- c( node.depth.edgelength( mph.clu[[ i ]] ), -mph.clu[[ i ]]$root.edge )
 																		tmp		<- which.max(depth)
 																		depth	<- depth-depth[tmp]+subset(mph.info, tip==tmp)[, TipT]
 																		depth[ seq.int(from=Ntip(mph.clu[[ i ]])+1, to=length(depth)) ]																		
 																	})
-															tmp		<- apply(tmp, 1, quantile, probs=seq(0,1,by=0.1))		
+															tmp				<- apply(tmp, 1, quantile, probs=seq(0,1,by=0.1))		
 															list( q= round(as.numeric(tmp),d=3), cdf=seq(0,1,by=0.1), node=rep(node, each=11) )					
-														}, by='equal.to']													
+														}, by='equal.to']
 					mph.node.ctime	<- mph.node.ctime[,	{
 															tmp<- setdiff(seq_along(q),which(duplicated(q))-1)
 															if(tmp[1]!=1)
@@ -3528,12 +3534,12 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 					#
 					cat(paste('\ncalculate SA.cnt'))
 					mph.SA.cnt		<- mph.clu.itopo[,	{
-								mph.topo.ntip	<- Ntip(mph.clu[[ mph.i[1] ]])
-								mph.topo.tipn	<- mph.clu[[ mph.i[1] ]]$tip.label
-								mph.topo.itip	<- which( mph.clu[[ mph.i[1] ]]$edge[,2] <= mph.topo.ntip )
-								tmp				<- sapply( mph.i, function(i)	mph.clu[[ i ]]$edge.length[mph.topo.itip]  )
-								list(tip=mph.topo.tipn, SA.freq= apply(tmp, 1, function(x) length(which(x==0.))), n= length(mph.i) )																						
-							}, by='equal.to']
+															mph.topo.ntip	<- Ntip(mph.clu[[ mph.i[1] ]])
+															mph.topo.tipn	<- mph.clu[[ mph.i[1] ]]$tip.label
+															mph.topo.itip	<- which( mph.clu[[ mph.i[1] ]]$edge[,2] <= mph.topo.ntip )
+															tmp				<- sapply( mph.i, function(i)	mph.clu[[ i ]]$edge.length[mph.topo.itip]  )
+															list(tip=mph.topo.tipn, SA.freq= apply(tmp, 1, function(x) length(which(x==0.))), n= length(mph.i) )																						
+														}, by='equal.to']
 					mph.SA.cnt[, cluster:= clu]
 					#
 					#	generate consensus tree: take the posterior tree such that all its branch lengths are closest to the marginal median branch lengths

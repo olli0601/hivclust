@@ -529,11 +529,13 @@ hivc.pipeline.BEASTout<- function()
 		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"		
 		insignat			<- "Wed_Dec_18_11:37:00_2013"		
 		outsignat			<- insignat
-		infilexml.template	<- "sasky_sdr06"		
-		infilexml.opt		<- "alsu50"
+		#infilexml.template	<- "sasky_sdr06"		
+		#infilexml.opt		<- "alsu50"
 		infilexml.template	<- "sasky_sdr06fr"
 		infilexml.opt		<- "alrh160"
-
+		#infilexml.template	<- "um192rhU2080"
+		#infilexml.opt		<- "mph4clutx4tip"	
+		
 		#indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
 		#infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
 		#insignat				<- "Tue_Aug_26_09:13:47_2013"
@@ -547,6 +549,9 @@ hivc.pipeline.BEASTout<- function()
 		cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
 		file.info	<- data.table(file=files, cluster=cluster)
 		setkey(file.info, cluster)
+		
+		#file.info	<- subset(file.info, cluster%in%c(23, 77, 126, 152, 315))
+		#print(file.info)
 		
 		dummy		<- sapply( file.info[,unique(cluster)], function(clu)
 				{

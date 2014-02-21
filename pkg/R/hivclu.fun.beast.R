@@ -392,14 +392,14 @@ hivc.beast2.extract.distinct.topologies<- function(mph.clu)
 	list(dtopo= mph.clu.dtopo, itopo=mph.clu.itopo)
 }
 ######################################################################################
-hivc.beast2out.combine.clu.trees<- function(indir, file.info, beastlabel.idx.clu=1, beastlabel.idx.hivn=2, beastlabel.idx.hivd=3, beastlabel.idx.hivs=4, beastlabel.idx.samplecode= 6, beastlabel.idx.rate= NA)
+hivc.beast2out.combine.clu.trees<- function(indir, file.info, beastlabel.idx.clu=1, beastlabel.idx.hivn=2, beastlabel.idx.hivd=3, beastlabel.idx.hivs=4, beastlabel.idx.samplecode= 6, beastlabel.idx.rate= NA, verbose=FALSE)
 {
 	#	collect consensus tree and further info for plotting
 	tmp			<- lapply(seq_len(nrow(file.info)), function(i)
 			{				
 				#	load dated cluster phylogenies
 				file				<- paste(indir, file.info[i,file], sep='/')
-				cat(paste('\nload file=',file,'i=',i))
+				if(verbose) cat(paste('\nload file=',file,'i=',i))
 				tmp					<- load(file)
 				topo.map			<- mph.clu.dtopo[which.max(freq),]					
 				tmp					<- which( grepl( paste('mph.i=',topo.map[,mph.i],'_',sep=''), names(ph.consensus) ) )
