@@ -3798,7 +3798,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 	thresh.brl				<- 0.096
 	thresh.bs				<- 0.8
 	pool.ntip				<- NA
-	beast.mcmc.length		<- 5e7
+	beast.mcmc.length		<- 2.5e7
 	infilexml.opt			<- "rbe420"
 	infilexml.template		<- "sasky_sdr06"	
 	
@@ -4263,7 +4263,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 	#
 	#	create BEAST2 XML file	
 	#
-	bfile			<- lapply(seq_len(length(df.clupool$pool.df)), function(pool.id)
+	bfile			<- lapply(seq_len(length(df.clupool$pool.df))[1], function(pool.id)
 						{
 							df							<- df.clupool$pool.df[[pool.id]]
 							setkey(df, cluster)							
@@ -4282,13 +4282,13 @@ hivc.prog.BEAST2.generate.xml<- function()
 	sapply(seq_along(bfile), function(pool.id)
 			{
 				cmd			<- hivc.cmd.beast2.runxml(indir, bfile[[pool.id]], outsignat, hpc.ncpu=hpc.ncpu, prog.beast=prog.beast, prog.opt.Xmx="1200m", hpc.tmpdir.prefix="beast2")
-				cmd			<- paste(cmd, hivc.cmd.beast2.getclustertrees.pipe(indir, infilexml, outsignat, infilexml.opt, infilexml.template, opt.burnin, outdir=indir, outsignat=outsignat, opt.pool=pool.id, verbose=verbose, resume=resume), sep='' )
+				#cmd		<- paste(cmd, hivc.cmd.beast2.getclustertrees.pipe(indir, infilexml, outsignat, infilexml.opt, infilexml.template, opt.burnin, outdir=indir, outsignat=outsignat, opt.pool=pool.id, verbose=verbose, resume=resume), sep='' )
 				#cmd		<- paste(cmd,hivc.cmd.beast.evalrun(outdir, infilexml, outsignat, infilexml.opt, infilexml.template, length(bfile), verbose=1),sep='')				
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=hpc.walltime, hpc.q="pqeph", hpc.mem=hpc.mem,  hpc.nproc=hpc.ncpu)					
 				cat(cmd)
 				outfile		<- paste("b2",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
-				#stop()
+				stop()
 			})	
 }
 ######################################################################################

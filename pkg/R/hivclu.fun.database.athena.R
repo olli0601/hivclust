@@ -7,17 +7,13 @@ hivc.db.resetNegTbyPoslRNA_T1<- function(df.all,verbose=1)
 	if(verbose)	cat(paste("\nreset NegT to NA for the following seq"))
 	if(verbose) print(subset( df.all,!is.na(PoslRNA_T1) & PoslRNA_T1<NegT ))
 	tmp		<- which(df.all[, NegT_Acc=="Yes" & !is.na(PoslRNA_T1) & PoslRNA_T1<NegT])
-	if(verbose) cat(paste("\nnumber of seq with NegT_Acc=='Yes' & !is.na(PoslRNA_T1) & NegT > time of VL test, n=",length(tmp)))			
-	set(df.all, tmp, "NegT", NA)
-	tmp2	<- as.character(df.all[,NegT_Acc])
-	tmp2[tmp]<- NA
-	set(df.all, NULL, "NegT_Acc", as.factor(tmp2))		
+	if(verbose) cat(paste("\nnumber of seq with NegT_Acc=='Yes' & !is.na(PoslRNA_T1) & NegT > time of VL test, n=",length(tmp)))	
+	set(df.all, tmp, "NegT", df.all[tmp, PoslRNA_T1-6*30])
+	set(df.all, tmp, "NegT_Acc", 'No')
 	tmp		<- which(df.all[, NegT_Acc=="No" & !is.na(PoslRNA_T1) & PoslRNA_T1<NegT])
 	if(verbose) cat(paste("\nnumber of seq with NegT_Acc=='No' & !is.na(PoslRNA_T1) & NegT > time of VL test, n=",length(tmp)))			
-	set(df.all, tmp, "NegT", NA)
-	tmp2	<- as.character(df.all[,NegT_Acc])
-	tmp2[tmp]<- NA
-	set(df.all, NULL, "NegT_Acc", as.factor(tmp2))
+	set(df.all, tmp, "NegT", df.all[tmp, PoslRNA_T1-6*30])
+	set(df.all, tmp, "NegT_Acc", 'No')
 	df.all
 }
 ######################################################################################

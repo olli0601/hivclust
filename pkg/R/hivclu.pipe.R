@@ -236,7 +236,7 @@ hivc.pipeline.clustering<- function()
 ######################################################################################
 hivc.pipeline.BEAST<- function()
 {
-	if(1)	#run BEAST 1.7.5 GMRF skyline
+	if(0)	#run BEAST 1.7.5 GMRF skyline
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		indircov			<- paste(DATA,"derived",sep='/')
@@ -365,7 +365,7 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "alsu50"
 		infilexml.opt		<- "alrh40"
 		infilexml.opt		<- "alrh80"
-		infilexml.opt		<- "alrh160"
+		#infilexml.opt		<- "alrh160"
 		#infilexml.opt		<- "rsu835"		
 		#infilexml.opt		<- "ori40"
 		#infilexml.opt		<- "ori50"
