@@ -159,21 +159,3 @@
 
 </beast>
 
-
-Hi all,
-
-regarding the inference of the number of cases on a transmission chain from A to B, I was wondering if we could use the differences in molecular clocks within vs between hosts.
-
-If this difference in rates holds, and as we have a time tree, we have a global rate of evolution on branch A---B, which will be a by-product of the number of transmissions on this branch. The idea is that several unobserved transmission events are more likely on a branch with a 'slow' rate of evolution. We can probably write this down as a mixture of rates within/between hosts. Not exactly modelling the time spent 'between' hosts as it does not make a lot of biological sense, but just express the mutation rate(s) as a function of the number of transmissions.
-------
-That’s a very interesting idea - quite HIV specific of course - do you think this would work even with a very relaxed clock? A problem I envisage is that there is quite a lot of variation between hosts in their within-host rates. The mismatch is most striking at the level of averages.
-------
-My fear too, but it may still be worth a shot? I think it depends on how many sequences we have per individuals. If we have enough for a within-individual clock to be estimated, then I think we have a chance to see if the branch leading to a new infection is too short given the amount of time elapsed.
-
-This said, Oli, I think I remember you telling us that there's only a few individuals for which we have multiple sequences?
-
-Actually, that could be an argument in favour of getting multiple sequences per host..
-------
-
-
-
