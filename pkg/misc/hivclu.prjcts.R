@@ -364,6 +364,13 @@ project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 		#	check for invalid NegT and set to NA	-- we would only know that NegT is before AnyPosT and this is not helpful
 		df.all	<- hivc.db.resetNegTbyAnyPosT(df.all)				
 		#
+		#	checking for SeqT before AnyPos_T1
+		#
+		df.all	<- merge(df.all, df.all[, list(PosSeqT.min=min(PosSeqT)),by='Patient'], by='Patient')
+		tmp		<- df.all[, which(AnyPos_T1>PosSeqT.min)]
+		if(verbose)		cat(paste("\nFound AnyPos_T1>PosSeqT.min, reset. n=", length(tmp)))
+		set(df.all, tmp, 'AnyPos_T1', df.all[tmp, PosSeqT.min])
+		#
 		#	add first RNA Virology date
 		#
 		if(verbose)		cat(paste("\nadding virology data"))
@@ -2719,12 +2726,12 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		#
 		#	compute infection window of recipient
 		#
-		Y.infwindow				<- project.athena.Fisheretal.Y.infectionwindow(df.tpairs, clumsm.info, t.period=t.period, ts.min=1980, score.min=0.2, score.set.value=1)		
+		Y.infwindow				<- project.athena.Fisheretal.Y.infectionwindow(df.tpairs, clumsm.info, t.period=t.period, ts.min=1980, score.min=0.1, score.set.value=1)		
 		#
 		#	compute Y scores
 		#
 		#	BRL	[0,1]: raw branch length between pot transmitter and infected
-		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlraw',sep='')	
+		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlraw2e',sep='')	
 		tmp						<- project.athena.Fisheretal.Y.rawbrl(df.tpairs, indir, insignat, indircov, infilecov, infiletree, save.file=paste(file, '.R', sep=''), plot.file=paste(file, '.pdf', sep=''))
 		Y.rawbrl				<- tmp$tpairs
 		Y.rawbrl.linked			<- tmp$linked
@@ -2733,8 +2740,8 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl.pdf',sep='')
 		Y.brl					<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked	, Y.rawbrl.unlinked, df.all, brl.linked.min=-4, brl.linked.min.dt=1.5, plot.file=file)	
 		#	COAL [0,1]: prob that coalescence is within the transmitter
-		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw2.R',sep='')		
-		Y.coal					<- project.athena.Fisheretal.Y.coal(df.tpairs, clumsm.info, X.pt, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.2, t.period=t.period, save.file=file )
+		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw2e.R',sep='')		
+		Y.coal					<- project.athena.Fisheretal.Y.coal(df.tpairs, clumsm.info, X.pt, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=file )
 		#	U [0,1]: prob that pot transmitter is still infected during infection window
 		Y.U						<- project.athena.Fisheretal.Y.transmitterinfected(Y.infwindow, X.pt)
 		#
@@ -2759,14 +2766,17 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		#	merge over time periods t
 		Y.score					<- merge( Y.score, subset(Y.infwindow, select=c(Patient, t)), by='Patient', allow.cartesian=TRUE )
 		YX						<- merge( subset(Y.score, select=c(FASTASampleCode, t.FASTASampleCode, score.Y, t)), X.pt, by= c('FASTASampleCode', 't.FASTASampleCode', 't'))
+		#	add weights -- TODO same tpair can be counted multiple times
+		YX						<- project.athena.Fisheretal.Y.weight(YX)
 		#	re-arrange a little
 		YX		<- subset(YX, select=	c(	t, t.Patient, Patient, cluster, score.Y, 																	#triplets identifiers and Y score
 						t.period, stage, U.score, contact, CDCC, lRNA, CD4, 														#main covariates							
 						t.Age, t.AnyPos_a, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.pulse, fw.up, t2.care.t1, t2.vl.supp, 		#secondary covariates
 						t.AnyPos_T1,  t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, Trm,												#other 
-						FASTASampleCode, t.FASTASampleCode										#other							
+						FASTASampleCode, t.FASTASampleCode, w										#other							
 				))
 		setkey(YX, t, t.Patient, Patient)
+		
 		#
 		if(!is.na(save.file))
 		{
@@ -2922,9 +2932,9 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(df.tpairs, Y.brl, Y.
 	{
 		set(missed, NULL, 'coal.after.t.NegT', missed[,coal.after.t.NegT-coal.after.i.AnyPos_T1])
 		set(missed, missed[,which(coal.after.t.NegT<0)], 'coal.after.t.NegT', 0.)		
-	}		
+	}			
 	#	simple rule for screening out missed sources, using genetics and dates
-	if(0)
+	if(1)
 	{
 		missed[, score.t.inf:=NULL]
 		setkey(missed, FASTASampleCode, t.FASTASampleCode)
@@ -2943,10 +2953,9 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(df.tpairs, Y.brl, Y.
 		cat(paste('\nprop of tpairs that meet the BRL.TN & COAL cutoff:', nrow(subset( missed, score.brl.TN<cut.brl &  p.nmissed>cut.date))/nrow(missed)  ))
 		nmissed					<- subset( missed, score.brl.TN<cut.brl  &  p.nmissed>cut.date )
 		nmissed					<- merge( df.tpairs, nmissed, by=c('FASTASampleCode','t.FASTASampleCode') )
-	}
-	
+	}	
 	#	simple rule for screening out missed sources and missed intermediates, using genetics and dates
-	if(1)
+	if(0)
 	{
 		missed					<- merge(missed, missed[, list(p.nmissed= coal.after.t.NegT*score.Inf*score.t.inf), by=c('t','FASTASampleCode','t.FASTASampleCode')],by=c('t','FASTASampleCode','t.FASTASampleCode'))
 		missed					<- missed[, list(p.nmissed= max(p.nmissed), brl=brl[1], score.brl.TN=score.brl.TN[1]), by=c('FASTASampleCode','t.FASTASampleCode')]
@@ -2963,6 +2972,20 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(df.tpairs, Y.brl, Y.
 	cat(paste('\nreturning #infecteds after screening for missed invidivuals, n=',  nmissed[, length(unique(Patient))]))
 	cat(paste('\nreturning #potential transmitters after screening for missed invidivuals, n=',  nmissed[, length(unique(t.Patient))]))
 	nmissed
+}
+######################################################################################
+project.athena.Fisheretal.Y.weight<- function(YX)
+{
+	#	add tpair weight: every transmitter can infect only in one time period
+	YX		<- merge(YX, YX[, list(w= 1/length(t)),by=c('t.FASTASampleCode','FASTASampleCode')], by=c('t.FASTASampleCode','FASTASampleCode'))
+	#	add infected weight: every infected can only be infected by one transmitter
+	tmp		<- subset(YX, select=c(Patient, t.Patient))
+	setkey(tmp, Patient, t.Patient)
+	tmp		<- unique(tmp)	
+	YX		<- merge(YX, tmp[, list(w.i= length(unique(t.Patient))),by=c('Patient')], by='Patient') 
+	set(YX, NULL, 'w', YX[, w/w.i])
+	YX[, w.i:=NULL]
+	YX
 }
 ######################################################################################
 project.athena.Fisheretal.Y.transmitterinfected<- function(Y.infwindow, X.pt)
@@ -3111,8 +3134,9 @@ project.athena.Fisheretal.Y.rawbrl<- function(df.tpairs, indir, insignat, indirc
 	list(tpairs=df.tpairs.brl, linked=msm.linked, unlinked=msm.unlinked.bytime)	
 }
 ######################################################################################
-project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA ,adjust.AcuteSelect=c('Yes'))
+project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'))
 {
+	#	adjust.AcuteByNegT<- 0.75
 	#	fixed input args
 	opt.brl			<- "dist.brl.casc" 
 	thresh.brl		<- 0.096
@@ -3175,6 +3199,13 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 		cat(paste('\nclumsm.info: set Acute==Maybe when NegT is close to AnyPos_T1, n=',length(tmp)))
 		set(clumsm.info, tmp, 'isAcute', 'Maybe')
 	}
+	#	date all NegT back by adjust.NegTByDetectability to allow for infection that the test does not pick up 
+	if(!is.na(adjust.NegTByDetectability))
+	{
+		tmp		<- clumsm.info[, which(!is.na(NegT))]
+		cat(paste('\ndate back NegT values to allow for undetected infection for n=',length(tmp)))
+		set(clumsm.info, tmp, 'NegT', clumsm.info[tmp, NegT-adjust.NegTByDetectability])
+	}
 	#	adjust missing NegT when Acute=='Yes'
 	if(!is.na(adjust.NegT4Acute))
 	{		
@@ -3183,11 +3214,11 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 		set(clumsm.info, tmp,'NegT', subset(clumsm.info, !is.na(isAcute) & isAcute=='Yes' & is.na(NegT) )[, AnyPos_T1-adjust.NegT4Acute] )					
 	}	
 	#	make sure the SC interval is at least adjust.NegTByDetectability years
-	if(!is.na(adjust.NegTByDetectability))
+	if(!is.na(adjust.minSCwindow))
 	{
-		tmp		<- clumsm.info[, which(!is.na(NegT) & AnyPos_T1-NegT<adjust.NegTByDetectability)]
+		tmp		<- clumsm.info[, which(!is.na(NegT) & AnyPos_T1-NegT<adjust.minSCwindow)]
 		cat(paste('\nensure seroconversion interval is at least adjust.NegTByDetectability years, dating back NegT values for n=',length(tmp)))
-		set(clumsm.info, tmp, 'NegT', clumsm.info[tmp, AnyPos_T1-adjust.NegTByDetectability])
+		set(clumsm.info, tmp, 'NegT', clumsm.info[tmp, AnyPos_T1-adjust.minSCwindow])
 	}
 	# 	recent individuals in cluster
 	setkey(clumsm.info, isAcute)	
@@ -3943,7 +3974,7 @@ project.athena.Fisheretal.YX.model1<- function(YX, vl.suppressed=log10(1e3), cd4
 		
 	}
 	#
-	YX.m1	<- subset(YX.m1, select=c(t, t.Patient, Patient, t.FASTASampleCode, FASTASampleCode, cluster, score.Y, stage, lRNA, t.period, RegionHospital ))
+	YX.m1	<- subset(YX.m1, select=c(t, t.Patient, Patient, t.FASTASampleCode, FASTASampleCode, cluster, score.Y, stage, lRNA, t.period, RegionHospital, w ))
 	set(YX.m1, NULL, 'stage', YX.m1[, as.factor(stage)])
 	set(YX.m1, YX.m1[, which(score.Y>0.999)], 'score.Y', 0.999)
 	set(YX.m1, YX.m1[, which(score.Y<0.001)], 'score.Y', 0.001)
@@ -3954,8 +3985,11 @@ project.athena.Fisheretal.YX.model1<- function(YX, vl.suppressed=log10(1e3), cd4
 	{
 		require(RColorBrewer)
 		print(YX.m1[, table(stage)])	
-		tmp			<- YX.m1[, list(E.logit.Y=mean(logit.Y), E.score.Y=mean(score.Y)), by='stage']
-		YX.m1		<- merge(YX.m1, tmp, by='stage')
+		YX.m1.stage	<- YX.m1[, list(N.notadj= length(w), N.eff=sum(w), E.logit.Y=weighted.mean(logit.Y, w=w), E.score.Y=weighted.mean(score.Y, w=w)), by='stage']
+		print(YX.m1.stage)
+		YX.m1		<- merge(YX.m1, YX.m1.stage, by='stage')
+		#tmp		<- YX.m1[, list(E.logit.Y.uw=mean(logit.Y), E.score.Y.uw=mean(score.Y)), by='stage']
+		#YX.m1		<- merge(YX.m1, tmp, by='stage')		
 		tmp			<- data.table(stage= YX.m1[, levels(stage)], col=sapply( brewer.pal(YX.m1[, nlevels(stage)], 'Set1'), my.fade.col, alpha=0.5) )
 		YX.m1		<- merge(YX.m1, tmp, by='stage')
 		
@@ -3963,12 +3997,12 @@ project.athena.Fisheretal.YX.model1<- function(YX, vl.suppressed=log10(1e3), cd4
 		plot( YX.m1[, t], YX.m1[, logit.Y], pch=18, col= YX.m1[, col])
 		legend('topleft', bty='n', border=NA, legend= tmp[,stage], fill=tmp[,col])
 		
-		plot( seq_len(nrow(YX.m1)), YX.m1[, logit.Y], pch=18, col= YX.m1[, col])
+		plot( seq_len(nrow(YX.m1)), YX.m1[, logit.Y], pch=18, col= YX.m1[, col], cex=YX.m1[, w^0.4])
 		lines( seq_len(nrow(YX.m1)), YX.m1[, E.logit.Y], type='s' )
-		abline(h=YX.m1[,mean(logit.Y)], lty=2)
+		abline(h=YX.m1[,weighted.mean(logit.Y, w)], lty=2)
 		legend('topleft', bty='n', border=NA, legend= tmp[,stage], fill=tmp[,col])
 		
-		tmp	<- subset( YX.m1, stage=='ART.su.Y' & score.Y>0.9, select=c(stage, t, t.Patient, Patient, t.FASTASampleCode, FASTASampleCode, cluster, score.Y) )
+		tmp	<- subset( YX.m1, stage=='ART.su.Y' & score.Y>0.9, select=c(stage, t, t.Patient, Patient, t.FASTASampleCode, FASTASampleCode, cluster, score.Y, w) )
 		setkey(tmp, cluster)
 		print(tmp, n=300)
 	}
@@ -4093,7 +4127,7 @@ project.athena.Fisheretal.Y.infectionwindow<- function(df.tpairs, clumsm.info, t
 	b4care			
 }
 ######################################################################################
-project.athena.Fisheretal.Y.coal<- function(df.tpairs, clumsm.info, X.pt, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.2, t.period= 0.25, save.file=NA )
+project.athena.Fisheretal.Y.coal<- function(df.tpairs, clumsm.info, X.pt, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, t.period= 0.25, coal.within.inf.grace= 0.25, save.file=NA )
 {
 	#df.tpairs	<- subset(X.pt, select=c(t.Patient, Patient, cluster, FASTASampleCode, t.FASTASampleCode))
 	#setkey(df.tpairs, FASTASampleCode, t.FASTASampleCode)
@@ -4130,9 +4164,9 @@ project.athena.Fisheretal.Y.coal<- function(df.tpairs, clumsm.info, X.pt, cluphy
 		df.tpairs.mrca		<- merge(df.tpairs.mrca, tmp, by='t.Patient')
 		tmp					<- df.tpairs.mrca[, list(t.queryT= max(t.NegT, t.UT, na.rm=TRUE)), by=c('FASTASampleCode','t.FASTASampleCode')]
 		df.tpairs.mrca		<- merge(df.tpairs.mrca, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))
-		
 		tmp					<- subset( df.tpairs.mrca, select=c(cluster, node, FASTASampleCode, t.FASTASampleCode, t.queryT) )
 		tmp					<- merge(tmp, subset(clumsm.info, select=c(FASTASampleCode, AnyPos_T1)), by='FASTASampleCode')
+		set(tmp, NULL, 'AnyPos_T1', tmp[, AnyPos_T1+coal.within.inf.grace])
 		tmp					<- merge( cluphy.map.nodectime, tmp, by=c('cluster','node'), allow.cartesian=TRUE)	
 		coal				<- tmp[,  {
 											z		<- 1-approx(q ,cdf, xout=c(t.queryT[1], AnyPos_T1[1]), yleft=0., yright=1., rule=2)$y
@@ -4583,7 +4617,7 @@ project.athena.Fisheretal.similar<- function()
 	#
 	#	select infected individuals and return in df.select
 	#
-	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=0.75, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.AcuteSelect=c('Yes','Maybe'))	
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=0.75, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'))	
 	df.all			<- tmp$df.all
 	df.denom		<- tmp$df.select
 	clumsm.subtrees	<- tmp$clumsm.subtrees
@@ -4608,7 +4642,7 @@ project.athena.Fisheretal.similar<- function()
 	#
 	#	select potential transmitters
 	#
-	df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos(clumsm.info, df.denom, any.pos.grace.yr= 2, select.if.transmitter.seq.unique=FALSE)	
+	df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos(clumsm.info, df.denom, any.pos.grace.yr= 3.5, select.if.transmitter.seq.unique=FALSE)	
 	#df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos.MinBrlMLETree(df.denom, clumsm.subtrees, any.pos.grace.yr= 2)
 	#	
 	#	plot MLE tree
@@ -4656,7 +4690,7 @@ project.athena.Fisheretal.similar<- function()
 	df.treatment			<- tmp$df.treatment
 	#
 	#
-	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX2c.R',sep='')
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX2e.R',sep='')
 	YX				<- project.athena.Fisheretal.YX(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=t.period, t.endctime=t.endctime, save.file=save.file)
 	#
 	#
