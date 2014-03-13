@@ -800,6 +800,10 @@ hivc.beast2.add.treemodel.sasky<- function(bxml, beast2.spec, verbose=1)
 		dummy		<- newXMLNode("parameter", attrs= list(	id=beast2.spec$bdsky.sprop.changepoint.id, 
 						name="samplingRateChangeTimes",
 						value=paste(beast2.spec$bdsky.sprop.changepoint.value, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)
+	if(!is.null(beast2.spec$bdsky.r.changepoint.id[1]))												
+		dummy		<- newXMLNode("parameter", attrs= list(	id=beast2.spec$bdsky.r.changepoint.id, 
+						name="removalProbabilityChangeTimes",
+						value=paste(beast2.spec$bdsky.r.changepoint.value, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)	
 	if(verbose)	cat(paste("\nadded SASKY tree models for taxonsets, n=", length(beast2.spec$tree.taxonset)))
 	bxml	
 }
@@ -1222,21 +1226,21 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$bdsky.sprop.upper				<- 1.0
 	beast2.spec$bdsky.sprop.prior				<- rep("Uniform/0.2/1.0",beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.sprop.changepoint.id		<- paste('samplingRateChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
-	beast2.spec$bdsky.sprop.changepoint.value	<- c(9.596, 5.596, 1.596, 0.)	
+	beast2.spec$bdsky.sprop.changepoint.value	<- c(1.596, 5.596, 9.596, 0.)	
 	beast2.spec$bdsky.R0.id						<- paste('R0S',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.R0.value					<- rep(1.2, beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.R0.lower					<- 0.0
 	beast2.spec$bdsky.R0.upper					<- 10.0
 	beast2.spec$bdsky.R0.prior					<- rep("Gamma/1.5/1.5/0",beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.R0.changepoint.id			<- paste('birthRateChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
-	beast2.spec$bdsky.R0.changepoint.value		<- c(9.596, 5.596, 1.596, 0.)	
+	beast2.spec$bdsky.R0.changepoint.value		<- c(1.596, 5.596, 9.596, 0.)	
 	beast2.spec$bdsky.notInf.id					<- paste('becomeUninfectiousRateS',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.notInf.value				<- rep(0.1, beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.notInf.lower				<- 0.0
 	beast2.spec$bdsky.notInf.upper				<- 10.0
 	beast2.spec$bdsky.notInf.prior				<- rep("OneOnX/0",beast2.spec$bdsky.intervalNumber)
 	beast2.spec$bdsky.notInf.changepoint.id		<- paste('deathRateChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
-	beast2.spec$bdsky.notInf.changepoint.value	<- c(9.596, 5.596, 1.596, 0.)
+	beast2.spec$bdsky.notInf.changepoint.value	<- c(1.596, 5.596, 9.596, 0.)
 	beast2.spec$bdsky.reverseTimeArrays.id		<- paste('reverseTimeArrays',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.reverseTimeArrays.spec	<- "parameter.BooleanParameter"	
 	beast2.spec$sasky.spec						<- "beast.evolution.speciation.SABDSkylineModel"		
@@ -1249,8 +1253,8 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$sasky.r.lower					<- 0.0
 	beast2.spec$sasky.r.upper					<- 1.0
 	beast2.spec$sasky.r.prior					<- rep("Uniform/0.0/1.0",beast2.spec$bdsky.intervalNumber)
-	beast2.spec$sasky.r.changepoint.id			<- paste('rChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
-	beast2.spec$sasky.r.changepoint.value		<- c(9.596, 5.596, 1.596, 0.)		
+	beast2.spec$sasky.r.changepoint.id			<- paste('removalProbabilityChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$sasky.r.changepoint.value		<- c(1.596, 5.596, 9.596, 0.)		
 	beast2.spec$compoundprior.spec				<- "util.CompoundDistribution"
 	beast2.spec$tip.log.stem					<- tip.log.stem
 	beast2.spec$tip.taxonset.id.prefix			<- 'tip'

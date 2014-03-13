@@ -2861,7 +2861,7 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		Y.rawbrl.linked			<- tmp$linked
 		Y.rawbrl.unlinked		<- tmp$unlinked
 		#	BRL [0,1]: branch length weight between pot transmitter and infected
-		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl3.pdf',sep='')
+		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl3b.pdf',sep='')
 		Y.brl					<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked	, Y.rawbrl.unlinked, df.all, brl.linked.min=-4, brl.linked.min.dt=1.5, plot.file=file)	
 		#	COAL [0,1]: prob that coalescence is within the transmitter
 		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw2e.R',sep='')		
@@ -3044,43 +3044,160 @@ project.athena.Fisheretal.v2.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y
 ######################################################################################
 project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.min.brl=-4, brl.linked.min.dt=1, plot.file=NA)
 {
+	#brl.linked.min.brl=-4; brl.linked.min.dt=1
 	#	check if Exp model would be reasonable
 	require(MASS)
 	setkey(Y.rawbrl.unlinked, brl)
 	#	compute cdf for pairs given they are unlinked
 	p.rawbrl.unlinked	<- Y.rawbrl.unlinked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]		 
 	#	compute sequence sampling times	to see if time between seq sampling times could be useful
-	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, unique(subset(df.all, select=c(FASTASampleCode, PosSeqT))), by='FASTASampleCode' )	
-	tmp					<- merge( data.table(FASTASampleCode=Y.rawbrl.linked[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, PosSeqT))), by='FASTASampleCode' )
+	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )	
+	tmp					<- merge( data.table(FASTASampleCode=Y.rawbrl.linked[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
 	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
 	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, tmp, by='t.FASTASampleCode')
 	set(Y.rawbrl.linked, NULL, 'PosSeqT', hivc.db.Date2numeric(Y.rawbrl.linked[,PosSeqT]))
 	set(Y.rawbrl.linked, NULL, 't.PosSeqT', hivc.db.Date2numeric(Y.rawbrl.linked[,t.PosSeqT]))
-	Y.rawbrl.linked[, dt:= Y.rawbrl.linked[,abs(t.PosSeqT-PosSeqT)]]	
+	set(Y.rawbrl.linked, NULL, 'AnyT_T1', hivc.db.Date2numeric(Y.rawbrl.linked[,AnyT_T1]))
+	set(Y.rawbrl.linked, NULL, 't.AnyT_T1', hivc.db.Date2numeric(Y.rawbrl.linked[,t.AnyT_T1]))
+	Y.rawbrl.linked[, b4T:= 'both']
+	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT<=AnyT_T1)], 'b4T', 'only.RI')
+	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT<=t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'only.T')
+	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'none')
+	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, data.table(b4T= Y.rawbrl.linked[, unique(b4T)], col=c('green','red','orange','yellow')), by='b4T' )	
+	set(Y.rawbrl.linked, NULL, 'b4T', Y.rawbrl.linked[, factor(b4T)])
+	Y.rawbrl.linked[, dt:= abs(PosSeqT-t.PosSeqT)]
 	#plot(Y.rawbrl.linked[,dt], Y.rawbrl.linked[,log(brl)], pch=18)		#no exponential clock within hosts 
 	if(0)
 	{
-		rawbrl.exp			<- sapply(c(0,1,2,3,4), function(dt.min)
-				{
-					tmp					<- subset(Y.rawbrl.linked, dt>=dt.min & log10(brl)>brl.linked.min.brl & brl<0.2)				
-					rawbrl.l	<- subset( tmp, brl>=0 )[, sort(brl)]		#allow for one mutation
-					#plot(log10(rawbrl.l))
-					rawbrl.exp	<- fitdistr(rawbrl.l, "exponential")$estimate 				
+		setkey(Y.rawbrl.linked, brl, b4T)
+		par(mfrow=c(1,5))
+		#	plot distribution of BRL, excluding close SeqT
+		dummy	<- sapply(c(0,1,2,3,4), function(dt.min)
+				{					
+					tmp					<- subset(Y.rawbrl.linked, dt>=dt.min &  brl<0.2)				
+					plot( tmp[, log10(brl)], pch=18, main=paste('exclude dt<',dt.min))					 				
 				})
+		#	plot distribution of BRL, excluding close SeqT & no evolution
+		dummy	<- sapply(c(0,1,2,3,4), function(dt.min)
+				{					
+					tmp					<- subset(Y.rawbrl.linked, dt>=dt.min & log10(brl)>brl.linked.min.brl &  brl<0.2)				
+					plot( tmp[, log10(brl)], pch=18, main=paste('exclude dt<',dt.min))					 				
+				})
+		#	plot raw data for each b4T group, excluding close SeqT & no evolution
+		tmp					<- subset(Y.rawbrl.linked, dt>=1 & log10(brl)>brl.linked.min.brl & brl<0.2)
+		setkey(tmp, b4T, brl)		
+		par(mfrow=c(1,1))
+		plot(1,1,type='n', ylim=c(-3, -0.5), xlim=c(1, tmp[, max(table(b4T))]), ylab='log10 brl', xlab='index')
+		tmp[, points( seq_along(brl), log10(brl), col=col, pch=18 ), by='b4T']		
+		#	exact two sample permutation test for equal location
+		library(coin)
+		test	<- list( 	both.only.T= 	{	tmp2	<- subset( tmp, b4T%in%c('both','only.T') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
+							both.only.RI= 	{	tmp2	<- subset( tmp, b4T%in%c('both','only.RI') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
+							both.none= 		{	tmp2	<- subset( tmp, b4T%in%c('both','none') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
+							none.only.T= 	{	tmp2	<- subset( tmp, b4T%in%c('only.T','none') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
+							none.only.RI= 	{	tmp2	<- subset( tmp, b4T%in%c('only.RI','none') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	}
+							)
+		sapply(test, pvalue)
+		#both.only.T both.only.RI    both.none  none.only.T none.only.RI 
+		#0.75287863   0.41671419   0.02926871   0.08318482   0.12930924
+		#
+		#	KS test
+		#
+		test	<- list( 	both.only.T= 	ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='only.T')[, brl] ),
+							both.only.RI= 	ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='only.RI')[, brl] ),
+							both.none= 		ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='none')[, brl] ),
+							none.only.T= 	ks.test( subset(tmp, b4T=='none')[, brl], subset(tmp, b4T=='only.T')[, brl] ),
+							none.only.RI= 	ks.test( subset(tmp, b4T=='none')[, brl], subset(tmp, b4T=='only.RI')[, brl] )	)
+		sapply(test, '[[', 'p.value')
+		#both.only.T both.only.RI    both.none  none.only.T none.only.RI 
+		#0.7271106    0.6860559    0.1520723    0.3264294    0.5416300
+		#
+		#	plot points by b4T
+		#
+		plot(1,1,type='n', ylim=c(-3, -0.5), xlim=tmp[,range(dt)], ylab='log10 brl', xlab='delta SeqT')
+		tmp[, points( dt, log10(brl), col=col, pch=18 ), by='b4T']		
+		#
+		#	fit Gamma and Exp and ZIExp	to data excluding b4T=='none'
+		#
+		require(fitdistrplus)
+		library(ADGofTest)
+		tmp			<- subset(Y.rawbrl.linked, dt>=1 & brl<0.2 & b4T!='none')
+		par(mfrow=c(1, 4))
+		mle			<- fitdist(tmp[,brl], 'exp')
+		qqcomp(mle, addlegend=FALSE, main='exp dt>=1 b4T!=none')
+		denscomp(mle, addlegend=FALSE, xlab='exp dt>=1 b4T!=none')
+		mle2		<- fitdist(tmp[,brl], 'gamma')
+		qqcomp(mle2, addlegend=FALSE, main='gamma dt>=1 b4T!=none')
+		denscomp(mle2, addlegend=FALSE, xlab='gamma dt>=1 b4T!=none')			
+		mle3			<- list()
+		tmp2			<- copy(tmp)
+		set(tmp2, tmp2[, which(log10(brl)<=brl.linked.min.brl)], 'brl', 0.)
+		mle3$estimate	<- c(z=tmp2[, mean(brl==0)], rate=subset(tmp2, brl>0)[, 1/mean(brl)])
+		test		<- list(	exp= ad.test(tmp[,brl], pexp, rate=mle3$estimate['rate']),								
+								gamma= ad.test(tmp[,brl], pgamma, shape=mle2$estimate['shape'], rate=mle2$estimate['rate']),
+								ziexp= ad.test(tmp2[,brl], pziexp, z=mle3$estimate['z'], rate=mle3$estimate['rate'])		)			
+		sapply(test, '[[', 'p.value')
+		#exp.AD     	gamma.AD 			ziexp.AD
+		#7.894737e-06 	3.697207e-03		4.862308e-04
+		#
+		#	fit Gamma and Exp and ZIExp	to data excluding b4T=='none' AND small brl
+		#
+		tmp			<- subset(Y.rawbrl.linked, dt>=1 & brl<0.2 & b4T!='none' & log10(brl)>brl.linked.min.brl)
+		par(mfrow=c(1, 4))
+		mle			<- fitdist(tmp[,brl], 'exp')
+		qqcomp(mle, addlegend=FALSE, main='exp dt>=1 b4T!=none brl>1e-4')
+		denscomp(mle, addlegend=FALSE, xlab='exp dt>=1 b4T!=none brl>1e-4')
+		mle2		<- fitdist(tmp[,brl], 'gamma')
+		qqcomp(mle2, addlegend=FALSE, main='gamma dt>=1 b4T!=none brl>1e-4')
+		denscomp(mle2, addlegend=FALSE, xlab='gamma dt>=1 b4T!=none brl>1e-4')		
+		test		<- list(	exp= ad.test(tmp[,brl], pexp), 
+								gamma= ad.test(tmp[,brl], pgamma, shape=mle2$estimate['shape'], rate=mle2$estimate['rate'])		)		
+		sapply(test, '[[', 'p.value')
+		#exp.AD     	gamma.AD 
+		#0.0000122449 	0.3602207894 
+		#
+		#	estimate mean under Exp model for each b4T group
+		#
+		rawbrl.exp			<- lapply(c(0,1,2,3,4), function(dt.min)
+				{
+					tmp					<- subset(Y.rawbrl.linked, dt>=dt.min & log10(brl)>brl.linked.min.brl & brl<0.2)
+					tmp					<- tmp[, list(exp.m= mean(brl)), by='b4T']
+					#tmp					<- tmp[, list(exp.m= 1/fitdistr(brl, "exponential")$estimate), by='b4T']
+					tmp[, dt:=dt.min]
+					#rawbrl.l	<- subset( tmp, brl>=0 )[, sort(brl)]		#allow for one mutation
+					#plot( tmp[, log10(brl)], col=tmp[,col], pch=18, main=paste('exclude dt<',dt.min))
+					tmp 				
+				})
+		rawbrl.exp			<- do.call('rbind', rawbrl.exp )
+		
+		plot( tmp[, log10(brl)], col=tmp[,col], pch=18 )
 		#rate estimates very similar irrespective of whether the first 1 2 3 years excluded:
 		#1/rawbrl.exp	:	0.009735224 0.011242407 0.009690996 0.010396757 0.012383081
 	}	
-	Y.rawbrl.linked	<- subset(Y.rawbrl.linked, log10(brl)>brl.linked.min.brl & brl<0.2 & dt>=brl.linked.min.dt)
-	rawbrl.l		<- Y.rawbrl.linked[, sort(brl)]		#suppose evolution not 'static'				
-	#plot(log10(rawbrl.l))
-	rawbrl.exp		<- fitdistr(rawbrl.l, "exponential")$estimate
+	if(0)
+	{
+		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, b4T!='none' & log10(brl)>-12 & brl<0.2 & dt>=brl.linked.min.dt)
+		#estimated mean= 0.0089
+	}
+	if(0)
+	{
+		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, b4T!='none' & log10(brl)>brl.linked.min.brl & brl<0.2 & dt>=brl.linked.min.dt)
+		#estimated mean= 0.0138
+	}
+	if(1)
+	{
+		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, log10(brl)>brl.linked.min.brl & brl<0.2 & dt>=brl.linked.min.dt)
+		#estimated mean= 0.0167
+	}
+	#plot(log10(Y.rawbrl.linked[, sort(brl)]	))
+	rawbrl.exp		<- fitdist( Y.rawbrl.linked[, brl]	, "exp")$estimate
 	cat(paste('\nestimated mean=',round(1/rawbrl.exp,d=4)))
 	#rawbrl.h	<- hist(Y.rawbrl.linked[,brl], breaks=1e3, freq=0, xlim=c(0,0.05))
 	#tmp			<- seq(min(Y.rawbrl.linked[,brl]), max(Y.rawbrl.linked[,brl]), length.out=1024) 
 	#lines( tmp, dexp(tmp, rate = rawbrl.exp$estimate), col='red')
 	Y.brl			<- Y.rawbrl
-	Y.brl[, score.brl.TPp:= pexp(brl, rate=rawbrl.exp/2, lower.tail=FALSE) ]
-	Y.brl[, score.brl.TPd:= dexp(brl, rate=rawbrl.exp/2) ]
+	Y.brl[, score.brl.TPp:= pgamma(Y.brl[,brl], shape=2, rate = rawbrl.exp, lower.tail=FALSE)]
+	Y.brl[, score.brl.TPd:= pgamma(Y.brl[,brl], shape=2, rate = rawbrl.exp, lower.tail=FALSE)]
 	Y.brl[, score.brl.TN:= p.rawbrl.unlinked(brl)]	
 	#tmp			<- seq(min(Y.rawbrl.linked[,brl]), max(Y.rawbrl.linked[,brl]), length.out=1024)
 	#plot(tmp, pgamma(tmp, shape=2, rate = rawbrl.exp$estimate, lower.tail=FALSE), type='l')
@@ -3091,16 +3208,14 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		cat(paste('\nplot to file',plot.file))
 		require(RColorBrewer)
 		par(mar=c(4,4,0.5,0.5))
-		cols		<- brewer.pal(4, 'Set1')[c(1,3,2,4)]
-		legend.txt	<- c('same host', 'potential transmission pairs', 'branch length weight', 'transm prob')	
+		cols		<- brewer.pal(4, 'Set1')[c(1,3,2)]
+		legend.txt	<- c('same host', 'potential transmission pairs', 'branch length weight')	
 		xlim		<- c(0, max(Y.rawbrl[, max(brl)],  Y.rawbrl.linked[, max(brl)])*1.1 )
 		tmp			<- seq(from=xlim[1], to=xlim[2], by=diff(xlim)/200)
 		hist( Y.rawbrl.linked[, brl], breaks=tmp , col=my.fade.col(cols[1],0.5), add=0, freq=0, xlab='branch length', main='', ylim=c(0,100) )
 		hist( Y.rawbrl[, brl], breaks=tmp, col=my.fade.col(cols[2],0.5), freq=0, add=1 )
-		tmp			<- seq(min(Y.rawbrl[,brl]), max(Y.rawbrl[,brl]), length.out=1024)
-		lines(tmp, dexp(tmp, rate = rawbrl.exp/2), col=cols[3], lwd=2)		
-		tmp2		<- pexp(tmp, rate = rawbrl.exp/2, lower.tail=FALSE)
-		lines(tmp, tmp2/(sum(tmp2)*diff(tmp)[1]), col=cols[4], lwd=2)		
+		tmp2		<- pgamma(tmp, shape=2, rate = rawbrl.exp, lower.tail=FALSE) 				
+		lines(tmp, tmp2/(sum(tmp2)*diff(tmp)[1]), col=cols[3], lwd=2)		
 		legend('topright', bty='n', fill= cols, border=NA, legend=legend.txt)		
 		dev.off()
 	}	
@@ -4232,10 +4347,10 @@ project.athena.Fisheretal.YX.model1<- function(YX, vl.suppressed=log10(1e3), cd4
 	#
 	YX.m1	<- subset(YX.m1, select=c(t, t.Patient, Patient, t.FASTASampleCode, FASTASampleCode, cluster, score.Y, stage, lRNA, t.period, RegionHospital, w ))
 	set(YX.m1, NULL, 'stage', YX.m1[, as.factor(stage)])
+	YX.m1[, score.Y.orig:= score.Y]
 	set(YX.m1, YX.m1[, which(score.Y>0.999)], 'score.Y', 0.999)
 	set(YX.m1, YX.m1[, which(score.Y<0.001)], 'score.Y', 0.001)
-	YX.m1[, logit.Y:= YX.m1[, log( score.Y/(1-score.Y) )]]
-	
+	YX.m1[, logit.Y:= YX.m1[, log( score.Y/(1-score.Y) )]]	
 	#	add info
 	print(YX.m1[, table(stage)])	
 	tmp			<- YX.m1[, length(unique(Patient))]
@@ -4244,10 +4359,9 @@ project.athena.Fisheretal.YX.model1<- function(YX, vl.suppressed=log10(1e3), cd4
 	YX.m1.info	<- merge(YX.m1, YX.m1.info, by='stage')
 
 	#	try basic beta regression
-	if(1)
+	if(0)
 	{
-		require(betareg)
-		require(gamlss)
+		require(betareg)		
 				
 		data("GasolineYield", package = "betareg")
 		GasolineYield	<- as.data.table(GasolineYield)
@@ -4261,10 +4375,43 @@ project.athena.Fisheretal.YX.model1<- function(YX, vl.suppressed=log10(1e3), cd4
 		lines(tmp$temp, predict(gy_logit, tmp, type='response'), col='red', pch=18)
 		lines(tmp$temp, predict(gy_logit, tmp, type='quantile', at=0.025), col='blue', pch=18)
 		lines(tmp$temp, predict(gy_logit, tmp, type='quantile', at=0.975), col='blue', pch=18)
-		#
-		plot(GasolineYield$temp, GasolineYield$yield.logit)
-		lines(tmp$temp, predict(gy_logit, tmp, type='link'), col='red', pch=18)
-		coeff(gy_logit)
+		#	betareg does not have predict, type='confidence'
+		#plot(GasolineYield$temp, GasolineYield$yield)
+		#lines(tmp$temp, predict(gy_logit, tmp, type='response'), col='red', pch=18)
+		lines(tmp$temp, predict(gy_logit, tmp, type='response') + 2*sqrt( predict(gy_logit, tmp, type='variance') ), col='green' )
+		lines(tmp$temp, predict(gy_logit, tmp, type='response') - 2*sqrt( predict(gy_logit, tmp, type='variance') ), col='green' )
+		#	+- 2*std deviation in predicted response is similar to quantiles
+			
+		start		<- c( gy_logit$coef$mean + head( 2*sqrt(diag(vcov(gy_logit))), length(gy_logit$coef$mean)), gy_logit$coef$precision)
+		gy_logit.s	<- betareg(yield ~ batch + temp - 1, data = GasolineYield, start=start, hessian=TRUE, maxit=0)
+		lines(tmp$temp, predict(gy_logit.s, tmp, type='response'), col='pink' )
+		start		<- c( gy_logit$coef$mean - head( 2*sqrt(diag(vcov(gy_logit))), length(gy_logit$coef$mean)), gy_logit$coef$precision)
+		gy_logit.s	<- betareg(yield ~ batch + temp - 1, data = GasolineYield, start=start, hessian=TRUE, maxit=0)
+		lines(tmp$temp, predict(gy_logit.s, tmp, type='response'), col='pink' )
+		#	+- 2*std deviation in coefficients is broader to quantiles			
+	}
+	#	try inflated beta regression at one
+	if(1)
+	{
+		require(gamlss)
+		require(gamlss.dist)
+		#	prepare data
+		YX.m1[, score.Y:= score.Y.orig]
+		YX.m1[, logit.Y:= NULL]
+		set(YX.m1, YX.m1[, which(score.Y>0.999)], 'score.Y', 1)		
+		tmp			<- data.table(stage= YX.m1[, levels(stage)], col=sapply( brewer.pal(YX.m1[, nlevels(stage)], 'Set1'), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m1.plot	<- merge(YX.m1, tmp, by='stage')
+		
+		show.link( BEZI )
+		#	need log link on nu since nu is Prob(score==1)/ ( 1-Prob(score==1)  ) 
+		YX.m1.fit3b	<- gamlss(formula= score.Y ~ stage-1, nu.formula=~stage-1, family=BEOI(mu.link='logit', nu.link='log'), weights=w, data=subset(YX.m1.plot, select=c(score.Y, stage, w)))
+		#	this estimates the coefficients for mu and nu separately
+		summary(YX.m1.fit3b)
+		#	suggests for mu term coeff stageART.su.N, stageART.su.NA, stageDiag.NA, stageDiag<=350  not significantly different from 0
+		#	suggests for nu term coeff stageART.su.NA  not significantly different from 0
+		gamlss(formula= prop ~ cov.factor-1, nu.formula=~cov.factor-1, family=BEOI(mu.link='logit', nu.link='log'), data=X)
+		#	I would like to have the SAME coefficients in mu and nu
 	}
 	if(1)
 	{
@@ -4301,21 +4448,29 @@ project.athena.Fisheretal.YX.model1<- function(YX, vl.suppressed=log10(1e3), cd4
 		plot( seq_len(nrow(YX.m1.plot)), YX.m1.plot[, score.Y], pch=18, col= YX.m1.plot[, col], cex=YX.m1.plot[, w^0.4])
 		tmp				<- subset(YX.m1.plot, select=stage)
 		lines(seq_len(nrow(tmp)), predict(YX.m1.fit3, tmp, type='response'))
+		lines(seq_len(nrow(tmp)), predict(YX.m1.fit3, tmp, type='quantile', at=0.5), lty=2, col='red')
 		lines(seq_len(nrow(tmp)), predict(YX.m1.fit3, tmp, type='quantile', at=0.025), lty=2)
 		lines(seq_len(nrow(tmp)), predict(YX.m1.fit3, tmp, type='quantile', at=0.975), lty=2)
+		#lines(seq_len(nrow(tmp)), predict(YX.m1.fit3, tmp, type='response') + 2*sqrt( predict(YX.m1.fit3, tmp, type='variance') ), lty=3)
+		#lines(seq_len(nrow(tmp)), predict(YX.m1.fit3, tmp, type='response') - 2*sqrt( predict(YX.m1.fit3, tmp, type='variance') ), lty=3)		
+		start			<- c( YX.m1.fit3$coef$mean + head( 2*sqrt(diag(vcov(YX.m1.fit3))), length(YX.m1.fit3$coef$mean)), YX.m1.fit3$coef$precision)
+		YX.m1.fit3.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m1.plot, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m1.fit3$coef$mean - head( 2*sqrt(diag(vcov(YX.m1.fit3))), length(YX.m1.fit3$coef$mean)), YX.m1.fit3$coef$precision)
+		YX.m1.fit3.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m1.plot, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+					c( predict(YX.m1.fit3.sup, tmp, type='response'), rev(predict(YX.m1.fit3.slw, tmp, type='response'))), 
+					border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m1[, levels(stage)], fill=YX.m1.plot[, unique(col)])
+		#
+		YX.m1.fit3.or	<- unique(subset(YX.m1.plot, select=stage))
+		YX.m1.fit3.or	<- cbind(YX.m1.fit3.or, data.table(p=predict(YX.m1.fit3, YX.m1.fit3.or, type='response')))
+		tmp				<- subset(YX.m1.fit3.or, stage=='U')[, p/(1-p) ] 		
+		YX.m1.fit3.or[, or:=YX.m1.fit3.or[, p/(1-p)/tmp]]		
 		#	
 		YX.m1.fit4 		<- betareg(score.Y ~ stage-1 | stage, link='logit', weights=w, data = YX.m1.plot)
 		summary(YX.m1.fit4)
 		#	suggests that for the precision term, none of the coeff are signif non-zero 
-		
-		
-	
-		plot(GasolineYield$temp, GasolineYield$yield)		
-		points(GasolineYield$temp, fitted(gy_logit), col='red', pch=18)
-		tmp				<- subset(GasolineYield,select=c(temp, batch))
-		set(tmp, NULL, 'batch', '6')
-		setkey(tmp, temp)
-		lines(tmp$temp, predict(gy_logit, tmp, link='response'), col='red', pch=18)		
+			
 	}
 	
 	#	plot log odds
@@ -5026,7 +5181,7 @@ project.athena.Fisheretal.similar<- function()
 	df.treatment			<- tmp$df.treatment
 	#
 	#
-	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX3.R',sep='')
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX3b.R',sep='')
 	YX				<- project.athena.Fisheretal.YX(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=t.period, t.endctime=t.endctime, save.file=save.file)
 	#
 	#

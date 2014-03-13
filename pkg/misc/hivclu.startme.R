@@ -160,6 +160,28 @@ my.dumpframes<- function()
 	q()
 }
 
+dziexp	<-function(x, z, rate, log=FALSE)
+{
+	ans					<- numeric(length(x))
+	tmp					<- x==0.
+	ans[tmp]			<- z+(1-z)*dexp(x[tmp], rate=rate)
+	ans[!tmp]			<- (1-z)*dexp(x[!tmp], rate=rate)
+	if(log)
+		ans				<- log(ans)
+	ans
+}
+
+pziexp	<-function(x, z, rate, log=FALSE)
+{
+	ans					<- numeric(length(x))
+	tmp					<- x==0.
+	ans[tmp]			<- z
+	ans[!tmp]			<- z+(1-z)*pexp(x[!tmp], rate=rate)
+	if(log)
+		ans				<- log(ans)
+	ans
+}
+
 my.aggregate<- function(x, bins)
 {
 	bins	<- cbind(bins[-length(bins)],bins[-1])			
