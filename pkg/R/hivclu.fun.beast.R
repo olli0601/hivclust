@@ -773,7 +773,7 @@ hivc.beast2.add.treemodel.sasky<- function(bxml, beast2.spec, verbose=1)
 					upper=as.character(beast2.spec$bdsky.notInf.upper),
 					value=paste(beast2.spec$bdsky.notInf.value, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)
 	dummy			<- newXMLNode("parameter", attrs= list(	id=beast2.spec$sasky.r.id, 
-					name="becomeNoninfectiousAfterSamplingProbability",
+					name="removalProbability",
 					dimension=beast2.spec$bdsky.intervalNumber,
 					lower=as.character(beast2.spec$sasky.r.lower),
 					upper=as.character(beast2.spec$sasky.r.upper),
@@ -783,11 +783,10 @@ hivc.beast2.add.treemodel.sasky<- function(bxml, beast2.spec, verbose=1)
 					lower=as.character(beast2.spec$bdsky.origin.lower),
 					upper=as.character(beast2.spec$bdsky.origin.upper),
 					value=paste(beast2.spec$bdsky.origin.value)), parent=beast.treemodel, doc=bxml, addFinalizer=T)
-	tmp				<- rep("false",4)
-	tmp[which(!sapply(c(beast2.spec$bdsky.R0.changepoint.id[1],beast2.spec$bdsky.notInf.changepoint.id[1],beast2.spec$bdsky.sprop.changepoint.id[1]),is.null))]		<- "true"
-	dummy			<- newXMLNode("reverseTimeArrays", attrs= list(	id=beast2.spec$bdsky.reverseTimeArrays.id, 
+	if(!is.null(beast2.spec$bdsky.reverseTimeArrays.id[1]))
+		dummy		<- newXMLNode("reverseTimeArrays", attrs= list(	id=beast2.spec$bdsky.reverseTimeArrays.id, 
 					spec=beast2.spec$bdsky.reverseTimeArrays.spec,
-					value=paste(tmp, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)
+					value=paste(beast2.spec$bdsky.reverseTimeArrays.value, collapse=' ')), parent=beast.treemodel, doc=bxml, addFinalizer=T)
 	if(!is.null(beast2.spec$bdsky.R0.changepoint.id[1]))												
 		dummy		<- newXMLNode("parameter", attrs= list(	id=beast2.spec$bdsky.R0.changepoint.id, 
 						name="birthRateChangeTimes",
@@ -1242,6 +1241,7 @@ hivc.beast2.get.specifications	<- function(xml.dir=NA, xml.filename=NA, mcmc.len
 	beast2.spec$bdsky.notInf.changepoint.id		<- paste('deathRateChangeTimes',beast2.spec$tree.taxonset,sep='.t:')
 	beast2.spec$bdsky.notInf.changepoint.value	<- c(1.596, 5.596, 9.596, 0.)
 	beast2.spec$bdsky.reverseTimeArrays.id		<- paste('reverseTimeArrays',beast2.spec$tree.taxonset,sep='.t:')
+	beast2.spec$bdsky.reverseTimeArrays.value	<- c('true', 'true', 'false', 'true')
 	beast2.spec$bdsky.reverseTimeArrays.spec	<- "parameter.BooleanParameter"	
 	beast2.spec$sasky.spec						<- "beast.evolution.speciation.SABDSkylineModel"		
 	beast2.spec$sasky.tree.nodetype				<- "beast.evolution.tree.ZeroBranchSANode"

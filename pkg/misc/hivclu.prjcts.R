@@ -2296,20 +2296,35 @@ project.ukca.TPTN.bootstrapvalues<- function(dir.name= DATA)
 	hivc.phy.get.TP.and.TN.bootstrapvalues(ph, bs.linked.bypatient, ph.mrca=ph.mrca ,df.seqinfo=NULL, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=NULL, dist.brl=NULL, thresh.brl=0.096, plot.file=plot.file, verbose= 1)	
 }
 ######################################################################################
-project.athena.Fisheretal.X.Trm.Region<- function(df.tpairs, clumsm.info)
+project.athena.Fisheretal.YX.Trm.Region<- function(YX, clumsm.info)
 {
-	t.group	<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique(subset( clumsm.info, select=c(Patient, RegionHospital, Trm))), by='Patient' )
-	#	Exposure group - MSM or Other or NA
+	t.group	<- merge( data.table(Patient=YX[, unique(t.Patient)]), unique(subset( clumsm.info, select=c(Patient, RegionHospital, Trm))), by='Patient' )
+	#	Exposure group for transmitter - MSM or Other or NA
 	set(t.group, t.group[, which(Trm!='MSM')], 'Trm', 'OTH' )
 	set(t.group, NULL, 'Trm', as.factor(as.character(t.group[,Trm])) )
 	set(t.group, NULL, 'RegionHospital', as.factor(as.character(t.group[,RegionHospital])) )
 	tmp	<- table(t.group[,Trm])
-	cat(paste('\nExposure group categories', paste(names(tmp), tmp, collapse=', ', sep='=')))
+	cat(paste('\nExposure group categories for transmitter', paste(names(tmp), tmp, collapse=', ', sep='=')))
+	#	Region code for transmitter
 	tmp	<- table(t.group[,RegionHospital])
-	cat(paste('\nRegion group categories', paste(names(tmp), tmp, collapse=', ', sep='=')))
-	setnames(t.group, 'Patient','t.Patient')
-	cat(paste('\nReturn X for #t.Patients=',t.group[, length(unique(t.Patient))]))
-	t.group		
+	cat(paste('\nRegion group categories for transmitter', paste(names(tmp), tmp, collapse=', ', sep='=')))
+	setnames(t.group, colnames(t.group), paste('t.',colnames(t.group),sep=''))
+	#	
+	YX	<- merge(YX, t.group, by='t.Patient')
+	#
+	t.group	<- merge( data.table(Patient=YX[, unique(Patient)]), unique(subset( clumsm.info, select=c(Patient, RegionHospital, Trm))), by='Patient' )
+	#	Exposure group for infected - MSM or Other or NA
+	set(t.group, t.group[, which(Trm!='MSM')], 'Trm', 'OTH' )
+	set(t.group, NULL, 'Trm', as.factor(as.character(t.group[,Trm])) )
+	set(t.group, NULL, 'RegionHospital', as.factor(as.character(t.group[,RegionHospital])) )
+	tmp	<- table(t.group[,Trm])
+	cat(paste('\nExposure group categories for infected', paste(names(tmp), tmp, collapse=', ', sep='=')))
+	#	Region code for infected
+	tmp	<- table(t.group[,RegionHospital])
+	cat(paste('\nRegion group categories for infected', paste(names(tmp), tmp, collapse=', ', sep='=')))
+	#
+	YX	<- merge(YX, t.group, by='Patient')
+	YX
 }
 ######################################################################################
 project.athena.Fisheretal.X.calendarperiod<- function(df.tpairs, clumsm.info, t.period= 0.25, c.nperiod= 4)
@@ -2812,8 +2827,7 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		tmp						<- merge(X.incare, X.b4care, by=c('t.Patient','t'))
 		cat(paste('\nnumber entries (Patient,t) that overlap in and before care [should be zero], n=',nrow(tmp)))
 		X.pt					<- merge(X.incare, X.b4care, by=c('t.Patient','t'), all.x=1, all.y=1)
-		set(X.pt, X.pt[,which(is.na(stage))], 'stage', 'U')
-		X.pt					<- project.athena.Fisheretal.X.age(X.pt, clumsm.info, t.period=t.period)	
+		set(X.pt, X.pt[,which(is.na(stage))], 'stage', 'U')			
 		X.pt					<- merge(X.pt, X.fwup, by=c('t.Patient', 't'), all.x=1)
 		#	complete of transmitter: AnyPos_T1, AnyT_T1, AnyPos_a, isAcute
 		X.pt[, AnyPos_T1:=NULL]
@@ -2829,10 +2843,6 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		#tmp					<- project.athena.Fisheretal.X.followup.compareCD4toVL(df.tpairs, df.immu, clumsm.info)
 		#	compute X: potential transmitters with pulsed ART shortly after seroconversion / diagnosis
 		X.ARTpulsed				<- project.athena.Fisheretal.X.ART.pulsed(df.tpairs, clumsm.info, t.pulse.ART=0.75, t.pulse.sc=NA, t.pulse.ART.I=1, t.pulse.ART.I.d=1)
-		#	compute X: calendar time period
-		X.tperiod				<- project.athena.Fisheretal.X.calendarperiod(df.tpairs, clumsm.info, t.period=t.period, c.nperiod= 4)
-		#	compute X: RegionHospital and Exposure group
-		X.Trm					<- project.athena.Fisheretal.X.Trm.Region(df.tpairs, clumsm.info)
 		#	project.athena.Fisheretal.X.incare.check(X.incare)
 		#	compute X: time to first viral suppression from diagnosis	
 		X.t2.vlsupp				<- project.athena.Fisheretal.X.time.diag2suppressed(df.tpairs, clumsm.info, df.viro, lRNA.suppressed= log10(1e3), t2.vl.supp.p=c(0.1, 0.25))
@@ -2840,10 +2850,8 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		X.t2.care				<- project.athena.Fisheretal.X.time.diag2firstVLandCD4(df.tpairs, clumsm.info, df.viro, df.immu, t2.care.t1.q=c(0.25,0.5))
 		#
 		#	merge all static X that are independent of time periods
-		#
-		tmp						<- merge( df.tpairs, X.tperiod, by=c('Patient','t.Patient'), all.x=1 )
-		tmp						<- merge( tmp, X.Trm, by='t.Patient', all.x=1 )
-		tmp						<- merge( tmp, X.t2.care, by='t.Patient', all.x=1 )
+		#		
+		tmp						<- merge( df.tpairs, X.t2.care, by='t.Patient', all.x=1 )
 		tmp						<- merge( tmp, X.t2.vlsupp, by='t.Patient', all.x=1 )
 		tmp						<- merge( tmp, X.ARTpulsed, by='t.Patient', all.x=1 )	
 		X.pt					<- merge(tmp, X.pt, by='t.Patient', allow.cartesian=TRUE)
@@ -2861,7 +2869,7 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		Y.rawbrl.linked			<- tmp$linked
 		Y.rawbrl.unlinked		<- tmp$unlinked
 		#	BRL [0,1]: branch length weight between pot transmitter and infected
-		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl3b.pdf',sep='')
+		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl3a.pdf',sep='')
 		Y.brl					<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked	, Y.rawbrl.unlinked, df.all, brl.linked.min=-4, brl.linked.min.dt=1.5, plot.file=file)	
 		#	COAL [0,1]: prob that coalescence is within the transmitter
 		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw2e.R',sep='')		
@@ -2872,6 +2880,8 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		#	screen for likely missed intermediates/sources
 		#
 		df.tpairs				<- project.athena.Fisheretal.Y.rm.missedtransmitter(df.tpairs, Y.brl, Y.coal, Y.U, cut.date=0.5, cut.brl=1e-3)
+		#	compute X: calendar time period
+		X.tperiod				<- project.athena.Fisheretal.X.calendarperiod(df.tpairs, clumsm.info, t.period=t.period, c.nperiod= 4)		
 		#
 		#	take branch length weight ONLY to derive "score.Y"
 		#		
@@ -2889,14 +2899,21 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		#	merge over time periods t
 		Y.score					<- merge( Y.score, subset(Y.infwindow, select=c(Patient, t)), by='Patient', allow.cartesian=TRUE )
 		YX						<- merge( subset(Y.score, select=c(FASTASampleCode, t.FASTASampleCode, score.Y, score.brl.TPd, t)), X.pt, by= c('FASTASampleCode', 't.FASTASampleCode', 't'))
-		#	add weights -- TODO same tpair can be counted multiple times
-		YX						<- project.athena.Fisheretal.Y.weight(YX)
+		YX						<- merge( YX, X.tperiod, by=c('Patient','t.Patient'), all.x=1 )
+		#	add weights 
+		save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'weight3a.R',sep='')
+		YX						<- project.athena.Fisheretal.YX.weight(YX, save.file=save.file)
+		#	add age of transmitter and recipient
+		YX						<- project.athena.Fisheretal.YX.age(YX, clumsm.info, t.period=t.period)
+		#	add RegionHospital and Exposure group of transmitter and recipient
+		YX						<- project.athena.Fisheretal.YX.Trm.Region(YX, clumsm.info)
+		
 		#	re-arrange a little
 		YX		<- subset(YX, select=	c(	t, t.Patient, Patient, cluster, score.Y, 																	#triplets identifiers and Y score
 						t.period, stage, U.score, contact, CDCC, lRNA, CD4, 														#main covariates							
-						t.Age, t.AnyPos_a, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.pulse, fw.up, t2.care.t1, t2.vl.supp, 		#secondary covariates
-						t.AnyPos_T1,  t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, Trm,												#other 
-						FASTASampleCode, t.FASTASampleCode, w										#other							
+						t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.pulse, fw.up, t2.care.t1, t2.vl.supp, 		#secondary covariates
+						t.AnyPos_T1,  t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, t.Trm, Trm,												#other 
+						FASTASampleCode, t.FASTASampleCode, w, w.t										#other							
 				))
 		setkey(YX, t, t.Patient, Patient)		
 		#
@@ -3121,20 +3138,26 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		#
 		require(fitdistrplus)
 		library(ADGofTest)
-		tmp			<- subset(Y.rawbrl.linked, dt>=1 & brl<0.2 & b4T!='none')
-		par(mfrow=c(1, 4))
-		mle			<- fitdist(tmp[,brl], 'exp')
-		qqcomp(mle, addlegend=FALSE, main='exp dt>=1 b4T!=none')
-		denscomp(mle, addlegend=FALSE, xlab='exp dt>=1 b4T!=none')
-		mle2		<- fitdist(tmp[,brl], 'gamma')
-		qqcomp(mle2, addlegend=FALSE, main='gamma dt>=1 b4T!=none')
-		denscomp(mle2, addlegend=FALSE, xlab='gamma dt>=1 b4T!=none')			
+		tmp			<- subset(Y.rawbrl.linked, dt>=1 & brl<0.2 & b4T!='none')		
+		mle.exp		<- fitdist(tmp[,brl], 'exp')
+		mle.ga		<- fitdist(tmp[,brl], 'gamma')
+		mle.ln		<- fitdist(tmp[,brl], 'lnorm')
+		mle.w		<- fitdist(tmp[,brl], 'weibull')
+		par(mfrow=c(2, 4))
+		qqcomp(mle.exp, addlegend=FALSE, main='exp dt>=1 b4T!=none')
+		denscomp(mle.exp, addlegend=FALSE, xlab='exp dt>=1 b4T!=none')		
+		qqcomp(mle.ga, addlegend=FALSE, main='gamma dt>=1 b4T!=none')
+		denscomp(mle.ga, addlegend=FALSE, xlab='gamma dt>=1 b4T!=none')
+		qqcomp(mle.ln, addlegend=FALSE, main='ln dt>=1 b4T!=none')
+		denscomp(mle.ln, addlegend=FALSE, xlab='ln dt>=1 b4T!=none')
+		qqcomp(mle.w, addlegend=FALSE, main='weibull dt>=1 b4T!=none')
+		denscomp(mle.w, addlegend=FALSE, xlab='weibull dt>=1 b4T!=none')
 		mle3			<- list()
 		tmp2			<- copy(tmp)
 		set(tmp2, tmp2[, which(log10(brl)<=brl.linked.min.brl)], 'brl', 0.)
 		mle3$estimate	<- c(z=tmp2[, mean(brl==0)], rate=subset(tmp2, brl>0)[, 1/mean(brl)])
-		test		<- list(	exp= ad.test(tmp[,brl], pexp, rate=mle3$estimate['rate']),								
-								gamma= ad.test(tmp[,brl], pgamma, shape=mle2$estimate['shape'], rate=mle2$estimate['rate']),
+		test		<- list(	exp= ad.test(tmp[,brl], pexp, rate=mle.exp$estimate['rate']),								
+								gamma= ad.test(tmp[,brl], pgamma, shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate']),
 								ziexp= ad.test(tmp2[,brl], pziexp, z=mle3$estimate['z'], rate=mle3$estimate['rate'])		)			
 		sapply(test, '[[', 'p.value')
 		#exp.AD     	gamma.AD 			ziexp.AD
@@ -3147,11 +3170,11 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		mle			<- fitdist(tmp[,brl], 'exp')
 		qqcomp(mle, addlegend=FALSE, main='exp dt>=1 b4T!=none brl>1e-4')
 		denscomp(mle, addlegend=FALSE, xlab='exp dt>=1 b4T!=none brl>1e-4')
-		mle2		<- fitdist(tmp[,brl], 'gamma')
-		qqcomp(mle2, addlegend=FALSE, main='gamma dt>=1 b4T!=none brl>1e-4')
-		denscomp(mle2, addlegend=FALSE, xlab='gamma dt>=1 b4T!=none brl>1e-4')		
+		mle.ga		<- fitdist(tmp[,brl], 'gamma')
+		qqcomp(mle.ga, addlegend=FALSE, main='gamma dt>=1 b4T!=none brl>1e-4')
+		denscomp(mle.ga, addlegend=FALSE, xlab='gamma dt>=1 b4T!=none brl>1e-4')		
 		test		<- list(	exp= ad.test(tmp[,brl], pexp), 
-								gamma= ad.test(tmp[,brl], pgamma, shape=mle2$estimate['shape'], rate=mle2$estimate['rate'])		)		
+								gamma= ad.test(tmp[,brl], pgamma, shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'])		)		
 		sapply(test, '[[', 'p.value')
 		#exp.AD     	gamma.AD 
 		#0.0000122449 	0.3602207894 
@@ -3174,7 +3197,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		#rate estimates very similar irrespective of whether the first 1 2 3 years excluded:
 		#1/rawbrl.exp	:	0.009735224 0.011242407 0.009690996 0.010396757 0.012383081
 	}	
-	if(0)
+	if(1)
 	{
 		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, b4T!='none' & log10(brl)>-12 & brl<0.2 & dt>=brl.linked.min.dt)
 		#estimated mean= 0.0089
@@ -3184,7 +3207,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, b4T!='none' & log10(brl)>brl.linked.min.brl & brl<0.2 & dt>=brl.linked.min.dt)
 		#estimated mean= 0.0138
 	}
-	if(1)
+	if(0)
 	{
 		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, log10(brl)>brl.linked.min.brl & brl<0.2 & dt>=brl.linked.min.dt)
 		#estimated mean= 0.0167
@@ -3292,8 +3315,31 @@ project.athena.Fisheretal.v2.Y.weight<- function(YX)
 	YX
 }
 ######################################################################################
-project.athena.Fisheretal.Y.weight<- function(YX)
+project.athena.Fisheretal.YX.weight<- function(YX, save.file)
 {
+	if(!is.na(save.file))
+	{
+		options(show.error.messages = FALSE)		
+		readAttempt		<- try(suppressWarnings(load(save.file)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",save.file))					
+		options(show.error.messages = TRUE)		
+	}
+	if(is.na(save.file) || inherits(readAttempt, "try-error"))
+	{		
+		triplet.weight				<- subset(YX, select=c(t, Patient, t.Patient))	
+		setkey(triplet.weight, t, Patient, t.Patient)
+		tmp							<- copy(triplet.weight)
+		setnames(tmp, colnames(tmp), paste('q.',colnames(tmp),sep='') )
+		triplet.weight				<- triplet.weight[,	{ 	
+															z	<- tmp[, which(q.t==t & q.Patient==t.Patient & q.t.Patient==Patient)]													
+															list(equal.triplet.idx= ifelse(!length(z), NA_integer_, z))						
+														}	, by=c('t','Patient','t.Patient')]												
+		if(!is.na(save.file))
+		{
+			cat(paste('\nsave triplet.weight to file=',save.file))
+			save(triplet.weight, file=save.file)
+		}		
+	}
 	#	add tpair weight: every transmitter can infect only in one time period
 	YX		<- merge(YX, YX[, list(w= 1/length(t)),by=c('t.FASTASampleCode','FASTASampleCode')], by=c('t.FASTASampleCode','FASTASampleCode'))
 	#	add infected weight: every infected can only be infected by one transmitter
@@ -3303,8 +3349,16 @@ project.athena.Fisheretal.Y.weight<- function(YX)
 	tmp		<- tmp[,	list(w.i=score.brl.TPd/sum(score.brl.TPd), t.Patient=t.Patient), by='Patient']	
 	YX		<- merge(YX, tmp, by=c('Patient','t.Patient')) 
 	set(YX, NULL, 'w', YX[, w*w.i])
+	#	weights are now normalised per 'Patient' but there are fewer infection EVENTS because Patient may also be a transmitter to t.Patient
+	setnames(triplet.weight, 'equal.triplet.idx', 'w.t')
+	set(triplet.weight, triplet.weight[,which(!is.na(w.t))], 'w.t', 2L)
+	set(triplet.weight, triplet.weight[,which(is.na(w.t))], 'w.t', 1L)
+	set(triplet.weight, NULL, 'w.t', triplet.weight[, 1/as.double(w.t)])
+	YX		<- merge(YX, triplet.weight, by=c('t','Patient','t.Patient'))
+	set(YX, NULL, 'w', YX[, w*w.t])
 	YX[, w.i:=NULL]
 	YX[,score.brl.TPd:=NULL]
+	#	
 	YX	
 }
 ######################################################################################
@@ -4172,15 +4226,20 @@ project.athena.Fisheretal.X.b4care<- function(df.tpairs, clumsm.info, predict.t2
 	b4care
 }
 ######################################################################################
-project.athena.Fisheretal.X.age<- function(X.pt, clumsm.info, t.period=0.25)
+project.athena.Fisheretal.YX.age<- function(YX, clumsm.info, t.period=0.25)
 {
-	tmp	<- unique(subset(clumsm.info, select=c(Patient, DateBorn)))
+	tmp		<- unique(subset(clumsm.info, select=c(Patient, DateBorn)))
 	setnames(tmp, 'Patient', 't.Patient')
-	age	<- merge(subset(X.pt, select=c(t.Patient, t)), tmp, by='t.Patient')
+	age		<- merge(subset(YX, select=c(t.Patient, Patient, t)), tmp, by='t.Patient')
+	setkey(age, t, Patient, t.Patient)
+	age		<- unique(age)
 	set(age, NULL, 'DateBorn', age[, t+t.period/2-DateBorn])
 	setnames(age, 'DateBorn', 't.Age')
-	X.pt	<- merge(X.pt, age, by=c('t.Patient','t'))
-	X.pt
+	age		<- merge(age, unique(subset(clumsm.info, select=c(Patient, DateBorn))), by='Patient')
+	set(age, NULL, 'DateBorn', age[, t+t.period/2-DateBorn])
+	setnames(age, 'DateBorn', 'Age')
+	YX	<- merge(YX, age, by=c('t','t.Patient','Patient'))
+	YX
 }
 ######################################################################################
 project.athena.Fisheretal.X.ART.pulsed<- function(df.tpairs, clumsm.info, t.pulse.ART=0.75, t.pulse.sc=NA, t.pulse.ART.I=1, t.pulse.ART.I.d=1)
@@ -5181,7 +5240,7 @@ project.athena.Fisheretal.similar<- function()
 	df.treatment			<- tmp$df.treatment
 	#
 	#
-	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX3b.R',sep='')
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX3a.R',sep='')
 	YX				<- project.athena.Fisheretal.YX(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=t.period, t.endctime=t.endctime, save.file=save.file)
 	#
 	#

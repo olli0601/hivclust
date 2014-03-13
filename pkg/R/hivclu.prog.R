@@ -4169,6 +4169,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$pool.fNegT						<- 0
 		beast2.spec$pool.ntip						<- 150		
 		beast2.spec$sasky.r.changepoint.value		<- beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(0.596, 1.596, 5.596, 9.596, 0.)
+		beast2.spec$bdsky.reverseTimeArrays.value	<- c('true', 'true', 'true', 'false', 'true')
 		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2, 0.2)		
 		beast2.spec$bdsky.sprop.prior				<- c("Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0")
 		beast2.spec$bdsky.R0.prior					<- c("Gamma/1.5/1.5/0", rep(paste("Gamma/2.3/0.15/0.7",sep=''),4))
