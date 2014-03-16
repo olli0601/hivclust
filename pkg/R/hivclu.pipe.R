@@ -366,6 +366,7 @@ hivc.pipeline.BEAST<- function()
 		infilexml.opt		<- "alrh40"
 		infilexml.opt		<- "alrh80"
 		#infilexml.opt		<- "alrh160"
+		infilexml.opt		<- "clrh80"
 		#infilexml.opt		<- "rsu835"		
 		#infilexml.opt		<- "ori40"
 		#infilexml.opt		<- "ori50"

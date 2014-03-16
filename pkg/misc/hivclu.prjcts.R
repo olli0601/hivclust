@@ -2346,48 +2346,108 @@ project.athena.Fisheretal.X.calendarperiod<- function(df.tpairs, clumsm.info, t.
 	i.diag
 }
 ######################################################################################
-project.athena.Fisheretal.X.followup<- function(df.tpairs, df.immu, t.period= 0.25, t.endctime=2013.0)
+project.athena.Fisheretal.X.followup<- function(X.incare, clumsm.info, df.immu, t.period= 0.25, t.endctime=2013.0)
 {
+	#	get follow.up time periods for every potential transmitter
+	#	follow.up timeline starts at AnyPos_T1 and ends at DateDied or t.endctime	
 	follow		<- subset(df.immu, select=c(Patient, PosCD4))
 	setkey(follow, Patient)
-	#	get follow.up time periods for every potential transmitter
-	#	follow.up timeline starts at first PosCD4 and ends at endctime
-	follow		<- merge( data.table(Patient= df.tpairs[, unique(t.Patient)]),  follow, by='Patient' )
+	follow		<- merge( data.table(Patient= X.incare[, unique(t.Patient)]),  follow, by='Patient' )	
+	tmp			<- subset( clumsm.info, select=c(Patient, AnyPos_T1, DateDied) )
+	setkey(tmp, Patient)
+	follow		<- merge(follow, unique(tmp), by='Patient')	
 	set(follow, NULL, 'PosCD4', hivc.db.Date2numeric(follow[,PosCD4]))
-	follow.t	<- follow[, list(PosCD4_T1= min(PosCD4)),by='Patient']
-	set(follow.t, NULL, 'PosCD4_T1', follow.t[, floor(PosCD4_T1) + floor( (PosCD4_T1%%1)*100 %/% (t.period*100) ) * t.period] )
-	follow.t	<- follow.t[, list(t= seq(PosCD4_T1, t.endctime-t.period, by=t.period)),by='Patient']
+	set(follow, follow[, which(is.na(DateDied))], 'DateDied', t.endctime)
+	follow		<- merge(follow, follow[, list(PosCD4_T1= min(PosCD4)),by='Patient'], by='Patient')
+	#	add fake first CD4 times at AnyPos_T1 so that follow up counts also the time to first CD4
+	follow		<- rbind( follow, subset(follow, PosCD4_T1>AnyPos_T1)[, list(PosCD4=AnyPos_T1[1], AnyPos_T1=AnyPos_T1[1], DateDied=DateDied[1], PosCD4_T1=PosCD4_T1[1]), by='Patient'] )
+	setkey(follow, Patient, PosCD4)
+	#
 	#	get follow up quantiles that do not depend on the time periods t
+	#
 	follow.q	<- follow[, {
 				if(length(PosCD4)>1)
 					tmp	<- diff(PosCD4)
 				else
 					tmp	<- NA_real_
-				list(fw.up.mean= mean(tmp), fw.up.mx=max(tmp))
+				list(fw.up.mean= mean(tmp), fw.up.med= median(tmp), fw.up.mx=max(tmp))
 			},by='Patient']
-	#plot(follow[, fw.up.mean], follow[, log(fw.up.mx)], pch=18)
+	#plot(follow.q[, fw.up.med], follow.q[, fw.up.mx], pch=18)
 	#hist(follow[, log(fw.up.mx)])
-	follow.q		<- round( follow.q[, quantile(fw.up.mx, p=c(0, 0.75, 0.95, 1), na.rm=TRUE)], d=3)
-	cat(paste('\nCD4 follow up quantiles are=',paste(follow.q, collapse=' ', sep=''), sep=''))
+	follow.q.mx		<- round( follow.q[, quantile(fw.up.mx, p=c(0, 0.75, 0.95, 1), na.rm=TRUE)], d=3)
+	cat(paste('\nCD4 max follow up quantiles are=',paste(follow.q.mx, collapse=' ', sep=''), sep=''))
+	follow.q.med	<- round( follow.q[, quantile(fw.up.med, p=c(0, 0.75, 0.95, 1), na.rm=TRUE)], d=3)
+	cat(paste('\nCD4 median follow up quantiles are=',paste(follow.q.med, collapse=' ', sep=''), sep=''))
+	follow.q.mx[1]	<- follow.q.med[1]<- -1
+	follow.q.mx[4]	<- follow.q.med[4]<- 100
+	#
+	#	set up follow up timeline per patient
+	#
+	follow.t	<- subset(follow, select=c(Patient, AnyPos_T1, DateDied))
+	setkey(follow.t, Patient)
+	follow.t	<- unique(follow.t)
+	set(follow.t, NULL, 'AnyPos_T1', follow.t[, floor(AnyPos_T1) + round( (AnyPos_T1%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(follow.t, NULL, 'DateDied', follow.t[, floor(DateDied) + round( (DateDied%%1)*100 %/% (t.period*100) ) * t.period] )	
+	follow.t	<- follow.t[, list(t= seq(AnyPos_T1, DateDied-t.period, by=t.period)),by='Patient']
+	#
 	#	determine fw.up.mx per patient up to time period t
+	#
 	follow.t		<- merge(follow, follow.t, by='Patient', allow.cartesian=TRUE)
 	cat(paste('\nmerge gives nrows=',nrow(follow.t)))
-	follow.t		<- follow.t[,	list(fw.up.mx= ifelse(length(which(PosCD4<=t))>1, max(diff(PosCD4[PosCD4<=t])), NA_real_) ),		by=c('Patient','t')]
-	set(follow.t, NULL, 'fw.up.mx', cut( follow.t[, fw.up.mx], breaks=follow.q, labels=c('<75pc','75-95pc','>95pc') )		)
-	setnames(follow.t, c('Patient','fw.up.mx'), c('t.Patient','fw.up'))
+	follow.t		<- follow.t[,	{
+										tmp<- PosCD4[which(PosCD4<=t)]
+										list(	fw.up.mx= ifelse(length(tmp)>1, max(diff(tmp)), NA_real_),
+												fw.up.med= ifelse(length(tmp)>1, median(diff(tmp)), NA_real_)
+												)
+									},		by=c('Patient','t')]
+	follow.t		<- follow.t[, {
+										tmp<- which(!is.na(fw.up.mx))
+										if(!length(tmp))
+											ans<- list(t=t, fw.up.mx=NA_real_, fw.up.med=NA_real_)
+										else if(tmp[1]==1)
+											ans<- list(t=t, fw.up.mx=fw.up.mx, fw.up.med=fw.up.med)
+										else
+											ans<- list(t=t, fw.up.mx=c(rep(fw.up.mx[tmp[1]], tmp[1]-1), fw.up.mx[tmp]), fw.up.med=c(rep(fw.up.med[tmp[1]], tmp[1]-1), fw.up.med[tmp]))
+										ans						
+									}, by='Patient']	
+							
+	set(follow.t, NULL, 'fw.up.mx', cut( follow.t[, fw.up.mx], breaks=follow.q.mx, labels=c('<=75pc','<=95pc','>95pc') )		)
+	set(follow.t, NULL, 'fw.up.med', cut( follow.t[, fw.up.med], breaks=follow.q.med, labels=c('<=75pc','<=95pc','>95pc') )		)
+	setnames(follow.t, 'Patient', 't.Patient')
 	cat(paste('\nreturn X for #t.Patient=',follow.t[, length(unique(t.Patient))]))	
-	follow.t	
+	X.incare		<- merge(X.incare, follow.t, by=c('t','t.Patient'), all.x=1)	
+	X.incare
 }
 ######################################################################################
-project.athena.Fisheretal.X.nocontact<- function(X.incare, df.tpairs, clumsm.info, t.period=0.25, t.endctime= 2013.)
-{
-	contact		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique(subset(clumsm.info,select=c(Patient, DateLastContact))), by='Patient')	
+project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.tpairs, clumsm.info, contact.grace=0.5, t.period=0.25, t.endctime= 2013.)
+{	
+	contact		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique(subset(clumsm.info,select=c(Patient, DateLastContact, DateDied))), by='Patient')
+	set(contact, contact[,which(is.na(DateDied))], 'DateDied', t.endctime)
+	set(contact, contact[, which(DateLastContact==DateDied)], 'DateLastContact', NA_real_)
+	tmp			<- merge(data.table(Patient=df.tpairs[, unique(t.Patient)]), subset(df.viro, select=c(Patient, PosRNA)), by='Patient')
+	set(tmp, NULL, 'PosRNA', hivc.db.Date2numeric(tmp[,PosRNA]))
+	tmp			<- tmp[, list(PosRNA_TL=max(PosRNA)), by='Patient']	
+	contact		<- merge(contact, tmp, by='Patient', all.x=1)
+	tmp			<- merge(data.table(Patient=df.tpairs[, unique(t.Patient)]), subset(df.immu, select=c(Patient, PosCD4)), by='Patient')
+	set(tmp, NULL, 'PosCD4', hivc.db.Date2numeric(tmp[,PosCD4]))
+	tmp			<- tmp[, list(PosCD4_TL=max(PosCD4)), by='Patient']	
+	contact		<- merge(contact, tmp, by='Patient', all.x=1)
+	#contact[, summary(abs(PosRNA_TL-PosCD4_TL))]
+	set(contact, NULL, 'PosRNA_TL', contact[,PosRNA_TL+contact.grace])
+	set(contact, NULL, 'PosCD4_TL', contact[,PosCD4_TL+contact.grace])
+	
+	contact		<- contact[, list(DateDied=DateDied, DateLastContact.old=DateLastContact, DateLastContact=min( c( max(c(DateLastContact, PosRNA_TL, PosCD4_TL), na.rm=TRUE), DateDied), na.rm=TRUE)), by='Patient']
+	cat(paste('\nsetting stricter DateLastContact for n=',contact[, length(which(DateLastContact.old>DateLastContact))]))
+	cat(paste('\nsetting relaxed DateLastContact for n=',contact[, length(which(DateLastContact.old<DateLastContact))]))
+	if(nrow(subset( contact, DateDied<DateLastContact )))	stop('unexpected DateDied<DateLastContact')
 	set(contact, NULL, 'DateLastContact', contact[, floor(DateLastContact) + ceiling( (DateLastContact%%1)*100 %/% (t.period*100) ) * t.period] )
-	contact		<- contact[, list(t= seq(DateLastContact, t.endctime, by=t.period), contact='No'),by='Patient']
-	contact		<- subset(contact, t<t.endctime)
+	set(contact, NULL, 'DateDied', contact[, floor(DateDied) + round( (DateDied%%1)*100 %/% (t.period*100) ) * t.period] )
+	contact		<- subset(contact, DateLastContact<DateDied)	
+	contact		<- contact[, list(t= seq(DateLastContact, DateDied-t.period, by=t.period), contact='No'),by='Patient']	
 	setnames(contact, 'Patient','t.Patient')
-	X.incare	<- merge(X.incare, contact, by=c('t.Patient','t'), all.x=1, all.y=1)
+	X.incare	<- merge(X.incare, contact, by=c('t.Patient','t'), all.x=1)
 	set(X.incare, X.incare[,which(is.na(contact))],'contact','Yes')
+	if(X.incare[, length(which(is.na(stage)))])	stop('unexpected NA stage')
 	X.incare
 }
 ######################################################################################
@@ -2816,19 +2876,17 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 	{		
 		#	get an idea how many time periods per year we could have:
 		#	tmp<- project.athena.Fisheretal.median.followup(df.tpairs, df.viro, df.immu, X.tperiod)
-		#	compute X: follow up
-		X.fwup					<- project.athena.Fisheretal.X.followup(df.tpairs, df.immu, t.period=t.period, t.endctime=t.endctime)
 		#	compute X: InCare
 		X.incare				<- project.athena.Fisheretal.X.incare(df.tpairs, clumsm.info, df.viro, df.immu, df.treatment, t.period=t.period, t.endctime=t.endctime)
-		X.incare				<- project.athena.Fisheretal.X.nocontact(X.incare, df.tpairs, clumsm.info, t.period=t.period, t.endctime=t.endctime)
-		X.incare				<- project.athena.Fisheretal.X.CDCC(X.incare, df.tpairs, clumsm.info, t.period=t.period, t.endctime=t.endctime)	
+		X.incare				<- project.athena.Fisheretal.X.nocontact(X.incare, df.viro, df.immu, df.tpairs, clumsm.info, contact.grace=0.5, t.period=t.period, t.endctime= t.endctime)		
+		X.incare				<- project.athena.Fisheretal.X.CDCC(X.incare, df.tpairs, clumsm.info, t.period=t.period, t.endctime=t.endctime)
+		X.incare				<- project.athena.Fisheretal.X.followup(X.incare, clumsm.info, df.immu, t.period=t.period, t.endctime=t.endctime)
 		#	compute X: before care
 		X.b4care				<- project.athena.Fisheretal.X.b4care(df.tpairs, clumsm.info, predict.t2inf, t2inf.args, t.period=t.period)
 		tmp						<- merge(X.incare, X.b4care, by=c('t.Patient','t'))
 		cat(paste('\nnumber entries (Patient,t) that overlap in and before care [should be zero], n=',nrow(tmp)))
 		X.pt					<- merge(X.incare, X.b4care, by=c('t.Patient','t'), all.x=1, all.y=1)
-		set(X.pt, X.pt[,which(is.na(stage))], 'stage', 'U')			
-		X.pt					<- merge(X.pt, X.fwup, by=c('t.Patient', 't'), all.x=1)
+		set(X.pt, X.pt[,which(is.na(stage))], 'stage', 'U')					
 		#	complete of transmitter: AnyPos_T1, AnyT_T1, AnyPos_a, isAcute
 		X.pt[, AnyPos_T1:=NULL]
 		X.pt[, AnyT_T1:=NULL]
@@ -2911,7 +2969,7 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		#	re-arrange a little
 		YX		<- subset(YX, select=	c(	t, t.Patient, Patient, cluster, score.Y, 																	#triplets identifiers and Y score
 						t.period, stage, U.score, contact, CDCC, lRNA, CD4, 														#main covariates							
-						t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.pulse, fw.up, t2.care.t1, t2.vl.supp, 		#secondary covariates
+						t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.pulse, fw.up.mx, fw.up.med, t2.care.t1, t2.vl.supp, 		#secondary covariates
 						t.AnyPos_T1,  t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, t.Trm, Trm,												#other 
 						FASTASampleCode, t.FASTASampleCode, w, w.t										#other							
 				))
@@ -4368,6 +4426,360 @@ project.athena.Fisheretal.YX.model1.whichregression<- function(YX.m1.info, outdi
 	YX.m1.gof
 }
 ######################################################################################
+project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))
+{
+	require(betareg)
+	#	Treatment cascade & ART risk groups
+	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis
+	#	
+	#	PQ: are there ART risk groups?
+	#	PQ: is VL the causal pathway?
+	#	SQ: is ART pulse associated with higher transmissibility?
+	YX.m3	<- copy(YX)
+	YX.m3[, U.score:=NULL]
+	#	stratify Diag by first CD4 after diagnosis
+	tmp		<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)	
+	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	print( subset( tmp, is.na(CD4.c) ) )
+	setnames(tmp, 'Patient', 't.Patient')
+	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+	YX.m3	<- merge(YX.m3, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+	tmp		<- YX.m3[, which(stage=='Diag')]
+	set(YX.m3, tmp, 'stage', YX.m3[tmp, CD4.c])
+	YX.m3[, CD4.c:=NULL]
+	YX.m3[, table(stage)]
+	#	if transmitter acute, set undiagnosed to undiagnosed and acute
+	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute%in%acute.select)], 'stage', 'UA')
+	#
+	#	stratify ART by 	ART.pulse	not ART.pulse
+	#
+	if(0)
+	{
+		YX.m3[, stage.orig:= stage]	
+		set( YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )
+		set( YX.m3, YX.m3[, which(stage=='ART.started')], 'stage', 'ART.pulse.N' )
+		set( YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])
+		tmp			<- data.table(stage= YX.m3[, levels(stage)], col=sapply( brewer.pal(YX.m3[, nlevels(stage)], 'Set1'), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m3		<- merge(YX.m3, tmp, by='stage')
+		
+		YX.m3.fit1 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3)
+		summary(YX.m3.fit1)
+		#
+		plot( seq_len(nrow(YX.m3)), YX.m3[, score.Y], pch=18, col= YX.m3[, col], cex=YX.m3[, w^0.4])
+		tmp				<- subset(YX.m3, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m3.fit1, tmp, type='response'))	
+		start			<- c( YX.m3.fit1$coef$mean + head( 2*sqrt(diag(vcov(YX.m3.fit1))), length(YX.m3.fit1$coef$mean)), YX.m3.fit1$coef$precision)
+		YX.m3.fit1.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m3.fit1$coef$mean - head( 2*sqrt(diag(vcov(YX.m3.fit1))), length(YX.m3.fit1$coef$mean)), YX.m3.fit1$coef$precision)
+		YX.m3.fit1.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m3.fit1.sup, tmp, type='response'), rev(predict(YX.m3.fit1.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m3[, levels(stage)], fill=YX.m3[, unique(col)])
+		#
+		YX.m3.or	<- c( 	exp(-diff( coef(YX.m3.fit1)[c('stageART.pulse.Y','stageART.pulse.N')] )),
+				exp(-diff( coef(YX.m3.fit1)[c('stageART.pulse.N','stageU')] )),
+				exp(-diff( coef(YX.m3.fit1)[c('stageART.pulse.Y','stageU')] ))	)
+		#pulse.N/pulse.Y   	pulse.N/U        pulse.Y/U 
+		#1.5581270       	0.4126163        0.6429086
+		YX.m3.p		<- YX.m3[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m3[,sum(w)],d=3) ),by='stage']	
+		#ART.pulse.N 	ART.pulse.Y 	D1<=350     D1<=550     D1>550      U           UA
+		#176.3   		6.4  			41.9  		95.9 		124.7 		248.9  		73.3
+		#0.230 			0.008 			0.055 		0.125 		0.162 		0.324 		0.095
+		YX.m3[, col:=NULL]		
+	}
+	#
+	#	stratify ART by 	ART.I	ART.F	ART.A	ART.P	ART.NAi 	ART.ni
+	#	
+	if(0)
+	{	
+		set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+		#	only one t.Patient with ART.F & ART.I
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+		#	no overlap between ART.P & ART.A
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+		#	there is overlap between ART.F and ART.P, ART.A: since ART.F is largest goup, keep fewest in ART.F
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')
+		#	ART and no other indications:
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & !is.na(ART.F) & !is.na(ART.I) & !is.na(ART.A) & !is.na(ART.P))], 'stage', 'ART.ni')	
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & (is.na(ART.F) | is.na(ART.I) | is.na(ART.A) | is.na(ART.P)))], 'stage', 'ART.NAi')	
+		#
+		YX.m3[, table(stage)]
+		set(YX.m3, NULL, 'stage', YX.m3[, factor(stage)])
+		tmp			<- data.table(stage= YX.m3[, levels(stage)], col=sapply( rainbow(YX.m3[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m3		<- merge(YX.m3, tmp, by='stage')
+		YX.m3.fit2 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3)				
+		summary(YX.m3.fit2)
+		#
+		plot( seq_len(nrow(YX.m3)), YX.m3[, score.Y], pch=18, col= YX.m3[, col], cex=YX.m3[, w^0.4])
+		tmp				<- subset(YX.m3, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m3.fit2, tmp, type='response'))	
+		start			<- c( YX.m3.fit2$coef$mean + head( 2*sqrt(diag(vcov(YX.m3.fit2))), length(YX.m3.fit2$coef$mean)), YX.m3.fit2$coef$precision)
+		YX.m3.fit2.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m3.fit2$coef$mean - head( 2*sqrt(diag(vcov(YX.m3.fit2))), length(YX.m3.fit2$coef$mean)), YX.m3.fit2$coef$precision)
+		YX.m3.fit2.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m3.fit2.sup, tmp, type='response'), rev(predict(YX.m3.fit2.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m3[, levels(stage)], fill=YX.m3[, unique(col)])
+		YX.m3[, col:=NULL]
+	}
+	#
+	#	stratify ART by 	ART.I	ART.F	ART.A	ART.P	-- group: ART.NAi 	ART.ni
+	#	
+	if(0)
+	{	
+		set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+		#	only one t.Patient with ART.F & ART.I
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+		#	no overlap between ART.P & ART.A
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+		#	there is overlap between ART.F and ART.P, ART.A: since ART.F is largest goup, keep fewest in ART.F
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')
+		#	ART and no other indications:
+		set(YX.m3, YX.m3[, which(stage=='ART.started')], 'stage', 'ART.ni')				
+		#
+		YX.m3[, table(stage)]
+		# 	ART.F   ART.I  ART.ni 	D1<=350 D1<=550  	D1>550      U      	UA 
+   		#	1609    639    5263    	1050    3242    	3980    	7848    2584
+		set(YX.m3, NULL, 'stage', YX.m3[, factor(stage)])
+		tmp			<- data.table(stage= YX.m3[, levels(stage)], col=sapply( rainbow(YX.m3[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m3		<- merge(YX.m3, tmp, by='stage')
+		YX.m3.fit3 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3)				
+		summary(YX.m3.fit3)
+		#
+		plot( seq_len(nrow(YX.m3)), YX.m3[, score.Y], pch=18, col= YX.m3[, col], cex=YX.m3[, w^0.4])
+		tmp				<- subset(YX.m3, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m3.fit3, tmp, type='response'))	
+		start			<- c( YX.m3.fit3$coef$mean + head( 2*sqrt(diag(vcov(YX.m3.fit3))), length(YX.m3.fit3$coef$mean)), YX.m3.fit3$coef$precision)
+		YX.m3.fit3.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m3.fit3$coef$mean - head( 2*sqrt(diag(vcov(YX.m3.fit3))), length(YX.m3.fit3$coef$mean)), YX.m3.fit3$coef$precision)
+		YX.m3.fit3.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m3.fit3.sup, tmp, type='response'), rev(predict(YX.m3.fit3.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m3[, levels(stage)], fill=YX.m3[, unique(col)])
+		#
+		YX.m3.fit3.or	<- c( 	exp(-diff( coef(YX.m3.fit3)[c('stageART.F','stageART.ni')] )),
+							exp(-diff( coef(YX.m3.fit3)[c('stageART.I','stageART.ni')] )),
+							exp(-diff( coef(YX.m3.fit3)[c('stageART.ni','stageU')] ))	)
+		#ART.F/ART.ni 		ART.I/ART.ni     	ART.ni/U 
+  		#1.2050623   		1.4891691   		0.3637384
+		YX.m3.fit3.p	<- YX.m3[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m3[,sum(w)],d=3) ),by='stage']	
+		#ART.F   	ART.I   ART.ni  D1<=350 D1<=550 	D1>550  U       UA
+		#30.7  		30.6 	110.5  	41.9  	95.9 		124.7 	248.9  	73.3
+		#0.041 		0.040 	0.146 	0.055 	0.127 		0.165 	0.329 	0.097
+		YX.m3[, col:=NULL]
+	}
+	#
+	#	stratify ART by 	ART.pulse	ART.I	ART.F 	ART.ni
+	#	
+	if(1)
+	{
+		set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')
+		set(YX.m3, YX.m3[, which(stage=='ART.started')], 'stage', 'ART.ni')				
+		YX.m3[, table(stage)]
+		# 	ART.F    ART.I      ART.ni 		ART.pulse.Y     D1<=350     D1<=550     D1>550      U          UA 
+       	#	1590     534        5210        177        		1050        3242        3980        7848       2584 
+		set(YX.m3, NULL, 'stage', YX.m3[, factor(stage)])
+		tmp			<- data.table(stage= YX.m3[, levels(stage)], col=sapply( rainbow(YX.m3[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m3		<- merge(YX.m3, tmp, by='stage')
+		YX.m3.fit4 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3)				
+		summary(YX.m3.fit4)
+		#
+		plot( seq_len(nrow(YX.m3)), YX.m3[, score.Y], pch=18, col= YX.m3[, col], cex=YX.m3[, w^0.4])
+		tmp				<- subset(YX.m3, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m3.fit4, tmp, type='response'))	
+		start			<- c( YX.m3.fit4$coef$mean + head( 2*sqrt(diag(vcov(YX.m3.fit4))), length(YX.m3.fit4$coef$mean)), YX.m3.fit4$coef$precision)
+		YX.m3.fit4.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m3.fit4$coef$mean - head( 2*sqrt(diag(vcov(YX.m3.fit4))), length(YX.m3.fit4$coef$mean)), YX.m3.fit4$coef$precision)
+		YX.m3.fit4.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m3.fit4.sup, tmp, type='response'), rev(predict(YX.m3.fit4.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m3[, levels(stage)], fill=YX.m3[, unique(col)])
+		#
+		YX.m3.fit4.or	<- c( 	exp(-diff( coef(YX.m3.fit4)[c('stageART.F','stageART.ni')] )),
+								exp(-diff( coef(YX.m3.fit4)[c('stageART.I','stageART.ni')] )),
+								exp(-diff( coef(YX.m3.fit4)[c('stageART.pulse.Y','stageART.ni')] )),
+								exp(-diff( coef(YX.m3.fit4)[c('stageART.ni','stageU')] ))	)
+		#	ART.F/ART.ni 	ART.I/ART.ni    ART.pulse.Y/ART.ni 		ART.ni/U				
+		# 	1.2150645   	1.4905635   	1.7831827   			0.3591426 				
+		YX.m3.fit4.p	<- YX.m3[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m3[,sum(w)],d=3) ),by='stage']
+		#	ART.F       ART.I       ART.ni      ART.pulse.Y D1<=350     D1<=550     D1>550      U           UA
+		#	30.2  		26.2 		109.1   	6.4  		41.9  		95.9 		124.7 		248.9  		73.3
+		#	0.040 		0.035 		0.144 		0.008 		0.055 		0.127 		0.165 		0.329 		0.097
+	}
+}
+######################################################################################
+project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))
+{
+	require(betareg)
+	#	Treatment cascade:
+	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis, 	 ART by first suppressed
+	#
+	#	PQ: what is the preventative effect of reaching the endpoint of the treatment cascade?
+	#	PQ: single VL that maximizes difference between ART/firstsuppressed and ART/notyetsuppressed
+	#	SQ: does acute matter for diagnosed?
+	#	SQ: does CDC matter?
+	#	SQ: does VL at diagnosis or age at diagnosis matter?	
+	YX.m2	<- copy(YX)
+	YX.m2[, U.score:=NULL]
+	#	stratify Diag by first CD4 after diagnosis
+	tmp		<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)	
+	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	print( subset( tmp, is.na(CD4.c) ) )
+	setnames(tmp, 'Patient', 't.Patient')
+	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+	YX.m2	<- merge(YX.m2, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+	tmp		<- YX.m2[, which(stage=='Diag')]
+	set(YX.m2, tmp, 'stage', YX.m2[tmp, CD4.c])
+	YX.m2[, CD4.c:=NULL]
+	YX.m2[, table(stage)]
+	#	if transmitter acute, set undiagnosed to undiagnosed and acute
+	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute%in%acute.select)], 'stage', 'UA')
+	YX.m2[, stage.orig:= stage]		
+	#
+	#	VL first suppressed (treatment cascade endpoint)
+	#
+	if(0)
+	{
+		#	VL first suppressed threshold: trial and error	
+		set(YX.m2, NULL, 'stage', YX.m2[, factor(stage)])
+		YX.m2[, stage.orig:= stage]
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, CDCC, lRNA, t.Age, t.isAcute, w, stage.orig  ))
+		#		consider different VL thresholds - no effect
+		VL.win		<- c( seq(400, 1000, by=100), seq(1250, 5000, by=250), 1e4 ) 
+		YX.m2.VL	<- sapply(VL.win, function(VL.cur)
+				{
+					cat(paste('\nprocess VL=', VL.cur))
+					VL.cur	<- log10(VL.cur)
+					set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+					tmp		<- YX.m2[, {
+								z<- which(stage=='ART.started' & lRNA<VL.cur)
+								list(ART.s_T1= ifelse(!length(z), NA_real_, t[z[1]]))
+							}, by='t.Patient']
+					YX.m2	<- merge( YX.m2, tmp, by=c('t.Patient'))	
+					set(YX.m2, YX.m2[, which(stage=='ART.started' & !is.na(ART.s_T1) & t>=ART.s_T1)], 'stage', 'ART1.su.Y')
+					set(YX.m2, YX.m2[, which(stage=='ART.started')], 'stage', 'ART1.su.N')
+					set(YX.m2, NULL, 'stage', YX.m2[, factor(as.character(stage))])
+					YX.m2[, ART.s_T1:=NULL]
+					
+					YX.m2.fit1 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)				
+					ans	<- c(		coef(YX.m2.fit1)['stageART1.su.Y'], coef(YX.m2.fit1)['stageART1.su.N'], coef(YX.m2.fit1)['stageU'],	
+							sqrt(diag(vcov(YX.m2.fit1)))[c('stageART1.su.Y','stageART1.su.N')],
+							exp(-diff( coef(YX.m2.fit1)[c('stageART1.su.Y','stageART1.su.N')] )),		# suppressed should have lower coeff, so we want to maximise log.odds.su.N-log.odds.su.Y > 0 
+							exp(-diff( coef(YX.m2.fit1)[c('stageART1.su.Y','stageU')] )),
+							logLik(YX.m2.fit1), YX.m2.fit1$pseudo.r.squared, 10^VL.cur	)
+					names(ans)	<- c('coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YU','lkl','r2','VL.thresh')
+					ans
+				})
+		YX.m2.VL	<- as.data.table(t(YX.m2.VL))
+		#		plot VL thresh 1e3
+		VL.cur		<- log10(1e3)
+		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+		tmp			<- YX.m2[, {
+					z<- which(stage=='ART.started' & lRNA<VL.cur)
+					list(ART.s_T1= ifelse(!length(z), NA_real_, t[z[1]]))
+				}, by='t.Patient']
+		YX.m2		<- merge( YX.m2, tmp, by=c('t.Patient'))	
+		set(YX.m2, YX.m2[, which(stage=='ART.started' & !is.na(ART.s_T1) & t>=ART.s_T1)], 'stage', 'ART1.su.Y')
+		set(YX.m2, YX.m2[, which(stage=='ART.started')], 'stage', 'ART1.su.N')
+		set(YX.m2, NULL, 'stage', YX.m2[, factor(as.character(stage))])
+		YX.m2[, ART.s_T1:=NULL]	
+		YX.m2.fit1 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)				
+		#
+		tmp			<- data.table(stage= YX.m2[, levels(stage)], col=sapply( brewer.pal(YX.m2[, nlevels(stage)], 'Set1'), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m2		<- merge(YX.m2, tmp, by='stage')
+		plot( seq_len(nrow(YX.m2)), YX.m2[, score.Y], pch=18, col= YX.m2[, col], cex=YX.m2[, w^0.4])
+		tmp				<- subset(YX.m2, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m2.fit1, tmp, type='response'))	
+		start			<- c( YX.m2.fit1$coef$mean + head( 2*sqrt(diag(vcov(YX.m2.fit1))), length(YX.m2.fit1$coef$mean)), YX.m2.fit1$coef$precision)
+		YX.m2.fit1.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m2, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m2.fit1$coef$mean - head( 2*sqrt(diag(vcov(YX.m2.fit1))), length(YX.m2.fit1$coef$mean)), YX.m2.fit1$coef$precision)
+		YX.m2.fit1.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m2, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m2.fit1.sup, tmp, type='response'), rev(predict(YX.m2.fit1.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
+		YX.m2[, col:=NULL]
+		#
+		tmp			<- cooks.distance(YX.m2.fit1)
+		plot(seq_along(tmp), tmp, type='h', col=YX.m2[, col], xlab='index', ylab='Cooks D')
+		legend('topright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
+		tmp			<- residuals(YX.m2.fit1)
+		plot(seq_along(tmp), tmp, type='p', pch=18, col=YX.m2[, col], xlab='index', ylab='std residuals')
+		legend('topright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
+		#
+		YX.m2.or	<- c( 	exp(-diff( coef(YX.m2.fit1)[c('stageART1.su.Y','stageART1.su.N')] )),
+				exp(-diff( coef(YX.m2.fit1)[c('stageART1.su.Y','stageU')] )),
+				exp(-diff( coef(YX.m2.fit1)[c('stageUA','stageU')] ))	)
+		#stageART1.su.N         stageU         stageU 
+		#  1.007593      		0.420100       2.012161 			
+		YX.m2.p		<- YX.m2[, list(prop= round(sum(w)/YX.m2[,sum(w)],d=2) ),by='stage']	
+		#	ART1.su.N 	ART1.su.Y 	D1<=350   	D1<=550   	D1>550    	U       UA
+		#	0.06 		0.18 		0.05 		0.12 		0.16 		0.32 	0.10
+		YX.m2
+	}
+	#
+	#	VL suppressed (more rigorous endpoint under continued monitoring)
+	#
+	if(1)
+	{
+		#	VL first suppressed threshold: trial and error	
+		#	consider different VL thresholds - no effect
+		VL.win		<- c( seq(400, 1000, by=100), seq(1250, 5000, by=250), 1e4 ) 
+		YX.m2.VL	<- sapply(VL.win, function(VL.cur)
+				{
+					cat(paste('\nprocess VL=', VL.cur))
+					VL.cur	<- log10(VL.cur)
+					set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+					
+					set(YX.m2, which(stage=='ART.started' & is.na(lRNA) & contact=='Yes'),'stage', 'ART.su.Y' )
+					set(YX.m2, which(stage=='ART.started' & lRNA<VL.cur),'stage', 'ART.su.Y' )
+					
+					tmp		<- YX.m2[, {
+								z<- which(stage=='ART.started' & lRNA<VL.cur)
+								list(ART.s_T1= ifelse(!length(z), NA_real_, t[z[1]]))
+							}, by='t.Patient']
+					YX.m2	<- merge( YX.m2, tmp, by=c('t.Patient'))	
+					set(YX.m2, YX.m2[, which(stage=='ART.started' & !is.na(ART.s_T1) & t>=ART.s_T1)], 'stage', 'ART1.su.Y')
+					set(YX.m2, YX.m2[, which(stage=='ART.started')], 'stage', 'ART1.su.N')
+					set(YX.m2, NULL, 'stage', YX.m2[, factor(as.character(stage))])
+					YX.m2[, ART.s_T1:=NULL]
+					
+					YX.m2.fit1 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)				
+					ans	<- c(		coef(YX.m2.fit1)['stageART1.su.Y'], coef(YX.m2.fit1)['stageART1.su.N'], coef(YX.m2.fit1)['stageU'],	
+							sqrt(diag(vcov(YX.m2.fit1)))[c('stageART1.su.Y','stageART1.su.N')],
+							exp(-diff( coef(YX.m2.fit1)[c('stageART1.su.Y','stageART1.su.N')] )),		# suppressed should have lower coeff, so we want to maximise log.odds.su.N-log.odds.su.Y > 0 
+							exp(-diff( coef(YX.m2.fit1)[c('stageART1.su.Y','stageU')] )),
+							logLik(YX.m2.fit1), YX.m2.fit1$pseudo.r.squared, 10^VL.cur	)
+					names(ans)	<- c('coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YU','lkl','r2','VL.thresh')
+					ans
+				})
+		YX.m2.VL	<- as.data.table(t(YX.m2.VL))
+	}
+	
+}
+######################################################################################
 project.athena.Fisheretal.YX.model1<- function(YX, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('Diag<=350','Diag<=550','Diag>550'))
 {
 	YX.m1	<- copy(YX)
@@ -4576,13 +4988,17 @@ project.athena.Fisheretal.X.incare.check<- function(X.incare)
 ######################################################################################
 project.athena.Fisheretal.X.CDCC<- function(X.incare, df.tpairs, clumsm.info, t.period=0.25, t.endctime=2013.)
 {
-	tmp		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique(subset(clumsm.info,select=c(Patient, DateFirstEverCDCC))), by='Patient')	
+	tmp		<- subset(clumsm.info,!is.na(DateFirstEverCDCC), select=c(Patient, AnyPos_T1, DateFirstEverCDCC, DateDied))
+	set(tmp, tmp[,which(is.na(DateDied))], 'DateDied', t.endctime)
+	setkey(tmp, Patient)		
+	tmp		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique(tmp), by='Patient')	
+	set(tmp, tmp[, which(DateFirstEverCDCC<AnyPos_T1)], 'DateFirstEverCDCC', tmp[which(DateFirstEverCDCC<AnyPos_T1),AnyPos_T1])
+	set(tmp, NULL, 'DateDied', tmp[, floor(DateDied) + ceiling( (DateDied%%1)*100 %/% (t.period*100) ) * t.period] )
 	set(tmp, NULL, 'DateFirstEverCDCC', tmp[, floor(DateFirstEverCDCC) + round( (DateFirstEverCDCC%%1)*100 %/% (t.period*100) ) * t.period] )
-	cat(paste('\nnumber of potential transmitters with CDC-C, n=',nrow(tmp)))
-	tmp		<- subset(tmp, !is.na(DateFirstEverCDCC))[, list(t= seq(DateFirstEverCDCC, t.endctime, by=t.period), CDCC='Yes'),by='Patient']
-	tmp		<- subset(tmp, t<t.endctime)
+	cat(paste('\nnumber of potential transmitters with CDC-C, n=',nrow(tmp)))	
+	tmp		<- subset(tmp, DateFirstEverCDCC<DateDied)[, list(t= seq(DateFirstEverCDCC, DateDied-t.period, by=t.period), CDCC='Yes'),by='Patient']	
 	setnames(tmp, 'Patient','t.Patient')	
-	X.incare	<- merge(X.incare, tmp, by=c('t.Patient','t'), all.x=1, all.y=1)
+	X.incare	<- merge(X.incare, tmp, by=c('t.Patient','t'), all.x=1)
 	set(X.incare, X.incare[,which(is.na(CDCC))],'CDCC','No')
 	X.incare		
 }

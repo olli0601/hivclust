@@ -4181,6 +4181,24 @@ hivc.prog.BEAST2.generate.xml<- function()
 		beast2.spec$bdsky.origin.prior				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt)))		
 		beast2.spec$bdsky.origin.prior				<- paste("Uniform/",min(20,beast2.spec$bdsky.origin.prior-20),"/",beast2.spec$bdsky.origin.prior,sep='')
 	}	
+	else if(grepl("clrh",infilexml.opt))
+	{
+		beast2.spec		<- hivc.beast2.get.specifications(mcmc.length=beast.mcmc.length, bdsky.intervalNumber=5, alignment.filter=alignment.filter, cluster.monophyletic=TRUE, cluster.log=FALSE, tip.log.stem=FALSE)
+		beast2.spec$pool.fNegT						<- 0
+		beast2.spec$pool.ntip						<- 150		
+		beast2.spec$sasky.r.changepoint.value		<- beast2.spec$bdsky.sprop.changepoint.value	<- beast2.spec$bdsky.R0.changepoint.value		<- beast2.spec$bdsky.notInf.changepoint.value	<- c(1.596, 3.596, 5.596, 9.596, 0.)
+		beast2.spec$bdsky.reverseTimeArrays.value	<- c('true', 'true', 'true', 'false', 'true')
+		beast2.spec$bdsky.sprop.value				<- c(0.1, 0.5, 0.2, 0.2, 0.2)		
+		beast2.spec$bdsky.sprop.prior				<- c("Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0","Uniform/0.0/1.0")
+		beast2.spec$bdsky.R0.prior					<- c("Gamma/1.5/1.5/0", rep(paste("Gamma/2.3/0.15/0.7",sep=''),4))
+		beast2.spec$bdsky.notInf.value				<- 1/c(5, 4, 4, 3, 3)		
+		beast2.spec$bdsky.notInf.prior				<- rep( "LogNormal/0.2/0.6/0.1/true",5)				
+		beast2.spec$sasky.r.value					<- rep( 0.5, 5 )
+		beast2.spec$sasky.r.prior					<- rep( "Uniform/0.0/1.0", 5 )		
+		beast2.spec$pool.cnts.requested				<- c(50, 70, 70, NA, NA)	
+		beast2.spec$bdsky.origin.prior				<- as.numeric(substr(infilexml.opt,5,nchar(infilexml.opt)))		
+		beast2.spec$bdsky.origin.prior				<- paste("Uniform/",min(20,beast2.spec$bdsky.origin.prior-20),"/",beast2.spec$bdsky.origin.prior,sep='')
+	}	
 	else stop("unknown infilexml.opt")
 	#		 
 	#
