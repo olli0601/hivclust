@@ -3265,7 +3265,8 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 	beastlabel.idx.hivd			<- 3
 	beastlabel.idx.hivs			<- 4
 	beastlabel.idx.samplecode	<- 6
-	beastlabel.idx.rate			<- NA	
+	beastlabel.idx.rate			<- NA
+	cdf.by						<- 0.025
 	#	input files		
 	indir					<- paste(DATA,"tmp",sep='/')
 	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
@@ -3505,14 +3506,62 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 															},by=c('equal.to','node')]					
 					mph.node.ctime[, cluster:=clu]
 					#
+					#	tips and edges in same order, so not difficult to summarize posterior node heights across all topologies
+					#
+					tmp			<- mph.clu.dtopo[, mph.i[which.max(freq)]]
+					tmp			<- as.matrix( mrca( mph.clu[[tmp]], full = FALSE ) )					
+					ref.mrca	<- do.call('rbind', lapply( seq_len(ncol(tmp)), function(j)		data.table( tip1=rownames(tmp)[-j], tip2=colnames(tmp)[j], node=tmp[-j,j]) ) )
+					
+					mph.mapnode.pctime	<- mph.clu.itopo[,	{					
+								
+										tmp			<- as.matrix( mrca( mph.clu[[ mph.i[1] ]], full = FALSE ) )					
+										mph.mrca	<- do.call('rbind', lapply( seq_len(ncol(tmp)), function(j)		data.table( tip1=rownames(tmp)[-j], tip2=colnames(tmp)[j], mph.node=tmp[-j,j]) ) )
+										mph.mrca	<- merge(mph.mrca, ref.mrca, by=c('tip1','tip2'))
+										mph.mrca	<- rbind(mph.mrca, data.table(tip1='root',tip2='root', mph.node=0, node=0))
+										mph.info	<- hivc.treeannotator.tiplabel2df(mph.clu[[ mph.i[1] ]], beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+										mph.info[, tip:=match( mph.info[, BEASTlabel], mph.clu[[ mph.i[1] ]]$tip.label)]															
+										node		<- c(seq.int(from=Ntip(mph.clu[[1]])+1, to=Nnode(mph.clu[[1]], internal=FALSE)),0)
+										#	extract ctimes for nodes in mph topology
+										tmp			<- sapply( mph.i, function(i)
+												{
+													depth	<- c( node.depth.edgelength( mph.clu[[ i ]] ), -mph.clu[[ i ]]$root.edge )
+													tmp		<- which.max(depth)
+													depth	<- depth-depth[tmp]+subset(mph.info, tip==tmp)[, TipT]
+													depth[ seq.int(from=Ntip(mph.clu[[ i ]])+1, to=length(depth)) ]																		
+												})
+										tmp	<- data.table(mph.node=rep(node, each=ncol(tmp)), ctime= as.numeric(t(tmp)))
+										#	every node in map topology can correspond to multipe mrca s in the mph topology
+										#	to weigh the ctimes correctly, count nodes multiple times according to how often they are the mrca s in the map topology
+										#	this may be mem intensive
+										tmp	<- merge(tmp, subset(mph.mrca, select=c(node, mph.node)), by='mph.node', allow.cartesian=TRUE)
+										list( node=tmp[,node], ctime=tmp[, ctime] )															
+									}, by='equal.to']
+					mph.mapnode.pctime	<- mph.mapnode.pctime[, list( q= round(quantile(ctime, probs=seq(0,1,by=cdf.by)),d=3), cdf=seq(0,1,by=cdf.by) ), by='node']		
+					mph.mapnode.pctime	<- mph.mapnode.pctime[,	{
+																	tmp<- setdiff(seq_along(q),which(duplicated(q))-1)
+																	if(tmp[1]!=1)
+																		tmp[1]	<- 1
+																	if(length(tmp)==1)	
+																		ans		<- list(q=q[tmp]+c(-0.001,0), cdf=c(0.,1.))
+																	else
+																		ans		<- list(q=q[tmp], cdf=cdf[tmp])
+																	ans
+																}, by='node']
+					mph.mapnode.pctime	<- mph.mapnode.pctime[, {
+																	tmp	<- c(0,diff(cdf)/diff(q))
+																	list(q=q, pdf=tmp/sum(tmp), cdf=cdf)	
+																}, by='node']							
+					mph.mapnode.pctime[, cluster:= clu]
+					mph.mapnode.pctime[, mph.i:= mph.clu.dtopo[, mph.i[which.max(freq)]]]					
+					#
 					#	tips and edges in same order, so very easy to summarize brls of each topology
 					#
 					cat(paste('\ncalculate brl.cdf'))
 					mph.brl.cdf		<- mph.clu.itopo[,	{					
 															edge.of	<- c(mph.clu[[ mph.i[1] ]]$edge[,2], 0)
 															tmp		<- sapply( mph.i, function(i)	c( mph.clu[[ i ]]$edge.length, mph.clu[[ i ]]$root.edge)  )
-															tmp		<- apply(tmp, 1, quantile, probs=seq(0,1,by=0.1))		
-															list( q= round(as.numeric(tmp),d=4), cdf=seq(0,1,by=0.1), edge.of=rep(edge.of, each=11) )					
+															tmp		<- apply(tmp, 1, quantile, probs=seq(0,1,by=cdf.by))																
+															list( q= round(as.numeric(tmp),d=4), cdf=seq(0,1,by=cdf.by), edge.of=rep(edge.of, each=nrow(tmp)) )					
 														}, by='equal.to']	
 					mph.brl.cdf		<- mph.brl.cdf[,	{
 															tmp<- setdiff(seq_along(q),which(duplicated(q))-1)
@@ -3580,8 +3629,8 @@ hivc.prog.BEAST2.process.cluster.trees<- function()
 					#	save
 					#
 					file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_cluposterior_',clu,'.R',sep='')					
-					cat(paste("\nsave ph.consensus, mph.SA.cnt, mph.brl.cdf, mph.node.ctime, mph.clu.dtopo, mph.clu.itopo to file",file))
-					save(ph.consensus, mph.SA.cnt, mph.brl.cdf, mph.clu.dtopo, mph.clu.itopo, mph.node.ctime, file=file)
+					cat(paste("\nsave ph.consensus, mph.SA.cnt, mph.brl.cdf, mph.node.ctime, mph.clu.dtopo, mph.clu.itopo, mph.mapnode.pctime to file",file))
+					save(ph.consensus, mph.SA.cnt, mph.brl.cdf, mph.clu.dtopo, mph.clu.itopo, mph.node.ctime, mph.mapnode.pctime, file=file)
 				}								
 			})
 }

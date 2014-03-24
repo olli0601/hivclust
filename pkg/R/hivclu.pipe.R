@@ -534,8 +534,8 @@ hivc.pipeline.BEASTout<- function()
 		#infilexml.opt		<- "alsu50"
 		infilexml.template	<- "sasky_sdr06fr"
 		infilexml.opt		<- "alrh160"
-		#infilexml.template	<- "um192rhU2080"
-		#infilexml.opt		<- "mph4clutx4tip"	
+		infilexml.template	<- "um192rhU2080"
+		infilexml.opt		<- "mph4clutx4tip"	
 		
 		#indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
 		#infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
@@ -554,7 +554,7 @@ hivc.pipeline.BEASTout<- function()
 		#file.info	<- subset(file.info, cluster%in%c(23, 77, 126, 152, 315))
 		#print(file.info)
 		
-		dummy		<- sapply( file.info[,unique(cluster)], function(clu)
+		dummy		<- sapply( file.info[,unique(cluster)][1:20], function(clu)
 				{
 					cmd			<- hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, cluster=clu, verbose=1, resume=1)					
 					cat(cmd)

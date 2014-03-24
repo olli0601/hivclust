@@ -2348,6 +2348,26 @@ project.athena.Fisheretal.X.calendarperiod<- function(df.tpairs, clumsm.info, t.
 	i.diag
 }
 ######################################################################################
+project.athena.Fisheretal.YX.calendarperiod.byweight<- function(YX, clumsm.info, t.period= 0.25, c.nperiod= 4)
+{
+	i.diag		<- YX[, list(w=sum(w)), by='Patient']
+	i.diag		<- merge( i.diag, unique(subset(clumsm.info, select=c(Patient, AnyPos_T1))), by='Patient' )					
+	setkey(i.diag, AnyPos_T1)
+	i.diag[, nsum:= cumsum(w)]
+	
+	i.cgroup.n	<- ceiling( i.diag[ nrow(i.diag), nsum] / c.nperiod )	
+	cat(paste('\nTarget group size is',i.cgroup.n))
+	i.diag[, t.period:= cut(i.diag[,nsum], breaks= seq(from= 0, by=i.cgroup.n, length.out=c.nperiod+1), labels= seq_len(c.nperiod))]
+	tmp			<- i.diag[, list(n=sum(w), min=min(AnyPos_T1), max=max(AnyPos_T1)),by='t.period']
+	cat(paste('\nGroup sizes are=',tmp[, paste(n, collapse=', ',sep='')]))
+	cat(paste('\nGroup min diag times are=',tmp[, paste(min, collapse=', ',sep='')]))
+	cat(paste('\nGroup max diag times are=',tmp[, paste(max, collapse=', ',sep='')]))
+	
+	YX		<- merge( YX, subset(i.diag, select=c(Patient, t.period)), by='Patient')
+	cat(paste('\nReturn X for #t.Patients=',YX[, length(unique(t.Patient))]))	
+	YX
+}
+######################################################################################
 project.athena.Fisheretal.X.followup<- function(X.incare, clumsm.info, df.immu, t.period= 0.25, t.endctime=2013.0)
 {
 	#	get follow.up time periods for every potential transmitter
@@ -2413,8 +2433,8 @@ project.athena.Fisheretal.X.followup<- function(X.incare, clumsm.info, df.immu, 
 										ans						
 									}, by='Patient']	
 							
-	set(follow.t, NULL, 'fw.up.mx', cut( follow.t[, fw.up.mx], breaks=follow.q.mx, labels=c('<=75pc','<=95pc','>95pc') )		)
-	set(follow.t, NULL, 'fw.up.med', cut( follow.t[, fw.up.med], breaks=follow.q.med, labels=c('<=75pc','<=95pc','>95pc') )		)
+	#set(follow.t, NULL, 'fw.up.mx', cut( follow.t[, fw.up.mx], breaks=follow.q.mx, labels=c('<=75pc','<=95pc','>95pc') )		)
+	#set(follow.t, NULL, 'fw.up.med', cut( follow.t[, fw.up.med], breaks=follow.q.med, labels=c('<=75pc','<=95pc','>95pc') )		)
 	setnames(follow.t, 'Patient', 't.Patient')
 	cat(paste('\nreturn X for #t.Patient=',follow.t[, length(unique(t.Patient))]))	
 	X.incare		<- merge(X.incare, follow.t, by=c('t','t.Patient'), all.x=1)	
@@ -2469,6 +2489,7 @@ project.athena.Fisheretal.X.time.diag2firstVLandCD4<- function(df.tpairs, clumsm
 	follow	<- merge(follow, tmp, by='Patient')
 	follow	<- merge(follow, follow[, list(t2.care.t1= max(t2.cd4.t1,t2.vl.t1)), by='Patient'], by='Patient')	
 	tmp		<- cut(follow[, t2.care.t1], breaks=c(0, t2.care.t1.q, follow[, max(t2.care.t1)+1]), right=FALSE, label= c('other',paste('>=',t2.care.t1.q,'y',sep='')))
+	follow[, t2.care.t1.c:= tmp]
 	set(follow, NULL, 't2.care.t1', tmp)	
 	tmp		<- round( cumsum(rev(table(follow[,t2.care.t1]))) / nrow(follow), d=3 )
 	cat(paste('\ncumulative right tail probability for recent follow up quantiles ',paste( names(tmp), ' = ',tmp*100, '%',sep='', collapse=', ')))
@@ -2493,10 +2514,10 @@ project.athena.Fisheretal.X.time.diag2suppressed<- function(df.tpairs, clumsm.in
 	viro.supp		<- subset(viro, PosRNA>AnyT_T1 & lRNA<=lRNA.suppressed)	
 	viro.supp		<- viro.supp[, list(t2.vl.supp= min(PosRNA)-AnyPos_T1[1]),by='t.Patient']	
 	#hist(viro[,t2.vl.supp], breaks=50)
-	t2.vl.supp.q	<- round(quantile(viro.supp[,t2.vl.supp], prob=c(0,t2.vl.supp.p,1)), d=3)
-	cat(paste('\nquantiles for time to viral suppression after diagnosis',paste(names(t2.vl.supp.q), t2.vl.supp.q, collapse=', ',sep='=')))
-	tmp				<- cut(viro.supp[,t2.vl.supp], breaks= t2.vl.supp.q, right=FALSE, label= c( paste( '<',t2.vl.supp.p*100,'pc',sep='' ), 'other' ) )
-	set(viro.supp,NULL,'t2.vl.supp',tmp)
+	#t2.vl.supp.q	<- round(quantile(viro.supp[,t2.vl.supp], prob=c(0,t2.vl.supp.p,1)), d=3)
+	#cat(paste('\nquantiles for time to viral suppression after diagnosis',paste(names(t2.vl.supp.q), t2.vl.supp.q, collapse=', ',sep='=')))
+	#tmp				<- cut(viro.supp[,t2.vl.supp], breaks= t2.vl.supp.q, right=FALSE, label= c( paste( '<',t2.vl.supp.p*100,'pc',sep='' ), 'other' ) )
+	#set(viro.supp,NULL,'t2.vl.supp',tmp)
 	viro			<- merge( unique( subset(viro, select=t.Patient) ), viro.supp, by='t.Patient', all.x=1 )
 	set(viro,viro[,which(is.na(t2.vl.supp))],'t2.vl.supp','other')
 	cat(paste('\nreturn X for #t.Patient=',viro[, length(unique(t.Patient))]))
@@ -2865,7 +2886,7 @@ project.athena.Fisheretal.v2.YX<- function(df.all, clumsm.info, df.tpairs, df.im
 	YX	
 }
 ######################################################################################
-project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=0.25, t.endctime=2013., save.file=NA, resume=1)
+project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=0.25, t.endctime=2013., save.file=NA, resume=1, method='3a')
 {
 	if(resume && !is.na(save.file))
 	{
@@ -2929,22 +2950,16 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		Y.rawbrl.linked			<- tmp$linked
 		Y.rawbrl.unlinked		<- tmp$unlinked
 		#	BRL [0,1]: branch length weight between pot transmitter and infected
-		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl3a.pdf',sep='')
-		Y.brl					<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked	, Y.rawbrl.unlinked, df.all, brl.linked.min=-4, brl.linked.min.dt=1.5, plot.file=file)	
+		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'.pdf',sep='')
+		Y.brl					<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked	, Y.rawbrl.unlinked, df.all, brl.linked.min=-4, brl.linked.min.dt=1.5, plot.file=file, method=method)	
 		#	COAL [0,1]: prob that coalescence is within the transmitter
-		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw2e.R',sep='')		
+		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw',method,'.R',sep='')		
 		Y.coal					<- project.athena.Fisheretal.Y.coal(df.tpairs, clumsm.info, X.pt, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=file )
 		#	U [0,1]: prob that pot transmitter is still infected during infection window
 		Y.U						<- project.athena.Fisheretal.Y.transmitterinfected(Y.infwindow, X.pt)
-		#
 		#	screen for likely missed intermediates/sources
-		#
-		df.tpairs				<- project.athena.Fisheretal.Y.rm.missedtransmitter(df.tpairs, Y.brl, Y.coal, Y.U, cut.date=0.5, cut.brl=1e-3)
-		#	compute X: calendar time period
-		X.tperiod				<- project.athena.Fisheretal.X.calendarperiod(df.tpairs, clumsm.info, t.period=t.period, c.nperiod= 4)		
-		#
+		df.tpairs				<- project.athena.Fisheretal.Y.rm.missedtransmitter(df.tpairs, Y.brl, Y.coal, Y.U, cut.date=0.5, cut.brl=1e-3)		
 		#	take branch length weight ONLY to derive "score.Y"
-		#		
 		Y.score					<- merge( df.tpairs, subset(Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, brl, score.brl.TPp, score.brl.TPd)), by=c('FASTASampleCode','t.FASTASampleCode'))
 		#	keep only one (Patient, t.Patient) pair if there are multiple sequences per individual. Take the one with largest brl score
 		tmp						<- Y.score[,	{	
@@ -2958,16 +2973,15 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		if(tmp[,any(n!=1)])	stop('unexpected multiple entries per Patient, t.Patient')
 		#	merge over time periods t
 		Y.score					<- merge( Y.score, subset(Y.infwindow, select=c(Patient, t)), by='Patient', allow.cartesian=TRUE )
-		YX						<- merge( subset(Y.score, select=c(FASTASampleCode, t.FASTASampleCode, score.Y, score.brl.TPd, t)), X.pt, by= c('FASTASampleCode', 't.FASTASampleCode', 't'))
-		YX						<- merge( YX, X.tperiod, by=c('Patient','t.Patient'), all.x=1 )
-		#	add weights 
-		save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'weight3a.R',sep='')
-		YX						<- project.athena.Fisheretal.YX.weight(YX, save.file=save.file)
+		YX						<- merge( subset(Y.score, select=c(FASTASampleCode, t.FASTASampleCode, score.Y, score.brl.TPd, t)), X.pt, by= c('FASTASampleCode', 't.FASTASampleCode', 't'))		
+		#	add weights 		
+		YX						<- project.athena.Fisheretal.YX.weight(YX)
+		#	add balanced calendar periods 		
+		YX						<- project.athena.Fisheretal.YX.calendarperiod.byweight(YX, clumsm.info, t.period=t.period, c.nperiod= 4)
 		#	add age of transmitter and recipient
 		YX						<- project.athena.Fisheretal.YX.age(YX, clumsm.info, t.period=t.period)
 		#	add RegionHospital and Exposure group of transmitter and recipient
-		YX						<- project.athena.Fisheretal.YX.Trm.Region(YX, clumsm.info)
-		
+		YX						<- project.athena.Fisheretal.YX.Trm.Region(YX, clumsm.info)		
 		#	re-arrange a little
 		YX		<- subset(YX, select=	c(	t, t.Patient, Patient, cluster, score.Y, 																	#triplets identifiers and Y score
 						t.period, stage, U.score, contact, CDCC, lRNA, CD4, 														#main covariates							
@@ -3119,7 +3133,7 @@ project.athena.Fisheretal.v2.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y
 	Y.brl		
 }
 ######################################################################################
-project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.min.brl=-4, brl.linked.min.dt=1, plot.file=NA)
+project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.min.brl=-4, brl.linked.min.dt=1, plot.file=NA, method='3a')
 {
 	#brl.linked.min.brl=-4; brl.linked.min.dt=1
 	#	check if Exp model would be reasonable
@@ -3257,7 +3271,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		#rate estimates very similar irrespective of whether the first 1 2 3 years excluded:
 		#1/rawbrl.exp	:	0.009735224 0.011242407 0.009690996 0.010396757 0.012383081
 	}	
-	if(1)
+	if(method=='3a')
 	{
 		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, b4T!='none' & log10(brl)>-12 & brl<0.2 & dt>=brl.linked.min.dt)
 		#estimated mean= 0.0089
@@ -3267,10 +3281,10 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, b4T!='none' & log10(brl)>brl.linked.min.brl & brl<0.2 & dt>=brl.linked.min.dt)
 		#estimated mean= 0.0138
 	}
-	if(0)
+	if(method=='3b')
 	{
 		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, log10(brl)>brl.linked.min.brl & brl<0.2 & dt>=brl.linked.min.dt)
-		#estimated mean= 0.0167
+		#estimated mean= 0.0175
 	}
 	#plot(log10(Y.rawbrl.linked[, sort(brl)]	))
 	rawbrl.exp		<- fitdist( Y.rawbrl.linked[, brl]	, "exp")$estimate
@@ -3375,46 +3389,42 @@ project.athena.Fisheretal.v2.Y.weight<- function(YX)
 	YX
 }
 ######################################################################################
-project.athena.Fisheretal.YX.weight<- function(YX, save.file)
-{
-	if(!is.na(save.file))
-	{
-		options(show.error.messages = FALSE)		
-		readAttempt		<- try(suppressWarnings(load(save.file)))
-		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",save.file))					
-		options(show.error.messages = TRUE)		
-	}
-	if(is.na(save.file) || inherits(readAttempt, "try-error"))
-	{		
-		triplet.weight				<- subset(YX, select=c(t, Patient, t.Patient))	
-		setkey(triplet.weight, t, Patient, t.Patient)
-		tmp							<- copy(triplet.weight)
-		setnames(tmp, colnames(tmp), paste('q.',colnames(tmp),sep='') )
-		triplet.weight				<- triplet.weight[,	{ 	
-															z	<- tmp[, which(q.t==t & q.Patient==t.Patient & q.t.Patient==Patient)]													
-															list(equal.triplet.idx= ifelse(!length(z), NA_integer_, z))						
-														}	, by=c('t','Patient','t.Patient')]												
-		if(!is.na(save.file))
-		{
-			cat(paste('\nsave triplet.weight to file=',save.file))
-			save(triplet.weight, file=save.file)
-		}		
-	}
+project.athena.Fisheretal.YX.weight<- function(YX)
+{	
 	#	add tpair weight: every transmitter can infect only in one time period
 	YX		<- merge(YX, YX[, list(w= 1/length(t)),by=c('t.FASTASampleCode','FASTASampleCode')], by=c('t.FASTASampleCode','FASTASampleCode'))
+	#	check weight
+	if( nrow(unique( subset(YX, select=c(Patient, t.Patient)) ))!=YX[, sum(w)] )	stop('unexpected weight')	
+	print( YX[, table(w)] )
 	#	add infected weight: every infected can only be infected by one transmitter
 	tmp		<- subset(YX, select=c(Patient, t.Patient, score.brl.TPd))
 	setkey(tmp, Patient, t.Patient)
 	tmp		<- unique(tmp)	
 	tmp		<- tmp[,	list(w.i=score.brl.TPd/sum(score.brl.TPd), t.Patient=t.Patient), by='Patient']	
+	if( tmp[,sum(w.i)]!=YX[, length(unique(Patient))] )	stop('unexpected weight')	
 	YX		<- merge(YX, tmp, by=c('Patient','t.Patient')) 
 	set(YX, NULL, 'w', YX[, w*w.i])
+	if( YX[,sum(w)]!=YX[, length(unique(Patient))] )	stop('unexpected weight')
 	#	weights are now normalised per 'Patient' but there are fewer infection EVENTS because Patient may also be a transmitter to t.Patient
-	setnames(triplet.weight, 'equal.triplet.idx', 'w.t')
-	set(triplet.weight, triplet.weight[,which(!is.na(w.t))], 'w.t', 2L)
-	set(triplet.weight, triplet.weight[,which(is.na(w.t))], 'w.t', 1L)
+	triplet.weight				<- subset(YX, select=c(Patient, t.Patient))	
+	setkey(triplet.weight, Patient, t.Patient)
+	tmp							<- copy(triplet.weight)
+	setnames(tmp, colnames(tmp), paste('q.',colnames(tmp),sep='') )
+	triplet.weight				<- triplet.weight[,	{ 	
+				z	<- tmp[, which(q.Patient==t.Patient & q.t.Patient==Patient)]													
+				list(equal.triplet.idx= ifelse(!length(z), NA_integer_, z))						
+			}	, by=c('Patient','t.Patient')]													
+	
+	triplet.weight[, w.t:=equal.triplet.idx]
+	triplet.weight				<- merge(triplet.weight, triplet.weight[, list(n.t.Patient=length(t.Patient)), by='Patient'], by='Patient')
+	#	correct only mututally exclusive A->B and B->A
+	# barplot( table( subset(triplet.weight, !is.na(equal.triplet.idx))[, n.t.Patient] ) )
+	set(triplet.weight, triplet.weight[, which(!is.na(w.t) & n.t.Patient<2)], 'w.t', 2L)
+	set(triplet.weight, triplet.weight[, which(!is.na(w.t) & n.t.Patient>=2)], 'w.t', 1L)
+	set(triplet.weight, triplet.weight[, which(is.na(w.t))], 'w.t', 1L)	
+	cat(paste('\nnumber of (i,j) and (j,i) pairs of the same infection event', triplet.weight[,length(which(w.t==2))] ))
 	set(triplet.weight, NULL, 'w.t', triplet.weight[, 1/as.double(w.t)])
-	YX		<- merge(YX, triplet.weight, by=c('t','Patient','t.Patient'))
+	YX		<- merge(YX, subset(triplet.weight, select=c(Patient, t.Patient, w.t)), by=c('Patient','t.Patient'))
 	set(YX, NULL, 'w', YX[, w*w.t])
 	YX[, w.i:=NULL]
 	YX[,score.brl.TPd:=NULL]
@@ -4428,6 +4438,1159 @@ project.athena.Fisheretal.YX.model1.whichregression<- function(YX.m1.info, outdi
 	YX.m1.gof
 }
 ######################################################################################
+project.athena.Fisheretal.YX.model5<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000) )
+{
+	require(betareg)
+	#	Age groups
+	#	
+	#	PQ:	Are the younger ages associated with high transmission prob? across Diag+U ? 
+	#		--> by time period at age at diagnosis?
+	#		--> across all parts of the treatment cascade?
+	#	PQ: Are late presenters associated with high transmission prob? (CD4<=220, CDCC at diag, Age at diag > 45)
+	#		--> by time period at age at diagnosis?
+	#		--> across Diag+U ? across all parts of the treatment cascade?
+	#	PQ:	Age differences ?
+	YX.m5	<- copy(YX)
+	YX.m5[, U.score:=NULL]
+	#	if transmitter acute, set undiagnosed to undiagnosed and acute
+	set(YX.m5, YX.m5[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
+	set(YX.m5, YX.m5[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')
+	set(YX.m5, YX.m5[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAy' )
+	set(YX.m5, YX.m5[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAm' )					
+	#
+	#	stratify ART into suppressed during infection window and not suppressed during infection window
+	#	minimize NAs by using extrapolation for 6 months after last known VL
+	#
+	VL.cur	<- 3
+	tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	YX.m5	<- merge(YX.m5, tmp, by= 't.Patient')					
+	YX.m5	<- merge(YX.m5, YX.m5[, {	
+						tmp<- which(!is.na(lRNA))
+						list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
+					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	YX.m5	<- merge(YX.m5, YX.m5[, {
+						tmp<- which(!is.na(lRNA))
+						if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=VL.cur)
+							lRNA.c	<- 'SuA.Y'						
+						else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>VL.cur)
+							lRNA.c	<- 'SuA.N'						
+						else if(!length(tmp))
+							lRNA.c	<- 'SuA.NA'
+						else if(max(lRNA[tmp])>VL.cur)
+							lRNA.c	<- 'SuA.N'
+						else
+							lRNA.c	<- 'SuA.Y'
+						list( lRNA.c= lRNA.c )
+					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	set(YX.m5, YX.m5[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
+	set(YX.m5, YX.m5[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
+	set(YX.m5, YX.m5[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
+	set(YX.m5, NULL, 'stage', YX.m5[, factor(as.character(stage))])			
+	YX.m5[, lRNA.c:= NULL]
+	#	age at diagnosis
+	tmp		<- subset( clumsm.info, select=c(Patient, DateBorn, AnyPos_T1) )
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)
+	tmp[, AnyPos_A:= AnyPos_T1-DateBorn]
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	tmp		<- merge( unique( subset(YX.m5, select=t.Patient) ), tmp, by='t.Patient' )		
+	YX.m5	<- merge(YX.m5, subset(tmp, select=c(t.Patient, t.AnyPos_A)), by='t.Patient')
+	#
+	YX.m5[, stage.orig:= stage]
+	YX.m5[, table(stage)]
+	#	young age groups by age at diagnosis
+	if(1)
+	{		
+		set(YX.m5, NULL, 'stage', YX.m5[, stage.orig])
+		
+		age.cut		<- c(-1, 20, 22, 45, 100)
+		age.label	<- c('T1<=20','T1<=22','T1<=45','T1>45')
+		for(i in seq_along(age.cut)[-1])
+			set(YX.m5, YX.m5[, which(stage%in%c('U','Diag') & t.AnyPos_A<=age.cut[i] & t.AnyPos_A>age.cut[i-1])], 'stage', age.label[i-1])
+		
+		set(YX.m5, NULL, 'stage', YX.m5[, factor(as.character(stage))])
+		YX.m5[, table(stage)]
+		#	ART.suA.N ART.suA.Y  ART.vlNA       DAm       DAy    T1<=20    T1<=22    T1<=45     T1>45       UAm       UAy 
+     	#	3172      4526        70       		436       523       293       373     10741      3512      1275      1291 
+		YX.m5.fit1 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m5)
+		YX.m5.fit1.or	<- data.table( 	T1l20= my.or.from.logit(YX.m5.fit1, 'stageT1<=20', 'stageT1<=45', subset(YX.m5, stage=='T1<=20')[, sum(w)], subset(YX.m5, stage=='T1<=45')[, sum(w)], 1.962),
+										T1l22= my.or.from.logit(YX.m5.fit1, 'stageT1<=22', 'stageT1<=45', subset(YX.m5, stage=='T1<=22')[, sum(w)], subset(YX.m5, stage=='T1<=45')[, sum(w)], 1.962),
+										T1g45= my.or.from.logit(YX.m5.fit1, 'stageT1>45', 'stageT1<=45', subset(YX.m5, stage=='T1>45')[, sum(w)], subset(YX.m5, stage=='T1<=45')[, sum(w)], 1.962)
+										)		
+		#	T1l20     T1l22     T1g45
+		#1: 1.728989 0.5585191 1.1386048
+		#2: 1.430177 0.4574844 0.9498748
+		#3: 2.090232 0.6818671 1.3648333
+	}
+	#	young age groups by age at time period
+	if(1)
+	{		
+		set(YX.m5, NULL, 'stage', YX.m5[, stage.orig])		
+		age.cut		<- c(-1, 20, 22, 45, 100)
+		age.label	<- c('tT<=20','tT<=22','tT<=45','tT>45')
+		for(i in seq_along(age.cut)[-1])
+			set(YX.m5, YX.m5[, which(stage%in%c('U','Diag') & t.Age<=age.cut[i] & t.Age>age.cut[i-1])], 'stage', age.label[i-1])
+		
+		set(YX.m5, NULL, 'stage', YX.m5[, factor(as.character(stage))])
+		YX.m5[, table(stage)]
+		#	ART.suA.N ART.suA.Y  ART.vlNA       DAm       DAy    tT<=20    tT<=22    tT<=45     tT>45       UAm       UAy 
+     	#	3172      4526        70       		436       523       295       388     10639      3597      1275      1291  
+		YX.m5.fit2 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m5)
+		YX.m5.fit2.or	<- data.table( 	tTl20= my.or.from.logit(YX.m5.fit2, 'stagetT<=20', 'stagetT<=45', subset(YX.m5, stage=='tT<=20')[, sum(w)], subset(YX.m5, stage=='tT<=45')[, sum(w)], 1.962),
+										tTl22= my.or.from.logit(YX.m5.fit2, 'stagetT<=22', 'stagetT<=45', subset(YX.m5, stage=='tT<=22')[, sum(w)], subset(YX.m5, stage=='tT<=45')[, sum(w)], 1.962),
+										tTg45= my.or.from.logit(YX.m5.fit2, 'stagetT>45', 'stagetT<=45', subset(YX.m5, stage=='tT>45')[, sum(w)], subset(YX.m5, stage=='tT<=45')[, sum(w)], 1.962)	)		
+		#	      tTl20    tTl22     tTg45
+		#1: 	1.645678 2.163212 0.9566155
+		#2: 	1.357772 1.785391 0.7974689
+		#3: 	1.994633 2.620986 1.1475223
+		#
+		set(YX.m5, NULL, 'stage', YX.m5[, stage.orig])		
+		age.cut		<- c(-1, 20, 25, 45, 100)
+		age.label	<- c('tT<=20','tT<=25','tT<=45','tT>45')
+		for(i in seq_along(age.cut)[-1])
+			set(YX.m5, YX.m5[, which(stage%in%c('U','Diag') & t.Age<=age.cut[i] & t.Age>age.cut[i-1])], 'stage', age.label[i-1])
+		
+		set(YX.m5, NULL, 'stage', YX.m5[, factor(as.character(stage))])
+		YX.m5[, table(stage)]
+		#	ART.suA.N ART.suA.Y  ART.vlNA       DAm       DAy    tT<=20    tT<=25    tT<=45     tT>45       UAm       UAy 
+		#	3172      4526        70       		436       523       295       388     10639      3597      1275      1291  
+		YX.m5.fit2 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m5)
+		YX.m5.fit2.or	<- data.table( 	tTl20= my.or.from.logit(YX.m5.fit2, 'stagetT<=20', 'stagetT<=45', subset(YX.m5, stage=='tT<=20')[, sum(w)], subset(YX.m5, stage=='tT<=45')[, sum(w)], 1.962),
+				tTl25= my.or.from.logit(YX.m5.fit2, 'stagetT<=25', 'stagetT<=45', subset(YX.m5, stage=='tT<=25')[, sum(w)], subset(YX.m5, stage=='tT<=45')[, sum(w)], 1.962),
+				tTg45= my.or.from.logit(YX.m5.fit2, 'stagetT>45', 'stagetT<=45', subset(YX.m5, stage=='tT>45')[, sum(w)], subset(YX.m5, stage=='tT<=45')[, sum(w)], 1.962)	)		
+		
+		#		tTl20    tTl25     tTg45
+		#1: 1.660208 1.552963 0.9653929
+		#2: 1.363555 1.273374 0.8021024
+		#3: 2.021401 1.893941 1.1619259
+		#	young age groups are generally associated with higher TP. T1>45 probably too once young age adjusted for
+		#
+		set(YX.m5, NULL, 'stage', YX.m5[, stage.orig])		
+		age.cut		<- c(-1, 20, 25, 45, 100)
+		age.label	<- c('tT<=20','tT<=25','tT<=45','tT>45')
+		for(i in seq_along(age.cut)[-1])
+			set(YX.m5, YX.m5[, which(stage%in%c('U','Diag','ART.suA.N','ART.vlNA') & t.Age<=age.cut[i] & t.Age>age.cut[i-1])], 'stage', age.label[i-1])
+		
+		set(YX.m5, NULL, 'stage', YX.m5[, factor(as.character(stage))])
+		YX.m5[, table(stage)]
+		#	ART.suA.Y       DAm       DAy    tT<=20    tT<=25    tT<=45     tT>45       UAm       UAy 
+     	#		4526       436       523       308      1310     12023      4520      1275      1291 
+		YX.m5.fit2 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m5)
+		YX.m5.fit2.or	<- data.table( 	tTl20= my.or.from.logit(YX.m5.fit2, 'stagetT<=20', 'stagetT<=45', subset(YX.m5, stage=='tT<=20')[, sum(w)], subset(YX.m5, stage=='tT<=45')[, sum(w)], 1.962),
+										tTl25= my.or.from.logit(YX.m5.fit2, 'stagetT<=25', 'stagetT<=45', subset(YX.m5, stage=='tT<=25')[, sum(w)], subset(YX.m5, stage=='tT<=45')[, sum(w)], 1.962),
+										tTg45= my.or.from.logit(YX.m5.fit2, 'stagetT>45', 'stagetT<=45', subset(YX.m5, stage=='tT>45')[, sum(w)], subset(YX.m5, stage=='tT<=45')[, sum(w)], 1.962)	)		
+		#      tTl20    tTl25     tTg45
+		#1: 1.742191 1.456322 0.9776405
+		#2: 1.453716 1.212899 0.8255276
+		#3: 2.087913 1.748599 1.1577819
+		#	young age groups remain significant. T1>45 probably too once young age adjusted for
+	}
+	#	try age pairs -- full matrix
+	if(1)
+	{
+		set(YX.m5, NULL, 'stage', YX.m5[, stage.orig])		
+		age.cut		<- c(-1, 20, 25, 35, 45, 100)		
+		setkey(YX.m5, t.Age, Age)
+		for(i in seq_along(age.cut)[-1])
+			for(j in seq.int(2, length(age.cut)))
+			{
+				tmp	<- paste('t',age.cut[i],'-i',age.cut[j],sep='')
+				set(YX.m5, YX.m5[, which(stage%in%c('U','Diag') & t.Age<=age.cut[i] & t.Age>age.cut[i-1] & Age<=age.cut[j] & Age>age.cut[j-1])], 'stage', tmp)	
+			}
+		set(YX.m5, NULL, 'stage', YX.m5[, factor(as.character(stage))])
+		YX.m5[, table(stage)]
+		
+		YX.m5.fit3 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m5)
+		summary(YX.m5.fit3)
+		#	is the assortativity matrix symmetric?
+		YX.m5.fit3.or	<- data.table( 	a100.20= my.or.from.logit(YX.m5.fit3, 'staget100-i20', 'staget20-i100', subset(YX.m5, stage=='t100-i20')[, sum(w)], subset(YX.m5, stage=='t20-i100')[, sum(w)], 1.962),
+										a100.25= my.or.from.logit(YX.m5.fit3, 'staget100-i25', 'staget25-i100', subset(YX.m5, stage=='t100-i25')[, sum(w)], subset(YX.m5, stage=='t25-i100')[, sum(w)], 1.962),
+										a100.35= my.or.from.logit(YX.m5.fit3, 'staget100-i35', 'staget35-i100', subset(YX.m5, stage=='t100-i35')[, sum(w)], subset(YX.m5, stage=='t35-i100')[, sum(w)], 1.962),
+										a100.45= my.or.from.logit(YX.m5.fit3, 'staget100-i45', 'staget45-i100', subset(YX.m5, stage=='t100-i45')[, sum(w)], subset(YX.m5, stage=='t45-i100')[, sum(w)], 1.962),				
+										a45.20= my.or.from.logit(YX.m5.fit3, 'staget45-i20', 'staget20-i45', subset(YX.m5, stage=='t45-i20')[, sum(w)], subset(YX.m5, stage=='t20-i45')[, sum(w)], 1.962),
+										a45.25= my.or.from.logit(YX.m5.fit3, 'staget45-i25', 'staget25-i45', subset(YX.m5, stage=='t45-i25')[, sum(w)], subset(YX.m5, stage=='t25-i45')[, sum(w)], 1.962),
+										a45.35= my.or.from.logit(YX.m5.fit3, 'staget45-i35', 'staget35-i45', subset(YX.m5, stage=='t45-i35')[, sum(w)], subset(YX.m5, stage=='t35-i45')[, sum(w)], 1.962),				
+										a35.20= my.or.from.logit(YX.m5.fit3, 'staget35-i20', 'staget20-i35', subset(YX.m5, stage=='t35-i20')[, sum(w)], subset(YX.m5, stage=='t20-i35')[, sum(w)], 1.962),
+										a35.25= my.or.from.logit(YX.m5.fit3, 'staget35-i25', 'staget25-i35', subset(YX.m5, stage=='t35-i25')[, sum(w)], subset(YX.m5, stage=='t25-i35')[, sum(w)], 1.962),				
+										a25.20= my.or.from.logit(YX.m5.fit3, 'staget25-i20', 'staget20-i25', subset(YX.m5, stage=='t25-i20')[, sum(w)], subset(YX.m5, stage=='t20-i25')[, sum(w)], 1.962)	)
+		#        a100.20   a100.25   a100.35   a100.45    a45.20    a45.25    a45.35    a35.20    a35.25     a25.20
+		#1: 9.465185e-01 0.4252564 0.8268187 0.9779962 1.5275007 0.4203820 0.8572967 0.4304842 0.7486459 0.52542055
+		#2: 1.220221e-06 0.1306335 0.4697377 0.6289970 0.6392072 0.1961459 0.5792472 0.1503698 0.3936640 0.07912175
+		#3: 7.342093e+05 1.3843546 1.4553424 1.5206376 3.6502378 0.9009669 1.2688153 1.2324060 1.4237283 3.48913869										
+		#	no evidence that the assortativity matrix is asymmetric
+	
+		#	take a35.35 as reference group
+		YX.m5.fit3.or	<- data.table( 	a100.20= my.or.from.logit(YX.m5.fit3, 'staget100-i20', 'staget35-i35', subset(YX.m5, stage=='t100-i20')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),			
+										a100.25= my.or.from.logit(YX.m5.fit3, 'staget100-i25', 'staget35-i35', subset(YX.m5, stage=='t100-i25')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),
+										a100.35= my.or.from.logit(YX.m5.fit3, 'staget100-i35', 'staget35-i35', subset(YX.m5, stage=='t100-i35')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),
+										a100.45= my.or.from.logit(YX.m5.fit3, 'staget100-i45', 'staget35-i35', subset(YX.m5, stage=='t100-i45')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),				
+										a100.100= my.or.from.logit(YX.m5.fit3, 'staget100-i100', 'staget35-i35', subset(YX.m5, stage=='t100-i100')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),								
+										a45.20= my.or.from.logit(YX.m5.fit3, 'staget45-i20', 'staget35-i35', subset(YX.m5, stage=='t45-i20')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),
+										a45.25= my.or.from.logit(YX.m5.fit3, 'staget45-i25', 'staget35-i35', subset(YX.m5, stage=='t45-i25')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),
+										a45.35= my.or.from.logit(YX.m5.fit3, 'staget45-i35', 'staget35-i35', subset(YX.m5, stage=='t45-i35')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),				
+										a45.45= my.or.from.logit(YX.m5.fit3, 'staget45-i45', 'staget35-i35', subset(YX.m5, stage=='t45-i45')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),			
+										a35.20= my.or.from.logit(YX.m5.fit3, 'staget35-i20', 'staget35-i35', subset(YX.m5, stage=='t35-i20')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),
+										a35.25= my.or.from.logit(YX.m5.fit3, 'staget35-i25', 'staget35-i35', subset(YX.m5, stage=='t35-i25')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),							
+										a25.20= my.or.from.logit(YX.m5.fit3, 'staget25-i20', 'staget35-i35', subset(YX.m5, stage=='t25-i20')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),
+										a25.25= my.or.from.logit(YX.m5.fit3, 'staget25-i25', 'staget35-i35', subset(YX.m5, stage=='t25-i25')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),
+										a20.20= my.or.from.logit(YX.m5.fit3, 'staget20-i20', 'staget35-i35', subset(YX.m5, stage=='t20-i20')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962)	)		
+		#		a100.20   a100.25   a100.35   a100.45  a100.100   	 	a45.20    	a45.25    a45.35    a45.45    a35.20    a35.25    a25.20    a25.25		a20.20
+		#1: 	0.6016153 0.7483158 0.9039788 1.0055359 0.7210333 		0.9031965 	0.8730449 0.6598175 0.8890139 0.8659097 0.8966013 0.7861447 1.2735921	1.582723
+		#2: 	0.4007082 0.4718837 0.5945772 0.6760679 0.4870311 		0.5725774 	0.5643833 0.4548822 0.6309828 0.5469808 0.5877713 0.5272560 0.8105412	1.035397
+		#3:	 	0.9032530 1.1866835 1.3743844 1.4955636 1.0674658 		1.4247226 	1.3505139 0.9570809 1.2525630 1.3707967 1.3676985 1.1721509 2.0011776	2.419375
+		#		L*		  L			E		  E			L		  		E			E		  L*		E		  E 		E		  E			E			H*
+		
+		#	take diagonal as reference group
+		YX.m5.fit3.or	<- data.table( 	a100.20= my.or.from.logit(YX.m5.fit3, 'staget100-i20', 'staget100-i100', subset(YX.m5, stage=='t100-i20')[, sum(w)], subset(YX.m5, stage=='t100-i100')[, sum(w)], 1.962),			
+										a100.25= my.or.from.logit(YX.m5.fit3, 'staget100-i25', 'staget100-i100', subset(YX.m5, stage=='t100-i25')[, sum(w)], subset(YX.m5, stage=='t100-i100')[, sum(w)], 1.962),
+										a100.35= my.or.from.logit(YX.m5.fit3, 'staget100-i35', 'staget100-i100', subset(YX.m5, stage=='t100-i35')[, sum(w)], subset(YX.m5, stage=='t100-i100')[, sum(w)], 1.962),
+										a100.45= my.or.from.logit(YX.m5.fit3, 'staget100-i45', 'staget100-i100', subset(YX.m5, stage=='t100-i45')[, sum(w)], subset(YX.m5, stage=='t100-i100')[, sum(w)], 1.962),																																
+										a45.20= my.or.from.logit(YX.m5.fit3, 'staget45-i20', 'staget45-i45', subset(YX.m5, stage=='t45-i20')[, sum(w)], subset(YX.m5, stage=='t45-i45')[, sum(w)], 1.962),
+										a45.25= my.or.from.logit(YX.m5.fit3, 'staget45-i25', 'staget45-i45', subset(YX.m5, stage=='t45-i25')[, sum(w)], subset(YX.m5, stage=='t45-i45')[, sum(w)], 1.962),
+										a45.35= my.or.from.logit(YX.m5.fit3, 'staget45-i35', 'staget45-i45', subset(YX.m5, stage=='t45-i35')[, sum(w)], subset(YX.m5, stage=='t45-i45')[, sum(w)], 1.962),				
+										a45.45= my.or.from.logit(YX.m5.fit3, 'staget45-i45', 'staget45-i45', subset(YX.m5, stage=='t45-i45')[, sum(w)], subset(YX.m5, stage=='t45-i45')[, sum(w)], 1.962),													
+										a35.20= my.or.from.logit(YX.m5.fit3, 'staget35-i20', 'staget35-i35', subset(YX.m5, stage=='t35-i20')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),
+										a35.25= my.or.from.logit(YX.m5.fit3, 'staget35-i25', 'staget35-i35', subset(YX.m5, stage=='t35-i25')[, sum(w)], subset(YX.m5, stage=='t35-i35')[, sum(w)], 1.962),																	
+										a25.20= my.or.from.logit(YX.m5.fit3, 'staget25-i20', 'staget25-i25', subset(YX.m5, stage=='t25-i20')[, sum(w)], subset(YX.m5, stage=='t25-i25')[, sum(w)], 1.962)	)		
+		#     a100.20   a100.25   a100.35   a100.45    a45.20    a45.25    a45.35    a45.45    a35.20    a35.25    a25.20
+		#1: 0.8343793 1.0378381 1.2537268 1.3945763 1.0159532 0.9820375 0.7421903 1.0000000 0.8659097 0.8966013 0.6172657
+		#2: 0.4997380 0.5883207 0.7684496 0.8841247 0.6603627 0.6475498 0.5177010 0.7162479 0.5469808 0.5877713 0.2094327
+		#3: 1.3931077 1.8308175 2.0454573 2.1997383 1.5630213 1.4893026 1.0640243 1.3961647 1.3707967 1.3676985 1.8192810
+		#								  *
+
+		set(YX.m5, NULL, 'stage', YX.m5[, stage.orig])		
+		age.cut		<- c(-1, 25, 35, 45, 100)		
+		setkey(YX.m5, t.Age, Age)
+		for(i in seq_along(age.cut)[-1])
+			for(j in seq.int(2, length(age.cut)))
+			{
+				tmp	<- paste('t',age.cut[i],'-i',age.cut[j],sep='')
+				set(YX.m5, YX.m5[, which(stage%in%c('U','Diag') & t.Age<=age.cut[i] & t.Age>age.cut[i-1] & Age<=age.cut[j] & Age>age.cut[j-1])], 'stage', tmp)	
+			}
+		set(YX.m5, NULL, 'stage', YX.m5[, factor(as.character(stage))])
+		YX.m5[, table(stage)]
+		
+		YX.m5.fit3 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m5)
+		summary(YX.m5.fit3)
+
+		YX.m5s			<- subset(YX.m5, !stage%in%c('ART.suA.N','ART.suA.Y','ART.suA.vlNA','DAm','DAy','UAm','UAy'))
+		YX.m5s.p		<- YX.m5s[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m5s[,sum(w)],d=3) ),by='stage']
+		#t25-i25   t25-i45   t25-i35   t25-i100  ART.vlNA  t35-i45   t35-i35   t35-i25   t35-i100  t45-i45   t45-i25   t45-i35   t45-i100 	t100-i25  t100-i35  t100-i45  t100-i100
+		#12.1  		4.9 		11.2  	1.7  	2.7 		43.9 		52.3 	26.6 		18.7 	59.4 		19.6 	43.7 		36.5  		7.4 		21.8 	30.0	 33.6
+	}
+}
+######################################################################################
+project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000) )
+{
+	require(betareg)
+	#	Diagnosis risk groups
+	#	
+	#	PQ: Are CD4 counts at time period or at diagnosis associated with higher transmission probability?		 diagnosis risk groups: age at diagnosis, t2care, t2vlsupp, median follow up?
+	#	PQ: Is Acute associated with higher transmission probability? Is high viral load associated with higher transmission probability? 
+	#	SQ:	Are the younger ages associated with high transmission prob?
+	#		--> this is a more general question, not just after diagnosis
+	#	SQ:	Is time to care or time to suppression associated with high transmission prob?
+	#	SQ: Are late presenters associated with high transmission prob? (CD4<=220, CDCC at diag, Age at diag > 45)
+	#		--> this could also include time before diagnosis
+	
+	YX.m4	<- copy(YX)
+	YX.m4[, U.score:=NULL]
+	#	if transmitter acute, set undiagnosed to undiagnosed and acute
+	set(YX.m4, YX.m4[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
+	set(YX.m4, YX.m4[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')
+	#
+	#	stratify ART into suppressed during infection window and not suppressed during infection window
+	#	minimize NAs by using extrapolation for 6 months after last known VL
+	#
+	VL.cur	<- 3
+	tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	YX.m4	<- merge(YX.m4, tmp, by= 't.Patient')					
+	YX.m4	<- merge(YX.m4, YX.m4[, {	
+										tmp<- which(!is.na(lRNA))
+										list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
+									}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	YX.m4	<- merge(YX.m4, YX.m4[, {
+										tmp<- which(!is.na(lRNA))
+										if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=VL.cur)
+											lRNA.c	<- 'SuA.Y'						
+										else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>VL.cur)
+											lRNA.c	<- 'SuA.N'						
+										else if(!length(tmp))
+											lRNA.c	<- 'SuA.NA'
+										else if(max(lRNA[tmp])>VL.cur)
+											lRNA.c	<- 'SuA.N'
+										else
+											lRNA.c	<- 'SuA.Y'
+										list( lRNA.c= lRNA.c )
+									}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	set(YX.m4, YX.m4[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
+	set(YX.m4, YX.m4[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
+	set(YX.m4, YX.m4[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
+	set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])		
+					
+	YX.m4[, lRNA.c:= NULL]			
+	YX.m4[, stage.orig:= stage]
+	YX.m4[, table(stage)]
+	#		base case: stratify Diag by first CD4 after diagnosis
+	if(0)
+	{
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		cd4.label	<- c('D1<=350','D1<=550','D1>550')
+		cd4.cut		<- c(-1, 350, 550, 5000)
+		tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+		setkey(tmp, Patient)
+		tmp			<- unique(tmp)	
+		tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+		cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+		print( subset( tmp, is.na(CD4.c) ) )
+		setnames(tmp, 'Patient', 't.Patient')
+		set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+		YX.m4		<- merge(YX.m4, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+		tmp			<- YX.m4[, which(stage=='Diag')]
+		set(YX.m4, tmp, 'stage', YX.m4[tmp, CD4.c])		
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, table(stage)]
+		
+		YX.m4.fit1 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit1.or	<- data.table( 	D1l350= my.or.from.logit(YX.m4.fit1, 'stageD1<=350', 'stageD1>550', subset(YX.m4, stage=='D1<=350')[, sum(w)], subset(YX.m4, stage=='D1>550')[, sum(w)], 1.962),
+										D1l550= my.or.from.logit(YX.m4.fit1, 'stageD1<=550', 'stageD1>550', subset(YX.m4, stage=='D1<=550')[, sum(w)], subset(YX.m4, stage=='D1>550')[, sum(w)], 1.962)	)
+		# YX.m4.fit1.or	(not adjusted for acute)
+      	#	D1l350    D1l550    D1g550
+		#1: 1.3039782 0.9266223 0.6534647
+		#2: 0.9731111 0.7166847 0.5337555
+		#3: 1.7473434 1.1980566 0.8000220
+		#	no significant difference between diagnosis groups						
+		YX.m4.p			<- YX.m4[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m4[,sum(w)],d=3) ),by='stage']
+		#
+		#	adjusted for acute:
+		#
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAm' )				
+		tmp			<- YX.m4[, which(stage=='Diag')]
+		set(YX.m4, tmp, 'stage', YX.m4[tmp, CD4.c])		
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, table(stage)]
+		#	ART.suA.N ART.suA.Y  ART.vlNA   D1<=350   D1<=550    D1>550       DAm       DAy         U       UAm       UAy 
+     	#	3172      4526        70       	807       2590       3322         702       851      7606      1275      1291 
+		YX.m4.fit1 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit1.or	<- data.table( 	D1l350= my.or.from.logit(YX.m4.fit1, 'stageD1<=350', 'stageD1>550', subset(YX.m4, stage=='D1<=350')[, sum(w)], subset(YX.m4, stage=='D1>550')[, sum(w)], 1.962),
+				D1l550= my.or.from.logit(YX.m4.fit1, 'stageD1<=550', 'stageD1>550', subset(YX.m4, stage=='D1<=550')[, sum(w)], subset(YX.m4, stage=='D1>550')[, sum(w)], 1.962),
+				D1g550= my.or.from.logit(YX.m4.fit1, 'stageD1>550', 'stageU', subset(YX.m4, stage=='D1>550')[, sum(w)], subset(YX.m4, stage=='U')[, sum(w)], 1.962) 		)
+		#D1l350    D1l550
+		#1: 1.0851541 0.8530707
+		#2: 0.7779292 0.6410546
+		#3: 1.5137102 1.1352070
+		#	plot
+		tmp			<- data.table(stage= YX.m4[, levels(stage)], col=sapply( rainbow(YX.m4[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m4		<- merge(YX.m4, tmp, by='stage')
+		plot( seq_len(nrow(YX.m4)), YX.m4[, score.Y], pch=18, col= YX.m4[, col], cex=YX.m4[, w^0.4])
+		tmp				<- subset(YX.m4, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m4.fit1, tmp, type='response'))	
+		start			<- c( YX.m4.fit1$coef$mean + head( 2*sqrt(diag(vcov(YX.m4.fit1))), length(YX.m4.fit1$coef$mean)), YX.m4.fit1$coef$precision)
+		YX.m4.fit1.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m4, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m4.fit1$coef$mean - head( 2*sqrt(diag(vcov(YX.m4.fit1))), length(YX.m4.fit1$coef$mean)), YX.m4.fit1$coef$precision)
+		YX.m4.fit1.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m4, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m4.fit1.sup, tmp, type='response'), rev(predict(YX.m4.fit1.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m4[, levels(stage)], fill=YX.m4[, unique(col)])
+		YX.m4[, col:=NULL]
+		#
+
+		YX.m4[, CD4.c:=NULL]
+	}
+	#		try 	Diag<350, Diag<550, Diag>550 a better explanation?
+	if(0)
+	{
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAm' )						
+		cd4.label	<- c('Dt<=350','Dt<=550','Dt>550')
+		set(YX.m4, YX.m4[, which(stage=='Diag' & is.na(CD4))], 'stage', 'Diag.NA')
+		for(i in seq_along(cd4.cut)[-1])
+		{
+			tmp	<- YX.m4[, which(stage=='Diag' & !is.na(CD4) & CD4<=cd4.cut[i] & CD4>cd4.cut[i-1])]
+			cat(paste('\nnumber entries with Diag and CD4 ',cd4.cut[i-1], cd4.cut[i],' , n=', length(tmp)))
+			set(YX.m4, tmp, 'stage', cd4.label[i-1])
+		}
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, table(stage)]
+		#ART.suA.N ART.suA.Y  ART.vlNA       DAm       	DAy   Diag.NA   Dt<=350   Dt<=550    Dt>550         U       UAm       UAy 
+     	#3172      4526        70       	702       	851       766       964      3010      1979      7606      1275      1291 
+		YX.m4.fit2 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit2.or	<- data.table( 	D1l350= my.or.from.logit(YX.m4.fit2, 'stageDt<=350', 'stageDt>550', subset(YX.m4, stage=='Dt<=350')[, sum(w)], subset(YX.m4, stage=='Dt>550')[, sum(w)], 1.962),
+										D1l550= my.or.from.logit(YX.m4.fit2, 'stageDt<=550', 'stageDt>550', subset(YX.m4, stage=='Dt<=550')[, sum(w)], subset(YX.m4, stage=='Dt>550')[, sum(w)], 1.962),
+										D1g550= my.or.from.logit(YX.m4.fit2, 'stageDt>550', 'stageU', subset(YX.m4, stage=='Dt>550')[, sum(w)], subset(YX.m4, stage=='U')[, sum(w)], 1.962) 		)
+		#> YX.m4.fit2.or	(not adjusted for acute)
+      	#		D1l350    D1l550    
+		#1: 	1.0229417 1.0216966 
+		#2: 	0.7195683 0.7703738 
+		#3: 	1.4542187 1.3550095 
+		#D1l350    D1l550    (adjusted for acute)
+		#1: 1.0200557 0.9414970 
+		#2: 0.6847272 0.6844514 
+		#3: 1.5196032 1.2950762 
+		# no significant difference between diagnosis groups
+	}
+	#		late presenters: stratify Diag by first CD4 after diagnosis
+	if(1)
+	{
+		cd4.cut		<- c(-1, 220, 350, 1e4)
+		cd4.label	<- c('D1<=220','D1<=350','D1>350')
+		YX.m4[, CD4.c:=NULL]
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAm' )		
+		#
+		tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+		setkey(tmp, Patient)
+		tmp			<- unique(tmp)	
+		tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]		
+		setnames(tmp, 'Patient', 't.Patient')
+		set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+		YX.m4		<- merge(YX.m4, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+		tmp			<- YX.m4[, which(stage=='Diag')]
+		set(YX.m4, tmp, 'stage', YX.m4[tmp, CD4.c])
+		YX.m4[, CD4.c:=NULL]
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, table(stage)]
+		#ART.suA.N ART.suA.Y  ART.vlNA   	D1<=220   D1<=350    	D1>350       	DAm       DAy         U       UAm       UAy 
+     	#3172      4526        70       	122       685      		5912       		702       851      7606      1275      1291
+		YX.m4.fit12 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit12.or		<- data.table( 	D1l220= my.or.from.logit(YX.m4.fit12, 'stageD1<=220', 'stageD1>350', subset(YX.m4, stage=='D1<=220')[, sum(w)], subset(YX.m4, stage=='D1>350')[, sum(w)], 1.962),
+											D1l350= my.or.from.logit(YX.m4.fit12, 'stageD1<=350', 'stageD1>350', subset(YX.m4, stage=='D1<=350')[, sum(w)], subset(YX.m4, stage=='D1>350')[, sum(w)], 1.962))		
+		#	D1l220   	D1l350
+		#1: 0.6272600 	1.417792
+		#2: 0.4792174 	1.086661
+		#3: 0.8210368 	1.849825
+	}
+	#		try 	Age at diagnosis
+	if(1)
+	{
+		YX.m4[, t.AnyPos_A:=NULL]
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAm' )				
+		tmp		<- subset( clumsm.info, select=c(Patient, DateBorn, AnyPos_T1) )
+		setkey(tmp, Patient)
+		tmp		<- unique(tmp)
+		tmp[, AnyPos_A:= AnyPos_T1-DateBorn]
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		tmp		<- merge( unique( subset(YX.m4, select=t.Patient) ), tmp, by='t.Patient' )		
+		YX.m4	<- merge(YX.m4, subset(tmp, select=c(t.Patient, t.AnyPos_A)), by='t.Patient')
+		
+		age.cut		<- c(-1, 20, 45, 100)
+		age.label	<- c('D1<=20','D1<=45','D1>45')
+		for(i in seq_along(cd4.cut)[-1])
+			set(YX.m4, YX.m4[, which(stage=='Diag' & t.AnyPos_A<=age.cut[i] & t.AnyPos_A>age.cut[i-1])], 'stage', age.label[i-1])
+		YX.m4[, t.AnyPos_A:=NULL]
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, table(stage)]
+		#	ART.suA.N ART.suA.Y  	ART.vlNA    D1<=25   D1<=45    D1>45        U       	UAm       UAy 
+     	#	3172      4526        	70       	234      6652      1386      	7606      	1275      1291	
+		#	ART.suA.N ART.suA.Y  ART.vlNA    	D1<=20   D1<=45    D1>45       DAm       DAy         U       UAm       UAy 
+     	#	3172      4526        70       		155      5436      1128        702       851      7606      1275      1291 
+		YX.m4.fit3 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit3.or	<- data.table( 	D1l20= my.or.from.logit(YX.m4.fit3, 'stageD1<=20', 'stageD1<=45', subset(YX.m4, stage=='D1<=20')[, sum(w)], subset(YX.m4, stage=='D1<=45')[, sum(w)], 1.962),
+										D1g45= my.or.from.logit(YX.m4.fit3, 'stageD1>45', 'stageD1<=45', subset(YX.m4, stage=='D1>45')[, sum(w)], subset(YX.m4, stage=='D1<=45')[, sum(w)], 1.962)
+										)		
+		#      D1l20    D1g45
+		#1: 2.145616 1.341343
+		#2: 1.707319 1.061021
+		#3: 2.696432 1.695725
+		#      D1l20     D1g45	(adjusting for acute)
+		#1: 2.721543 1.1584342
+		#2: 2.136278 0.8892229
+		#3: 3.467149 1.5091489
+		#	young and old age at diagnosis significant; D1l25 was not significant
+		#	young age at diagnosis remains significant
+	}
+	#		try 	mean age in infection window
+	if(1)
+	{		
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])		
+		#YX.m4[, list(t.Age.m= mean(t.Age)),by=c('t.Patient','Patient')]
+		age.cut		<- c(-1, 23, 45, 100)
+		age.label	<- c('Dt<=20','Dt<=45','Dt>45')
+		for(i in seq_along(cd4.cut)[-1])
+			set(YX.m4, YX.m4[, which(stage=='Diag' & t.Age<=age.cut[i] & t.Age>age.cut[i-1])], 'stage', age.label[i-1])
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, table(stage)]
+		#	ART.suA.N ART.suA.Y  ART.vlNA    Dt<=20    Dt<=45     Dt>45         U       	UAm       UAy 
+     	#	3172      4526        70       	136      	6351      1785      	7606      	1275      1291 
+		YX.m4.fit4 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit4.or	<- data.table( 	Dtl20= my.or.from.logit(YX.m4.fit4, 'stageDt<=20', 'stageDt<=45', subset(YX.m4, stage=='Dt<=20')[, sum(w)], subset(YX.m4, stage=='Dt<=45')[, sum(w)], 1.962),
+										Dtg45= my.or.from.logit(YX.m4.fit4, 'stageDt>45', 'stageDt<=45', subset(YX.m4, stage=='Dt>45')[, sum(w)], subset(YX.m4, stage=='Dt<=45')[, sum(w)], 1.962)	)		
+		#       Dtl20     	Dtg45
+		#1: 	2.669321 	1.0475037
+		#2: 	2.149098 	0.8275752
+		#3: 	3.315471 	1.3258784
+		#	young age at t significant, but generally older is not significant; Dtl25 is just signif 1.33 [1.03, 1.72]; Dtl23 is signif 1.85 [1.45, 1.37]
+		#	there seems to be a trend with decreasing age <= 25	
+	}
+	#		try t2care	
+	if(1)
+	{
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAm' )				
+		set(YX.m4, YX.m4[, which(stage=='Diag' & t2.care.t1=='>=0.25y')], 'stage', 'Dc>=0.25y')
+		set(YX.m4, YX.m4[, which(stage=='Diag' & t2.care.t1=='>=0.5y')], 'stage', 'Dc>=0.5y')
+		set(YX.m4, YX.m4[, which(stage=='Diag' & t2.care.t1=='other')], 'stage', 'Dc<0.25y')
+		
+		YX.m4s	<- subset(YX.m4, stage!='Diag')
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]
+		#	ART.suA.N ART.suA.Y  ART.vlNA       DAm       DAy  		Dc<0.25y 	Dc>=0.25y  	Dc>=0.5y         U       UAm       UAy 
+     	#	3172      4526        70       		702       851      	5514       	340       	858      		7606      1275      1291 
+		YX.m4s.fit5 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4s)
+		YX.m4s.fit5.or	<- data.table( 	Dcg25= my.or.from.logit(YX.m4s.fit5, 'stageDc>=0.25y', 'stageDc<0.25y', subset(YX.m4s, stage=='Dc>=0.25y')[, sum(w)], subset(YX.m4s, stage=='Dc<0.25y')[, sum(w)], 1.962),
+										Dcg50= my.or.from.logit(YX.m4s.fit5, 'stageDc>=0.5y', 'stageDc<0.25y', subset(YX.m4s, stage=='Dc>=0.5y')[, sum(w)], subset(YX.m4s, stage=='Dc<0.25y')[, sum(w)], 1.962)	)
+		#      	Dcg25     Dcg50
+		#1: 	1.361898 0.5660182
+		#2: 	1.062440 0.4443110
+		#3: 	1.745762 0.7210638	
+		#	this is unexpected ..
+		#      Dcg25     Dcg50
+		#1: 1.852120 0.6782845
+		#2: 1.399815 0.5179190
+		#3: 2.450573 0.8883048
+		#	remains after adjusting for Acute
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(stage=='Diag' & t2.care.t1=='>=0.25y')], 'stage', 'Dc>=0.25y')
+		set(YX.m4, YX.m4[, which(stage=='Diag' & t2.care.t1=='>=0.5y')], 'stage', 'Dc>=0.25y')
+		set(YX.m4, YX.m4[, which(stage=='Diag' & t2.care.t1=='other')], 'stage', 'Dc<0.25y')
+		
+		YX.m4s	<- subset(YX.m4, stage!='Diag')
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]
+		#	ART.suA.N ART.suA.Y  ART.vlNA  Dc<0.25y  Dc>=0.25y          U       	UAm       UAy 
+     	#	3172      4526        70       6952      1313      			7606      	1275      1291
+		YX.m4s.fit5 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4s)
+		YX.m4s.fit5.or	<- data.table( 	Dcg25= my.or.from.logit(YX.m4s.fit5, 'stageDc>=0.25y', 'stageDc<0.25y', subset(YX.m4s, stage=='Dc>=0.25y')[, sum(w)], subset(YX.m4s, stage=='Dc<0.25y')[, sum(w)], 1.962)	)
+		#       Dcg25
+		#1: 0.7277992
+		#2: 0.5748090
+		#3: 0.9215088
+		#	this is unexpected ...
+	}
+	#		try t2supp	
+	if(1)
+	{
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		
+		cd4.label	<- c('D1<=350','D1<=550','D1>550')
+		tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+		setkey(tmp, Patient)
+		tmp			<- unique(tmp)	
+		tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+		cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+		print( subset( tmp, is.na(CD4.c) ) )
+		setnames(tmp, 'Patient', 't.Patient')
+		set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+		YX.m4		<- merge(YX.m4, tmp, by='t.Patient')
+		#	adjust for Acute and pulse
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAm' )
+		set(YX.m4, YX.m4[, which(t.Patient%in%subset(YX.m4, ART.pulse=='Yes')[, unique(t.Patient)])], 'stage', 'Ppulse' )		
+				
+		
+		fw.cut		<- c(-1, 1, 2, 30)
+		fw.label	<- c('Ds<=1','Ds<=2','Dother')
+		for(i in seq_along(fw.cut)[-1])
+			set(YX.m4, YX.m4[, which(stage=='Diag' & CD4.c=='D1>550' & t2.vl.supp<=fw.cut[i] & t2.vl.supp>fw.cut[i-1])], 'stage', fw.label[i-1])
+		set(YX.m4, YX.m4[, which(stage=='Diag' & CD4.c=='D1>550')], 'stage', 'Dother')		
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, table(stage)]
+		
+		YX.m4.fit14 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit14.or	<- data.table( 	Dsl1= my.or.from.logit(YX.m4.fit14, 'stageDs<=1', 'stageDother', subset(YX.m4, stage=='Ds<=1')[, sum(w)], subset(YX.m4, stage=='Dother')[, sum(w)], 1.962),
+										Dsl2= my.or.from.logit(YX.m4.fit14, 'stageDs<=2', 'stageDother', subset(YX.m4, stage=='Ds<=2')[, sum(w)], subset(YX.m4, stage=='Dother')[, sum(w)], 1.962)	)		
+		#	adjusting for Acute. adjusting for pulse: no such individual
+		#	not adjusted for high CD4 at diagnosis
+		#      Dsl1    Dsl2
+		#1: 1.503301 1.449234
+		#2: 1.154431 1.112343
+		#3: 1.957600 1.888157
+		#	adjusted for high CD4 at diagnosis
+		#Dsl1      Dsl2
+		#1: 2.177977 1.2301539
+		#2: 1.669790 0.9291165
+		#3: 2.840826 1.6287285
+			
+		cd4.label	<- c('D1<=350','D1<=550','D1>550')
+		tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+		setkey(tmp, Patient)
+		tmp			<- unique(tmp)	
+		tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+		cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+		print( subset( tmp, is.na(CD4.c) ) )
+		setnames(tmp, 'Patient', 't.Patient')
+		set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+		YX.m4		<- merge(YX.m4, tmp, by='t.Patient')
+		#	adjust for Acute and pulse
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])		
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAm' )
+		set(YX.m4, YX.m4[, which(t.Patient%in%subset(YX.m4, ART.pulse=='Yes')[, unique(t.Patient)])], 'stage', 'Ppulse' )		
+		#	adjust for young age
+		age.cut		<- c(-1, 20, 22, 100)
+		age.label	<- c('DC.T<=20','DC.T<=22', 'Diag')
+		for(i in seq_along(age.cut)[-1])
+			set(YX.m4, YX.m4[, which(stage=='Diag' & t.Age<=age.cut[i] & t.Age>age.cut[i-1])], 'stage', age.label[i-1])
+		#	t2supp
+		
+		fw.cut		<- c(-1, 1, 2, 30)
+		fw.label	<- c('Ds<=1','Ds<=2','Dother')
+		for(i in seq_along(fw.cut)[-1])
+			set(YX.m4, YX.m4[, which(stage=='Diag' & CD4>350 & t2.vl.supp<=fw.cut[i] & t2.vl.supp>fw.cut[i-1])], 'stage', fw.label[i-1])
+		set(YX.m4, YX.m4[, which(stage=='Diag')], 'stage', 'Dother')		
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, table(stage)]
+		#	ignoring CD4(t)
+		#ART.suA.N ART.suA.Y  ART.vlNA       DAm       DAy  DC.T<=20  DC.T<=22    Dother     Ds<=1     Ds<=2    Ppulse         U       UAm       UAy 
+		#3024      4497        70       	 702       844        72       148      5693       203       600       222      7593      1275
+		#
+		#ART.suA.N ART.suA.Y  ART.vlNA       DAm       DAy  DC.T<=20  DC.T<=22    Dother     Ds<=1     Ds<=2    Ppulse         U       UAm       UAy 
+	    #3024      4497        70      		 702       844        72       148      6084        75       337       222      7593      1275      1269 
+
+		YX.m4.fit14 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit14.or		<- data.table( 	Dsl1= my.or.from.logit(YX.m4.fit14, 'stageDs<=1', 'stageDother', subset(YX.m4, stage=='Ds<=1')[, sum(w)], subset(YX.m4, stage=='Dother')[, sum(w)], 1.962),
+											Dsl2= my.or.from.logit(YX.m4.fit14, 'stageDs<=2', 'stageDother', subset(YX.m4, stage=='Ds<=2')[, sum(w)], subset(YX.m4, stage=='Dother')[, sum(w)], 1.962)	)		
+		#       Dsl1     Dsl2		ignoring CD4(t)
+		#1: 1.505878 1.463572
+		#2: 1.154378 1.121267
+		#3: 1.964406 1.910376
+
+		#       Dsl1     Dsl2		only CD4(t)>350
+		#1: 2.433970 1.516979
+		#2: 1.916189 1.173828
+		#3: 3.091664 1.960445
+
+	}
+	#		try fw.up.med	
+	if(1)
+	{
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		fw.cut		<- c(-1, 2/12, 0.5, 2, 30)
+		fw.label	<- c('Df<=0.16','Df<=0.5','Df<=2','Df>2')
+		for(i in seq_along(fw.cut)[-1])
+			set(YX.m4, YX.m4[, which(stage=='Diag' & fw.up.med<=fw.cut[i] & fw.up.med>fw.cut[i-1])], 'stage', fw.label[i-1])
+		YX.m4[, table(stage)]
+		
+		YX.m4s	<- subset(YX.m4, stage!='Diag')
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]
+		#	ART.suA.N ART.suA.Y  ART.vlNA   Df<=0.2     Df<=2     	Df<=5         U       	UAm       UAy 
+     	#	3172      4526        70      	2972      	5114       	66      		7606      	1275      1291
+		YX.m4s.fit6 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4s)
+		YX.m4s.fit6.or	<- data.table( 	Dfl02= my.or.from.logit(YX.m4s.fit6, 'stageDf<=0.16', 'stageDf<=2', subset(YX.m4s, stage=='Df<=0.16')[, sum(w)], subset(YX.m4s, stage=='Df<=2')[, sum(w)], 1.962),
+										Dfl05= my.or.from.logit(YX.m4s.fit6, 'stageDf<=0.5', 'stageDf<=2', subset(YX.m4s, stage=='Df<=0.5')[, sum(w)], subset(YX.m4s, stage=='Df<=2')[, sum(w)], 1.962),
+										Dfg2= my.or.from.logit(YX.m4s.fit6, 'stageDf>2', 'stageDf<=2', subset(YX.m4s, stage=='Df>2')[, sum(w)], subset(YX.m4s, stage=='Df<=2')[, sum(w)], 1.962)		)
+		#       Dfl02    Dfl05      Dfg2
+		#1: 2.633420 1.140633 0.6190514
+		#2: 1.821406 0.856658 0.3310043
+		#3: 3.807445 1.518743 1.1577631
+		#	only frequent follow up associated with higher transmissibility. this is similar story to t2.care
+		#	is this still true when we adjust for CDCC event ? --> YES
+		YX.m4s	<- subset(YX.m4s, !stage%in%c('ART.suA.N','ART.suA.Y','ART.vlNA','U','UAm','UAy'))
+		set(YX.m4s, NULL, 'CDCC', YX.m4s[, factor(CDCC)])
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s.fit6b 	<- betareg(score.Y ~ stage:CDCC-1, link='logit', weights=w, data = YX.m4s)
+	}
+	#		see if single VL thresh stratifies diagnosed	- use max VL per infection window
+	if(0)
+	{		
+		YX.m4[, lRNA.c:=NULL]
+		YX.m4[, lRNA_TL:=NULL]
+		YX.m4[, PoslRNA_TL:=NULL]		
+		tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		YX.m4	<- merge(YX.m4, tmp, by= 't.Patient')
+		YX.m4	<- merge(YX.m4, YX.m4[, {	
+											tmp<- which(!is.na(lRNA))
+											list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
+										}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+		
+		VL.win		<- c( seq(1e4, 1e5, by=1e4), seq(2e5, 5e5, by=1e5) ) 
+		YX.m4.VL	<- sapply(VL.win, function(VL.cur)
+				{
+					cat(paste('\nprocess VL=', VL.cur))									
+					VL.cur	<- log10(VL.cur)
+					set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+					tmp		<- YX.m4[, {
+										tmp<- which(!is.na(lRNA))
+										#if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE)) stop('found')
+										if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=VL.cur)
+											lRNA.c	<- 'VLw.L'						
+										else if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1]>VL.cur)
+											lRNA.c	<- 'VLw.H'						
+										else if(!length(tmp))
+											lRNA.c	<- 'VLw.NA'
+										else if(max(lRNA[tmp])>VL.cur)
+											lRNA.c	<- 'VLw.H'
+										else
+											lRNA.c	<- 'VLw.L'
+										list( lRNA.c= lRNA.c )
+							}, by=c('Patient','t.Patient')]
+					YX.m4	<- merge(YX.m4, tmp, by=c('Patient','t.Patient'))
+					#	actually, the number of entries with missing VL does not improve based on the contact stuff because we there is no such individual
+					set(YX.m4, YX.m4[,which(stage=='Diag' & lRNA.c=='VLw.L')],'stage', 'DVLw.L' )
+					set(YX.m4, YX.m4[,which(stage=='Diag' & lRNA.c=='VLw.H')],'stage', 'DVLw.H' )
+					set(YX.m4, YX.m4[,which(stage=='Diag')],'stage', 'DVLw.NA' )
+					set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+					YX.m4[, lRNA.c:=NULL]
+					YX.m4.fit7 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+					
+					
+					ans			<- c(		YX.m4[, length(which(stage=='DVLw.H'))], YX.m4[, length(which(stage=='DVLw.L'))],
+											subset(YX.m4, stage=='DVLw.H')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)],
+											my.or.from.logit(YX.m4.fit7, 'stageDVLw.H', 'stageDVLw.L', subset(YX.m4, stage=='DVLw.H')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)], 1.962),						
+											my.or.from.logit(YX.m4.fit7, 'stageDVLw.NA', 'stageDVLw.L', subset(YX.m4, stage=='DVLw.NA')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)], 1.962),
+											logLik(YX.m4.fit7), YX.m4.fit7$pseudo.r.squared, 10^VL.cur	)
+					names(ans)	<- c('n.DVLw.H','n.DVLw.L','w.DVLw.H','w.DVLw.L','or.HL','or.HL.l95','or.HL.u95','or.NAL','or.NAL.l95','or.NAL.u95','lkl','r2','VL.thresh')
+					ans
+				})
+		YX.m4.VL	<- as.data.table(t(YX.m4.VL))
+		plot(YX.m4.VL[, VL.thresh], YX.m4.VL[, or.HL], type='p', pch=18, ylim= c( min(YX.m4.VL[, or.HL.l95], na.rm=TRUE),max(YX.m4.VL[, or.HL.u95], na.rm=TRUE))  )
+		dummy	<- YX.m4.VL[,	lines( rep(VL.thresh,2), c(or.HL.l95,or.HL.u95))	, by='VL.thresh']
+		abline(h=1, lty=2)
+		#	suggests to consider Acute separately!
+		YX.m4[, PoslRNA_TL:=NULL]
+		YX.m4[, lRNA_TL:=NULL]
+		YX.m4[, t.PoslRNA_T1:=NULL]
+	}	
+	#	investigate Acute=='Yes' and Acute=='Maybe' at diagnosis and infection window periods close to diagnosis
+	if(0)
+	{
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 1)], 'stage', 'DAm' )
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, table(stage)]
+		#	ART.suA.N ART.suA.Y  ART.vlNA       DAm       DAy      Diag         U       UAm       UAy 
+     	#	3172      4526        70       		702       851      6719      7606      1275      1291 
+		YX.m4.fit8 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit8.or	<- data.table( 	DAy= my.or.from.logit(YX.m4.fit8, 'stageDAy', 'stageDiag', subset(YX.m4, stage=='DAy')[, sum(w)], subset(YX.m4, stage=='Diag')[, sum(w)], 1.962),
+										DAm= my.or.from.logit(YX.m4.fit8, 'stageDAm', 'stageDiag', subset(YX.m4, stage=='DAy')[, sum(w)], subset(YX.m4, stage=='Diag')[, sum(w)], 1.962)	)
+		#        DAy      DAm
+		#1: 2.453331 3.061342
+		#2: 1.930366 2.390187
+		#3: 3.117974 3.920955								
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAm' )
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, table(stage)]
+		#	ART.suA.N ART.suA.Y  ART.vlNA       DAm       DAy      Diag         U       UAm       UAy 
+     	#	3172      4526        70       		436       523      7313      7606      1275      1291  
+		YX.m4.fit9 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit9.or	<- data.table( 	DAy= my.or.from.logit(YX.m4.fit9, 'stageDAy', 'stageDiag', subset(YX.m4, stage=='DAy')[, sum(w)], subset(YX.m4, stage=='Diag')[, sum(w)], 1.962),
+										DAm= my.or.from.logit(YX.m4.fit9, 'stageDAm', 'stageDiag', subset(YX.m4, stage=='DAy')[, sum(w)], subset(YX.m4, stage=='Diag')[, sum(w)], 1.962)	)
+		#               DAy      DAm
+		#1: 2.668173 3.266706
+		#2: 2.115017 2.585143
+		#3: 3.365999 4.127960
+		#
+		#	YES -- they are strongly associated with transmission at a fairly small time period after diagnosis	
+	}
+	#	interplay Acute and VL high -- max VL
+	if(1)
+	{		
+		YX.m4[, lRNA.c:=NULL]
+		YX.m4[, lRNA_TL:=NULL]
+		YX.m4[, PoslRNA_TL:=NULL]		
+		tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		YX.m4	<- merge(YX.m4, tmp, by= 't.Patient')
+		YX.m4	<- merge(YX.m4, YX.m4[, {	
+							tmp<- which(!is.na(lRNA))
+							list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
+						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+		
+		VL.win		<- c( seq(1e4, 1e5, by=1e4), seq(1.5e5, 5e5, by=5e4) ) 
+		YX.m4.VL	<- sapply(VL.win, function(VL.cur)
+				{
+					cat(paste('\nprocess VL=', VL.cur))									
+					VL.cur	<- log10(VL.cur)
+					set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+					tmp		<- YX.m4[, {
+								tmp<- which(!is.na(lRNA))
+								#if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE)) stop('found')
+								if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=VL.cur)
+									lRNA.c	<- 'VLw.L'						
+								else if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1]>VL.cur)
+									lRNA.c	<- 'VLw.H'						
+								else if(!length(tmp))
+									lRNA.c	<- 'VLw.NA'
+								else if(max(lRNA[tmp])>VL.cur)
+									lRNA.c	<- 'VLw.H'
+								else
+									lRNA.c	<- 'VLw.L'
+								list( lRNA.c= lRNA.c )
+							}, by=c('Patient','t.Patient')]
+					YX.m4	<- merge(YX.m4, tmp, by=c('Patient','t.Patient'))
+					#	actually, the number of entries with missing VL does not improve based on the contact stuff because we there is no such individual
+					set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+					set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )					
+					set(YX.m4, YX.m4[,which(stage=='Diag' & lRNA.c=='VLw.L')],'stage', 'DVLw.L' )
+					set(YX.m4, YX.m4[,which(stage=='Diag' & lRNA.c=='VLw.H')],'stage', 'DVLw.H' )
+					set(YX.m4, YX.m4[,which(stage=='Diag')],'stage', 'DVLw.NA' )
+					set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+					YX.m4[, lRNA.c:=NULL]
+					#YX.m4[, table(stage)]
+					YX.m4.fit10 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+					ans			<- c(		YX.m4[, length(which(stage=='DVLw.H'))], YX.m4[, length(which(stage=='DVLw.L'))],
+											subset(YX.m4, stage=='DVLw.H')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)],
+											my.or.from.logit(YX.m4.fit10, 'stageDVLw.H', 'stageDVLw.L', subset(YX.m4, stage=='DVLw.H')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)], 1.962),						
+											my.or.from.logit(YX.m4.fit10, 'stageDVLw.NA', 'stageDVLw.L', subset(YX.m4, stage=='DVLw.NA')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)], 1.962),
+											logLik(YX.m4.fit10), YX.m4.fit10$pseudo.r.squared, 10^VL.cur	)
+					names(ans)	<- c('n.DVLw.H','n.DVLw.L','w.DVLw.H','w.DVLw.L','or.HL','or.HL.l95','or.HL.u95','or.NAL','or.NAL.l95','or.NAL.u95','lkl','r2','VL.thresh')
+					ans
+				})
+		YX.m4.VL	<- as.data.table(t(YX.m4.VL))
+		plot(YX.m4.VL[, VL.thresh], YX.m4.VL[, or.HL], type='p', pch=18, ylim= c( min(YX.m4.VL[, or.HL.l95], na.rm=TRUE),max(YX.m4.VL[, or.HL.u95], na.rm=TRUE))  )
+		dummy	<- YX.m4.VL[,	lines( rep(VL.thresh,2), c(or.HL.l95,or.HL.u95))	, by='VL.thresh']
+		abline(h=1, lty=2)
+		#	Once Acute is considered separately, there is no indication that VL.high is associated with higher transmissibility
+		#	typical: 0.9985499 [ 0.7548396  1.320946] for VL 1e5
+		YX.m4[, PoslRNA_TL:=NULL]
+		YX.m4[, lRNA_TL:=NULL]
+		YX.m4[, t.PoslRNA_T1:=NULL]
+	}
+	#	interplay Acute and VL high using Geometric mean of RNA, or the log Geometric mean ( mean of lRNA )
+	if(1)
+	{		
+		YX.m4[, lRNA.c:=NULL]
+		YX.m4[, lRNA_TL:=NULL]
+		YX.m4[, PoslRNA_TL:=NULL]		
+		tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		YX.m4	<- merge(YX.m4, tmp, by= 't.Patient')
+		YX.m4	<- merge(YX.m4, YX.m4[, {	
+							tmp<- which(!is.na(lRNA))
+							list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
+						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+		
+		VL.win		<- c( seq(1e4, 1e5, by=1e4), seq(1.5e5, 5e5, by=5e4) ) 
+		YX.m4.VL	<- sapply(VL.win, function(VL.cur)
+				{
+					cat(paste('\nprocess VL=', VL.cur))									
+					VL.cur	<- log10(VL.cur)
+					set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+					tmp		<- YX.m4[, {
+								tmp<- which(!is.na(lRNA))
+								#if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE)) stop('found')
+								if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=VL.cur)
+									lRNA.c	<- 'VLw.L'						
+								else if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1]>VL.cur)
+									lRNA.c	<- 'VLw.H'						
+								else if(!length(tmp))
+									lRNA.c	<- 'VLw.NA'
+								else if(mean(lRNA[tmp])>VL.cur)
+									lRNA.c	<- 'VLw.H'
+								else
+									lRNA.c	<- 'VLw.L'
+								list( lRNA.c= lRNA.c )
+							}, by=c('Patient','t.Patient')]
+					YX.m4	<- merge(YX.m4, tmp, by=c('Patient','t.Patient'))
+					#	actually, the number of entries with missing VL does not improve based on the contact stuff because we there is no such individual
+					set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+					set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )					
+					set(YX.m4, YX.m4[,which(stage=='Diag' & lRNA.c=='VLw.L')],'stage', 'DVLw.L' )
+					set(YX.m4, YX.m4[,which(stage=='Diag' & lRNA.c=='VLw.H')],'stage', 'DVLw.H' )
+					set(YX.m4, YX.m4[,which(stage=='Diag')],'stage', 'DVLw.NA' )
+					set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+					YX.m4[, lRNA.c:=NULL]
+					#YX.m4[, table(stage)]
+					YX.m4.fit10 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+					ans			<- c(		YX.m4[, length(which(stage=='DVLw.H'))], YX.m4[, length(which(stage=='DVLw.L'))],
+							subset(YX.m4, stage=='DVLw.H')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)],
+							my.or.from.logit(YX.m4.fit10, 'stageDVLw.H', 'stageDVLw.L', subset(YX.m4, stage=='DVLw.H')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)], 1.962),						
+							my.or.from.logit(YX.m4.fit10, 'stageDVLw.NA', 'stageDVLw.L', subset(YX.m4, stage=='DVLw.NA')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)], 1.962),
+							logLik(YX.m4.fit10), YX.m4.fit10$pseudo.r.squared, 10^VL.cur	)
+					names(ans)	<- c('n.DVLw.H','n.DVLw.L','w.DVLw.H','w.DVLw.L','or.HL','or.HL.l95','or.HL.u95','or.NAL','or.NAL.l95','or.NAL.u95','lkl','r2','VL.thresh')
+					ans
+				})
+		YX.m4.VL	<- as.data.table(t(YX.m4.VL))
+		plot(YX.m4.VL[, VL.thresh], YX.m4.VL[, or.HL], type='p', pch=18, ylim= c( min(YX.m4.VL[, or.HL.l95], na.rm=TRUE),max(YX.m4.VL[, or.HL.u95], na.rm=TRUE)) )
+		dummy	<- YX.m4.VL[,	lines( rep(VL.thresh,2), c(or.HL.l95,or.HL.u95))	, by='VL.thresh']
+		abline(h=1, lty=2)
+		#	with dt=0.25, this is now significant
+		#
+		#	compare threshold to linear on lRNA model
+		VL.cur	<- 5
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		tmp		<- YX.m4[, {
+					tmp<- which(!is.na(lRNA))
+					#if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE)) stop('found')
+					if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=VL.cur)
+						lRNA.c	<- 'VLw.L'						
+					else if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1]>VL.cur)
+						lRNA.c	<- 'VLw.H'						
+					else if(!length(tmp))
+						lRNA.c	<- 'VLw.NA'
+					else if(mean(lRNA[tmp])>VL.cur)
+						lRNA.c	<- 'VLw.H'
+					else
+						lRNA.c	<- 'VLw.L'
+					list( lRNA.c= lRNA.c )
+				}, by=c('Patient','t.Patient')]
+		YX.m4	<- merge(YX.m4, tmp, by=c('Patient','t.Patient'))
+		#	actually, the number of entries with missing VL does not improve based on the contact stuff because we there is no such individual
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )					
+		set(YX.m4, YX.m4[,which(stage=='Diag' & lRNA.c=='VLw.L')],'stage', 'DVLw.L' )
+		set(YX.m4, YX.m4[,which(stage=='Diag' & lRNA.c=='VLw.H')],'stage', 'DVLw.H' )
+		set(YX.m4, YX.m4[,which(stage=='Diag')],'stage', 'DVLw.NA' )
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		YX.m4[, lRNA.c:=NULL]
+		YX.m4s	<- subset(YX.m4, !stage%in%c('ART.suA.N','ART.suA.Y','ART.vlNA','U','UAy','UAm','DAy','DAm'))
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]				
+		YX.m4.fit10a 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4s)
+		summary(YX.m4.fit10a)
+		#Log-likelihood: 217.4 on 6 Df
+		#Pseudo R-squared: 0.05876		
+		#Log-likelihood: 152.3 on 4 Df		(excluding acute Diagnosed)
+		#Pseudo R-squared: 0.008702
+		
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )					
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])		
+		tmp		<- YX.m4[, {
+					tmp<- which(!is.na(lRNA))
+					#if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE)) stop('found')
+					if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) )
+						lRNA.c	<- lRNA_TL						
+					else if(!length(tmp))
+						lRNA.c	<- NA_real_
+					else
+						lRNA.c	<- mean(lRNA[tmp])
+					list( lRNA.c= lRNA.c, lRNA.g=exp(lRNA.c) )
+				}, by=c('Patient','t.Patient')]
+		YX.m4	<- merge(YX.m4, tmp, by=c('Patient','t.Patient'))
+		YX.m4s	<- subset(YX.m4, !stage%in%c('ART.suA.N','ART.suA.Y','ART.vlNA','U','UAy','UAm','DAy','DAm'))
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]
+		YX.m4.fit10b 	<- betareg(score.Y ~ lRNA.c, link='logit', weights=w, data = YX.m4s)
+		summary(YX.m4.fit10b)
+		#Log-likelihood: 197.3 on 5 Df
+		#Pseudo R-squared: 0.06579
+		#Log-likelihood: 141.3 on 3 Df		(excluding acute Diagnosed)
+		#Pseudo R-squared: 0.0236		
+		YX.m4.fit10c 	<- betareg(score.Y ~ lRNA.g+stage-1, link='logit', weights=w, data = YX.m4s)
+		summary(YX.m4.fit10c)
+		#Log-likelihood: 197.5 on 5 Df
+		#Pseudo R-squared: 0.06377
+		#Log-likelihood: 141.5 on 4 Df		(excluding acute Diagnosed)
+		#Pseudo R-squared: 0.02102
+
+		tmp<- subset( YX.m4s, stage=='Diag', select=c(lRNA.c, score.Y))
+		setkey(tmp, lRNA.c)
+		tmp	<- subset(tmp, !is.na(lRNA.c))
+		plot(tmp[, lRNA.c], tmp[, log( score.Y/(1-score.Y) )], pch=18)
+		lines( lowess(tmp[, lRNA.c], tmp[, log( score.Y/(1-score.Y) )]), col='blue')	#	linear fit prob not too bad
+		
+		YX.m4[, lRNA.c:=NULL]
+		
+		YX.m4[, PoslRNA_TL:=NULL]
+		YX.m4[, lRNA_TL:=NULL]
+		YX.m4[, t.PoslRNA_T1:=NULL]
+	}
+	#	interplay Acute and VL high using every time period individually
+	if(1)
+	{		
+		YX.m4[, lRNA.c:=NULL]
+		YX.m4[, lRNA_TL:=NULL]
+		YX.m4[, PoslRNA_TL:=NULL]		
+		tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		YX.m4	<- merge(YX.m4, tmp, by= 't.Patient')
+		YX.m4	<- merge(YX.m4, YX.m4[, {	
+							tmp<- which(!is.na(lRNA))
+							list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
+						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+		
+		VL.win		<- c( seq(1e4, 1e5, by=1e4), seq(1.5e5, 5e5, by=5e4) ) 
+		YX.m4.VL	<- sapply(VL.win, function(VL.cur)
+				{
+					cat(paste('\nprocess VL=', VL.cur))									
+					VL.cur	<- log10(VL.cur)
+					set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+					set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+					#set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )										
+					set(YX.m4, YX.m4[, which(stage=='Diag' & is.na(lRNA) & !is.na(lRNA_TL) & t>PoslRNA_TL & (t-PoslRNA_TL)<0.5 & lRNA_TL[1]<=VL.cur)],'stage', 'DVLw.L' )
+					set(YX.m4, YX.m4[, which(stage=='Diag' & !is.na(lRNA) & lRNA<=VL.cur)],'stage', 'DVLw.L' )
+					set(YX.m4, YX.m4[, which(stage=='Diag' & is.na(lRNA) & !is.na(lRNA_TL) & t>PoslRNA_TL & (t-PoslRNA_TL)<0.5 & lRNA_TL[1]>VL.cur)],'stage', 'DVLw.H' )					
+					set(YX.m4, YX.m4[, which(stage=='Diag' & !is.na(lRNA) & lRNA>VL.cur)],'stage', 'DVLw.H' )
+					set(YX.m4, YX.m4[, which(stage=='Diag')],'stage', 'DVLw.NA' )
+					set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])					
+					#YX.m4[, table(stage)]
+					YX.m4.fit10 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+					ans			<- c(		YX.m4[, length(which(stage=='DVLw.H'))], YX.m4[, length(which(stage=='DVLw.L'))],
+							subset(YX.m4, stage=='DVLw.H')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)],
+							my.or.from.logit(YX.m4.fit10, 'stageDVLw.H', 'stageDVLw.L', subset(YX.m4, stage=='DVLw.H')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)], 1.962),						
+							my.or.from.logit(YX.m4.fit10, 'stageDVLw.NA', 'stageDVLw.L', subset(YX.m4, stage=='DVLw.NA')[, sum(w)], subset(YX.m4, stage=='DVLw.L')[, sum(w)], 1.962),
+							logLik(YX.m4.fit10), YX.m4.fit10$pseudo.r.squared, 10^VL.cur	)
+					names(ans)	<- c('n.DVLw.H','n.DVLw.L','w.DVLw.H','w.DVLw.L','or.HL','or.HL.l95','or.HL.u95','or.NAL','or.NAL.l95','or.NAL.u95','lkl','r2','VL.thresh')
+					ans
+				})
+		YX.m4.VL	<- as.data.table(t(YX.m4.VL))
+		plot(YX.m4.VL[, VL.thresh], YX.m4.VL[, or.HL], type='p', pch=18, ylim= c( min(YX.m4.VL[, or.HL.l95], na.rm=TRUE),max(YX.m4.VL[, or.HL.u95], na.rm=TRUE))  )
+		dummy	<- YX.m4.VL[,	lines( rep(VL.thresh,2), c(or.HL.l95,or.HL.u95))	, by='VL.thresh']
+		abline(h=1, lty=2)
+		#	Once Acute is considered separately, there is no indication that VL.high is associated with higher transmissibility
+		#	typical: 0.9985499 [ 0.7548396  1.320946] for VL 1e5
+		YX.m4[, PoslRNA_TL:=NULL]
+		YX.m4[, lRNA_TL:=NULL]
+		YX.m4[, t.PoslRNA_T1:=NULL]
+	}
+	# combine various risk groups that were identified: Acute, D1>45
+	if(1)
+	{
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		#	add age at diagnosis
+		YX.m4[, t.AnyPos_A:=NULL]
+		tmp		<- subset( clumsm.info, select=c(Patient, DateBorn, AnyPos_T1) )
+		setkey(tmp, Patient)
+		tmp		<- unique(tmp)
+		tmp[, AnyPos_A:= AnyPos_T1-DateBorn]
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		tmp		<- merge( unique( subset(YX.m4, select=t.Patient) ), tmp, by='t.Patient' )		
+		YX.m4	<- merge(YX.m4, subset(tmp, select=c(t.Patient, t.AnyPos_A)), by='t.Patient')	
+		#	set Acute			
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAm' )
+		#	set age 45 at diagnosis
+		set(YX.m4, YX.m4[, which(t.AnyPos_A>45 & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DC.T1>45' )
+		#	set young age groups
+		age.cut		<- c(-1, 20, 22, 24, 100)
+		age.label	<- c('DC.T<=20','DC.T<=22', 'DC.T<=24', 'DC.T>25')
+		for(i in seq_along(age.cut)[-1])
+			set(YX.m4, YX.m4[, which(stage=='Diag' & t.Age<=age.cut[i] & t.Age>age.cut[i-1])], 'stage', age.label[i-1])
+		#			
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
+		table( YX.m4[, stage])
+		#	ART.suA.N ART.suA.Y  ART.vlNA       DAm       DAy  		DC.T<=20  	DC.T<=25   DC.T>25  	DC.T1>45         U       UAm       UAy 
+     	#	3172      4526        70       		436       523       75       	427      	6533       278      		7606      1275      1291
+		YX.m4.fit11 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
+		YX.m4.fit11.or	<- data.table( 	DAy= my.or.from.logit(YX.m4.fit11, 'stageDAy', 'stageDC.T>25', subset(YX.m4, stage=='DAy')[, sum(w)], subset(YX.m4, stage=='DC.T>25')[, sum(w)], 1.962),
+										DAm= my.or.from.logit(YX.m4.fit11, 'stageDAm', 'stageDC.T>25', subset(YX.m4, stage=='DAy')[, sum(w)], subset(YX.m4, stage=='DC.T>25')[, sum(w)], 1.962),
+										D1g45= my.or.from.logit(YX.m4.fit11, 'stageDC.T1>45', 'stageDC.T>25', subset(YX.m4, stage=='DC.T1>45')[, sum(w)], subset(YX.m4, stage=='DC.T>25')[, sum(w)], 1.962),
+										Dl20= my.or.from.logit(YX.m4.fit11, 'stageDC.T<=20', 'stageDC.T>25', subset(YX.m4, stage=='DC.T<=20')[, sum(w)], subset(YX.m4, stage=='DC.T>25')[, sum(w)], 1.962),
+										Dl22= my.or.from.logit(YX.m4.fit11, 'stageDC.T<=22', 'stageDC.T>25', subset(YX.m4, stage=='DC.T<=20')[, sum(w)], subset(YX.m4, stage=='DC.T>25')[, sum(w)], 1.962),
+										Dl24= my.or.from.logit(YX.m4.fit11, 'stageDC.T<=24', 'stageDC.T>25', subset(YX.m4, stage=='DC.T<=25')[, sum(w)], subset(YX.m4, stage=='DC.T>25')[, sum(w)], 1.962))
+		#        DAy      DAm    D1g45
+		#1: 2.697307 3.302536 1.443833
+		#2: 2.131744 2.605657 1.135020
+		#3: 3.412917 4.185795 1.836668
+		#	D1>45 remains significant
+		#        DAy      DAm    D1g45     Dl20     Dl22      Dl24
+		#1: 2.749188 3.366780 1.470059 4.696014 1.379099 1.0650515
+		#2: 2.165804 2.647792 1.151648 3.887683 1.144275 0.9277367
+		#3: 3.489713 4.281004 1.876507 5.672414 1.662112 1.2226903
+		#	young ages also remain significant
+	}
+}
+######################################################################################
+project.athena.Fisheretal.YX.model3.ARTriskgroups<- function(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA)
+{
+	require(betareg)
+	#	Treatment cascade & ART risk groups
+	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis
+	#	
+	#	PQ: are there ART risk groups?
+	#	PQ: is VL the causal pathway?		--> currently problematic with uniform infection window approach
+	#	SQ: is ART pulse associated with higher transmissibility?
+	YX.m3	<- copy(YX)
+	YX.m3[, U.score:=NULL]
+	#	deal with acutes
+	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
+	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')	
+	set(YX.m3, YX.m3[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAy' )
+	set(YX.m3, YX.m3[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAm' )			
+	#	stratify Diag by first CD4 after diagnosis
+	tmp		<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)	
+	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	print( subset( tmp, is.na(CD4.c) ) )
+	setnames(tmp, 'Patient', 't.Patient')
+	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+	YX.m3	<- merge(YX.m3, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+	tmp		<- YX.m3[, which(stage=='Diag')]
+	set(YX.m3, tmp, 'stage', YX.m3[tmp, CD4.c])
+	YX.m3[, CD4.c:=NULL]
+	YX.m3[, table(stage)]
+	#	
+	YX.m3[, stage.orig:= stage]
+	#
+	#	stratify ART by 	ART.pulse	ART.I	ART.F 	ART.A	ART.P	ART.ni
+	#	full model
+	#	
+	set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')
+	set(YX.m3, YX.m3[, which(stage=='ART.started')], 'stage', 'ART.ni')				
+	YX.m3[, table(stage)]
+	# 	stage
+	#	ART.A       ART.F       ART.I      ART.ni       ART.P 		ART.pulse.Y     D1<=350     D1<=550      D1>550           U          UA 
+	#  	7        	1590         534        5210         250         177        	1050        3242        3980        	7606        2566
+	set(YX.m3, NULL, 'stage', YX.m3[, factor(stage)])
+	tmp				<- data.table(stage= YX.m3[, levels(stage)], col=sapply( rainbow(YX.m3[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+	set(tmp, NULL, 'stage', tmp[, factor(stage)])
+	YX.m3			<- merge(YX.m3, tmp, by='stage')
+	YX.m3.fit4 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3)				
+	YX.m3.fit4.or	<- data.table( 	F= my.or.from.logit(YX.m3.fit4, 'stageART.F', 'stageART.ni', subset(YX.m3, stage=='ART.F')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+									I= my.or.from.logit(YX.m3.fit4, 'stageART.I', 'stageART.ni', subset(YX.m3, stage=='ART.I')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+									P= my.or.from.logit(YX.m3.fit4, 'stageART.P', 'stageART.ni', subset(YX.m3, stage=='ART.P')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+									A= my.or.from.logit(YX.m3.fit4, 'stageART.A', 'stageART.ni', subset(YX.m3, stage=='ART.A')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+									pulse= my.or.from.logit(YX.m3.fit4, 'stageART.pulse.Y', 'stageART.ni', subset(YX.m3, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+									ni= my.or.from.logit(YX.m3.fit4, 'stageART.ni', 'stageU', subset(YX.m3, stage=='ART.ni')[, sum(w)], subset(YX.m3, stage=='U')[, sum(w)], 1.962) )	
+	YX.m3.fit4.p	<- YX.m3[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m3[,sum(w)],d=3) ),by='stage']	
+	#
+	#	stratify ART by 	ART.pulse	ART.I	ART.F 	ART.A	ART.P	ART.ni
+	#	sub model after treatment
+	#	
+	YX.m3s			<- subset(YX.m3, !stage%in%c('D1<=350','D1<=550','D1>550','U','UAm','UAy'))
+	set(YX.m3s, NULL, 'stage', YX.m3s[, factor(as.character(stage))])
+	YX.m3s.fit4 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3s)
+	YX.m3s.fit4.or	<- data.table( 	F= my.or.from.logit(YX.m3s.fit4, 'stageART.F', 'stageART.ni', subset(YX.m3s, stage=='ART.F')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962),
+									I= my.or.from.logit(YX.m3s.fit4, 'stageART.I', 'stageART.ni', subset(YX.m3s, stage=='ART.I')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962),
+									P= my.or.from.logit(YX.m3s.fit4, 'stageART.P', 'stageART.ni', subset(YX.m3s, stage=='ART.P')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962),
+									A= my.or.from.logit(YX.m3s.fit4, 'stageART.A', 'stageART.ni', subset(YX.m3s, stage=='ART.A')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962),
+									pulse= my.or.from.logit(YX.m3s.fit4, 'stageART.pulse.Y', 'stageART.ni', subset(YX.m3s, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962))
+	if(!is.na(plot.file.cascade))
+	{
+		pdf(file=plot.file.cascade, w=5, h=5)
+		plot( seq_len(nrow(YX.m3)), YX.m3[, score.Y], pch=18, col= YX.m3[, col], cex=YX.m3[, w^0.4])
+		tmp				<- subset(YX.m3, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m3.fit4, tmp, type='response'))	
+		start			<- c( YX.m3.fit4$coef$mean + head( 2*sqrt(diag(vcov(YX.m3.fit4))), length(YX.m3.fit4$coef$mean)), YX.m3.fit4$coef$precision)
+		YX.m3.fit4.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m3.fit4$coef$mean - head( 2*sqrt(diag(vcov(YX.m3.fit4))), length(YX.m3.fit4$coef$mean)), YX.m3.fit4$coef$precision)
+		YX.m3.fit4.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m3.fit4.sup, tmp, type='response'), rev(predict(YX.m3.fit4.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m3[, levels(stage)], fill=YX.m3[, unique(col)])
+		YX.m3[, col:=NULL]
+		dev.off()
+		#		
+	}
+	list(m3=YX.m3, m3.fit=YX.m3.fit4, m3.fit.art=YX.m3s.fit4, m3.or=YX.m3.fit4.or, m3.or.art=YX.m3s.fit4.or)
+}
+######################################################################################
 project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))
 {
 	require(betareg)
@@ -4485,8 +5648,8 @@ project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=lo
 		legend('bottomright', bty='n', border=NA, legend= YX.m3[, levels(stage)], fill=YX.m3[, unique(col)])
 		#		
 		YX.m3.fit1.or	<- data.table( 	ART1.pulse.YN= my.or.from.logit(YX.m3.fit1, 'stageART.pulse.Y', 'stageART.pulse.N', subset(YX.m2, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m2, stage=='ART.pulse.N')[, sum(w)], 1.962),
-										ART1.pulse.Y= my.or.from.logit(YX.m3.fit1, 'stageART.pulse.Y', 'stageU', subset(YX.m2, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										ART1.pulse.N= my.or.from.logit(YX.m3.fit1, 'stageART.pulse.N', 'stageU', subset(YX.m2, stage=='ART.pulse.N')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962)		)
+				ART1.pulse.Y= my.or.from.logit(YX.m3.fit1, 'stageART.pulse.Y', 'stageU', subset(YX.m2, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				ART1.pulse.N= my.or.from.logit(YX.m3.fit1, 'stageART.pulse.N', 'stageU', subset(YX.m2, stage=='ART.pulse.N')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962)		)
 		#  	 	ART1.pulse.YN 	ART1.pulse.Y 	ART1.pulse.N
 		#1:     1.489437     	0.620418    	0.4165452
 		#2:     0.684947     	0.527689    	0.3487689
@@ -4554,14 +5717,14 @@ project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=lo
 		set(YX.m3, NULL, 'stage', YX.m3[, factor(stage)])
 		YX.m3[, table(stage)]
 		#   ART.A   ART.F   ART.I  ART.ni   ART.P 	D1<=350 	D1<=550  D1>550     U      UA 
-      	#	7    	1609     639    5263     250    1050    	3242     3980    	7606   2566 		
+		#	7    	1609     639    5263     250    1050    	3242     3980    	7606   2566 		
 		YX.m3.fit3 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3)				
 		summary(YX.m3.fit3)		
 		YX.m3.fit3.or	<- data.table( 	F= my.or.from.logit(YX.m3.fit3, 'stageART.F', 'stageART.ni', subset(YX.m3, stage=='ART.F')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
-										I= my.or.from.logit(YX.m3.fit3, 'stageART.I', 'stageART.ni', subset(YX.m3, stage=='ART.I')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
-										P= my.or.from.logit(YX.m3.fit3, 'stageART.P', 'stageART.ni', subset(YX.m3, stage=='ART.P')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
-										A= my.or.from.logit(YX.m3.fit3, 'stageART.A', 'stageART.ni', subset(YX.m3, stage=='ART.A')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
-										ni= my.or.from.logit(YX.m3.fit3, 'stageART.ni', 'stageU', subset(YX.m3, stage=='ART.ni')[, sum(w)], subset(YX.m3, stage=='U')[, sum(w)], 1.962) )
+				I= my.or.from.logit(YX.m3.fit3, 'stageART.I', 'stageART.ni', subset(YX.m3, stage=='ART.I')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+				P= my.or.from.logit(YX.m3.fit3, 'stageART.P', 'stageART.ni', subset(YX.m3, stage=='ART.P')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+				A= my.or.from.logit(YX.m3.fit3, 'stageART.A', 'stageART.ni', subset(YX.m3, stage=='ART.A')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+				ni= my.or.from.logit(YX.m3.fit3, 'stageART.ni', 'stageU', subset(YX.m3, stage=='ART.ni')[, sum(w)], subset(YX.m3, stage=='U')[, sum(w)], 1.962) )
 		#      F        	I        P        A        ni
 		#	1: 1.1514737 	1.560395 2.104169 1.348143 0.3669521
 		#	2: 0.8368176 	1.132237 1.503246 1.058437 0.2985505
@@ -4603,8 +5766,8 @@ project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=lo
 		set(YX.m3, YX.m3[, which(stage=='ART.started')], 'stage', 'ART.ni')				
 		YX.m3[, table(stage)]
 		# 	stage
-      	#	ART.A       ART.F       ART.I      ART.ni       ART.P 		ART.pulse.Y     D1<=350     D1<=550      D1>550           U          UA 
-        #  	7        	1590         534        5210         250         177        	1050        3242        3980        	7606        2566
+		#	ART.A       ART.F       ART.I      ART.ni       ART.P 		ART.pulse.Y     D1<=350     D1<=550      D1>550           U          UA 
+		#  	7        	1590         534        5210         250         177        	1050        3242        3980        	7606        2566
 		set(YX.m3, NULL, 'stage', YX.m3[, factor(stage)])
 		tmp			<- data.table(stage= YX.m3[, levels(stage)], col=sapply( rainbow(YX.m3[, nlevels(stage)]), my.fade.col, alpha=0.5) )
 		set(tmp, NULL, 'stage', tmp[, factor(stage)])
@@ -4613,11 +5776,11 @@ project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=lo
 		summary(YX.m3.fit4)
 		#
 		YX.m3.fit4.or	<- data.table( 	F= my.or.from.logit(YX.m3.fit4, 'stageART.F', 'stageART.ni', subset(YX.m3, stage=='ART.F')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
-										I= my.or.from.logit(YX.m3.fit4, 'stageART.I', 'stageART.ni', subset(YX.m3, stage=='ART.I')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
-										P= my.or.from.logit(YX.m3.fit4, 'stageART.P', 'stageART.ni', subset(YX.m3, stage=='ART.P')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
-										A= my.or.from.logit(YX.m3.fit4, 'stageART.A', 'stageART.ni', subset(YX.m3, stage=='ART.A')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
-										pulse= my.or.from.logit(YX.m3.fit4, 'stageART.pulse.Y', 'stageART.ni', subset(YX.m3, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
-										ni= my.or.from.logit(YX.m3.fit4, 'stageART.ni', 'stageU', subset(YX.m3, stage=='ART.ni')[, sum(w)], subset(YX.m3, stage=='U')[, sum(w)], 1.962) )	
+				I= my.or.from.logit(YX.m3.fit4, 'stageART.I', 'stageART.ni', subset(YX.m3, stage=='ART.I')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+				P= my.or.from.logit(YX.m3.fit4, 'stageART.P', 'stageART.ni', subset(YX.m3, stage=='ART.P')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+				A= my.or.from.logit(YX.m3.fit4, 'stageART.A', 'stageART.ni', subset(YX.m3, stage=='ART.A')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+				pulse= my.or.from.logit(YX.m3.fit4, 'stageART.pulse.Y', 'stageART.ni', subset(YX.m3, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m3, stage=='ART.ni')[, sum(w)], 1.962),
+				ni= my.or.from.logit(YX.m3.fit4, 'stageART.ni', 'stageU', subset(YX.m3, stage=='ART.ni')[, sum(w)], subset(YX.m3, stage=='U')[, sum(w)], 1.962) )	
 		#	F        I        P        A    	pulse    ni
 		#1: 1.160429 1.589336 2.130490 1.364599 1.707879 0.3623668
 		#2: 0.841474 1.146290 1.519117 1.069798 1.215947 0.2947070
@@ -4672,17 +5835,17 @@ project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=lo
 		table( YX.m3[, lRNA.c, stage] )
 		#             lRNA.c
 		#stage         ART.su.N ART.su.Y su.NA
-  		#ART.A              0        7     0
-  		#ART.F            181     1409     0
-  		#ART.I            510       19     5
-  		#ART.ni           327     4821    62
-  		#ART.P            114      133     3
-  		#ART.pulse.Y      108       69     0
-  		#D1<=350            0        0  1050
-  		#D1<=550            0        0  3242
-  		#D1>550             0        0  3980
-  		#U                  0        0  7606
-  		#UA                 0        0  2566	
+		#ART.A              0        7     0
+		#ART.F            181     1409     0
+		#ART.I            510       19     5
+		#ART.ni           327     4821    62
+		#ART.P            114      133     3
+		#ART.pulse.Y      108       69     0
+		#D1<=350            0        0  1050
+		#D1<=550            0        0  3242
+		#D1>550             0        0  3980
+		#U                  0        0  7606
+		#UA                 0        0  2566	
 		#
 		set(YX.m3, YX.m3[, which(stage=='ART.pulse.Y' & lRNA.c=='ART.su.Y')], 'stage', 'ART.pulse.Y.su.Y' )
 		set(YX.m3, YX.m3[, which(stage=='ART.A')], 'stage', 'DEL' )
@@ -4822,7 +5985,7 @@ project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=lo
 		#
 		YX.m3.s			<- subset(YX.m3, stage%in%c('ART.A','ART.F','ART.I','ART.P','ART.ni','ART.pulse.Y'))
 		set(YX.m3.s, NULL, 'stage', YX.m3.s[, factor(stage)])
-				
+		
 		YX.m3.s.fit7 	<- betareg(score.Y ~ lRNA + stage, link='logit', weights=w, data = YX.m3.s)
 		#
 		#
@@ -4893,10 +6056,10 @@ project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=lo
 		#YX.m3.s.fit7  8 -211.3867
 		#YX.m3.s.fit8  9 -219.4119
 		YX.m3.fit8.or	<- data.table( 	F= my.or.from.logit(YX.m3.s.fit8, 'stageART.F', 'stageART.ni', subset(YX.m3.s, stage=='ART.F')[, sum(w)], subset(YX.m3.s, stage=='ART.ni')[, sum(w)], 1.962),
-										I= my.or.from.logit(YX.m3.s.fit8, 'stageART.I', 'stageART.ni', subset(YX.m3.s, stage=='ART.I')[, sum(w)], subset(YX.m3.s, stage=='ART.ni')[, sum(w)], 1.962),
-										P= my.or.from.logit(YX.m3.s.fit8, 'stageART.P', 'stageART.ni', subset(YX.m3.s, stage=='ART.P')[, sum(w)], subset(YX.m3.s, stage=='ART.ni')[, sum(w)], 1.962),
-										A= my.or.from.logit(YX.m3.s.fit8, 'stageART.A', 'stageART.ni', subset(YX.m3.s, stage=='ART.A')[, sum(w)], subset(YX.m3.s, stage=='ART.ni')[, sum(w)], 1.962),
-										pulse= my.or.from.logit(YX.m3.s.fit8, 'stageART.pulse.Y', 'stageART.ni', subset(YX.m3.s, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m3.s, stage=='ART.ni')[, sum(w)], 1.962) )
+				I= my.or.from.logit(YX.m3.s.fit8, 'stageART.I', 'stageART.ni', subset(YX.m3.s, stage=='ART.I')[, sum(w)], subset(YX.m3.s, stage=='ART.ni')[, sum(w)], 1.962),
+				P= my.or.from.logit(YX.m3.s.fit8, 'stageART.P', 'stageART.ni', subset(YX.m3.s, stage=='ART.P')[, sum(w)], subset(YX.m3.s, stage=='ART.ni')[, sum(w)], 1.962),
+				A= my.or.from.logit(YX.m3.s.fit8, 'stageART.A', 'stageART.ni', subset(YX.m3.s, stage=='ART.A')[, sum(w)], subset(YX.m3.s, stage=='ART.ni')[, sum(w)], 1.962),
+				pulse= my.or.from.logit(YX.m3.s.fit8, 'stageART.pulse.Y', 'stageART.ni', subset(YX.m3.s, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m3.s, stage=='ART.ni')[, sum(w)], 1.962) )
 		#YX.m3.fit8.or
 		#			F        	I         	P  			A     	pulse
 		#1: 		1.0631908 	1.250178 	1.8097541 	NA 		1.4108150
@@ -4905,7 +6068,100 @@ project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=lo
 	}
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))
+project.athena.Fisheretal.YX.model2.time<- function(YX, clumsm.info, df.viro, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file=NA)
+{
+	require(betareg)
+	#	Treatment cascade by time period
+	#	prop and odds by updated treatment cascade
+	YX.m2	<- copy(YX)
+	YX.m2[, U.score:=NULL]
+	#	pool acute given small numbers
+	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'Ay' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'Am' )
+	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'Ay')
+	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'Am')
+	#	stratify Diag by first CD4 after diagnosis
+	tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	setkey(tmp, Patient)
+	tmp			<- unique(tmp)	
+	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	print( subset( tmp, is.na(CD4.c) ) )
+	setnames(tmp, 'Patient', 't.Patient')
+	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+	YX.m2	<- merge(YX.m2, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+	tmp		<- YX.m2[, which(stage=='Diag')]
+	set(YX.m2, tmp, 'stage', YX.m2[tmp, CD4.c])
+	YX.m2[, CD4.c:=NULL]
+	YX.m2[, table(stage)]
+	
+	#set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute%in%acute.select)], 'stage', 'UA')
+	YX.m2[, stage.orig:= stage]
+	# collect PoslRNA_T1
+	tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')				
+	YX.m2	<- merge(YX.m2, YX.m2[, {	
+						tmp<- which(!is.na(lRNA))
+						list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
+					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+	tmp		<- YX.m2[, {
+				tmp<- which(!is.na(lRNA))
+				if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=vl.suppressed)
+					lRNA.c	<- 'SuA.Y'						
+				else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>vl.suppressed)
+					lRNA.c	<- 'SuA.N'						
+				else if(!length(tmp))
+					lRNA.c	<- 'SuA.NA'
+				else if(max(lRNA[tmp])>vl.suppressed)
+					lRNA.c	<- 'SuA.N'
+				else
+					lRNA.c	<- 'SuA.Y'
+				list( lRNA.c= lRNA.c )
+			}, by=c('Patient','t.Patient')]
+	YX.m2	<- merge(YX.m2, tmp, by=c('Patient','t.Patient'))	
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
+	set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
+	#
+	YX.m2		<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, t.period, CDCC, lRNA, t.Age, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, w.t, stage.orig  ))
+	#YX.m2[, table(stage)]	 
+	YX.m2.p		<- YX.m2[, 	list(n=round(sum(w),d=1)) , by= c('stage','t.period')]
+	YX.m2.p		<- merge( YX.m2.p, YX.m2[, list(N= sum(w)), by='t.period'], by='t.period' )
+	
+	tmp			<- unique(subset(clumsm.info, select=c(Patient, AnyPos_T1)))
+	tmp			<- merge( unique(subset(YX.m2, select=c(Patient, t.period))), tmp, by='Patient' )
+	YX.m2.p		<- merge( YX.m2.p, tmp[, list(t.min=min(AnyPos_T1), t.max=max(AnyPos_T1)), by='t.period'], by='t.period' )
+	YX.m2.p[, p:= n/N]
+	setkey(YX.m2.p, stage)
+	#	get Binomial confidence intervals
+	require(Hmisc)
+	YX.m2.p		<- merge( YX.m2.p, YX.m2.p[ , 	{
+													tmp<- binconf( n, N, alpha=0.05, method= "wilson", include.x=FALSE, include.n=FALSE, return.df=TRUE)
+													list(p.l95=tmp$Lower, p.u95=tmp$Upper)
+												}, by=c('stage','t.period')], by=c('stage','t.period'))
+	#	plot
+	if(!is.na(plot.file))
+	{
+		pdf(file=plot.file, w=5, h=5)
+		tmp			<- data.table( stage=YX.m2.p[, unique(stage)], h=seq(1, YX.m2.p[,length(unique(stage))]), col= rainbow(YX.m2.p[,length(unique(stage))] ) )
+		set(tmp, NULL, 'h', tmp[,(h-mean(h))/50] )
+		YX.m2.p		<- merge(YX.m2.p, tmp, by='stage')
+		set(YX.m2.p, NULL, 't.period', YX.m2.p[,as.numeric(t.period)])
+		plot(1,1,type='n',xlim=range(YX.m2.p[,t.period]), ylim=range(unlist( subset( YX.m2.p, select=c(p, p.l95, p.u95) ) )),xlab='time period',ylab='prop')
+		YX.m2.p[, lines(t.period+h, p, col=col, type='b') ,by='stage']
+		YX.m2.p[, lines(rep(t.period+h,2), c(p.l95,p.u95), col=col ) ,by=c('stage','t.period')]	
+		legend('topright', bty='n',border=NA,fill=YX.m2.p[, unique(col)], legend=YX.m2.p[, unique(stage)] )	
+		YX.m2.p[, col:=NULL]	
+		YX.m2.p[, h:=NULL]	
+		dev.off()
+	}
+	#	
+	YX.m2.p
+}
+######################################################################################
+project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, df.viro, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))
 {
 	require(betareg)
 	#	Treatment cascade:
@@ -4918,10 +6174,14 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, vl.suppressed=lo
 	#	SQ: does VL at diagnosis or age at diagnosis matter?	
 	YX.m2	<- copy(YX)
 	YX.m2[, U.score:=NULL]
+	#	diagnosed and acute
+	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAy' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAm' )		
 	#	stratify Diag by first CD4 after diagnosis
-	tmp		<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	cd4.label	<- c('D1<=350','D1<=550','D1>550')
+	tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
 	setkey(tmp, Patient)
-	tmp		<- unique(tmp)	
+	tmp			<- unique(tmp)	
 	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
 	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
 	print( subset( tmp, is.na(CD4.c) ) )
@@ -4941,7 +6201,7 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, vl.suppressed=lo
 	tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
 	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
 	YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')				
-	YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, CDCC, lRNA, t.Age, t.isAcute, t.PoslRNA_T1, contact, fw.up.med, w, stage.orig  ))	
+	YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, CDCC, lRNA, t.Age, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, stage.orig  ))	
 	#
 	#	VL first suppressed (treatment cascade endpoint)
 	#
@@ -4956,41 +6216,55 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, vl.suppressed=lo
 					cat(paste('\nprocess VL=', VL.cur))
 					VL.cur	<- log10(VL.cur)
 					set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
-					tmp		<- YX.m2[, {
-								z<- which(stage=='ART.started' & lRNA<VL.cur)
-								list(ART.s_T1= ifelse(!length(z), NA_real_, t[z[1]]))
+					
+					tmp		<- subset(df.viro, select=c(Patient, PosRNA, lRNA))
+					setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+					set(tmp, NULL, 't.PosRNA', hivc.db.Date2numeric(tmp[,t.PosRNA]))
+					tmp		<- merge( unique(subset(YX.m2, select=c(t.Patient, t.AnyT_T1))), tmp, by='t.Patient' )
+					tmp		<- subset(tmp, t.AnyT_T1<=t.PosRNA)[, {
+								z<- which(t.lRNA<VL.cur)
+								list(t.ARTSu_T1= ifelse(length(z), t.PosRNA[z[1]], NA_real_) )	
 							}, by='t.Patient']
-					YX.m2	<- merge( YX.m2, tmp, by=c('t.Patient'))	
-					set(YX.m2, YX.m2[, which(stage=='ART.started' & !is.na(ART.s_T1) & t>=ART.s_T1)], 'stage', 'ART1.su.Y')
+					YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')
+					set(YX.m2, YX.m2[, which(stage=='ART.started' & !is.na(t.ARTSu_T1) & t>=t.ARTSu_T1)], 'stage', 'ART1.su.Y')
 					set(YX.m2, YX.m2[, which(stage=='ART.started')], 'stage', 'ART1.su.N')
 					set(YX.m2, NULL, 'stage', YX.m2[, factor(as.character(stage))])
-					YX.m2[, ART.s_T1:=NULL]
+					YX.m2[, t.ARTSu_T1:=NULL]
 					
 					YX.m2.fit1 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)				
 					ans	<- c(		coef(YX.m2.fit1)['stageART1.su.Y'], coef(YX.m2.fit1)['stageART1.su.N'], coef(YX.m2.fit1)['stageU'],	
 							sqrt(diag(vcov(YX.m2.fit1)))[c('stageART1.su.Y','stageART1.su.N')],
-							exp(-diff( coef(YX.m2.fit1)[c('stageART1.su.Y','stageART1.su.N')] )),		# suppressed should have lower coeff, so we want to maximise log.odds.su.N-log.odds.su.Y > 0 
-							exp(-diff( coef(YX.m2.fit1)[c('stageART1.su.Y','stageU')] )),
+							my.or.from.logit(YX.m2.fit1, 'stageART1.su.Y', 'stageART1.su.N', subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], subset(YX.m2, stage=='ART1.su.N')[, sum(w)], 1.962),						
+							my.or.from.logit(YX.m2.fit1, 'stageART1.su.Y', 'stageU', subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+							my.or.from.logit(YX.m2.fit1, 'stageART1.su.N', 'stageU', subset(YX.m2, stage=='ART1.su.N')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
 							logLik(YX.m2.fit1), YX.m2.fit1$pseudo.r.squared, 10^VL.cur	)
-					names(ans)	<- c('coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YU','lkl','r2','VL.thresh')
+					names(ans)	<- c('coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YN.l95','or.YN.u95','or.YU','or.YU.l95','or.YU.u95','or.YN','or.YN.l95','or.YN.u95','lkl','r2','VL.thresh')
 					ans
 				})
 		YX.m2.VL	<- as.data.table(t(YX.m2.VL))
+		plot(YX.m2.VL[, VL.thresh], YX.m2.VL[, or.YN], type='p', pch=18, ylim= c( min(YX.m2.VL[, or.YN.l95], na.rm=TRUE),max(YX.m2.VL[, or.YN.u95], na.rm=TRUE))  )
+		dummy		<- YX.m2.VL[,	lines( rep(VL.thresh,2), c(or.YN.l95,or.YN.u95))	, by='VL.thresh']
+		#
 		#		plot VL thresh 1e3
+		#
 		VL.cur		<- log10(1e3)
 		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
-		tmp			<- YX.m2[, {
-					z<- which(stage=='ART.started' & lRNA<VL.cur)
-					list(ART.s_T1= ifelse(!length(z), NA_real_, t[z[1]]))
+		tmp			<- subset(df.viro, select=c(Patient, PosRNA, lRNA))
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		set(tmp, NULL, 't.PosRNA', hivc.db.Date2numeric(tmp[,t.PosRNA]))
+		tmp			<- merge( unique(subset(YX.m2, select=c(t.Patient, t.AnyT_T1))), tmp, by='t.Patient' )
+		tmp			<- subset(tmp, t.AnyT_T1<=t.PosRNA)[, 	{
+					z<- which(t.lRNA<VL.cur)
+					list(t.ARTSu_T1= ifelse(length(z), t.PosRNA[z[1]], NA_real_) )	
 				}, by='t.Patient']
-		YX.m2		<- merge( YX.m2, tmp, by=c('t.Patient'))	
-		set(YX.m2, YX.m2[, which(stage=='ART.started' & !is.na(ART.s_T1) & t>=ART.s_T1)], 'stage', 'ART1.su.Y')
-		set(YX.m2, YX.m2[, which(stage=='ART.started')], 'stage', 'ART1.su.N')
+		YX.m2		<- merge(YX.m2, tmp, by= 't.Patient')
+		set(YX.m2, YX.m2[, which(stage=='ART.started' & !is.na(t.ARTSu_T1) & t>=t.ARTSu_T1)], 'stage', 'ART1.su.Y')
+		set(YX.m2, YX.m2[, which(stage=='ART.started')], 'stage', 'ART1.su.N')		
 		set(YX.m2, NULL, 'stage', YX.m2[, factor(as.character(stage))])
-		YX.m2[, ART.s_T1:=NULL]	
+		YX.m2[, t.ARTSu_T1:=NULL]
 		YX.m2.fit1 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)				
 		#	plot
-		tmp			<- data.table(stage= YX.m2[, levels(stage)], col=sapply( brewer.pal(YX.m2[, nlevels(stage)], 'Set1'), my.fade.col, alpha=0.5) )
+		tmp			<- data.table(stage= YX.m2[, levels(stage)], col=sapply( rainbow(YX.m2[, nlevels(stage)]), my.fade.col, alpha=0.5) )
 		set(tmp, NULL, 'stage', tmp[, factor(stage)])
 		YX.m2		<- merge(YX.m2, tmp, by='stage')
 		plot( seq_len(nrow(YX.m2)), YX.m2[, score.Y], pch=18, col= YX.m2[, col], cex=YX.m2[, w^0.4])
@@ -5007,22 +6281,24 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, vl.suppressed=lo
 		YX.m2[, col:=NULL]
 		#
 		YX.m2.fit1.or	<- data.table( 	ART1.su.NY= my.or.from.logit(YX.m2.fit1, 'stageART1.su.N', 'stageART1.su.Y', subset(YX.m2, stage=='ART1.su.N')[, sum(w)], subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], 1.962),
-										ART1.su.N= my.or.from.logit(YX.m2.fit1, 'stageART1.su.N', 'stageU', subset(YX.m2, stage=='ART1.su.N')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										ART1.su.Y= my.or.from.logit(YX.m2.fit1, 'stageART1.su.Y', 'stageU', subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										D1l350= my.or.from.logit(YX.m2.fit1, 'stageD1<=350', 'stageU', subset(YX.m2, stage=='D1<=350')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										D1l550= my.or.from.logit(YX.m2.fit1, 'stageD1<=550', 'stageU', subset(YX.m2, stage=='D1<=550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										D1g550= my.or.from.logit(YX.m2.fit1, 'stageD1>550', 'stageU', subset(YX.m2, stage=='D1>550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										UAm= my.or.from.logit(YX.m2.fit1, 'stageUAm', 'stageU', subset(YX.m2, stage=='UAm')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										UAy= my.or.from.logit(YX.m2.fit1, 'stageUAy', 'stageU', subset(YX.m2, stage=='UAy')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962) 	)
+				ART1.su.N= my.or.from.logit(YX.m2.fit1, 'stageART1.su.N', 'stageU', subset(YX.m2, stage=='ART1.su.N')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				ART1.su.Y= my.or.from.logit(YX.m2.fit1, 'stageART1.su.Y', 'stageU', subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				DAy= my.or.from.logit(YX.m2.fit1, 'stageDAy', 'stageU', subset(YX.m2, stage=='DAy')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				DAm= my.or.from.logit(YX.m2.fit1, 'stageDAm', 'stageU', subset(YX.m2, stage=='DAm')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				D1l350= my.or.from.logit(YX.m2.fit1, 'stageD1<=350', 'stageU', subset(YX.m2, stage=='D1<=350')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				D1l550= my.or.from.logit(YX.m2.fit1, 'stageD1<=550', 'stageU', subset(YX.m2, stage=='D1<=550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				D1g550= my.or.from.logit(YX.m2.fit1, 'stageD1>550', 'stageU', subset(YX.m2, stage=='D1>550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				UAm= my.or.from.logit(YX.m2.fit1, 'stageUAm', 'stageU', subset(YX.m2, stage=='UAm')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				UAy= my.or.from.logit(YX.m2.fit1, 'stageUAy', 'stageU', subset(YX.m2, stage=='UAy')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962) 	)
 		# YX.m2.fit1.or
-   		#		ART1.su.NY 	ART1.su.N ART1.su.Y    	D1l350    D1l550    D1g550      UAm      UAy
-		#1:		1.0087734 	0.4239133 0.4202265 	0.8529154 0.6075534 0.6552882 1.578880 2.413729
-		#2:  	0.7595178 	0.3426483 0.3394552 	0.6785325 0.4918212 0.5351614 1.261470 1.935876
-		#3:  	1.3398287 	0.5244519 0.5202170 	1.0721147 0.7505191 0.8023798 1.976156 3.009535
+		#   ART1.su.NY ART1.su.N ART1.su.Y      DAy      DAm    D1l350    D1l550    D1g550      UAm      UAy
+		#1:  1.0819401 0.4959514 0.4583908 1.478592 2.080791 0.7559947 0.5594259 0.6672697 1.977886 2.746282
+		#2:  0.8151495 0.3866189 0.3692749 1.139423 1.610585 0.5824594 0.4373290 0.5251420 1.538850 2.142883
+		#3:  1.4360489 0.6362022 0.5690127 1.918720 2.688273 0.9812323 0.7156107 0.8478636 2.542179 3.519587
 		YX.m2.p		<- YX.m2[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m2[,sum(w)],d=3) ),by='stage']
-		#	ART1.su.N 	ART1.su.Y 	D1<=350   	D1<=550   	D1>550    	U         	UAm       	UAy
-		#	85.4  		83.6  		38.3  		89.0 		115.6 		212.8  		33.9  		32.9
-		#	0.124 		0.121 		0.055 		0.129 		0.167 		0.308 		0.049 		0.048
+		#	ART1.su.N 	ART1.su.Y 	D1<=350 D1<=550 D1>550 	DAm 	DAy 	U 		UAm 	UAy
+		#	48.5 		120.5  		26.1  	53.7  	65.9  	13.0  	12.2 	168.6  	25.8  24.5
+		#	0.087 		0.216 		0.047 	0.096 	0.118 	0.023 	0.022 	0.302 	0.046 0.044
 		tmp			<- cooks.distance(YX.m2.fit1)
 		plot(seq_along(tmp), tmp, type='h', col=YX.m2[, col], xlab='index', ylab='Cooks D')
 		legend('topright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
@@ -5069,41 +6345,62 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, vl.suppressed=lo
 	if(1)
 	{			
 		YX.m2	<- merge(YX.m2, YX.m2[, {	
-											tmp<- which(!is.na(lRNA))
-											list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_))
-										}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+							tmp<- which(!is.na(lRNA))
+							list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_))
+						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
 		
 		VL.win		<- c( 50, seq(100, 1000, by=100), seq(1250, 1e4, by=250) ) 
 		YX.m2.VL	<- sapply(VL.win, function(VL.cur)
-								{
-									cat(paste('\nprocess VL=', VL.cur))									
-									VL.cur	<- log10(VL.cur)
-									set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
-									set(YX.m2, YX.m2[,which(stage=='ART.started' & !is.na(lRNA) & lRNA<=VL.cur)],'stage', 'ART.su.Y' )
-									set(YX.m2, YX.m2[,which(stage=='ART.started' & !is.na(lRNA) & lRNA>VL.cur)],'stage', 'ART.su.N' )		
-									set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & !is.na(lRNA_TL) & lRNA_TL<=VL.cur)],'stage', 'ART.su.Y' )	
-									set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & !is.na(lRNA_TL) & lRNA_TL>VL.cur)],'stage', 'ART.su.N' )
-									set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & lRNA>VL.cur)],'stage', 'ART.su.N' )
-									set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
-									YX.m2[, table(stage)]
-									YX.m2s		<- subset(YX.m2, stage!='ART.vlNA') 		
-									set(YX.m2s, NULL, 'stage', YX.m2s[, factor(as.character(stage))])																		
-									YX.m2.fit3 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2s)
-									
-									ans			<- c(		YX.m2s[, length(which(stage=='ART.su.Y'))], YX.m2s[, length(which(stage=='ART.su.N'))],
-															subset(YX.m2s, stage=='ART.su.Y')[, sum(w)], subset(YX.m2s, stage=='ART.su.N')[, sum(w)],
-															coef(YX.m2.fit3)['stageART.su.Y'], coef(YX.m2.fit3)['stageART.su.N'], coef(YX.m2.fit3)['stageU'],	
-															sqrt(diag(vcov(YX.m2.fit3)))[c('stageART.su.Y','stageART.su.N')],
-															my.or.from.logit(YX.m2.fit3, 'stageART.su.Y', 'stageART.su.N', subset(YX.m2s, stage=='ART.su.Y')[, sum(w)], subset(YX.m2s, stage=='ART.su.N')[, sum(w)], 1.962),						
-															my.or.from.logit(YX.m2.fit3, 'stageART.su.Y', 'stageU', subset(YX.m2s, stage=='ART.su.Y')[, sum(w)], subset(YX.m2s, stage=='U')[, sum(w)], 1.962),
-															logLik(YX.m2.fit3), YX.m2.fit3$pseudo.r.squared, 10^VL.cur	)
-									names(ans)	<- c('n.su.Y','n.su.N','w.su.Y','w.su.N','coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YN.l95','or.YN.u95','or.YU','or.YU.l95','or.YU.u95','lkl','r2','VL.thresh')
-									ans
-								})
+				{
+					cat(paste('\nprocess VL=', VL.cur))									
+					VL.cur	<- log10(VL.cur)
+					set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+					set(YX.m2, YX.m2[,which(stage=='ART.started' & !is.na(lRNA) & lRNA<=VL.cur)],'stage', 'ART.su.Y' )
+					set(YX.m2, YX.m2[,which(stage=='ART.started' & !is.na(lRNA) & lRNA>VL.cur)],'stage', 'ART.su.N' )		
+					set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & !is.na(lRNA_TL) & lRNA_TL<=VL.cur)],'stage', 'ART.su.Y' )	
+					set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & !is.na(lRNA_TL) & lRNA_TL>VL.cur)],'stage', 'ART.su.N' )
+					set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & lRNA>VL.cur)],'stage', 'ART.su.N' )
+					set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
+					YX.m2[, table(stage)]
+					YX.m2s		<- subset(YX.m2, stage!='ART.vlNA') 		
+					set(YX.m2s, NULL, 'stage', YX.m2s[, factor(as.character(stage))])																		
+					YX.m2.fit3 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2s)
+					
+					ans			<- c(		YX.m2s[, length(which(stage=='ART.su.Y'))], YX.m2s[, length(which(stage=='ART.su.N'))],
+							subset(YX.m2s, stage=='ART.su.Y')[, sum(w)], subset(YX.m2s, stage=='ART.su.N')[, sum(w)],
+							coef(YX.m2.fit3)['stageART.su.Y'], coef(YX.m2.fit3)['stageART.su.N'], coef(YX.m2.fit3)['stageU'],	
+							sqrt(diag(vcov(YX.m2.fit3)))[c('stageART.su.Y','stageART.su.N')],
+							my.or.from.logit(YX.m2.fit3, 'stageART.su.Y', 'stageART.su.N', subset(YX.m2s, stage=='ART.su.Y')[, sum(w)], subset(YX.m2s, stage=='ART.su.N')[, sum(w)], 1.962),						
+							my.or.from.logit(YX.m2.fit3, 'stageART.su.Y', 'stageU', subset(YX.m2s, stage=='ART.su.Y')[, sum(w)], subset(YX.m2s, stage=='U')[, sum(w)], 1.962),
+							logLik(YX.m2.fit3), YX.m2.fit3$pseudo.r.squared, 10^VL.cur	)
+					names(ans)	<- c('n.su.Y','n.su.N','w.su.Y','w.su.N','coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YN.l95','or.YN.u95','or.YU','or.YU.l95','or.YU.u95','lkl','r2','VL.thresh')
+					ans
+				})
 		YX.m2.VL	<- as.data.table(t(YX.m2.VL))
-				
+		
 		plot(YX.m2.VL[, VL.thresh], YX.m2.VL[, or.YN], type='p', pch=18, ylim= c( min(YX.m2.VL[, or.YN.l95], na.rm=TRUE),max(YX.m2.VL[, or.YN.u95], na.rm=TRUE))  )
 		dummy	<- YX.m2.VL[,	lines( rep(VL.thresh,2), c(or.YN.l95,or.YN.u95))	, by='VL.thresh']
+		
+		VL.cur	<- 3
+		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+		set(YX.m2, YX.m2[,which(stage=='ART.started' & !is.na(lRNA) & lRNA<=VL.cur)],'stage', 'ART.su.Y' )
+		set(YX.m2, YX.m2[,which(stage=='ART.started' & !is.na(lRNA) & lRNA>VL.cur)],'stage', 'ART.su.N' )		
+		set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & !is.na(lRNA_TL) & lRNA_TL<=VL.cur)],'stage', 'ART.su.Y' )	
+		set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & !is.na(lRNA_TL) & lRNA_TL>VL.cur)],'stage', 'ART.su.N' )
+		set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & lRNA>VL.cur)],'stage', 'ART.su.N' )		
+		YX.m2s		<- subset(YX.m2, stage!='ART.vlNA') 		
+		set(YX.m2s, NULL, 'stage', YX.m2s[, factor(as.character(stage))])																		
+		YX.m2.fit3 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2s)
+		tmp			<- c(		YX.m2s[, length(which(stage=='ART.su.Y'))], YX.m2s[, length(which(stage=='ART.su.N'))],
+				subset(YX.m2s, stage=='ART.su.Y')[, sum(w)], subset(YX.m2s, stage=='ART.su.N')[, sum(w)],
+				coef(YX.m2.fit3)['stageART.su.Y'], coef(YX.m2.fit3)['stageART.su.N'], coef(YX.m2.fit3)['stageU'],	
+				sqrt(diag(vcov(YX.m2.fit3)))[c('stageART.su.Y','stageART.su.N')],
+				my.or.from.logit(YX.m2.fit3, 'stageART.su.Y', 'stageART.su.N', subset(YX.m2s, stage=='ART.su.Y')[, sum(w)], subset(YX.m2s, stage=='ART.su.N')[, sum(w)], 1.962),						
+				my.or.from.logit(YX.m2.fit3, 'stageART.su.Y', 'stageU', subset(YX.m2s, stage=='ART.su.Y')[, sum(w)], subset(YX.m2s, stage=='U')[, sum(w)], 1.962),
+				logLik(YX.m2.fit3), YX.m2.fit3$pseudo.r.squared, 10^VL.cur	)
+		names(tmp)	<- c('n.su.Y','n.su.N','w.su.Y','w.su.N','coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YN.l95','or.YN.u95','or.YU','or.YU.l95','or.YU.u95','lkl','r2','VL.thresh')
+		tmp
+		
 	}
 	#	split missing VL into contact Yes/No and before first contact
 	#	and take max VL 
@@ -5149,12 +6446,12 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, vl.suppressed=lo
 					YX.m2[, lRNA.c:=NULL]
 					
 					ans			<- c(		YX.m2[, length(which(stage=='ART.suA.Y'))], YX.m2[, length(which(stage=='ART.suA.N'))],
-											subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='ART.suA.N')[, sum(w)],
-											coef(YX.m2.fit4)['stageART.suA.Y'], coef(YX.m2.fit4)['stageART.suA.N'], coef(YX.m2.fit4)['stageU'],	
-											sqrt(diag(vcov(YX.m2.fit4)))[c('stageART.suA.Y','stageART.suA.N')],
-											my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageART.suA.N', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='ART.suA.N')[, sum(w)], 1.962),						
-											my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageU', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-											logLik(YX.m2.fit4), YX.m2.fit4$pseudo.r.squared, 10^VL.cur	)
+							subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='ART.suA.N')[, sum(w)],
+							coef(YX.m2.fit4)['stageART.suA.Y'], coef(YX.m2.fit4)['stageART.suA.N'], coef(YX.m2.fit4)['stageU'],	
+							sqrt(diag(vcov(YX.m2.fit4)))[c('stageART.suA.Y','stageART.suA.N')],
+							my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageART.suA.N', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='ART.suA.N')[, sum(w)], 1.962),						
+							my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageU', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+							logLik(YX.m2.fit4), YX.m2.fit4$pseudo.r.squared, 10^VL.cur	)
 					names(ans)	<- c('n.su.Y','n.su.N','w.su.Y','w.su.N','coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YN.l95','or.YN.u95','or.YU','or.YU.l95','or.YU.u95','lkl','r2','VL.thresh')
 					ans
 				})
@@ -5181,34 +6478,41 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, vl.suppressed=lo
 					list( lRNA.c= lRNA.c )
 				}, by=c('Patient','t.Patient')]
 		# 	SuA.N 	SuA.NA  SuA.Y 
-  		#	1477    947    	583 
+		#	1477    947    	583 
 		YX.m2	<- merge(YX.m2, tmp, by=c('Patient','t.Patient'))	
 		set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
 		set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
 		set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
+		YX.m2[, table(stage)]
 		#stage
-		#ART.su.N ART.su.Y ART.vlNA  D1<=350  D1<=550   D1>550        U      UAm      UAy 
-		#3172     4526       70     1050     3242     3980     7606     1275     1291 
+		#ART.suA.N ART.suA.Y  ART.vlNA   D1<=350   D1<=550    D1>550       DAm       DAy         U       UAm       UAy 
+		#3172      4526        69       818      2064      2440       379       383      5732      1012       933
 		set(YX.m2, NULL, 'stage', YX.m2[, factor(as.character(stage))])		
 		YX.m2.fit4 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)
 		
 		YX.m2.fit4.or	<- data.table( 	ART1.su.NY= my.or.from.logit(YX.m2.fit4, 'stageART.suA.N', 'stageART.suA.Y', subset(YX.m2, stage=='ART.suA.N')[, sum(w)], subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], 1.962),
-										ART1.su.N= my.or.from.logit(YX.m2.fit4, 'stageART.suA.N', 'stageU', subset(YX.m2, stage=='ART.suA.N')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										ART1.su.NA= my.or.from.logit(YX.m2.fit4, 'stageART.vlNA', 'stageU', subset(YX.m2, stage=='ART.vlNA')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										ART1.su.Y= my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageU', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										D1l350= my.or.from.logit(YX.m2.fit4, 'stageD1<=350', 'stageU', subset(YX.m2, stage=='D1<=350')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										D1l550= my.or.from.logit(YX.m2.fit4, 'stageD1<=550', 'stageU', subset(YX.m2, stage=='D1<=550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										D1g550= my.or.from.logit(YX.m2.fit4, 'stageD1>550', 'stageU', subset(YX.m2, stage=='D1>550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										UAm= my.or.from.logit(YX.m2.fit4, 'stageUAm', 'stageU', subset(YX.m2, stage=='UAm')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
-										UAy= my.or.from.logit(YX.m2.fit4, 'stageUAy', 'stageU', subset(YX.m2, stage=='UAy')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962) 	)
-		#   	ART1.su.NY 	ART1.su.N 	ART1.su.NA 	ART1.su.Y   D1l350    D1l550    D1g550      UAm      UAy
-		#	1:   1.613759 	0.5375319  0.2453099 	0.3330931 	0.8521037 0.6055149 0.6534647 1.582091 2.421317
-		#	2:   1.214886 	0.4343888  0.1961154 	0.2691312 	0.6780152 0.4902517 0.5337555 1.264272 1.942282
-		#	3:   2.143590 	0.6651659  0.3068445 	0.4122562 	1.0708915 0.7478778 0.8000220 1.979807 3.018499						
+				ART1.su.NY= my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageART.suA.N', subset(YX.m2, stage=='ART.suA.N')[, sum(w)], subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], 1.962),
+				ART1.su.N= my.or.from.logit(YX.m2.fit4, 'stageART.suA.N', 'stageU', subset(YX.m2, stage=='ART.suA.N')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				ART1.su.NA= my.or.from.logit(YX.m2.fit4, 'stageART.vlNA', 'stageU', subset(YX.m2, stage=='ART.vlNA')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				ART1.su.Y= my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageU', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				DAy= my.or.from.logit(YX.m2.fit4, 'stageDAy', 'stageU', subset(YX.m2, stage=='DAy')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				DAm= my.or.from.logit(YX.m2.fit4, 'stageDAm', 'stageU', subset(YX.m2, stage=='DAm')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),										
+				D1l350= my.or.from.logit(YX.m2.fit4, 'stageD1<=350', 'stageU', subset(YX.m2, stage=='D1<=350')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				D1l550= my.or.from.logit(YX.m2.fit4, 'stageD1<=550', 'stageU', subset(YX.m2, stage=='D1<=550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				D1g550= my.or.from.logit(YX.m2.fit4, 'stageD1>550', 'stageU', subset(YX.m2, stage=='D1>550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				UAm= my.or.from.logit(YX.m2.fit4, 'stageUAm', 'stageU', subset(YX.m2, stage=='UAm')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				UAy= my.or.from.logit(YX.m2.fit4, 'stageUAy', 'stageU', subset(YX.m2, stage=='UAy')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+				DAyUAy= my.or.from.logit(YX.m2.fit4, 'stageDAy', 'stageUAy', subset(YX.m2, stage=='DAy')[, sum(w)], subset(YX.m2, stage=='UAy')[, sum(w)], 1.962),
+				DAmUAm= my.or.from.logit(YX.m2.fit4, 'stageDAm', 'stageUAm', subset(YX.m2, stage=='DAm')[, sum(w)], subset(YX.m2, stage=='UAm')[, sum(w)], 1.962)										
+		)
+		#	   ART1.su.NY ART1.su.NY ART1.su.N ART1.su.NA ART1.su.Y      DAy      DAm     D1l350    D1l550    D1g550      UAm      UAy
+		#1:   1.624383  	0.6156184 0.5987443  0.2684546 0.3685980 	1.482267 2.088981 0.7542298 0.5565142 0.6649380 1.985317 2.759259
+		#2:   1.223428  	0.4625772 0.4753364  0.2089221 0.2925060 	1.142601 1.617384 0.5812614 0.4351638 0.5234374 1.545052 2.153543
+		#3:   2.156743  	0.8192925 0.7541916  0.3449509 0.4644844 	1.922909 2.698085 0.9786689 0.7117045 0.8446903 2.551037 3.535343
 		YX.m2.p		<- YX.m2[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m2[,sum(w)],d=3) ),by='stage']
-		#	D1<=350   	D1<=550   	UAm     U       ART.suA.N 	D1>550    	ART.suA.Y 	ART.vlNA  	UAy
-		#	38.3 		89.0  		33.9 	212.8  	84.3 		115.6  		82.1   		2.7  		32.9
-		#	0.055 		0.129 		0.049 	0.308 	0.122 		0.167 		0.119 		0.004 		0.048
+		#	D1<=350   DAm       UAm       U         ART.suA.N 	D1>550    D1<=550   ART.suA.Y ART.vlNA  DAy       UAy
+		#	26.1  		13.0  	25.8 	168.6  		84.3 		 65.9  		53.7  	82.1   		2.7  	12.2  		24.5
+		#	0.047 		0.023 	0.046 	0.302 		0.151 		0.118 		0.096 	0.147 		0.005 	0.022 		0.044
 		#	plot
 		tmp			<- data.table(stage= YX.m2[, levels(stage)], col=sapply( rainbow(YX.m2[, nlevels(stage)]), my.fade.col, alpha=0.5) )
 		set(tmp, NULL, 'stage', tmp[, factor(stage)])
@@ -5224,10 +6528,333 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, vl.suppressed=lo
 				c( predict(YX.m2.fit4.sup, tmp, type='response'), rev(predict(YX.m2.fit4.slw, tmp, type='response'))), 
 				border=NA, col=my.fade.col('black',0.5) )
 		legend('bottomright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
-		YX.m2[, col:=NULL]
-		
+		YX.m2[, col:=NULL]		
+	}	
+}
+######################################################################################
+project.athena.Fisheretal.YX.model2.VL1stsu<- function(YX, clumsm.info, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA)
+{
+	require(betareg)
+	#	Treatment cascade:
+	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis, 	 ART by first suppressed
+	#
+	#	PQ: what is the preventative effect of reaching the endpoint of the treatment cascade?
+	#	PQ: single VL that maximizes difference between ART/firstsuppressed and ART/notyetsuppressed
+	#	SQ: does acute matter for diagnosed?
+	#	SQ: does CDC matter?
+	#	SQ: does VL at diagnosis or age at diagnosis matter?	
+	YX.m2	<- copy(YX)
+	YX.m2[, U.score:=NULL]
+	#	diagnosed and acute
+	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAy' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAm' )		
+	#	stratify Diag by first CD4 after diagnosis
+	cd4.label	<- c('D1<=350','D1<=550','D1>550')
+	tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	setkey(tmp, Patient)
+	tmp			<- unique(tmp)	
+	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	print( subset( tmp, is.na(CD4.c) ) )
+	setnames(tmp, 'Patient', 't.Patient')
+	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+	YX.m2	<- merge(YX.m2, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+	tmp		<- YX.m2[, which(stage=='Diag')]
+	set(YX.m2, tmp, 'stage', YX.m2[tmp, CD4.c])
+	YX.m2[, CD4.c:=NULL]
+	YX.m2[, table(stage)]
+	#	if transmitter acute, set undiagnosed to undiagnosed and acute
+	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
+	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')
+	#set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute%in%acute.select)], 'stage', 'UA')
+	YX.m2[, stage.orig:= stage]
+	#
+	tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')				
+	YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, CDCC, lRNA, t.Age, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, stage.orig  ))	
+	#
+	if(!is.na(plot.file.varyvl))
+	{			
+		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])		
+		VL.win		<- c( seq(400, 1000, by=100), seq(1250, 5000, by=250), 1e4 ) 
+		YX.m2.VL	<- sapply(VL.win, function(VL.cur)
+				{
+					cat(paste('\nprocess VL=', VL.cur))
+					VL.cur	<- log10(VL.cur)
+					set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+					
+					tmp		<- subset(df.viro, select=c(Patient, PosRNA, lRNA))
+					setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+					set(tmp, NULL, 't.PosRNA', hivc.db.Date2numeric(tmp[,t.PosRNA]))
+					tmp		<- merge( unique(subset(YX.m2, select=c(t.Patient, t.AnyT_T1))), tmp, by='t.Patient' )
+					tmp		<- subset(tmp, t.AnyT_T1<=t.PosRNA)[, {
+								z<- which(t.lRNA<VL.cur)
+								list(t.ARTSu_T1= ifelse(length(z), t.PosRNA[z[1]], NA_real_) )	
+							}, by='t.Patient']
+					YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')
+					set(YX.m2, YX.m2[, which(stage=='ART.started' & !is.na(t.ARTSu_T1) & t>=t.ARTSu_T1)], 'stage', 'ART1.su.Y')
+					set(YX.m2, YX.m2[, which(stage=='ART.started')], 'stage', 'ART1.su.N')
+					set(YX.m2, NULL, 'stage', YX.m2[, factor(as.character(stage))])
+					YX.m2[, t.ARTSu_T1:=NULL]
+					
+					YX.m2.fit1 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)				
+					ans	<- c(		coef(YX.m2.fit1)['stageART1.su.Y'], coef(YX.m2.fit1)['stageART1.su.N'], coef(YX.m2.fit1)['stageU'],	
+							sqrt(diag(vcov(YX.m2.fit1)))[c('stageART1.su.Y','stageART1.su.N')],
+							my.or.from.logit(YX.m2.fit1, 'stageART1.su.Y', 'stageART1.su.N', subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], subset(YX.m2, stage=='ART1.su.N')[, sum(w)], 1.962),						
+							my.or.from.logit(YX.m2.fit1, 'stageART1.su.Y', 'stageU', subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+							my.or.from.logit(YX.m2.fit1, 'stageART1.su.N', 'stageU', subset(YX.m2, stage=='ART1.su.N')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+							logLik(YX.m2.fit1), YX.m2.fit1$pseudo.r.squared, 10^VL.cur	)
+					names(ans)	<- c('coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YN.l95','or.YN.u95','or.YU','or.YU.l95','or.YU.u95','or.YN','or.YN.l95','or.YN.u95','lkl','r2','VL.thresh')
+					ans
+				})
+		YX.m2.VL	<- as.data.table(t(YX.m2.VL))		
+		pdf(file=plot.file, w=5, h=5)
+		plot(YX.m2.VL[, VL.thresh], YX.m2.VL[, or.YN], type='p', pch=18, ylim= c( min(YX.m2.VL[, or.YN.l95], na.rm=TRUE),max(YX.m2.VL[, or.YN.u95], na.rm=TRUE))  )
+		dummy	<- YX.m2.VL[,	lines( rep(VL.thresh,2), c(or.YN.l95,or.YN.u95))	, by='VL.thresh']
+		dev.off()								
 	}
+	#
+	#	using given VL threshold 
+	#		
+	set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+	tmp			<- subset(df.viro, select=c(Patient, PosRNA, lRNA))
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	set(tmp, NULL, 't.PosRNA', hivc.db.Date2numeric(tmp[,t.PosRNA]))
+	tmp			<- merge( unique(subset(YX.m2, select=c(t.Patient, t.AnyT_T1))), tmp, by='t.Patient' )
+	tmp			<- subset(tmp, t.AnyT_T1<=t.PosRNA)[, 	{
+															z<- which(t.lRNA<vl.suppressed)
+															list(t.ARTSu_T1= ifelse(length(z), t.PosRNA[z[1]], NA_real_) )	
+														}, by='t.Patient']
+	YX.m2		<- merge(YX.m2, tmp, by= 't.Patient')
+	set(YX.m2, YX.m2[, which(stage=='ART.started' & !is.na(t.ARTSu_T1) & t>=t.ARTSu_T1)], 'stage', 'ART1.su.Y')
+	set(YX.m2, YX.m2[, which(stage=='ART.started')], 'stage', 'ART1.su.N')		
+	set(YX.m2, NULL, 'stage', YX.m2[, factor(as.character(stage))])
+	YX.m2[, t.ARTSu_T1:=NULL]
+	YX.m2.fit1 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)
 	
+	YX.m2.fit1.or	<- data.table( 	ART1.su.NY= my.or.from.logit(YX.m2.fit1, 'stageART1.su.N', 'stageART1.su.Y', subset(YX.m2, stage=='ART1.su.N')[, sum(w)], subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], 1.962),
+									ART1.su.N= my.or.from.logit(YX.m2.fit1, 'stageART1.su.N', 'stageU', subset(YX.m2, stage=='ART1.su.N')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									ART1.su.Y= my.or.from.logit(YX.m2.fit1, 'stageART1.su.Y', 'stageU', subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									DAy= my.or.from.logit(YX.m2.fit1, 'stageDAy', 'stageU', subset(YX.m2, stage=='DAy')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									DAm= my.or.from.logit(YX.m2.fit1, 'stageDAm', 'stageU', subset(YX.m2, stage=='DAm')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									D1l350= my.or.from.logit(YX.m2.fit1, 'stageD1<=350', 'stageU', subset(YX.m2, stage=='D1<=350')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									D1l550= my.or.from.logit(YX.m2.fit1, 'stageD1<=550', 'stageU', subset(YX.m2, stage=='D1<=550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									D1g550= my.or.from.logit(YX.m2.fit1, 'stageD1>550', 'stageU', subset(YX.m2, stage=='D1>550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									UAm= my.or.from.logit(YX.m2.fit1, 'stageUAm', 'stageU', subset(YX.m2, stage=='UAm')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									UAy= my.or.from.logit(YX.m2.fit1, 'stageUAy', 'stageU', subset(YX.m2, stage=='UAy')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962) 	)
+	# YX.m2.fit1.or
+	#   ART1.su.NY ART1.su.N ART1.su.Y      DAy      DAm    D1l350    D1l550    D1g550      UAm      UAy
+	#1:  1.0819401 0.4959514 0.4583908 1.478592 2.080791 0.7559947 0.5594259 0.6672697 1.977886 2.746282
+	#2:  0.8151495 0.3866189 0.3692749 1.139423 1.610585 0.5824594 0.4373290 0.5251420 1.538850 2.142883
+	#3:  1.4360489 0.6362022 0.5690127 1.918720 2.688273 0.9812323 0.7156107 0.8478636 2.542179 3.519587
+	YX.m2.p		<- YX.m2[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m2[,sum(w)],d=3) ),by='stage']
+	#	ART1.su.N 	ART1.su.Y 	D1<=350 D1<=550 D1>550 	DAm 	DAy 	U 		UAm 	UAy
+	#	48.5 		120.5  		26.1  	53.7  	65.9  	13.0  	12.2 	168.6  	25.8  24.5
+	#	0.087 		0.216 		0.047 	0.096 	0.118 	0.023 	0.022 	0.302 	0.046 0.044
+	if(0)
+	{
+		tmp			<- cooks.distance(YX.m2.fit1)
+		plot(seq_along(tmp), tmp, type='h', col=YX.m2[, col], xlab='index', ylab='Cooks D')
+		legend('topright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
+		tmp			<- residuals(YX.m2.fit1)
+		plot(seq_along(tmp), tmp, type='p', pch=18, col=YX.m2[, col], xlab='index', ylab='std residuals')
+		legend('topright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])		
+	}
+	if(!is.na(plot.file.or))
+	{
+		pdf(file=plot.file.or, w=5, h=5)
+		tmp			<- data.table(stage= YX.m2[, levels(stage)], col=sapply( rainbow(YX.m2[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m2		<- merge(YX.m2, tmp, by='stage')
+		plot( seq_len(nrow(YX.m2)), YX.m2[, score.Y], pch=18, col= YX.m2[, col], cex=YX.m2[, w^0.4])
+		tmp				<- subset(YX.m2, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m2.fit1, tmp, type='response'))	
+		start			<- c( YX.m2.fit1$coef$mean + head( 2*sqrt(diag(vcov(YX.m2.fit1))), length(YX.m2.fit1$coef$mean)), YX.m2.fit1$coef$precision)
+		YX.m2.fit1.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m2, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m2.fit1$coef$mean - head( 2*sqrt(diag(vcov(YX.m2.fit1))), length(YX.m2.fit1$coef$mean)), YX.m2.fit1$coef$precision)
+		YX.m2.fit1.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m2, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m2.fit1.sup, tmp, type='response'), rev(predict(YX.m2.fit1.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
+		YX.m2[, col:=NULL]
+		dev.off()
+	}
+	list(m2= YX.m2, m2.fit=YX.m2.fit1, m2.or=YX.m2.fit1.or, m2.p=YX.m2.p)
+}
+######################################################################################
+project.athena.Fisheretal.YX.model2.VL.mx.window<- function(YX, clumsm.info, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA)
+{
+	require(betareg)
+	#	Treatment cascade:
+	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis, 	 ART by first suppressed
+	#
+	#	PQ: what is the preventative effect of reaching the endpoint of the treatment cascade?
+	#	PQ: single VL that maximizes difference between ART/firstsuppressed and ART/notyetsuppressed
+	#	SQ: does acute matter for diagnosed?
+	#	SQ: does CDC matter?
+	#	SQ: does VL at diagnosis or age at diagnosis matter?	
+	YX.m2	<- copy(YX)
+	YX.m2[, U.score:=NULL]
+	#	diagnosed and acute
+	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAy' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAm' )		
+	#	stratify Diag by first CD4 after diagnosis
+	cd4.label	<- c('D1<=350','D1<=550','D1>550')
+	tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	setkey(tmp, Patient)
+	tmp			<- unique(tmp)	
+	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	print( subset( tmp, is.na(CD4.c) ) )
+	setnames(tmp, 'Patient', 't.Patient')
+	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+	YX.m2	<- merge(YX.m2, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+	tmp		<- YX.m2[, which(stage=='Diag')]
+	set(YX.m2, tmp, 'stage', YX.m2[tmp, CD4.c])
+	YX.m2[, CD4.c:=NULL]
+	YX.m2[, table(stage)]
+	#	if transmitter acute, set undiagnosed to undiagnosed and acute
+	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
+	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')
+	#set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute%in%acute.select)], 'stage', 'UA')
+	YX.m2[, stage.orig:= stage]
+	#
+	tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')				
+	YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, CDCC, lRNA, t.Age, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, stage.orig  ))	
+	#	split missing VL into contact Yes/No and before first contact
+	#	and take max VL
+	YX.m2	<- merge(YX.m2, YX.m2[, {	
+					tmp<- which(!is.na(lRNA))
+					list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
+				}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	if(!is.na(plot.file.varyvl))
+	{			
+		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+		VL.win		<- c( seq(100, 1000, by=100), seq(1250, 1e4, by=250) ) 
+		YX.m2.VL	<- sapply(VL.win, function(VL.cur)
+				{
+					cat(paste('\nprocess VL=', VL.cur))									
+					VL.cur	<- log10(VL.cur)
+					set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+					tmp		<- YX.m2[, {
+								tmp<- which(!is.na(lRNA))
+								if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=VL.cur)
+									lRNA.c	<- 'SuA.Y'						
+								else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>VL.cur)
+									lRNA.c	<- 'SuA.N'						
+								else if(!length(tmp))
+									lRNA.c	<- 'SuA.NA'
+								else if(max(lRNA[tmp])>VL.cur)
+									lRNA.c	<- 'SuA.N'
+								else
+									lRNA.c	<- 'SuA.Y'
+								list( lRNA.c= lRNA.c )
+							}, by=c('Patient','t.Patient')]
+					YX.m2	<- merge(YX.m2, tmp, by=c('Patient','t.Patient'))
+					
+					set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
+					set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
+					set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
+					set(YX.m2, NULL, 'stage', YX.m2[, factor(as.character(stage))])		
+					YX.m2.fit4 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)
+					YX.m2[, lRNA.c:=NULL]
+					
+					ans			<- c(		YX.m2[, length(which(stage=='ART.suA.Y'))], YX.m2[, length(which(stage=='ART.suA.N'))],
+											subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='ART.suA.N')[, sum(w)],
+											coef(YX.m2.fit4)['stageART.suA.Y'], coef(YX.m2.fit4)['stageART.suA.N'], coef(YX.m2.fit4)['stageU'],	
+											sqrt(diag(vcov(YX.m2.fit4)))[c('stageART.suA.Y','stageART.suA.N')],
+											my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageART.suA.N', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='ART.suA.N')[, sum(w)], 1.962),						
+											my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageU', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+											logLik(YX.m2.fit4), YX.m2.fit4$pseudo.r.squared, 10^VL.cur	)
+					names(ans)	<- c('n.su.Y','n.su.N','w.su.Y','w.su.N','coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YN.l95','or.YN.u95','or.YU','or.YU.l95','or.YU.u95','lkl','r2','VL.thresh')
+					ans
+				})
+		YX.m2.VL	<- as.data.table(t(YX.m2.VL))
+		pdf(file=plot.file, w=5, h=5)
+		plot(YX.m2.VL[, VL.thresh], YX.m2.VL[, or.YN], type='p', pch=18, ylim= c( min(YX.m2.VL[, or.YN.l95], na.rm=TRUE),max(YX.m2.VL[, or.YN.u95], na.rm=TRUE))  )
+		dummy	<- YX.m2.VL[,	lines( rep(VL.thresh,2), c(or.YN.l95,or.YN.u95))	, by='VL.thresh']
+		dev.off()
+	}
+	#
+	#	using given VL threshold 
+	#	
+	set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+	tmp		<- YX.m2[, {
+				tmp<- which(!is.na(lRNA))
+				if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=vl.suppressed)
+					lRNA.c	<- 'SuA.Y'						
+				else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>vl.suppressed)
+					lRNA.c	<- 'SuA.N'						
+				else if(!length(tmp))
+					lRNA.c	<- 'SuA.NA'
+				else if(max(lRNA[tmp])>vl.suppressed)
+					lRNA.c	<- 'SuA.N'
+				else
+					lRNA.c	<- 'SuA.Y'
+				list( lRNA.c= lRNA.c )
+			}, by=c('Patient','t.Patient')]
+	# 	SuA.N 	SuA.NA  SuA.Y 
+	#	1477    947    	583 
+	YX.m2	<- merge(YX.m2, tmp, by=c('Patient','t.Patient'))	
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
+	set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
+	#YX.m2[, table(stage)]
+	#stage
+	#ART.suA.N ART.suA.Y  ART.vlNA   D1<=350   D1<=550    D1>550       DAm       DAy         U       UAm       UAy 
+	#3172      4526        69       818      2064      2440       379       383      5732      1012       933
+	set(YX.m2, NULL, 'stage', YX.m2[, factor(as.character(stage))])		
+	YX.m2.fit4 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)
+	
+	YX.m2.fit4.or	<- data.table( 	ART1.su.NY= my.or.from.logit(YX.m2.fit4, 'stageART.suA.N', 'stageART.suA.Y', subset(YX.m2, stage=='ART.suA.N')[, sum(w)], subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], 1.962),
+									ART1.su.NY= my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageART.suA.N', subset(YX.m2, stage=='ART.suA.N')[, sum(w)], subset(YX.m2, stage=='ART1.su.Y')[, sum(w)], 1.962),
+									ART1.su.N= my.or.from.logit(YX.m2.fit4, 'stageART.suA.N', 'stageU', subset(YX.m2, stage=='ART.suA.N')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									ART1.su.NA= my.or.from.logit(YX.m2.fit4, 'stageART.vlNA', 'stageU', subset(YX.m2, stage=='ART.vlNA')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									ART1.su.Y= my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageU', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									DAy= my.or.from.logit(YX.m2.fit4, 'stageDAy', 'stageU', subset(YX.m2, stage=='DAy')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									DAm= my.or.from.logit(YX.m2.fit4, 'stageDAm', 'stageU', subset(YX.m2, stage=='DAm')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),										
+									D1l350= my.or.from.logit(YX.m2.fit4, 'stageD1<=350', 'stageU', subset(YX.m2, stage=='D1<=350')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									D1l550= my.or.from.logit(YX.m2.fit4, 'stageD1<=550', 'stageU', subset(YX.m2, stage=='D1<=550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									D1g550= my.or.from.logit(YX.m2.fit4, 'stageD1>550', 'stageU', subset(YX.m2, stage=='D1>550')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									UAm= my.or.from.logit(YX.m2.fit4, 'stageUAm', 'stageU', subset(YX.m2, stage=='UAm')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									UAy= my.or.from.logit(YX.m2.fit4, 'stageUAy', 'stageU', subset(YX.m2, stage=='UAy')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+									DAyUAy= my.or.from.logit(YX.m2.fit4, 'stageDAy', 'stageUAy', subset(YX.m2, stage=='DAy')[, sum(w)], subset(YX.m2, stage=='UAy')[, sum(w)], 1.962),
+									DAmUAm= my.or.from.logit(YX.m2.fit4, 'stageDAm', 'stageUAm', subset(YX.m2, stage=='DAm')[, sum(w)], subset(YX.m2, stage=='UAm')[, sum(w)], 1.962)										
+									)
+	#	   ART1.su.NY ART1.su.NY ART1.su.N ART1.su.NA ART1.su.Y      DAy      DAm     D1l350    D1l550    D1g550      UAm      UAy
+	#1:   1.624383  	0.6156184 0.5987443  0.2684546 0.3685980 	1.482267 2.088981 0.7542298 0.5565142 0.6649380 1.985317 2.759259
+	#2:   1.223428  	0.4625772 0.4753364  0.2089221 0.2925060 	1.142601 1.617384 0.5812614 0.4351638 0.5234374 1.545052 2.153543
+	#3:   2.156743  	0.8192925 0.7541916  0.3449509 0.4644844 	1.922909 2.698085 0.9786689 0.7117045 0.8446903 2.551037 3.535343
+	YX.m2.p		<- YX.m2[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m2[,sum(w)],d=3) ),by='stage']
+	#	D1<=350   DAm       UAm       U         ART.suA.N 	D1>550    D1<=550   ART.suA.Y ART.vlNA  DAy       UAy
+	#	26.1  		13.0  	25.8 	168.6  		84.3 		 65.9  		53.7  	82.1   		2.7  	12.2  		24.5
+	#	0.047 		0.023 	0.046 	0.302 		0.151 		0.118 		0.096 	0.147 		0.005 	0.022 		0.044
+	#	plot
+	if(!is.na(plot.file.or))
+	{
+		pdf(file=plot.file.or, w=5, h=5)
+		tmp			<- data.table(stage= YX.m2[, levels(stage)], col=sapply( rainbow(YX.m2[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m2		<- merge(YX.m2, tmp, by='stage')
+		plot( seq_len(nrow(YX.m2)), YX.m2[, score.Y], pch=18, col= YX.m2[, col], cex=YX.m2[, w^0.4])
+		tmp				<- subset(YX.m2, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m2.fit4, tmp, type='response'))	
+		start			<- c( YX.m2.fit4$coef$mean + head( 2*sqrt(diag(vcov(YX.m2.fit4))), length(YX.m2.fit4$coef$mean)), YX.m2.fit4$coef$precision)
+		YX.m2.fit4.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m2, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m2.fit4$coef$mean - head( 2*sqrt(diag(vcov(YX.m2.fit4))), length(YX.m2.fit4$coef$mean)), YX.m2.fit4$coef$precision)
+		YX.m2.fit4.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m2, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m2.fit4.sup, tmp, type='response'), rev(predict(YX.m2.fit4.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
+		YX.m2[, col:=NULL]	
+		dev.off()
+	}
+	list(m2= YX.m2, m2.fit=YX.m2.fit4, m2.or=YX.m2.fit4.or, m2.p=YX.m2.p)
 }
 ######################################################################################
 project.athena.Fisheretal.YX.model1<- function(YX, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('Diag<=350','Diag<=550','Diag>550'))
@@ -5999,6 +7626,73 @@ my.or.from.logit<- function(object, f1, f2, n1, n2, u=1.962)
 	as.double(exp(c( lor, or.ci )))
 }
 ######################################################################################
+project.athena.Fisheretal.sensitivity<- function()
+{
+	require(data.table)
+	require(ape)
+	stop()
+	indir					<- paste(DATA,"tmp",sep='/')		
+	indircov				<- paste(DATA,"derived",sep='/')
+	outdir					<- paste(DATA,"fisheretal",sep='/')
+	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	t.period				<- 1/8
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+	
+	if(0)
+	{
+		infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs100",sep="_")
+		insignat				<- "Thu_Aug_01_17/05/23_2013"	
+		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
+		clu.infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
+		clu.insignat			<- "Tue_Aug_26_09:13:47_2013"
+		clu.infilexml.template	<- "sasky_sdr06"
+		clu.infilexml.opt		<- "rsu815"				
+	}
+	if(1)
+	{
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"				
+		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alrh160'
+		clu.infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		clu.insignat			<- "Wed_Dec_18_11:37:00_2013"
+		clu.infilexml.opt		<- "alrh160"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=2_sasky',sep='_')
+	}
+
+	methods			<- c('3a','3b')
+	res				<- lapply(methods, function(method)
+			{
+				file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_results.R',sep='')
+				load(file)
+				ans
+			})
+	names(res)		<- methods
+	
+	res[['3a']]$YX.m2.VL1.or
+	res[['3b']]$YX.m2.VL1.or
+	
+	res[['3a']]$YX.m2.VLmxw.or
+	res[['3b']]$YX.m2.VLmxw.or
+	
+	res[['3a']]$YX.m3.or.art
+	res[['3b']]$YX.m3.or.art
+	
+	res[['3a']]$YX.m2time.p
+	res[['3b']]$YX.m2time.p
+	
+	
+	ans				<- list(	YX.m2.VL1.or=YX.m2.VL1.or, YX.m2.VL1.p=YX.m2.VL1.p, 
+			YX.m2.VLmxw.or=YX.m2.VLmxw.or, YX.m2.VLmxw.p=YX.m2.VLmxw.p, 
+			YX.m2time.p=YX.m2time.p, 
+			YX.m3.or=YX.m3.or, YX.m3.or.art=YX.m3.or.art )
+	save(ans, file=save.file)
+	
+}
+######################################################################################
 project.athena.Fisheretal.similar<- function()
 {
 	require(data.table)
@@ -6117,25 +7811,39 @@ project.athena.Fisheretal.similar<- function()
 	df.treatment			<- tmp$df.treatment
 	#
 	#
-	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX3a.R',sep='')
-	YX				<- project.athena.Fisheretal.YX(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=0)
+	method			<- '3a'
+	resume			<- 0
 	#
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'.R',sep='')	
+	YX				<- project.athena.Fisheretal.YX(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume, method=method)
 	#
-	YX.m1.info		<- project.athena.Fisheretal.YX.model1(YX)	
-	#	figure out which random effects model better: logit or beta
-	#YX.m1.gof		<- project.athena.Fisheretal.YX.model1(YX.m1.info, outdir, outfile, outsignat)
+	#	endpoint: first VL suppressed
+	plot.file.varyvl<- NA	#paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit4_VL_adjAym_dt025','.pdf',sep='')
+	plot.file.or	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit1','.pdf',sep='')
+	tmp				<- project.athena.Fisheretal.YX.model2.VL1stsu(YX, clumsm.info, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl, plot.file.or=plot.file.or)
+	YX.m2.VL1.or	<- tmp$m2.or
+	YX.m2.VL1.p		<- tmp$m2.p
+	#	endpoint: all VL in infection window suppressed
+	plot.file.varyvl<- NA	#paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit4_VL_adjAym_dt025','.pdf',sep='')
+	plot.file.or	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit4','.pdf',sep='')
+	tmp				<- project.athena.Fisheretal.YX.model2.VL.mx.window(YX, clumsm.info, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl, plot.file.or=plot.file.or)
+	YX.m2.VLmxw.or	<- tmp$m2.or
+	YX.m2.VLmxw.p	<- tmp$m2.p
+	#	proportions across time
+	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2time','.pdf',sep='')
+	YX.m2time.p		<- project.athena.Fisheretal.YX.model2.time(YX, clumsm.info, df.viro, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file=plot.file)
+	#	treatment risk groups
+	plot.file.cascade	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_cascade_FIPAPuNi','.pdf',sep='')
+	tmp				<- project.athena.Fisheretal.YX.model3.ARTriskgroups(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=plot.file.cascade)	
+	YX.m3.or.art	<- tmp$m3.or.art
+	YX.m3.or		<- tmp$m3.or
 	
-	
-	#	since only one transmission event is possible between any pair {Patient, t.Patient}, add weights for each pair (Patient, t.Patient) or (t.Patient, Patient)
-
-	save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'tripletweight.R',sep='')
-	Y.triplet.weight		<- project.athena.Fisheretal.tripletweights(Y.score, save.file=save.file)
-	
-	
-	
-	
-	
-	
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_results.R',sep='')
+	ans				<- list(	YX.m2.VL1.or=YX.m2.VL1.or, YX.m2.VL1.p=YX.m2.VL1.p, 
+								YX.m2.VLmxw.or=YX.m2.VLmxw.or, YX.m2.VLmxw.p=YX.m2.VLmxw.p, 
+								YX.m2time.p=YX.m2time.p, 
+								YX.m3.or=YX.m3.or, YX.m3.or.art=YX.m3.or.art )
+	save(ans, file=save.file)
 	
 	
 	
