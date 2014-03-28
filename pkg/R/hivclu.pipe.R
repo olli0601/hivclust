@@ -486,7 +486,7 @@ hivc.pipeline.BEASTout.get.cluster.trees<- function()
 ######################################################################################
 hivc.pipeline.BEASTout<- function()
 {
-	if(0)
+	if(1)
 	{
 		indircov			<- paste(DATA,"derived",sep='/')
 		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
@@ -503,11 +503,12 @@ hivc.pipeline.BEASTout<- function()
 		insignat			<- "Wed_Dec_18_11:37:00_2013"		
 		infilexml.template	<- "sasky_sdr06"
 		infilexml.opt		<- "alrh160"
+		infilexml.opt		<- "clrh80"
 		burnin				<- 5e6
 		#
-		infilexml.template	<- "um192rhU2080"
-		infilexml.opt		<- "mph4clutx4tip"
-		burnin				<- 2e7
+		#infilexml.template	<- "um192rhU2080"
+		#infilexml.opt		<- "mph4clutx4tip"
+		#burnin				<- 2e7
 		#
 		outdir				<- indir
 		outsignat			<- insignat
@@ -521,7 +522,7 @@ hivc.pipeline.BEASTout<- function()
 		outfile		<- paste("b2m.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 	}
-	if(1)
+	if(0)
 	{
 		indir				<- paste(DATA,"tmp",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
@@ -554,7 +555,7 @@ hivc.pipeline.BEASTout<- function()
 		#file.info	<- subset(file.info, cluster%in%c(23, 77, 126, 152, 315))
 		#print(file.info)
 		
-		dummy		<- sapply( file.info[,unique(cluster)][1:20], function(clu)
+		dummy		<- sapply( file.info[,unique(cluster)], function(clu)
 				{
 					cmd			<- hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, cluster=clu, verbose=1, resume=1)					
 					cat(cmd)

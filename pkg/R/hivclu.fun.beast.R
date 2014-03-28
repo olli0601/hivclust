@@ -392,7 +392,7 @@ hivc.beast2.extract.distinct.topologies<- function(mph.clu)
 	list(dtopo= mph.clu.dtopo, itopo=mph.clu.itopo)
 }
 ######################################################################################
-hivc.beast2out.combine.clu.trees<- function(indir, file.info, beastlabel.idx.clu=1, beastlabel.idx.hivn=2, beastlabel.idx.hivd=3, beastlabel.idx.hivs=4, beastlabel.idx.samplecode= 6, beastlabel.idx.rate= NA, verbose=FALSE)
+hivc.beast2out.combine.clu.trees<- function(indir, file.info, beastlabel.idx.clu=1, beastlabel.idx.hivn=2, beastlabel.idx.hivd=3, beastlabel.idx.hivs=4, beastlabel.idx.samplecode= 6, beastlabel.idx.rate= NA, method.nodectime='any', verbose=FALSE)
 {
 	#	collect consensus tree and further info for plotting
 	tmp			<- lapply(seq_len(nrow(file.info)), function(i)
@@ -409,8 +409,14 @@ hivc.beast2out.combine.clu.trees<- function(indir, file.info, beastlabel.idx.clu
 				set(topo.map.SA, NULL, 'SA.freq', topo.map.SA[,SA.freq/n])													
 				topo.map.nodectime	<- subset(mph.node.ctime, equal.to==topo.map[,mph.i])
 				topo.map			<- merge(subset(topo.map, select=c(cluster, dens)), subset(topo.map.SA, select=c(cluster, tip, SA.freq)), by='cluster')
-				topo.map.nodectime	<- subset(topo.map.nodectime, select=c(cluster, node, q, cdf, pdf))					
-				list(map= topo.map, nodectime=topo.map.nodectime, ph=topo.map.ph)			
+				topo.map.nodectime	<- subset(topo.map.nodectime, select=c(cluster, node, q, cdf, pdf))						
+				topo.any.nodectime	<- subset(mph.mapnode.pctime, select=c(cluster, node, q, cdf, pdf))
+				if(method.nodectime=='any')
+					node.ctime		<- topo.any.nodectime
+				else if(method.nodectime=='map')
+					node.ctime		<- topo.map.nodectime
+				else	stop('unknown method.nodectime')
+				list(map= topo.map, nodectime=node.ctime, ph=topo.map.ph)			
 			})
 	cluphy.map					<- do.call('rbind',lapply(tmp, function(x) x$map))
 	cluphy.map.nodectime		<- do.call('rbind',lapply(tmp, function(x) x$nodectime))

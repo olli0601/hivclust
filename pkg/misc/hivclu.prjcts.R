@@ -2886,7 +2886,7 @@ project.athena.Fisheretal.v2.YX<- function(df.all, clumsm.info, df.tpairs, df.im
 	YX	
 }
 ######################################################################################
-project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=0.25, t.endctime=2013., save.file=NA, resume=1, method='3a')
+project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=0.25, t.endctime=2013., save.file=NA, resume=1, method='3aa')
 {
 	if(resume && !is.na(save.file))
 	{
@@ -2944,14 +2944,21 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		#	compute Y scores
 		#
 		#	BRL	[0,1]: raw branch length between pot transmitter and infected
-		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlraw2e',sep='')	
-		tmp						<- project.athena.Fisheretal.Y.rawbrl(df.tpairs, indir, insignat, indircov, infilecov, infiletree, save.file=paste(file, '.R', sep=''), plot.file=paste(file, '.pdf', sep=''))
+		method.restrictTPtoRI	<- ifelse(substr(method,1,2)%in%c('3a','3b'),1,0)
+		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlraw2e',method.restrictTPtoRI,sep='')	
+		tmp						<- project.athena.Fisheretal.Y.rawbrl(df.tpairs, indir, insignat, indircov, infilecov, infiletree, save.file=paste(file, '.R', sep=''), plot.file=paste(file, '.pdf', sep=''), method.restrictTPtoRI=method.restrictTPtoRI)
 		Y.rawbrl				<- tmp$tpairs
 		Y.rawbrl.linked			<- tmp$linked
 		Y.rawbrl.unlinked		<- tmp$unlinked
 		#	BRL [0,1]: branch length weight between pot transmitter and infected
-		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'.pdf',sep='')
-		Y.brl					<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked	, Y.rawbrl.unlinked, df.all, brl.linked.min=-4, brl.linked.min.dt=1.5, plot.file=file, method=method)	
+		plot.file.score			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_score','.pdf',sep='')
+		plot.file.both			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_both','.pdf',sep='')
+		plot.file.one			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_one','.pdf',sep='')
+		if(substr(method,1,2)=='3c')		
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.04, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
+		if(substr(method,1,2)=='3d')		
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
+		if(all(substr(method,1,2)!=c('3c','3d')))	stop('brlweight: method not supported')
 		#	COAL [0,1]: prob that coalescence is within the transmitter
 		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw',method,'.R',sep='')		
 		Y.coal					<- project.athena.Fisheretal.Y.coal(df.tpairs, clumsm.info, X.pt, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=file )
@@ -2985,7 +2992,7 @@ project.athena.Fisheretal.YX<- function(df.all, clumsm.info, df.tpairs, df.immu,
 		#	re-arrange a little
 		YX		<- subset(YX, select=	c(	t, t.Patient, Patient, cluster, score.Y, 																	#triplets identifiers and Y score
 						t.period, stage, U.score, contact, CDCC, lRNA, CD4, 														#main covariates							
-						t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.pulse, fw.up.mx, fw.up.med, t2.care.t1, t2.vl.supp, 		#secondary covariates
+						t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.pulse, ART.nDrug, ART.nNRT, ART.nNNRT, ART.nPI, fw.up.mx, fw.up.med, t2.care.t1, t2.vl.supp, 		#secondary covariates
 						t.AnyPos_T1,  t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, t.Trm, Trm,												#other 
 						FASTASampleCode, t.FASTASampleCode, w, w.t										#other							
 				))
@@ -3133,7 +3140,321 @@ project.athena.Fisheretal.v2.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y
 	Y.brl		
 }
 ######################################################################################
-project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.min.brl=-4, brl.linked.min.dt=1, plot.file=NA, method='3a')
+project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.04, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1.5, plot.file.score=NA, method='3c', plot.file.both=NA, plot.file.one=NA)
+{
+	#brl.linked.max.brlr= 0.01; brl.linked.min.brl= 1e-12; brl.linked.max.dt= 10; brl.linked.min.dt= 1; plot.file.score=NA; method='3aa'; plot.file.both=NA; plot.file.one=NA
+	#	check if Exp model would be reasonable
+	require(MASS)	
+	require(ggplot2)
+	setkey(Y.rawbrl.unlinked, brl)
+	#	compute cdf for pairs given they are unlinked
+	p.rawbrl.unlinked	<- Y.rawbrl.unlinked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]		 
+	#	compute sequence sampling times	to see if time between seq sampling times could be useful
+	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )	
+	tmp					<- merge( data.table(FASTASampleCode=Y.rawbrl.linked[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, tmp, by='t.FASTASampleCode')
+	set(Y.rawbrl.linked, NULL, 'PosSeqT', hivc.db.Date2numeric(Y.rawbrl.linked[,PosSeqT]))
+	set(Y.rawbrl.linked, NULL, 't.PosSeqT', hivc.db.Date2numeric(Y.rawbrl.linked[,t.PosSeqT]))
+	set(Y.rawbrl.linked, NULL, 'AnyT_T1', hivc.db.Date2numeric(Y.rawbrl.linked[,AnyT_T1]))
+	set(Y.rawbrl.linked, NULL, 't.AnyT_T1', hivc.db.Date2numeric(Y.rawbrl.linked[,t.AnyT_T1]))
+	Y.rawbrl.linked[, b4T:= 'both']
+	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT<=AnyT_T1)], 'b4T', 'only.RI')
+	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT<=t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'only.T')
+	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'none')
+	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, data.table(b4T= Y.rawbrl.linked[, unique(b4T)], col=c('green','red','orange','yellow')), by='b4T' )	
+	set(Y.rawbrl.linked, NULL, 'b4T', Y.rawbrl.linked[, factor(b4T)])
+	Y.rawbrl.linked[, dt:= abs(PosSeqT-t.PosSeqT)]		
+	Y.rawbrl.linked[, brlr:= brl/dt]
+	#
+	#	EXCLUDE options
+	#
+	Y.rawbrl.linked		<- subset( Y.rawbrl.linked, dt!=0 )
+	
+	cat(paste('\nY.rawbrl.linked all, n=',nrow(Y.rawbrl.linked)))
+	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  brlr<=brl.linked.max.brlr)
+	cat(paste('\nY.rawbrl.linked max brlr ',brl.linked.max.brlr,' excluded, n=',nrow(Y.rawbrl.linked)))
+	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  dt<=brl.linked.max.dt)		
+	cat(paste('\nY.rawbrl.linked max dt ',brl.linked.max.dt,' excluded, n=',nrow(Y.rawbrl.linked)))	
+	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  brlr>brl.linked.min.brl)
+	cat(paste('\nY.rawbrl.linked min brl ',brl.linked.min.brl,' excluded, n=',nrow(Y.rawbrl.linked)))
+	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  dt>brl.linked.min.dt)		
+	cat(paste('\nY.rawbrl.linked min dt ',brl.linked.min.dt,' excluded, n=',nrow(Y.rawbrl.linked)))	
+	#
+	# wilcox test for same mean
+	#
+	test	<- list( 	both.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),
+						both.only.RI= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)] ),
+						both.none= 		wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)] ),
+						only.RI.T= 		wilcox.test( subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),
+						none.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),
+						none.only.RI= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)] )	)
+	cat(paste('\nwilcox test for same mean'))
+	print( sapply(test, '[[', 'p.value') )
+	# KS test for same distribution
+	test	<- list( 	both.only.T= 	ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)]),
+						both.only.RI= 	ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)] ),
+						both.none= 		ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)] ),
+						only.RI.T= 		ks.test( subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),
+						none.only.T= 	ks.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),
+						none.only.RI= 	ks.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)] )	)
+	cat(paste('\nKS test for same distribution'))
+	print( sapply(test, '[[', 'p.value') )	
+	#
+	#	fit distributions to data 
+	#
+	require(fitdistrplus)
+	require(ADGofTest)
+	require(gamlss.mx)
+	#
+	#	Gamma shape mixture 
+	#
+	if(0)
+	{
+		require(GSM)
+		tmp			<- estim.gsm_theta(subset(Y.rawbrl.linked, b4T=='both')[,brl], 2, 300, burnin + mcmcsim, 1, 1, 1/2)
+		tmp3		<- estim.gsm_theta(subset(Y.rawbrl.linked, b4T=='both')[,brl], 3, 300, burnin + mcmcsim, 1, 1, 1/3)
+		tmp4		<- estim.gsm_theta(subset(Y.rawbrl.linked, b4T=='both')[,brl], 4, 300, burnin + mcmcsim, 1, 1, 1/4)
+		plot(tmp, ndens = 0, nbin = 50, histogram = TRUE, start = (burnin + 1))
+		ad.test(subset(Y.rawbrl.linked, b4T=='both')[,brl], pgsm, weight=apply(tmp@weight[seq.int(burnin+1,burnin+mcmcsim),], 2, median), rateparam=median(tmp@theta[seq.int(burnin+1,burnin+mcmcsim)]))
+		#does not work: pvalue is 1e-6 almost Exponential		
+	}
+	#
+	#	Gamma mixture 
+	#
+	if(0)
+	{
+		brl				<- subset(Y.rawbrl.linked, b4T=='both')[,brl]
+		ml.gam			<- lapply(1:5, function(gam.n) gamlssMX(brl~1, family=GA, K=gam.n) )
+		ml.gam.n		<- which.min(sapply(ml.gam, AIC))				
+		cat(paste('\nbest AIC Gamma mixture has components n=', ml.gam.n))
+		ml.gam.p		<- ad.test(brl, pMX, 	mu=as.list(exp(sapply(ml.gam[[ml.gam.n]]$models,'[[','mu.coefficients'))), 
+				sigma=as.list(exp(sapply(ml.gam[[ml.gam.n]]$models,'[[','sigma.coefficients'))), 
+				pi=as.list(ml.gam[[ml.gam.n]]$prob), family=ml.gam[[ml.gam.n]]$family 	)$p.value
+		cat(paste('\nbest AIC Gamma mixture has pval=', ml.gam.p))		
+		
+		brl				<- subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl]
+		ml.gam.one		<- lapply(1:5, function(gam.n) gamlssMX(brl~1, family=GA, K=gam.n) )
+		ml.gam.one.n	<- which.min(sapply(ml.gam.one, AIC))				
+		cat(paste('\nbest AIC Gamma mixture has components n=', ml.gam.one.n))
+		ml.gam.one.p	<- ad.test(brl, pMX, 	mu=as.list(exp(sapply(ml.gam.one[[ml.gam.one.n]]$models,'[[','mu.coefficients'))), 
+				sigma=as.list(exp(sapply(ml.gam.one[[ml.gam.one.n]]$models,'[[','sigma.coefficients'))), 
+				pi=as.list(ml.gam.one[[ml.gam.one.n]]$prob), family=ml.gam.one[[ml.gam.one.n]]$family 	)$p.value
+		cat(paste('\nbest AIC Gamma mixture has pval=', ml.gam.one.p))									
+	}
+	#
+	#	zero adjusted Gamma 
+	#
+	if(1)
+	{
+		Y.rawbrl.linked[, brlz:=brl]
+		tmp				<- Y.rawbrl.linked[, which(brlz<1e-4)]
+		set(Y.rawbrl.linked, tmp, 'brlz', 0)
+		brl				<- subset(Y.rawbrl.linked, b4T=='both'  )[,brlz]
+		ml.zaga			<- gamlss(brl~1, family=ZAGA)
+		ml.zaga.p		<- ad.test(brl, pZAGA, mu=exp(ml.zaga[['mu.coefficients']]), sigma=exp(ml.zaga[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga[['nu.coefficients']])) )$p.value
+		cat(paste('\nbest ZAGA pvalue for both b4T=', ml.zaga.p))
+		brl				<- subset(Y.rawbrl.linked, b4T!='both' & b4T!='none'  & brlr<=0.01)[,brlz]
+		ml.zaga.one		<- gamlss(brl~1, family=ZAGA)
+		ml.zaga.one.p	<- ad.test(brl, pZAGA, mu=exp(ml.zaga.one[['mu.coefficients']]), sigma=exp(ml.zaga.one[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga.one[['nu.coefficients']])) )$p.value
+		cat(paste('\nbest ZAGA pvalue for one b4T=', ml.zaga.one.p))			
+	}
+	#
+	#	others
+	#
+	mle.exp		<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'exp')
+	mle.ga		<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'gamma')
+	mle.ln		<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'lnorm')
+	mle.w		<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'weibull')
+	mle.exp.one	<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'exp')
+	mle.ga.one	<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'gamma')
+	mle.ln.one	<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'lnorm')
+	mle.w.one	<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'weibull')
+	#	plot
+	if(!is.na(plot.file.both))
+	{
+		pdf(file=plot.file.both, w=12,h=5)
+		par(mfrow=c(2, 4))
+		qqcomp(mle.exp, addlegend=FALSE, main='exp')
+		denscomp(mle.exp, addlegend=FALSE, xlab='exp')		
+		qqcomp(mle.ga, addlegend=FALSE, main='gamma')
+		denscomp(mle.ga, addlegend=FALSE, xlab='gamma')
+		qqcomp(mle.ln, addlegend=FALSE, main='ln')
+		denscomp(mle.ln, addlegend=FALSE, xlab='ln')
+		qqcomp(mle.w, addlegend=FALSE, main='weibull')
+		denscomp(mle.w, addlegend=FALSE, xlab='weibull')
+		dev.off()
+		###		zero adjusted for ZAGA
+		brl				<- subset(Y.rawbrl.linked, b4T=='both')[,brlz]
+		brl.cdf			<- data.table( brl=sort(brl), cdf=seq_along(brl)/length(brl) )[, list(cdf=tail(cdf, 1)), by='brl']
+		brl.cdf[, cdf.f:= pZAGA( brl.cdf[,brl], mu=exp(ml.zaga[['mu.coefficients']]), sigma=exp(ml.zaga[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga[['nu.coefficients']])) ) ]				
+		ggplot( data=melt(brl.cdf, id='brl'), aes(x=brl, y=value, colour=variable)) + geom_line()
+		ggsave(file=paste(substr(plot.file.both,1,nchar(plot.file.both)-4),'_zagacdf','.pdf',sep=''), w=5,h=5)
+		###		
+		qv 		<- quantile(brl, c(.25, .75))
+		qt 		<- qZAGA(c(.25, .75), mu=exp(ml.zaga[['mu.coefficients']]), sigma=exp(ml.zaga[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga[['nu.coefficients']])) )
+		slope 	<- diff(qv)/diff(qt)
+		int 	<- qv[1] - slope * qt[1]	
+		qplot(sample=brl, geom = "point", stat = "qq", distribution = qZAGA, dparams = list(mu=exp(ml.zaga[['mu.coefficients']]), sigma=exp(ml.zaga[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga[['nu.coefficients']])))) + geom_abline(slope = slope, intercept = int)
+		ggsave(file=paste(substr(plot.file.both,1,nchar(plot.file.both)-4),'_zagaqq','.pdf',sep=''), w=5,h=5)
+	}
+	if(0)
+	{
+		brl				<- subset(Y.rawbrl.linked, b4T=='both')[,brl]
+		pdf(file=paste(substr(plot.file.both,1,nchar(plot.file.both)-4),'_gam','.pdf',sep=''), w=12,h=5)	
+		hist(brl, breaks=100, freq=FALSE)
+		dummy		<- sapply(seq_along(ml.gam), function(ml.gam.i)
+				{
+					print(ml.gam.i)
+					dbrl		<- dMX(y=seq(min(brl),max(brl),len=1024), mu=as.list(exp(sapply(ml.gam[[ml.gam.i]]$models,'[[','mu.coefficients'))), sigma=as.list(exp(sapply(ml.gam[[ml.gam.i]]$models,'[[','sigma.coefficients'))), pi=as.list(ml.gam[[ml.gam.i]]$prob), family=ml.gam[[ml.gam.i]]$family )
+					lines(seq(min(brl),max(brl),len=1024), dbrl, col=rainbow(length(ml.gam))[ml.gam.i], lty=ml.gam.i)
+				})
+		legend('topright', fill=rainbow(length(ml.gam)), bty='n', border=NA, legend=paste('GA mixture cmpnts',seq_along(ml.gam)))
+		dev.off()		
+	}
+	if(!is.na(plot.file.one))
+	{
+		pdf(file=plot.file.one, w=12,h=5)
+		par(mfrow=c(2, 4))
+		qqcomp(mle.exp.one, addlegend=FALSE, main='exp')
+		denscomp(mle.exp.one, addlegend=FALSE, xlab='exp')		
+		qqcomp(mle.ga.one, addlegend=FALSE, main='gamma')
+		denscomp(mle.ga.one, addlegend=FALSE, xlab='gamma')
+		qqcomp(mle.ln.one, addlegend=FALSE, main='ln')
+		denscomp(mle.ln.one, addlegend=FALSE, xlab='ln')
+		qqcomp(mle.w.one, addlegend=FALSE, main='weibull')
+		denscomp(mle.w.one, addlegend=FALSE, xlab='weibull')
+		dev.off()
+		###		zero adjusted for ZAGA
+		brl				<- subset(Y.rawbrl.linked, b4T!='both' & b4T!='none' )[,brlz]
+		brl.cdf			<- data.table( brl=sort(brl), cdf=seq_along(brl)/length(brl) )[, list(cdf=tail(cdf, 1)), by='brl']
+		brl.cdf[, cdf.f:= pZAGA( brl.cdf[,brl], mu=exp(ml.zaga.one[['mu.coefficients']]), sigma=exp(ml.zaga.one[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga.one[['nu.coefficients']])) ) ]						
+		ggplot( data=melt(brl.cdf, id='brl'), aes(x=brl, y=value, colour=variable)) + geom_line()
+		ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_zagacdf','.pdf',sep=''), w=5,h=5)		
+		###		
+		qv 		<- quantile(brl, c(.25, .75))
+		qt 		<- qZAGA(c(.25, .75), mu=exp(ml.zaga.one[['mu.coefficients']]), sigma=exp(ml.zaga.one[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga.one[['nu.coefficients']])) )
+		slope 	<- diff(qv)/diff(qt)
+		int 	<- qv[1] - slope * qt[1]	
+		qplot(sample=brl, geom = "point", stat = "qq", distribution = qZAGA, dparams = list(mu=exp(ml.zaga.one[['mu.coefficients']]), sigma=exp(ml.zaga.one[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga.one[['nu.coefficients']])))) + geom_abline(slope = slope, intercept = int)
+		ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_zagaqq','.pdf',sep=''), w=5,h=5)
+	}
+	if(0)
+	{
+		pdf(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_gam','.pdf',sep=''), w=12,h=5)
+		brl				<- subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl]
+		hist(brl, breaks=100, freq=FALSE)
+		dummy		<- sapply(seq_along(ml.gam.one), function(ml.gam.i)
+				{
+					dbrl		<- dMX(y=seq(min(brl),max(brl),len=1024), mu=as.list(exp(sapply(ml.gam.one[[ml.gam.i]]$models,'[[','mu.coefficients'))), sigma=as.list(exp(sapply(ml.gam.one[[ml.gam.i]]$models,'[[','sigma.coefficients'))), pi=as.list(ml.gam.one[[ml.gam.i]]$prob), family=ml.gam.one[[ml.gam.i]]$family )
+					lines(seq(min(brl),max(brl),len=1024), dbrl, col=rainbow(length(ml.gam.one))[ml.gam.i])
+				})
+		legend('topright', fill=rainbow(length(ml.gam.one)), bty='n', border=NA, legend=paste('GA mixture cmpnts',seq_along(ml.gam.one)))
+		dev.off()		
+	}
+	test		<- list(	exp= ad.test(subset(Y.rawbrl.linked, b4T=='both')[,brl], pexp, rate=mle.exp$estimate['rate']),								
+							gamma= ad.test(subset(Y.rawbrl.linked, b4T=='both')[,brl], pgamma, shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'])		)
+	cat(paste('\nAD test for MLE fit in distribution for both before ART'))
+	print( sapply(test, '[[', 'p.value') )	
+	test		<- list(	exp= ad.test(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], pexp, rate=mle.exp.one$estimate['rate']),								
+							gamma= ad.test(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], pgamma, shape=mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'])		)
+	cat(paste('\nAD test for MLE fit in distribution for one before ART'))
+	print( sapply(test, '[[', 'p.value') )	
+	#
+	#	fit Gamma for b4T==both and b4T one in ART
+	#
+	Y.brl			<- copy(Y.rawbrl)	
+	Y.brl[, score.brl.TN:= p.rawbrl.unlinked(brl)]
+	
+	if(substr(method,1,2)=='3c')	#ignore zeros use Gamma
+	{
+		cat(paste('\nBoth b4T: MLE param:',paste( mle.ga$estimate, collapse=' ')))
+		cat(paste('\nOne b4T: MLE param:',paste( mle.ga.one$estimate, collapse=' ')))
+		
+		Y.brl			<- merge( Y.brl, unique(subset(clumsm.info, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )	
+		tmp				<- merge( data.table(FASTASampleCode=Y.brl[, unique(t.FASTASampleCode)]), unique(subset(clumsm.info, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		Y.brl			<- merge( Y.brl, tmp, by='t.FASTASampleCode')
+		Y.brl[, b4T:= 'both']
+		set(Y.brl, Y.brl[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT<=AnyT_T1)], 'b4T', 'one')
+		set(Y.brl, Y.brl[, which(t.PosSeqT<=t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'one')
+		set(Y.brl, Y.brl[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'one')		
+		print(Y.brl[,table(b4T)])
+		
+		Y.brl[, score.brl.TPp:= pgamma(Y.brl[,brl], shape=2*mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'], lower.tail=FALSE)]
+		tmp<- Y.brl[, which(b4T=='one')]
+		set(Y.brl, tmp, 'score.brl.TPp', pgamma(Y.brl[tmp,brl], shape=2*mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'], lower.tail=FALSE) )
+		Y.brl[, score.brl.TPd:= score.brl.TPp]		
+		Y.brl[, dt:= abs(PosSeqT-t.PosSeqT)]
+	}	
+	if(substr(method,1,2)=='3d')	#dont ignore zeros - use zero adjusted Gamma
+	{
+		tmp			<- c( exp(ml.zaga[['mu.coefficients']]), exp(ml.zaga[['sigma.coefficients']]), 1/(1+exp(-ml.zaga[['nu.coefficients']])) )
+		cat(paste('\nZAGA Both b4T: MLE param:',paste( tmp, collapse=' ')))
+		tmp			<- c( exp(ml.zaga.one[['mu.coefficients']]), exp(ml.zaga.one[['sigma.coefficients']]), 1/(1+exp(-ml.zaga.one[['nu.coefficients']])) )
+		cat(paste('\nZAGA One b4T: MLE param:',paste( tmp, collapse=' ')))
+		
+		Y.brl[, brlz:=brl]		 
+		set(Y.brl, Y.brl[, which(brlz<1e-4)], 'brlz', 0)
+		Y.brl			<- merge( Y.brl, unique(subset(clumsm.info, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )	
+		tmp				<- merge( data.table(FASTASampleCode=Y.brl[, unique(t.FASTASampleCode)]), unique(subset(clumsm.info, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		Y.brl			<- merge( Y.brl, tmp, by='t.FASTASampleCode')
+		Y.brl[, b4T:= 'both']
+		set(Y.brl, Y.brl[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT<=AnyT_T1)], 'b4T', 'one')
+		set(Y.brl, Y.brl[, which(t.PosSeqT<=t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'one')
+		set(Y.brl, Y.brl[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'one')		
+		print(Y.brl[,table(b4T)])
+		
+		#	convolution of zero adjusted Gamma	
+		ml.zaga.pa		<- c(mu=as.double(exp(ml.zaga[['mu.coefficients']])), sigma=as.double(exp(ml.zaga[['sigma.coefficients']])), nu=as.double(1/(1+exp(-ml.zaga[['nu.coefficients']]))) )
+		ml.zaga.pa		<- c(ml.zaga.pa, shape= as.double(1/(ml.zaga.pa['sigma']*ml.zaga.pa['sigma'])), scale= as.double(ml.zaga.pa['mu']*ml.zaga.pa['sigma']*ml.zaga.pa['sigma']) )
+		ml.zaga.one.pa	<- c(mu=as.double(exp(ml.zaga.one[['mu.coefficients']])), sigma=as.double(exp(ml.zaga.one[['sigma.coefficients']])), nu=as.double(1/(1+exp(-ml.zaga.one[['nu.coefficients']]))) )
+		ml.zaga.one.pa	<- c(ml.zaga.one.pa, shape= as.double(1/(ml.zaga.one.pa['sigma']*ml.zaga.one.pa['sigma'])), scale= as.double(ml.zaga.one.pa['mu']*ml.zaga.one.pa['sigma']*ml.zaga.one.pa['sigma']) )
+		#	sense check -- should evaluate to 0, ~1
+		tmp				<- c(0, 0.1)
+		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( tmp,  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( tmp,  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
+		tmp				<- tmp / (1-ml.zaga.pa['nu']*ml.zaga.pa['nu'])				
+		cat(paste('\nZAGA Both b4T convolution sense check: should be ~0 ~1',paste( tmp, collapse=' ')))
+		#
+		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( Y.brl[,brlz],  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
+		tmp				<- tmp / (1-ml.zaga.pa['nu']*ml.zaga.pa['nu'])				
+		Y.brl[, score.brl.TPp:= 1-tmp]
+		tmp				<- Y.brl[, which(b4T=='one')]
+		tmp				<- 2*ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) + (1-ml.zaga.one.pa['nu'])*(1-ml.zaga.one.pa['nu'])*pgamma( Y.brl[tmp,brlz],  shape=2*ml.zaga.one.pa['shape'], scale=ml.zaga.one.pa['scale'] ) 
+		tmp				<- tmp / (1-ml.zaga.one.pa['nu']*ml.zaga.one.pa['nu'])				
+		set(Y.brl, Y.brl[, which(b4T=='one')], 'score.brl.TPp', 1-tmp )
+		
+		Y.brl[, score.brl.TPd:= score.brl.TPp]		
+		Y.brl[, dt:= abs(PosSeqT-t.PosSeqT)]
+	}	
+	if(!is.na(plot.file.score))
+	{
+		pdf(plot.file.score, w=5, h=5)
+		cat(paste('\nplot to file',plot.file.score))
+		require(RColorBrewer)
+		par(mar=c(4,4,0.5,0.5))
+		cols		<- brewer.pal(4, 'Set1')[c(1,3,2)]
+		legend.txt	<- c('same host', 'potential transmission pairs', 'branch length weight')	
+		xlim		<- c(0, max(Y.brl[, max(brl)],  Y.rawbrl.linked[, max(brl)])*1.1 )
+		tmp			<- seq(from=xlim[1], to=xlim[2], by=diff(xlim)/200)
+		hist( Y.rawbrl.linked[, brl], breaks=tmp , col=my.fade.col(cols[1],0.5), add=0, freq=0, xlab='branch length', main='', ylim=c(0,50) )
+		tmp2		<- hist( Y.brl[, brl], breaks=tmp, col=my.fade.col(cols[2],0.5), freq=0, add=1 )
+		setkey(Y.brl, brl)
+		lines(subset(Y.brl, b4T=='both')[, brl], subset(Y.brl, b4T=='both')[, score.brl.TPp]*max(tmp2$density), col=cols[3], lwd=2)
+		lines(subset(Y.brl, b4T=='one')[, brl], subset(Y.brl, b4T=='one')[, score.brl.TPp]*max(tmp2$density), col=cols[3], lwd=2)
+		legend('topright', bty='n', fill= cols, border=NA, legend=legend.txt)		
+		dev.off()
+		
+		ggplot(Y.brl, aes(x = brl, fill=b4T))+stat_bin(binwidth=0.002)+geom_line(data=Y.brl, aes(x=brl, y=score.brl.TPp*Y.brl[, length(which(brl<=0.002))], colour=b4T))+ scale_color_manual(values=c('black', 'blue'))
+		ggsave(file=paste(substr(plot.file.score,1,nchar(plot.file.score)-4),'_b4T','.pdf',sep=''), w=5, h=5)		
+	}	
+	Y.brl		<- subset( Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, score.brl.TPd, score.brl.TPp, score.brl.TN, brl) )
+	cat(paste('\nReturn brl score for #t.Patient seqs=',Y.brl[, length(unique(t.FASTASampleCode))]))
+	Y.brl		
+}
+######################################################################################
+project.athena.Fisheretal.v3a.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.min.brl=-4, brl.linked.min.dt=1, plot.file=NA, method='3aa')
 {
 	#brl.linked.min.brl=-4; brl.linked.min.dt=1
 	#	check if Exp model would be reasonable
@@ -3156,86 +3477,195 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'none')
 	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, data.table(b4T= Y.rawbrl.linked[, unique(b4T)], col=c('green','red','orange','yellow')), by='b4T' )	
 	set(Y.rawbrl.linked, NULL, 'b4T', Y.rawbrl.linked[, factor(b4T)])
-	Y.rawbrl.linked[, dt:= abs(PosSeqT-t.PosSeqT)]
-	#plot(Y.rawbrl.linked[,dt], Y.rawbrl.linked[,log(brl)], pch=18)		#no exponential clock within hosts 
+	Y.rawbrl.linked[, dt:= abs(PosSeqT-t.PosSeqT)]	
+	#	subset(Y.rawbrl.linked, dt==0 & brl>1e-4)
+	#	M36101 M10149 M15536 M15701 M29207 M28446 M10038 M31096
+	Y.rawbrl.linked		<- subset( Y.rawbrl.linked, dt!=0 )
+	Y.rawbrl.linked[, brlr:= brl/dt]
 	if(0)
 	{
+		plot(Y.rawbrl.linked[,dt], Y.rawbrl.linked[,log(brl)], pch=18)		#no exponential clock within hosts
+		tmp				<- loess(log(brl)~dt, Y.rawbrl.linked)
+		tmp				<- predict(tmp, data.frame(dt = seq(0, 20, 0.5)), se=TRUE)
+		lines(seq(0, 20, 0.5), tmp$fit, col='red')
+		lines(seq(0, 20, 0.5), tmp$fit+2*tmp$se.fit, col='red')
+		lines(seq(0, 20, 0.5), tmp$fit-2*tmp$se.fit, col='red')		
+	}
+	if(0)
+	{
+		brl.max	<- 0.2
+		brl.max	<- 0.4
 		setkey(Y.rawbrl.linked, brl, b4T)
 		par(mfrow=c(1,5))
 		#	plot distribution of BRL, excluding close SeqT
 		dummy	<- sapply(c(0,1,2,3,4), function(dt.min)
 				{					
-					tmp					<- subset(Y.rawbrl.linked, dt>=dt.min &  brl<0.2)				
+					tmp					<- subset(Y.rawbrl.linked, dt>=dt.min &  brl<brl.max)				
 					plot( tmp[, log10(brl)], pch=18, main=paste('exclude dt<',dt.min))					 				
 				})
 		#	plot distribution of BRL, excluding close SeqT & no evolution
 		dummy	<- sapply(c(0,1,2,3,4), function(dt.min)
 				{					
-					tmp					<- subset(Y.rawbrl.linked, dt>=dt.min & log10(brl)>brl.linked.min.brl &  brl<0.2)				
+					tmp					<- subset(Y.rawbrl.linked, dt>=dt.min & log10(brl)>brl.linked.min.brl &  brl<brl.max)				
 					plot( tmp[, log10(brl)], pch=18, main=paste('exclude dt<',dt.min))					 				
 				})
 		#	plot raw data for each b4T group, excluding close SeqT & no evolution
-		tmp					<- subset(Y.rawbrl.linked, dt>=1 & log10(brl)>brl.linked.min.brl & brl<0.2)
+		tmp					<- subset(Y.rawbrl.linked, dt>=1 & log10(brl)>brl.linked.min.brl & brl<brl.max)
 		setkey(tmp, b4T, brl)		
 		par(mfrow=c(1,1))
 		plot(1,1,type='n', ylim=c(-3, -0.5), xlim=c(1, tmp[, max(table(b4T))]), ylab='log10 brl', xlab='index')
 		tmp[, points( seq_along(brl), log10(brl), col=col, pch=18 ), by='b4T']		
+		legend('bottomright',legend=unique(subset(tmp, select=c(b4T, col)))[, b4T], fill=unique(subset(tmp, select=c(b4T, col)))[, col], bty='n', border=NA) 
 		#	exact two sample permutation test for equal location
 		library(coin)
 		test	<- list( 	both.only.T= 	{	tmp2	<- subset( tmp, b4T%in%c('both','only.T') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
-							both.only.RI= 	{	tmp2	<- subset( tmp, b4T%in%c('both','only.RI') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
-							both.none= 		{	tmp2	<- subset( tmp, b4T%in%c('both','none') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
-							none.only.T= 	{	tmp2	<- subset( tmp, b4T%in%c('only.T','none') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
-							none.only.RI= 	{	tmp2	<- subset( tmp, b4T%in%c('only.RI','none') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	}
-							)
+				both.only.RI= 	{	tmp2	<- subset( tmp, b4T%in%c('both','only.RI') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
+				both.none= 		{	tmp2	<- subset( tmp, b4T%in%c('both','none') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
+				none.only.T= 	{	tmp2	<- subset( tmp, b4T%in%c('only.T','none') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	},
+				none.only.RI= 	{	tmp2	<- subset( tmp, b4T%in%c('only.RI','none') ); set(tmp2, NULL, 'b4T', tmp2[,factor(as.character(b4T))]); oneway_test( brl~b4T, data=tmp2, distribution = "exact", conf.int = TRUE ) 	}
+		)
 		sapply(test, pvalue)
+		#within host among RI
 		#both.only.T both.only.RI    both.none  none.only.T none.only.RI 
 		#0.75287863   0.41671419   0.02926871   0.08318482   0.12930924
+		#within host among all
 		#
 		#	KS test
 		#
 		test	<- list( 	both.only.T= 	ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='only.T')[, brl] ),
-							both.only.RI= 	ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='only.RI')[, brl] ),
-							both.none= 		ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='none')[, brl] ),
-							none.only.T= 	ks.test( subset(tmp, b4T=='none')[, brl], subset(tmp, b4T=='only.T')[, brl] ),
-							none.only.RI= 	ks.test( subset(tmp, b4T=='none')[, brl], subset(tmp, b4T=='only.RI')[, brl] )	)
+				both.only.RI= 	ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='only.RI')[, brl] ),
+				both.none= 		ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='none')[, brl] ),
+				none.only.T= 	ks.test( subset(tmp, b4T=='none')[, brl], subset(tmp, b4T=='only.T')[, brl] ),
+				none.only.RI= 	ks.test( subset(tmp, b4T=='none')[, brl], subset(tmp, b4T=='only.RI')[, brl] )	)
 		sapply(test, '[[', 'p.value')
+		#within host among RI
 		#both.only.T both.only.RI    both.none  none.only.T none.only.RI 
 		#0.7271106    0.6860559    0.1520723    0.3264294    0.5416300
+		#within host among all
+		# both.only.T 	both.only.RI    both.none  		none.only.T 	none.only.RI 
+		#6.320585e-06 	1.341786e-04 	3.330669e-15 	5.086774e-04 	2.301351e-05 
 		#
 		#	plot points by b4T
 		#
-		plot(1,1,type='n', ylim=c(-3, -0.5), xlim=tmp[,range(dt)], ylab='log10 brl', xlab='delta SeqT')
-		tmp[, points( dt, log10(brl), col=col, pch=18 ), by='b4T']		
+		tmp				<- subset(Y.rawbrl.linked, dt>=1 & log10(brl)>brl.linked.min.brl & brl<brl.max)
+		plot(1,1,type='n', ylim=tmp[,range(log10(brl))], xlim=tmp[,range(dt)], ylab='log10 brl', xlab='delta SeqT')
+		tmp[, points( dt, log10(brl), col=col, pch=18 ), by='b4T']
+		legend('bottomright',legend=unique(subset(tmp, select=c(b4T, col)))[, b4T], fill=unique(subset(tmp, select=c(b4T, col)))[, col], bty='n', border=NA)
+		#	expect rate 2e-3/site/year, so at most 4e-3/site/year pairwise divergence from between host evolution
+		#	exclude 20-fold: n=136	out of 4090
+		#	exclude 10-fold: n=323	out of 4090
+		Y.rawbrl.linked	<- subset(Y.rawbrl.linked,  brlr<=0.04)		
+		#	exclude dt>10, n=100
+		Y.rawbrl.linked	<- subset(Y.rawbrl.linked,  dt<=10)		
+		hist(Y.rawbrl.linked[, brl],breaks=100)
+		#	exclude short dt to avoid bias 
+		tmp				<- subset(Y.rawbrl.linked, dt>=1)
+		plot(1,1,type='n', ylim=tmp[,range(log10(brl))], xlim=tmp[,range(dt)], ylab='log10 brl', xlab='delta SeqT')
+		tmp[, points( dt, log10(brl), col=col, pch=18 ), by='b4T']
+		legend('bottomright',legend=unique(subset(tmp, select=c(b4T, col)))[, b4T], fill=unique(subset(tmp, select=c(b4T, col)))[, col], bty='n', border=NA)
+		setkey(tmp, b4T, brl)		
+		plot(1,1,type='n', ylim=c(-3, -0.5), xlim=c(1, tmp[, max(table(b4T))]), ylab='log10 brl', xlab='index')
+		tmp[, points( seq_along(brl), log10(brl), col=col, pch=18 ), by='b4T']		
+		legend('bottomright',legend=unique(subset(tmp, select=c(b4T, col)))[, b4T], fill=unique(subset(tmp, select=c(b4T, col)))[, col], bty='n', border=NA)
+		test	<- list( 	both.only.T= 	ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='only.T')[, brl] ),
+				both.only.RI= 	ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='only.RI')[, brl] ),
+				both.none= 		ks.test( subset(tmp, b4T=='both')[, brl], subset(tmp, b4T=='none')[, brl] ),
+				none.only.T= 	ks.test( subset(tmp, b4T=='none')[, brl], subset(tmp, b4T=='only.T')[, brl] ),
+				none.only.RI= 	ks.test( subset(tmp, b4T=='none')[, brl], subset(tmp, b4T=='only.RI')[, brl] )	)
+		sapply(test, '[[', 'p.value')
+		#	same distribution for 'both b4T' and 'one b4T' rejected		--> expect similar results with coin but run out of mem
+		#	both.only.T 	both.only.RI    both.none  		none.only.T 	none.only.RI 
+		#	1.211440e-04 	3.670217e-04	 0.000000e+00 	7.075251e-11 	9.402701e-11
+		test	<- list( 	both.only.T= 	wilcox.test( subset(tmp, b4T=='both')[, log10(brl)], subset(tmp, b4T=='only.T')[, log10(brl)], alternative='greater' ),
+				both.only.RI= 	wilcox.test( subset(tmp, b4T=='both')[, log10(brl)], subset(tmp, b4T=='only.RI')[, log10(brl)] ),
+				both.none= 		wilcox.test( subset(tmp, b4T=='both')[, log10(brl)], subset(tmp, b4T=='none')[, log10(brl)] ),
+				only.RI.T= 		wilcox.test( subset(tmp, b4T=='only.RI')[, log10(brl)], subset(tmp, b4T=='only.T')[, log10(brl)] ),
+				none.only.T= 	wilcox.test( subset(tmp, b4T=='none')[, log10(brl)], subset(tmp, b4T=='only.T')[, log10(brl)] ),
+				none.only.RI= 	wilcox.test( subset(tmp, b4T=='none')[, log10(brl)], subset(tmp, b4T=='only.RI')[, log10(brl)] )	)
+		sapply(test, '[[', 'p.value')
+		# 	both.only.T 	both.only.RI    both.none    	only.RI.T  		none.only.T 	none.only.RI 
+		#	9.999306e-01 	6.530813e-04 	2.214453e-26 	7.411552e-01 	1.921079e-12 	2.952566e-12 
+		tmp[, list(med.brl=median(log10(brl)), mean.brl=mean(log10(brl))), by='b4T']
+		#       b4T   med.brl  mean.brl
+		#1:    both -2.303041 -3.198350
+		#2:    none -1.665873 -2.105176
+		#3: only.RI -2.054468 -2.772468
+		#4:  only.T -1.992733 -2.739838
+		
 		#
-		#	fit Gamma and Exp and ZIExp	to data excluding b4T=='none'
+		#	fit Gamma and Exp and ZIExp	to data for b4T=='both'
 		#
 		require(fitdistrplus)
 		library(ADGofTest)
-		tmp			<- subset(Y.rawbrl.linked, dt>=1 & brl<0.2 & b4T!='none')		
+		tmp			<- subset(Y.rawbrl.linked, dt>=1 & b4T=='both')		
 		mle.exp		<- fitdist(tmp[,brl], 'exp')
 		mle.ga		<- fitdist(tmp[,brl], 'gamma')
 		mle.ln		<- fitdist(tmp[,brl], 'lnorm')
 		mle.w		<- fitdist(tmp[,brl], 'weibull')
 		par(mfrow=c(2, 4))
-		qqcomp(mle.exp, addlegend=FALSE, main='exp dt>=1 b4T!=none')
-		denscomp(mle.exp, addlegend=FALSE, xlab='exp dt>=1 b4T!=none')		
-		qqcomp(mle.ga, addlegend=FALSE, main='gamma dt>=1 b4T!=none')
-		denscomp(mle.ga, addlegend=FALSE, xlab='gamma dt>=1 b4T!=none')
-		qqcomp(mle.ln, addlegend=FALSE, main='ln dt>=1 b4T!=none')
-		denscomp(mle.ln, addlegend=FALSE, xlab='ln dt>=1 b4T!=none')
-		qqcomp(mle.w, addlegend=FALSE, main='weibull dt>=1 b4T!=none')
-		denscomp(mle.w, addlegend=FALSE, xlab='weibull dt>=1 b4T!=none')
+		qqcomp(mle.exp, addlegend=FALSE, main='exp dt>=1 b4T==both')
+		denscomp(mle.exp, addlegend=FALSE, xlab='exp dt>=1 b4T==both')		
+		qqcomp(mle.ga, addlegend=FALSE, main='gamma dt>=1 b4T==both')
+		denscomp(mle.ga, addlegend=FALSE, xlab='gamma dt>=1 b4T==both')
+		qqcomp(mle.ln, addlegend=FALSE, main='ln dt>=1 b4T==both')
+		denscomp(mle.ln, addlegend=FALSE, xlab='ln dt>=1 b4T==both')
+		qqcomp(mle.w, addlegend=FALSE, main='weibull dt>=1 b4T==both')
+		denscomp(mle.w, addlegend=FALSE, xlab='weibull dt>=1 b4T==both')
 		mle3			<- list()
 		tmp2			<- copy(tmp)
 		set(tmp2, tmp2[, which(log10(brl)<=brl.linked.min.brl)], 'brl', 0.)
 		mle3$estimate	<- c(z=tmp2[, mean(brl==0)], rate=subset(tmp2, brl>0)[, 1/mean(brl)])
 		test		<- list(	exp= ad.test(tmp[,brl], pexp, rate=mle.exp$estimate['rate']),								
-								gamma= ad.test(tmp[,brl], pgamma, shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate']),
-								ziexp= ad.test(tmp2[,brl], pziexp, z=mle3$estimate['z'], rate=mle3$estimate['rate'])		)			
+				gamma= ad.test(tmp[,brl], pgamma, shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate']),
+				ziexp= ad.test(tmp2[,brl], pziexp, z=mle3$estimate['z'], rate=mle3$estimate['rate'])		)			
 		sapply(test, '[[', 'p.value')
-		#exp.AD     	gamma.AD 			ziexp.AD
-		#7.894737e-06 	3.697207e-03		4.862308e-04
+		#      exp.AD     gamma.AD     ziexp.AD 
+		#	4.195804e-06 1.130774e-05 4.195804e-06
+		tmp			<- subset(Y.rawbrl.linked, dt>=1 & b4T=='both' & log10(brl)>brl.linked.min.brl)		
+		mle.exp		<- fitdist(tmp[,brl], 'exp')
+		mle.ga		<- fitdist(tmp[,brl], 'gamma')
+		mle.ln		<- fitdist(tmp[,brl], 'lnorm')
+		mle.w		<- fitdist(tmp[,brl], 'weibull')
+		par(mfrow=c(2, 4))
+		qqcomp(mle.exp, addlegend=FALSE, main='exp dt>=1 b4T==both')
+		denscomp(mle.exp, addlegend=FALSE, xlab='exp dt>=1 b4T==both')		
+		qqcomp(mle.ga, addlegend=FALSE, main='gamma dt>=1 b4T==both')
+		denscomp(mle.ga, addlegend=FALSE, xlab='gamma dt>=1 b4T==both')
+		qqcomp(mle.ln, addlegend=FALSE, main='ln dt>=1 b4T==both')
+		denscomp(mle.ln, addlegend=FALSE, xlab='ln dt>=1 b4T==both')
+		qqcomp(mle.w, addlegend=FALSE, main='weibull dt>=1 b4T==both')
+		denscomp(mle.w, addlegend=FALSE, xlab='weibull dt>=1 b4T==both')
+		mle3			<- list()
+		tmp2			<- copy(tmp)
+		set(tmp2, tmp2[, which(log10(brl)<=brl.linked.min.brl)], 'brl', 0.)
+		mle3$estimate	<- c(z=tmp2[, mean(brl==0)], rate=subset(tmp2, brl>0)[, 1/mean(brl)])
+		test		<- list(	exp= ad.test(tmp[,brl], pexp, rate=mle.exp$estimate['rate']),								
+				gamma= ad.test(tmp[,brl], pgamma, shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate']),
+				ziexp= ad.test(tmp2[,brl], pziexp, z=mle3$estimate['z'], rate=mle3$estimate['rate'])		)			
+		sapply(test, '[[', 'p.value')
+		#exp.AD  gamma.AD  ziexp.AD 
+		#0.0421112 0.3320742 0.0421112
+		
+		tmp			<- subset(Y.rawbrl.linked, dt>=1 & b4T!='both' & b4T!='none' & log10(brl)>brl.linked.min.brl)		
+		mle.exp		<- fitdist(tmp[,brl], 'exp')
+		mle.ga		<- fitdist(tmp[,brl], 'gamma')
+		mle.ln		<- fitdist(tmp[,brl], 'lnorm')
+		mle.w		<- fitdist(tmp[,brl], 'weibull')
+		par(mfrow=c(2, 4))
+		qqcomp(mle.exp, addlegend=FALSE, main='exp dt>=1 b4T==one')
+		denscomp(mle.exp, addlegend=FALSE, xlab='exp dt>=1 b4T==one')		
+		qqcomp(mle.ga, addlegend=FALSE, main='gamma dt>=1 b4T==one')
+		denscomp(mle.ga, addlegend=FALSE, xlab='gamma dt>=1 b4T==one')
+		qqcomp(mle.ln, addlegend=FALSE, main='ln dt>=1 b4T==one')
+		denscomp(mle.ln, addlegend=FALSE, xlab='ln dt>=1 b4T==one')
+		qqcomp(mle.w, addlegend=FALSE, main='weibull dt>=1 b4T==one')
+		denscomp(mle.w, addlegend=FALSE, xlab='weibull dt>=1 b4T==one')
+		test		<- list(	exp= ad.test(tmp[,brl], pexp, rate=mle.exp$estimate['rate']),								
+				gamma= ad.test(tmp[,brl], pgamma, shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'])		)			
+		sapply(test, '[[', 'p.value')
+		#exp.AD  	gamma.AD 
+		#0.0028749 	0.2870875 
+		
 		#
 		#	fit Gamma and Exp and ZIExp	to data excluding b4T=='none' AND small brl
 		#
@@ -3248,7 +3678,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		qqcomp(mle.ga, addlegend=FALSE, main='gamma dt>=1 b4T!=none brl>1e-4')
 		denscomp(mle.ga, addlegend=FALSE, xlab='gamma dt>=1 b4T!=none brl>1e-4')		
 		test		<- list(	exp= ad.test(tmp[,brl], pexp), 
-								gamma= ad.test(tmp[,brl], pgamma, shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'])		)		
+				gamma= ad.test(tmp[,brl], pgamma, shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'])		)		
 		sapply(test, '[[', 'p.value')
 		#exp.AD     	gamma.AD 
 		#0.0000122449 	0.3602207894 
@@ -3271,7 +3701,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		#rate estimates very similar irrespective of whether the first 1 2 3 years excluded:
 		#1/rawbrl.exp	:	0.009735224 0.011242407 0.009690996 0.010396757 0.012383081
 	}	
-	if(method=='3a')
+	if(substr(method,1,2)=='3a')
 	{
 		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, b4T!='none' & log10(brl)>-12 & brl<0.2 & dt>=brl.linked.min.dt)
 		#estimated mean= 0.0089
@@ -3281,7 +3711,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, b4T!='none' & log10(brl)>brl.linked.min.brl & brl<0.2 & dt>=brl.linked.min.dt)
 		#estimated mean= 0.0138
 	}
-	if(method=='3b')
+	if(substr(method,1,2)=='3b')
 	{
 		Y.rawbrl.linked	<- subset(Y.rawbrl.linked, log10(brl)>brl.linked.min.brl & brl<0.2 & dt>=brl.linked.min.dt)
 		#estimated mean= 0.0175
@@ -3394,7 +3824,7 @@ project.athena.Fisheretal.YX.weight<- function(YX)
 	#	add tpair weight: every transmitter can infect only in one time period
 	YX		<- merge(YX, YX[, list(w= 1/length(t)),by=c('t.FASTASampleCode','FASTASampleCode')], by=c('t.FASTASampleCode','FASTASampleCode'))
 	#	check weight
-	if( nrow(unique( subset(YX, select=c(Patient, t.Patient)) ))!=YX[, sum(w)] )	stop('unexpected weight')	
+	if( abs(nrow(unique( subset(YX, select=c(Patient, t.Patient)) ))-YX[, sum(w)])>2*EPS )	stop('unexpected weight')	
 	print( YX[, table(w)] )
 	#	add infected weight: every infected can only be infected by one transmitter
 	tmp		<- subset(YX, select=c(Patient, t.Patient, score.brl.TPd))
@@ -3404,7 +3834,7 @@ project.athena.Fisheretal.YX.weight<- function(YX)
 	if( tmp[,sum(w.i)]!=YX[, length(unique(Patient))] )	stop('unexpected weight')	
 	YX		<- merge(YX, tmp, by=c('Patient','t.Patient')) 
 	set(YX, NULL, 'w', YX[, w*w.i])
-	if( YX[,sum(w)]!=YX[, length(unique(Patient))] )	stop('unexpected weight')
+	if( abs(YX[,sum(w)]-YX[, length(unique(Patient))])>2*EPS )	stop('unexpected weight')
 	#	weights are now normalised per 'Patient' but there are fewer infection EVENTS because Patient may also be a transmitter to t.Patient
 	triplet.weight				<- subset(YX, select=c(Patient, t.Patient))	
 	setkey(triplet.weight, Patient, t.Patient)
@@ -3443,7 +3873,7 @@ project.athena.Fisheretal.Y.transmitterinfected<- function(Y.infwindow, X.pt)
 	Y.U
 }
 ######################################################################################
-project.athena.Fisheretal.Y.rawbrl<- function(df.tpairs, indir, insignat, indircov, infilecov, infiletree, save.file=NA, plot.file=NA)
+project.athena.Fisheretal.Y.rawbrl<- function(df.tpairs, indir, insignat, indircov, infilecov, infiletree, save.file=NA, plot.file=NA, method.restrictTPtoRI=FALSE)
 {
 	if(!is.na(save.file))
 	{
@@ -3476,8 +3906,11 @@ project.athena.Fisheretal.Y.rawbrl<- function(df.tpairs, indir, insignat, indirc
 		#
 		#	select any other within host sequence for every individual in the denominator population as 'true positive'
 		#
-		tmp					<- unique( subset( df.tpairs, select=Patient ) )
-		msm.linked			<- merge( msm.linked, tmp, by='Patient' )
+		if(method.restrictTPtoRI)
+		{
+			tmp					<- unique( subset( df.tpairs, select=Patient ) )
+			msm.linked			<- merge( msm.linked, tmp, by='Patient' )			
+		}
 		setkey(msm.linked, Patient)
 		cat(paste('\nfound patients in denominator group with multiple sequences that can be taken as truly linked, n=',msm.linked[,length(unique(Patient))]))
 		cat(paste('\nfound seq in denominator group with multiple sequences that can be taken as truly linked, n=',msm.linked[,length(unique(FASTASampleCode))]))
@@ -4183,7 +4616,7 @@ project.athena.Fisheretal.t2inf.explore.chronic<- function(indircov, infilecov)
 	lines(age1, m4d$coefficients["(Intercept)"] + m4d$coefficients["AnyPos_a"]*age1, col='black')
 }
 ######################################################################################
-project.athena.Fisheretal.get.data.for.selection<- function(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov)
+project.athena.Fisheretal.get.data.for.selection<- function(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov, method.nodectime='any')
 {
 	file.cov				<- paste(indircov,"/",infilecov,".R",sep='')
 	file.viro				<- paste(indircov,"/ATHENA_2013_03_Viro.R",sep='/')
@@ -4220,9 +4653,9 @@ project.athena.Fisheretal.get.data.for.selection<- function(df.tpairs, clu.indir
 		df.tpairs.reduced	<- merge(df.tpairs, subset(file.info, select=cluster), by='cluster')
 		cat(paste('\nnumber of remaining Patients with one potential transmitter', length(df.tpairs.reduced[, unique(Patient)])))
 		cat(paste('\nnumber of remaining potential transmitter', length(df.tpairs.reduced[, unique(t.Patient)])))
-	}		
+	}			
 	#	combine dated cluster phylogenies
-	clu			<- hivc.beast2out.combine.clu.trees(clu.indir, file.info)		
+	clu			<- hivc.beast2out.combine.clu.trees(clu.indir, file.info, method.nodectime=method.nodectime)		
 	
 	list(clu=clu, df.all=df.all, df.viro=df.viro, df.immu=df.immu, df.treatment=df.treatment, df.tpairs=df.tpairs.reduced)
 }
@@ -4347,7 +4780,7 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, clumsm.info, df.viro, d
 	incare.t[, stage:='Diag']
 	cat(paste('\nincare.t entries, n=',nrow(incare.t)))
 	#	prepare treatment variables for potential transmitters
-	treat		<- subset(df.treatment, select=c(Patient, AnyT_T1, StartTime, StopTime, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel)) 
+	treat		<- subset(df.treatment, select=c(Patient, AnyT_T1, StartTime, StopTime, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel, NoDrug, NoNRT, NoNNRT, NoPI)) 
 	treat		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), treat, by='Patient' )
 	set(treat, NULL, 'AnyT_T1', hivc.db.Date2numeric(treat[,AnyT_T1]))
 	set(treat, NULL, 'StopTime', hivc.db.Date2numeric(treat[,StopTime]))
@@ -4367,7 +4800,7 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, clumsm.info, df.viro, d
 	treat.t		<- merge(subset(incare.t, select=c(Patient, t)), treat, by='Patient', allow.cartesian=TRUE )	
 	treat.t		<- subset( treat.t, StartTime<=t+t.period/2 & t+t.period/2<StopTime )
 	cat(paste('\ntreat.t entries, n=',nrow(treat.t)))
-	setnames(treat.t, c('TrI','TrCh.failure','TrCh.adherence','TrCh.patrel'), c('ART.I','ART.F','ART.A','ART.P'))
+	setnames(treat.t, c('TrI','TrCh.failure','TrCh.adherence','TrCh.patrel','NoDrug','NoNRT','NoNNRT','NoPI'), c('ART.I','ART.F','ART.A','ART.P','ART.nDrug','ART.nNRT','ART.nNNRT','ART.nPI'))
 	#	merge incare and treatment timelines
 	incare.t	<- merge(incare.t, treat.t, all.x=1, by=c('Patient','t'))	
 	#	set ever on ART per period t		(avoid AnyT_T1 as it may give periods that would start with treatment interruption)
@@ -4706,28 +5139,34 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 	VL.cur	<- 3
 	tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
 	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
-	YX.m4	<- merge(YX.m4, tmp, by= 't.Patient')					
-	YX.m4	<- merge(YX.m4, YX.m4[, {	
-										tmp<- which(!is.na(lRNA))
-										list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
-									}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
-	YX.m4	<- merge(YX.m4, YX.m4[, {
-										tmp<- which(!is.na(lRNA))
-										if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=VL.cur)
-											lRNA.c	<- 'SuA.Y'						
-										else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>VL.cur)
-											lRNA.c	<- 'SuA.N'						
-										else if(!length(tmp))
-											lRNA.c	<- 'SuA.NA'
-										else if(max(lRNA[tmp])>VL.cur)
-											lRNA.c	<- 'SuA.N'
-										else
-											lRNA.c	<- 'SuA.Y'
-										list( lRNA.c= lRNA.c )
-									}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	YX.m4	<- merge(YX.m4, tmp, by= 't.Patient')	
+	# collect PoslRNA_TL and lRNA_TL
+	tmp		<- merge( unique(subset(clumsm.info, select=Patient)), subset(df.viro, select=c(Patient, PosRNA, lRNA)), by='Patient' )
+	set( tmp, NULL, 'PosRNA', hivc.db.Date2numeric(tmp[,PosRNA]) )
+	tmp		<- subset( tmp[, 	{
+						tmp<- which(!is.na(lRNA))
+						list(t.Patient=Patient[1], lRNA_TL=lRNA[tail(tmp,1)], PoslRNA_TL=PosRNA[tail(tmp,1)])
+					}, by='Patient'], select=c(t.Patient, lRNA_TL, PoslRNA_TL) )
+	YX.m4	<- merge(YX.m4, tmp, by= 't.Patient', all.x=TRUE)
+	set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+	tmp		<- YX.m4[, {
+				tmp<- which(!is.na(lRNA))
+				if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & any(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=vl.suppressed)
+					lRNA.c	<- 'SuA.Y'						
+				else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & any(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>vl.suppressed)
+					lRNA.c	<- 'SuA.N'						
+				else if(!length(tmp))
+					lRNA.c	<- 'SuA.NA'
+				else if(max(lRNA[tmp])>vl.suppressed)
+					lRNA.c	<- 'SuA.N'
+				else
+					lRNA.c	<- 'SuA.Y'
+				list( lRNA.c= lRNA.c )
+			}, by=c('Patient','t.Patient')]	
+	YX.m4	<- merge(YX.m4, tmp, by=c('Patient','t.Patient'))	
 	set(YX.m4, YX.m4[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
 	set(YX.m4, YX.m4[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
-	set(YX.m4, YX.m4[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
+	set(YX.m4, YX.m4[,which(stage=='ART.started')],'stage', 'ART.vlNA' )	
 	set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])		
 					
 	YX.m4[, lRNA.c:= NULL]			
@@ -4982,7 +5421,20 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 	if(1)
 	{
 		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(t2.vl.supp<1)], 'stage', 's<=1' )
+		set(YX.m4, YX.m4[, which(t2.vl.supp>1)], 'stage', 's>1' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag')], 'stage', 'UAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag')], 'stage', 'UAm' )
+		set(YX.m4, YX.m4[, which(t.Patient%in%subset(YX.m4, ART.pulse=='Yes')[, unique(t.Patient)])], 'stage', 'Ppulse' )		
 		
+		ggplot(YX.m4, aes(stage, score.Y)) + geom_boxplot() + geom_jitter(size=0.4)	
+	}
+	#		try t2supp	
+	if(1)
+	{
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		
+		YX.m4[, CD4.c:=NULL]
 		cd4.label	<- c('D1<=350','D1<=550','D1>550')
 		tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
 		setkey(tmp, Patient)
@@ -4999,13 +5451,17 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 		set(YX.m4, YX.m4[, which(t.Patient%in%subset(YX.m4, ART.pulse=='Yes')[, unique(t.Patient)])], 'stage', 'Ppulse' )		
 				
 		
-		fw.cut		<- c(-1, 1, 2, 30)
+		fw.cut		<- c(-1, 1.5, 2.5, 30)
 		fw.label	<- c('Ds<=1','Ds<=2','Dother')
 		for(i in seq_along(fw.cut)[-1])
 			set(YX.m4, YX.m4[, which(stage=='Diag' & CD4.c=='D1>550' & t2.vl.supp<=fw.cut[i] & t2.vl.supp>fw.cut[i-1])], 'stage', fw.label[i-1])
 		set(YX.m4, YX.m4[, which(stage=='Diag' & CD4.c=='D1>550')], 'stage', 'Dother')		
 		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
-		YX.m4[, table(stage)]
+		#
+		YX.m4s			<- subset(YX.m4, !stage%in%c('ART.suA.N','ART.suA.Y','ART.vlNA','U','UAy','UAm'))
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]
+		ggplot(YX.m4s, aes(stage, score.Y)) + geom_boxplot() + geom_jitter(size=0.4)
 		
 		YX.m4.fit14 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4)
 		YX.m4.fit14.or	<- data.table( 	Dsl1= my.or.from.logit(YX.m4.fit14, 'stageDs<=1', 'stageDother', subset(YX.m4, stage=='Ds<=1')[, sum(w)], subset(YX.m4, stage=='Dother')[, sum(w)], 1.962),
@@ -5072,6 +5528,21 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 		#3: 3.091664 1.960445
 
 	}
+	#	how about contact==No ?
+	if(1)
+	{
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		set(YX.m4, YX.m4[, which(stage=='Diag' & contact=='No')], 'stage', 'D.cN')
+		set(YX.m4, YX.m4[, which(stage=='Diag' & contact=='Yes')], 'stage', 'D.cY')
+		YX.m4[, table(stage)]
+		YX.m4s			<- subset(YX.m4, !stage%in%c('ART.suA.N','ART.suA.Y','ART.vlNA','U','UAy','UAm'))
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]
+		
+		YX.m4s.fit13 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4s)
+		summary(YX.m4s.fit13)
+		ggplot(YX.m4s, aes(stage, score.Y)) + geom_boxplot() + geom_jitter(size=0.4)
+	}
 	#		try fw.up.med	
 	if(1)
 	{
@@ -5101,6 +5572,51 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 		set(YX.m4s, NULL, 'CDCC', YX.m4s[, factor(CDCC)])
 		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
 		YX.m4s.fit6b 	<- betareg(score.Y ~ stage:CDCC-1, link='logit', weights=w, data = YX.m4s)
+		#
+		#	does this still hold with acute and viral load ?
+		#
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		#	set acute
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )		
+		#	define lRNA.gm
+		YX.m4[, lRNA.gm:=NULL]
+		YX.m4	<- merge(YX.m4, YX.m4[, {
+							tmp<- which(!is.na(lRNA))					
+							if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1])
+								lRNA.gm		<- lRNA_TL[1]						
+							else if(!length(tmp))
+								lRNA.gm		<- NA_real_
+							else
+								lRNA.gm		<- mean(lRNA[tmp])
+							list( lRNA.gm= lRNA.gm )
+						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+		#	
+		fw.label	<- c('Df<=0.16','Df<=0.5','Df<=2','Df>2')
+		for(i in seq_along(fw.cut)[-1])
+			set(YX.m4, YX.m4[, which(stage=='Diag' & fw.up.med<=fw.cut[i] & fw.up.med>fw.cut[i-1])], 'stage', fw.label[i-1])
+		YX.m4[, table(stage)]
+		#	focus on diagnosis stage
+		YX.m4s	<- subset(YX.m4, !stage%in%c('ART.suA.N','ART.suA.Y','ART.vlNA','U','UAy','UAm'))
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]			
+		#
+		YX.m4s.fit6.fw 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m4s)
+		YX.m4s.fit6.vl.fw 	<- betareg(score.Y ~ lRNA.gm+stage-1, link='logit', weights=w, data = YX.m4s)
+		#	there are some transmitters with long follow up that obtain a high score, but most tend to be low
+		ggplot(YX.m4s, aes(stage, score.Y)) + geom_boxplot() + geom_jitter(size=0.4)
+		#		
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])		
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )
+		YX.m4s	<- subset(YX.m4, !stage%in%c('ART.suA.N','ART.suA.Y','ART.vlNA','U','UAy','UAm'))
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])		
+		YX.m4s.fit6.vl 		<- betareg(score.Y ~ lRNA.gm+stage-1, link='logit', weights=w, data = YX.m4s)
+		AIC( YX.m4s.fit6.fw, YX.m4s.fit6.vl, YX.m4s.fit6.vl.fw )
+		#                  df       AIC
+		#YX.m4s.fit6.fw     6 -414.8447		acute + fw
+		#YX.m4s.fit6.vl     5 -391.6777		acute + vl
+		#YX.m4s.fit6.vl.fw  7 -389.2229		acute + fw + vl
 	}
 	#		see if single VL thresh stratifies diagnosed	- use max VL per infection window
 	if(0)
@@ -5201,17 +5717,7 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 	#	interplay Acute and VL high -- max VL
 	if(1)
 	{		
-		YX.m4[, lRNA.c:=NULL]
-		YX.m4[, lRNA_TL:=NULL]
-		YX.m4[, PoslRNA_TL:=NULL]		
-		tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
-		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
-		YX.m4	<- merge(YX.m4, tmp, by= 't.Patient')
-		YX.m4	<- merge(YX.m4, YX.m4[, {	
-							tmp<- which(!is.na(lRNA))
-							list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
-						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
-		
+		YX.m4[, lRNA.c:=NULL]		
 		VL.win		<- c( seq(1e4, 1e5, by=1e4), seq(1.5e5, 5e5, by=5e4) ) 
 		YX.m4.VL	<- sapply(VL.win, function(VL.cur)
 				{
@@ -5262,20 +5768,61 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 		YX.m4[, lRNA_TL:=NULL]
 		YX.m4[, t.PoslRNA_T1:=NULL]
 	}
+	#	compare model using lRNA as linear predictor over three possibilities: VL.t VL.mxw VL.gm
+	if(1)
+	{
+		#define lRNA.mxw and lRNA.gm
+		YX.m4	<- merge(YX.m4, YX.m4[, {
+											tmp<- which(!is.na(lRNA))					
+											if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1])
+												lRNA.gm		<- lRNA.mxw	<- lRNA_TL[1]						
+											else if(!length(tmp))
+												lRNA.gm		<- lRNA.mxw	<- NA_real_
+											else
+											{
+												lRNA.gm		<- mean(lRNA[tmp])
+												lRNA.mxw	<- max(lRNA[tmp])
+											}
+											list( lRNA.gm= lRNA.gm, lRNA.mxw= lRNA.mxw )
+										}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))	
+		#	actually, the number of entries with missing VL does not improve based on the contact stuff because we there is no such individual
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )							
+		#	focus on diagnosis stage
+		YX.m4s	<- subset(YX.m4, !stage%in%c('ART.suA.N','ART.suA.Y','ART.vlNA','U','UAy','UAm'))
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]				
+		#
+		YX.m4.fit11.t 	<- betareg(score.Y ~ lRNA+stage-1, link='logit', weights=w, data = YX.m4s)
+		YX.m4.fit11.gm 	<- betareg(score.Y ~ lRNA.gm+stage-1, link='logit', weights=w, data = YX.m4s)
+		YX.m4.fit11.mxw <- betareg(score.Y ~ lRNA.mxw+stage-1, link='logit', weights=w, data = YX.m4s)
+		
+		sapply( list(YX.m4.fit11.t, YX.m4.fit11.mxw, YX.m4.fit11.gm), '[[', 'pseudo.r.squared' ) 
+		#	0.05427173 0.05646519 0.06212560
+		AIC(YX.m4.fit11.t, YX.m4.fit11.mxw, YX.m4.fit11.gm)
+		#                df       AIC
+		#YX.m4.fit11.t    5 -339.9402
+		#YX.m4.fit11.mxw  5 -389.6059
+		#YX.m4.fit11.gm   5 -391.6777
+		summary( YX.m4.fit11.gm )
+		data.table( 	DAy= my.or.from.logit(YX.m4.fit11.gm, 'stageDAy', 'stageDiag', subset(YX.m4, stage=='DAy')[, sum(w)], subset(YX.m4, stage=='Diag')[, sum(w)], 1.962),
+						DAm= my.or.from.logit(YX.m4.fit11.gm, 'stageDAm', 'stageDiag', subset(YX.m4, stage=='DAm')[, sum(w)], subset(YX.m4, stage=='Diag')[, sum(w)], 1.962)		)
+		#         DAy       DAm
+		#1: 2.2460174 2.7237358
+		#2: 0.7100023 0.8615171
+		#3: 7.1050396 8.6112475
+		YX.m4.fit11.noa <- betareg(score.Y ~ lRNA.mxw-1, link='logit', weights=w, data = YX.m4s)		
+		sapply( list(YX.m4.fit11.noa, YX.m4.fit11.gm), '[[', 'pseudo.r.squared' )
+		#	0.01663442 0.06212560
+		AIC(YX.m4.fit11.noa, YX.m4.fit11.gm)
+		#					df       AIC
+		#YX.m4.fit11.noa  2 -384.0294
+		#YX.m4.fit11.gm   5 -391.6777
+	}
 	#	interplay Acute and VL high using Geometric mean of RNA, or the log Geometric mean ( mean of lRNA )
 	if(1)
 	{		
 		YX.m4[, lRNA.c:=NULL]
-		YX.m4[, lRNA_TL:=NULL]
-		YX.m4[, PoslRNA_TL:=NULL]		
-		tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
-		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
-		YX.m4	<- merge(YX.m4, tmp, by= 't.Patient')
-		YX.m4	<- merge(YX.m4, YX.m4[, {	
-							tmp<- which(!is.na(lRNA))
-							list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
-						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
-		
 		VL.win		<- c( seq(1e4, 1e5, by=1e4), seq(1.5e5, 5e5, by=5e4) ) 
 		YX.m4.VL	<- sapply(VL.win, function(VL.cur)
 				{
@@ -5407,16 +5954,6 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 	if(1)
 	{		
 		YX.m4[, lRNA.c:=NULL]
-		YX.m4[, lRNA_TL:=NULL]
-		YX.m4[, PoslRNA_TL:=NULL]		
-		tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
-		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
-		YX.m4	<- merge(YX.m4, tmp, by= 't.Patient')
-		YX.m4	<- merge(YX.m4, YX.m4[, {	
-							tmp<- which(!is.na(lRNA))
-							list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
-						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
-		
 		VL.win		<- c( seq(1e4, 1e5, by=1e4), seq(1.5e5, 5e5, by=5e4) ) 
 		YX.m4.VL	<- sapply(VL.win, function(VL.cur)
 				{
@@ -5451,7 +5988,7 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 		YX.m4[, lRNA_TL:=NULL]
 		YX.m4[, t.PoslRNA_T1:=NULL]
 	}
-	# combine various risk groups that were identified: Acute, D1>45
+	# combine Acute, lRNA.gm, young age
 	if(1)
 	{
 		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
@@ -5464,16 +6001,126 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
 		tmp		<- merge( unique( subset(YX.m4, select=t.Patient) ), tmp, by='t.Patient' )		
 		YX.m4	<- merge(YX.m4, subset(tmp, select=c(t.Patient, t.AnyPos_A)), by='t.Patient')	
-		#	set Acute			
-		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAy' )
-		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAm' )
-		#	set age 45 at diagnosis
-		set(YX.m4, YX.m4[, which(t.AnyPos_A>45 & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DC.T1>45' )
+		#	define lRNA.gm
+		YX.m4[, lRNA.gm:=NULL]
+		YX.m4	<- merge(YX.m4, YX.m4[, {
+							tmp<- which(!is.na(lRNA))					
+							if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1])
+								lRNA.gm		<- lRNA_TL[1]						
+							else if(!length(tmp))
+								lRNA.gm		<- NA_real_
+							else
+								lRNA.gm		<- mean(lRNA[tmp])
+							list( lRNA.gm= lRNA.gm )
+						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))	
+		#	set acute
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )
 		#	set young age groups
 		age.cut		<- c(-1, 20, 22, 24, 100)
-		age.label	<- c('DC.T<=20','DC.T<=22', 'DC.T<=24', 'DC.T>25')
+		age.label	<- c('D.T<=20','D.T<=22', 'D.T<=24', 'D.T>25')
+		age.cut		<- c(-1, 23, 100)
+		age.label	<- c('D.T<=24', 'D.T>25')
+		
+		YX.m4[, t.Age.c:= cut(YX.m4[, t.Age], breaks=age.cut, labels=age.label)]
+		#	focus on diagnosis stage
+		YX.m4s	<- subset(YX.m4, !stage%in%c('ART.suA.N','ART.suA.Y','ART.vlNA','U','UAy','UAm'))
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]			
+		#
+		YX.m4.fit12.age.stage 	<- betareg(score.Y ~ lRNA.gm+t.Age.c+stage-1, link='logit', weights=w, data = YX.m4s)
+		YX.m4.fit12.age		 	<- betareg(score.Y ~ lRNA.gm+t.Age.c-1, link='logit', weights=w, data = YX.m4s)
+		YX.m4.fit12.stage 	<- betareg(score.Y ~ lRNA.gm+stage-1, link='logit', weights=w, data = YX.m4s)
+		AIC(YX.m4.fit12.age, YX.m4.fit12.stage, YX.m4.fit12.age.stage)
+		#	using age<=23 gave largest r2 for YX.m4.fit12.age.stage -- but not lower AIC than stage+lRNA.gw	
+		#                      df       AIC
+		#YX.m4.fit12.age        4 -384.3063
+		#YX.m4.fit12.stage      5 -391.6777
+		#YX.m4.fit12.age.stage  6 -390.5392
+		sapply( list(YX.m4.fit12.age, YX.m4.fit12.stage, YX.m4.fit12.age.stage), '[[', 'pseudo.r.squared' )
+		#	0.04103416 0.06212560 0.07381119
+	}
+	# combine Acute, lRNA.gm, young age among chronic
+	if(1)
+	{
+		set(YX.m4, NULL, 'stage', YX.m4[, stage.orig])
+		#	add age at diagnosis
+		YX.m4[, t.AnyPos_A:=NULL]
+		tmp		<- subset( clumsm.info, select=c(Patient, DateBorn, AnyPos_T1) )
+		setkey(tmp, Patient)
+		tmp		<- unique(tmp)
+		tmp[, AnyPos_A:= AnyPos_T1-DateBorn]
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		tmp		<- merge( unique( subset(YX.m4, select=t.Patient) ), tmp, by='t.Patient' )		
+		YX.m4	<- merge(YX.m4, subset(tmp, select=c(t.Patient, t.AnyPos_A)), by='t.Patient')	
+		#	define lRNA.gm
+		YX.m4[, lRNA.gm:=NULL]
+		YX.m4	<- merge(YX.m4, YX.m4[, {
+							tmp<- which(!is.na(lRNA))					
+							if(!length(tmp) & all( t>PoslRNA_TL, na.rm=TRUE ) & any( (t-PoslRNA_TL)<0.5, na.rm=TRUE) & !is.na(lRNA_TL[1]) & lRNA_TL[1])
+								lRNA.gm		<- lRNA_TL[1]						
+							else if(!length(tmp))
+								lRNA.gm		<- NA_real_
+							else
+								lRNA.gm		<- mean(lRNA[tmp])
+							list( lRNA.gm= lRNA.gm )
+						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))	
+		#	set acute
+		set(YX.m4, YX.m4[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+		set(YX.m4, YX.m4[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )
+		#	set young age groups
+		age.cut		<- c(-1, 22, 100)
+		age.label	<- c('DC.T<=22', 'Diag')
 		for(i in seq_along(age.cut)[-1])
-			set(YX.m4, YX.m4[, which(stage=='Diag' & t.Age<=age.cut[i] & t.Age>age.cut[i-1])], 'stage', age.label[i-1])
+			set(YX.m4, YX.m4[, which(stage=='Diag' & t.Age<=age.cut[i] & t.Age>age.cut[i-1])], 'stage', age.label[i-1])		
+		#	focus on diagnosis stage
+		YX.m4s	<- subset(YX.m4, !stage%in%c('ART.suA.N','ART.suA.Y','ART.vlNA','U','UAy','UAm'))
+		set(YX.m4s, NULL, 'stage', YX.m4s[, factor(as.character(stage))])
+		YX.m4s[, table(stage)]			
+		#
+		YX.m4.fit13.age.stage 	<- betareg(score.Y ~ lRNA.gm+stage-1, link='logit', weights=w, data = YX.m4s)
+		AIC(YX.m4.fit12.age, YX.m4.fit12.stage, YX.m4.fit12.age.stage, YX.m4.fit13.age.stage)
+		#                      df       AIC		
+		#YX.m4.fit12.age        4 -383.4353
+		#YX.m4.fit12.stage      5 -391.6777
+		#YX.m4.fit12.age.stage  6 -389.7269
+		#YX.m4.fit13.age.stage  6 -390.8501		slightly higher age effect among chronic, but still not significant
+	}
+	# combine Acute, lRNA.gm, time2viralsuppression
+	if(1)
+	{
+		
+
+
+#	adjust for young age
+
+
+
+		summary(YX.m4.fit12)
+		
+		sapply( list(YX.m4.fit11.t, YX.m4.fit11.mxw, YX.m4.fit11.gm), '[[', 'pseudo.r.squared' ) 
+		#	0.05427173 0.05646519 0.06212560
+		AIC(YX.m4.fit11.t, YX.m4.fit11.mxw, YX.m4.fit11.gm)
+		#                df       AIC
+		#YX.m4.fit11.t    5 -339.9402
+		#YX.m4.fit11.mxw  5 -389.6059
+		#YX.m4.fit11.gm   5 -391.6777
+		summary( YX.m4.fit11.gm )
+		data.table( 	DAy= my.or.from.logit(YX.m4.fit11.gm, 'stageDAy', 'stageDiag', subset(YX.m4, stage=='DAy')[, sum(w)], subset(YX.m4, stage=='Diag')[, sum(w)], 1.962),
+				DAm= my.or.from.logit(YX.m4.fit11.gm, 'stageDAm', 'stageDiag', subset(YX.m4, stage=='DAm')[, sum(w)], subset(YX.m4, stage=='Diag')[, sum(w)], 1.962)		)
+		#         DAy       DAm
+		#1: 2.2460174 2.7237358
+		#2: 0.7100023 0.8615171
+		#3: 7.1050396 8.6112475
+		YX.m4.fit11.noa <- betareg(score.Y ~ lRNA.mxw-1, link='logit', weights=w, data = YX.m4s)		
+		sapply( list(YX.m4.fit11.noa, YX.m4.fit11.gm), '[[', 'pseudo.r.squared' )
+		#	0.01663442 0.06212560
+		AIC(YX.m4.fit11.noa, YX.m4.fit11.gm)
+		
+		
+		
+		#	set age 45 at diagnosis
+		set(YX.m4, YX.m4[, which(t.AnyPos_A>45 & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DC.T1>45' )
 		#			
 		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(stage))])
 		table( YX.m4[, stage])
@@ -5499,7 +6146,7 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 	}
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model3.ARTriskgroups<- function(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA)
+project.athena.Fisheretal.YX.model3.ARTriskgroups_v2<- function(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA)
 {
 	require(betareg)
 	#	Treatment cascade & ART risk groups
@@ -5510,6 +6157,121 @@ project.athena.Fisheretal.YX.model3.ARTriskgroups<- function(YX, clumsm.info, cd
 	#	SQ: is ART pulse associated with higher transmissibility?
 	YX.m3	<- copy(YX)
 	YX.m3[, U.score:=NULL]
+	set(YX.m3, YX.m3[,which(score.Y==1)], 'score.Y', subset(YX, score.Y<1)[, max(c(score.Y,0.99))])
+	set(YX.m3, YX.m3[,which(score.Y==0)], 'score.Y', subset(YX, score.Y>0)[, min(c(score.Y,0.01))])
+	#	transmitter acute
+	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
+	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')	
+	set(YX.m3, YX.m3[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+	set(YX.m3, YX.m3[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )				
+	#	stratify Diag by first CD4 after diagnosis
+	tmp		<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)	
+	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	print( subset( tmp, is.na(CD4.c) ) )
+	setnames(tmp, 'Patient', 't.Patient')
+	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+	YX.m3	<- merge(YX.m3, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+	tmp		<- YX.m3[, which(stage=='Diag')]
+	set(YX.m3, tmp, 'stage', YX.m3[tmp, CD4.c])
+	YX.m3[, CD4.c:=NULL]		
+	YX.m3[, stage.orig:= stage]
+	#	ART indication risk factors
+	set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )		
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')		
+	#	ART no indication: nDrug
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug!=3)], 'stage', 'ART.3n')
+	#	split weight for PI and NNRT
+	tmp		<- YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)]
+	tmp2	<- YX.m3[tmp,]
+	set(tmp2, NULL, 'w', tmp2[, w/2])
+	set(tmp2, NULL, 'stage', 'ART.3.NRT.PI')
+	YX.m3	<- rbind(YX.m3, tmp2)
+	set(YX.m3, tmp, 'w', YX.m3[tmp, w/2])
+	set(YX.m3, tmp, 'stage', 'ART.3.NRT.NNRT')
+	#			
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 )], 'stage', 'ART.3.NRT.PI')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nNNRT>0)], 'stage', 'ART.3.NRT.NNRT')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 )], 'stage', 'ART.3.NRT')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'stage', 'ART.3.NNRT.PI')
+	#	add viral load suppressed during infection window
+	#VL.cur	<- 3
+	#YX.m3	<- merge(YX.m3, YX.m3[, {
+	#									tmp<- which(!is.na(lRNA))
+	#									list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>VL.cur, 'SuA.N', 'SuA.Y'), 'SuA.NA') )
+	#								}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	#	problem: one factor disappears because X'X is ow not invertible
+	YX.m3	<- merge(YX.m3, YX.m3[, {
+						tmp<- which(!is.na(lRNA))
+						list( lRNA.c= ifelse(length(tmp), max(lRNA[tmp]), NA_real_) )
+					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))								
+	#
+	YX.m3s	<- subset( YX.m3, !stage%in%c('UAm','UAy','DAm','DAy','D1<=350','D1<=550','D1>550','U'))
+	set(YX.m3s, NULL, 'stage', YX.m3s[, factor(as.character(stage))])
+	#set(YX.m3s, NULL, 'lRNA.c', YX.m3s[, factor(as.character(lRNA.c))])
+	#YX.m3s[, table(stage)]
+	#YX.m3s[, table(lRNA.c)]
+	YX.m3s.fit10 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3s)	#dummy variables act as baseline for lRNA, so that s fine
+	#YX.m3s.fit10 		<- betareg(score.Y ~ poly(lRNA.c,3)+stage-1, link='logit', weights=w, data = YX.m3s)	#poly does not like NAs
+	#require(splines)
+	#YX.m3s.fit10 		<- betareg(score.Y ~ ns(lRNA.c,knot=median(lRNA.c))+stage-1, link='logit', weights=w, data = YX.m3s)	#exactly same r2 as linear model in x
+	#YX.m3s.fit10 		<- betareg(score.Y ~ ns(lRNA.c,knot=3)+stage-1, link='logit', weights=w, data = YX.m3s)					#unclear what ns does
+	
+	summary(YX.m3s.fit10)
+	YX.m3s.fit10.or	<- data.table( 	F= my.or.from.logit(YX.m3s.fit10, 'stageART.F', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.F')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+									I= my.or.from.logit(YX.m3s.fit10, 'stageART.I', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.I')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+									P= my.or.from.logit(YX.m3s.fit10, 'stageART.P', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.P')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+									Pulse= my.or.from.logit(YX.m3s.fit10, 'stageART.pulse.Y', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+									A= my.or.from.logit(YX.m3s.fit10, 'stageART.A', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.A')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+									n3= my.or.from.logit(YX.m3s.fit10, 'stageART.3n', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3n')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+									NRT= my.or.from.logit(YX.m3s.fit10, 'stageART.3.NRT', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3.NRT')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+									NRT.NNRT= my.or.from.logit(YX.m3s.fit10, 'stageART.3.NRT.NNRT', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3.NRT.NNRT')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+									NNRT.PI= my.or.from.logit(YX.m3s.fit10, 'stageART.3.NNRT.PI', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3.NNRT.PI')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962) )
+	
+	YX.m3.fit10.p	<- YX.m3[, list(n=round(sum(w),d=1),prop= round(sum(w)/YX.m3[,sum(w)],d=3) ),by='stage']	
+	if(!is.na(plot.file.cascade))
+	{
+		tmp			<- data.table(stage= YX.m3s[, levels(stage)], col=sapply( rainbow(YX.m3s[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m3s		<- merge(YX.m3s, tmp, by='stage')				
+		pdf(file=plot.file.cascade, w=5, h=5)
+		plot( seq_len(nrow(YX.m3s)), YX.m3s[, score.Y], pch=18, col= YX.m3s[, col], cex=YX.m3s[, w^0.4])
+		tmp				<- subset(YX.m3s, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m3s.fit10, tmp, type='response'))	
+		start			<- c( YX.m3s.fit10$coef$mean + head( 2*sqrt(diag(vcov(YX.m3s.fit10))), length(YX.m3s.fit10$coef$mean)), YX.m3s.fit10$coef$precision)
+		YX.m3s.fit10.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3s, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m3s.fit10$coef$mean - head( 2*sqrt(diag(vcov(YX.m3s.fit10))), length(YX.m3s.fit10$coef$mean)), YX.m3s.fit10$coef$precision)
+		YX.m3s.fit10.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3s, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m3s.fit10.sup, tmp, type='response'), rev(predict(YX.m3s.fit10.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m3s[, levels(stage)], fill=YX.m3s[, unique(col)])
+		YX.m3s[, col:=NULL]
+		dev.off()
+		#		
+	}
+	list(m3=YX.m3, m3.p=YX.m3.fit10.p, m3.fit.art=YX.m3s.fit10, m3.or.art=YX.m3s.fit10.or)
+}
+######################################################################################
+project.athena.Fisheretal.YX.model3.ARTriskgroups<- function(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA)
+{
+	require(betareg)
+	#	Treatment cascade & ART risk groups
+	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis
+	#	
+	#	PQ: are there ART risk groups?
+	#	PQ: is VL the causal pathway?		--> currently problematic with uniform infection window approach
+	#	SQ: is ART pulse associated with higher transmissibility?
+	YX.m3	<- copy(YX)
+	YX.m3[, U.score:=NULL]	
+	set(YX.m3, YX.m3[,which(score.Y==1)], 'score.Y', subset(YX, score.Y<1)[, max(c(score.Y,0.99))])
+	set(YX.m3, YX.m3[,which(score.Y==0)], 'score.Y', subset(YX, score.Y>0)[, min(c(score.Y,0.01))])	
 	#	deal with acutes
 	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
 	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')	
@@ -5589,6 +6351,284 @@ project.athena.Fisheretal.YX.model3.ARTriskgroups<- function(YX, clumsm.info, cd
 		#		
 	}
 	list(m3=YX.m3, m3.fit=YX.m3.fit4, m3.fit.art=YX.m3s.fit4, m3.or=YX.m3.fit4.or, m3.or.art=YX.m3s.fit4.or)
+}
+######################################################################################
+project.athena.Fisheretal.YX.model3_v2<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))
+{
+	require(betareg)
+	#	Treatment cascade & ART risk groups
+	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis
+	#	
+	#	PQ: are there ART risk groups?
+	#	PQ: is VL the causal pathway?		--> currently problematic with uniform infection window approach
+	#	SQ: is ART pulse associated with higher transmissibility?
+	YX.m3	<- copy(YX)
+	YX.m3[, U.score:=NULL]
+	set(YX.m3, YX.m3[,which(score.Y==1)], 'score.Y', subset(YX, score.Y<1)[, max(c(score.Y,0.99))])
+	set(YX.m3, YX.m3[,which(score.Y==0)], 'score.Y', subset(YX, score.Y>0)[, min(c(score.Y,0.01))])	
+	#	stratify Diag by first CD4 after diagnosis
+	tmp		<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)	
+	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	print( subset( tmp, is.na(CD4.c) ) )
+	setnames(tmp, 'Patient', 't.Patient')
+	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+	YX.m3	<- merge(YX.m3, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+	tmp		<- YX.m3[, which(stage=='Diag')]
+	set(YX.m3, tmp, 'stage', YX.m3[tmp, CD4.c])
+	YX.m3[, CD4.c:=NULL]	
+	#	if transmitter acute, set undiagnosed to undiagnosed and acute
+	set(YX.m3, YX.m3[, which(t.isAcute=='Yes')], 'stage', 'Ay')
+	set(YX.m3, YX.m3[, which(t.isAcute=='Maybe')], 'stage', 'Am')
+	YX.m3[, stage.orig:= stage]
+	#	number of drugs
+	if(1)
+	{
+		YX.m3s	<- subset( YX.m3, stage=='ART.started') 		
+		YX.m3s[, c(any(is.na( ART.nNRT )), any(is.na( ART.nNNRT )), any(is.na( ART.nPI )))]		#no missing entries - great
+		YX.m3s[, table(ART.nDrug)]
+		
+		#	ART indication risk factors
+		set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+		set(YX.m3, YX.m3[, which(ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )		
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')
+		
+		#	ART no indication: break up by nDrug<3 or nDrug>3
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3)], 'stage', 'ART.3l')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'stage', 'ART.3g')
+		set(YX.m3, YX.m3[, which(stage=='ART.started')], 'stage', 'ART.ni')
+		
+		ggplot(YX.m3, aes(stage, score.Y)) + geom_boxplot() + geom_jitter(size=0.4)
+		#	some indication that 3l has higher transmissibility
+		
+		YX.m3s	<- subset( YX.m3, !stage%in%c('Am','Ay','D1<=350','D1<=550','D1>550','U'))
+		set(YX.m3s, NULL, 'stage', YX.m3s[, factor(as.character(stage))])
+		YX.m3s[, table(stage)]
+		#   stage
+    	# ART.3g      ART.3l       ART.F       ART.I       ART.P ART.pulse.Y ART.started 
+        # 171          51         703         209         191         164        2328  		
+		YX.m3s.fit8 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3s)				
+		summary(YX.m3s.fit8)
+		#	plot
+		tmp			<- data.table(stage= YX.m3s[, levels(stage)], col=sapply( rainbow(YX.m3s[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m3s		<- merge(YX.m3s, tmp, by='stage')		
+		plot( seq_len(nrow(YX.m3s)), YX.m3s[, score.Y], pch=18, col= YX.m3s[, col], cex=YX.m3s[, w^0.4])
+		tmp				<- subset(YX.m3s, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m3s.fit8, tmp, type='response'))	
+		start			<- c( YX.m3s.fit8$coef$mean + head( 2*sqrt(diag(vcov(YX.m3s.fit8))), length(YX.m3s.fit8$coef$mean)), YX.m3s.fit8$coef$precision)
+		YX.m3s.fit8.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3s, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m3s.fit8$coef$mean - head( 2*sqrt(diag(vcov(YX.m3s.fit8))), length(YX.m3s.fit8$coef$mean)), YX.m3s.fit8$coef$precision)
+		YX.m3s.fit8.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3s, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m3s.fit8.sup, tmp, type='response'), rev(predict(YX.m3s.fit8.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m3s[, levels(stage)], fill=YX.m3s[, unique(col)])
+		YX.m3s[, col:=NULL]
+		#
+		YX.m3s.fit8.or	<- data.table( 	F= my.or.from.logit(YX.m3s.fit8, 'stageART.F', 'stageART.ni', subset(YX.m3s, stage=='ART.F')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962),
+										I= my.or.from.logit(YX.m3s.fit8, 'stageART.I', 'stageART.ni', subset(YX.m3s, stage=='ART.I')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962),
+										P= my.or.from.logit(YX.m3s.fit8, 'stageART.P', 'stageART.ni', subset(YX.m3s, stage=='ART.P')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962),
+										A= my.or.from.logit(YX.m3s.fit8, 'stageART.A', 'stageART.ni', subset(YX.m3s, stage=='ART.A')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962),
+										g3= my.or.from.logit(YX.m3s.fit8, 'stageART.3g', 'stageART.ni', subset(YX.m3s, stage=='ART.3g')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962),
+										l3= my.or.from.logit(YX.m3s.fit8, 'stageART.3l', 'stageART.ni', subset(YX.m3s, stage=='ART.3l')[, sum(w)], subset(YX.m3s, stage=='ART.ni')[, sum(w)], 1.962)	)
+	}
+	#	number drugs != 3, no drugs==3 and which type
+	if(1)
+	{							
+		#	ART indication risk factors
+		set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+		set(YX.m3, YX.m3[, which(ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )		
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')		
+		#	ART no indication: nDrug
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug!=3)], 'stage', 'ART.3n')
+		#	ART triple therapy - type
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'stage', 'ART.3.NRT.PI.NNRT')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 )], 'stage', 'ART.3.NRT.PI')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nNNRT>0)], 'stage', 'ART.3.NRT.NNRT')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 )], 'stage', 'ART.3.NRT')
+		
+		YX.m3s	<- subset( YX.m3, !stage%in%c('Am','Ay','D1<=350','D1<=550','D1>550','U'))
+		set(YX.m3s, NULL, 'stage', YX.m3s[, factor(as.character(stage))])
+		YX.m3s[, table(stage)]
+		#   stage
+		# ART.3.NRT    ART.3.NRT.NNRT      ART.3.NRT.PI 	ART.3.NRT.PI.NNRT     ART.3n             ART.F             ART.I		  ART.P       ART.pulse.Y 
+        # 72              1423               798                35               	222               703               209 			191               164
+		YX.m3s.fit9 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3s)				
+		summary(YX.m3s.fit9)
+		#	plot
+		tmp			<- data.table(stage= YX.m3s[, levels(stage)], col=sapply( rainbow(YX.m3s[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+		set(tmp, NULL, 'stage', tmp[, factor(stage)])
+		YX.m3s		<- merge(YX.m3s, tmp, by='stage')		
+		plot( seq_len(nrow(YX.m3s)), YX.m3s[, score.Y], pch=18, col= YX.m3s[, col], cex=YX.m3s[, w^0.4])
+		tmp				<- subset(YX.m3s, select=stage)
+		lines(seq_len(nrow(tmp)), predict(YX.m3s.fit9, tmp, type='response'))	
+		start			<- c( YX.m3s.fit9$coef$mean + head( 2*sqrt(diag(vcov(YX.m3s.fit9))), length(YX.m3s.fit9$coef$mean)), YX.m3s.fit9$coef$precision)
+		YX.m3s.fit9.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3s, start=start, hessian=TRUE, maxit=0)		
+		start			<- c( YX.m3s.fit9$coef$mean - head( 2*sqrt(diag(vcov(YX.m3s.fit9))), length(YX.m3s.fit9$coef$mean)), YX.m3s.fit9$coef$precision)
+		YX.m3s.fit9.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m3s, start=start, hessian=TRUE, maxit=0)		
+		polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+				c( predict(YX.m3s.fit9.sup, tmp, type='response'), rev(predict(YX.m3s.fit9.slw, tmp, type='response'))), 
+				border=NA, col=my.fade.col('black',0.5) )
+		legend('bottomright', bty='n', border=NA, legend= YX.m3s[, levels(stage)], fill=YX.m3s[, unique(col)])
+		YX.m3s[, col:=NULL]
+		#
+		YX.m3s.fit9.or	<- data.table( 	F= my.or.from.logit(YX.m3s.fit9, 'stageART.F', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.F')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										I= my.or.from.logit(YX.m3s.fit9, 'stageART.I', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.I')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										P= my.or.from.logit(YX.m3s.fit9, 'stageART.P', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.P')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										Pulse= my.or.from.logit(YX.m3s.fit9, 'stageART.pulse.Y', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										A= my.or.from.logit(YX.m3s.fit9, 'stageART.A', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.A')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										n3= my.or.from.logit(YX.m3s.fit9, 'stageART.3n', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3n')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										NRT= my.or.from.logit(YX.m3s.fit9, 'stageART.3.NRT', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3.NRT')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										NNRT= my.or.from.logit(YX.m3s.fit9, 'stageART.3.NRT.NNRT', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3.NRT.NNRT')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										NNRTPI= my.or.from.logit(YX.m3s.fit9, 'stageART.3.NRT.PI.NNRT', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3.NRT.PI.NNRT')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962))
+		#           F        I         P    Pulse  A       n3      NRT      NNRT    NNRTPI
+		#1: 1.6683804 2.515669  4.626841 3.291011 NA 3.060213 3.595480 1.4408900 1.3585172
+		#2: 0.8347612 1.208841  2.095001 1.427700 NA 1.425840 1.553389 0.8554175 0.6189499
+		#3: 3.3344786 5.235258 10.218448 7.586156 NA 6.567993 8.322113 2.4270770 2.9817746
+	}
+	#	number drugs!=3, NRT alone, split weight for PI and NNRT
+	if(1)
+	{							
+		#	ART indication risk factors
+		set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+		set(YX.m3, YX.m3[, which(ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )		
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')		
+		#	ART no indication: nDrug
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug!=3)], 'stage', 'ART.3n')
+		#	split weight for PI and NNRT
+		tmp		<- YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)]
+		tmp2	<- YX.m3[tmp,]
+		set(tmp2, NULL, 'w', tmp2[, w/2])
+		set(tmp2, NULL, 'stage', 'ART.3.NRT.PI')
+		YX.m3	<- rbind(YX.m3, tmp2)
+		set(YX.m3, tmp, 'w', YX.m3[tmp, w/2])
+		set(YX.m3, tmp, 'stage', 'ART.3.NRT.NNRT')
+		#			
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 )], 'stage', 'ART.3.NRT.PI')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nNNRT>0)], 'stage', 'ART.3.NRT.NNRT')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 )], 'stage', 'ART.3.NRT')
+		#	add viral load suppressed during infection window
+		VL.cur	<- 3
+		YX.m3[,lRNA.c:=NULL]
+		#YX.m3	<- merge(YX.m3, YX.m3[, {
+		#									tmp<- which(!is.na(lRNA))
+		#									list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>VL.cur, 'SuA.N', 'SuA.Y'), 'SuA.NA') )
+		#								}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+		#	problem: one factor disappears because X'X is ow not invertible
+		YX.m3	<- merge(YX.m3, YX.m3[, {
+											tmp<- which(!is.na(lRNA))
+											list( lRNA.c= ifelse(length(tmp), max(lRNA[tmp]), NA_real_) )
+										}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))								
+		#
+		YX.m3s	<- subset( YX.m3, !stage%in%c('Am','Ay','D1<=350','D1<=550','D1>550','U'))
+		set(YX.m3s, NULL, 'stage', YX.m3s[, factor(as.character(stage))])
+		#set(YX.m3s, NULL, 'lRNA.c', YX.m3s[, factor(as.character(lRNA.c))])
+		YX.m3s[, table(stage)]
+		#     ART.3.NRT ART.3.NRT.NNRT   ART.3.NRT.PI         ART.3n          ART.F          ART.I          ART.P    ART.pulse.Y 
+        #	    72           1458            833            222            703            209            191            164			
+		YX.m3s[, table(lRNA.c)]
+		# SuA.N SuA.NA  SuA.Y 
+  		#1548     72   2232
+		
+		ggplot(YX.m3s, aes(x = lRNA, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ stage, margins=TRUE)	#suggest polynomial of order 3 for lRNA
+		YX.m3s.fit10 		<- betareg(score.Y ~ lRNA.c+stage-1, link='logit', weights=w, data = YX.m3s)	#dummy variables act as baseline for lRNA, so that s fine
+		#YX.m3s.fit10 		<- betareg(score.Y ~ poly(lRNA.c,3)+stage-1, link='logit', weights=w, data = YX.m3s)	#poly does not like NAs
+		
+		require(splines)
+		YX.m3s.fit10 		<- betareg(score.Y ~ ns(lRNA.c,knot=median(lRNA.c))+stage-1, link='logit', weights=w, data = YX.m3s)	#exactly same r2 as linear model in x
+		YX.m3s.fit10 		<- betareg(score.Y ~ ns(lRNA.c,knot=3)+stage-1, link='logit', weights=w, data = YX.m3s)					#unclear what ns does
+		
+		summary(YX.m3s.fit10)
+		YX.m3s.fit10.or	<- data.table( 	F= my.or.from.logit(YX.m3s.fit10, 'stageART.F', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.F')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										I= my.or.from.logit(YX.m3s.fit10, 'stageART.I', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.I')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										P= my.or.from.logit(YX.m3s.fit10, 'stageART.P', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.P')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										Pulse= my.or.from.logit(YX.m3s.fit10, 'stageART.pulse.Y', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.pulse.Y')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										A= my.or.from.logit(YX.m3s.fit10, 'stageART.A', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.A')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										n3= my.or.from.logit(YX.m3s.fit10, 'stageART.3n', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3n')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										NRT= my.or.from.logit(YX.m3s.fit10, 'stageART.3.NRT', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3.NRT')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962),
+										NNRT= my.or.from.logit(YX.m3s.fit10, 'stageART.3.NRT.NNRT', 'stageART.3.NRT.PI', subset(YX.m3s, stage=='ART.3.NRT.NNRT')[, sum(w)], subset(YX.m3s, stage=='ART.3.NRT.PI')[, sum(w)], 1.962) )
+		#	all ORs not significant when I include lRNA
+		#          F          I          P      Pulse  A         n3        NRT      NNRT
+		#1: 1.361985  1.8438760  3.2542092  2.1139994 NA  2.4075422  4.2927092 1.2845132
+		#2: 0.238022  0.2980641  0.5405002  0.3345607 NA  0.4160757  0.7406314 0.2573805
+		#3: 7.793409 11.4065339 19.5927344 13.3577941 NA 13.9307793 24.8805967 6.4106403								
+	}	
+	#
+	#	global ART.pulse		stratify after treatment initiation		 by 		ART.I	ART.F 	ART.A	ART.P	ART.ni
+	#	
+	if(1)
+	{
+		#	ART indication risk factors
+		set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+		set(YX.m3, YX.m3[, which(ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )		
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & contact=='No')], 'stage', 'ART.cN')
+		set(YX.m3, YX.m3[, which(stage=='ART.started')], 'stage', 'ART.ni')				
+		YX.m3[, table(stage)]
+				
+		
+		ggplot(YX.m3, aes(stage, score.Y)) + geom_boxplot() + geom_jitter(size=0.4)
+		#	contact No has no neg effect
+		#	combining pulse has neg effect
+	}
+	if(1)
+	{
+		VL.cur	<- 3
+		#
+		set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+		set(YX.m3, YX.m3[, which(ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )		
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')
+		# collect PoslRNA_TL and lRNA_TL etc
+		YX.m3[, t.PoslRNA_T1:=NULL]
+		YX.m3[, lRNA_T1:=NULL]
+		YX.m3[,PoslRNA_TL:=NULL]
+		YX.m3[,lRNA_TL:=NULL]
+		tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		YX.m3	<- merge(YX.m3, tmp, by= 't.Patient')						
+		tmp		<- merge( unique(subset(clumsm.info, select=Patient)), subset(df.viro, select=c(Patient, PosRNA, lRNA)), by='Patient' )
+		set( tmp, NULL, 'PosRNA', hivc.db.Date2numeric(tmp[,PosRNA]) )
+		tmp		<- subset( tmp[, 	{
+							tmp<- which(!is.na(lRNA))
+							list(t.Patient=Patient[1], lRNA_TL=lRNA[tail(tmp,1)], PoslRNA_TL=PosRNA[tail(tmp,1)])
+						}, by='Patient'], select=c(t.Patient, lRNA_TL, PoslRNA_TL) )
+		YX.m3	<- merge(YX.m3, tmp, by= 't.Patient', all.x=TRUE)
+		#	set VL.mx suppressed in infection window
+		YX.m3[,lRNA.c:=NULL]
+		YX.m3	<- merge(YX.m3, YX.m3[, {
+								tmp<- which(!is.na(lRNA))
+								list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>VL.cur, 'SuA.N', 'SuA.Y'), 'SuA.NA') )
+							}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+		#	
+		set(YX.m3, YX.m3[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
+		set(YX.m3, YX.m3[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )		
+		set(YX.m3, YX.m3[,which(stage=='ART.started' & lRNA.c=='SuA.NA')], 'stage', 'ART.suA.NA' )	
+		#	additional benefit in fast suppression?
+		set(YX.m3, YX.m3[, which(stage%in%c('ART.suA.Y') & t2.vl.supp<1 )], 'stage', 'ARTs<=1')
+		#set(YX.m3, YX.m3[, which(stage%in%c('ART.started','D1<=350','D1<=550','D1>550') & t2.vl.supp<1 & ( is.na(lRNA) | max(lRNA)<3 ) )], 'stage', 'ARTs<=1')
+						
+		YX.m3[, table(stage)]
+		
+		ggplot(YX.m3, aes(stage, score.Y)) + geom_boxplot() + geom_jitter(size=0.4)
+	}	
 }
 ######################################################################################
 project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))
@@ -6075,9 +7115,11 @@ project.athena.Fisheretal.YX.model2.time<- function(YX, clumsm.info, df.viro, cd
 	#	prop and odds by updated treatment cascade
 	YX.m2	<- copy(YX)
 	YX.m2[, U.score:=NULL]
+	set(YX.m2, YX.m2[,which(score.Y==1)], 'score.Y', subset(YX, score.Y<1)[, max(c(score.Y,0.99))])
+	set(YX.m2, YX.m2[,which(score.Y==0)], 'score.Y', subset(YX, score.Y>0)[, min(c(score.Y,0.01))])	
 	#	pool acute given small numbers
-	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'Ay' )
-	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'Am' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'Ay' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'Am' )
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'Ay')
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'Am')
 	#	stratify Diag by first CD4 after diagnosis
@@ -6097,36 +7139,69 @@ project.athena.Fisheretal.YX.model2.time<- function(YX, clumsm.info, df.viro, cd
 	
 	#set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute%in%acute.select)], 'stage', 'UA')
 	YX.m2[, stage.orig:= stage]
-	# collect PoslRNA_T1
-	tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
-	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
-	YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')				
-	YX.m2	<- merge(YX.m2, YX.m2[, {	
-						tmp<- which(!is.na(lRNA))
-						list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
-					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
-	set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
-	tmp		<- YX.m2[, {
-				tmp<- which(!is.na(lRNA))
-				if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=vl.suppressed)
-					lRNA.c	<- 'SuA.Y'						
-				else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>vl.suppressed)
-					lRNA.c	<- 'SuA.N'						
-				else if(!length(tmp))
-					lRNA.c	<- 'SuA.NA'
-				else if(max(lRNA[tmp])>vl.suppressed)
-					lRNA.c	<- 'SuA.N'
-				else
-					lRNA.c	<- 'SuA.Y'
-				list( lRNA.c= lRNA.c )
-			}, by=c('Patient','t.Patient')]
-	YX.m2	<- merge(YX.m2, tmp, by=c('Patient','t.Patient'))	
-	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
-	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
-	set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
-	#
-	YX.m2		<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, t.period, CDCC, lRNA, t.Age, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, w.t, stage.orig  ))
-	#YX.m2[, table(stage)]	 
+	if(0)
+	{
+		# collect PoslRNA_T1
+		tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')	
+		# collect PoslRNA_TL and lRNA_TL
+		tmp		<- merge( unique(subset(clumsm.info, select=Patient)), subset(df.viro, select=c(Patient, PosRNA, lRNA)), by='Patient' )
+		set( tmp, NULL, 'PosRNA', hivc.db.Date2numeric(tmp[,PosRNA]) )
+		tmp		<- subset( tmp[, 	{
+							tmp<- which(!is.na(lRNA))
+							list(t.Patient=Patient[1], lRNA_TL=lRNA[tail(tmp,1)], PoslRNA_TL=PosRNA[tail(tmp,1)])
+						}, by='Patient'], select=c(t.Patient, lRNA_TL, PoslRNA_TL) )
+		YX.m2	<- merge(YX.m2, tmp, by= 't.Patient', all.x=TRUE)
+		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
+		tmp		<- YX.m2[, {
+					tmp<- which(!is.na(lRNA))
+					if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & any(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=vl.suppressed)
+						lRNA.c	<- 'SuA.Y'						
+					else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & any(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>vl.suppressed)
+						lRNA.c	<- 'SuA.N'						
+					else if(!length(tmp))
+						lRNA.c	<- 'SuA.NA'
+					else if(max(lRNA[tmp])>vl.suppressed)
+						lRNA.c	<- 'SuA.N'
+					else
+						lRNA.c	<- 'SuA.Y'
+					list( lRNA.c= lRNA.c )
+				}, by=c('Patient','t.Patient')]	
+		YX.m2	<- merge(YX.m2, tmp, by=c('Patient','t.Patient'))	
+		set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
+		set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
+		set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
+		YX.m2		<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, t.period, CDCC, lRNA, t.Age, t.isAcute, t.PoslRNA_T1, lRNA_TL, PoslRNA_TL, t.AnyT_T1, contact, fw.up.med, w, w.t, stage.orig  ))
+		
+		#stage	(  using any(contact==='yes')  )
+		#   Am 		ART.suA.N 	ART.suA.Y  	ART.vlNA        Ay   		D1<=350   	D1<=550    	D1>550         U 
+		# 	2522     3187      	4532        49      		2111       	865      	2836      	3612     	10528		
+	}
+	if(1)
+	{
+		YX.m2	<- merge(YX.m2, YX.m2[, {
+											tmp		<- which(!is.na(lRNA))
+											list( lRNA.c= ifelse(!length(tmp), 'SuA.NA', ifelse(max(lRNA[tmp])>vl.suppressed, 'SuA.N', 'SuA.Y')) )
+										}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))				
+		set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
+		set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
+		set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
+		YX.m2		<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, t.period, CDCC, lRNA, t.Age, t.isAcute, t.AnyT_T1, contact, fw.up.med, w, w.t, stage.orig  ))		
+		#stage
+		#   Am ART.suA.N ART.suA.Y  ART.vlNA        Ay   D1<=350   D1<=550    D1>550         U 
+		# 2522      3172      4526        70      2111       865      2836      3612     10528 		
+	}
+	if(0)
+	{		
+		ggplot(subset(YX.m2, stage=='ART.suA.Y'), aes(t.period, score.Y)) + geom_boxplot() + geom_jitter(size=0.4)
+		ggplot(subset(YX.m2, stage=='ART.suA.Y'), aes(t.period, w)) + geom_boxplot() + geom_jitter(size=0.4) + scale_y_continuous(breaks = seq(0,1,0.05))
+		#ggplot(YX.m2, aes(t.period, w)) + geom_boxplot()  + scale_y_continuous(breaks = seq(0,1,0.05))
+		ggplot(YX.m2, aes(t.period, score.Y)) + geom_boxplot() + geom_jitter(size=0.4)
+	}	
+	#subset(YX.m2, stage=='ART.suA.Y')[, list(n=length(w), w=sum(w), wpn= mean(w)),by='t.period']	
+	#YX.m2[, table(stage)]
+	#subset( YX.m2, stage=='ART.vlNA' ) 	
 	YX.m2.p		<- YX.m2[, 	list(n=round(sum(w),d=1)) , by= c('stage','t.period')]
 	YX.m2.p		<- merge( YX.m2.p, YX.m2[, list(N= sum(w)), by='t.period'], by='t.period' )
 	
@@ -6545,9 +7620,11 @@ project.athena.Fisheretal.YX.model2.VL1stsu<- function(YX, clumsm.info, vl.suppr
 	#	SQ: does VL at diagnosis or age at diagnosis matter?	
 	YX.m2	<- copy(YX)
 	YX.m2[, U.score:=NULL]
+	set(YX.m2, YX.m2[,which(score.Y==1)], 'score.Y', subset(YX, score.Y<1)[, max(c(score.Y,0.99))])
+	set(YX.m2, YX.m2[,which(score.Y==0)], 'score.Y', subset(YX, score.Y>0)[, min(c(score.Y,0.01))])
 	#	diagnosed and acute
-	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAy' )
-	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAm' )		
+	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )		
 	#	stratify Diag by first CD4 after diagnosis
 	cd4.label	<- c('D1<=350','D1<=550','D1>550')
 	tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
@@ -6684,8 +7761,9 @@ project.athena.Fisheretal.YX.model2.VL1stsu<- function(YX, clumsm.info, vl.suppr
 	list(m2= YX.m2, m2.fit=YX.m2.fit1, m2.or=YX.m2.fit1.or, m2.p=YX.m2.p)
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.VL.mx.window<- function(YX, clumsm.info, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA)
+project.athena.Fisheretal.YX.model2.VL.mx.window<- function(YX, clumsm.info, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA)
 {
+	#vl.suppressed=log10(1e3); cd4.cut= c(-1, 350, 550, 5000); cd4.label=c('D1<=350','D1<=550','D1>550')
 	require(betareg)
 	#	Treatment cascade:
 	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis, 	 ART by first suppressed
@@ -6697,9 +7775,11 @@ project.athena.Fisheretal.YX.model2.VL.mx.window<- function(YX, clumsm.info, vl.
 	#	SQ: does VL at diagnosis or age at diagnosis matter?	
 	YX.m2	<- copy(YX)
 	YX.m2[, U.score:=NULL]
+	set(YX.m2, YX.m2[,which(score.Y==1)], 'score.Y', subset(YX, score.Y<1)[, max(c(score.Y,0.99))])
+	set(YX.m2, YX.m2[,which(score.Y==0)], 'score.Y', subset(YX, score.Y>0)[, min(c(score.Y,0.01))])
 	#	diagnosed and acute
-	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAy' )
-	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.5)], 'stage', 'DAm' )		
+	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )		
 	#	stratify Diag by first CD4 after diagnosis
 	cd4.label	<- c('D1<=350','D1<=550','D1>550')
 	tmp			<- subset(clumsm.info, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
@@ -6720,17 +7800,19 @@ project.athena.Fisheretal.YX.model2.VL.mx.window<- function(YX, clumsm.info, vl.
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')
 	#set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute%in%acute.select)], 'stage', 'UA')
 	YX.m2[, stage.orig:= stage]
-	#
+	# 	collect PoslRNA_TL and lRNA_TL etc
 	tmp		<- unique(subset( clumsm.info, select=c(Patient, PoslRNA_T1) ))
 	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
-	YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')				
-	YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, CDCC, lRNA, t.Age, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, stage.orig  ))	
-	#	split missing VL into contact Yes/No and before first contact
-	#	and take max VL
-	YX.m2	<- merge(YX.m2, YX.m2[, {	
-					tmp<- which(!is.na(lRNA))
-					list(lRNA_TL= ifelse(length(tmp)>0, lRNA[tail(tmp,1)], NA_real_), 	PoslRNA_TL=ifelse(length(tmp)>0, t[tail(tmp,1)], NA_real_))
-				}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')	
+	tmp		<- merge( unique(subset(clumsm.info, select=Patient)), subset(df.viro, select=c(Patient, PosRNA, lRNA)), by='Patient' )
+	set( tmp, NULL, 'PosRNA', hivc.db.Date2numeric(tmp[,PosRNA]) )
+	tmp		<- subset( tmp[, 	{
+						tmp<- which(!is.na(lRNA))
+						list(t.Patient=Patient[1], lRNA_TL=lRNA[tail(tmp,1)], PoslRNA_TL=PosRNA[tail(tmp,1)])
+					}, by='Patient'], select=c(t.Patient, lRNA_TL, PoslRNA_TL) )
+	YX.m2	<- merge(YX.m2, tmp, by= 't.Patient', all.x=TRUE)
+	YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, cluster, score.Y, stage, CDCC, lRNA, t.Age, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, lRNA_TL, PoslRNA_TL, contact, fw.up.med, w, stage.orig  ))
+	#
 	if(!is.na(plot.file.varyvl))
 	{			
 		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
@@ -6740,22 +7822,11 @@ project.athena.Fisheretal.YX.model2.VL.mx.window<- function(YX, clumsm.info, vl.
 					cat(paste('\nprocess VL=', VL.cur))									
 					VL.cur	<- log10(VL.cur)
 					set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
-					tmp		<- YX.m2[, {
-								tmp<- which(!is.na(lRNA))
-								if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=VL.cur)
-									lRNA.c	<- 'SuA.Y'						
-								else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>VL.cur)
-									lRNA.c	<- 'SuA.N'						
-								else if(!length(tmp))
-									lRNA.c	<- 'SuA.NA'
-								else if(max(lRNA[tmp])>VL.cur)
-									lRNA.c	<- 'SuA.N'
-								else
-									lRNA.c	<- 'SuA.Y'
-								list( lRNA.c= lRNA.c )
-							}, by=c('Patient','t.Patient')]
-					YX.m2	<- merge(YX.m2, tmp, by=c('Patient','t.Patient'))
-					
+					YX.m2[,lRNA.c:=NULL]
+					YX.m2	<- merge(YX.m2, YX.m2[, {
+										tmp<- which(!is.na(lRNA))
+										list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>VL.cur, 'SuA.N', 'SuA.Y'), 'SuA.NA') )
+									}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))					
 					set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
 					set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
 					set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
@@ -6783,23 +7854,11 @@ project.athena.Fisheretal.YX.model2.VL.mx.window<- function(YX, clumsm.info, vl.
 	#	using given VL threshold 
 	#	
 	set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
-	tmp		<- YX.m2[, {
-				tmp<- which(!is.na(lRNA))
-				if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]<=vl.suppressed)
-					lRNA.c	<- 'SuA.Y'						
-				else if(!length(tmp) & any(t>t.PoslRNA_T1[1]) & all(contact=='Yes') & !is.na(lRNA_TL[1]) & lRNA_TL[1]>vl.suppressed)
-					lRNA.c	<- 'SuA.N'						
-				else if(!length(tmp))
-					lRNA.c	<- 'SuA.NA'
-				else if(max(lRNA[tmp])>vl.suppressed)
-					lRNA.c	<- 'SuA.N'
-				else
-					lRNA.c	<- 'SuA.Y'
-				list( lRNA.c= lRNA.c )
-			}, by=c('Patient','t.Patient')]
-	# 	SuA.N 	SuA.NA  SuA.Y 
-	#	1477    947    	583 
-	YX.m2	<- merge(YX.m2, tmp, by=c('Patient','t.Patient'))	
+	YX.m2[,lRNA.c:=NULL]
+	YX.m2	<- merge(YX.m2, YX.m2[, {
+						tmp<- which(!is.na(lRNA))
+						list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>vl.suppressed, 'SuA.N', 'SuA.Y'), 'SuA.NA') )
+					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
 	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
 	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
 	set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
@@ -7225,7 +8284,7 @@ project.athena.Fisheretal.Y.coal<- function(df.tpairs, clumsm.info, X.pt, cluphy
 	cat(paste('\n number of transmitter-infected pairs, n=',nrow(coal)))
 	cat(paste('\n number of potential transmitter seqs, n=',coal[, length(unique(t.FASTASampleCode))]))
 	cat(paste('\n number of transmitter-infected pairs with coal !NA score (should be all), n=',nrow(subset(coal, !is.na(coal.after.t.NegT)))))
-	cat(paste('\n number of transmitter-infected pairs with zero coal score, n=',nrow(subset(Y.coal, !is.na(coal.after.t.NegT) & coal.after.t.NegT<=EPS))))	
+	cat(paste('\n number of transmitter-infected pairs with zero coal score, n=',nrow(subset(coal, !is.na(coal.after.t.NegT) & coal.after.t.NegT<=EPS))))	
 	coal		
 }
 ######################################################################################
@@ -7663,7 +8722,15 @@ project.athena.Fisheretal.sensitivity<- function()
 		outfile					<- paste(infile,'Ac=MY_D=2_sasky',sep='_')
 	}
 
-	methods			<- c('3a','3b')
+	methods			<- c('3am','3bm','3aa')
+	YX				<- lapply(methods, function(method)
+			{
+				file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'.R',sep='')
+				load(file)
+				YX
+			})
+	names(YX)		<- methods
+	
 	res				<- lapply(methods, function(method)
 			{
 				file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_results.R',sep='')
@@ -7672,25 +8739,92 @@ project.athena.Fisheretal.sensitivity<- function()
 			})
 	names(res)		<- methods
 	
-	res[['3a']]$YX.m2.VL1.or
-	res[['3b']]$YX.m2.VL1.or
+	sapply( YX, function(tmp){	c(n.Patient=tmp[, length(unique(Patient))], n.t.Patient=tmp[, length(unique(t.Patient))], n.tpair=nrow(unique( subset( tmp, select=c(Patient, t.Patient) ) )), n.infevents=tmp[, sum(w)])	})
 	
-	res[['3a']]$YX.m2.VLmxw.or
-	res[['3b']]$YX.m2.VLmxw.or
+	res[['3am']]$YX.m2.VL1.or
+	res[['3bm']]$YX.m2.VL1.or
+	res[['3aa']]$YX.m2.VL1.or
 	
-	res[['3a']]$YX.m3.or.art
-	res[['3b']]$YX.m3.or.art
+	res[['3am']]$YX.m2.VLmxw.or
+	res[['3bm']]$YX.m2.VLmxw.or
+	res[['3aa']]$YX.m2.VLmxw.or
 	
-	res[['3a']]$YX.m2time.p
-	res[['3b']]$YX.m2time.p
+	res[['3am']]$YX.m3.or.art
+	res[['3bm']]$YX.m3.or.art
+	res[['3aa']]$YX.m3.or.art
+	
+	res[['3am']]$YX.m2time.p
+	res[['3bm']]$YX.m2time.p
+	res[['3aa']]$YX.m2time.p
+	
+}
+######################################################################################
+project.athena.Fisheretal.RI.summarize<- function(ri, clumsm.info, tperiod.info, with.seq=TRUE, with.cluster=TRUE, cols=c('lRNA_T1','CD4_T1','AnyPos_A','SC_dt','PosCD4_dt','PoslRNA_dt'))
+{	
+	#	clinical & demographic 
+	tmp	<- subset( clumsm.info, select=c(Patient, DateBorn, AnyPos_T1,  RegionHospital, isAcute, NegT, Trm, DateFirstEverCDCC, PoslRNA_T1, lRNA_T1, PosCD4_T1, CD4_T1 ))
+	setkey(tmp, Patient)	
+	ri	<- merge( ri, unique(tmp), by='Patient' )
+	#	number of Sequences 
+	if(with.seq)
+	{
+		tmp		<- merge( subset(ri, select=Patient), subset( clumsm.info, select=c(Patient, PosSeqT)), by='Patient' )
+		ri		<- merge(ri, tmp[, list(n.seq= length(PosSeqT), PosSeq_T1= min(PosSeqT)) , by='Patient'], by='Patient')
+		ri[, PosSeq_dt:=PosSeq_T1-AnyPos_T1]
+		cols	<- c( cols,'PosSeq_dt' )
+	}
+	#	cluster
+	if(with.cluster)
+	{
+		tmp	<- subset( clumsm.info, select=c(Patient, cluster, clu.fPossAcute, clu.npat ))
+		setkey(tmp, Patient)	
+		ri	<- merge( ri, unique(tmp), by='Patient' )			
+	}
+	#	age at diagnosis
+	ri[, AnyPos_A:= AnyPos_T1-DateBorn]
+	#	time period
+	ri[, t.period:= factor(cut( ri[, AnyPos_T1], breaks=c( tperiod.info[, t.period.min], tail( tperiod.info[, t.period.max], 1 ) ), right=FALSE, label= seq_len(nrow(tperiod.info)) ))]
+	ri	<- merge(ri, tperiod.info, by='t.period')
+	#	seroconversion interval
+	ri[, SC_dt:=AnyPos_T1-NegT]
+	#	time differences
+	ri[, PosCD4_dt:=PosCD4_T1-AnyPos_T1]
+	ri[, PoslRNA_dt:=PoslRNA_T1-AnyPos_T1]		
+	#	summarize by time period: quantiles 
+	ris	<- ri[, {
+				tmp	<- lapply(.SD, quantile, prob=c(0.05, 0.5, 0.95), na.rm=TRUE)
+				tmp[['stat']]<- paste('quantile',c(0.05, 0.5, 0.95),sep='_')
+				tmp
+			}, by='t.period',.SDcols=cols ]
+	#	summarize by time period: sd
+	ris	<- rbind(ris, ri[, {
+						tmp	<- lapply(.SD, sd, na.rm=TRUE)
+						tmp[['stat']]<- 'sd'
+						tmp
+					}, by='t.period',.SDcols=cols ])
+	#	summarize by time period: total not NA
+	ris	<- rbind(ris, ri[, {
+						tmp	<- lapply(.SD, function(x) length(which(!is.na(x))))
+						tmp[['stat']]<- 'not.NA'
+						tmp
+					}, by='t.period',.SDcols=cols ])
 	
 	
-	ans				<- list(	YX.m2.VL1.or=YX.m2.VL1.or, YX.m2.VL1.p=YX.m2.VL1.p, 
-			YX.m2.VLmxw.or=YX.m2.VLmxw.or, YX.m2.VLmxw.p=YX.m2.VLmxw.p, 
-			YX.m2time.p=YX.m2time.p, 
-			YX.m3.or=YX.m3.or, YX.m3.or.art=YX.m3.or.art )
-	save(ans, file=save.file)
+	#	summarize by time period: tables
+	tmp				<- ri[ , table( t.period, RegionHospital, useNA='ifany') ]	
+	rin				<- cbind( data.table(t.period=factor(rownames(tmp))), as.data.table(unclass(tmp)) )
+	tmp				<- ri[ , table( t.period, isAcute, useNA='ifany') ]
+	colnames(tmp)	<- paste('isAcute',colnames(tmp),sep='.')
+	rin				<- merge( rin, cbind( data.table(t.period=factor(rownames(tmp))), as.data.table(unclass(tmp)) ), by='t.period' )
+	tmp				<- ri[ , table( t.period, Trm, useNA='ifany') ]
+	colnames(tmp)	<- paste('Trm',colnames(tmp),sep='.')
+	rin				<- merge( rin, cbind( data.table(t.period=factor(rownames(tmp))), as.data.table(unclass(tmp)) ), by='t.period' )
+	#	
+	tmp		<- merge(tperiod.info, ri[, list(Patient=length(Patient)), by='t.period'], by='t.period')
+	rin		<- merge(tmp, rin, by='t.period')
+	ris		<- merge(tmp, ris, by='t.period')
 	
+	list(ri.n=rin, ri.s=ris)
 }
 ######################################################################################
 project.athena.Fisheretal.similar<- function()
@@ -7708,17 +8842,20 @@ project.athena.Fisheretal.similar<- function()
 	
 	if(0)
 	{
-		infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs100",sep="_")
-		insignat				<- "Thu_Aug_01_17/05/23_2013"	
-		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
-		clu.infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
-		clu.insignat			<- "Tue_Aug_26_09:13:47_2013"
-		clu.infilexml.template	<- "sasky_sdr06"
-		clu.infilexml.opt		<- "rsu815"				
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"				
+		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/gmrf_sdr06fr_-DR-RC-SH+LANL_um192rhU2080_mapcnode'
+		clu.infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		clu.insignat			<- "Wed_Dec_18_11:37:00_2013"
+		clu.infilexml.opt		<- "mph4clutx4tip"
+		clu.infilexml.template	<- "um192rhU2080"	
+		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
 	}
-	if(1)
+	if(0)
 	{
+		method.nodectime		<- 'map'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"				
@@ -7728,6 +8865,19 @@ project.athena.Fisheretal.similar<- function()
 		clu.infilexml.opt		<- "alrh160"
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=2_sasky',sep='_')
+	}
+	if(1)
+	{
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"				
+		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alrh160_mapcnode'
+		clu.infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		clu.insignat			<- "Wed_Dec_18_11:37:00_2013"
+		clu.infilexml.opt		<- "alrh160"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
 	#
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
@@ -7801,7 +8951,7 @@ project.athena.Fisheretal.similar<- function()
 	#
 	#	get time stamped data (if clusters missing, confine df.tpairs to available clusters)
 	#
-	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov)	
+	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov, method.nodectime=method.nodectime)
 	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime
 	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
 	cluphy.info				<- tmp$clu$cluphy.info
@@ -7809,24 +8959,45 @@ project.athena.Fisheretal.similar<- function()
 	df.viro					<- tmp$df.viro
 	df.immu					<- tmp$df.immu
 	df.treatment			<- tmp$df.treatment
+
 	#
 	#
-	method			<- '3a'
-	resume			<- 0
+	#
+	method			<- '3d'
+	if(method.nodectime=='any')
+		method		<- paste(method,'a',sep='')
+	if(method.nodectime=='map')
+		method		<- paste(method,'m',sep='')
+	resume			<- 1
 	#
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'.R',sep='')	
 	YX				<- project.athena.Fisheretal.YX(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume, method=method)
 	#
+	#	characteristics of RI with at least one direct transmitter
+	#
+	tperiod.info	<- merge(clumsm.info, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
+	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']
+	tperiod.info[, t.period.max:=c(tperiod.info[-1, t.period.min], t.endctime)]
+
+	ri				<- subset(YX, select=c(Patient, t))[, list(n.t.infw= length(unique(t))), by='Patient']
+	project.athena.Fisheretal.RI.summarize(ri, clumsm.info, tperiod.info, with.seq=TRUE, with.cluster=TRUE, cols=c('lRNA_T1','CD4_T1','AnyPos_A','SC_dt','PosCD4_dt','PoslRNA_dt'))
+	
+	
+	
+	
+
+	
+	#
 	#	endpoint: first VL suppressed
-	plot.file.varyvl<- NA	#paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit4_VL_adjAym_dt025','.pdf',sep='')
+	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit4_VL_adjAym_dt025','.pdf',sep='')
 	plot.file.or	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit1','.pdf',sep='')
 	tmp				<- project.athena.Fisheretal.YX.model2.VL1stsu(YX, clumsm.info, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl, plot.file.or=plot.file.or)
 	YX.m2.VL1.or	<- tmp$m2.or
 	YX.m2.VL1.p		<- tmp$m2.p
 	#	endpoint: all VL in infection window suppressed
-	plot.file.varyvl<- NA	#paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit4_VL_adjAym_dt025','.pdf',sep='')
+	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit4_VL_adjAym_dt025','.pdf',sep='')
 	plot.file.or	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit4','.pdf',sep='')
-	tmp				<- project.athena.Fisheretal.YX.model2.VL.mx.window(YX, clumsm.info, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl, plot.file.or=plot.file.or)
+	tmp				<- project.athena.Fisheretal.YX.model2.VL.mx.window(YX, clumsm.info, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl, plot.file.or=plot.file.or)
 	YX.m2.VLmxw.or	<- tmp$m2.or
 	YX.m2.VLmxw.p	<- tmp$m2.p
 	#	proportions across time
@@ -7834,25 +9005,27 @@ project.athena.Fisheretal.similar<- function()
 	YX.m2time.p		<- project.athena.Fisheretal.YX.model2.time(YX, clumsm.info, df.viro, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file=plot.file)
 	#	treatment risk groups
 	plot.file.cascade	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_cascade_FIPAPuNi','.pdf',sep='')
-	tmp				<- project.athena.Fisheretal.YX.model3.ARTriskgroups(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=plot.file.cascade)	
+	tmp				<- project.athena.Fisheretal.YX.model3.ARTriskgroups_v2(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=plot.file.cascade)	
 	YX.m3.or.art	<- tmp$m3.or.art
-	YX.m3.or		<- tmp$m3.or
+	YX.m3.p			<- tmp$m3.p
 	
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_results.R',sep='')
 	ans				<- list(	YX.m2.VL1.or=YX.m2.VL1.or, YX.m2.VL1.p=YX.m2.VL1.p, 
 								YX.m2.VLmxw.or=YX.m2.VLmxw.or, YX.m2.VLmxw.p=YX.m2.VLmxw.p, 
 								YX.m2time.p=YX.m2time.p, 
-								YX.m3.or=YX.m3.or, YX.m3.or.art=YX.m3.or.art )
+								YX.m3.p=YX.m3.p, YX.m3.or.art=YX.m3.or.art )
 	save(ans, file=save.file)
 	
 	
 	
 	#
 	#	get data for selection
-	#
-	df.tpairs<- subset( df.tpairs, cluster%in%c(1205, 1510) )
-	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov)	
-	df.all					<- tmp$df.all
+	#	
+	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov, method.nodectime=method.nodectime)
+	df.all					<- subset(clumsm.info, select=c(Patient, cluster))
+	setkey(df.all, Patient)
+	df.all					<- merge( tmp$df.all, unique(df.all), by='Patient', all.x=TRUE )
+	df.tpairs				<- tmp$df.tpairs
 	df.viro					<- tmp$df.viro
 	df.immu					<- tmp$df.immu
 	df.treatment			<- tmp$df.treatment
@@ -7863,8 +9036,8 @@ project.athena.Fisheretal.similar<- function()
 	#			
 	#	plot	
 	#	
-	outfile					<- paste(indir,'/',infile, '_', clu.infilexml.template, '_', clu.infilexml.opt, '_', gsub('/',':',insignat), '_', 'pt_anypos_0.5_minbrl_coalb4', '.pdf',sep='')
-	project.athena.Fisheretal.plot.selected.transmitters(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, outfile)
+	outfile					<- paste(indir,'/',infile, '_', clu.infilexml.template, '_', clu.infilexml.opt, '_', gsub('/',':',insignat), '_', 'pt_anypos_3.5_anynodectime', '.pdf',sep='')	
+	project.athena.Fisheretal.plot.selected.transmitters(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, outfile, pdf.height=600)
 
 	
 }
