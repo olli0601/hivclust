@@ -498,10 +498,12 @@ hivc.pipeline.BEASTout<- function()
 		infilexml.opt		<- "mph4clutx4tip"
 		burnin				<- 2e7
 		#
-		indir				<- paste(DATA,"tmp",sep='/')							
+		indir				<- paste(DATA,"tmp",sep='/')
+		indir				<- paste(DATA,"zip",sep='/')
+		
 		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"		
 		insignat			<- "Wed_Dec_18_11:37:00_2013"		
-		infilexml.template	<- "sasky_sdr06"
+		infilexml.template	<- "sasky_sdr06fr"
 		infilexml.opt		<- "alrh160"
 		infilexml.opt		<- "clrh80"
 		burnin				<- 5e6
@@ -513,14 +515,27 @@ hivc.pipeline.BEASTout<- function()
 		outdir				<- indir
 		outsignat			<- insignat
 		opt.pool			<- NA
-		cmd				<- hivc.cmd.beast2.getclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, burnin=burnin, opt.pool=opt.pool, verbose=1, resume=1)
-		#cmd			<- paste(cmd, hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, verbose=1, resume=1), sep='')
-		#cmd			<- paste(cmd, hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, resume=1, verbose=1), sep='')
-		cat(cmd)
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=21, hpc.mem="3800mb")
-		outdir		<- paste(DATA,"tmp",sep='/')
-		outfile		<- paste("b2m.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
-		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		#
+		files		<- list.files(indir)
+		files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('_pool_[0-9]+',x) & grepl('trees$',x) ) ]				
+		if(!length(files))	stop('no input files matching criteria')
+		tmp			<- regmatches( files, regexpr('_pool_[0-9]+',files)) 
+		pool		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+		file.info	<- data.table(file=files, pool=pool)
+		setkey(file.info, pool)
+		#
+		dummy		<- sapply( file.info[,unique(pool)], function(pool)
+				{
+					cmd				<- hivc.cmd.beast2.getclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, burnin=burnin, opt.pool=pool, verbose=1, resume=1)
+					#cmd			<- paste(cmd, hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, verbose=1, resume=1), sep='')
+					#cmd			<- paste(cmd, hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, resume=1, verbose=1), sep='')
+					cat(cmd)
+					stop()
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=21, hpc.mem="3800mb")
+					outdir		<- paste(DATA,"tmp",sep='/')
+					outfile		<- paste("b2p.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+					hivc.cmd.hpccaller(outdir, outfile, cmd)			
+				})
 	}
 	if(0)
 	{
@@ -535,8 +550,9 @@ hivc.pipeline.BEASTout<- function()
 		#infilexml.opt		<- "alsu50"
 		infilexml.template	<- "sasky_sdr06fr"
 		infilexml.opt		<- "alrh160"
-		infilexml.template	<- "um192rhU2080"
-		infilexml.opt		<- "mph4clutx4tip"	
+		infilexml.opt		<- "clrh80"
+		#infilexml.template	<- "um192rhU2080"
+		#infilexml.opt		<- "mph4clutx4tip"	
 		
 		#indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
 		#infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
@@ -559,7 +575,7 @@ hivc.pipeline.BEASTout<- function()
 				{
 					cmd			<- hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, cluster=clu, verbose=1, resume=1)					
 					cat(cmd)
-					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=21, hpc.mem="3800mb")
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=80, hpc.mem="1600mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
 					outfile		<- paste("b2m.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			

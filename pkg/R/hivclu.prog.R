@@ -3654,11 +3654,11 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	beastlabel.idx.rate			<- NA
 	#	input files		
 	indir					<- paste(DATA,"tmp",sep='/')
-	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
-	infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
-	insignat				<- "Tue_Aug_26_09:13:47_2013"
-	infilexml.opt			<- "rsu815"
-	infilexml.template		<- "sasky_sdr06"
+	indir					<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/zip'
+	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	insignat				<- "Wed_Dec_18_11:37:00_2013"
+	infilexml.opt			<- "clrh80"
+	infilexml.template		<- "sasky_sdr06fr"
 	#
 	#indir				<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast_131011"		
 	#infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
@@ -3754,14 +3754,14 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	#	read tree files	- this takes a while
 	#	do this one by one as reading all in one go is too mem intensive
 	files		<- list.files(indir)
-	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('trees$',x) ) ]
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('trees$',x) ) ]	
 	if(!length(files))	stop('cannot find files matching criteria')
 	files		<- paste(indir, files, sep='/')
 	tmp			<- grepl('timetrees$',files)
 	if(any(tmp))
-		files	<- files[tmp]		
+		files	<- files[tmp]
 	if(!is.na(opt.pool))
-		files	<- files[ grepl(paste('_pool_',opt.pool), files) ]
+		files	<- files[ grepl(paste('_pool_',opt.pool,'_',sep=''), files) ]
 	cat(paste("\nfound files, n=",length(files)))
 	dummy		<- lapply(seq_along(files), function(i)
 			{
@@ -3780,6 +3780,7 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 					mph						<- hivc.beast2out.read.trees(files[i], opt.rescale.edge.length=1, opt.burnin=opt.burnin)					
 					cat(paste('\nsave mph to file=',file))
 					tmp						<- hivc.beast2out.tip.date.check(mph[[length(mph)]], fun=hivc.treeannotator.tiplabel2df, beastlabel.idx.clu=beastlabel.idx.clu, beastlabel.idx.hivn=beastlabel.idx.hivn, beastlabel.idx.hivd=beastlabel.idx.hivd, beastlabel.idx.hivs=beastlabel.idx.hivs, beastlabel.idx.samplecode=beastlabel.idx.samplecode, beastlabel.idx.rate=beastlabel.idx.rate)
+					print(tmp)
 					if(tmp>2*EPS )	stop('hivc.beast2out.read.trees does not pass random tip date check')						
 					save(mph, file=file)					
 				}
