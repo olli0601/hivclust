@@ -95,6 +95,9 @@ PR.BEAST2CLUPOSTERIOR	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BE
 PR.BEAST2.PLOTCLUTREES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.PLOTCLUTREES",sep='/')
 
 #' @export
+PR.BETAREG.ESTRISK		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BETAREG.ESTRISK",sep='/')
+
+#' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
 
 #' @export
@@ -401,6 +404,25 @@ hivc.cmd.get.firstseq<- function(indir, infile, signat.in, signat.out, outdir=in
 	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir," -insignat=",signat.in," -outsignat=",signat.out,sep='')
 	#verbose stuff
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
+	cmd
+}	
+######################################################################################
+#' @export
+hivc.cmd.betareg.estimate.risks<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, outdir=indir, prog= PR.BETAREG.ESTRISK, resume=1, verbose=1)
+{
+	cmd		<- "#######################################################
+# start: run beta regression and estimate risks
+#######################################################"
+	cmd		<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd		<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov, " -infiletree=",infiletree, sep='')
+	cmd		<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -method=",method," -method.nodectime=",method.nodectime,sep='')
+	cmd		<- paste(cmd," -outdir=",outdir, sep='')
+	#verbose stuff
+	cmd		<- paste(cmd,paste("\necho \'end ",prog,"\'",sep=''))
+	cmd		<- paste(cmd,"\n#######################################################
+# end: run beta regression and estimate risks
+#######################################################\n",sep='')
 	cmd
 }
 ######################################################################################

@@ -7067,11 +7067,11 @@ project.athena.Fisheretal.RI.summarize<- function(ri, df.all, tperiod.info, info
 	list(rin=rin, ris=ris, rip=rip)
 }
 ######################################################################################
-project.athena.Fisheretal.similar<- function()
+hivc.prog.betareg.estimaterisks<- function()
 {
 	require(data.table)
 	require(ape)
-	stop()
+	#stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
@@ -7080,47 +7080,117 @@ project.athena.Fisheretal.similar<- function()
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
 	
-	if(0)
+	if(1)
 	{
+		method					<- '3c'
 		method.nodectime		<- 'any'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"				
-		clu.indir				<- paste(DATA,"fisheretal_data",sep='/')	
-		clu.infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		clu.insignat			<- "Wed_Dec_18_11:37:00_2013"
+		insignat				<- "Wed_Dec_18_11:37:00_2013"					
 		clu.infilexml.opt		<- "mph4clutx4tip"
 		clu.infilexml.template	<- "um192rhU2080"	
 		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
 	}
 	if(0)
 	{
+		method					<- '3c'
 		method.nodectime		<- 'map'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"				
-		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alrh160'
-		clu.infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		clu.insignat			<- "Wed_Dec_18_11:37:00_2013"
+		insignat				<- "Wed_Dec_18_11:37:00_2013"						
 		clu.infilexml.opt		<- "alrh160"
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=2_sasky',sep='_')
 	}
-	if(1)
+	if(0)
 	{
+		method					<- '3c'
 		method.nodectime		<- 'any'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"	
-		clu.indir				<- paste(DATA,"fisheretal_data",sep='/')		
-		clu.infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		clu.insignat			<- "Wed_Dec_18_11:37:00_2013"
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
 		clu.infilexml.opt		<- "clrh80"
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
 	
-	method			<- '3c'
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									indircov= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indircov<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									infilecov= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infilecov<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,11),
+									infiletree= return(substr(arg,13,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infiletree<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,14),
+									infilexml.opt= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) clu.infilexml.opt<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) clu.infilexml.template<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]		
+		#		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									method= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,17),
+									method.nodectime= return(substr(arg,19,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method.nodectime<- tmp[1]		
+	}	
+	if(verbose)
+	{
+		print(indir)
+		print(infile)
+		print(insignat)
+		print(indircov)
+		print(infilecov)
+		print(infiletree)
+		print(clu.infilexml.opt)
+		print(clu.infilexml.template)
+		print(outdir)
+		print(method)
+		print(method.nodectime)
+	}
+	clu.infile		<- infile
+	clu.indir		<- indir
+	clu.insignat	<- insignat
+	
+	
 	if(method.nodectime=='any')
 		method		<- paste(method,'a',sep='')
 	if(method.nodectime=='map')

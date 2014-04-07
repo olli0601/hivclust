@@ -584,6 +584,45 @@ hivc.pipeline.BEASTout<- function()
 	}	
 }
 ######################################################################################
+hivc.pipeline.betareg.estimate.risks<- function()
+{
+	indir					<- paste(DATA,"fisheretal_data",sep='/')		
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	outdir					<- paste(DATA,"fisheretal",sep='/')
+	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	
+	if(0)
+	{
+		method					<- '3c'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"					
+		infilexml.opt			<- "mph4clutx4tip"
+		infilexml.template		<- "um192rhU2080"	
+		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
+	}
+	if(1)
+	{
+		method					<- '3c'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		infilexml.opt			<- "clrh80"
+		infilexml.template		<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+	}
+	
+	cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, outdir=outdir, resume=1, verbose=1)
+	cat(cmd)
+	#stop()
+	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=80, hpc.mem="3800mb")
+	outdir		<- paste(DATA,"tmp",sep='/')
+	outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+	hivc.cmd.hpccaller(outdir, outfile, cmd)
+}
+######################################################################################
 hivc.pipeline.various<- function()
 {
 	stop()
@@ -624,7 +663,13 @@ hivc.pipeline.various<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		quit("no")
 	}	
-	
+	if(0)	#run fisher similar analysis
+	{
+		indir		<- paste(dir.name,"tmp",sep='/')
+		infile		<- "ATHENA_2013_03_SeqMaster.R"		
+		outdir		<- paste(dir.name,"tmp",sep='/')
+		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
+	}
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 	outdir	<- paste(dir.name,"tmp",sep='/')
 	outfile	<- paste("pipeline",signat,sep='.')					

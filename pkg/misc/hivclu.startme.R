@@ -80,6 +80,7 @@ default.fun		<- "project.hivc.clustering"
 #default.fun 	<- "hivc.pipeline.BEAST"
 #default.fun		<- "hivc.pipeline.BEASTout"
 default.fun		<- "project.athena.Fisheretal.similar"
+default.fun		<- "hivc.pipeline.betareg.estimate.risks"
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
 ###############################################################################
@@ -376,7 +377,8 @@ if(length(args))
 					BEAST2.PLOTCLUTREES		= "hivc.prog.BEAST2.plot.cluster.trees",
 					RECOMB.PROCESS3SEQOUT	= "hivc.prog.recombination.process.3SEQ.output",
 					RECOMB.CHECKCANDIDATES	= "hivc.prog.recombination.check.candidates",
-					RECOMB.PLOTINCONGRUENCE	= "hivc.prog.recombination.plot.incongruence"
+					RECOMB.PLOTINCONGRUENCE	= "hivc.prog.recombination.plot.incongruence",
+					BETAREG.ESTRISK			= "hivc.prog.betareg.estimaterisks",
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)
