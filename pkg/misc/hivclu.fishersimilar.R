@@ -4036,6 +4036,147 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 	}
 }
 ######################################################################################
+project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, df.viro, plot.file.varyvl=NA, plot.file.or=NA, bs.n=1e3, resume=TRUE, save.file=NA, method=NA)
+{
+	require(betareg)
+	#	Treatment cascade:
+	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis, 	 ART by first suppressed
+	#
+	#	PQ: what is the preventative effect of reaching the endpoint of the treatment cascade?
+	#	PQ: single VL that maximizes difference between ART/firstsuppressed and ART/notyetsuppressed
+	#	SQ: does acute matter for diagnosed?
+	#	SQ: does CDC matter?
+	#	SQ: does VL at diagnosis or age at diagnosis matter?	
+	if(resume & !is.na(save.file))
+	{
+		options(show.error.messages = FALSE)		
+		readAttempt		<- try(suppressWarnings(load(save.file)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",save.file))					
+		options(show.error.messages = TRUE)		
+	}
+	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
+	{
+		#cat(paste('\nstratify by', method))
+		#if(method=='VL1stsu')
+		#{			
+			YX.m3		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))	
+			X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)				
+		#}
+		#
+		cat(paste('\nregression on data set'))
+		YX.m2.fit1 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)	
+		YX.m2.fit1b <- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.m2)
+		#require(VGAM)
+		#YX.m2.fit1c <- vglm(score.Y ~ stage-1, link='log', tobit(Lower=0, Upper=1), data = YX.m2)
+		#tmp				<- data.table(idx=seq_len(nrow(YX.m2)),r.logit=YX.m2.fit1$residuals,r.log=YX.m2.fit1b$residuals)	
+		#ggplot( data=melt(tmp, id='idx'), aes(x=idx, y=value, colour=variable)) + geom_points()
+		
+		#	odds ratio and risk ratio
+		risk.df		<- subset(data.table(risk=X.seq[,levels(stage)], risk.ref='U'), risk!=risk.ref)
+		risk.df		<- rbind(risk.df, data.table(risk=X.seq[,levels(stage)][1], risk.ref=X.seq[,levels(stage)][2]))
+		setkey(risk.df, risk)
+		risk.prefix	<- 'stage'
+		risk.ans	<- risk.df[, 	{
+					tmp	<- my.or.from.logit(YX.m2.fit1, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m2, stage==risk)[, sum(w)], subset(YX.m2, stage==risk.ref)[, sum(w)], 1.962)
+					list(stat= 'OR', v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
+				},by=c('risk','risk.ref')]
+		tmp			<- risk.df[, 	{
+					tmp	<- my.rr.from.log(YX.m2.fit1b, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m2, stage==risk)[, sum(w)], subset(YX.m2, stage==risk.ref)[, sum(w)], 1.962)
+					list(stat= 'RR', v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
+				},by=c('risk','risk.ref')]
+		risk.ans	<- rbind(risk.ans, tmp)	
+		#	person years in infection window	
+		tmp			<- X.seq[ , table( stage, useNA='ifany') ]	
+		tmp			<- cbind( data.table(risk=rownames(tmp)), data.table(risk.ref='None', stat='PY', v=as.numeric(unclass(tmp)), l95.asym=NA, u95.asym=NA) )
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(risk, risk.ref, stat, v, l95.asym, u95.asym)))
+		#	number of transmissions and proportion of transmissions
+		tmp			<- rbind(unique(risk.df), data.table(risk='U', risk.ref=risk.ref))
+		tmp			<- tmp[, 		{
+					tmp		<- my.prop.from.log(YX.m2.fit1b, paste(risk.prefix,risk,sep=''), 1.962)
+					tmp[4]	<- subset(YX.m2, stage==risk)[, sum(w)]
+					list(risk.ref='None', stat= 'N', expbeta=ifelse(tmp[4]<2*EPS, 0., tmp[1]), n=tmp[4], l95.asym=NA, u95.asym=NA)
+				},by= 'risk']
+		tmp[, v:= tmp[,expbeta*n]]	
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(risk, risk.ref, stat, v, l95.asym, u95.asym)))
+		set(tmp, NULL, 'stat', 'P')
+		set(tmp, NULL, 'v', tmp[, v/sum(expbeta*n)])
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(risk, risk.ref, stat, v, l95.asym, u95.asym)))
+		#	relative infectiousness
+		tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / nrow(X.seq) ), l95.asym=NA, u95.asym=NA ), by='risk']	
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(risk, risk.ref, stat, v, l95.asym, u95.asym)))	
+		#	Bootstraps	on ratio and on prob
+		cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
+		tmp			<- lapply(seq_len(bs.n), function(bs.i)
+				{
+					if(bs.i%%100==0)	cat(paste('\nregression on bootstrap data sets bs.i=',bs.i))
+					#bootstrap over recently infected Patient
+					tmp				<- unique(subset(YX.m2, select=Patient))
+					tmp				<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
+					YX.m2.bs		<- merge( YX.m2, tmp, by='Patient', allow.cartesian=TRUE )				
+					YX.m2.fit1.bs 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2.bs)	
+					YX.m2.fit1b.bs 	<- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.m2.bs)
+					#	odds ratio and risk ratio
+					risk.ans.bs		<- risk.df[, 	list(stat='OR', v=my.or.from.logit(YX.m2.fit1.bs, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m2.bs, stage==risk)[, sum(w)], subset(YX.m2.bs, stage==risk.ref)[, sum(w)], 1.962)[1]),	by=c('risk','risk.ref')]
+					tmp				<- risk.df[, 	list(stat='RR', v=my.rr.from.log(YX.m2.fit1b.bs, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m2.bs, stage==risk)[, sum(w)], subset(YX.m2.bs, stage==risk.ref)[, sum(w)], 1.962)[1]),	by=c('risk','risk.ref')]
+					risk.ans.bs		<- rbind(risk.ans.bs, tmp)
+					#	for proportions
+					tmp				<- rbind(unique(risk.df), data.table(risk='U', risk.ref=risk.ref))				 
+					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'prob', v=my.prop.from.log(YX.m2.fit1b.bs, paste(risk.prefix,risk,sep=''), 1.962)[1]), by= 'risk'])
+					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'n', v=subset(YX.m2.bs, stage==risk)[, sum(w)]),by= 'risk'])				
+					risk.ans.bs[, bs:=bs.i]
+				})
+		risk.ans.bs	<- do.call('rbind',tmp)
+		tmp			<- risk.ans.bs[, list(stat='N', risk.ref='None', v= v[stat=='prob']*v[stat=='n'] ), by=c('bs','risk')]
+		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(risk, risk.ref, stat, v, bs)))
+		tmp			<- tmp[,	list(stat='P', risk=risk, risk.ref=risk.ref, v= v/sum(v, na.rm=TRUE)),	by='bs']
+		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(risk, risk.ref, stat, v, bs)))	
+		tmp			<- merge( subset(tmp, stat=='P'), subset(risk.ans, stat=='PY', select=c(risk, v)), by='risk' )
+		tmp[, v:= v.x/(v.y/nrow(X.seq))]
+		set(tmp, NULL, 'stat', 'RI')
+		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(risk, risk.ref, stat, v, bs)))
+		tmp			<- risk.ans.bs[,	list(l95.bs=quantile(v, prob=0.025, na.rm=TRUE), u95.bs=quantile(v, prob=0.975, na.rm=TRUE)), by=c('risk','risk.ref','stat')]
+		risk.ans	<- merge(risk.ans, tmp, by=c('risk','risk.ref','stat'), all.x=TRUE)
+		#	
+		setkey(risk.ans, stat, risk, risk.ref)
+		
+		if(0)
+		{
+			tmp			<- cooks.distance(YX.m2.fit1)
+			plot(seq_along(tmp), tmp, type='h', col=YX.m2[, col], xlab='index', ylab='Cooks D')
+			legend('topright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
+			tmp			<- residuals(YX.m2.fit1)
+			plot(seq_along(tmp), tmp, type='p', pch=18, col=YX.m2[, col], xlab='index', ylab='std residuals')
+			legend('topright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])		
+		}
+		if(!is.na(plot.file.or))
+		{
+			pdf(file=plot.file.or, w=5, h=5)
+			tmp			<- data.table(stage= YX.m2[, levels(stage)], col=sapply( rainbow(YX.m2[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+			set(tmp, NULL, 'stage', tmp[, factor(stage)])
+			YX.m2		<- merge(YX.m2, tmp, by='stage')
+			plot( seq_len(nrow(YX.m2)), YX.m2[, score.Y], pch=18, col= YX.m2[, col], cex=YX.m2[, w^0.4])
+			tmp				<- subset(YX.m2, select=stage)
+			lines(seq_len(nrow(tmp)), predict(YX.m2.fit1, tmp, type='response'))	
+			start			<- c( YX.m2.fit1$coef$mean + head( 2*sqrt(diag(vcov(YX.m2.fit1))), length(YX.m2.fit1$coef$mean)), YX.m2.fit1$coef$precision)
+			YX.m2.fit1.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m2, start=start, hessian=TRUE, maxit=0)		
+			start			<- c( YX.m2.fit1$coef$mean - head( 2*sqrt(diag(vcov(YX.m2.fit1))), length(YX.m2.fit1$coef$mean)), YX.m2.fit1$coef$precision)
+			YX.m2.fit1.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m2, start=start, hessian=TRUE, maxit=0)		
+			polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
+					c( predict(YX.m2.fit1.sup, tmp, type='response'), rev(predict(YX.m2.fit1.slw, tmp, type='response'))), 
+					border=NA, col=my.fade.col('black',0.5) )
+			legend('bottomright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
+			YX.m2[, col:=NULL]
+			dev.off()
+		}
+		if(!is.na(save.file))
+		{
+			cat(paste('\nsave to file', save.file))
+			save(risk.ans, risk.ans.bs, YX.m2.fit1, YX.m2.fit1b, file=save.file)
+		}
+	}
+	list(risk=risk.ans, or.fit=YX.m2.fit1, rr.fit=YX.m2.fit1b, risk.bs=risk.ans.bs)
+}
+######################################################################################
 project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA, score.Y.cut=1e-2)
 {	
 	#	Treatment cascade & ART risk groups
@@ -4080,18 +4221,18 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX, df.all
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3)], 'stage', 'ART.l3')
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'stage', 'ART.g3')
 	#	split weight for PI and NNRT
-	if('score.Y'%in%colnames(YX.m3))
-	{
-		
-	}
-	tmp		<- YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)]
-	tmp2	<- YX.m3[tmp,]
-	set(tmp2, NULL, 'w', tmp2[, w/2])
-	set(tmp2, NULL, 'stage', 'ART.3.NRT.PI')
-	YX.m3	<- rbind(YX.m3, tmp2)
-	set(YX.m3, tmp, 'w', YX.m3[tmp, w/2])
-	set(YX.m3, tmp, 'stage', 'ART.3.NRT.NNRT')
+	#if('score.Y'%in%colnames(YX.m3))
+	#{
+	#	tmp		<- YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)]
+	#	tmp2	<- YX.m3[tmp,]
+	#	set(tmp2, NULL, 'w', tmp2[, w/2])
+	#	set(tmp2, NULL, 'stage', 'ART.3.NRT.PI')
+	#	YX.m3	<- rbind(YX.m3, tmp2)
+	#	set(YX.m3, tmp, 'w', YX.m3[tmp, w/2])
+	#	set(YX.m3, tmp, 'stage', 'ART.3.NRT.NNRT')		
+	#}
 	#			
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'stage', 'ART.3.NRT.PI.NNRT')
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 )], 'stage', 'ART.3.NRT.PI')
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nNNRT>0)], 'stage', 'ART.3.NRT.NNRT')
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 )], 'stage', 'ART.3.NRT')
@@ -4099,16 +4240,16 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX, df.all
 	#	add mx viral load during infection window
 	YX.m3	<- merge(YX.m3, YX.m3[, {
 						tmp<- which(!is.na(lRNA))
-						list( lRNA.c= ifelse(length(tmp), max(lRNA[tmp]), NA_real_) )
+						list( lRNA.mx= ifelse(length(tmp), max(lRNA[tmp]), NA_real_) )
 					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))								
 	#	focus after ART initiation
 	YX.m3	<- subset( YX.m3, !stage%in%c('UAm','UAy','DAm','DAy','D1<=350','D1<=550','D1>550','U'))
 	set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])
 	#
 	if('score.Y'%in%colnames(YX.m3))
-		YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, stage.orig  ))	
+		YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, score.Y, stage, lRNA.mx, CDCC, lRNA, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, stage.orig  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
-		YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, stage.orig  ))		
+		YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, stage, lRNA.mx, CDCC, lRNA, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, stage.orig  ))		
 	
 	YX.m3
 }
@@ -6319,7 +6460,7 @@ project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, l
 	viro
 }
 ######################################################################################
-project.athena.Fisheretal.Y.infectionwindow<- function(df.tpairs, clumsm.info, t.period=0.25, ts.min=1980, score.min=0.2, score.set.value=1)
+project.athena.Fisheretal.Y.infectionwindow<- function(df.tpairs, clumsm.info, predict.t2inf, t2inf.args, t.period=0.25, ts.min=1980, score.min=0.2, score.set.value=1)
 {
 	b4care	<- merge(unique(subset( df.tpairs, select=Patient )), unique(subset(clumsm.info, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1, AnyT_T1))), by='Patient')
 	tmp		<- b4care[, list(AnyPos_a=AnyPos_T1-DateBorn, ts=ifelse(is.na(NegT), AnyPos_T1-10, NegT), te=AnyPos_T1), by='Patient']
@@ -6987,7 +7128,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			X.pt				<- merge(X.pt, tperiod.info, by='t.period') 			
 		}
 		#	compute infection window of recipient for direct potential transmitters ri	
-		Y.infwindow				<- project.athena.Fisheretal.Y.infectionwindow( ri, df.all, t.period=t.period, ts.min=1980, score.min=0.1, score.set.value=1)
+		Y.infwindow				<- project.athena.Fisheretal.Y.infectionwindow( ri, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.min=0.1, score.set.value=1)
 		Y.infwindow[, AnyPos_a:=NULL]
 		if('FASTASampleCode'%in%colnames(df.tpairs))		#mode 1
 		{			
