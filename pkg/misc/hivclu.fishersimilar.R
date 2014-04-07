@@ -943,6 +943,8 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	#	check if Exp model would be reasonable
 	require(MASS)	
 	require(ggplot2)
+	require(gamlss)
+	
 	setkey(Y.rawbrl.unlinked, brl)
 	#	compute cdf for pairs given they are unlinked
 	p.rawbrl.unlinked	<- Y.rawbrl.unlinked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]		 
@@ -4072,7 +4074,7 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#ggplot( data=melt(tmp, id='idx'), aes(x=idx, y=value, colour=variable)) + geom_points()
 		
 		#	odds ratio and risk ratio
-		risk.df		<- subset(data.table(risk=X.seq[,levels(stage)], risk.ref='U'), risk!=risk.ref)
+		risk.df		<- subset(data.table(risk=X.seq[,levels(stage)], risk.ref='ART.3.NRT.PI'), risk!=risk.ref)
 		risk.df		<- rbind(risk.df, data.table(risk=X.seq[,levels(stage)][1], risk.ref=X.seq[,levels(stage)][2]))
 		setkey(risk.df, risk)
 		risk.prefix	<- 'stage'
@@ -4243,7 +4245,7 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX, df.all
 						list( lRNA.mx= ifelse(length(tmp), max(lRNA[tmp]), NA_real_) )
 					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))								
 	#	focus after ART initiation
-	YX.m3	<- subset( YX.m3, !stage%in%c('UAm','UAy','DAm','DAy','D1<=350','D1<=550','D1>550','U'))
+	YX.m3	<- subset( YX.m3, !stage%in%c('UAm','UAy','DAm','DAy','D1<=350','D1<=550','D1>550','D1.NA','U'))
 	set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])
 	#
 	if('score.Y'%in%colnames(YX.m3))
