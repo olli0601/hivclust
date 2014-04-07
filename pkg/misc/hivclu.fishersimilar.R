@@ -6175,7 +6175,7 @@ project.athena.Fisheretal.X.CDCC<- function(X.incare, df.tpairs, clumsm.info, t.
 	X.incare		
 }
 ######################################################################################
-project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.imm, t.period=0.25)
+project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.immu, t.period=0.25)
 {
 	immu	<- subset( df.immu, select=c(Patient, PosCD4, CD4) )
 	setnames(immu, 'Patient','t.Patient')
