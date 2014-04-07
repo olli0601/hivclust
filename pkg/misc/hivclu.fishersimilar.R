@@ -590,7 +590,7 @@ project.athena.Fisheretal.v2.YX<- function(df.all, clumsm.info, df.tpairs, df.im
 	YX	
 }
 ######################################################################################
-project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, t.period=0.25, save.file=NA, resume=1, method='3aa')
+project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, t.period=0.25, save.file=NA, resume=1, method='3aa')
 {
 	if(resume && !is.na(save.file))
 	{
@@ -4060,12 +4060,12 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#if(method=='VL1stsu')
 		#{			
 			YX.m3		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))	
-			X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)				
+			X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))				
 		#}
 		#
 		cat(paste('\nregression on data set'))
-		YX.m2.fit1 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)	
-		YX.m2.fit1b <- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.m2)
+		YX.m3.fit1 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3)	
+		YX.m3.fit1b <- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.m3)
 		#require(VGAM)
 		#YX.m2.fit1c <- vglm(score.Y ~ stage-1, link='log', tobit(Lower=0, Upper=1), data = YX.m2)
 		#tmp				<- data.table(idx=seq_len(nrow(YX.m2)),r.logit=YX.m2.fit1$residuals,r.log=YX.m2.fit1b$residuals)	
@@ -4247,9 +4247,9 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX, df.all
 	set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])
 	#
 	if('score.Y'%in%colnames(YX.m3))
-		YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, score.Y, stage, lRNA.mx, CDCC, lRNA, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, stage.orig  ))	
+		YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, score.Y, stage, lRNA.mx, CDCC, lRNA, contact, fw.up.med, w, stage.orig  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
-		YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, stage, lRNA.mx, CDCC, lRNA, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, stage.orig  ))		
+		YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, stage, lRNA.mx, CDCC, lRNA, contact, fw.up.med, stage.orig  ))		
 	
 	YX.m3
 }
@@ -7505,7 +7505,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	YX.part1		<- merge( YX.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)
 	YX.part1[, class:='pt']
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'.R',sep='')	
-	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)
+	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
 	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']
 	tperiod.info[, t.period.max:=c(tperiod.info[-1, t.period.min], t.endctime)]	
@@ -7530,7 +7530,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		YXS.part1		<- do.call('rbind',list(YX.part1, subset(YXS.part1, select=colnames(YX.part1))))		#put potential transmitters and potential non-transmitters together		
 		YXS.part1		<- merge( YXS.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)	
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_RICT_tATHENAseq','.R',sep='')
-		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, insignat, indircov, infilecov, infiletree, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)		
+		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, indir, insignat, indircov, infilecov, infiletree, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)		
 	}
 	#
 	#	get timelines for all candidate transmitters in df.all to the recently infected RI.PT
