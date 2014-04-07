@@ -2631,7 +2631,7 @@ project.athena.Fisheretal.YX.age<- function(YX, clumsm.info, t.period=0.25)
 	YX
 }
 ######################################################################################
-project.athena.Fisheretal.X.ART.pulsed<- function(df.tpairs, clumsm.info, t.pulse.ART=0.75, t.pulse.sc=NA, t.pulse.ART.I=1, t.pulse.ART.I.d=1)
+project.athena.Fisheretal.X.ART.pulsed<- function(df.tpairs, clumsm.info, df.treatment, t.pulse.ART=0.75, t.pulse.sc=NA, t.pulse.ART.I=1, t.pulse.ART.I.d=1)
 {
 	pulse		<- merge( data.table(Patient= df.tpairs[, unique(t.Patient)]), unique(subset(clumsm.info, select=c(Patient, NegT, AnyPos_T1, AnyT_T1))), by='Patient' )
 	pulse		<- subset(pulse, !is.na(AnyT_T1) & AnyPos_T1<AnyT_T1 & AnyPos_T1+t.pulse.ART>=AnyT_T1)	
@@ -4036,7 +4036,84 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 	}
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model3.ARTriskgroups_v2<- function(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA, score.Y.cut=1e-2)
+project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA, score.Y.cut=1e-2)
+{	
+	#	Treatment cascade & ART risk groups
+	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis
+	#	
+	#	PQ: are there ART risk groups?
+	#	PQ: is VL the causal pathway?		--> currently problematic with uniform infection window approach
+	#	SQ: is ART pulse associated with higher transmissibility?
+	YX.m3	<- copy(YX)
+	YX.m3[, U.score:=NULL]
+	if('score.Y'%in%colnames(YX.m2))
+		set(YX.m2, NULL, 'score.Y', YX.m2[,(score.Y*(nrow(YX.m2)-1)+0.5)/nrow(YX.m2)] )	
+	#	transmitter acute
+	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
+	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')	
+	set(YX.m3, YX.m3[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+	set(YX.m3, YX.m3[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )				
+	#	stratify Diag by first CD4 after diagnosis
+	tmp		<- subset(df.all, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)	
+	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	print( subset( tmp, is.na(CD4.c) ) )
+	setnames(tmp, 'Patient', 't.Patient')
+	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+	YX.m3	<- merge(YX.m3, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+	tmp		<- YX.m3[, which(stage=='Diag')]
+	set(YX.m3, tmp, 'stage', YX.m3[tmp, CD4.c])
+	YX.m3[, CD4.c:=NULL]		
+	YX.m3[, stage.orig:= stage]
+	#
+	#	ART indication risk factors
+	#
+	set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )		
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')		
+	#	ART no indication: nDrug
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3)], 'stage', 'ART.l3')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'stage', 'ART.g3')
+	#	split weight for PI and NNRT
+	if('score.Y'%in%colnames(YX.m3))
+	{
+		
+	}
+	tmp		<- YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)]
+	tmp2	<- YX.m3[tmp,]
+	set(tmp2, NULL, 'w', tmp2[, w/2])
+	set(tmp2, NULL, 'stage', 'ART.3.NRT.PI')
+	YX.m3	<- rbind(YX.m3, tmp2)
+	set(YX.m3, tmp, 'w', YX.m3[tmp, w/2])
+	set(YX.m3, tmp, 'stage', 'ART.3.NRT.NNRT')
+	#			
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 )], 'stage', 'ART.3.NRT.PI')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nNNRT>0)], 'stage', 'ART.3.NRT.NNRT')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 )], 'stage', 'ART.3.NRT')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'stage', 'ART.3.NNRT.PI')
+	#	add mx viral load during infection window
+	YX.m3	<- merge(YX.m3, YX.m3[, {
+						tmp<- which(!is.na(lRNA))
+						list( lRNA.c= ifelse(length(tmp), max(lRNA[tmp]), NA_real_) )
+					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))								
+	#	focus after ART initiation
+	YX.m3	<- subset( YX.m3, !stage%in%c('UAm','UAy','DAm','DAy','D1<=350','D1<=550','D1>550','U'))
+	set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])
+	#
+	if('score.Y'%in%colnames(YX.m3))
+		YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, stage.orig  ))	
+	if(!'score.Y'%in%colnames(YX.m2))
+		YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, stage.orig  ))		
+	
+	YX.m3
+}
+######################################################################################
+project.athena.Fisheretal.YX.model3.ARTriskgroups<- function(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA, score.Y.cut=1e-2)
 {
 	require(betareg)
 	#	Treatment cascade & ART risk groups
@@ -4149,7 +4226,7 @@ project.athena.Fisheretal.YX.model3.ARTriskgroups_v2<- function(YX, clumsm.info,
 	list(m3=YX.m3, m3.p=YX.m3.fit10.p, m3.fit.art=YX.m3s.fit10, m3.or.art=YX.m3s.fit10.or)
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model3.ARTriskgroups<- function(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA, score.Y.cut=1e-2)
+project.athena.Fisheretal.YX.model3.v1.ARTriskgroups<- function(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA, score.Y.cut=1e-2)
 {
 	require(betareg)
 	#	Treatment cascade & ART risk groups
@@ -6898,7 +6975,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		setnames( tmp, 'DateBorn', 'AnyPos_a')
 		setnames( tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
 		X.pt					<- merge(X.pt, tmp, by='t.Patient', allow.cartesian=TRUE)		
-		tmp						<- project.athena.Fisheretal.X.ART.pulsed(df.tpairs, df.all, t.pulse.ART=0.75, t.pulse.sc=NA, t.pulse.ART.I=1, t.pulse.ART.I.d=1)
+		tmp						<- project.athena.Fisheretal.X.ART.pulsed(df.tpairs, df.all, df.treatment, t.pulse.ART=0.75, t.pulse.sc=NA, t.pulse.ART.I=1, t.pulse.ART.I.d=1)
 		X.pt					<- merge( X.pt, tmp, by='t.Patient', all.x=1 )
 		tmp						<- project.athena.Fisheretal.X.time.diag2suppressed(df.tpairs, df.all, df.viro, lRNA.suppressed= log10(1e3), t2.vl.supp.p=c(0.1, 0.25))
 		X.pt					<- merge( X.pt, tmp, by='t.Patient', all.x=1 )
@@ -7344,27 +7421,21 @@ hivc.prog.betareg.estimaterisks<- function()
 	m2.method		<- 'VLtsu'
 	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',m2.method,'_VL_adjAym_dt025','.pdf',sep='')
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',m2.method,'.R',sep='')
-	YX.m2.VLt.risk	<- project.athena.Fisheretal.YX.model2.estimate.risk(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=m2.method)
+	YX.m2.VLt.risk	<- project.athena.Fisheretal.YX.model2.estimate.risk(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=m2.method)	
+	#		
+	#	treatment risk groups
+	#
+	plot.file.cascade	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_cascade_FIPAPuNi','.pdf',sep='')
+	tmp					<- project.athena.Fisheretal.YX.model3.ARTriskgroups(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=plot.file.cascade)	
+	YX.m3.or.art		<- tmp$m3.or.art
+	YX.m3.p				<- tmp$m3.p
 	
-			
 		
 		
 		
-		
-	#	endpoint: all VL in infection window suppressed
-	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit4_VL_adjAym_dt025','.pdf',sep='')
-	plot.file.or	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2fit4','.pdf',sep='')
-	tmp				<- project.athena.Fisheretal.YX.model2.VL.mx.window(YX, clumsm.info, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl, plot.file.or=plot.file.or)
-	YX.m2.VLmxw.or	<- tmp$m2.or
-	YX.m2.VLmxw.p	<- tmp$m2.p
 	#	proportions across time
 	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2time','.pdf',sep='')
 	YX.m2time.p		<- project.athena.Fisheretal.YX.model2.time(YX, clumsm.info, df.viro, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file=plot.file)
-	#	treatment risk groups
-	plot.file.cascade	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_cascade_FIPAPuNi','.pdf',sep='')
-	tmp				<- project.athena.Fisheretal.YX.model3.ARTriskgroups_v2(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=plot.file.cascade)	
-	YX.m3.or.art	<- tmp$m3.or.art
-	YX.m3.p			<- tmp$m3.p
 	
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_results.R',sep='')
 	cat(paste('\nsave to',save.file))
