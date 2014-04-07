@@ -614,7 +614,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
 	
-	cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, outdir=outdir, resume=1, verbose=1)
+	cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 	cat(cmd)
 	#stop()
 	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=80, hpc.mem="3800mb")

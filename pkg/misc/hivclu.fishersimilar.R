@@ -7292,7 +7292,7 @@ hivc.prog.betareg.estimaterisks<- function()
 {
 	require(data.table)
 	require(ape)
-	#stop()
+	stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
@@ -7301,7 +7301,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
 	
-	if(1)
+	if(0)
 	{
 		method					<- '3c'
 		method.nodectime		<- 'any'
@@ -7323,8 +7323,9 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=2_sasky',sep='_')
 	}
-	if(0)
+	if(1)
 	{
+		resume					<- 0
 		method					<- '3c'
 		method.nodectime		<- 'any'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -7334,8 +7335,6 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	
-	
 	if(exists("argv"))
 	{
 		tmp<- na.omit(sapply(argv,function(arg)
@@ -7373,7 +7372,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,7),
 									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
-		if(length(tmp)>0) outdir<- tmp[1]		
+		if(length(tmp)>0) outdir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,8),
+									outfile= return(substr(arg,10,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outfile<- tmp[1]						
 		#		
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,7),
@@ -7404,6 +7407,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		print(clu.infilexml.opt)
 		print(clu.infilexml.template)
 		print(outdir)
+		print(outfile)
 		print(method)
 		print(method.nodectime)
 	}
