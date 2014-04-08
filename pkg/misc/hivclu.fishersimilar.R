@@ -6826,6 +6826,7 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy,
 		
 		print( subset( tmp, FASTASampleCode=='' | t.FASTASampleCode==''))
 		print( subset( tmp, is.na(FASTASampleCode) | is.na(t.FASTASampleCode)))
+		print( subset( tmp, is.na(t.queryT) ) )
 		debug	<- tmp[,  list(n=length(which(!is.na(cdf)))), 	by=c('FASTASampleCode','t.FASTASampleCode')]	
 		print(subset( debug, n<2 ))
 		
