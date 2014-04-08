@@ -38,7 +38,7 @@ project.bezemer2013a.figs.v131023_DB<- function()
 		df					<- merge(df, tmp, by='clustername', all.x=1)
 		f.name				<- paste("Bezemer2014_clusters_MRCAs91MSM_",signat,".csv",sep='')
 		tmp					<- read.csv(paste(dir.name,f.name,sep='/'), stringsAsFactors=FALSE)
-		tmp					<- tmp[,c('clustername','MRCA','colour.cross')]
+		tmp					<- tmp[,c('clustername','MRCA','MRCA2','colour.cross','colour.cross2')]
 		df					<- merge(df, tmp, by='clustername', all.x=1)
 	}
 	#	
@@ -61,6 +61,10 @@ project.bezemer2013a.figs.v131023_DB<- function()
 	df[,"MRCA"]											<- gsub(",",".", df[,"MRCA"],fixed=TRUE)
 	#df[df[,"MRCA"]=="","MRCA"]							<- NA
 	df[,"MRCA"]											<- as.numeric(df[,"MRCA"])
+	df[,"MRCA2"]										<- gsub("\\s","", df[,"MRCA2"])
+	df[,"MRCA2"]										<- gsub(",",".", df[,"MRCA2"],fixed=TRUE)	
+	df[,"MRCA2"]										<- as.numeric(df[,"MRCA2"])
+	
 	df[which(is.na(df[,"recent"])),"recent"]			<- 2
 	df[,"recent"]										<- factor(df[,"recent"],levels=c(0,1),labels=c("Unknown","Recent"))
 	df[,"patient"]										<- factor(df[,"patient"])
@@ -75,11 +79,16 @@ project.bezemer2013a.figs.v131023_DB<- function()
 
 	df[which(df[,"agegroup"]==""),"agegroup"]			<- NA
 	df[,"agegroup"]										<- factor(df[,"agegroup"])
+	
+	df[which(df[,"colour.cross"]=="blue cross"),"colour.cross"]		<- 'blue'
+	df[which(df[,"colour.cross"]=="grey cross"),"colour.cross"]		<- 'grey50'
+	df[which(df[,"colour.cross"]=="orange"),"colour.cross"]			<- 'orange'
 
-	df[which(df[,"colour.cross"]=="blue cross"),"colour.cross"]	<- 'blue'
-	df[which(df[,"colour.cross"]=="grey cross"),"colour.cross"]	<- 'grey50'
-	df[which(df[,"colour.cross"]=="orange"),"colour.cross"]		<- 'orange'
-	df[which(df[,"colour.cross"]=="orangeblue"),"colour.cross"]	<- 'pink'
+	df[which(df[,"colour.cross2"]==""),"colour.cross2"]				<- NA
+	df[which(df[,"colour.cross2"]=="blue cross"),"colour.cross2"]	<- 'blue'
+	df[which(df[,"colour.cross2"]=="grey cross"),"colour.cross2"]	<- 'grey50'
+	df[which(df[,"colour.cross2"]=="orange"),"colour.cross2"]		<- 'orange'
+	
 
 	code												<- seq_along(attr(tmp,"levels"))
 	names(code)											<- attr(tmp,"levels")
@@ -120,6 +129,7 @@ project.bezemer2013a.figs.v131023_DB<- function()
 	#print(levels(df[,"agegroup"]))
 	df	<- data.table(df, key="clustername")
 	setnames(df, c("clustername","hregion"),c("cluster","RegionHospital"))
+	set(df, df[, which(colour.cross2=='')], 'colour.cross2', NA_character_)
 	str(df)
 	#
 	#	determine median fpos1 time for cluster and add PLUS determine cex for each cluster and add
@@ -197,7 +207,7 @@ project.bezemer2013a.figs.v131023_DB<- function()
 	clusters.sortby2	<- as.numeric( tmp[,sort2] )
 	clusters.sortby		<- order(clusters.sortby1,clusters.sortby2, decreasing=F)
 	clusters			<- tmp[clusters.sortby,cluster]														
-	clusters			<- lapply(clusters,function(x)	subset(df,cluster==x,c(time, cluster,rout, RegionOrigin, diaggroup, agegroup, RegionHospital, recent, cluster.cex, sort1, MRCA, colour.cross, MeanR, R025, R975))		)
+	clusters			<- lapply(clusters,function(x)	subset(df,cluster==x,c(time, cluster,rout, RegionOrigin, diaggroup, agegroup, RegionHospital, recent, cluster.cex, sort1, MRCA, colour.cross, MRCA2, colour.cross2, MeanR, R025, R975))		)
 	ylim				<- c(-50,length(clusters))
 	xlim[1]				<- xlim[1]-700/365		
 	df.R				<- data.table(idx=seq_along(clusters), cluster=sapply(clusters, function(x) x[, cluster][1]), R.mean=sapply(clusters, function(x) x[, MeanR][1]), R.025=sapply(clusters, function(x) x[, R025][1]), R.975=sapply(clusters, function(x) x[, R975][1]) )
@@ -229,6 +239,8 @@ project.bezemer2013a.figs.v131023_DB<- function()
 				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )
 				if(!is.na(clusters[[i]][,MRCA][1]))
 					points( clusters[[i]][,MRCA][1], cluster.y[1], col=clusters[[i]][,colour.cross][1], pch=4, cex=cex.points*0.7 )
+				if(!is.na(clusters[[i]][,MRCA2][1]))
+					points( clusters[[i]][,MRCA2][1], cluster.y[1], col=clusters[[i]][,colour.cross2][1], pch=4, cex=cex.points*0.7 )
 			})	
 	
 	c.lines	<- sapply(clusters,function(x) x[1,sort1])
@@ -281,6 +293,8 @@ project.bezemer2013a.figs.v131023_DB<- function()
 				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )
 				if(!is.na(clusters[[i]][,MRCA][1]))
 					points( clusters[[i]][,MRCA][1], cluster.y[1], col=clusters[[i]][,colour.cross][1], pch=4, cex=cex.points*0.7 )
+				if(!is.na(clusters[[i]][,MRCA2][1]))
+					points( clusters[[i]][,MRCA2][1], cluster.y[1], col=clusters[[i]][,colour.cross2][1], pch=4, cex=cex.points*0.7 )
 			})	
 	
 	c.lines	<- sapply(clusters,function(x) x[1,sort1])
@@ -335,6 +349,8 @@ project.bezemer2013a.figs.v131023_DB<- function()
 				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )
 				if(!is.na(clusters[[i]][,MRCA][1]))
 					points( clusters[[i]][,MRCA][1], cluster.y[1], col=clusters[[i]][,colour.cross][1], pch=4, cex=cex.points*0.7 )
+				if(!is.na(clusters[[i]][,MRCA2][1]))
+					points( clusters[[i]][,MRCA2][1], cluster.y[1], col=clusters[[i]][,colour.cross2][1], pch=4, cex=cex.points*0.7 )
 			})	
 	
 	c.lines	<- sapply(clusters,function(x) x[1,sort1])
@@ -387,6 +403,8 @@ project.bezemer2013a.figs.v131023_DB<- function()
 				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )
 				if(!is.na(clusters[[i]][,MRCA][1]))
 					points( clusters[[i]][,MRCA][1], cluster.y[1], col=clusters[[i]][,colour.cross][1], pch=4, cex=cex.points*0.7 )
+				if(!is.na(clusters[[i]][,MRCA2][1]))
+					points( clusters[[i]][,MRCA2][1], cluster.y[1], col=clusters[[i]][,colour.cross2][1], pch=4, cex=cex.points*0.7 )
 			})	
 	
 	c.lines	<- sapply(clusters,function(x) x[1,sort1])
@@ -439,6 +457,8 @@ project.bezemer2013a.figs.v131023_DB<- function()
 				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )
 				if(!is.na(clusters[[i]][,MRCA][1]))
 					points( clusters[[i]][,MRCA][1], cluster.y[1], col=clusters[[i]][,colour.cross][1], pch=4, cex=cex.points*0.7 )
+				if(!is.na(clusters[[i]][,MRCA2][1]))
+					points( clusters[[i]][,MRCA2][1], cluster.y[1], col=clusters[[i]][,colour.cross2][1], pch=4, cex=cex.points*0.7 )
 			})	
 	c.lines	<- sapply(clusters,function(x) x[1,sort1])
 	c.lines	<- c( which(diff(as.numeric(c.lines))!=0), length(clusters) )
@@ -486,7 +506,7 @@ project.bezemer2013a.figs.v131023_DB<- function()
 	clusters.sortby2	<- as.numeric( tmp[,sort2] )
 	clusters.sortby		<- order(clusters.sortby1,clusters.sortby2, decreasing=F)
 	clusters			<- tmp[clusters.sortby,cluster]		
-	clusters			<- lapply(clusters,function(x)	subset(df,cluster==x,c(time, cluster,rout, RegionOrigin, diaggroup, agegroup, RegionHospital, recent, cluster.cex, sort1, MRCA, colour.cross, MeanR, R025, R975))		)
+	clusters			<- lapply(clusters,function(x)	subset(df,cluster==x,c(time, cluster,rout, RegionOrigin, diaggroup, agegroup, RegionHospital, recent, cluster.cex, sort1, MRCA, colour.cross, MRCA2, colour.cross2, MeanR, R025, R975))		)
 	ylim				<- c(-50,length(clusters))
 	xlim[1]				<- xlim[1]-700/365		
 	df.R				<- data.table(idx=seq_along(clusters), cluster=sapply(clusters, function(x) x[, cluster][1]), R.mean=sapply(clusters, function(x) x[, MeanR][1]), R.025=sapply(clusters, function(x) x[, R025][1]), R.975=sapply(clusters, function(x) x[, R975][1]) )
@@ -516,6 +536,8 @@ project.bezemer2013a.figs.v131023_DB<- function()
 				points( cluster.x, cluster.y, col=cols[ cluster.z ], pch=19, cex=cluster.cex )
 				if(!is.na(clusters[[i]][,MRCA][1]))
 					points( clusters[[i]][,MRCA][1], cluster.y[1], col=clusters[[i]][,colour.cross][1], pch=4, cex=cex.points*0.7 )
+				if(!is.na(clusters[[i]][,MRCA2][1]))
+					points( clusters[[i]][,MRCA2][1], cluster.y[1], col=clusters[[i]][,colour.cross2][1], pch=4, cex=cex.points*0.7 )
 			})	
 	
 	tmp		<- sapply(clusters,function(x) x[1,sort1])

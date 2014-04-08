@@ -4125,7 +4125,6 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#	person years in infection window	
 		tmp			<- risk.df[ , list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='PY', l95.asym=NA, u95.asym=NA, v=eval(parse(text=paste('X.seq[, length(which(',risk,'=="',factor,'"))]',sep='')))), by='coef'] 	
 		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, l95.asym, u95.asym)))
-
 		#	number of transmissions and proportion of transmissions		
 		tmp			<- risk.df[, 		{
 											tmp		<- my.prop.from.log(YX.m3.fit.ni.rr, coef, 1.962)
@@ -4138,8 +4137,9 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		set(tmp, NULL, 'v', tmp[, v/sum(expbeta*n)])
 		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, l95.asym, u95.asym)))
 		#	relative infectiousness
-		tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / nrow(X.seq) ), l95.asym=NA, u95.asym=NA ), by='risk']	
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(risk, risk.ref, stat, v, l95.asym, u95.asym)))	
+		tmp			<- subset(risk.ans, stat=='PY' )[, sum(v)]
+		tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / tmp ), l95.asym=NA, u95.asym=NA ), by='coef']	
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, l95.asym, u95.asym)))	
 		#	Bootstraps	on ratio and on prob
 		cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
 		tmp			<- lapply(seq_len(bs.n), function(bs.i)
@@ -7384,7 +7384,9 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			X.pt					<- merge(X.pt, tmp, by='t.Patient', allow.cartesian=TRUE)									#merge all seq pairs
 			tmp						<- subset(df.tpairs, select=c(Patient, t.FASTASampleCode, FASTASampleCode))
 			Y.infwindow				<- merge(Y.infwindow, tmp, by='Patient', allow.cartesian=TRUE)							#merge all seq pairs
-			YX.part1				<- merge(Y.infwindow, X.pt, by=c('FASTASampleCode','t.FASTASampleCode','t'), allow.cartesian=TRUE)			
+			YX.part1				<- merge(Y.infwindow, X.pt, by=c('FASTASampleCode','t.FASTASampleCode','t'), allow.cartesian=TRUE)
+			set(YX.part1,NULL,'FASTASampleCode', YX.part1[, as.character(FASTASampleCode)])
+			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])			
 		}			
 		else if(is.na(sample.n))							#mode 2
 		{
@@ -7423,11 +7425,11 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			YX.part1		<- merge(YX.part1, unique(tmp), by='t.Patient', allow.cartesian=TRUE)
 			YX.part1.batch	<- NULL			
 			cat(paste('\ncompleted sampled merge of sequence pairs, nrows=',nrow(YX.part1)))
+			set(YX.part1,NULL,'FASTASampleCode', YX.part1[, as.character(FASTASampleCode)])
+			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])			
 		}	
 		if(!is.na(save.file))
 		{
-			set(YX.part1,NULL,'FASTASampleCode', YX.part1[, as.character(FASTASampleCode)])
-			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])
 			setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
 			YX.part1	<- unique(YX.part1)
 			cat(paste('\nsave YX.part1 to file=',save.file))
