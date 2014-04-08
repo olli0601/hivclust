@@ -4100,6 +4100,12 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#ggplot( data=melt(tmp, id='idx'), aes(x=idx, y=value, colour=variable)) + geom_points()
 		
 		#	odds ratio and risk ratio
+		risk.df		<- data.table( risk= c(rep('stage',3), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3','ART.l3','ART.g3', rep('Yes',5)))
+		risk.df		<- risk.df[, list(coef=paste(risk,factor,sep='') ), by=c('risk','factor')]
+		
+		
+		risk.df		<- subset(data.table(risk=X.seq[,levels(stage)], risk.ref='ART.3.NRT.PI'), risk!=risk.ref)	
+
 		risk.df		<- subset(data.table(risk=X.seq[,levels(stage)], risk.ref='ART.3.NRT.PI'), risk!=risk.ref)
 		#risk.df		<- rbind(risk.df, data.table(risk=X.seq[,levels(stage)][1], risk.ref=X.seq[,levels(stage)][2]))
 		setkey(risk.df, risk)
@@ -7752,6 +7758,10 @@ hivc.prog.betareg.estimaterisks<- function()
 	df.viro					<- tmp$df.viro
 	df.immu					<- tmp$df.immu
 	df.treatment			<- tmp$df.treatment
+	#
+	print(getMRCA(cluphy, c('00S024579', 'M2913713012009')))
+	print(packageVersion("ape"))
+	stop()
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
