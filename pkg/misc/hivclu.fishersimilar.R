@@ -7389,9 +7389,11 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])			
 		}			
 		else if(is.na(sample.n))							#mode 2
-		{
+		{			
 			cat(paste('\nstart big merge of patient pairs'))
 			#	the BIG merge. this is easier if we first reduce to the relevant time periods
+			X.b4care				<- X.incare	<- X.ARTpulsed<- X.t2.vlsupp<- X.t2.care<- tmp<- NULL
+			gc()
 			X.pt					<- merge(X.pt, unique(subset( Y.infwindow, select=t )), by='t')		
 			YX.part1				<- merge(Y.infwindow, X.pt, by='t', allow.cartesian=TRUE)
 			cat(paste('\ncompleted big merge of patient pairs, nrows=',nrow(YX.part1)))
