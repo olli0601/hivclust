@@ -81,7 +81,7 @@ default.fun		<- "project.hivc.clustering"
 #default.fun		<- "hivc.pipeline.BEASTout"
 #default.fun		<- "hivc.prog.betareg.estimaterisks"
 default.fun		<- "hivc.pipeline.betareg.estimate.risks"
-default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
+#default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
