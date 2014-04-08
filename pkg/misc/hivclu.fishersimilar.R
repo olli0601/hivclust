@@ -4068,12 +4068,13 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))				
 		#}
 		#
-		
+		#	easiest: change stage as needed
 		#	ART indicators without number/type	
 		YX.m3.fit.i 	<- betareg(score.Y ~ ART.I+ART.P+ART.A+ART.pulse+ART.F, link='log', weights=w, data = YX.m3)
 		#	ART indicators and number
-		cf				<- coef(betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		YX.m3.fit.ni 	<- betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))		
+		set(YX.m3, NULL, 'stage', YX.m3[, ART.nDrug.c])
+		cf				<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+		YX.m3.fit.ni 	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))		
 		#	ART.tnDrug.c independent of indicators and of pulse and of ART.I
 		cf				<- coef(betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
 		YX.m3.fit.tni 	<- betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(cf))		
@@ -6797,6 +6798,8 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy,
 		cat(paste('\nnumber of pot transmitters for which dated phylogenies are available, n=',df.tpairs.mrca[,length(unique(t.Patient))]))		
 		#	compute mrcas of tpairs 
 		print(str(cluphy))
+		print(str(df.tpairs.mrca))
+		print(getMRCA(cluphy, c('00S024579', 'M2913713012009')))
 		tmp					<- df.tpairs.mrca[,	list(node=getMRCA(cluphy, c(FASTASampleCode, t.FASTASampleCode))), by=c('FASTASampleCode','t.FASTASampleCode')]
 		#if(nrow(tmp)!=nrow(df.tpairs.mrca))	stop('unexpected length of tmp')
 		df.tpairs.mrca		<- merge(df.tpairs.mrca, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))		
