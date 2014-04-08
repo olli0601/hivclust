@@ -4102,22 +4102,23 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#	odds ratio and risk ratio
 		risk.df		<- data.table( risk= c(rep('stage',3), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3','ART.l3','ART.g3', rep('Yes',5)))
 		risk.df		<- risk.df[, list(coef=paste(risk,factor,sep='') ), by=c('risk','factor')]
-		
-		
-		risk.df		<- subset(data.table(risk=X.seq[,levels(stage)], risk.ref='ART.3.NRT.PI'), risk!=risk.ref)	
-
-		risk.df		<- subset(data.table(risk=X.seq[,levels(stage)], risk.ref='ART.3.NRT.PI'), risk!=risk.ref)
-		#risk.df		<- rbind(risk.df, data.table(risk=X.seq[,levels(stage)][1], risk.ref=X.seq[,levels(stage)][2]))
+		tmp			<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3',nrow(risk.df)))
+		risk.df		<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
+		risk.df		<- subset(risk.df, coef!=coef.ref)
 		setkey(risk.df, risk)
-		risk.prefix	<- 'stage'
+		
 		risk.ans	<- risk.df[, 	{
-					tmp	<- my.or.from.logit(YX.m3.fit1, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m3, stage==risk)[, sum(w)], subset(YX.m3, stage==risk.ref)[, sum(w)], 1.962)
-					list(stat= 'OR', v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
-				},by=c('risk','risk.ref')]
+										tmp	<- c(	eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep=''))),
+													eval(parse(text=paste('subset(YX.m3, ',risk.ref,'=="',factor.ref,'")[, sum(w)]',sep='')))		)
+										tmp	<- my.or.from.logit(YX.m3.fit.ni, coef, coef.ref, tmp[1], tmp[2], 1.962)
+										list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
+									},by=c('coef','coef.ref')]
 		tmp			<- risk.df[, 	{
-					tmp	<- my.rr.from.log(YX.m3.fit1b, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m3, stage==risk)[, sum(w)], subset(YX.m3, stage==risk.ref)[, sum(w)], 1.962)
-					list(stat= 'RR', v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
-				},by=c('risk','risk.ref')]
+										tmp	<- c(	eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep=''))),
+													eval(parse(text=paste('subset(YX.m3, ',risk.ref,'=="',factor.ref,'")[, sum(w)]',sep='')))		)										
+										tmp	<- my.rr.from.log(YX.m3.fit.ni, coef, coef.ref, tmp[1], tmp[2], 1.962)
+										list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
+									},by=c('coef','coef.ref')]
 		risk.ans	<- rbind(risk.ans, tmp)	
 		#	person years in infection window	
 		tmp			<- X.seq[ , table( stage, useNA='ifany') ]	
@@ -7761,6 +7762,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	print(getMRCA(cluphy, c('00S024579', 'M2913713012009')))
 	print(packageVersion("ape"))
+	print( hivc.clu.mrca(cluphy, c('00S024579', 'M2913713012009')))
 	stop()
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
