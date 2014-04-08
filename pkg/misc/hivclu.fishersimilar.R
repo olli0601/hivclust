@@ -4075,7 +4075,8 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		set(YX.m3, NULL, 'stage', YX.m3[, ART.nDrug.c])
 		set(X.seq, NULL, 'stage', X.seq[, ART.nDrug.c])
 		cf				<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		YX.m3.fit.ni 	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))		
+		YX.m3.fit.ni 	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = YX.m3, start=list(cf))
+		YX.m3.fit.ni.rr <- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))
 		#	ART.tnDrug.c independent of indicators and of pulse and of ART.I
 		cf				<- coef(betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
 		YX.m3.fit.tni 	<- betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(cf))		
@@ -4117,7 +4118,7 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
 										tmp	<- c(	eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep=''))),
 													eval(parse(text=paste('subset(YX.m3, ',risk.ref,'=="',factor.ref,'")[, sum(w)]',sep='')))		)										
-										tmp	<- my.rr.from.log(YX.m3.fit.ni, coef, coef.ref, tmp[1], tmp[2], 1.962)
+										tmp	<- my.rr.from.log(YX.m3.fit.ni.rr, coef, coef.ref, tmp[1], tmp[2], 1.962)
 										list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
 									},by=c('coef','coef.ref')]
 		risk.ans	<- rbind(risk.ans, tmp)	
@@ -4127,7 +4128,7 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 
 		#	number of transmissions and proportion of transmissions		
 		tmp			<- risk.df[, 		{
-											tmp		<- my.prop.from.log(YX.m3.fit.ni, coef, 1.962)
+											tmp		<- my.prop.from.log(YX.m3.fit.ni.rr, coef, 1.962)
 											tmp[4]	<- eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep='')))
 											list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[4]<2*EPS, 0., tmp[1]), n=tmp[4], l95.asym=NA, u95.asym=NA)
 										},by= 'coef']
@@ -6804,10 +6805,6 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy,
 		df.tpairs.mrca		<- merge( YX.tpairs, unique(subset(cluphy.info, select=cluster)), by='cluster' )
 		cat(paste('\nnumber of pot transmitters for which dated phylogenies are available, n=',df.tpairs.mrca[,length(unique(t.Patient))]))		
 		#	compute mrcas of tpairs 
-		print(str(cluphy))
-		print(str(df.tpairs.mrca))
-		print(getMRCA(cluphy, c('00S024579', 'M2913713012009')))
-		print(hivc.clu.mrca(cluphy, c('00S024579', 'M2913713012009'))$mrca)
 		tmp					<- df.tpairs.mrca[,	list(node=hivc.clu.mrca(cluphy, c(FASTASampleCode, t.FASTASampleCode))$mrca), by=c('FASTASampleCode','t.FASTASampleCode')]
 		#if(nrow(tmp)!=nrow(df.tpairs.mrca))	stop('unexpected length of tmp')
 		df.tpairs.mrca		<- merge(df.tpairs.mrca, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))		
@@ -6826,18 +6823,7 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy,
 		tmp					<- subset( df.tpairs.mrca, select=c(cluster, node, FASTASampleCode, t.FASTASampleCode, t.queryT) )
 		tmp					<- merge(tmp, subset(df.all, select=c(FASTASampleCode, AnyPos_T1)), by='FASTASampleCode')
 		set(tmp, NULL, 'AnyPos_T1', tmp[, AnyPos_T1+coal.within.inf.grace])
-		print(tmp)
-		print(cluphy.map.nodectime)
-		stop()
 		tmp					<- merge( cluphy.map.nodectime, tmp, by=c('cluster','node'), allow.cartesian=TRUE)	
-		
-		print(tmp)
-		print( subset( tmp, FASTASampleCode=='' | t.FASTASampleCode==''))
-		print( subset( tmp, is.na(FASTASampleCode) | is.na(t.FASTASampleCode)))
-		print( subset( tmp, is.na(t.queryT) ) )
-		debug	<- tmp[,  list(n=length(which(!is.na(cdf)))), 	by=c('FASTASampleCode','t.FASTASampleCode')]	
-		print(subset( debug, n<2 ))
-		
 		coal				<- tmp[,  {
 											if(length(which(!is.na(cdf)))<2)
 											{
