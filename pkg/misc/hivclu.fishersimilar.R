@@ -7507,7 +7507,7 @@ hivc.prog.betareg.estimaterisks<- function()
 {
 	require(data.table)
 	require(ape)
-	stop()
+	#stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
