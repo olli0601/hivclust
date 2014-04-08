@@ -4125,18 +4125,17 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		tmp			<- risk.df[ , list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='PY', l95.asym=NA, u95.asym=NA, v=eval(parse(text=paste('X.seq[, length(which(',risk,'=="',factor,'"))]',sep='')))), by='coef'] 	
 		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, l95.asym, u95.asym)))
 
-		#	number of transmissions and proportion of transmissions
-		tmp			<- rbind(unique(risk.df), data.table(risk='U', risk.ref=risk.ref))
-		tmp			<- tmp[, 		{
-					tmp		<- my.prop.from.log(YX.m3.fit1b, paste(risk.prefix,risk,sep=''), 1.962)
-					tmp[4]	<- subset(YX.m3, stage==risk)[, sum(w)]
-					list(risk.ref='None', stat= 'N', expbeta=ifelse(tmp[4]<2*EPS, 0., tmp[1]), n=tmp[4], l95.asym=NA, u95.asym=NA)
-				},by= 'risk']
+		#	number of transmissions and proportion of transmissions		
+		tmp			<- risk.df[, 		{
+											tmp		<- my.prop.from.log(YX.m3.fit.ni, coef, 1.962)
+											tmp[4]	<- eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep='')))
+											list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[4]<2*EPS, 0., tmp[1]), n=tmp[4], l95.asym=NA, u95.asym=NA)
+										},by= 'coef']
 		tmp[, v:= tmp[,expbeta*n]]	
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(risk, risk.ref, stat, v, l95.asym, u95.asym)))
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, l95.asym, u95.asym)))
 		set(tmp, NULL, 'stat', 'P')
 		set(tmp, NULL, 'v', tmp[, v/sum(expbeta*n)])
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(risk, risk.ref, stat, v, l95.asym, u95.asym)))
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, l95.asym, u95.asym)))
 		#	relative infectiousness
 		tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / nrow(X.seq) ), l95.asym=NA, u95.asym=NA ), by='risk']	
 		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(risk, risk.ref, stat, v, l95.asym, u95.asym)))	
@@ -6801,8 +6800,8 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy,
 		setkey(YX.tpairs, cluster)	
 		#	select tpairs for which dated phylogenies are available
 		tmp					<- na.omit( setdiff( YX.tpairs[,unique(cluster)], cluphy.info[, unique(cluster)] ) )
-		cat(paste('\nnumber of clusters missing for analysis of pot transmitters, n=',length(tmp)))
-		df.tpairs.mrca		<- YX.tpairs[J(cluphy.info[, unique(cluster)]),]	
+		cat(paste('\nnumber of clusters missing for analysis of pot transmitters, n=',length(tmp)))		
+		df.tpairs.mrca		<- merge( YX.tpairs, unique(subset(cluphy.info, select=cluster)), by='cluster' )
 		cat(paste('\nnumber of pot transmitters for which dated phylogenies are available, n=',df.tpairs.mrca[,length(unique(t.Patient))]))		
 		#	compute mrcas of tpairs 
 		print(str(cluphy))
