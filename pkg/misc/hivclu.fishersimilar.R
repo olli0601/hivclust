@@ -4059,247 +4059,36 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 	}
 	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
 	{
-		YX.m3	<- copy(YX)
-		YX.m3[, U.score:=NULL]
-		if('score.Y'%in%colnames(YX.m3))
-			set(YX.m3, NULL, 'score.Y', YX.m3[,(score.Y*(nrow(YX.m3)-1)+0.5)/nrow(YX.m3)] )					
-		#	transmitter acute
-		set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
-		set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')	
-		set(YX.m3, YX.m3[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
-		set(YX.m3, YX.m3[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )				
-		#	stratify Diag by first CD4 after diagnosis
-		tmp		<- subset(df.all, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
-		setkey(tmp, Patient)
-		tmp		<- unique(tmp)	
-		tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
-		cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
-		print( subset( tmp, is.na(CD4.c) ) )
-		setnames(tmp, 'Patient', 't.Patient')
-		set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
-		YX.m3	<- merge(YX.m3, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
-		tmp		<- YX.m3[, which(stage=='Diag')]
-		set(YX.m3, tmp, 'stage', YX.m3[tmp, CD4.c])
-		YX.m3[, CD4.c:=NULL]		
-		YX.m3[, stage.orig:= stage]
-		YX.m3	<- subset( YX.m3,stage=='ART.started' )
-		#
-		#	ART indication risk factors
-		#
-		set(YX.m3, YX.m3[,which(is.na(ART.pulse))], 'ART.pulse', 'No')
-		set(YX.m3, NULL, 'ART.pulse', YX.m3[, factor(ART.pulse)])	
-		if( YX.m3[, any(is.na(ART.pulse))] ) stop('unexpected NA in ART.pulse')
-		set(YX.m3, YX.m3[,which(is.na(ART.I) | ART.pulse=='Yes')], 'ART.I', 'No')
-		set(YX.m3, NULL, 'ART.I', YX.m3[, factor(as.character(ART.I))])
-		set(YX.m3, YX.m3[,which(is.na(ART.F) | ART.pulse=='Yes')], 'ART.F', 'No')
-		set(YX.m3, NULL, 'ART.F', YX.m3[, factor(as.character(ART.F))])
-		set(YX.m3, YX.m3[,which(is.na(ART.A) | ART.pulse=='Yes')], 'ART.A', 'No')
-		set(YX.m3, NULL, 'ART.A', YX.m3[, factor(as.character(ART.A))])
-		set(YX.m3, YX.m3[,which(is.na(ART.P) | ART.pulse=='Yes')], 'ART.P', 'No')
-		set(YX.m3, NULL, 'ART.P', YX.m3[, factor(as.character(ART.P))])		
-		#	number of drugs -- independent. I can set nDrug==0 to NA but then I get 'contrasts can be applied only to factors with 2' because this is perf corr with ART.I
-		#	set reference group for dummy coding to ART.3  
-		YX.m3[, ART.nDrug.c:=NULL]
-		YX.m3[, ART.nDrug.c:=NA_integer_]
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3)], 'ART.nDrug.c', 2L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3)], 'ART.nDrug.c', 1L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'ART.nDrug.c', 3L)
-		set(YX.m3, NULL, 'ART.nDrug.c', YX.m3[, factor(ART.nDrug.c, levels=1:3, labels=c('ART.3','ART.l3','ART.g3'))])
-		if( YX.m3[, any(is.na(ART.nDrug.c))] ) stop('unexpected NA in ART.nDrug.c')
-		#	type of drugs for ART.3 
-		#	set reference group for dummy coding to ART.3.NRT.PI
-		#	include pulse as separate
-		YX.m3[, ART.tDrug.c:=NULL]
-		YX.m3[, ART.tDrug.c:=NA_integer_]
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==0)], 'ART.tDrug.c', 2L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.tDrug.c', 3L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tDrug.c', 1L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.tDrug.c', 4L)		
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tDrug.c', 5L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tDrug.c', 6L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT==0 & ART.nPI==0 & ART.nNNRT>0)], 'ART.tDrug.c', 7L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT==0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tDrug.c', 8L)
-		#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tnDrug.c', NA_integer_)		#exclude ART with indication		
-		set(YX.m3, NULL, 'ART.tDrug.c', YX.m3[, factor(ART.tDrug.c, levels=1:8, labels=c('ART.NRT.PI','ART.None','ART.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.NRT','ART.PI.NNRT','ART.NNRT','ART.PI'))])										
-		if( YX.m3[, any(is.na(ART.tDrug.c))] ) stop('unexpected NA in ART.tDrug.c')
-		#	number and type of drugs for ART.3 
-		#	set reference group for dummy coding to ART.3.NRT.PI
-		#	include pulse as separate
-		YX.m3[, ART.tiDrug.c:=NULL]
-		YX.m3[, ART.tiDrug.c:=NA_integer_]
-		set(YX.m3, YX.m3[,which(ART.I=='Yes')], 'ART.tiDrug.c', 2L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3 & ART.nDrug>0)], 'ART.tiDrug.c', 3L)		
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'ART.tiDrug.c', 4L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.tiDrug.c', 5L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tiDrug.c', 1L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.tiDrug.c', 6L)
-		#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tiDrug.c', 7L)	-- these are all on pulsed, need to take out
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tiDrug.c', 7L)		
-		#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tiDrug.c', NA_integer_)		#exclude ART with indication		
-		set(YX.m3, NULL, 'ART.tiDrug.c', YX.m3[, factor(ART.tiDrug.c, levels=1:7, labels=c('ART.3.NRT.PI','ART.I','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.NRT'))])
-		if( YX.m3[, any(is.na(ART.tiDrug.c))] ) stop('unexpected NA in ART.tiDrug.c')
-		#	number and type of drugs for ART.3 
-		#	set reference group for dummy coding to ART.3.NRT.PI
-		#	do not include ART.I as separate		
-		YX.m3[, ART.tnDrug.c:=NULL]
-		YX.m3[, ART.tnDrug.c:=NA_integer_]
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3)], 'ART.tnDrug.c', 3L)		
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'ART.tnDrug.c', 4L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.tnDrug.c', 5L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tnDrug.c', 1L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.tnDrug.c', 6L)
-		#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tnDrug.c', 7L)	-- these are all on pulsed, need to take out
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tnDrug.c', 2L)		
-		#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tnDrug.c', NA_integer_)		#exclude ART with indication		
-		set(YX.m3, NULL, 'ART.tnDrug.c', YX.m3[, factor(ART.tnDrug.c, levels=1:6, labels=c('ART.3.NRT.PI','ART.3.NRT','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT'))])
-		if( YX.m3[, any(is.na(ART.tnDrug.c))] ) stop('unexpected NA in ART.tnDrug.c')		
-		#	number and type of drugs for ART.3 
-		#	set reference group for dummy coding to ART.3.NRT.PI
-		#	do not include pulse as separate
-		YX.m3[, ART.tpDrug.c:=NULL]
-		YX.m3[, ART.tpDrug.c:=NA_integer_]
-		set(YX.m3, YX.m3[,which(ART.I=='Yes')], 'ART.tpDrug.c', 2L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug<3 & ART.nDrug>0)], 'ART.tpDrug.c', 3L)		
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug>3)], 'ART.tpDrug.c', 4L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.tpDrug.c', 5L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tpDrug.c', 1L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.tpDrug.c', 6L)
-		#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tpDrug.c', 7L)	-- these are all on pulsed, need to take out
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tpDrug.c', 7L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'ART.tpDrug.c', 8L)
-		#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tpDrug.c', NA_integer_)		#exclude ART with indication		
-		set(YX.m3, NULL, 'ART.tpDrug.c', YX.m3[, factor(ART.tpDrug.c, levels=1:8, labels=c('ART.3.NRT.PI','ART.I','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.NRT','ART.pulse'))])											#still has pulse has NA
-		if( YX.m3[, any(is.na(ART.tpDrug.c))] ) stop('unexpected NA in ART.tpDrug.c')
-		#
-		#	number of drugs conditional on no indication
-		#
-		YX.m3[, ART.ntstage.c:=NULL]
-		YX.m3[, ART.ntstage.c:=NA_integer_]
-		
-		
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )		
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')		
-		#	ART no indication: nDrug
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug!=3)], 'stage', 'ART.3n')
-		
-		
-		
-		set(YX.m3, YX.m3[,which(ART.I=='Yes')], 'ART.ntstage.c', 2L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3 & ART.nDrug>0)], 'ART.ntstage.c', 3L)		
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'ART.ntstage.c', 4L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.ntstage.c', 5L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.ntstage.c', 1L)
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.ntstage.c', 6L)
-		#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.ntstage.c', 7L)	-- these are all on pulsed, need to take out
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.ntstage.c', 7L)		
-		#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.ntstage.c', NA_integer_)		#exclude ART with indication		
-		set(YX.m3, NULL, 'ART.ntstage.c', YX.m3[, factor(ART.ntstage.c, levels=1:7, labels=c('ART.3.NRT.PI','ART.I','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.NRT'))])
-		if( YX.m3[, any(is.na(ART.ntstage.c))] ) stop('unexpected NA in ART.tiDrug.c')
-
-		
-		
-		#set(YX.m3, YX.m3[, which(stage=='ART.started' & (ART.I=='Yes' | ART.F=='Yes' | ART.A=='Yes' | ART.P=='Yes' | ART.pulse=='Yes'))], 'stage', 'ART.ind.Y' )
-		#set(YX.m3, YX.m3[, which(stage=='ART.started')], 'stage', 'ART.ind.N')		
-		set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])
-		
-		#	ART indicators without number/type
-		YX.m3.fit1 	<- betareg(score.Y ~ ART.pulse+ART.I+ART.F+ART.P+ART.A, link='log', weights=w, data = YX.m3)
-		YX.m3.fit1 	<- betareg(score.Y ~ ART.I+ART.P+ART.A+ART.pulse+ART.F, link='log', weights=w, data = YX.m3)
-		#	ART indicators and number
-		cf			<- coef(betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		YX.m3.fit2 	<- betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))
-		#	variation in variance not significant
-		cf			<- coef(betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
-		YX.m3.fit2b <- betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))		
-		cf			<- coef(betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.nDrug.c+ART.pulse+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
-		YX.m3.fit2c <- betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.nDrug.c+ART.pulse+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))		
-		cf			<- coef(betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.pulse+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
-		YX.m3.fit2d <- betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.pulse+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))
-		require(lmtest)
-		lrtest(YX.m3.fit2, YX.m3.fit2b)
-		lrtest(YX.m3.fit2, YX.m3.fit2c)
-		lrtest(YX.m3.fit2, YX.m3.fit2d)
-		
-		#	ART number of drugs and type of drugs independent
-		#cf			<- coef(betareg(score.Y ~ ART.tDrug.c+ART.nDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		#YX.m3.fit2 	<- betareg(score.Y ~ ART.tDrug.c+ART.nDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(cf))
-				
-		#	ART.tpDrug.c (with pulse) independent of indicators		
-		cf			<- coef(betareg(score.Y ~ ART.tpDrug.c+ART.A+ART.F+ART.P-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		YX.m3.fit3 	<- betareg(score.Y ~ ART.tpDrug.c+ART.A+ART.F+ART.P-1, link='log', weights=w, data = YX.m3, start=list(cf))
-		
-		#	ART.tiDrug.c independent of indicators and of pulse	-- this is better than YX.m3.fit2
-		cf			<- coef(betareg(score.Y ~ ART.tiDrug.c+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		YX.m3.fit4 	<- betareg(score.Y ~ ART.tiDrug.c+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(cf))
-		
-		#	ART.tnDrug.c independent of indicators and of pulse and of ART.I
-		cf			<- coef(betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		YX.m3.fit5 	<- betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(cf))
-		
-		do.call('cbind',list( YX.m3[, sd(score.Y), by='ART.pulse'], YX.m3[, sd(score.Y), by='ART.P'], YX.m3[, sd(score.Y), by='ART.A'], YX.m3[, sd(score.Y), by='ART.F'], YX.m3[, sd(score.Y), by='ART.I'] ))
-		YX.m3[, sd(score.Y), by='ART.nDrug.c']
-		
-		
-		AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5 )
-		AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, k=YX.m3[, log(round(sum(w)))])
-		sapply( list(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5), '[[', 'pseudo.r.squared')
-		
-		
-		cf 			<- coef(lm(log(score.Y) ~ ART.pulse+ART.nDrug.c+ART.tDrug.c+ART.F+ART.P+ART.A-1, weights=w, data = subset(YX.m3, score.Y>0.1))) 
-		cf			<- coef(betareg(score.Y ~ ART.pulse+ART.nDrug.c+ART.tDrug.c+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		YX.m3.fit1 	<- betareg(score.Y ~ ART.pulse+ART.nDrug.c+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))
-		
-		
-		set(YX.m3, NULL, 'stage', YX.m3[,stage.orig])
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )		
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')		
-		#	ART no indication: nDrug
-		#	split weight for PI and NNRT
-		#if('score.Y'%in%colnames(YX.m3))
-		#{
-		#	tmp		<- YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)]
-		#	tmp2	<- YX.m3[tmp,]
-		#	set(tmp2, NULL, 'w', tmp2[, w/2])
-		#	set(tmp2, NULL, 'stage', 'ART.3.NRT.PI')
-		#	YX.m3	<- rbind(YX.m3, tmp2)
-		#	set(YX.m3, tmp, 'w', YX.m3[tmp, w/2])
-		#	set(YX.m3, tmp, 'stage', 'ART.3.NRT.NNRT')		
-		#}
-		#			
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'stage', 'ART.3.NRT.PI.NNRT')
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 )], 'stage', 'ART.3.NRT.PI')
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nNNRT>0)], 'stage', 'ART.3.NRT.NNRT')
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 )], 'stage', 'ART.3.NRT')
-		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'stage', 'ART.3.NNRT.PI')
-		#	add mx viral load during infection window
-		YX.m3	<- merge(YX.m3, YX.m3[, {
-							tmp<- which(!is.na(lRNA))
-							list( lRNA.mx= ifelse(length(tmp), max(lRNA[tmp]), NA_real_) )
-						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))								
-		#	focus after ART initiation
-		YX.m3	<- subset( YX.m3, !stage%in%c('UAm','UAy','DAm','DAy','D1<=350','D1<=550','D1>550','D1.NA','U'))
-		set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])
-		#
-		if('score.Y'%in%colnames(YX.m3))
-			YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, score.Y, stage, lRNA.mx, CDCC, lRNA, contact, fw.up.med, w, stage.orig  ))	
-		if(!'score.Y'%in%colnames(YX.m2))
-			YX.m3	<- subset(YX.m3, select=c(t, t.Patient, Patient, stage, lRNA.mx, CDCC, lRNA, contact, fw.up.med, stage.orig  ))		
-		
-		YX.m3
-		
+	
 		#cat(paste('\nstratify by', method))
 		#if(method=='VL1stsu')
 		#{			
-			YX.m3		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))	
-			X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))				
+		YX.m3		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))	
+		X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))				
 		#}
 		#
+		
+		#	ART indicators without number/type	
+		YX.m3.fit.i 	<- betareg(score.Y ~ ART.I+ART.P+ART.A+ART.pulse+ART.F, link='log', weights=w, data = YX.m3)
+		#	ART indicators and number
+		cf				<- coef(betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+		YX.m3.fit.ni 	<- betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))		
+		#	ART.tnDrug.c independent of indicators and of pulse and of ART.I
+		cf				<- coef(betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+		YX.m3.fit.tni 	<- betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(cf))		
+		#	number of drugs conditional on no indication				
+		YX.m3.fit.nic 	<- betareg(score.Y ~ ART.nstage.c-1, link='log', weights=w, data = YX.m3 )		
+		#	number and type of drugs conditional on no indication				
+		YX.m3.fit.tnic 	<- betareg(score.Y ~ ART.ntstage.c-1, link='log', weights=w, data = YX.m3 )
+		
+		
+		
+		AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7 )
+		AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7, k=YX.m3[, log(round(sum(w)))])
+		sapply( list(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7), '[[', 'pseudo.r.squared')
+		
+		
+		
 		cat(paste('\nregression on data set'))
 		YX.m3.fit1 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3)	
 		YX.m3.fit1b <- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.m3)
@@ -4415,6 +4204,157 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 }
 ######################################################################################
 project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA, score.Y.cut=1e-2)
+{	
+	#	Treatment cascade & ART risk groups
+	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis
+	#	
+	#	PQ: are there ART risk groups?
+	#	PQ: is VL the causal pathway?		--> currently problematic with uniform infection window approach
+	#	SQ: is ART pulse associated with higher transmissibility?
+	YX.m3	<- copy(YX)
+	YX.m3[, U.score:=NULL]
+	if('score.Y'%in%colnames(YX.m3))
+		set(YX.m3, NULL, 'score.Y', YX.m3[,(score.Y*(nrow(YX.m3)-1)+0.5)/nrow(YX.m3)] )					
+	#	transmitter acute
+	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
+	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')	
+	set(YX.m3, YX.m3[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
+	set(YX.m3, YX.m3[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )				
+	#	stratify Diag by first CD4 after diagnosis
+	tmp		<- subset(df.all, select=c(Patient, AnyPos_T1, PosCD4_T1, CD4_T1))
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)	
+	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	print( subset( tmp, is.na(CD4.c) ) )
+	setnames(tmp, 'Patient', 't.Patient')
+	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
+	YX.m3	<- merge(YX.m3, subset(tmp, select=c(t.Patient, CD4.c)), by='t.Patient')
+	tmp		<- YX.m3[, which(stage=='Diag')]
+	set(YX.m3, tmp, 'stage', YX.m3[tmp, CD4.c])
+	YX.m3[, CD4.c:=NULL]		
+	YX.m3[, stage.orig:= stage]
+	YX.m3	<- subset( YX.m3,stage=='ART.started' )
+	#
+	#	ART indication risk factors
+	#
+	set(YX.m3, YX.m3[,which(is.na(ART.pulse))], 'ART.pulse', 'No')
+	set(YX.m3, NULL, 'ART.pulse', YX.m3[, factor(ART.pulse)])	
+	if( YX.m3[, any(is.na(ART.pulse))] ) stop('unexpected NA in ART.pulse')
+	set(YX.m3, YX.m3[,which(is.na(ART.I) | ART.pulse=='Yes')], 'ART.I', 'No')
+	set(YX.m3, NULL, 'ART.I', YX.m3[, factor(as.character(ART.I))])
+	set(YX.m3, YX.m3[,which(is.na(ART.F) | ART.pulse=='Yes')], 'ART.F', 'No')
+	set(YX.m3, NULL, 'ART.F', YX.m3[, factor(as.character(ART.F))])
+	set(YX.m3, YX.m3[,which(is.na(ART.A) | ART.pulse=='Yes')], 'ART.A', 'No')
+	set(YX.m3, NULL, 'ART.A', YX.m3[, factor(as.character(ART.A))])
+	set(YX.m3, YX.m3[,which(is.na(ART.P) | ART.pulse=='Yes')], 'ART.P', 'No')
+	set(YX.m3, NULL, 'ART.P', YX.m3[, factor(as.character(ART.P))])		
+	#	number of drugs -- independent. I can set nDrug==0 to NA but then I get 'contrasts can be applied only to factors with 2' because this is perf corr with ART.I
+	#	set reference group for dummy coding to ART.3  
+	YX.m3[, ART.nDrug.c:=NULL]
+	YX.m3[, ART.nDrug.c:=NA_integer_]
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3)], 'ART.nDrug.c', 2L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3)], 'ART.nDrug.c', 1L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'ART.nDrug.c', 3L)
+	set(YX.m3, NULL, 'ART.nDrug.c', YX.m3[, factor(ART.nDrug.c, levels=1:3, labels=c('ART.3','ART.l3','ART.g3'))])
+	if( YX.m3[, any(is.na(ART.nDrug.c))] ) stop('unexpected NA in ART.nDrug.c')
+	#	type of drugs for ART.3 
+	#	set reference group for dummy coding to ART.3.NRT.PI
+	#	include pulse as separate
+	YX.m3[, ART.tDrug.c:=NULL]
+	YX.m3[, ART.tDrug.c:=NA_integer_]
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==0)], 'ART.tDrug.c', 2L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.tDrug.c', 3L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tDrug.c', 1L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.tDrug.c', 4L)		
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tDrug.c', 5L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tDrug.c', 6L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT==0 & ART.nPI==0 & ART.nNNRT>0)], 'ART.tDrug.c', 7L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT==0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tDrug.c', 8L)
+	#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tnDrug.c', NA_integer_)		#exclude ART with indication		
+	set(YX.m3, NULL, 'ART.tDrug.c', YX.m3[, factor(ART.tDrug.c, levels=1:8, labels=c('ART.NRT.PI','ART.None','ART.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.NRT','ART.PI.NNRT','ART.NNRT','ART.PI'))])										
+	if( YX.m3[, any(is.na(ART.tDrug.c))] ) stop('unexpected NA in ART.tDrug.c')
+	#	number and type of drugs for ART.3 
+	#	set reference group for dummy coding to ART.3.NRT.PI
+	#	do not include ART.I as separate		
+	YX.m3[, ART.tnDrug.c:=NULL]
+	YX.m3[, ART.tnDrug.c:=NA_integer_]
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3)], 'ART.tnDrug.c', 3L)		
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'ART.tnDrug.c', 4L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.tnDrug.c', 5L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tnDrug.c', 1L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.tnDrug.c', 6L)
+	#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tnDrug.c', 7L)	-- these are all on pulsed, need to take out
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tnDrug.c', 2L)		
+	#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tnDrug.c', NA_integer_)		#exclude ART with indication		
+	set(YX.m3, NULL, 'ART.tnDrug.c', YX.m3[, factor(ART.tnDrug.c, levels=1:6, labels=c('ART.3.NRT.PI','ART.3.NRT','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT'))])
+	if( YX.m3[, any(is.na(ART.tnDrug.c))] ) stop('unexpected NA in ART.tnDrug.c')		
+	#	number and type of drugs for ART.3 
+	#	set reference group for dummy coding to ART.3.NRT.PI
+	#	do not include pulse as separate
+	YX.m3[, ART.tpDrug.c:=NULL]
+	YX.m3[, ART.tpDrug.c:=NA_integer_]
+	set(YX.m3, YX.m3[,which(ART.I=='Yes')], 'ART.tpDrug.c', 2L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug<3 & ART.nDrug>0)], 'ART.tpDrug.c', 3L)		
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug>3)], 'ART.tpDrug.c', 4L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.tpDrug.c', 5L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tpDrug.c', 1L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.tpDrug.c', 6L)
+	#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tpDrug.c', 7L)	-- these are all on pulsed, need to take out
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tpDrug.c', 7L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'ART.tpDrug.c', 8L)
+	#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tpDrug.c', NA_integer_)		#exclude ART with indication		
+	set(YX.m3, NULL, 'ART.tpDrug.c', YX.m3[, factor(ART.tpDrug.c, levels=1:8, labels=c('ART.3.NRT.PI','ART.I','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.pulse'))])											#still has pulse has NA
+	if( YX.m3[, any(is.na(ART.tpDrug.c))] ) stop('unexpected NA in ART.tpDrug.c')
+	#
+	#	number of drugs conditional on no indication
+	#
+	YX.m3[, ART.nstage.c:=NULL]
+	YX.m3[, ART.nstage.c:=NA_integer_]
+	set(YX.m3, YX.m3[, which(ART.pulse=='Yes')], 'ART.nstage.c', 2L )			#ART.I excludes pulsed
+	set(YX.m3, YX.m3[, which(ART.I=='Yes')], 'ART.nstage.c', 3L)
+	set(YX.m3, YX.m3[, which(ART.P=='Yes')], 'ART.nstage.c', 4L)
+	set(YX.m3, YX.m3[, which(ART.A=='Yes')], 'ART.nstage.c', 5L)
+	set(YX.m3, YX.m3[, which(ART.F=='Yes')], 'ART.nstage.c', 6L)				
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.nstage.c) & ART.nDrug<3 & ART.nDrug>0)], 'ART.nstage.c', 7L)		
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.nstage.c) & ART.nDrug>3)], 'ART.nstage.c', 8L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.nstage.c) & ART.nDrug==3)], 'ART.nstage.c', 1L)
+	set(YX.m3, NULL, 'ART.nstage.c', YX.m3[, factor(ART.nstage.c, levels=1:8, labels=c('ART.3','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3'))])
+	if( YX.m3[, any(is.na(ART.nstage.c))] ) stop('unexpected ART.nstage.c')
+	#
+	#	number and type of drugs conditional on no indication
+	#
+	YX.m3[, ART.ntstage.c:=NULL]
+	YX.m3[, ART.ntstage.c:=NA_integer_]
+	set(YX.m3, YX.m3[, which(ART.pulse=='Yes')], 'ART.ntstage.c', 2L )			#ART.I excludes pulsed
+	set(YX.m3, YX.m3[, which(ART.I=='Yes')], 'ART.ntstage.c', 3L)
+	set(YX.m3, YX.m3[, which(ART.P=='Yes')], 'ART.ntstage.c', 4L)
+	set(YX.m3, YX.m3[, which(ART.A=='Yes')], 'ART.ntstage.c', 5L)
+	set(YX.m3, YX.m3[, which(ART.F=='Yes')], 'ART.ntstage.c', 6L)				
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nDrug<3 & ART.nDrug>0)], 'ART.ntstage.c', 7L)		
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nDrug>3)], 'ART.ntstage.c', 8L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.ntstage.c', 1L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.ntstage.c', 9L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.ntstage.c', 10L)
+	#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.ntstage.c', 7L)	-- these are all on pulsed, need to take out
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.ntstage.c', 11L)						
+	set(YX.m3, NULL, 'ART.ntstage.c', YX.m3[, factor(ART.ntstage.c, levels=1:11, labels=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT'))])
+	if( YX.m3[, any(is.na(ART.ntstage.c))] ) stop('unexpected ART.ntstage.c')
+	#
+	#	add mx viral load during infection window
+	#
+	YX.m3	<- merge(YX.m3, YX.m3[, {
+						tmp<- which(!is.na(lRNA))
+						list( lRNA.mx= ifelse(length(tmp), max(lRNA[tmp]), NA_real_) )
+					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))								
+	#	focus after ART initiation
+	YX.m3	<- subset( YX.m3, !stage%in%c('UAm','UAy','DAm','DAy','D1<=350','D1<=550','D1>550','D1.NA','U'))
+	set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])
+	#
+	YX.m3
+}
+######################################################################################
+project.athena.Fisheretal.YX.model3.stratify.v1.ARTriskgroups<- function(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA, score.Y.cut=1e-2)
 {	
 	#	Treatment cascade & ART risk groups
 	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis
@@ -4974,6 +4914,57 @@ project.athena.Fisheretal.YX.model3_v2<- function(YX, clumsm.info, vl.suppressed
 		
 		ggplot(YX.m3, aes(stage, score.Y)) + geom_boxplot() + geom_jitter(size=0.4)
 	}	
+	if(1)
+	{
+		YX.m3		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))	
+		#X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))				
+		#}
+		#
+		
+		
+		set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])
+		
+		#	ART indicators without number/type
+		YX.m3.fit1 	<- betareg(score.Y ~ ART.pulse+ART.I+ART.F+ART.P+ART.A, link='log', weights=w, data = YX.m3)
+		YX.m3.fit1 	<- betareg(score.Y ~ ART.I+ART.P+ART.A+ART.pulse+ART.F, link='log', weights=w, data = YX.m3)
+		#	ART indicators and number
+		cf			<- coef(betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+		YX.m3.fit2 	<- betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))
+		#	variation in variance not significant
+		cf			<- coef(betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
+		YX.m3.fit2b <- betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))		
+		cf			<- coef(betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.nDrug.c+ART.pulse+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
+		YX.m3.fit2c <- betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.nDrug.c+ART.pulse+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))		
+		cf			<- coef(betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.pulse+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
+		YX.m3.fit2d <- betareg(score.Y ~ ART.nDrug.c+ART.pulse+ART.I+ART.F+ART.P+ART.A-1 | ART.pulse+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))
+		require(lmtest)
+		lrtest(YX.m3.fit2, YX.m3.fit2b)
+		lrtest(YX.m3.fit2, YX.m3.fit2c)
+		lrtest(YX.m3.fit2, YX.m3.fit2d)
+		
+		#	ART number of drugs and type of drugs independent
+		#cf			<- coef(betareg(score.Y ~ ART.tDrug.c+ART.nDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+		#YX.m3.fit2 	<- betareg(score.Y ~ ART.tDrug.c+ART.nDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(cf))
+		
+		#	ART.tpDrug.c (with pulse) independent of indicators		
+		cf			<- coef(betareg(score.Y ~ ART.tpDrug.c+ART.A+ART.F+ART.P-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+		YX.m3.fit3 	<- betareg(score.Y ~ ART.tpDrug.c+ART.A+ART.F+ART.P-1, link='log', weights=w, data = YX.m3, start=list(cf))
+		
+		#	ART.tiDrug.c independent of indicators and of pulse	-- this is better than YX.m3.fit2
+		cf			<- coef(betareg(score.Y ~ ART.tiDrug.c+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+		YX.m3.fit4 	<- betareg(score.Y ~ ART.tiDrug.c+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(cf))
+		
+		#	ART.tnDrug.c independent of indicators and of pulse and of ART.I
+		cf			<- coef(betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+		YX.m3.fit5 	<- betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(cf))
+		
+		#	number of drugs conditional on no indication				
+		YX.m3.fit6 	<- betareg(score.Y ~ ART.nstage.c-1, link='log', weights=w, data = YX.m3 )
+		
+		#	number and type of drugs conditional on no indication				
+		YX.m3.fit7 	<- betareg(score.Y ~ ART.ntstage.c-1, link='log', weights=w, data = YX.m3 )
+		
+	}
 }
 ######################################################################################
 project.athena.Fisheretal.YX.model3<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))
@@ -6824,6 +6815,7 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy,
 		print(tmp)
 		tmp					<- merge( cluphy.map.nodectime, tmp, by=c('cluster','node'), allow.cartesian=TRUE)	
 		
+		print(tmp)
 		print( subset( tmp, FASTASampleCode=='' | t.FASTASampleCode==''))
 		print( subset( tmp, is.na(FASTASampleCode) | is.na(t.FASTASampleCode)))
 		print( subset( tmp, is.na(t.queryT) ) )
