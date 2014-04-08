@@ -4096,8 +4096,7 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		set(YX.m3, YX.m3[,which(is.na(ART.A) | ART.pulse=='Yes')], 'ART.A', 'No')
 		set(YX.m3, NULL, 'ART.A', YX.m3[, factor(as.character(ART.A))])
 		set(YX.m3, YX.m3[,which(is.na(ART.P) | ART.pulse=='Yes')], 'ART.P', 'No')
-		set(YX.m3, NULL, 'ART.P', YX.m3[, factor(as.character(ART.P))])
-		
+		set(YX.m3, NULL, 'ART.P', YX.m3[, factor(as.character(ART.P))])		
 		#	number of drugs -- independent. I can set nDrug==0 to NA but then I get 'contrasts can be applied only to factors with 2' because this is perf corr with ART.I
 		#	set reference group for dummy coding to ART.3  
 		YX.m3[, ART.nDrug.c:=NULL]
@@ -4171,6 +4170,35 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tpDrug.c', NA_integer_)		#exclude ART with indication		
 		set(YX.m3, NULL, 'ART.tpDrug.c', YX.m3[, factor(ART.tpDrug.c, levels=1:8, labels=c('ART.3.NRT.PI','ART.I','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.NRT','ART.pulse'))])											#still has pulse has NA
 		if( YX.m3[, any(is.na(ART.tpDrug.c))] ) stop('unexpected NA in ART.tpDrug.c')
+		#
+		#	number of drugs conditional on no indication
+		#
+		YX.m3[, ART.ntstage.c:=NULL]
+		YX.m3[, ART.ntstage.c:=NA_integer_]
+		
+		
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'stage', 'ART.pulse.Y' )		
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'stage', 'ART.I')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'stage', 'ART.P')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'stage', 'ART.A')
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'stage', 'ART.F')		
+		#	ART no indication: nDrug
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug!=3)], 'stage', 'ART.3n')
+		
+		
+		
+		set(YX.m3, YX.m3[,which(ART.I=='Yes')], 'ART.ntstage.c', 2L)
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3 & ART.nDrug>0)], 'ART.ntstage.c', 3L)		
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'ART.ntstage.c', 4L)
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.ntstage.c', 5L)
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.ntstage.c', 1L)
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.ntstage.c', 6L)
+		#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.ntstage.c', 7L)	-- these are all on pulsed, need to take out
+		set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.ntstage.c', 7L)		
+		#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.ntstage.c', NA_integer_)		#exclude ART with indication		
+		set(YX.m3, NULL, 'ART.ntstage.c', YX.m3[, factor(ART.ntstage.c, levels=1:7, labels=c('ART.3.NRT.PI','ART.I','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.NRT'))])
+		if( YX.m3[, any(is.na(ART.ntstage.c))] ) stop('unexpected NA in ART.tiDrug.c')
+
 		
 		
 		#set(YX.m3, YX.m3[, which(stage=='ART.started' & (ART.I=='Yes' | ART.F=='Yes' | ART.A=='Yes' | ART.P=='Yes' | ART.pulse=='Yes'))], 'stage', 'ART.ind.Y' )
@@ -6753,6 +6781,7 @@ project.athena.Fisheretal.v3.Y.coal<- function(df.tpairs, clumsm.info, X.pt, clu
 ######################################################################################
 project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, t.period= 0.25, coal.within.inf.grace= 0.25, save.file=NA, resume=0 )
 {
+	#coal.t.Uscore.min=0.01; coal.within.inf.grace= 0.25
 	#YX.tpairs	<- subset(X.pt, select=c(t.Patient, Patient, cluster, FASTASampleCode, t.FASTASampleCode))
 	#setkey(YX.tpairs, FASTASampleCode, t.FASTASampleCode)
 	#YX.tpairs	<- unique(YX.tpairs)
@@ -6773,7 +6802,7 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy,
 		df.tpairs.mrca		<- YX.tpairs[J(cluphy.info[, unique(cluster)]),]	
 		cat(paste('\nnumber of pot transmitters for which dated phylogenies are available, n=',df.tpairs.mrca[,length(unique(t.Patient))]))		
 		#	compute mrcas of tpairs 
-		print(cluphy)
+		print(str(cluphy))
 		tmp					<- df.tpairs.mrca[,	list(node=getMRCA(cluphy, c(FASTASampleCode, t.FASTASampleCode))), by=c('FASTASampleCode','t.FASTASampleCode')]
 		#if(nrow(tmp)!=nrow(df.tpairs.mrca))	stop('unexpected length of tmp')
 		df.tpairs.mrca		<- merge(df.tpairs.mrca, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))		
@@ -6794,6 +6823,12 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy,
 		set(tmp, NULL, 'AnyPos_T1', tmp[, AnyPos_T1+coal.within.inf.grace])
 		print(tmp)
 		tmp					<- merge( cluphy.map.nodectime, tmp, by=c('cluster','node'), allow.cartesian=TRUE)	
+		
+		print( subset( tmp, FASTASampleCode=='' | t.FASTASampleCode==''))
+		print( subset( tmp, is.na(FASTASampleCode) | is.na(t.FASTASampleCode)))
+		debug	<- tmp[,  list(n=length(which(!is.na(cdf)))), 	by=c('FASTASampleCode','t.FASTASampleCode')]	
+		print(subset( debug, n<2 ))
+		
 		coal				<- tmp[,  {
 											if(length(which(!is.na(cdf)))<2)
 											{
