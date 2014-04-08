@@ -630,6 +630,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, indir, insignat,
 		Y.coal					<- NULL
 		if(!is.null(cluphy) & !is.null(cluphy.info) & !is.null(cluphy.map.nodectime)  )
 		{
+			print(cluphy.map.nodectime)
 			file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw',method,'.R',sep='')		
 			Y.coal				<- project.athena.Fisheretal.Y.coal(YX.tpairs, df.all, YX.part1, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=file, resume=resume )			
 		}
@@ -4284,10 +4285,11 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX, df.all
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.tnDrug.c', 5L)
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tnDrug.c', 1L)
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.tnDrug.c', 6L)
-	#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tnDrug.c', 7L)	-- these are all on pulsed, need to take out
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tnDrug.c', 7L)	
+	#-- these are all on pulsed, need to take out
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tnDrug.c', 2L)		
 	#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tnDrug.c', NA_integer_)		#exclude ART with indication		
-	set(YX.m3, NULL, 'ART.tnDrug.c', YX.m3[, factor(ART.tnDrug.c, levels=1:6, labels=c('ART.3.NRT.PI','ART.3.NRT','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT'))])
+	set(YX.m3, NULL, 'ART.tnDrug.c', YX.m3[, factor(ART.tnDrug.c, levels=1:7, labels=c('ART.3.NRT.PI','ART.3.NRT','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NNRT.PI'))])
 	if( YX.m3[, any(is.na(ART.tnDrug.c))] ) stop('unexpected NA in ART.tnDrug.c')		
 	#	number and type of drugs for ART.3 
 	#	set reference group for dummy coding to ART.3.NRT.PI
@@ -4300,11 +4302,12 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX, df.all
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.tpDrug.c', 5L)
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.tpDrug.c', 1L)
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.tpDrug.c', 6L)
-	#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tpDrug.c', 7L)	-- these are all on pulsed, need to take out
-	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tpDrug.c', 7L)
-	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'ART.tpDrug.c', 8L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tpDrug.c', 7L)	
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.tpDrug.c', 8L)	
+	#-- these are all on pulsed, need to take out
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'ART.tpDrug.c', 9L)	
 	#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tpDrug.c', NA_integer_)		#exclude ART with indication		
-	set(YX.m3, NULL, 'ART.tpDrug.c', YX.m3[, factor(ART.tpDrug.c, levels=1:8, labels=c('ART.3.NRT.PI','ART.I','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.pulse'))])											#still has pulse has NA
+	set(YX.m3, NULL, 'ART.tpDrug.c', YX.m3[, factor(ART.tpDrug.c, levels=1:9, labels=c('ART.3.NRT.PI','ART.I','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.pulse'))])											#still has pulse has NA
 	if( YX.m3[, any(is.na(ART.tpDrug.c))] ) stop('unexpected NA in ART.tpDrug.c')
 	#
 	#	number of drugs conditional on no indication
@@ -4335,10 +4338,10 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX, df.all
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nDrug>3)], 'ART.ntstage.c', 8L)
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT>0)], 'ART.ntstage.c', 1L)
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.ntstage.c', 9L)
-	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.ntstage.c', 10L)
-	#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.ntstage.c', 7L)	-- these are all on pulsed, need to take out
-	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.ntstage.c', 11L)						
-	set(YX.m3, NULL, 'ART.ntstage.c', YX.m3[, factor(ART.ntstage.c, levels=1:11, labels=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT'))])
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 )], 'ART.ntstage.c', 10L)	
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.ntstage.c', 11L)				
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.ntstage.c', 12L)	#-- these are all on pulsed, need to take out
+	set(YX.m3, NULL, 'ART.ntstage.c', YX.m3[, factor(ART.ntstage.c, levels=1:12, labels=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI'))])
 	if( YX.m3[, any(is.na(ART.ntstage.c))] ) stop('unexpected ART.ntstage.c')
 	#
 	#	add mx viral load during infection window
@@ -6770,7 +6773,7 @@ project.athena.Fisheretal.v3.Y.coal<- function(df.tpairs, clumsm.info, X.pt, clu
 	coal		
 }
 ######################################################################################
-project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, t.period= 0.25, coal.within.inf.grace= 0.25, save.file=NA, resume=0 )
+project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period= 0.25, save.file=NA, resume=0 )
 {
 	#coal.t.Uscore.min=0.01; coal.within.inf.grace= 0.25
 	#YX.tpairs	<- subset(X.pt, select=c(t.Patient, Patient, cluster, FASTASampleCode, t.FASTASampleCode))
@@ -6813,6 +6816,7 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, YX.part1, cluphy,
 		tmp					<- merge(tmp, subset(df.all, select=c(FASTASampleCode, AnyPos_T1)), by='FASTASampleCode')
 		set(tmp, NULL, 'AnyPos_T1', tmp[, AnyPos_T1+coal.within.inf.grace])
 		print(tmp)
+		print(cluphy.map.nodectime)
 		tmp					<- merge( cluphy.map.nodectime, tmp, by=c('cluster','node'), allow.cartesian=TRUE)	
 		
 		print(tmp)
