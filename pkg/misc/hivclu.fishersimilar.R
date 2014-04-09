@@ -4150,13 +4150,11 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 					tmp					<- unique(subset(YX.m3, select=Patient))
 					tmp					<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
 					YX.m3.bs			<- merge( YX.m3, tmp, by='Patient', allow.cartesian=TRUE )
-					
+					#
 					tmp					<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
 					YX.m3.fit.ni.bs 	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = YX.m3.bs, start=list(tmp))					
 					tmp					<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
 					YX.m3.fit.ni.rr.bs	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3.bs, start=list(tmp))
-					
-					
 					#	odds ratio and risk ratio
 					risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{
 																					tmp	<- c(	eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep=''))),
@@ -4172,21 +4170,18 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 																				},by=c('coef','coef.ref')]
 					risk.ans.bs		<- rbind(risk.ans.bs, tmp)													
 			
-					#	for proportions
-			#	number of transmissions and proportion of transmissions		
-			tmp			<- risk.df[, 		{
-						tmp		<- my.prop.from.log(YX.m3.fit.ni.rr, coef, 1.962)
-						tmp[4]	<- eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep='')))
-						list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[4]<2*EPS, 0., tmp[1]), n=tmp[4], l95.asym=NA, u95.asym=NA)
-					},by= 'coef']
-			tmp[, v:= tmp[,expbeta*n]]	
-			
-			
-			#TODO
-			
-					tmp				<- rbind(unique(risk.df), data.table(risk='U', risk.ref=risk.ref))				 
-					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'prob', v=my.prop.from.log(YX.m3.fit1b.bs, paste(risk.prefix,risk,sep=''), 1.962)[1]), by= 'risk'])
-					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'n', v=subset(YX.m3.bs, stage==risk)[, sum(w)]),by= 'risk'])				
+					#	for proportions					 
+					tmp			<- risk.df[, 		{
+														tmp		<- my.prop.from.log(YX.m3.fit.ni.rr.bs, coef, 1.962)
+														tmp[4]	<- eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep='')))
+														list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='prob', v=ifelse(tmp[4]<2*EPS, 0., tmp[1]) )
+													},by= 'coef']
+					risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))																	
+					tmp			<- risk.df[, 		{						
+														tmp	<- eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep='')))
+														list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'n', v=tmp )
+													},by= 'coef']
+					risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 					risk.ans.bs[, bs:=bs.i]
 				})
 		risk.ans.bs	<- do.call('rbind',tmp)
