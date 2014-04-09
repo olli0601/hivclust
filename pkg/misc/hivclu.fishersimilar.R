@@ -4118,8 +4118,7 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 										tmp	<- copy(predict.df)
 										set(tmp, NULL, risk, factor(factor))
 										list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(YX.m3.fit.ni, tmp, type='link')-predict(YX.m3.fit.ni, predict.df, type='link') ) )
-									},by=c('coef','coef.ref')]
-							
+									},by=c('coef','coef.ref')]							
 		tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
 										tmp	<- copy(predict.df)
 										set(tmp, NULL, risk, factor(factor))
@@ -4127,23 +4126,25 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 									},by=c('coef','coef.ref')]
 		risk.ans	<- rbind(risk.ans, tmp)	
 		#	person years in infection window	
-		tmp			<- risk.df[ , list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='PY', l95.asym=NA, u95.asym=NA, v=eval(parse(text=paste('X.seq[, length(which(',risk,'=="',factor,'"))]',sep='')))), by='coef'] 	
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, l95.asym, u95.asym)))
+		tmp			<- risk.df[ , list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='PY', v=eval(parse(text=paste('X.seq[, length(which(',risk,'=="',factor,'"))]',sep='')))), by='coef'] 	
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 		#	number of transmissions and proportion of transmissions		
 		tmp			<- risk.df[, 		{
-											tmp		<- my.prop.from.log(YX.m3.fit.ni.rr, coef, 1.962)
-											tmp[4]	<- eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep='')))
-											list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[4]<2*EPS, 0., tmp[1]), n=tmp[4], l95.asym=NA, u95.asym=NA)
+											tmp		<- copy(predict.df)
+											set(tmp, NULL, risk, factor(factor))
+											tmp		<- exp( predict(YX.m3.fit.ni.rr, tmp, type='link') )
+											tmp[2]	<- eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep='')))
+											list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[2]<2*EPS, 0., tmp[1]), n=tmp[2] )
 										},by= 'coef']
 		tmp[, v:= tmp[,expbeta*n]]	
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, l95.asym, u95.asym)))
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 		set(tmp, NULL, 'stat', 'P')
 		set(tmp, NULL, 'v', tmp[, v/sum(expbeta*n)])
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, l95.asym, u95.asym)))
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 		#	relative infectiousness
 		tmp			<- subset(risk.ans, stat=='PY' )[, sum(v)]
-		tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / tmp ), l95.asym=NA, u95.asym=NA ), by='coef']	
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, l95.asym, u95.asym)))	
+		tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / tmp ) ), by='coef']	
+		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))	
 		#	Bootstraps	on ratio and on prob
 		cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
 		tmp			<- lapply(seq_len(bs.n), function(bs.i)
@@ -5984,9 +5985,10 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, df.viro, vl.supp
 	}	
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
+project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
 {
-	YX.m2	<- copy(YX)
+	#YX.m2	<- copy(YX)
+	gc()
 	YX.m2[, U.score:=NULL]
 	#score.Y.cut<- 1e-8
 	#set(YX.m2, YX.m2[,which(score.Y<score.Y.cut)], 'score.Y', score.Y.cut)
@@ -6006,6 +6008,8 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX, df.all, df.v
 	tmp			<- unique(tmp)	
 	tmp[, CD4.c:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
 	cat(paste('\ntransmitters with no CD4 after diagnosis\n'))
+	lsos()
+	gc()
 	print( subset( tmp, is.na(CD4.c) ) )
 	setnames(tmp, 'Patient', 't.Patient')
 	set(tmp, tmp[, which(is.na(CD4.c))], 'CD4.c', 'D1.NA')
@@ -6245,10 +6249,11 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 	list(risk=risk.ans, or.fit=YX.m2.fit1, rr.fit=YX.m2.fit1b, risk.bs=risk.ans.bs)
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
+project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
 {
 	#vl.suppressed=log10(1e3); cd4.cut= c(-1, 350, 550, 5000); cd4.label=c('D1<=350','D1<=550','D1>550')	
-	YX.m2	<- copy(YX)
+	#YX.m2	<- copy(YX)
+	gc()
 	YX.m2[, U.score:=NULL]
 	if('score.Y'%in%colnames(YX.m2))
 		set(YX.m2, NULL, 'score.Y', YX.m2[,(score.Y*(nrow(YX.m2)-1)+0.5)/nrow(YX.m2)] )
@@ -6340,10 +6345,11 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX, df.all, df.viro,
 	YX.m2
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
+project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
 {
 	#vl.suppressed=log10(1e3); cd4.cut= c(-1, 350, 550, 5000); cd4.label=c('D1<=350','D1<=550','D1>550')	
-	YX.m2	<- copy(YX)
+	#YX.m2	<- copy(YX)
+	gc()
 	YX.m2[, U.score:=NULL]
 	if('score.Y'%in%colnames(YX.m2))
 		set(YX.m2, NULL, 'score.Y', YX.m2[,(score.Y*(nrow(YX.m2)-1)+0.5)/nrow(YX.m2)] )
