@@ -4074,8 +4074,9 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#	ART indicators and number
 		set(YX.m3, NULL, 'stage', YX.m3[, ART.nDrug.c])
 		set(X.seq, NULL, 'stage', X.seq[, ART.nDrug.c])
-		cf				<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+		cf				<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = subset(YX.m3, score.Y>0.1)))		
 		YX.m3.fit.ni 	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = YX.m3, start=list(cf))
+		cf				<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
 		YX.m3.fit.ni.rr <- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))
 		#	ART.tnDrug.c independent of indicators and of pulse and of ART.I
 		cf				<- coef(betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
@@ -4146,16 +4147,43 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 				{
 					if(bs.i%%100==0)	cat(paste('\nregression on bootstrap data sets bs.i=',bs.i))
 					#bootstrap over recently infected Patient
-					tmp				<- unique(subset(YX.m3, select=Patient))
-					tmp				<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
-					YX.m3.bs		<- merge( YX.m3, tmp, by='Patient', allow.cartesian=TRUE )				
-					YX.m3.fit1.bs 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3.bs)	
-					YX.m3.fit1b.bs 	<- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.m3.bs)
+					tmp					<- unique(subset(YX.m3, select=Patient))
+					tmp					<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
+					YX.m3.bs			<- merge( YX.m3, tmp, by='Patient', allow.cartesian=TRUE )
+					
+					tmp					<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
+					YX.m3.fit.ni.bs 	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = YX.m3.bs, start=list(tmp))					
+					tmp					<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
+					YX.m3.fit.ni.rr.bs	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3.bs, start=list(tmp))
+					
+					
 					#	odds ratio and risk ratio
-					risk.ans.bs		<- risk.df[, 	list(stat='OR', v=my.or.from.logit(YX.m3.fit1.bs, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m3.bs, stage==risk)[, sum(w)], subset(YX.m3.bs, stage==risk.ref)[, sum(w)], 1.962)[1]),	by=c('risk','risk.ref')]
-					tmp				<- risk.df[, 	list(stat='RR', v=my.rr.from.log(YX.m3.fit1b.bs, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m3.bs, stage==risk)[, sum(w)], subset(YX.m3.bs, stage==risk.ref)[, sum(w)], 1.962)[1]),	by=c('risk','risk.ref')]
-					risk.ans.bs		<- rbind(risk.ans.bs, tmp)
+					risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{
+																					tmp	<- c(	eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep=''))),
+																								eval(parse(text=paste('subset(YX.m3.bs, ',risk.ref,'=="',factor.ref,'")[, sum(w)]',sep='')))		)
+																					tmp	<- my.or.from.logit(YX.m3.fit.ni.bs, coef, coef.ref, tmp[1], tmp[2], 1.962)
+																					list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp[1])
+																				},by=c('coef','coef.ref')]
+					tmp					<- subset(risk.df, coef!=coef.ref)[, 	{
+																					tmp	<- c(	eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep=''))),
+																								eval(parse(text=paste('subset(YX.m3.bs, ',risk.ref,'=="',factor.ref,'")[, sum(w)]',sep='')))		)
+																					tmp	<- my.rr.from.log(YX.m3.fit.ni.rr.bs, coef, coef.ref, tmp[1], tmp[2], 1.962)
+																					list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp[1])
+																				},by=c('coef','coef.ref')]
+					risk.ans.bs		<- rbind(risk.ans.bs, tmp)													
+			
 					#	for proportions
+			#	number of transmissions and proportion of transmissions		
+			tmp			<- risk.df[, 		{
+						tmp		<- my.prop.from.log(YX.m3.fit.ni.rr, coef, 1.962)
+						tmp[4]	<- eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep='')))
+						list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[4]<2*EPS, 0., tmp[1]), n=tmp[4], l95.asym=NA, u95.asym=NA)
+					},by= 'coef']
+			tmp[, v:= tmp[,expbeta*n]]	
+			
+			
+			#TODO
+			
 					tmp				<- rbind(unique(risk.df), data.table(risk='U', risk.ref=risk.ref))				 
 					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'prob', v=my.prop.from.log(YX.m3.fit1b.bs, paste(risk.prefix,risk,sep=''), 1.962)[1]), by= 'risk'])
 					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'n', v=subset(YX.m3.bs, stage==risk)[, sum(w)]),by= 'risk'])				
@@ -7386,7 +7414,8 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			Y.infwindow				<- merge(Y.infwindow, tmp, by='Patient', allow.cartesian=TRUE)							#merge all seq pairs
 			YX.part1				<- merge(Y.infwindow, X.pt, by=c('FASTASampleCode','t.FASTASampleCode','t'), allow.cartesian=TRUE)
 			set(YX.part1,NULL,'FASTASampleCode', YX.part1[, as.character(FASTASampleCode)])
-			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])			
+			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])	
+			setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
 		}			
 		else if(is.na(sample.n))							#mode 2
 		{			
@@ -7397,6 +7426,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			X.pt					<- merge(X.pt, unique(subset( Y.infwindow, select=t )), by='t')		
 			YX.part1				<- merge(Y.infwindow, X.pt, by='t', allow.cartesian=TRUE)
 			cat(paste('\ncompleted big merge of patient pairs, nrows=',nrow(YX.part1)))
+			setkey(YX.part1, Patient, t.Patient, t)
 		}	
 		else if(!is.na(sample.n))							#mode 3
 		{
@@ -7428,11 +7458,11 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			YX.part1.batch	<- NULL			
 			cat(paste('\ncompleted sampled merge of sequence pairs, nrows=',nrow(YX.part1)))
 			set(YX.part1,NULL,'FASTASampleCode', YX.part1[, as.character(FASTASampleCode)])
-			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])			
+			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])		
+			setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
 		}	
 		if(!is.na(save.file))
-		{
-			setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
+		{			
 			YX.part1	<- unique(YX.part1)
 			cat(paste('\nsave YX.part1 to file=',save.file))
 			save(YX.part1, file=save.file)
