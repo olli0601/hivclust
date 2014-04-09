@@ -4161,24 +4161,24 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 					YX.m3.fit.ni.rr.bs	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3.bs, start=list(tmp))
 					#	odds ratio and risk ratio
 					risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{
-																					tmp	<- c(	eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep=''))),
-																								eval(parse(text=paste('subset(YX.m3.bs, ',risk.ref,'=="',factor.ref,'")[, sum(w)]',sep='')))		)
-																					tmp	<- my.or.from.logit(YX.m3.fit.ni.bs, coef, coef.ref, tmp[1], tmp[2], 1.962)
-																					list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp[1])
+																					tmp	<- copy(predict.df)
+																					set(tmp, NULL, risk, factor(factor))
+																					list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(YX.m3.fit.ni.bs, tmp, type='link')-predict(YX.m3.fit.ni.bs, predict.df, type='link') ) )
 																				},by=c('coef','coef.ref')]
 					tmp					<- subset(risk.df, coef!=coef.ref)[, 	{
-																					tmp	<- c(	eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep=''))),
-																								eval(parse(text=paste('subset(YX.m3.bs, ',risk.ref,'=="',factor.ref,'")[, sum(w)]',sep='')))		)
-																					tmp	<- my.rr.from.log(YX.m3.fit.ni.rr.bs, coef, coef.ref, tmp[1], tmp[2], 1.962)
-																					list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp[1])
+																					tmp	<- copy(predict.df)
+																					set(tmp, NULL, risk, factor(factor))
+																					list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(YX.m3.fit.ni.rr.bs, tmp, type='link')-predict(YX.m3.fit.ni.rr.bs, predict.df, type='link') ) )
 																				},by=c('coef','coef.ref')]
 					risk.ans.bs		<- rbind(risk.ans.bs, tmp)													
 			
-					#	for proportions					 
+					#	for proportions		
 					tmp			<- risk.df[, 		{
-														tmp		<- my.prop.from.log(YX.m3.fit.ni.rr.bs, coef, 1.962)
-														tmp[4]	<- eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep='')))
-														list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='prob', v=ifelse(tmp[4]<2*EPS, 0., tmp[1]) )
+														tmp		<- copy(predict.df)
+														set(tmp, NULL, risk, factor(factor))
+														tmp		<- exp( predict(YX.m3.fit.ni.rr.bs, tmp, type='link') )
+														tmp[2]	<- eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep='')))														
+														list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='prob', v=ifelse(tmp[2]<2*EPS, 0., tmp[1]) )
 													},by= 'coef']
 					risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))																	
 					tmp			<- risk.df[, 		{						
@@ -4189,18 +4189,19 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 					risk.ans.bs[, bs:=bs.i]
 				})
 		risk.ans.bs	<- do.call('rbind',tmp)
-		tmp			<- risk.ans.bs[, list(stat='N', risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='prob']*v[stat=='n'] ), by=c('bs','coef')]
-		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(risk, risk.ref, stat, v, bs)))
-		tmp			<- tmp[,	list(stat='P', risk=risk, risk.ref=risk.ref, v= v/sum(v, na.rm=TRUE)),	by='bs']
-		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(risk, risk.ref, stat, v, bs)))	
-		tmp			<- merge( subset(tmp, stat=='P'), subset(risk.ans, stat=='PY', select=c(risk, v)), by='risk' )
-		tmp[, v:= v.x/(v.y/nrow(X.seq))]
+		tmp			<- risk.ans.bs[, list(stat='N', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='prob']*v[stat=='n'] ), by=c('bs','coef')]
+		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
+		tmp			<- tmp[,	list(stat='P', coef=coef, risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', v= v/sum(v, na.rm=TRUE)),	by='bs']
+		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))	
+		tmp			<- merge( subset(tmp, stat=='P'), subset(risk.ans, stat=='PY', select=c(coef, v)), by='coef' )
+		subset(risk.ans, stat=='PY')[, sum(v)]
+		tmp[, v:= v.x/( v.y/subset(risk.ans, stat=='PY')[, sum(v)] )]
 		set(tmp, NULL, 'stat', 'RI')
-		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(risk, risk.ref, stat, v, bs)))
-		tmp			<- risk.ans.bs[,	list(l95.bs=quantile(v, prob=0.025, na.rm=TRUE), u95.bs=quantile(v, prob=0.975, na.rm=TRUE)), by=c('risk','risk.ref','stat')]
-		risk.ans	<- merge(risk.ans, tmp, by=c('risk','risk.ref','stat'), all.x=TRUE)
+		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
+		tmp			<- risk.ans.bs[,	list(l95.bs=quantile(v, prob=0.025, na.rm=TRUE), u95.bs=quantile(v, prob=0.975, na.rm=TRUE)), by=c('coef','coef.ref','stat')]
+		risk.ans	<- merge(risk.ans, tmp, by=c('coef','coef.ref','stat'), all.x=TRUE)
 		#	
-		setkey(risk.ans, stat, risk, risk.ref)
+		setkey(risk.ans, stat, coef, coef.ref)
 		
 		if(0)
 		{
@@ -6144,7 +6145,7 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 		#ggplot( data=melt(tmp, id='idx'), aes(x=idx, y=value, colour=variable)) + geom_points()
 		
 		#	odds ratio and risk ratio
-		risk.df		<- subset(data.table(risk=X.seq[,levels(stage)], risk.ref='U'), risk!=risk.ref)
+		risk.df		<- subset(data.table(risk=X.seq[,levels(stage)], risk.ref='U'), risk!='U')
 		risk.df		<- rbind(risk.df, data.table(risk=X.seq[,levels(stage)][1], risk.ref=X.seq[,levels(stage)][2]))
 		setkey(risk.df, risk)
 		risk.prefix	<- 'stage'
