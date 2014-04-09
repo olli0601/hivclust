@@ -4185,7 +4185,7 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 					risk.ans.bs[, bs:=bs.i]
 				})
 		risk.ans.bs	<- do.call('rbind',tmp)
-		tmp			<- risk.ans.bs[, list(stat='N', risk.ref='None', v= v[stat=='prob']*v[stat=='n'] ), by=c('bs','risk')]
+		tmp			<- risk.ans.bs[, list(stat='N', risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='prob']*v[stat=='n'] ), by=c('bs','coef')]
 		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(risk, risk.ref, stat, v, bs)))
 		tmp			<- tmp[,	list(stat='P', risk=risk, risk.ref=risk.ref, v= v/sum(v, na.rm=TRUE)),	by='bs']
 		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(risk, risk.ref, stat, v, bs)))	
@@ -6109,8 +6109,8 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 		cat(paste('\nstratify by', method))
 		if(method=='VL1stsu')
 		{			
-			YX.m2		<- project.athena.Fisheretal.YX.model2.VL1stsu.stratify(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
-			X.seq		<- project.athena.Fisheretal.YX.model2.VL1stsu.stratify(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)				
+			YX.m2		<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
+			X.seq		<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)				
 		}
 		if(method=='VLmxsu')
 		{			
@@ -7076,10 +7076,11 @@ project.athena.Fisheretal.exact.repro<- function()
 ######################################################################################
 my.or.from.logit<- function(object, f1, f2, n1, n2, u=1.962)
 {
+	n1			<- round(n1)
+	n2			<- round(n2)	
 	coef		<- coef(object)[c(f1, f2)]
 	sd.raw		<- sqrt(diag(vcov(object)))[c(f1,f2)]			
-	#sd.pooled	<- sqrt(sum(1/c(n1, n2))) * sqrt( ((n1-1)*sd.raw[1]*sd.raw[1] 	+ (n2-1)*sd.raw[2]*sd.raw[2] )/(n1-1 + n2-1)	)
-	sd.pooled	<- sqrt( ((n1-1)*sd.raw[1]*sd.raw[1] 	+ (n2-1)*sd.raw[2]*sd.raw[2] )/(n1-1 + n2-1)	)
+	sd.pooled	<- ifelse(n1<2 || n2<2, NA, sqrt( ((n1-1)*sd.raw[1]*sd.raw[1] 	+ (n2-1)*sd.raw[2]*sd.raw[2] )/(n1-1 + n2-1)	) )
 	lor			<- -diff( coef(object)[c(f1, f2)] )
 	or.ci		<- lor + c(-1,1)*u*sd.pooled
 	as.double(exp(c( lor, or.ci )))
@@ -7087,10 +7088,12 @@ my.or.from.logit<- function(object, f1, f2, n1, n2, u=1.962)
 ######################################################################################
 my.rr.from.log<- function(object, f1, f2, n1, n2, u=1.962)
 {
+	n1			<- round(n1)
+	n2			<- round(n2)
 	coef		<- coef(object)[c(f1, f2)]
 	sd.raw		<- sqrt(diag(vcov(object)))[c(f1,f2)]			
 	#sd.pooled	<- sqrt(sum(1/c(n1, n2))) * sqrt( ((n1-1)*sd.raw[1]*sd.raw[1] 	+ (n2-1)*sd.raw[2]*sd.raw[2] )/(n1-1 + n2-1)	)
-	sd.pooled	<- sqrt( ((n1-1)*sd.raw[1]*sd.raw[1] 	+ (n2-1)*sd.raw[2]*sd.raw[2] )/(n1-1 + n2-1)	)
+	sd.pooled	<- ifelse(n1<2 || n2<2, NA, sqrt( ((n1-1)*sd.raw[1]*sd.raw[1] 	+ (n2-1)*sd.raw[2]*sd.raw[2] )/(n1-1 + n2-1)	) )
 	lrr			<- -diff( coef(object)[c(f1, f2)] )
 	rr.ci		<- lrr + c(-1,1)*u*sd.pooled
 	as.double(exp(c( lrr, rr.ci )))
@@ -7823,7 +7826,6 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	endpoint: first VL suppressed
 	#
 	resume	<- 0
-	X.seq	<- X.seq[1:2e6,]
 	bs.n			<- 1e1
 	m2.method		<- 'VL1stsu'
 	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',m2.method,'_VL_adjAym_dt025','.pdf',sep='')
