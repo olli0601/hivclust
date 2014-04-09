@@ -7834,7 +7834,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	endpoint: first VL suppressed
 	#
 	resume	<- 0
-	bs.n			<- 1e1
+	bs.n			<- 1e3
 	m2.method		<- 'VL1stsu'
 	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',m2.method,'_VL_adjAym_dt025','.pdf',sep='')
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',m2.method,'.R',sep='')
