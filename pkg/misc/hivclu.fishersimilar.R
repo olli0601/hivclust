@@ -4086,6 +4086,8 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#	number and type of drugs conditional on no indication				
 		YX.m3.fit.tnic 	<- betareg(score.Y ~ ART.ntstage.c-1, link='log', weights=w, data = YX.m3 )
 		
+		YX.m3.fit.ni
+		
 		
 		
 		AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7 )
@@ -4102,6 +4104,8 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#tmp				<- data.table(idx=seq_len(nrow(YX.m3)),r.logit=YX.m3.fit1$residuals,r.log=YX.m3.fit1b$residuals)	
 		#ggplot( data=melt(tmp, id='idx'), aes(x=idx, y=value, colour=variable)) + geom_points()
 		
+		predict.df	<- data.table(stage=factor('ART.3', levels=X.seq[, levels(stage)]), ART.pulse=factor('No',levels=c('No','Yes')), ART.I=factor('No',levels=c('No','Yes')), ART.F=factor('No',levels=c('No','Yes')), ART.P=factor('No',levels=c('No','Yes')), ART.A=factor('No',levels=c('No','Yes')))
+		predict.df	<- data.table(stage='ART.3', ART.pulse='No', ART.I='No', ART.F='No', ART.P='No', ART.A='No')
 		#	odds ratio and risk ratio
 		risk.df		<- data.table( risk= c(rep('stage',3), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3','ART.l3','ART.g3', rep('Yes',5)))
 		risk.df		<- risk.df[, list(coef=paste(risk,factor,sep='') ), by=c('risk','factor')]
@@ -4110,17 +4114,16 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		
 		setkey(risk.df, risk)
 		
-		risk.ans	<- subset(risk.df, coef!=coef.ref)[, 	{
-										tmp	<- c(	eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep=''))),
-													eval(parse(text=paste('subset(YX.m3, ',risk.ref,'=="',factor.ref,'")[, sum(w)]',sep='')))		)
-										tmp	<- my.or.from.logit(YX.m3.fit.ni, coef, coef.ref, tmp[1], tmp[2], 1.962)
-										list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
+		risk.ans	<- subset(risk.df, coef!=coef.ref)[, 	{										
+										tmp	<- copy(predict.df)
+										set(tmp, NULL, risk, factor(factor))
+										list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(YX.m3.fit.ni, tmp, type='link')-predict(YX.m3.fit.ni, predict.df, type='link') ) )
 									},by=c('coef','coef.ref')]
+							
 		tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
-										tmp	<- c(	eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep=''))),
-													eval(parse(text=paste('subset(YX.m3, ',risk.ref,'=="',factor.ref,'")[, sum(w)]',sep='')))		)										
-										tmp	<- my.rr.from.log(YX.m3.fit.ni.rr, coef, coef.ref, tmp[1], tmp[2], 1.962)
-										list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
+										tmp	<- copy(predict.df)
+										set(tmp, NULL, risk, factor(factor))
+										list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(YX.m3.fit.ni.rr, tmp, type='link')-predict(YX.m3.fit.ni.rr, predict.df, type='link') ) )										
 									},by=c('coef','coef.ref')]
 		risk.ans	<- rbind(risk.ans, tmp)	
 		#	person years in infection window	
@@ -6012,14 +6015,17 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX, df.all, df.v
 	YX.m2[, CD4.c:=NULL]
 	YX.m2[, table(stage)]
 	#	if transmitter acute, set undiagnosed to undiagnosed and acute
+	cat(paste('\nsetting UAy UAm\n'))
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')
 	#set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute%in%acute.select)], 'stage', 'UA')
 	YX.m2[, stage.orig:= stage]
 	#
+	cat(paste('\nsetting PoslRNA_T1\n'))
 	tmp			<- unique(subset( df.all, select=c(Patient, PoslRNA_T1) ))
 	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
 	YX.m2		<- merge(YX.m2, tmp, by= 't.Patient')	
+	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, w, stage.orig  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
@@ -6069,10 +6075,12 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX, df.all, df.v
 	#
 	#	using given VL threshold 
 	#		
+	cat(paste('\nsettting PosRNA, lRNA\n'))
 	set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
 	tmp			<- subset(df.viro, select=c(Patient, PosRNA, lRNA))
 	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
 	set(tmp, NULL, 't.PosRNA', hivc.db.Date2numeric(tmp[,t.PosRNA]))
+	cat(paste('\nsettting t.ARTSu_T1\n'))
 	tmp			<- merge( unique(subset(YX.m2, select=c(t.Patient, t.AnyT_T1))), tmp, by='t.Patient' )
 	tmp			<- subset(tmp, t.AnyT_T1<=t.PosRNA)[, 	{
 				z<- which(t.lRNA<vl.suppressed)
