@@ -6185,6 +6185,7 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 				{
 					if(bs.i%%100==0)	cat(paste('\nregression on bootstrap data sets bs.i=',bs.i))
 					#bootstrap over recently infected Patient
+					gc()
 					tmp				<- unique(subset(YX, select=Patient))
 					tmp				<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
 					YX.bs			<- merge( YX, tmp, by='Patient', allow.cartesian=TRUE )				
