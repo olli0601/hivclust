@@ -4176,29 +4176,38 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 					tmp					<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
 					YX.m3.bs			<- merge( YX.m3, tmp, by='Patient', allow.cartesian=TRUE )
 					#
-					tmp					<- coef(betareg(formula=formula, link='logit', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
-					betafit.or.bs 		<- betareg(formula=formula, link='logit', weights=w, data = YX.m3.bs, start=list(tmp))					
-					tmp					<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
-					betafit.rr.bs		<- betareg(formula=formula, link='log', weights=w, data = YX.m3.bs, start=list(tmp))
+					bs.repeat			<- 1
+					while(bs.repeat)
+					{
+						bs.repeat		<- 0
+						tryCatch({								
+									tmp				<- coef(betareg(formula=formula, link='logit', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
+									betafit.or.bs 	<- betareg(formula=formula, link='logit', weights=w, data = YX.m3.bs, start=list(tmp))					
+									tmp				<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
+									betafit.rr.bs	<- betareg(formula=formula, link='log', weights=w, data = YX.m3.bs, start=list(tmp))
+								}, error=function(e){ print(e$message); bs.repeat<<- 1})						
+					}					
 					#	odds ratio and risk ratio
 					risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{
-																					tmp	<- copy(predict.df)
+																					tmp				<- copy(predict.df)
 																					set(tmp, NULL, risk, factor(factor))
-																					list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(betafit.or.bs, tmp, type='link')-predict(betafit.or.bs, predict.df, type='link') ) )
+																					tryCatch( tmp	<- exp( predict(betafit.or.bs, tmp, type='link')-predict(betafit.or.bs, predict.df, type='link') ), error=function(e){ print(e$message); tmp<<- NA_real_})
+																					list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
 																				},by=c('coef','coef.ref')]
 					tmp					<- subset(risk.df, coef!=coef.ref)[, 	{
-																					tmp	<- copy(predict.df)
+																					tmp				<- copy(predict.df)
 																					set(tmp, NULL, risk, factor(factor))
-																					list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(betafit.rr.bs, tmp, type='link')-predict(betafit.rr.bs, predict.df, type='link') ) )
+																					tryCatch( tmp	<- exp( predict(betafit.rr.bs, tmp, type='link')-predict(betafit.rr.bs, predict.df, type='link') ), error=function(e){ print(e$message); tmp<<- NA_real_})
+																					list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
 																				},by=c('coef','coef.ref')]
 					risk.ans.bs			<- rbind(risk.ans.bs, tmp)													
 			
 					#	for proportions		
 					tmp			<- risk.df[, 		{
-														tmp		<- copy(predict.df)
+														tmp				<- copy(predict.df)
 														set(tmp, NULL, risk, factor(factor))
-														tmp		<- exp( predict(betafit.rr.bs, tmp, type='link') )
-														tmp[2]	<- eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep='')))														
+														tryCatch( tmp	<- exp( predict(betafit.rr.bs, tmp, type='link') ), error=function(e){ print(e$message); tmp<<- NA_real_})														
+														tmp[2]			<- eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep='')))														
 														list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='prob', v=ifelse(tmp[2]<2*EPS, 0., tmp[1]) )
 													},by= 'coef']
 					risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))																	
@@ -6114,26 +6123,27 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 		cat(paste('\nstratify by', method))
 		if(method=='VL1stsu')
 		{			
-			YX.m2		<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
+			YX			<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
 			X.seq		<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)				
 		}
 		if(method=='VLmxsu')
 		{			
-			YX.m2		<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
+			YX			<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
 			X.seq		<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
 		}
 		if(method=='VLtsu')
 		{			
-			YX.m2		<- project.athena.Fisheretal.YX.model2.stratify.VLt(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
+			YX			<- project.athena.Fisheretal.YX.model2.stratify.VLt(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
 			X.seq		<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
 		}
 		#
+		gc()
 		cat(paste('\nregression on data set'))
-		YX.m2.fit1 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)	
-		YX.m2.fit1b <- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.m2)
+		YX.fit1 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX)	
+		YX.fit1b 	<- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX)
 		#require(VGAM)
-		#YX.m2.fit1c <- vglm(score.Y ~ stage-1, link='log', tobit(Lower=0, Upper=1), data = YX.m2)
-		#tmp				<- data.table(idx=seq_len(nrow(YX.m2)),r.logit=YX.m2.fit1$residuals,r.log=YX.m2.fit1b$residuals)	
+		#YX.fit1c <- vglm(score.Y ~ stage-1, link='log', tobit(Lower=0, Upper=1), data = YX)
+		#tmp				<- data.table(idx=seq_len(nrow(YX)),r.logit=YX.fit1$residuals,r.log=YX.fit1b$residuals)	
 		#ggplot( data=melt(tmp, id='idx'), aes(x=idx, y=value, colour=variable)) + geom_points()
 		
 		#	odds ratio and risk ratio
@@ -6142,11 +6152,11 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 		setkey(risk.df, risk)
 		risk.prefix	<- 'stage'
 		risk.ans	<- risk.df[, 	{
-										tmp	<- my.or.from.logit(YX.m2.fit1, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m2, stage==risk)[, sum(w)], subset(YX.m2, stage==risk.ref)[, sum(w)], 1.962)
+										tmp	<- my.or.from.logit(YX.fit1, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX, stage==risk)[, sum(w)], subset(YX, stage==risk.ref)[, sum(w)], 1.962)
 										list(stat= 'OR', v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
 									},by=c('risk','risk.ref')]
 		tmp			<- risk.df[, 	{
-										tmp	<- my.rr.from.log(YX.m2.fit1b, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m2, stage==risk)[, sum(w)], subset(YX.m2, stage==risk.ref)[, sum(w)], 1.962)
+										tmp	<- my.rr.from.log(YX.fit1b, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX, stage==risk)[, sum(w)], subset(YX, stage==risk.ref)[, sum(w)], 1.962)
 										list(stat= 'RR', v=tmp[1], l95.asym=tmp[2], u95.asym=tmp[3])
 									},by=c('risk','risk.ref')]
 		risk.ans	<- rbind(risk.ans, tmp)	
@@ -6157,8 +6167,8 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 		#	number of transmissions and proportion of transmissions
 		tmp			<- rbind(unique(risk.df), data.table(risk='U', risk.ref='U'))
 		tmp			<- tmp[, 		{
-												tmp		<- my.prop.from.log(YX.m2.fit1b, paste(risk.prefix,risk,sep=''), 1.962)
-												tmp[4]	<- subset(YX.m2, stage==risk)[, sum(w)]
+												tmp		<- my.prop.from.log(YX.fit1b, paste(risk.prefix,risk,sep=''), 1.962)
+												tmp[4]	<- subset(YX, stage==risk)[, sum(w)]
 												list(risk.ref='None', stat= 'N', expbeta=ifelse(tmp[4]<2*EPS, 0., tmp[1]), n=tmp[4], l95.asym=NA, u95.asym=NA)
 											},by= 'risk']
 		tmp[, v:= tmp[,expbeta*n]]	
@@ -6175,19 +6185,19 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 				{
 					if(bs.i%%100==0)	cat(paste('\nregression on bootstrap data sets bs.i=',bs.i))
 					#bootstrap over recently infected Patient
-					tmp				<- unique(subset(YX.m2, select=Patient))
+					tmp				<- unique(subset(YX, select=Patient))
 					tmp				<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
-					YX.m2.bs		<- merge( YX.m2, tmp, by='Patient', allow.cartesian=TRUE )				
-					YX.m2.fit1.bs 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2.bs)	
-					YX.m2.fit1b.bs 	<- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.m2.bs)
+					YX.bs			<- merge( YX, tmp, by='Patient', allow.cartesian=TRUE )				
+					YX.fit1.bs 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.bs)	
+					YX.fit1b.bs 	<- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.bs)
 					#	odds ratio and risk ratio
-					risk.ans.bs		<- risk.df[, 	list(stat='OR', v=my.or.from.logit(YX.m2.fit1.bs, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m2.bs, stage==risk)[, sum(w)], subset(YX.m2.bs, stage==risk.ref)[, sum(w)], 1.962)[1]),	by=c('risk','risk.ref')]
-					tmp				<- risk.df[, 	list(stat='RR', v=my.rr.from.log(YX.m2.fit1b.bs, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m2.bs, stage==risk)[, sum(w)], subset(YX.m2.bs, stage==risk.ref)[, sum(w)], 1.962)[1]),	by=c('risk','risk.ref')]
+					risk.ans.bs		<- risk.df[, 	list(stat='OR', v=my.or.from.logit(YX.fit1.bs, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.bs, stage==risk)[, sum(w)], subset(YX.bs, stage==risk.ref)[, sum(w)], 1.962)[1]),	by=c('risk','risk.ref')]
+					tmp				<- risk.df[, 	list(stat='RR', v=my.rr.from.log(YX.fit1b.bs, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.bs, stage==risk)[, sum(w)], subset(YX.bs, stage==risk.ref)[, sum(w)], 1.962)[1]),	by=c('risk','risk.ref')]
 					risk.ans.bs		<- rbind(risk.ans.bs, tmp)
 					#	for proportions
 					tmp				<- rbind(unique(risk.df), data.table(risk='U', risk.ref='U'))				 
-					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'prob', v=my.prop.from.log(YX.m2.fit1b.bs, paste(risk.prefix,risk,sep=''), 1.962)[1]), by= 'risk'])
-					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'n', v=subset(YX.m2.bs, stage==risk)[, sum(w)]),by= 'risk'])				
+					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'prob', v=my.prop.from.log(YX.fit1b.bs, paste(risk.prefix,risk,sep=''), 1.962)[1]), by= 'risk'])
+					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'n', v=subset(YX.bs, stage==risk)[, sum(w)]),by= 'risk'])				
 					risk.ans.bs[, bs:=bs.i]
 				})
 		risk.ans.bs	<- do.call('rbind',tmp)
@@ -6206,41 +6216,41 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 		
 		if(0)
 		{
-			tmp			<- cooks.distance(YX.m2.fit1)
-			plot(seq_along(tmp), tmp, type='h', col=YX.m2[, col], xlab='index', ylab='Cooks D')
-			legend('topright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
-			tmp			<- residuals(YX.m2.fit1)
-			plot(seq_along(tmp), tmp, type='p', pch=18, col=YX.m2[, col], xlab='index', ylab='std residuals')
-			legend('topright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])		
+			tmp			<- cooks.distance(YX.fit1)
+			plot(seq_along(tmp), tmp, type='h', col=YX[, col], xlab='index', ylab='Cooks D')
+			legend('topright', bty='n', border=NA, legend= YX[, levels(stage)], fill=YX[, unique(col)])
+			tmp			<- residuals(YX.fit1)
+			plot(seq_along(tmp), tmp, type='p', pch=18, col=YX[, col], xlab='index', ylab='std residuals')
+			legend('topright', bty='n', border=NA, legend= YX[, levels(stage)], fill=YX[, unique(col)])		
 		}
 		if(!is.na(plot.file.or))
 		{
 			cat(paste('\nplot to',plot.file.or))
 			pdf(file=plot.file.or, w=5, h=5)
-			tmp			<- data.table(stage= YX.m2[, levels(stage)], col=sapply( rainbow(YX.m2[, nlevels(stage)]), my.fade.col, alpha=0.5) )
+			tmp			<- data.table(stage= YX[, levels(stage)], col=sapply( rainbow(YX[, nlevels(stage)]), my.fade.col, alpha=0.5) )
 			set(tmp, NULL, 'stage', tmp[, factor(stage)])
-			YX.m2		<- merge(YX.m2, tmp, by='stage')
-			plot( seq_len(nrow(YX.m2)), YX.m2[, score.Y], pch=18, col= YX.m2[, col], cex=YX.m2[, w^0.4])
-			tmp				<- subset(YX.m2, select=stage)
-			lines(seq_len(nrow(tmp)), predict(YX.m2.fit1, tmp, type='response'))	
-			start			<- c( YX.m2.fit1$coef$mean + head( 2*sqrt(diag(vcov(YX.m2.fit1))), length(YX.m2.fit1$coef$mean)), YX.m2.fit1$coef$precision)
-			YX.m2.fit1.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m2, start=start, hessian=TRUE, maxit=0)		
-			start			<- c( YX.m2.fit1$coef$mean - head( 2*sqrt(diag(vcov(YX.m2.fit1))), length(YX.m2.fit1$coef$mean)), YX.m2.fit1$coef$precision)
-			YX.m2.fit1.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX.m2, start=start, hessian=TRUE, maxit=0)		
+			YX		<- merge(YX, tmp, by='stage')
+			plot( seq_len(nrow(YX)), YX[, score.Y], pch=18, col= YX[, col], cex=YX[, w^0.4])
+			tmp				<- subset(YX, select=stage)
+			lines(seq_len(nrow(tmp)), predict(YX.fit1, tmp, type='response'))	
+			start			<- c( YX.fit1$coef$mean + head( 2*sqrt(diag(vcov(YX.fit1))), length(YX.fit1$coef$mean)), YX.fit1$coef$precision)
+			YX.fit1.sup	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX, start=start, hessian=TRUE, maxit=0)		
+			start			<- c( YX.fit1$coef$mean - head( 2*sqrt(diag(vcov(YX.fit1))), length(YX.fit1$coef$mean)), YX.fit1$coef$precision)
+			YX.fit1.slw	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data=YX, start=start, hessian=TRUE, maxit=0)		
 			polygon(	c( seq_len(nrow(tmp)),rev(seq_len(nrow(tmp))) ), 
-					c( predict(YX.m2.fit1.sup, tmp, type='response'), rev(predict(YX.m2.fit1.slw, tmp, type='response'))), 
+					c( predict(YX.fit1.sup, tmp, type='response'), rev(predict(YX.fit1.slw, tmp, type='response'))), 
 					border=NA, col=my.fade.col('black',0.5) )
-			legend('bottomright', bty='n', border=NA, legend= YX.m2[, levels(stage)], fill=YX.m2[, unique(col)])
-			YX.m2[, col:=NULL]
+			legend('bottomright', bty='n', border=NA, legend= YX[, levels(stage)], fill=YX[, unique(col)])
+			YX[, col:=NULL]
 			dev.off()
 		}
 		if(!is.na(save.file))
 		{
 			cat(paste('\nsave to file', save.file))
-			save(risk.ans, risk.ans.bs, YX.m2.fit1, YX.m2.fit1b, file=save.file)
+			save(risk.ans, risk.ans.bs, YX.fit1, YX.fit1b, file=save.file)
 		}
 	}
-	list(risk=risk.ans, or.fit=YX.m2.fit1, rr.fit=YX.m2.fit1b, risk.bs=risk.ans.bs)
+	list(risk=risk.ans, or.fit=YX.fit1, rr.fit=YX.fit1b, risk.bs=risk.ans.bs)
 }
 ######################################################################################
 project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
