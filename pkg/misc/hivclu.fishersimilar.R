@@ -4060,69 +4060,84 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 	}
 	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
 	{
-	
-		#cat(paste('\nstratify by', method))
 		#if(method=='VL1stsu')
-		#{			
+		#{					
 		YX.m3		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))	
 		X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))				
 		#}
 		#
 		#	easiest: change stage as needed
-		#	ART indicators without number/type	
+		#	ART indicators without number/type
+		cat(paste('\nregression on data set by method', method))
+		if(method=='m3.ni')
+		{
+			#	ART indicators and number of drugs
+			#	ART.nDrug.c independent of indicators			
+			set(YX.m3, NULL, 'stage', YX.m3[, ART.nDrug.c])
+			set(X.seq, NULL, 'stage', X.seq[, ART.nDrug.c])
+			formula			<- 'score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1'
+			predict.df		<- data.table(stage=factor('ART.3', levels=X.seq[, levels(stage)]), ART.pulse=factor('No',levels=c('No','Yes')), ART.I=factor('No',levels=c('No','Yes')), ART.F=factor('No',levels=c('No','Yes')), ART.P=factor('No',levels=c('No','Yes')), ART.A=factor('No',levels=c('No','Yes')))
+			risk.df			<- data.table( risk= c(rep('stage',3), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3','ART.l3','ART.g3', rep('Yes',5)))
+			risk.df			<- risk.df[, list(coef=paste(risk,factor,sep='') ), by=c('risk','factor')]
+			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3',nrow(risk.df)))
+			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
+		}
+		if(method=='m3.nic')
+		{
+			#	number of drugs conditional on no indicators and ART indicators (not overlapping)  
+			set(YX.m3, NULL, 'stage', YX.m3[, ART.nstage.c])
+			set(X.seq, NULL, 'stage', X.seq[, ART.nstage.c])
+			formula			<- 'score.Y ~ stage-1'
+			predict.df		<- data.table(stage=factor('ART.3', levels=X.seq[, levels(stage)]))			
+			risk.df			<- data.table(risk='stage',factor=factor(X.seq[, levels(stage)], levels=factor(X.seq[, levels(stage)])))
+			risk.df			<- risk.df[, list(coef=paste(risk,factor,sep='') ), by=c('risk','factor')]
+			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3',nrow(risk.df)))
+			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
+		}
+		if(method=='m3.tni')
+		{
+			#	ART indicators and number/type of drugs
+			#	ART.tnDrug.c independent of indicators
+			set(YX.m3, NULL, 'stage', YX.m3[, ART.tnDrug.c])
+			set(X.seq, NULL, 'stage', X.seq[, ART.tnDrug.c])			
+			tmp				<- coef(betareg(score.Y ~ stage+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+			YX.m3.fit.tni 	<- betareg(score.Y ~ stage+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(tmp))					
+		}
+		if(method=='m3.tnic')
+		{
+			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)  
+			set(YX.m3, NULL, 'stage', YX.m3[, ART.ntstage.c])
+			set(X.seq, NULL, 'stage', X.seq[, ART.ntstage.c])
+			tmp				<- coef(betareg(score.Y ~ stage-1, link='logit', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+			betafit.or 		<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3, start=list(tmp))
+			tmp				<- coef(betareg(score.Y ~ stage-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
+			betafit.rr 		<- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.m3, start=list(tmp))			
+		}
+		
 		YX.m3.fit.i 	<- betareg(score.Y ~ ART.I+ART.P+ART.A+ART.pulse+ART.F, link='log', weights=w, data = YX.m3)
-		#	ART indicators and number
-		set(YX.m3, NULL, 'stage', YX.m3[, ART.nDrug.c])
-		set(X.seq, NULL, 'stage', X.seq[, ART.nDrug.c])
-		cf				<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		YX.m3.fit.ni 	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = YX.m3, start=list(cf))
-		cf				<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
-		YX.m3.fit.ni.rr <- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3, start=list(cf))
-		#	ART.tnDrug.c independent of indicators and of pulse and of ART.I
-		cf				<- coef(betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		YX.m3.fit.tni 	<- betareg(score.Y ~ ART.tnDrug.c+ART.I+ART.A+ART.F+ART.P+ART.pulse-1, link='log', weights=w, data = YX.m3, start=list(cf))		
-		#	number of drugs conditional on no indication				
-		YX.m3.fit.nic 	<- betareg(score.Y ~ ART.nstage.c-1, link='log', weights=w, data = YX.m3 )		
-		#	number and type of drugs conditional on no indication				
-		YX.m3.fit.tnic 	<- betareg(score.Y ~ ART.ntstage.c-1, link='log', weights=w, data = YX.m3 )
 		
-		YX.m3.fit.ni
+		tmp					<- coef(betareg(formula=formula, link='logit', weights=w, data = subset(YX.m3, score.Y>0.1)))		
+		betafit.or 			<- betareg(formula=formula, link='logit', weights=w, data = YX.m3, start=list(tmp))
+		tmp					<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
+		betafit.rr 			<- betareg(formula=formula, link='log', weights=w, data = YX.m3, start=list(tmp))
 		
+		#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7 )
+		#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7, k=YX.m3[, log(round(sum(w)))])
+		#sapply( list(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7), '[[', 'pseudo.r.squared')
 		
-		
-		AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7 )
-		AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7, k=YX.m3[, log(round(sum(w)))])
-		sapply( list(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7), '[[', 'pseudo.r.squared')
-		
-		
-		
-		cat(paste('\nregression on data set'))
-		YX.m3.fit1 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m3)	
-		YX.m3.fit1b <- betareg(score.Y ~ stage-1, link='log', weights=w, data = YX.m3)
-		#require(VGAM)
-		#YX.m2.fit1c <- vglm(score.Y ~ stage-1, link='log', tobit(Lower=0, Upper=1), data = YX.m3)
-		#tmp				<- data.table(idx=seq_len(nrow(YX.m3)),r.logit=YX.m3.fit1$residuals,r.log=YX.m3.fit1b$residuals)	
-		#ggplot( data=melt(tmp, id='idx'), aes(x=idx, y=value, colour=variable)) + geom_points()
-		
-		predict.df	<- data.table(stage=factor('ART.3', levels=X.seq[, levels(stage)]), ART.pulse=factor('No',levels=c('No','Yes')), ART.I=factor('No',levels=c('No','Yes')), ART.F=factor('No',levels=c('No','Yes')), ART.P=factor('No',levels=c('No','Yes')), ART.A=factor('No',levels=c('No','Yes')))
-		predict.df	<- data.table(stage='ART.3', ART.pulse='No', ART.I='No', ART.F='No', ART.P='No', ART.A='No')
 		#	odds ratio and risk ratio
-		risk.df		<- data.table( risk= c(rep('stage',3), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3','ART.l3','ART.g3', rep('Yes',5)))
-		risk.df		<- risk.df[, list(coef=paste(risk,factor,sep='') ), by=c('risk','factor')]
-		tmp			<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3',nrow(risk.df)))
-		risk.df		<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
 		
 		setkey(risk.df, risk)
 		
 		risk.ans	<- subset(risk.df, coef!=coef.ref)[, 	{										
 										tmp	<- copy(predict.df)
 										set(tmp, NULL, risk, factor(factor))
-										list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(YX.m3.fit.ni, tmp, type='link')-predict(YX.m3.fit.ni, predict.df, type='link') ) )
+										list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(betafit.or, tmp, type='link')-predict(betafit.or, predict.df, type='link') ) )
 									},by=c('coef','coef.ref')]							
 		tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
 										tmp	<- copy(predict.df)
 										set(tmp, NULL, risk, factor(factor))
-										list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(YX.m3.fit.ni.rr, tmp, type='link')-predict(YX.m3.fit.ni.rr, predict.df, type='link') ) )										
+										list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(betafit.rr, tmp, type='link')-predict(betafit.rr, predict.df, type='link') ) )										
 									},by=c('coef','coef.ref')]
 		risk.ans	<- rbind(risk.ans, tmp)	
 		#	person years in infection window	
@@ -4132,7 +4147,7 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		tmp			<- risk.df[, 		{
 											tmp		<- copy(predict.df)
 											set(tmp, NULL, risk, factor(factor))
-											tmp		<- exp( predict(YX.m3.fit.ni.rr, tmp, type='link') )
+											tmp		<- exp( predict(betafit.rr, tmp, type='link') )
 											tmp[2]	<- eval(parse(text=paste('subset(YX.m3, ',risk,'=="',factor,'")[, sum(w)]',sep='')))
 											list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[2]<2*EPS, 0., tmp[1]), n=tmp[2] )
 										},by= 'coef']
@@ -4155,28 +4170,28 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 					tmp					<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
 					YX.m3.bs			<- merge( YX.m3, tmp, by='Patient', allow.cartesian=TRUE )
 					#
-					tmp					<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
-					YX.m3.fit.ni.bs 	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='logit', weights=w, data = YX.m3.bs, start=list(tmp))					
-					tmp					<- coef(betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
-					YX.m3.fit.ni.rr.bs	<- betareg(score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1, link='log', weights=w, data = YX.m3.bs, start=list(tmp))
+					tmp					<- coef(betareg(formula=formula, link='logit', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
+					betafit.or.bs 		<- betareg(formula=formula, link='logit', weights=w, data = YX.m3.bs, start=list(tmp))					
+					tmp					<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
+					betafit.rr.bs		<- betareg(formula=formula, link='log', weights=w, data = YX.m3.bs, start=list(tmp))
 					#	odds ratio and risk ratio
 					risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{
 																					tmp	<- copy(predict.df)
 																					set(tmp, NULL, risk, factor(factor))
-																					list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(YX.m3.fit.ni.bs, tmp, type='link')-predict(YX.m3.fit.ni.bs, predict.df, type='link') ) )
+																					list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(betafit.or.bs, tmp, type='link')-predict(betafit.or.bs, predict.df, type='link') ) )
 																				},by=c('coef','coef.ref')]
 					tmp					<- subset(risk.df, coef!=coef.ref)[, 	{
 																					tmp	<- copy(predict.df)
 																					set(tmp, NULL, risk, factor(factor))
-																					list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(YX.m3.fit.ni.rr.bs, tmp, type='link')-predict(YX.m3.fit.ni.rr.bs, predict.df, type='link') ) )
+																					list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=exp( predict(betafit.rr.bs, tmp, type='link')-predict(betafit.rr.bs, predict.df, type='link') ) )
 																				},by=c('coef','coef.ref')]
-					risk.ans.bs		<- rbind(risk.ans.bs, tmp)													
+					risk.ans.bs			<- rbind(risk.ans.bs, tmp)													
 			
 					#	for proportions		
 					tmp			<- risk.df[, 		{
 														tmp		<- copy(predict.df)
 														set(tmp, NULL, risk, factor(factor))
-														tmp		<- exp( predict(YX.m3.fit.ni.rr.bs, tmp, type='link') )
+														tmp		<- exp( predict(betafit.rr.bs, tmp, type='link') )
 														tmp[2]	<- eval(parse(text=paste('subset(YX.m3.bs, ',risk,'=="',factor,'")[, sum(w)]',sep='')))														
 														list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='prob', v=ifelse(tmp[2]<2*EPS, 0., tmp[1]) )
 													},by= 'coef']
@@ -6163,7 +6178,7 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 		tmp			<- cbind( data.table(risk=rownames(tmp)), data.table(risk.ref='None', stat='PY', v=as.numeric(unclass(tmp)), l95.asym=NA, u95.asym=NA) )
 		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(risk, risk.ref, stat, v, l95.asym, u95.asym)))
 		#	number of transmissions and proportion of transmissions
-		tmp			<- rbind(unique(risk.df), data.table(risk='U', risk.ref=risk.ref))
+		tmp			<- rbind(unique(risk.df), data.table(risk='U', risk.ref='U'))
 		tmp			<- tmp[, 		{
 												tmp		<- my.prop.from.log(YX.m2.fit1b, paste(risk.prefix,risk,sep=''), 1.962)
 												tmp[4]	<- subset(YX.m2, stage==risk)[, sum(w)]
@@ -6193,7 +6208,7 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 					tmp				<- risk.df[, 	list(stat='RR', v=my.rr.from.log(YX.m2.fit1b.bs, paste(risk.prefix,risk,sep=''), paste(risk.prefix,risk.ref,sep=''), subset(YX.m2.bs, stage==risk)[, sum(w)], subset(YX.m2.bs, stage==risk.ref)[, sum(w)], 1.962)[1]),	by=c('risk','risk.ref')]
 					risk.ans.bs		<- rbind(risk.ans.bs, tmp)
 					#	for proportions
-					tmp				<- rbind(unique(risk.df), data.table(risk='U', risk.ref=risk.ref))				 
+					tmp				<- rbind(unique(risk.df), data.table(risk='U', risk.ref='U'))				 
 					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'prob', v=my.prop.from.log(YX.m2.fit1b.bs, paste(risk.prefix,risk,sep=''), 1.962)[1]), by= 'risk'])
 					risk.ans.bs		<- rbind(risk.ans.bs, tmp[, 	list(risk.ref='None', stat= 'n', v=subset(YX.m2.bs, stage==risk)[, sum(w)]),by= 'risk'])				
 					risk.ans.bs[, bs:=bs.i]
