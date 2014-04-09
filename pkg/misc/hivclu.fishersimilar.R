@@ -6459,6 +6459,8 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	if(!is.na(plot.file.varyvl))
 	{			
 		require(betareg)
+		print(YX.m2)
+		print(colnames(YX.m2))
 		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
 		VL.win		<- c( seq(100, 1000, by=100), seq(1250, 1e4, by=250) ) 
 		YX.m2.VL	<- sapply(VL.win, function(VL.cur)
