@@ -4043,6 +4043,162 @@ project.athena.Fisheretal.YX.model4<- function(YX, clumsm.info, vl.suppressed=lo
 	}
 }
 ######################################################################################
+project.athena.Fisheretal.estimate.risk<- function(YX, X.seq, formula, predict.df, risk.df, bs.n=1e3 )
+{
+	require(betareg)
+	#
+	tmp					<- coef(betareg(formula=formula, link='logit', weights=w, data = subset(YX.m3, score.Y>0.2)))		
+	betafit.or 			<- betareg(formula=formula, link='logit', weights=w, data = YX.m3, start=list(tmp))
+	tmp					<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3, score.Y>0.2)))
+	betafit.rr 			<- betareg(formula=formula, link='log', weights=w, data = YX.m3, start=list(tmp))
+	#YX.m3b	<- na.omit(subset(YX.m3, select=c(score.Y, stage, lRNA.mx, ART.pulse, ART.I, ART.F, ART.P, ART.A, w)))		
+	#tmp		<- gamlss(formula= formula, family=BE(mu.link='logit'), weights=w, data=YX.m3b)
+	
+	
+	
+	#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7 )
+	#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7, k=YX.m3[, log(round(sum(w)))])
+	#sapply( list(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7), '[[', 'pseudo.r.squared')
+	
+	#	odds ratio and risk ratio
+	risk.ans	<- subset(risk.df, coef!=coef.ref)[, 	{										
+				tmp				<- copy(predict.df)
+				tmp2			<- copy(predict.df)
+				set(tmp, NULL, risk, factor(factor))
+				corisk			<- intersect(colnames(risk.df), colnames(predict.df))
+				if(length(corisk))
+				{
+					tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
+					tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
+				}
+				#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
+				tryCatch( tmp	<- weighted.mean(exp(predict(betafit.or, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.or, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ print(w$message); tmp<<- NA_real_ })
+				list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
+			},by=c('coef','coef.ref')]	
+	tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
+				tmp				<- copy(predict.df)
+				tmp2			<- copy(predict.df)
+				set(tmp, NULL, risk, factor(factor))
+				corisk			<- intersect(colnames(risk.df), colnames(predict.df))
+				if(length(corisk))
+				{
+					tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
+					tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
+				}
+				#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
+				tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.rr, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ print(w$message); tmp<<- NA_real_ })
+				list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
+			},by=c('coef','coef.ref')]
+	risk.ans	<- rbind(risk.ans, tmp)	
+	#	person years in infection window
+	tmp			<- risk.df[, list(risk=risk, factor=factor, risk.ref="None", factor.ref="None", coef.ref="None", stat="PY", v=length(which(unclass(X.seq[, risk, with=FALSE])[[1]]==factor))), by='coef']
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#	number of transmissions and proportion of transmissions		
+	tmp			<- risk.df[, 		{
+				tmp					<- copy(predict.df)
+				set(tmp, NULL, risk, factor(factor))
+				corisk				<- intersect(colnames(risk.df), colnames(predict.df))
+				if(length(corisk))
+					tmp				<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)																																		
+				tryCatch( tmp		<- weighted.mean(exp(predict(betafit.rr, tmp, type='link')),w=tmp[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ print(w$message); tmp<<- NA_real_ })
+				tmp[2]				<- sum( YX.m3[ which(unclass(YX.m3[, risk, with=FALSE])[[1]]==factor), w] )
+				list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[2]<2*EPS, 0., tmp[1]), n=tmp[2] )
+			},by= 'coef']
+	tmp[, v:= tmp[,expbeta*n]]	
+	set(tmp, tmp[, which(v==0)],'v', NA_real_)
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	set(tmp, NULL, 'stat', 'P')
+	set(tmp, NULL, 'v', tmp[, v/sum(expbeta*n)])
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#	relative infectiousness
+	tmp			<- subset(risk.ans, stat=='PY' )[, sum(v)]
+	tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / tmp ) ), by='coef']
+	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))	
+	#	Bootstraps	on ratio and on prob
+	cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
+	tmp			<- lapply(seq_len(bs.n), function(bs.i)
+			{
+				if(bs.i%%100==0)	cat(paste('\nregression on bootstrap data sets bs.i=',bs.i))
+				#bootstrap over recently infected Patient
+				tmp					<- unique(subset(YX.m3, select=Patient))					
+				#
+				bs.repeat			<- 1
+				while(bs.repeat)
+				{
+					bs.repeat		<- 0
+					tryCatch({
+								YX.m3.bs		<- merge( YX.m3, tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ], by='Patient', allow.cartesian=TRUE )
+								betafit.or.bs	<- coef(betareg(formula=formula, link='logit', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
+								betafit.or.bs 	<- betareg(formula=formula, link='logit', weights=w, data = YX.m3.bs, start=list(betafit.or.bs))					
+								betafit.rr.bs	<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
+								betafit.rr.bs	<- betareg(formula=formula, link='log', weights=w, data = YX.m3.bs, start=list(betafit.rr.bs))
+							}, error=function(e){ print(e$message); bs.repeat<<- 1})						
+				}					
+				#	odds ratio and risk ratio
+				risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{
+							tmp				<- copy(predict.df)
+							tmp2			<- copy(predict.df)
+							set(tmp, NULL, risk, factor(factor))
+							corisk			<- intersect(colnames(risk.df), colnames(predict.df))
+							if(length(corisk))
+							{
+								tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
+								tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
+							}
+							#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
+							tryCatch( tmp	<- weighted.mean(exp(predict(betafit.or.bs, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.or.bs, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ tmp<<- NA_real_}, warning=function(w){ tmp<<- NA_real_ })
+							list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
+						},by=c('coef','coef.ref')]
+				tmp					<- subset(risk.df, coef!=coef.ref)[, 	{
+							tmp				<- copy(predict.df)
+							tmp2			<- copy(predict.df)
+							set(tmp, NULL, risk, factor(factor))
+							corisk			<- intersect(colnames(risk.df), colnames(predict.df))
+							if(length(corisk))
+							{
+								tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
+								tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
+							}
+							#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
+							tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr.bs, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.rr.bs, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ tmp<<- NA_real_}, warning=function(w){ tmp<<- NA_real_ })
+							list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
+						},by=c('coef','coef.ref')]
+				risk.ans.bs			<- rbind(risk.ans.bs, tmp)																
+				#	for proportions		
+				tmp			<- risk.df[, 		{
+							tmp				<- copy(predict.df)
+							set(tmp, NULL, risk, factor(factor))
+							corisk			<- intersect(colnames(risk.df), colnames(predict.df))
+							if(length(corisk))
+								tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
+							tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr.bs, tmp, type='link')),w=tmp[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ tmp<<- NA_real_ })																												
+							tmp[2]			<- sum( YX.m3.bs[ which(unclass(YX.m3.bs[, risk, with=FALSE])[[1]]==factor), w] )																												
+							list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='prob', v=ifelse(tmp[2]<2*EPS, 0., tmp[1]) )
+						},by= 'coef']
+				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))																	
+				tmp			<- risk.df[, list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'n', v=sum( YX.m3.bs[ which(unclass(YX.m3.bs[, risk, with=FALSE])[[1]]==factor), w] ) ),by= 'coef']
+				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+				risk.ans.bs[, bs:=bs.i]
+			})
+	risk.ans.bs	<- do.call('rbind',tmp)
+	tmp			<- risk.ans.bs[, list(stat='N', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='prob']*v[stat=='n'] ), by=c('bs','coef')]
+	set(tmp, tmp[, which(v==0)],'v', NA_real_)
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
+	tmp			<- tmp[,	list(stat='P', coef=coef, risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', v= v/sum(v, na.rm=TRUE)),	by='bs']		
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))	
+	tmp			<- merge( subset(tmp, stat=='P'), subset(risk.ans, stat=='PY', select=c(coef, v)), by='coef' )
+	tmp[, v:= v.x/( v.y/subset(risk.ans, stat=='PY')[, sum(v)] )]
+	set(tmp, NULL, 'stat', 'RI')
+	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
+	tmp			<- risk.ans.bs[,	list(l95.bs=quantile(v, prob=0.025, na.rm=TRUE), u95.bs=quantile(v, prob=0.975, na.rm=TRUE)), by=c('coef','coef.ref','stat')]
+	risk.ans	<- merge(risk.ans, tmp, by=c('coef','coef.ref','stat'), all.x=TRUE)
+	#	
+	setkey(risk.ans, stat, coef, coef.ref)
+	list(risk=risk.ans, fit.or=betafit.or, fit.rr=betafit.rr, risk.bs=risk.ans.bs)
+}
+######################################################################################
 project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, plot.file.varyvl=NA, plot.file.or=NA, bs.n=1e3, resume=TRUE, save.file=NA, method=NA)
 {
 	require(betareg)
@@ -4080,7 +4236,26 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		cat(paste('\nregression on data set by method', method))
 		if(method=='m2wmx.tp')
 		{
+			set(YX.m3, NULL, 'stage', YX.m3[, stage.tperiod])
+			set(X.seq, NULL, 'stage', X.seq[, stage.tperiod])
+			formula			<- 'score.Y ~ stage-1'
+			YX.m3.orig		<- copy(YX.m3)
+			X.seq.orig		<- copy(X.seq)
 			
+			tp				<- '3'
+			YX.m3			<- subset(YX.m3.orig, t.period==tp)
+			set(YX.m3, NULL, 'stage', YX.m3[,factor(as.character(stage))])
+			X.seq			<- subset(X.seq.orig, t.period==tp)
+			set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage))])
+			
+			predict.df		<- data.table(stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), w=1.)			
+			risk.df			<- data.table(risk='stage',factor=factor(X.seq[, levels(stage)], levels=factor(X.seq[, levels(stage)])))
+			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
+			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
+			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
+			
+			
+			ans				<- project.athena.Fisheretal.estimate.risk(YX, X.seq, formula, predict.df, risk.df, bs.n=1e3 )
 		}
 		if(method=='m3.i')
 		{
@@ -4177,168 +4352,16 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 								list(lRNA.mx=ifelse(is.nan(tmp), YX.m3[, mean( lRNA.mx, na.rm=TRUE )], tmp))
 							}, by='coef'], by='coef')			
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
-			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])										
+			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
+			
+			ans				<- project.athena.Fisheretal.estimate.risk(YX, X.seq, formula, predict.df, risk.df, bs.n=1e3 )						
 		}
-		
-		
-		#
-		tmp					<- coef(betareg(formula=formula, link='logit', weights=w, data = subset(YX.m3, score.Y>0.1)))		
-		betafit.or 			<- betareg(formula=formula, link='logit', weights=w, data = YX.m3, start=list(tmp))
-		tmp					<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
-		betafit.rr 			<- betareg(formula=formula, link='log', weights=w, data = YX.m3, start=list(tmp))
-		#YX.m3b	<- na.omit(subset(YX.m3, select=c(score.Y, stage, lRNA.mx, ART.pulse, ART.I, ART.F, ART.P, ART.A, w)))		
-		#tmp		<- gamlss(formula= formula, family=BE(mu.link='logit'), weights=w, data=YX.m3b)
-		
-		
-		
-		#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7 )
-		#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7, k=YX.m3[, log(round(sum(w)))])
-		#sapply( list(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7), '[[', 'pseudo.r.squared')
-		
-		#	odds ratio and risk ratio
-		risk.ans	<- subset(risk.df, coef!=coef.ref)[, 	{										
-										tmp				<- copy(predict.df)
-										tmp2			<- copy(predict.df)
-										set(tmp, NULL, risk, factor(factor))
-										corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-										if(length(corisk))
-										{
-											tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
-											tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
-										}
-										#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
-										tryCatch( tmp	<- weighted.mean(exp(predict(betafit.or, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.or, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ print(w$message); tmp<<- NA_real_ })
-										list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
-									},by=c('coef','coef.ref')]	
-		tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
-										tmp				<- copy(predict.df)
-										tmp2			<- copy(predict.df)
-										set(tmp, NULL, risk, factor(factor))
-										corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-										if(length(corisk))
-										{
-											tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
-											tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
-										}
-										#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
-										tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.rr, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ print(w$message); tmp<<- NA_real_ })
-										list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
-									},by=c('coef','coef.ref')]
-		risk.ans	<- rbind(risk.ans, tmp)	
-		#	person years in infection window
-		tmp			<- risk.df[, list(risk=risk, factor=factor, risk.ref="None", factor.ref="None", coef.ref="None", stat="PY", v=length(which(unclass(X.seq[, risk, with=FALSE])[[1]]==factor))), by='coef']
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
-		#	number of transmissions and proportion of transmissions		
-		tmp			<- risk.df[, 		{
-											tmp					<- copy(predict.df)
-											set(tmp, NULL, risk, factor(factor))
-											corisk				<- intersect(colnames(risk.df), colnames(predict.df))
-											if(length(corisk))
-												tmp				<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)																																		
-											tryCatch( tmp		<- weighted.mean(exp(predict(betafit.rr, tmp, type='link')),w=tmp[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ print(w$message); tmp<<- NA_real_ })
-											tmp[2]				<- sum( YX.m3[ which(unclass(YX.m3[, risk, with=FALSE])[[1]]==factor), w] )
-											list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[2]<2*EPS, 0., tmp[1]), n=tmp[2] )
-										},by= 'coef']
-		tmp[, v:= tmp[,expbeta*n]]	
-		set(tmp, tmp[, which(v==0)],'v', NA_real_)
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
-		set(tmp, NULL, 'stat', 'P')
-		set(tmp, NULL, 'v', tmp[, v/sum(expbeta*n)])
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
-		#	relative infectiousness
-		tmp			<- subset(risk.ans, stat=='PY' )[, sum(v)]
-		tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / tmp ) ), by='coef']
-		set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
-		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))	
-		#	Bootstraps	on ratio and on prob
-		cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
-		tmp			<- lapply(seq_len(bs.n), function(bs.i)
-				{
-					if(bs.i%%100==0)	cat(paste('\nregression on bootstrap data sets bs.i=',bs.i))
-					#bootstrap over recently infected Patient
-					tmp					<- unique(subset(YX.m3, select=Patient))					
-					#
-					bs.repeat			<- 1
-					while(bs.repeat)
-					{
-						bs.repeat		<- 0
-						tryCatch({
-									YX.m3.bs		<- merge( YX.m3, tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ], by='Patient', allow.cartesian=TRUE )
-									betafit.or.bs	<- coef(betareg(formula=formula, link='logit', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
-									betafit.or.bs 	<- betareg(formula=formula, link='logit', weights=w, data = YX.m3.bs, start=list(betafit.or.bs))					
-									betafit.rr.bs	<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3.bs, score.Y>0.2)))
-									betafit.rr.bs	<- betareg(formula=formula, link='log', weights=w, data = YX.m3.bs, start=list(betafit.rr.bs))
-								}, error=function(e){ print(e$message); bs.repeat<<- 1})						
-					}					
-					#	odds ratio and risk ratio
-					risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{
-																					tmp				<- copy(predict.df)
-																					tmp2			<- copy(predict.df)
-																					set(tmp, NULL, risk, factor(factor))
-																					corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-																					if(length(corisk))
-																					{
-																						tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
-																						tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
-																					}
-																					#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
-																					tryCatch( tmp	<- weighted.mean(exp(predict(betafit.or.bs, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.or.bs, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ tmp<<- NA_real_}, warning=function(w){ tmp<<- NA_real_ })
-																					list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
-																				},by=c('coef','coef.ref')]
-					tmp					<- subset(risk.df, coef!=coef.ref)[, 	{
-																					tmp				<- copy(predict.df)
-																					tmp2			<- copy(predict.df)
-																					set(tmp, NULL, risk, factor(factor))
-																					corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-																					if(length(corisk))
-																					{
-																						tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
-																						tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
-																					}
-																					#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
-																					tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr.bs, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.rr.bs, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ tmp<<- NA_real_}, warning=function(w){ tmp<<- NA_real_ })
-																					list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
-																				},by=c('coef','coef.ref')]
-					risk.ans.bs			<- rbind(risk.ans.bs, tmp)																
-					#	for proportions		
-					tmp			<- risk.df[, 		{
-														tmp				<- copy(predict.df)
-														set(tmp, NULL, risk, factor(factor))
-														corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-														if(length(corisk))
-															tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
-														tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr.bs, tmp, type='link')),w=tmp[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ tmp<<- NA_real_ })																												
-														tmp[2]			<- sum( YX.m3.bs[ which(unclass(YX.m3.bs[, risk, with=FALSE])[[1]]==factor), w] )																												
-														list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='prob', v=ifelse(tmp[2]<2*EPS, 0., tmp[1]) )
-													},by= 'coef']
-					risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))																	
-					tmp			<- risk.df[, list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'n', v=sum( YX.m3.bs[ which(unclass(YX.m3.bs[, risk, with=FALSE])[[1]]==factor), w] ) ),by= 'coef']
-					risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
-					risk.ans.bs[, bs:=bs.i]
-				})
-		risk.ans.bs	<- do.call('rbind',tmp)
-		tmp			<- risk.ans.bs[, list(stat='N', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='prob']*v[stat=='n'] ), by=c('bs','coef')]
-		set(tmp, tmp[, which(v==0)],'v', NA_real_)
-		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
-		tmp			<- tmp[,	list(stat='P', coef=coef, risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', v= v/sum(v, na.rm=TRUE)),	by='bs']		
-		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))	
-		tmp			<- merge( subset(tmp, stat=='P'), subset(risk.ans, stat=='PY', select=c(coef, v)), by='coef' )
-		tmp[, v:= v.x/( v.y/subset(risk.ans, stat=='PY')[, sum(v)] )]
-		set(tmp, NULL, 'stat', 'RI')
-		set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
-		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
-		tmp			<- risk.ans.bs[,	list(l95.bs=quantile(v, prob=0.025, na.rm=TRUE), u95.bs=quantile(v, prob=0.975, na.rm=TRUE)), by=c('coef','coef.ref','stat')]
-		risk.ans	<- merge(risk.ans, tmp, by=c('coef','coef.ref','stat'), all.x=TRUE)
-		#	
-		setkey(risk.ans, stat, coef, coef.ref)
-		
 		if(!is.na(save.file))
 		{
 			cat(paste('\nsave to file', save.file))
-			save(risk.ans, risk.ans.bs, YX.m3.fit1, YX.m3.fit1b, file=save.file)
+			save(ans, file=save.file)
 		}
 	}
-	list(risk=risk.ans, fit.or=betafit.or, fit.rr=betafit.rr, risk.bs=risk.ans.bs)
 }
 ######################################################################################
 project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), return.only.ART=TRUE, plot.file.cascade=NA, score.Y.cut=1e-2)
@@ -6388,7 +6411,8 @@ project.athena.Fisheretal.YX.model2.estimate.risk<- function(YX, X.seq, df.all, 
 		}
 		if(method=='VLmxsu')
 		{			
-			YX			<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
+			#YX			<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)
+			YX			<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
 			X.seq		<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
 		}
 		if(method=='VLtsu')
@@ -6645,22 +6669,24 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	#set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute%in%acute.select)], 'stage', 'UA')
 	YX.m2[, stage.orig:= stage]
 	# 	collect PoslRNA_TL and lRNA_TL etc
-	tmp		<- unique(subset( df.all, select=c(Patient, PoslRNA_T1) ))
-	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
-	YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')	
-	tmp		<- merge( unique(subset(df.all, select=Patient)), subset(df.viro, select=c(Patient, PosRNA, lRNA)), by='Patient' )
-	set( tmp, NULL, 'PosRNA', hivc.db.Date2numeric(tmp[,PosRNA]) )
-	tmp		<- subset( tmp[, 	{
-						tmp<- which(!is.na(lRNA))
-						list(t.Patient=Patient[1], lRNA_TL=lRNA[tail(tmp,1)], PoslRNA_TL=PosRNA[tail(tmp,1)])
-					}, by='Patient'], select=c(t.Patient, lRNA_TL, PoslRNA_TL) )
-	YX.m2	<- merge(YX.m2, tmp, by= 't.Patient', all.x=TRUE)
+	#tmp		<- unique(subset( df.all, select=c(Patient, PoslRNA_T1) ))
+	#setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	#YX.m2	<- merge(YX.m2, tmp, by= 't.Patient')	
+	#tmp		<- merge( unique(subset(df.all, select=Patient)), subset(df.viro, select=c(Patient, PosRNA, lRNA)), by='Patient' )
+	#set( tmp, NULL, 'PosRNA', hivc.db.Date2numeric(tmp[,PosRNA]) )
+	#tmp		<- subset( tmp[, 	{
+	#					tmp<- which(!is.na(lRNA))
+	#					list(t.Patient=Patient[1], lRNA_TL=lRNA[tail(tmp,1)], PoslRNA_TL=PosRNA[tail(tmp,1)])
+	#				}, by='Patient'], select=c(t.Patient, lRNA_TL, PoslRNA_TL) )
+	#YX.m2	<- merge(YX.m2, tmp, by= 't.Patient', all.x=TRUE)
 	gc()
+	cat(paste('\nsubsetting YX.m2\n'))
 	#
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, t.period, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, lRNA_TL, PoslRNA_TL, contact, fw.up.med, w, stage.orig  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, t.period, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, w, stage.orig  ))
+	#	YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, t.period, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, lRNA_TL, PoslRNA_TL, contact, fw.up.med, w, stage.orig  ))
 	if(!'score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, t.period, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, lRNA_TL, PoslRNA_TL, contact, fw.up.med, stage.orig  ))		
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, t.period, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, stage.orig  ))		
 	#
 	if(!is.na(plot.file.varyvl))
 	{			
@@ -6705,12 +6731,14 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	#	using given VL threshold 
 	#	
 	gc()
+	cat(paste('\nadding lRNA.mx\n'))
 	set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
 	YX.m2[,lRNA.c:=NULL]
 	YX.m2	<- merge(YX.m2, YX.m2[, {
 						tmp<- which(!is.na(lRNA))
 						list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>vl.suppressed, 'SuA.N', 'SuA.Y'), 'SuA.NA') )
 					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)
+	gc()
 	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.Y')],'stage', 'ART.suA.Y' )
 	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.c=='SuA.N')],'stage', 'ART.suA.N' )
 	set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
@@ -6718,8 +6746,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	#
 	#	add stage.tperiod
 	#
+	cat(paste('\nadding stage.tperiod\n'))
 	stopifnot( YX.m2[, any(is.na(stage))]=='FALSE' )
 	YX.m2[, stage.tperiod:= paste(stage,t.period,sep='.')]
+	set(YX.m2, NULL, 'stage.tperiod', YX.m2[, factor(as.character(stage.tperiod))])
 	gc()
 	YX.m2
 }
