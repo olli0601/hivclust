@@ -4124,7 +4124,7 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 			#	ART.tnDrug.c independent of indicators
 			set(YX.m3, NULL, 'stage', YX.m3[, ART.tnDrug.c])
 			set(X.seq, NULL, 'stage', X.seq[, ART.tnDrug.c])	
-			formula			<- 'score.Y ~ stage+ART.pulse+bs(lRNA.mx, knots=c(3.25,4.5), degree=1)+ART.I+ART.F+ART.P+ART.A-1'
+			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1'
 			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), 
 											lRNA.mx=subset(YX.m3, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)],
 											ART.pulse=factor('No',levels=c('No','Yes')), ART.I=factor('No',levels=c('No','Yes')), ART.F=factor('No',levels=c('No','Yes')), ART.P=factor('No',levels=c('No','Yes')), ART.A=factor('No',levels=c('No','Yes')))
@@ -4143,7 +4143,7 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 			set(YX.m3, NULL, 'stage', YX.m3[, ART.ntstage.c])
 			set(X.seq, NULL, 'stage', X.seq[, ART.ntstage.c])
 			formula			<- 'score.Y ~ stage-1'
-			predict.df		<- data.table(stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]))			
+			predict.df		<- data.table(stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), w=1.)			
 			risk.df			<- data.table(risk='stage',factor=factor(X.seq[, levels(stage)], levels=factor(X.seq[, levels(stage)])))
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
@@ -4154,6 +4154,10 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		betafit.or 			<- betareg(formula=formula, link='logit', weights=w, data = YX.m3, start=list(tmp))
 		tmp					<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3, score.Y>0.1)))
 		betafit.rr 			<- betareg(formula=formula, link='log', weights=w, data = YX.m3, start=list(tmp))
+		#YX.m3b	<- na.omit(subset(YX.m3, select=c(score.Y, stage, lRNA.mx, ART.pulse, ART.I, ART.F, ART.P, ART.A, w)))		
+		#tmp		<- gamlss(formula= formula, family=BE(mu.link='logit'), weights=w, data=YX.m3b)
+		
+		
 		
 		#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7 )
 		#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7, k=YX.m3[, log(round(sum(w)))])
@@ -4162,12 +4166,31 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#	odds ratio and risk ratio
 		risk.ans	<- subset(risk.df, coef!=coef.ref)[, 	{										
 										tmp				<- copy(predict.df)
+										tmp2			<- copy(predict.df)
 										set(tmp, NULL, risk, factor(factor))
-										for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
-											tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]	
-										tryCatch( tmp	<- exp( predict(betafit.or, tmp, type='link')-predict(betafit.or, predict.df, type='link') ), error=function(e){ print(e$message); tmp<<- NA_real_})
+										corisk			<- intersect(colnames(risk.df), colnames(predict.df))
+										if(length(corisk))
+										{
+											tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
+											tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
+										}
+										print(tmp2)										
+										print(tmp)
+										#stop()
+										#YX.m3[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]
+										
+										#for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
+										#	tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]
+										print(predict(betafit.rr, tmp, type='link'))
+										print(exp(predict(betafit.rr, tmp, type='link')))
+										print(weighted.mean(exp(predict(betafit.rr, tmp, type='link')),w=tmp[,w], na.rm=TRUE))
+										tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.rr, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_})
+										print(tmp)
+										stop()
 										list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
-									},by=c('coef','coef.ref')]							
+									},by=c('coef','coef.ref')]	
+							
+							
 		tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
 										tmp				<- copy(predict.df)
 										set(tmp, NULL, risk, factor(factor))
@@ -7836,7 +7859,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method		<- paste(method,'a',sep='')
 	if(method.nodectime=='map')
 		method		<- paste(method,'m',sep='')
-	resume			<- 1
+	resume			<- 0
 	adjust.AcuteByNegT=0.75
 	#
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
@@ -7921,7 +7944,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
-	resume			<- 1
+	resume			<- 0
 	rm.zero.score	<- TRUE
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT_',method,'_tATHENAclu','.R',sep='')	
 	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
