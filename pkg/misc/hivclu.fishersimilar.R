@@ -4174,29 +4174,22 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 											tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
 											tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
 										}
-										print(tmp2)										
-										print(tmp)
-										#stop()
-										#YX.m3[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]
-										
-										#for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
-										#	tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]
-										print(predict(betafit.rr, tmp, type='link'))
-										print(exp(predict(betafit.rr, tmp, type='link')))
-										print(weighted.mean(exp(predict(betafit.rr, tmp, type='link')),w=tmp[,w], na.rm=TRUE))
-										tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.rr, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_})
-										print(tmp)
-										stop()
+										#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
+										tryCatch( tmp	<- weighted.mean(exp(predict(betafit.or, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.or, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ print(w$message); tmp<<- NA_real_ })
 										list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
 									},by=c('coef','coef.ref')]	
-							
-							
 		tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
 										tmp				<- copy(predict.df)
+										tmp2			<- copy(predict.df)
 										set(tmp, NULL, risk, factor(factor))
-										for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
-											tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]											
-										tryCatch( tmp	<- exp( predict(betafit.rr, tmp, type='link')-predict(betafit.rr, predict.df, type='link') ), error=function(e){ print(e$message); tmp<<- NA_real_})
+										corisk			<- intersect(colnames(risk.df), colnames(predict.df))
+										if(length(corisk))
+										{
+											tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
+											tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
+										}
+										#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
+										tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr, tmp, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.rr, tmp2, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ print(w$message); tmp<<- NA_real_ })
 										list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
 									},by=c('coef','coef.ref')]
 		risk.ans	<- rbind(risk.ans, tmp)	
@@ -4207,9 +4200,10 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		tmp			<- risk.df[, 		{
 											tmp					<- copy(predict.df)
 											set(tmp, NULL, risk, factor(factor))
-											for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
-												tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]												
-											tryCatch( tmp		<- exp( predict(betafit.rr, tmp, type='link') ), error=function(e){ print(e$message); tmp<<- NA_real_})
+											corisk				<- intersect(colnames(risk.df), colnames(predict.df))
+											if(length(corisk))
+												tmp				<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)																																		
+											tryCatch( tmp		<- weighted.mean(exp(predict(betafit.rr, tmp, type='link')),w=tmp[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_}, warning=function(w){ print(w$message); tmp<<- NA_real_ })
 											tmp[2]				<- sum( YX.m3[ which(unclass(YX.m3[, risk, with=FALSE])[[1]]==factor), w] )
 											list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[2]<2*EPS, 0., tmp[1]), n=tmp[2] )
 										},by= 'coef']
@@ -6816,6 +6810,7 @@ project.athena.Fisheretal.X.CDCC<- function(X.incare, df.tpairs, clumsm.info, t.
 ######################################################################################
 project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.immu, t.period=0.25)
 {
+	stopifnot(class(df.immu$Patient)=='character',class(df.tpairs$t.Patient)=='character')
 	immu	<- subset( df.immu, select=c(Patient, PosCD4, CD4) )
 	setnames(immu, 'Patient','t.Patient')
 	immu	<- merge(immu, unique(subset(df.tpairs, select=t.Patient)), by='t.Patient')	
@@ -6871,8 +6866,6 @@ project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, l
 						}
 						list(t=z[,t], lRNA=y, lRNAc=y2)
 					},by='t.Patient']	
-	print(viro)
-	stop()
 	if(!is.na(lRNA.cutoff))
 	{
 		set(viro, viro[, which(lRNA<lRNA.cutoff)], 'lRNA', 0.)
@@ -7988,7 +7981,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	endpoint: first VL suppressed
 	#
 	#X.seq<- X.seq[1:2e6,]
-	resume			<- 1
+	resume			<- 0
 	bs.n			<- 1e3
 	m2.method		<- 'VL1stsu'
 	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',m2.method,'_VL_adjAym_dt025','.pdf',sep='')
