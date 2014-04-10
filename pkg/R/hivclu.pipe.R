@@ -602,6 +602,28 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "um192rhU2080"	
 		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
 	}
+	if(0)
+	{
+		method					<- '3d'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"					
+		infilexml.opt			<- "mph4clutx4tip"
+		infilexml.template		<- "um192rhU2080"	
+		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
+	}
+	if(0)
+	{
+		method					<- '3d'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		infilexml.opt			<- "clrh80"
+		infilexml.template		<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+	}
 	if(1)
 	{
 		method					<- '3c'
@@ -617,7 +639,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 	cat(cmd)
 	#stop()
-	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=80, hpc.mem="15800mb")
+	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=80, hpc.mem="30800mb")
 	outdir		<- paste(DATA,"tmp",sep='/')
 	outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 	hivc.cmd.hpccaller(outdir, outfile, cmd)
