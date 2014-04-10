@@ -459,7 +459,8 @@ hivc.beast2out.combine.clu.trees<- function(indir, file.info, beastlabel.idx.clu
 	#	set node.label to MAP prob
 	tmp											<- merge( unique(subset(cluphy.info, select=c(cluster, mrca))), unique(subset(cluphy.map, select=c(cluster, dens))), by='cluster' )
 	cluphy$node.label							<- rep('',Nnode(cluphy))
-	cluphy$node.label[tmp[,mrca-Ntip(cluphy)]]	<- as.character(tmp[,dens])		
+	cluphy$node.label[tmp[,mrca-Ntip(cluphy)]]	<- as.character(tmp[,dens])	
+	#set(cluphy.info, NULL, 'Patient', cluphy.info[, as.character(Patient)])	
 	list(cluphy=cluphy, cluphy.subtrees=cluphy.subtrees, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime)
 }
 ######################################################################################

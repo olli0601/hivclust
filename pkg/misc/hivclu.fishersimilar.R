@@ -1916,6 +1916,7 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 		cat(paste('\nmsm.recent: set Acute==Maybe when NegT is close to AnyPos_T1, n=',length(tmp)))
 		set(df.all, tmp, 'isAcute', 'Maybe')
 	}		
+	set(df.all, NULL, 'Patient', df.all[, as.character(Patient)])
 	set(df.all, NULL, 'PosSeqT', hivc.db.Date2numeric(df.all[,PosSeqT]))
 	set(df.all, NULL, 'DateBorn', hivc.db.Date2numeric(df.all[,DateBorn]))	
 	set(df.all, NULL, 'NegT', hivc.db.Date2numeric(df.all[,NegT]))
@@ -2516,12 +2517,15 @@ project.athena.Fisheretal.get.data.for.selection<- function(df.tpairs, clu.indir
 	load(file.cov)				
 	#	load patient RNA
 	load(file.viro)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
 	df.viro				<- df				
 	#	load patient CD4				
 	load(file.immu)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
 	df.immu				<- df
 	#	load patient regimen
 	load(file.treatment)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
 	df.treatment		<- df		
 	#
 	#	collect files containing dated cluster phylogenies
@@ -2545,9 +2549,8 @@ project.athena.Fisheretal.get.data.for.selection<- function(df.tpairs, clu.indir
 		cat(paste('\nnumber of remaining potential transmitter', length(df.tpairs.reduced[, unique(t.Patient)])))
 	}			
 	#	combine dated cluster phylogenies
-	clu			<- hivc.beast2out.combine.clu.trees(clu.indir, file.info, method.nodectime=method.nodectime)		
-	
-	list(clu=clu, df.all=df.all, df.viro=df.viro, df.immu=df.immu, df.treatment=df.treatment, df.tpairs=df.tpairs.reduced)
+	clu			<- hivc.beast2out.combine.clu.trees(clu.indir, file.info, method.nodectime=method.nodectime)
+	list(clu=clu, df.viro=df.viro, df.immu=df.immu, df.treatment=df.treatment, df.tpairs=df.tpairs.reduced)
 }
 ######################################################################################
 project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, file, pdf.height=400)
@@ -4064,24 +4067,6 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		#{					
 		YX.m3		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))	
 		X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))
-		
-		#non parametric fit
-		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ ART.nDrug.c, margins=TRUE)
-		
-		#ns spline have no order, only knots or dfs		
-		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "lm", formula= y~ns(x,2), size=1) + facet_grid(. ~ ART.nDrug.c, margins=TRUE)
-		
-		#linear on log scale; two change points at 3 and 5
-		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "lm", formula= y~bs(x,knots=c(3,5), degree=1)) + facet_grid(. ~ ART.nDrug.c, margins=TRUE)
-		
-		#linear on log scale; two change points at 3.5 and 5 to capture the bump in loess
-		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "lm", formula= y~bs(x,knots=c(3.5,5), degree=1)) + facet_grid(. ~ ART.nDrug.c, margins=TRUE)
-		
-		#
-		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "lm", formula= y~bs(x,knots=c(3.5,5), degree=1)) + facet_grid(. ~ ART.I, margins=TRUE)
-		
-		#}
-		#
 		#	easiest: change stage as needed
 		#	ART indicators without number/type
 		cat(paste('\nregression on data set by method', method))
@@ -4133,6 +4118,25 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
 		}
+		if(method=='m3.tniv')
+		{
+			#	ART indicators and number/type of drugs
+			#	ART.tnDrug.c independent of indicators
+			set(YX.m3, NULL, 'stage', YX.m3[, ART.tnDrug.c])
+			set(X.seq, NULL, 'stage', X.seq[, ART.tnDrug.c])	
+			formula			<- 'score.Y ~ stage+ART.pulse+bs(lRNA.mx, knots=c(3.25,4.5), degree=1)+ART.I+ART.F+ART.P+ART.A-1'
+			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), 
+											lRNA.mx=subset(YX.m3, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)],
+											ART.pulse=factor('No',levels=c('No','Yes')), ART.I=factor('No',levels=c('No','Yes')), ART.F=factor('No',levels=c('No','Yes')), ART.P=factor('No',levels=c('No','Yes')), ART.A=factor('No',levels=c('No','Yes')))
+			risk.df			<- data.table( risk= c(rep('stage',9), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3.NRT.PI','ART.l3','ART.g3','ART.3.NRT','ART.3.PI','ART.3.NNRT','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NNRT.PI', rep('Yes',5)))
+			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]			
+			risk.df			<- merge(risk.df, risk.df[, {
+															tmp				<- YX.m3[ which(unclass(YX.m3[, risk, with=FALSE])[[1]]==factor), mean( lRNA.mx, na.rm=TRUE )]
+															list(lRNA.mx=ifelse(is.nan(tmp), YX.m3[, mean( lRNA.mx, na.rm=TRUE )], tmp))
+														}, by='coef'], by='coef')			
+			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
+			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
+		}
 		if(method=='m3.tnic')
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)  
@@ -4159,36 +4163,43 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 		risk.ans	<- subset(risk.df, coef!=coef.ref)[, 	{										
 										tmp				<- copy(predict.df)
 										set(tmp, NULL, risk, factor(factor))
+										for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
+											tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]	
 										tryCatch( tmp	<- exp( predict(betafit.or, tmp, type='link')-predict(betafit.or, predict.df, type='link') ), error=function(e){ print(e$message); tmp<<- NA_real_})
 										list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
 									},by=c('coef','coef.ref')]							
 		tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
 										tmp				<- copy(predict.df)
 										set(tmp, NULL, risk, factor(factor))
+										for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
+											tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]											
 										tryCatch( tmp	<- exp( predict(betafit.rr, tmp, type='link')-predict(betafit.rr, predict.df, type='link') ), error=function(e){ print(e$message); tmp<<- NA_real_})
 										list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
 									},by=c('coef','coef.ref')]
 		risk.ans	<- rbind(risk.ans, tmp)	
-		#	person years in infection window	TODO
-
+		#	person years in infection window
 		tmp			<- risk.df[, list(risk=risk, factor=factor, risk.ref="None", factor.ref="None", coef.ref="None", stat="PY", v=length(which(unclass(X.seq[, risk, with=FALSE])[[1]]==factor))), by='coef']
 		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 		#	number of transmissions and proportion of transmissions		
 		tmp			<- risk.df[, 		{
 											tmp					<- copy(predict.df)
 											set(tmp, NULL, risk, factor(factor))
+											for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
+												tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]												
 											tryCatch( tmp		<- exp( predict(betafit.rr, tmp, type='link') ), error=function(e){ print(e$message); tmp<<- NA_real_})
 											tmp[2]				<- sum( YX.m3[ which(unclass(YX.m3[, risk, with=FALSE])[[1]]==factor), w] )
 											list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[2]<2*EPS, 0., tmp[1]), n=tmp[2] )
 										},by= 'coef']
 		tmp[, v:= tmp[,expbeta*n]]	
+		set(tmp, tmp[, which(v==0)],'v', NA_real_)
 		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 		set(tmp, NULL, 'stat', 'P')
 		set(tmp, NULL, 'v', tmp[, v/sum(expbeta*n)])
 		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 		#	relative infectiousness
 		tmp			<- subset(risk.ans, stat=='PY' )[, sum(v)]
-		tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / tmp ) ), by='coef']	
+		tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / tmp ) ), by='coef']
+		set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
 		risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))	
 		#	Bootstraps	on ratio and on prob
 		cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
@@ -4214,12 +4225,16 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 					risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{
 																					tmp				<- copy(predict.df)
 																					set(tmp, NULL, risk, factor(factor))
+																					for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
+																						tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]																																	
 																					tryCatch( tmp	<- exp( predict(betafit.or.bs, tmp, type='link')-predict(betafit.or.bs, predict.df, type='link') ), error=function(e){ tmp<<- NA_real_})
 																					list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
 																				},by=c('coef','coef.ref')]
 					tmp					<- subset(risk.df, coef!=coef.ref)[, 	{
 																					tmp				<- copy(predict.df)
 																					set(tmp, NULL, risk, factor(factor))
+																					for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
+																						tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]																																	
 																					tryCatch( tmp	<- exp( predict(betafit.rr.bs, tmp, type='link')-predict(betafit.rr.bs, predict.df, type='link') ), error=function(e){ tmp<<- NA_real_})
 																					list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
 																				},by=c('coef','coef.ref')]
@@ -4228,7 +4243,9 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 					tmp			<- risk.df[, 		{
 														tmp				<- copy(predict.df)
 														set(tmp, NULL, risk, factor(factor))
-														tryCatch( tmp	<- exp( predict(betafit.rr.bs, tmp, type='link') ), error=function(e){ print(e$message); tmp<<- NA_real_})														
+														for(corisk in intersect( colnames(risk.df), colnames(predict.df) )) 
+															tmp[1,which(corisk==colnames(tmp))]<- risk.df[ which(risk.df[, risk]==risk && risk.df[, factor]==factor), corisk, with=FALSE][[1]]																										
+														tryCatch( tmp	<- exp( predict(betafit.rr.bs, tmp, type='link') ), error=function(e){ tmp<<- NA_real_})														
 														tmp[2]			<- sum( YX.m3.bs[ which(unclass(YX.m3.bs[, risk, with=FALSE])[[1]]==factor), w] )																												
 														list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='prob', v=ifelse(tmp[2]<2*EPS, 0., tmp[1]) )
 													},by= 'coef']
@@ -4239,13 +4256,15 @@ project.athena.Fisheretal.YX.model3.estimate.risk<- function(YX, X.seq, df.all, 
 				})
 		risk.ans.bs	<- do.call('rbind',tmp)
 		tmp			<- risk.ans.bs[, list(stat='N', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='prob']*v[stat=='n'] ), by=c('bs','coef')]
+		set(tmp, tmp[, which(v==0)],'v', NA_real_)
 		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
-		tmp			<- tmp[,	list(stat='P', coef=coef, risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', v= v/sum(v, na.rm=TRUE)),	by='bs']
+		tmp			<- tmp[,	list(stat='P', coef=coef, risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', v= v/sum(v, na.rm=TRUE)),	by='bs']		
 		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))	
 		tmp			<- merge( subset(tmp, stat=='P'), subset(risk.ans, stat=='PY', select=c(coef, v)), by='coef' )
 		subset(risk.ans, stat=='PY')[, sum(v)]
 		tmp[, v:= v.x/( v.y/subset(risk.ans, stat=='PY')[, sum(v)] )]
 		set(tmp, NULL, 'stat', 'RI')
+		set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
 		risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
 		tmp			<- risk.ans.bs[,	list(l95.bs=quantile(v, prob=0.025, na.rm=TRUE), u95.bs=quantile(v, prob=0.975, na.rm=TRUE)), by=c('coef','coef.ref','stat')]
 		risk.ans	<- merge(risk.ans, tmp, by=c('coef','coef.ref','stat'), all.x=TRUE)
@@ -5060,6 +5079,39 @@ project.athena.Fisheretal.YX.model3.v2<- function(YX, clumsm.info, vl.suppressed
 		
 		#	number and type of drugs conditional on no indication				
 		YX.m3.fit7 	<- betareg(score.Y ~ ART.ntstage.c-1, link='log', weights=w, data = YX.m3 )
+		
+	}
+	if(1)
+	{
+		YX.m3		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))	
+		X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))
+		
+		#non parametric fit
+		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ ART.nDrug.c, margins=TRUE)
+		
+		#ns spline have no order, only knots or dfs		
+		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "lm", formula= y~ns(x,2), size=1) + facet_grid(. ~ ART.nDrug.c, margins=TRUE)
+		
+		#linear on log scale; two change points at 3 and 5
+		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "lm", formula= y~bs(x,knots=c(3,5), degree=1)) + facet_grid(. ~ ART.nDrug.c, margins=TRUE)
+		
+		#linear on log scale; two change points at 3.5 and 5 to capture the bump in loess
+		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "lm", formula= y~bs(x,knots=c(3.5,5), degree=1)) + facet_grid(. ~ ART.nDrug.c, margins=TRUE)
+		
+		#use betaregression to determine reasonable knots
+		require(gamlss)
+		YX.m3b	<- na.omit(subset(YX.m3, select=c(score.Y, ART.nstage.c, lRNA.mx, w)))
+		#set(YX.m3b, YX.m3b[, which(score.Y<1e-4)], 'score.Y', 1e-4)
+		tmp		<- gamlss(formula= score.Y ~ bs(lRNA.mx, knots=c(3.25,4.5), degree=1), family=BE(mu.link='logit'), weights=w, data=YX.m3b)
+		YX.m3b[, score.Y.gamlss:= predict(tmp, type='response')]
+		tmp		<- loess(formula= score.Y ~ lRNA.mx, weights=w, span=0.8, degree=1, data=YX.m3b)
+		YX.m3b[, score.Y.loess:= predict(tmp)]
+		ggplot(YX.m3b, aes(x = lRNA.mx, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.gamlss), stat='identity') + geom_smooth(aes(y= score.Y.loess), stat='identity')
+		
+		
+		
+		
+		gamlss(score.Y~ART.nstage.c-1, weights=w, data=subset(YX.m3, select=c(score.Y, ART.nstage.c, w)), family=BE(mu.link='log'))
 		
 	}
 }
@@ -6768,6 +6820,7 @@ project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.immu, t.period=0.25)
 ######################################################################################
 project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, lRNA.cutoff= log10(1e3))
 {
+	stopifnot(class(df.viro$Patient)=='character',class(df.tpairs$t.Patient)=='character') 
 	viro	<- subset( df.viro, select=c(Patient, PosRNA, lRNA) )
 	setnames(viro, 'Patient','t.Patient')
 	viro	<- merge(viro, unique(subset(df.tpairs, select=t.Patient)), by='t.Patient')	
@@ -6779,21 +6832,24 @@ project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, l
 	
 	setnames(tmp, 't.Patient', 'tt.Patient')
 	setkey(tmp, tt.Patient)
+	#merge(data.table(t.Patient=tmp[, unique(tt.Patient)]), viro, by='t.Patient')	
 	viro	<- viro[, {
-				z		<- subset(tmp, tt.Patient==t.Patient[1])	
-				if(length(PosRNA)<2)
-				{
-					y	<- rep(NA, nrow(z))
-					y[z[,which( PosRNA<=t+t.period )[1]]]<- lRNA
-					y2	<- y
-				}
-				else
-				{
-					y	<- approx(PosRNA , lRNA, xout=z[,t]+t.period/2, yleft=NA_real_, yright=NA_real_, rule=2, method='linear')$y
-					y2	<- approx(PosRNA , lRNA, xout=z[,t]+t.period/2, yleft=NA_real_, yright=NA_real_, rule=2, method='constant')$y
-				}
-				list(t=z[,t], lRNA=y, lRNAc=y2)
-			},by='t.Patient']		
+						z		<- subset(tmp, tt.Patient==t.Patient[1])						#fails if t.Patient is factor because t.Patient[1] gets converted to integer
+						if(length(PosRNA)<2)
+						{
+							y	<- rep(NA, nrow(z))
+							y[z[,which( PosRNA<=t+t.period )[1]]]<- lRNA
+							y2	<- y
+						}
+						else
+						{
+							y	<- approx(PosRNA , lRNA, xout=z[,t]+t.period/2, yleft=NA_real_, yright=NA_real_, rule=2, method='linear')$y
+							y2	<- approx(PosRNA , lRNA, xout=z[,t]+t.period/2, yleft=NA_real_, yright=NA_real_, rule=2, method='constant')$y
+						}
+						list(t=z[,t], lRNA=y, lRNAc=y2)
+					},by='t.Patient']	
+	print(viro)
+	stop()
 	if(!is.na(lRNA.cutoff))
 	{
 		set(viro, viro[, which(lRNA<lRNA.cutoff)], 'lRNA', 0.)
@@ -7867,7 +7923,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	resume			<- 1
 	rm.zero.score	<- TRUE
-	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT_',method,'_tATHENAclu','.R',sep='')
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT_',method,'_tATHENAclu','.R',sep='')	
 	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
 	YX.part1		<- merge( YX.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)
 	YX.part1[, class:='pt']
