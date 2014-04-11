@@ -1443,8 +1443,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#
 	tmp		<- df[, list(select= !all(Undetectable=='Yes')), by='Patient']
 	if(verbose)		cat(paste("\nPatients with all Undetectable RNA, DELETE n=",nrow(subset(tmp, !select))))
-	df		<- merge( df,subset(tmp, select,Patient), by='Patient' )
-	
+	df		<- merge( df, subset(tmp, select, Patient), by='Patient' )
 	df		<- df[,  {
 							tmp<- seq.int(which(Undetectable=='No')[1], length(Undetectable)) 
 							lapply(.SD,'[',tmp)
@@ -1520,6 +1519,19 @@ project.hivc.Excel2dataframe.Viro<- function()
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units > 1e6  -- M10607 M10969 M11428 M28707 M31388 M31455 M32401 M32877 M33406 M33839 M33918 M34062 M35280  M30788, n=",length(tmp),"DIV by 10"))
 	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)
 	#
+	#	remove duplicate entries
+	#
+	setkey(df, Patient, PosRNA, RNA)
+	df		<- unique(df)
+	setkey(df, Patient, PosRNA)
+	tmp		<- which(duplicated(df))
+	tmp		<- sapply(tmp, function(i)		c(i-1,i)[which.min(df[c(i-1,i),Source])]	)
+	df		<- df[-tmp,]			
+	#			
+	#
+	tmp		<- merge(unique(subset(df, RNA>5e6 & PosRNA>AnyT_T1, Patient)), df, by="Patient")
+	tmp		<- which(df[, Patient%in%c("M12736","M27885","M14799","M12612") & RNA>5e6])
+	set(df, tmp, "RNA", NA_real_)	
 	# double check entries manually in range >5e6
 	#		
 	tmp		<- merge(subset(df, RNA>5e6, c(Patient,PosRNA)), df.treat, by="Patient")
@@ -1593,11 +1605,10 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#
 	#	average duplicate entries out
 	#						
-	if(verbose) cat(paste("\nremoving duplicate entries"))
-	df		<- df[, list(RNA=mean(RNA)), by=c('Patient','PosRNA')]
-	if(verbose) cat(paste("\nnumber of entries after duplicates removed, n=",nrow(df)))
-	setkey(df, PosRNA)
-	setkey(df, Patient)
+	#if(verbose) cat(paste("\nremoving duplicate entries"))
+	#df		<- df[, list(RNA=mean(RNA)), by=c('Patient','PosRNA')]
+	i#f(verbose) cat(paste("\nnumber of entries after duplicates removed, n=",nrow(df)))
+	setkey(df, Patient, PosRNA)
 	#
 	df[,"lRNA":=round(log10( df[,RNA] ), d=3)]		
 	#	
@@ -1638,7 +1649,75 @@ project.hivc.Excel2dataframe.Viro<- function()
 	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
 	if(verbose) cat(paste("\nsave to", file))
 	save(df, file=file)	
-}	
+}
+######################################################################################
+project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21, verbose=1)
+{
+	file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient.csv",sep='/')
+	file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient_AllMSM.csv",sep='/')
+	
+	NA.Acute			<- c(NA,9)
+	NA.CountryInfection	<- c(NA,"")
+	NA.CountryBorn		<- c(NA,"",'XX')
+	NA.RegionOrigin		<- c(NA,"",'XX')
+	NA.Subtype			<- c(NA,"")
+	NA.time				<- c("","01/01/1911","11/11/1911")		
+	NA.transmission		<- 900
+	#read PATIENT csv data file and preprocess	
+	df					<- read.csv(file, stringsAsFactors=FALSE)									
+	df$isDead			<- as.numeric( df[,"DateDied"]!="")
+	tmp					<- which(df[,"Transmission"]==NA.transmission)
+	if(length(tmp))
+		df[tmp,"Transmission"]<- NA
+	
+	date.var			<- c("DateBorn","MyDateNeg1","MyDatePos1","DateDied","DateLastContact","DateFirstEverCDCC")		
+	for(x in date.var)
+	{
+		cat(paste("\nprocess Time", x))
+		nok.idx			<- which( df[,x]==NA.time[1] )
+		if(verbose)	cat(paste("\nentries with format ",NA.time[1],", n=", length(nok.idx)))
+		#if(verbose && length(nok.idx))	cat(paste("\nentries with format ",NA.time[1],", Patient", paste(df[nok.idx,"Patient"],collapse=', ')))
+		
+		if(length(nok.idx))	
+			df[nok.idx,x]	<- NA
+		nok.idx			<- which( df[,x]==NA.time[2] )
+		if(verbose)	cat(paste("\nentries with format ",NA.time[2],", n=", length(nok.idx)))
+		if(length(nok.idx))
+			df[nok.idx,x]	<- NA
+		nok.idx			<- which( df[,x]==NA.time[3] )
+		if(verbose)	cat(paste("\nentries with format ",NA.time[3],", n=", length(nok.idx)))
+		if(length(nok.idx))
+			df[nok.idx,x]	<- NA
+		df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
+	}
+	
+	df<- data.table(df)
+	setnames(df, c("MyDateNeg1_Acc","MyDatePos1_Acc","AcuteInfection","Transmission","HospitalRegion"), c("NegT_Acc","PosT_Acc","isAcute","Trm","RegionHospital"))
+	#set(df, NULL, "Patient", factor(df[,Patient]))
+	set(df, which( df[,isAcute%in%NA.Acute] ), "isAcute", NA )		
+	set(df, NULL, "isAcute", factor(df[,isAcute], levels=c(0,1,2), labels=c("No","Yes","Maybe")) )
+	set(df, NULL, "Sex", factor(df[,Sex], levels=c(1,2), labels=c("M","F")))
+	set(df, which( df[,Subtype%in%NA.Subtype] ), "Subtype", NA_character_ )
+	set(df, NULL, "Subtype", factor(df[,Subtype]))
+	set(df, which( df[,CountryBorn%in%NA.CountryBorn] ), "CountryBorn", NA_character_ )	
+	set(df, NULL, "CountryBorn", factor(df[,CountryBorn]))
+	set(df, which( df[,CountryInfection%in%NA.CountryInfection] ), "CountryInfection", NA_character_ )		
+	set(df, NULL, "CountryInfection", factor(df[,CountryInfection]))
+	set(df, which( df[,RegionOrigin%in%NA.RegionOrigin] ), "RegionOrigin", NA_character_ )	
+	set(df, NULL, "RegionOrigin", factor(df[,RegionOrigin]))
+	
+	set(df, NULL, "NegT_Acc", factor(df[,NegT_Acc], levels=c(0,1), labels=c("No","Yes")))
+	set(df, NULL, "PosT_Acc", factor(df[,PosT_Acc], levels=c(0,1), labels=c("No","Yes")))		
+	set(df, NULL, "isDead", factor(df[,isDead], levels=c(0,1), labels=c("No","Yes")))
+	set(df, NULL, "Trm", factor(df[, Trm], levels=c(100, 101,  102,  202, 103,  104,  105,  106,  107, 108,  110), labels= c("MSM","BI","HET","HETfa","IDU","BLOOD","NEEACC", "PREG", "BREAST", "OTH", "SXCH")) )
+	set(df, NULL, "RegionHospital", factor(df[,RegionHospital], levels=c(1,2,3,4,5,6), labels=c("Amst","N","E","S","W","Curu")))
+	setkey(df,Patient)
+	str(df)
+	
+	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
+	if(verbose) cat(paste("\nsave to", file))	
+	save(df, file=file)	
+}
 ######################################################################################
 project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 {
@@ -1685,58 +1764,7 @@ project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=
 	}
 	if(0)
 	{
-		NA.Acute			<- c(NA,9)
-		NA.CountryInfection	<- c(NA,"")
-		NA.time				<- c("","01/01/1911","11/11/1911")		
-		NA.transmission		<- 900
-		#read PATIENT csv data file and preprocess
-		file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient.csv",sep='/')
-		df					<- read.csv(file, stringsAsFactors=FALSE)									
-		df$isDead			<- as.numeric( df[,"DateDied"]!="")
-		df[which(df[,"Transmission"]==NA.transmission),"Transmission"]<- NA
-
-		date.var			<- c("DateBorn","MyDateNeg1","MyDatePos1","DateDied","DateLastContact","DateFirstEverCDCC")		
-		for(x in date.var)
-		{
-			cat(paste("\nprocess Time", x))
-			nok.idx			<- which( df[,x]==NA.time[1] )
-			if(verbose)	cat(paste("\nentries with format ",NA.time[1],", n=", length(nok.idx)))
-			#if(verbose && length(nok.idx))	cat(paste("\nentries with format ",NA.time[1],", Patient", paste(df[nok.idx,"Patient"],collapse=', ')))
-			
-			if(length(nok.idx))	
-				df[nok.idx,x]	<- NA
-			nok.idx			<- which( df[,x]==NA.time[2] )
-			if(verbose)	cat(paste("\nentries with format ",NA.time[2],", n=", length(nok.idx)))
-			if(length(nok.idx))
-				df[nok.idx,x]	<- NA
-			nok.idx			<- which( df[,x]==NA.time[3] )
-			if(verbose)	cat(paste("\nentries with format ",NA.time[3],", n=", length(nok.idx)))
-			if(length(nok.idx))
-				df[nok.idx,x]	<- NA
-			df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
-		}
-		file		<- paste(dir.name,"derived/ATHENA_2013_03_Patients.R",sep='/')
-		if(verbose) cat(paste("\nsave to", file))
-		
-		df<- data.table(df)
-		setnames(df, c("MyDateNeg1_Acc","MyDatePos1_Acc","AcuteInfection","Transmission","HospitalRegion"), c("NegT_Acc","PosT_Acc","isAcute","Trm","RegionHospital"))
-		set(df, NULL, "Patient", factor(df[,Patient]))
-		set(df, which( df[,isAcute%in%NA.Acute] ), "isAcute", NA )		
-		set(df, NULL, "isAcute", factor(df[,isAcute], levels=c(0,1,2), labels=c("No","Yes","Maybe")) )
-		set(df, NULL, "Sex", factor(df[,Sex], levels=c(1,2), labels=c("M","F")))
-		set(df, NULL, "Subtype", factor(df[,Subtype]))
-		set(df, NULL, "CountryBorn", factor(df[,CountryBorn]))
-		set(df, which( df[,CountryInfection%in%NA.CountryInfection] ), "CountryInfection", NA_character_ )		
-		set(df, NULL, "CountryInfection", factor(df[,CountryInfection]))
-		set(df, NULL, "RegionOrigin", factor(df[,RegionOrigin]))
-		set(df, NULL, "NegT_Acc", factor(df[,NegT_Acc], levels=c(0,1), labels=c("No","Yes")))
-		set(df, NULL, "PosT_Acc", factor(df[,PosT_Acc], levels=c(0,1), labels=c("No","Yes")))		
-		set(df, NULL, "isDead", factor(df[,isDead], levels=c(0,1), labels=c("No","Yes")))
-		set(df, NULL, "Trm", factor(df[, Trm], levels=c(100, 101,  102,  202, 103,  104,  105,  106,  107, 108,  110), labels= c("MSM","BI","HET","HETfa","IDU","BLOOD","NEEACC", "PREG", "BREAST", "OTH", "SXCH")) )
-		set(df, NULL, "RegionHospital", factor(df[,RegionHospital], levels=c(1,2,3,4,5,6), labels=c("Amst","N","E","S","W","Curu")))
-		setkey(df,Patient)
-		str(df)
-		save(df, file=file)		
+		project.hivc.Excel2dataframe.Patients()			
 	}
 	if(0)
 	{

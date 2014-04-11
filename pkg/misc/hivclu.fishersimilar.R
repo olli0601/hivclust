@@ -4079,7 +4079,7 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 	require(gamlss)
 	#
 	cat(paste('\nbeta regression for formula=',formula))	 
-	tmp				<- project.athena.Fisheretal.betareg(YX.m3, formula, include.colnames, verbose=1 )
+	tmp				<- project.athena.Fisheretal.betareg(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( c(0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
 	betafit.or		<- tmp$betafit.or
 	betafit.rr		<- tmp$betafit.rr
 	stopifnot(tmp$gamlss.BE.limit>gamlss.BE.required.limit)
@@ -4165,7 +4165,7 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				while(bs.repeat)
 				{
 					YX.m3.bs		<- merge( YX.m3, tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ], by='Patient', allow.cartesian=TRUE )
-					tmp				<- project.athena.Fisheretal.betareg(YX.m3.bs, formula, include.colnames, gamlss.BE.limit.u=c( seq(0.95, 0.99, 0.025),seq(0.991, 1, 0.005)), verbose=1 )
+					tmp				<- project.athena.Fisheretal.betareg(YX.m3.bs, formula, include.colnames, gamlss.BE.limit.u=c( c(0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 1)), verbose=1 )
 					betafit.or.bs	<- tmp$betafit.or
 					betafit.rr.bs	<- tmp$betafit.rr
 					bs.repeat		<- ifelse( tmp$gamlss.BE.limit>gamlss.BE.required.limit, 0, 1 )											
