@@ -1196,7 +1196,8 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 							Patient=="M33353" & PosCD4=="2006-03-22" & CD4A==101	|
 							Patient=="M33924" & PosCD4=="2007-11-01" & CD4A==0		|
 							Patient=="M37294" & PosCD4=="2011-07-18" & CD4A==820	|
-							Patient=="M39055" & PosCD4=="2012-02-06" & CD4A==6850							
+							Patient=="M39055" & PosCD4=="2012-02-06" & CD4A==6850	|
+							Patient=="M36408" & PosCD4=="2011-12-09" & CD4A==3701		#unclear
 							])
 	if(verbose) cat(paste("\nnumber of entries with incorrect CD4  should be 45, n=",length(tmp),"set to NA"))	
 	set(df, tmp, "CD4A", NA)	
@@ -1223,8 +1224,28 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	#	check above 1700 manually
 	#
 	tmp<- merge(df, subset(df, CD4A>1700, Patient), by="Patient")
-	tmp<- tmp[,	list(CD4.med= median(CD4A), CD4.max=max(CD4A)),by="Patient"]
-	print( subset(tmp, CD4.med*1.5<CD4.max) )
+	setkey(tmp, Patient, PosCD4)
+	tmp<- tmp[,	{
+					z<- which(CD4A>1000)
+					list(PosCD4_T1= min(PosCD4), CD4_T1= CD4A[1], CD4.med= median(CD4A), CD4.q= quantile(CD4A, p=0.9), CD4.h=CD4A[z], PosCD4=PosCD4[z])
+			},by="Patient"]
+	
+	
+	tmp		<- subset(tmp, CD4_T1!=CD4.h)	#leave those with high CD4 at start for now 	
+	tmp		<- subset(tmp, ((CD4.h/10)%%1)==0 )		#leave those with last non-zero digit for now
+	#	divide by 10
+	#subset(tmp, CD4.q*3<CD4.h)
+	z		<- df[, which( CD4A>1700 & Patient%in%subset(tmp, CD4.q*3<CD4.h)[,Patient])]
+	set(df, z, 'CD4A', df[z,CD4A]/10)
+	tmp		<- subset(tmp, CD4.q*3>=CD4.h)
+	
+	
+	set(tmp[, CD4.q*3<CD4.h]
+
+	subset(tmp, CD4_T1<500 & CD4.h>1000 & ((CD4.h/10)%%1)==0)
+	
+	
+	print( subset(tmp, CD4.med*1.5<CD4.h) , n=600 )
 	#	divide by 10
 	tmp		<- which(df[, Patient%in%c("M10212","M14927","M15431","M15519","M20720","M26334","M27643","M27571") & CD4A>1700])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong CD4 units > 1700  M10212 M27571 M14927  M15431  M15519  M20720  M26334  M27643, n=",length(tmp),"DIVIDE BY 10"))

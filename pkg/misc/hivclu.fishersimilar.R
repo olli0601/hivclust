@@ -6661,12 +6661,12 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 					YX.m2.fit4 	<- betareg(score.Y ~ stage-1, link='logit', weights=w, data = YX.m2)
 					YX.m2[, lRNA.c:=NULL]
 					
-					ans			<- c(		YX.m2[, length(which(stage=='ART.suA.Y'))], YX.m2[, length(which(stage=='ART.suA.N'))],
-							subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='ART.suA.N')[, sum(w)],
-							coef(YX.m2.fit4)['stageART.suA.Y'], coef(YX.m2.fit4)['stageART.suA.N'], coef(YX.m2.fit4)['stageU'],	
-							sqrt(diag(vcov(YX.m2.fit4)))[c('stageART.suA.Y','stageART.suA.N')],
-							my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageART.suA.N', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='ART.suA.N')[, sum(w)], 1.962),						
-							my.or.from.logit(YX.m2.fit4, 'stageART.suA.Y', 'stageU', subset(YX.m2, stage=='ART.suA.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
+					ans			<- c(		YX.m2[, length(which(stage=='ART.su.Y'))], YX.m2[, length(which(stage=='ART.su.N'))],
+							subset(YX.m2, stage=='ART.su.Y')[, sum(w)], subset(YX.m2, stage=='ART.su.N')[, sum(w)],
+							coef(YX.m2.fit4)['stageART.su.Y'], coef(YX.m2.fit4)['stageART.su.N'], coef(YX.m2.fit4)['stageU'],	
+							sqrt(diag(vcov(YX.m2.fit4)))[c('stageART.su.Y','stageART.su.N')],
+							my.or.from.logit(YX.m2.fit4, 'stageART.su.Y', 'stageART.su.N', subset(YX.m2, stage=='ART.su.Y')[, sum(w)], subset(YX.m2, stage=='ART.su.N')[, sum(w)], 1.962),						
+							my.or.from.logit(YX.m2.fit4, 'stageART.su.Y', 'stageU', subset(YX.m2, stage=='ART.su.Y')[, sum(w)], subset(YX.m2, stage=='U')[, sum(w)], 1.962),
 							logLik(YX.m2.fit4), YX.m2.fit4$pseudo.r.squared, 10^VL.cur	)
 					names(ans)	<- c('n.su.Y','n.su.N','w.su.Y','w.su.N','coef.su.Y','coef.su.N','coef.U','coef.su.Y.sd','coef.su.N.sd','or.YN','or.YN.l95','or.YN.u95','or.YU','or.YU.l95','or.YU.u95','lkl','r2','VL.thresh')
 					ans
