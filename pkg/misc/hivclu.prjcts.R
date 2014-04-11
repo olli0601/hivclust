@@ -1426,9 +1426,15 @@ project.hivc.Excel2dataframe.Viro<- function()
 	set(df, tmp, 'RNA', NA_real_)
 	df	<- subset(df, !is.na(RNA))
 	#
+	#	set undetectable & 1e3<RNA<1e4 after treatment start to RNA
+	#	
+	tmp		<- which( df[, Undetectable=="Yes" & RNA>RNA.stdvl.udetect.aTS & RNA<1e4 & difftime(PosRNA, AnyT_T1, units='days')>=0] )
+	if(verbose)		cat(paste("\nsetting Undetectable=='Yes' and RNA<1e4 and PosRNA>AnyT_T1 to Undetectable=='No', n=",length(tmp)))
+	set(df,tmp,"Undetectable","No")
+	#
 	#	set undetectable & RNA<1e4 after treatment start to 1e3
 	#	
-	tmp		<- which( df[, Undetectable=="Yes" & RNA<1e4 & difftime(PosRNA, AnyT_T1, units='days')>=0] )
+	tmp		<- which( df[, Undetectable=="Yes" & RNA<=RNA.stdvl.udetect.aTS & difftime(PosRNA, AnyT_T1, units='days')>=0] )
 	if(verbose)		cat(paste("\nsetting Undetectable=='Yes' and RNA<1e4 and PosRNA>AnyT_T1 to Undetectable=='No' and RNA.min, n=",length(tmp)))
 	set(df,tmp,"Undetectable","No")
 	set(df,tmp,"RNA",RNA.stdvl.udetect.aTS)
@@ -1436,11 +1442,13 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#	remove undetectable RNA (before treatment start) that are before the first detectable RNA
 	#
 	tmp		<- df[, list(select= !all(Undetectable=='Yes')), by='Patient']
-	if(verbose)		cat(paste("\nPatients with all Undetectable RNA, n=",nrow(subset(tmp, !select))))
+	if(verbose)		cat(paste("\nPatients with all Undetectable RNA, DELETE n=",nrow(subset(tmp, !select))))
+	df		<- merge( df,subset(tmp, select,Patient), by='Patient' )
+	
 	df		<- df[,  {
-				tmp<- seq.int(which(Undetectable=='No')[1], length(Undetectable)) 
-				lapply(.SD,'[',tmp)
-			},by='Patient']
+							tmp<- seq.int(which(Undetectable=='No')[1], length(Undetectable)) 
+							lapply(.SD,'[',tmp)
+						},by='Patient']
 	if(verbose)		cat(paste("\nnumber of entries after removing undetectable RNA before any detectable RNA, n=",nrow(df)))
 	if(verbose)		cat(paste("\nnumber of remaining undetectable RNA, n=",df[,length(which(Undetectable=='Yes'))]))
 	#M38913, M38722, M38411, M37285, M37211, M35710, M33521, M31924, M28495, M15900
