@@ -4049,16 +4049,16 @@ project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, g
 	gamlss.BE.limit.i	<- gamlss.BE.limit.u[1]
 	YX.m3b				<- copy(YX.m3)	
 	set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.i)], 'score.Y', gamlss.BE.limit.i)
-	betafit.or			<- gamlss(as.formula(formula), weights=w, data=YX.m3b[, include.colnames, with=FALSE], family=BE(mu.link='logit'), trace=0)	
-	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=YX.m3b[, include.colnames, with=FALSE], family=BE(mu.link='log'), trace=0)	
+	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3b[, include.colnames, with=FALSE]), family=BE(mu.link='logit'), trace=0)	
+	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3b[, include.colnames, with=FALSE]), family=BE(mu.link='log'), trace=0)	
 	tryCatch({
 				for(i in seq_along(gamlss.BE.limit.u)[-1])
 				{
 					#print(gamlss.BE.limit.u[i])			
 					YX.m3b	<- copy(YX.m3)	
 					set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.u[i])], 'score.Y', gamlss.BE.limit.u[i])
-					tmp.or				<- gamlss(as.formula(formula), weights=w, data=YX.m3b[, include.colnames, with=FALSE], family=BE(mu.link='logit'), trace=0, start.from=betafit.or)
-					tmp.rr				<- gamlss(as.formula(formula), weights=w, data=YX.m3b[, include.colnames, with=FALSE], family=BE(mu.link='log'), trace=0, start.from=betafit.rr)
+					tmp.or				<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3b[, include.colnames, with=FALSE]), family=BE(mu.link='logit'), trace=0, start.from=betafit.or)
+					tmp.rr				<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3b[, include.colnames, with=FALSE]), family=BE(mu.link='log'), trace=0, start.from=betafit.rr)
 					gamlss.BE.limit		<- gamlss.BE.limit.u[i]	#not run if error in gamlss
 					betafit.rr			<- tmp.rr				#not run if error in gamlss
 					betafit.or			<- tmp.or				#not run if error in gamlss
@@ -4068,8 +4068,8 @@ project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, g
 	
 	if(verbose) cat(paste('\nsuccess: gamlss beta regression for score<=',gamlss.init$BE.limit))
 	set(YX.m3, YX.m3[, which(score.Y>gamlss.init$BE.limit)], 'score.Y', gamlss.init$BE.limit)
-	betafit.or			<- gamlss(as.formula(formula), weights=w, data=YX.m3[, include.colnames, with=FALSE], family=BE(mu.link='logit'), trace=0, start.from=gamlss.init$start.from.or)
-	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=YX.m3[, include.colnames, with=FALSE], family=BE(mu.link='log'), trace=0, start.from=gamlss.init$start.from.rr)
+	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3[, include.colnames, with=FALSE]), family=BE(mu.link='logit'), trace=0, start.from=gamlss.init$start.from.or)
+	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3[, include.colnames, with=FALSE]), family=BE(mu.link='log'), trace=0, start.from=gamlss.init$start.from.rr)
 	
 	list(betafit.or=betafit.or, betafit.rr=betafit.rr, gamlss.BE.limit=gamlss.init$BE.limit)
 }
