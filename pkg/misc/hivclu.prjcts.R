@@ -303,15 +303,25 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 	#input files generated with "project.hivc.Excel2dataframe"
 	resume			<- 0
 	verbose			<- 1
-	file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
-	file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patients.R",sep='/')
-	file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
-	file.immu		<- paste(dir.name,"derived/ATHENA_2013_03_Immu.R",sep='/')
-	file.treatment	<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
+	if(0)
+	{
+		file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
+		file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patients.R",sep='/')
+		file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
+		file.immu		<- paste(dir.name,"derived/ATHENA_2013_03_Immu.R",sep='/')
+		file.treatment	<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
+		file.out		<- paste(dir.name,"derived/ATHENA_2013_03_AllSeqPatientCovariates.R",sep='/')
+	}
+	if(1)
+	{
+		file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences_AllMSM.R",sep='/')
+		file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patients_AllMSM.R",sep='/')
+		file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+		file.immu		<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.R",sep='/')
+		file.treatment	<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
+		file.out		<- paste(dir.name,"derived/ATHENA_2013_03_AllSeqPatientCovariates_AllMSM.R",sep='/')
+	}
 	
-	#compute file AllSeqPatientCovariates
-	file.out.name	<- "ATHENA_2013_03_AllSeqPatientCovariates"
-	file.out		<- paste(dir.name,"/derived/",file.out.name,".R",sep='')
 	if(resume)												#//load if there is R Master data.table
 	{
 		options(show.error.messages = FALSE)		
@@ -1726,33 +1736,29 @@ project.hivc.Excel2dataframe.Sequences<- function(dir.name= DATA)
 	#read SEQUENCE csv data file and preprocess				
 	verbose			<- 1
 	names.GeneCode	<- c("PROT","RT")
-	NA.DateRes		<- as.Date("1911-11-11") 
+	NA.DateRes		<- as.Date("1911-11-11")
+	NA.Seq			<- c('')
 	min.seq.len		<- 21
 	proc.GeneCode	<- c(1,2)
 	
 	df				<- read.csv(file, stringsAsFactors=FALSE)
 	df[,"DateRes"]	<- as.Date(df[,"DateRes"], format="%d/%m/%Y")	
-	nok.idx<- which( df[,"DateRes"]==NA.DateRes )					
+	nok.idx<- which( df[,"DateRes"]==NA.DateRes )	
+	if(verbose) cat(paste("\nrange of DateRes is",paste(range(df[,"DateRes"], na.rm=1),collapse=', ')))
 	if(verbose) cat(paste("\nentries with missing DateRes, n=", length(nok.idx)))					
 	if(verbose) cat(paste("\nentries with missing DateRes, SampleCode", paste(df[nok.idx,"SampleCode"],collapse=', ')))
-	df[nok.idx,"DateRes"]<- NA
+	df[nok.idx,"DateRes"]					<- NA	
+	df[ which(df[,"Sequence"]%in%NA.Seq),]	<- NA 
+	tmp										<- nchar(df[,"Sequence"])
+	tmp										<- which(tmp<min.seq.len)
+	if(verbose)	cat(paste("\ndiscarding sequences with insufficient length, n=",length(tmp),'\n'))
+	df										<- df[-tmp,]
 	
-	which(df[,"Sequence"]=='')
 	
 	df				<- lapply(proc.GeneCode,function(gene)
 			{
 				cat(paste("\nprocess GeneCode", gene))
-				tmp				<- df[ df[,"GeneCode"]==gene, c("Patient","SampleCode","DateRes","Sequence"), drop=0 ]
-				if(verbose) cat(paste("\nrange of DateRes is",paste(range(tmp[,"DateRes"], na.rm=1),collapse=', ')))
-				cat(paste("\nfound n=", nrow(tmp)))
-				seq.len			<- nchar(tmp[,"Sequence"])
-				
-				nok.idx			<- which(seq.len<min.seq.len)
-				seq.ok.idx		<- which(seq.len>=min.seq.len)
-				if(verbose)	cat(paste("\ndiscarding sequences with insufficient length, n=",length(nok.idx),'\n'))
-				if(verbose)	cat(paste("\ndiscarding sequence with insufficient length, SampleCode",paste(tmp[nok.idx,"SampleCode"],collapse=', ')))
-				tmp				<- tmp[seq.ok.idx,]
-				if(verbose) cat(paste("\nfinal n=", nrow(tmp)))
+				tmp				<- df[ df[,"GeneCode"]==gene, c("Patient","SampleCode","DateRes","Sequence"), drop=0 ]								
 				tmp
 			})		
 	names(df)	<- names.GeneCode

@@ -4257,7 +4257,6 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 		cat(paste('\nstratify by', method))
 		if(substr(method,1,5)=='m2wmx')
 		{
-			#X.seq<- X.seq[sample(seq.int(1,nrow(X.seq)), 2e6),]
 			YX			<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )
 			X.seq		<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
 		}
@@ -8290,7 +8289,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#X.seq<- X.seq[sample(1:nrow(X.seq),2e6),]
 	resume			<- 1
-	bs.n			<- 1e1
+	bs.n			<- 1e3
 	method.risk		<- 'm21st.cas'
 	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
