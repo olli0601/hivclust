@@ -4164,11 +4164,13 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				bs.repeat			<- 1
 				while(bs.repeat)
 				{
-					YX.m3.bs		<- merge( YX.m3, tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ], by='Patient', allow.cartesian=TRUE )
-					tmp				<- project.athena.Fisheretal.betareg(YX.m3.bs, formula, include.colnames, gamlss.BE.limit.u=c( c(0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 1)), verbose=1 )
-					betafit.or.bs	<- tmp$betafit.or
-					betafit.rr.bs	<- tmp$betafit.rr
-					bs.repeat		<- ifelse( tmp$gamlss.BE.limit>gamlss.BE.required.limit, 0, 1 )											
+					YX.m3.bs			<- merge( YX.m3, tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ], by='Patient', allow.cartesian=TRUE )
+					tryCatch({ 
+						tmp				<- project.athena.Fisheretal.betareg(YX.m3.bs, formula, include.colnames, gamlss.BE.limit.u=c( c(0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 1)), verbose=1 )
+						betafit.or.bs	<- tmp$betafit.or
+						betafit.rr.bs	<- tmp$betafit.rr
+						bs.repeat		<- ifelse( tmp$gamlss.BE.limit>gamlss.BE.required.limit, 0, 1 )
+					}, error=function(e){ bs.repeat<<- 1})																
 				}					
 				#	odds ratio and risk ratio
 				risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{

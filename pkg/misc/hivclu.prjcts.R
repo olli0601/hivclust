@@ -296,7 +296,7 @@ project.seq.dataset.mDR.mRC.mSH.pLANL<- function()
 	save(seq.PROT.RT, file=file)
 }				
 ######################################################################################
-project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
+project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, verbose=1, resume=0)
 {	
 	require(data.table)		
 	
@@ -1719,61 +1719,48 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	save(df, file=file)	
 }
 ######################################################################################
-project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=1)
+project.hivc.Excel2dataframe.Sequences<- function(dir.name= DATA)
 {
-	if(0)
-	{
-		#read SEQUENCE csv data file and preprocess				
-		names.GeneCode	<- c("PROT","RT")
-		NA.DateRes		<- as.Date("1911-11-11") 
-		
-		file			<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.csv",sep='/')
-		df				<- read.csv(file, stringsAsFactors=FALSE)				
-		proc.GeneCode	<- c(1,2)
-		df				<- lapply(proc.GeneCode,function(gene)
-				{
-					cat(paste("\nprocess GeneCode", gene))
-					tmp				<- df[ df[,"GeneCode"]==gene, c("Patient","SampleCode","DateRes","Sequence"), drop=0 ]
-					tmp[,"DateRes"]	<- as.Date(tmp[,"DateRes"], format="%d/%m/%Y")
-					
-					nok.idx<- which( tmp[,"DateRes"]==NA.DateRes )					
-					if(verbose) cat(paste("\nentries with missing DateRes, n=", length(nok.idx)))					
-					if(verbose) cat(paste("\nentries with missing DateRes, SampleCode", paste(tmp[nok.idx,"SampleCode"],collapse=', ')))
-					tmp[nok.idx,"DateRes"]<- NA
-					if(verbose) cat(paste("\nrange of DateRes is",paste(range(tmp[,"DateRes"], na.rm=1),collapse=', ')))
-					cat(paste("\nfound n=", nrow(tmp)))
-					seq.len			<- nchar(tmp[,"Sequence"])
-					nok.idx		<- which(seq.len<min.seq.len)
-					seq.ok.idx		<- which(seq.len>=min.seq.len)
-					if(verbose)	cat(paste("\ndiscarding sequences with insufficient length, n=",length(nok.idx),'\n'))
-					if(verbose)	cat(paste("\ndiscarding sequence with insufficient length, SampleCode",paste(tmp[nok.idx,"SampleCode"],collapse=', ')))
-					tmp				<- tmp[seq.ok.idx,]
-					if(verbose) cat(paste("\nfinal n=", nrow(tmp)))
-					tmp
-				})		
-		names(df)	<- names.GeneCode
-		file		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
-		cat(paste("\nsave to", file))
-		save(df, file=file)
-		quit("no")
-	}
-	if(0)
-	{
-		project.hivc.Excel2dataframe.Regimen()		
-		project.hivc.Excel2dataframe.Regimen.CheckARTStartDate()	#assume Viro.R is alreaedy there
-	}
-	if(0)
-	{
-		project.hivc.Excel2dataframe.Patients()			
-	}
-	if(0)
-	{
-		project.hivc.Excel2dataframe.Viro()	
-	}
-	if(0)
-	{
-		project.hivc.Excel2dataframe.CD4()		
-	}
+	file			<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.csv",sep='/')
+	file			<- paste(dir.name,"derived/ATHENA_2013_03_Sequences_AllMSM.csv",sep='/')
+	#read SEQUENCE csv data file and preprocess				
+	verbose			<- 1
+	names.GeneCode	<- c("PROT","RT")
+	NA.DateRes		<- as.Date("1911-11-11") 
+	min.seq.len		<- 21
+	proc.GeneCode	<- c(1,2)
+	
+	df				<- read.csv(file, stringsAsFactors=FALSE)
+	df[,"DateRes"]	<- as.Date(df[,"DateRes"], format="%d/%m/%Y")	
+	nok.idx<- which( df[,"DateRes"]==NA.DateRes )					
+	if(verbose) cat(paste("\nentries with missing DateRes, n=", length(nok.idx)))					
+	if(verbose) cat(paste("\nentries with missing DateRes, SampleCode", paste(df[nok.idx,"SampleCode"],collapse=', ')))
+	df[nok.idx,"DateRes"]<- NA
+	
+	which(df[,"Sequence"]=='')
+	
+	df				<- lapply(proc.GeneCode,function(gene)
+			{
+				cat(paste("\nprocess GeneCode", gene))
+				tmp				<- df[ df[,"GeneCode"]==gene, c("Patient","SampleCode","DateRes","Sequence"), drop=0 ]
+				if(verbose) cat(paste("\nrange of DateRes is",paste(range(tmp[,"DateRes"], na.rm=1),collapse=', ')))
+				cat(paste("\nfound n=", nrow(tmp)))
+				seq.len			<- nchar(tmp[,"Sequence"])
+				
+				nok.idx			<- which(seq.len<min.seq.len)
+				seq.ok.idx		<- which(seq.len>=min.seq.len)
+				if(verbose)	cat(paste("\ndiscarding sequences with insufficient length, n=",length(nok.idx),'\n'))
+				if(verbose)	cat(paste("\ndiscarding sequence with insufficient length, SampleCode",paste(tmp[nok.idx,"SampleCode"],collapse=', ')))
+				tmp				<- tmp[seq.ok.idx,]
+				if(verbose) cat(paste("\nfinal n=", nrow(tmp)))
+				tmp
+			})		
+	names(df)	<- names.GeneCode
+	
+	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')
+	if(verbose) cat(paste("\nsave to", file))
+	save(df, file=file)
+	quit("no")	
 }
 ######################################################################################
 project.hivc.clustering.get.linked.and.unlinked<- function(dir.name= DATA)
