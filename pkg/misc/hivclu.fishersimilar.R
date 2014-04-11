@@ -4293,7 +4293,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 						risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 						tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep(paste('ART.suA.Y',tp,sep='.'),nrow(risk.df)))
 						risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-												
+
+						print(YX[, table(stage)])
+						print(YX[ ,summary(score.Y)])
 						ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, bs.n=bs.n )
 						ans				<- ans$risk
 						options(warn=-1)
@@ -8218,7 +8220,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#X.seq<- X.seq[1:2e6,]
 	resume			<- 1
-	bs.n			<- 1e2
+	bs.n			<- 1e1
 	method.risk		<- 'm21st.cas'
 	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')

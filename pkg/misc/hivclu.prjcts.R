@@ -1315,12 +1315,17 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 ######################################################################################
 project.hivc.Excel2dataframe.Viro<- function()		
 {
+	file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
+	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro.csv",sep='/')
+	file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
+	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.csv",sep='/')
+	
 	verbose				<- 1
 	dir.name			<- DATA
 	DB.locktime			<- HIVC.db.locktime
 	
 	#need for checking of VL data
-	file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
+	
 	load(file.treatment)
 	df.treat			<- subset(df, select=c(Patient, StartTime, StopTime, AnyT_T1, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel))
 	
@@ -1333,8 +1338,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	lRNA.min.early			<- log10(1e5)
 	lRNA.max.b4early		<- log10(2e4)
 	
-	#read VIROLOGY csv data file and preprocess
-	file			<- paste(dir.name,"derived/ATHENA_2013_03_Viro.csv",sep='/')
+	#read VIROLOGY csv data file and preprocess	
 	df				<- read.csv(file, stringsAsFactors=FALSE)									
 	df$Undetectable	<- factor(df$Undetectable, levels=c(0,1,2),labels=c("No","Yes","LargerThan"))
 	date.var		<- c("DateRNA")		
@@ -1364,7 +1368,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	df		<- data.table(df, key="Patient")
 	if(verbose) cat(paste("\nnumber of entries read, n=",nrow(df)))
 	setnames(df, "DateRNA","PosRNA")
-	set(df, NULL, "Patient", factor(df[,Patient]))
+	#set(df, NULL, "Patient", factor(df[,Patient]))
 	#
 	#	checking manually NegT>PosRNA
 	#
@@ -1623,9 +1627,9 @@ project.hivc.Excel2dataframe.Viro<- function()
 					}, by="Patient"]
 	df<- merge(subset(df,select=c(Patient, PosRNA, RNA, lRNA, PoslRNA_T1, lRNA_T1)), subset(tmp,select=c(Patient,lRNA.i,lRNA.hb4tr_LT,lRNA.early)), all.x=1, by="Patient")
 	
-	file		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
+	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
 	if(verbose) cat(paste("\nsave to", file))
-	save(df, file=file)
+	save(df, file=file)	
 }	
 ######################################################################################
 project.hivc.Excel2dataframe<- function(dir.name= DATA, min.seq.len=21, verbose=1)
