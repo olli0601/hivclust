@@ -1239,11 +1239,7 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	set(df, z, 'CD4A', df[z,CD4A]/10)
 	tmp		<- subset(tmp, CD4.q*3>=CD4.h)
 	
-	
-	set(tmp[, CD4.q*3<CD4.h]
-
-	subset(tmp, CD4_T1<500 & CD4.h>1000 & ((CD4.h/10)%%1)==0)
-	
+		
 	
 	print( subset(tmp, CD4.med*1.5<CD4.h) , n=600 )
 	#	divide by 10
