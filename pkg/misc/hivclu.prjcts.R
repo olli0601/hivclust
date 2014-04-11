@@ -621,14 +621,16 @@ project.hivc.collectpatientdata<- function(dir.name= DATA, verbose=1, resume=0)
 ######################################################################################
 project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 {
+	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
+	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')
+	
 	NA.time			<- c("01/01/1911","01/11/1911","11/11/1911")	
 	MAX.time		<- c("")
 	TR.notyet		<- "30/03/2013"
 	TR.failure 		<- c(21, 24, 25, 31, 32, 34, 35, 36) 	#either viro or immu failure, dose escalation, toxicity, new CDC-B/C event, interaction with other medication
 	TR.adherence	<- c(47)
 	TR.patrel		<- c(23, 33, 42, 43)					#either patient s decision, desired pregnancy
-	#read REGIMEN csv data file and preprocess
-	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
+	#read REGIMEN csv data file and preprocess	
 	df				<- read.csv(file, stringsAsFactors=FALSE)							
 	
 	date.var		<- c("T0","StartTime","StopTime")		
@@ -656,8 +658,9 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	TR.notyet				<- as.Date(TR.notyet, format="%d/%m/%Y")
 	
 	df						<- data.table(df, key="Patient")
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
 	setnames(df, "T0","HAART_T1")
-	set(df,NULL,"Patient",factor(df[,Patient]))
+	#set(df,NULL,"Patient",factor(df[,Patient]))
 	if(verbose)	cat(paste("\nnumber of entries, n=",nrow(df)))
 	#	fix entry 	M17493  1996-01-01 manually
 	tmp						<- which(df[, Patient=="M17493" & StartTime=="1996-01-01"])
@@ -730,8 +733,22 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	tmp						<- merge( df, subset( df[,list(check= any( is.na(StartTime) & NoDrug==0) ), by='Patient'], check, Patient), by='Patient') 
 	if(verbose)	cat(paste("\nnumber of entries with NoDrug==0 and is.na StartTime, n=",nrow(tmp)))
 	#
-	#	fix StartTime>StopTime
+	#	remove duplicate entries
 	#
+	setkey(df, Patient, StartTime, StopTime)
+	tmp		<- which(duplicated(df))
+	if(verbose)	cat(paste("\nnumber of duplicate entries with key  Patient, StartTime, StopTime, n=",nrow(tmp)))
+	df		<- unique(df)
+	#M15198 1998-05-28 1996-08-22 1998-02-24
+	#M15198 1998-05-28 1996-08-22 1998-07-01
+	#M17774 1997-03-30 2013-03-30 1996-08-26
+	#M17774 1997-03-30 2013-03-30 1998-06-21
+	tmp						<- which(df[, Patient=="M15198" & StartTime=="1998-07-01"])
+	if(verbose)	cat(paste("\nrm entry 	M15198 1998-05-28 1996-08-22 1998-07-01"))
+	df						<- subset(df, !(Patient=="M15198" & StartTime=="1998-07-01"))
+	#
+	#	fix StartTime>StopTime
+	#	
 	tmp		<- which(df[,StartTime>StopTime])	
 	if(verbose)	cat(paste("\nnumber of entries with StartTime>StopTime, n=",length(tmp)))
 	tmp		<- cbind( tmp, sapply(tmp,function(x)		which(df[, Patient==df[x,Patient] & StopTime==df[x,StartTime]])	) )		#second col contains StopTime
@@ -845,7 +862,7 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	tmp$mon				<- 11
 	set(df, nacc, "AnyT_T1", as.Date(tmp))		
 	#
-	file		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
+	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')
 	if(verbose) cat(paste("\nsave to", file))
 	save(df, file=file)
 }
@@ -1076,10 +1093,11 @@ project.hivc.Excel2dataframe.Regimen.CheckARTStartDate<- function(dir.name= DATA
 ######################################################################################
 project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 {
+	file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu.csv",sep='/')
+	file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.csv",sep='/')
 	NA.time			<- c("","01/01/1911","11/11/1911","24/06/1923")		
 	verbose			<- 1
 	#read CD4 csv data file and preprocess
-	file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu.csv",sep='/')
 	df				<- read.csv(file, stringsAsFactors=FALSE)											
 	date.var		<- c("DateImm")		
 	for(x in date.var)
@@ -1106,7 +1124,7 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	}		
 	df		<- data.table(df, key="Patient")
 	setnames(df, "DateImm","PosCD4")
-	set(df, NULL, "Patient", factor(df[,Patient]))
+	#set(df, NULL, "Patient", factor(df[,Patient]))
 	if(verbose) cat(paste("\nnumber of entries read, n=",nrow(df)))
 	tmp		<- which(df[,is.na(CD4A)])
 	if(verbose) cat(paste("\nnumber of entries with is.na(CD4A), n=",length(tmp),"SETTING PosCD4 to NA"))
@@ -1268,8 +1286,7 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 			},by=Patient]
 	
 	
-	
-	file		<- paste(dir.name,"derived/ATHENA_2013_03_Immu.R",sep='/')
+	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
 	if(verbose) cat(paste("\nsave to", file))
 	save(df, file=file)		
 }

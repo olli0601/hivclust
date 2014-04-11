@@ -630,7 +630,6 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, indir, insignat,
 		Y.coal					<- NULL
 		if(!is.null(cluphy) & !is.null(cluphy.info) & !is.null(cluphy.map.nodectime)  )
 		{
-			print(cluphy.map.nodectime)
 			file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw',method,'.R',sep='')		
 			Y.coal				<- project.athena.Fisheretal.Y.coal(YX.tpairs, df.all, YX.part1, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=file, resume=resume )			
 		}
@@ -6644,8 +6643,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	if(!is.na(plot.file.varyvl))
 	{			
 		require(betareg)
+		print(YX.m2)
+		print(YX.m2[,table(stage.orig)])
 		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
-		VL.win		<- c( seq(100, 1000, by=100), seq(1250, 1e4, by=250) ) 
+		VL.win		<- c( seq(400, 1000, by=100), seq(1250, 1e4, by=250) ) 
 		YX.m2.VL	<- sapply(VL.win, function(VL.cur)
 				{
 					cat(paste('\nprocess VL=', VL.cur))									
@@ -6671,8 +6672,11 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 					ans
 				})
 		YX.m2.VL	<- as.data.table(t(YX.m2.VL))
+		ylim		<- c( min(YX.m2.VL[, or.YN.l95], na.rm=TRUE),max(YX.m2.VL[, or.YN.u95], na.rm=TRUE))
+		print(YX.m2.VL)
+		print(ylim)
 		pdf(file=plot.file.varyvl, w=5, h=5)
-		plot(YX.m2.VL[, VL.thresh], YX.m2.VL[, or.YN], type='p', pch=18, ylim= c( min(YX.m2.VL[, or.YN.l95], na.rm=TRUE),max(YX.m2.VL[, or.YN.u95], na.rm=TRUE))  )
+		plot(YX.m2.VL[, VL.thresh], YX.m2.VL[, or.YN], type='p', pch=18, ylim= ylim  )
 		dummy	<- YX.m2.VL[,	lines( rep(VL.thresh,2), c(or.YN.l95,or.YN.u95))	, by='VL.thresh']
 		dev.off()
 	}
@@ -6746,7 +6750,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	{			
 		require(betareg)
 		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
-		VL.win		<- c( seq(100, 1000, by=100), seq(1250, 1e4, by=250) ) 
+		VL.win		<- c( seq(400, 1000, by=100), seq(1250, 1e4, by=250) ) 
 		YX.m2.VL	<- sapply(VL.win, function(VL.cur)
 				{
 					cat(paste('\nprocess VL=', VL.cur))									
@@ -7980,7 +7984,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	}
 	if(1)
 	{
-		resume					<- 0
+		resume					<- 1
 		method					<- '3c'
 		method.nodectime		<- 'any'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -8205,7 +8209,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#X.seq<- X.seq[1:2e6,]
 	resume			<- 1
-	bs.n			<- 1e3
+	bs.n			<- 1e2
 	method.risk		<- 'm21st.cas'
 	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
