@@ -4047,10 +4047,19 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 	require(betareg)
 	#
 	cat(paste('\nbeta regression for formula=',formula))
-	tmp					<- coef(betareg(formula=formula, link='logit', weights=w, data = subset(YX.m3, score.Y>0.2)))		
-	betafit.or 			<- betareg(formula=formula, link='logit', weights=w, data = YX.m3, start=list(tmp))
-	tmp					<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3, score.Y>0.2)))
-	betafit.rr 			<- betareg(formula=formula, link='log', weights=w, data = YX.m3, start=list(tmp))
+	for(tmp in seq(0.1,0.5,0.1))
+	{
+		th.repeat		<- 0
+		tryCatch({
+					betafit.or			<- coef(betareg(formula=formula, link='logit', weights=w, data = subset(YX.m3, score.Y>tmp)))		
+					betafit.or 			<- betareg(formula=formula, link='logit', weights=w, data = YX.m3, start=list(betafit.or))
+					betafit.rr			<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3, score.Y>tmp)))
+					betafit.rr 			<- betareg(formula=formula, link='log', weights=w, data = YX.m3, start=list(betafit.rr))					
+				}, error=function(e){ print(e$message); th.repeat<<- 1})
+		if(!th.repeat)	break
+	}					
+	stopifnot(th.repeat==0)
+	
 	#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7 )
 	#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7, k=YX.m3[, log(round(sum(w)))])
 	#sapply( list(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7), '[[', 'pseudo.r.squared')
@@ -8231,10 +8240,9 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	trends: all VL in infection window suppressed
 	#
-	method.risk			<- 'm2wmx.tp'
-	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+	method.risk			<- 'm2wmx.tp'	
 	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-	YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+	YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=NA, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	#		
 	#	treatment risk groups: only overlapping indicators
 	#

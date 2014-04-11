@@ -1221,27 +1221,65 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	if(verbose) print(df[tmp,])
 	set(df, tmp, "CD4A", round(df[tmp, CD4A]*1e-1,d=0))
 	#
+	#	remove too small entries and digit entries
+	#	
+	df		<- subset(df, CD4A>10)	
+	#subset(df, (CD4A%%1)!=0 & ((CD4A*10)%%1)==0 & CD4A<170)
+	df		<- subset(df, (CD4A%%1)==0 )
+	#
+	#	remove duplicate entries 
+	#
+	setkey(df, Patient, PosCD4, CD4A)
+	tmp		<- which(duplicated(df))
+	if(verbose) cat(paste("\nnumber of duplicated entries by Patient, PosCD4, CD4A, DELETE n=",length(tmp)))
+	df		<- unique(df)
+	setkey(df, Patient, PosCD4)
+	tmp		<- which(duplicated(df))	
+	tmp		<- sapply(tmp, function(i) c(i-1,i)[ which.min(df[c(i-1,i),Source]) ] )
+	if(verbose) cat(paste("\nnumber of duplicated entries by Patient, PosCD4, DELETE WITH LOWER SOURCE n=",length(tmp)))
+	df		<- df[-tmp,]
+	#
+	#	remove consecutive jumps >1e3 
+	#
+	setkey(df, Patient, PosCD4)
+	tmp		<- subset( df[, {  tmp<- which( length(CD4A)>1 & diff(CD4A)>1000 ); list(PosCD4=ifelse(length(tmp), as.character(PosCD4[tmp+1]), NA_character_), CD4A=ifelse(length(tmp), CD4A[tmp+1], NA_real_)) }, by='Patient'], !is.na(PosCD4))
+	if(verbose) cat(paste("\nnumber of consecutive jumps >1e3 DELETE n=",nrow(tmp)))
+	tmp		<- sapply(seq_len(nrow(tmp)), function(i)		df[,which(Patient==tmp[i,Patient] & PosCD4==tmp[i,PosCD4] & CD4A==tmp[i,CD4A])])
+	df		<- df[-tmp,]
+	#
+	#	remove consecutive jumps >7e2 within 60days 
+	#
+	tmp		<- subset( df[, {  tmp<- which( length(CD4A)>1 & diff(CD4A)>700 & difftime(PosCD4[-1],PosCD4[-length(PosCD4)],units='days')<60 ); list(PosCD4=ifelse(length(tmp), as.character(PosCD4[tmp+1]), NA_character_), CD4A=ifelse(length(tmp), CD4A[tmp+1], NA_real_)) }, by='Patient'], !is.na(PosCD4))
+	if(verbose) cat(paste("\nnumber of consecutive jumps >7e2 within 60days DELETE n=",nrow(tmp)))
+	tmp		<- sapply(seq_len(nrow(tmp)), function(i)		df[,which(Patient==tmp[i,Patient] & PosCD4==tmp[i,PosCD4] & CD4A==tmp[i,CD4A])])
+	df		<- df[-tmp,]
+	#
 	#	check above 1700 manually
 	#
 	tmp<- merge(df, subset(df, CD4A>1700, Patient), by="Patient")
 	setkey(tmp, Patient, PosCD4)
 	tmp<- tmp[,	{
-					z<- which(CD4A>1000)
+					z<- which(CD4A>1700)
 					list(PosCD4_T1= min(PosCD4), CD4_T1= CD4A[1], CD4.med= median(CD4A), CD4.q= quantile(CD4A, p=0.9), CD4.h=CD4A[z], PosCD4=PosCD4[z])
-			},by="Patient"]
-	
-	
-	tmp		<- subset(tmp, CD4_T1!=CD4.h)	#leave those with high CD4 at start for now 	
-	tmp		<- subset(tmp, ((CD4.h/10)%%1)==0 )		#leave those with last non-zero digit for now
+			},by="Patient"]	
+	#leave those with high CD4 at start for now
+	tmp		<- subset(tmp, CD4_T1!=CD4.h)	 	
+	#leave those with last non-zero digit for now
+	tmp		<- subset(tmp, ((CD4.h/10)%%1)==0 )		
 	#	divide by 10
 	#subset(tmp, CD4.q*3<CD4.h)
 	z		<- df[, which( CD4A>1700 & Patient%in%subset(tmp, CD4.q*3<CD4.h)[,Patient])]
 	set(df, z, 'CD4A', df[z,CD4A]/10)
 	tmp		<- subset(tmp, CD4.q*3>=CD4.h)
-	
-		
-	
-	print( subset(tmp, CD4.med*1.5<CD4.h) , n=600 )
+	#	remove
+	z		<- df[, which( CD4A>1700 & Patient%in%subset(tmp, CD4.q*2<CD4.h)[,Patient])]
+	df		<- df[-z]
+	tmp		<- subset(tmp, CD4.q*2>=CD4.h)
+	#	remove
+	z		<- df[, which( CD4A>1700 & Patient%in%subset(tmp, CD4.q<CD4.h & CD4.q<1200)[,Patient])]
+	df		<- df[-z]
+	tmp		<- subset(tmp, !(CD4.q<CD4.h & CD4.q<1200))
+	if(verbose) cat(paste("\nstill high entries NOT DELETED n=",nrow(tmp)))
 	#	divide by 10
 	tmp		<- which(df[, Patient%in%c("M10212","M14927","M15431","M15519","M20720","M26334","M27643","M27571") & CD4A>1700])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong CD4 units > 1700  M10212 M27571 M14927  M15431  M15519  M20720  M26334  M27643, n=",length(tmp),"DIVIDE BY 10"))
@@ -1266,43 +1304,10 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	df		<- subset(df, !is.na(CD4A))
 	if(verbose) cat(paste("\nnumber of entries with !is.na(PosCD4), n=",nrow(df)))
 	#
-	#	check for too small entries
-	#
-	tmp		<- which(df[,CD4A<1 & CD4A>0])
-	if(verbose) cat(paste("\nnumber of entries with too small CD4 CHECK MANUALLY, n=",length(tmp),"SET TO *1e3"))
-	if(verbose)	print(df[tmp,])
-	set(df, tmp, "CD4A", df[tmp,CD4A]*1e3)
-	#
-	#	check for double entries
-	#
-	tmp		<- df[,	{
-						z	<- which(as.numeric(difftime(PosCD4[-1],PosCD4[-length(PosCD4)],units="days"))==0)
-						z	<- rbind(z,z+1)
-						z2	<- rep( apply( z, 2, function(z2)	abs(CD4A[z2[1]]-CD4A[z2[2]])	), each=2 )
-						z3	<- rep( apply( z, 2, function(z2)	mean(c(CD4A[z2[1]],CD4A[z2[2]]))	), each=2 )
-						z	<- as.numeric(z)
-						list( PosCD4=PosCD4[z], CD4A=CD4A[z], CD4d=z2, CD4mean=z3 ) 					
-					}, by="Patient"]
-	if(verbose) cat(paste("\nfound double entries, n=",nrow(tmp),"SET TO MEAN -- NOT ALWAYS OK"))
-	if(verbose)	print(tmp)	
-	for( i in seq.int(1,nrow(tmp),2))
-	{
-		z<- which(df[, Patient==tmp[i,Patient] & PosCD4==tmp[i,PosCD4]])
-		set(df,z[1],"CD4A", mean(df[z,CD4A]))
-		set(df,z[-1],"CD4A", NA)		
-	}
-	df		<- subset(df, !is.na(CD4A))
-	if(verbose) cat(paste("\nnumber of entries with !is.na(PosCD4), n=",nrow(df)))
-	#	
-	setkey(df, PosCD4)
-	setkey(df, Patient)
-	#
 	df		<- df[, 	{
-				z<- which.min(PosCD4)
-				list(PosCD4=PosCD4, CD4=CD4A, PosCD4_T1=PosCD4[z], CD4_T1=CD4A[z] ) 	
-			},by=Patient]
-	
-	
+							z<- which.min(PosCD4)
+							list(PosCD4=PosCD4, CD4=CD4A, PosCD4_T1=PosCD4[z], CD4_T1=CD4A[z] ) 	
+						},by=Patient]
 	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
 	if(verbose) cat(paste("\nsave to", file))
 	save(df, file=file)		
