@@ -636,13 +636,18 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
 	
-	cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, outdir=outdir, outfile=outfile, resume=1, verbose=1)
-	cat(cmd)
-	#stop()
-	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=80, hpc.mem="30800mb")
-	outdir		<- paste(DATA,"tmp",sep='/')
-	outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
-	hivc.cmd.hpccaller(outdir, outfile, cmd)
+	#method.risk<- c('m21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
+	method.risk<- c('m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
+	dummy	<- sapply(method.risk, function(x)
+			{
+				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, outdir=outdir, outfile=outfile, resume=1, verbose=1)
+				cat(cmd)
+				stop()
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=80, hpc.mem="30800mb")
+				outdir		<- paste(DATA,"tmp",sep='/')
+				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+				hivc.cmd.hpccaller(outdir, outfile, cmd)			
+			})	
 }
 ######################################################################################
 hivc.pipeline.various<- function()

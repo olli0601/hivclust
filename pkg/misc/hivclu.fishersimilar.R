@@ -8044,6 +8044,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	{
 		method					<- '3c'
 		method.nodectime		<- 'any'
+		method.risk				<- 'm21st.cas'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"					
@@ -8055,18 +8056,20 @@ hivc.prog.betareg.estimaterisks<- function()
 	{
 		method					<- '3c'
 		method.nodectime		<- 'map'
+		method.risk				<- 'm21st.cas'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"						
 		clu.infilexml.opt		<- "alrh160"
 		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=2_sasky',sep='_')
+		outfile					<- paste(infile,'Ac=MY_D=2_sasky',sep='_')		
 	}
 	if(1)
 	{
 		resume					<- 1
 		method					<- '3c'
 		method.nodectime		<- 'any'
+		method.risk				<- 'm21st.cas'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
@@ -8131,6 +8134,10 @@ hivc.prog.betareg.estimaterisks<- function()
 									method= return(substr(arg,9,nchar(arg))),NA)	}))
 		if(length(tmp)>0) method<- tmp[1]
 		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,12),
+									method.risk= return(substr(arg,14,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method.risk<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,17),
 									method.nodectime= return(substr(arg,19,nchar(arg))),NA)	}))
 		if(length(tmp)>0) method.nodectime<- tmp[1]		
@@ -8148,6 +8155,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		print(outdir)
 		print(outfile)
 		print(method)
+		print(method.risk)
 		print(method.nodectime)
 	}
 	clu.infile		<- infile
@@ -8290,81 +8298,95 @@ hivc.prog.betareg.estimaterisks<- function()
 	#X.seq<- X.seq[sample(1:nrow(X.seq),2e6),]
 	resume			<- 1
 	bs.n			<- 1e3
-	method.risk		<- 'm21st.cas'
-	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
-	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-	YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+	if(method.risk=='m21st.cas')
+	{
+		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
+	}
 	#
 	#	endpoint: all VL in infection window suppressed
 	#
-	method.risk		<- 'm2wmx.cas'
-	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
-	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-	YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	if(method.risk=='m2wmx.cas')
+	{		
+		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	#
 	#	endpoint: VL at time t suppressed
 	#
-	method.risk		<- 'm2t.cas'
-	plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
-	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-	YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+	if(method.risk=='m2t.cas')
+	{					
+		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+	}
 	#
 	#	trends: all VL in infection window suppressed
 	#
-	method.risk			<- 'm2wmx.tp'	
-	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-	YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=NA, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+	if(method.risk=='m2wmx.tp')
+	{
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=NA, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+	}
 	#		
 	#	treatment risk groups: only overlapping indicators
-	#
-	method.risk			<- 'm3.i'
-	plot.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.pdf',sep='')
+	# 
+	if(method.risk=='m3.i')
+	{	
 	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 	YX.m3.ARTi.risk		<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	#		
 	#	treatment risk groups: number drug + overlapping indicators
 	#	
-	method.risk			<- 'm3.ni'
-	plot.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.pdf',sep='')
-	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
-	YX.m3.ARTni.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	if(method.risk=='m3.ni')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTni.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	#		
 	#	treatment risk groups: number drug conditional no indicators + separate indicators
-	#	
-	method.risk			<- 'm3.nic'
-	plot.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.pdf',sep='')
-	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
-	YX.m3.ARTnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	#		
+	if(method.risk=='m3.nic')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	#		
 	#	treatment risk groups: number/type drug + overlapping indicators
 	#	
-	method.risk			<- 'm3.tni'
-	plot.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.pdf',sep='')
-	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
-	YX.m3.ARTtni.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	if(method.risk=='m3.tni')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtni.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	#		
 	#	treatment risk groups: number/type drug conditional no indicators + separate indicators
 	#	
-	method.risk			<- 'm3.tnic'
-	plot.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.pdf',sep='')
-	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
-	YX.m3.ARTtnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	if(method.risk=='m3.tnic')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	#		
 	#	treatment risk groups: number/type drug + overlapping indicators + bs(lRNA.mx, knots=c(3,4.5), degree=1)
 	#	
-	method.risk			<- 'm3.tniv'
-	plot.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.pdf',sep='')
-	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
-	YX.m3.ARTtniv.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	if(method.risk=='m3.tniv')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtniv.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	#		
 	#	treatment risk groups: number/type drug + overlapping indicators + bs(lRNA.mx, knots=c(3,4.5), degree=1)
 	#	
-	method.risk				<- 'm3.tnicvNo'
-	plot.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.pdf',sep='')
-	save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
-	YX.m3.ARTtnicvNo.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	if(method.risk=='m3.tnicvNo')
+	{	
+		save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtnicvNo.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	
-		
 	stop()
 		
 		

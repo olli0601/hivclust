@@ -306,7 +306,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 	if(0)
 	{
 		file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
-		file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patients.R",sep='/')
+		file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patient.R",sep='/')
 		file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
 		file.immu		<- paste(dir.name,"derived/ATHENA_2013_03_Immu.R",sep='/')
 		file.treatment	<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
@@ -315,7 +315,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 	if(1)
 	{
 		file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences_AllMSM.R",sep='/')
-		file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patients_AllMSM.R",sep='/')
+		file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patient_AllMSM.R",sep='/')
 		file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
 		file.immu		<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.R",sep='/')
 		file.treatment	<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
@@ -342,8 +342,8 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		set(df, tmp, "DateRes.x", df[tmp, DateRes.y])
 		set(df, NULL, "SampleCode", gsub(' ','', df[, SampleCode]))
 		setnames(df, c("SampleCode","Patient.x","DateRes.x"), c("FASTASampleCode","Patient","PosSeqT"))
-		set(df, NULL, "FASTASampleCode", factor(df[,FASTASampleCode]))
-		set(df, NULL, "Patient", factor(df[,Patient]))		
+		#set(df, NULL, "FASTASampleCode", factor(df[,FASTASampleCode]))
+		#set(df, NULL, "Patient", factor(df[,Patient]))		
 		df.all	<- subset(df, select=c(FASTASampleCode,Patient,PosSeqT))
 		if(verbose)		cat(paste("\nnumber of sequences found, n=", nrow(df.all)))
 		#
@@ -351,26 +351,53 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		#
 		if(verbose)		cat(paste("\nadding patient data"))
 		load(file.patient)		
-		df.all	<- merge(df.all, df, all.x=1, by="Patient")
+		df.all	<- merge(df.all, df, all.x=1, all.y=1, by="Patient")
 		setnames(df.all, c("MyDateNeg1","MyDatePos1"), c("NegT","PosT"))
 		#	reset PosT_Acc=='No' conservatively to end of year / month
 		df.all	<- hivc.db.reset.inaccuratePosT(df.all, nacc.dy.dy= 30, nacc.mody.mo= 11, nacc.mody.dy= 31, verbose=1)
 		#	reset NegT_Acc=='No' conservatively to start of year / month
 		df.all	<- hivc.db.reset.inaccurateNegT(df.all)
+		#
 		#	check for clashes in NegT and PosT
+		# 	add viro data to check PosT and NegT
+		#
+		load(file.viro)	
+		tmp		<- subset(df, select=c(Patient, PoslRNA_T1, lRNA_T1))
+		setkey(tmp, Patient)
+		df.all	<- merge(df.all, unique(tmp), by='Patient', all.x=1)
+		load(file.treatment)
+		tmp		<- subset(df, select=c(Patient, AnyT_T1))
+		setkey(tmp, Patient)
+		df.all	<- merge(df.all, unique(tmp), by='Patient', all.x=1)
 		tmp		<- subset(df.all, !is.na(PosT) & !is.na(NegT) & PosT<NegT)
 		if(verbose)		cat(paste("\nchecking for clashes in NegT and PosT"))
-		if(verbose)		print(tmp)
-		if(verbose)		cat(paste("\nmanually resolving clashes -- M41654 has wrong PosT since PosRNA much later -- M12982 has wrong NegT as PosRNA before that time"))
-		#	resolving M41654
+		if(verbose)		print(tmp)		
+		#	wrong NegT	M12982 M31263 M37982 M40070 M41206	M11399 M12702	
+		#	wrong PosT M41654
 		tmp		<- which(df.all[,FASTASampleCode=="M4165429052012"])
 		set(df.all, tmp, "PosT", df.all[tmp, PosSeqT]) 		
+		tmp		<- which(df.all[,Patient%in%c("M12982","M31263","M37982","M40070","M41206","M11399","M12702")])
+		set(df.all, tmp, "NegT", NA_integer_) 	
+		#	set missing PosT		
+		tmp		<- df.all[, which(is.na(PosT) & !is.na(AnyT_T1))]
+		if(verbose)		cat(paste("\nSet missing PosT to  AnyT_T1, n=", length(tmp)))
+		set(df.all,tmp,'PosT',df.all[tmp, AnyT_T1])
+		tmp		<- df.all[, which(is.na(PosT) & !is.na(PoslRNA_T1))]
+		if(verbose)		cat(paste("\nSet missing PosT to  PoslRNA_T1, n=", length(tmp)))
+		set(df.all,tmp,'PosT',df.all[tmp, PoslRNA_T1])
+		#	remove rest
+		if(verbose)		cat(paste("\nREMOVE"))
+		print(subset(df.all, is.na(PosT)))
+		df.all	<- subset(df.all, !is.na(PosT))
+		df.all	<- df.all[, setdiff( colnames(df.all), c("PoslRNA_T1","lRNA_T1","AnyT_T1")), with=FALSE]
 		# 	add preliminary AnyPos_T1	-- since PosT conservative we are good to set irrespective of PosT_Acc	
 		df.all[, AnyPos_T1:=PosSeqT]
 		tmp		<- which( df.all[, !is.na(PosT) & ( is.na(PosSeqT) | PosT<PosSeqT ) ] )
 		if(verbose)		cat(paste("\nbuilding prel AnyPos_T1. Number of seq with !is.na(PosT) & ( is.na(PosSeqT) | PosT<PosSeqT ), n=",length(tmp)))
-		set(df.all, tmp, "AnyPos_T1", df.all[tmp, PosT])		
+		set(df.all, tmp, "AnyPos_T1", df.all[tmp, PosT])	
 		if(nrow(subset(df.all, is.na(AnyPos_T1))))	stop("unexpected NA in AnyPos_T1")
+		
+		
 		#	check for invalid NegT and set to NA	-- we would only know that NegT is before AnyPosT and this is not helpful
 		df.all	<- hivc.db.resetNegTbyAnyPosT(df.all)				
 		#
