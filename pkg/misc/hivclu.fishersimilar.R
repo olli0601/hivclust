@@ -7660,59 +7660,7 @@ project.athena.Fisheretal.sensitivity<- function()
 	
 			 															 															 
 			
-	method.risk
 	
-		tmp			<- regexpr('_clu_[0-9]+',files)
-		if(any(tmp<0))	stop('unexpected _clu_ files')
-		tmp			<- regmatches( files, tmp) 
-		cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
-		tmp			<- regmatches( files, regexpr('_pool_[0-9]+',files)) 
-		run.id		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
-		file.info	<- data.table(file=files, cluster=cluster, run.id=run.id )
-		setkey(file.info, cluster)
-		if(!is.na(clu))
-			file.info	<- subset( file.info, cluster==clu )
-		cat(paste('\nnumber of files to process, n=',nrow(file.info)))
-		
-	}
-	
-	
-	save.file		<- paste(indir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-	
-	methods			<- c('3am','3bm','3aa')
-	YX				<- lapply(methods, function(method)
-			{
-				file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'.R',sep='')
-				load(file)
-				YX
-			})
-	names(YX)		<- methods
-	
-	res				<- lapply(methods, function(method)
-			{
-				file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_results.R',sep='')
-				load(file)
-				ans
-			})
-	names(res)		<- methods
-	
-	sapply( YX, function(tmp){	c(n.Patient=tmp[, length(unique(Patient))], n.t.Patient=tmp[, length(unique(t.Patient))], n.tpair=nrow(unique( subset( tmp, select=c(Patient, t.Patient) ) )), n.infevents=tmp[, sum(w)])	})
-	
-	res[['3am']]$YX.m2.VL1.or
-	res[['3bm']]$YX.m2.VL1.or
-	res[['3aa']]$YX.m2.VL1.or
-	
-	res[['3am']]$YX.m2.VLmxw.or
-	res[['3bm']]$YX.m2.VLmxw.or
-	res[['3aa']]$YX.m2.VLmxw.or
-	
-	res[['3am']]$YX.m3.or.art
-	res[['3bm']]$YX.m3.or.art
-	res[['3aa']]$YX.m3.or.art
-	
-	res[['3am']]$YX.m2time.p
-	res[['3bm']]$YX.m2time.p
-	res[['3aa']]$YX.m2time.p
 	
 }
 ######################################################################################
