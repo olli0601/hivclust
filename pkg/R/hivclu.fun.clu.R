@@ -1270,16 +1270,38 @@ hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early=
 	#	
 	#	convert time to string	& handle inaccurate NegT or AnyPos_T1
 	#
-	tmp		<- which(df.info[, as.POSIXlt(NegT)$mday==1 & as.POSIXlt(NegT)$mon==0])				#since NegT were reset, these are the ones with inaccurate month
-	set(df.info,NULL,	"NegT", 		as.character( df.info[,NegT], "%y.%m" ))
-	set(df.info, tmp,	"NegT", 		paste(df.info[tmp,substr(NegT,1,3)],'??',sep='') )
-	tmp		<- which(df.info[, as.POSIXlt(AnyPos_T1)$mday==31 & as.POSIXlt(AnyPos_T1)$mon==11])	#since AnyPos_T1 were reset, these are the ones with inaccurate month
-	set(df.info,NULL,	"AnyPos_T1",	as.character( df.info[,AnyPos_T1], "%y.%m" ))
-	set(df.info, tmp, 	"AnyPos_T1", 	paste(df.info[tmp,substr(AnyPos_T1,1,3)],'??',sep='') )
-	set(df.info,NULL,	"PosSeqT", 		as.character( df.info[,PosSeqT], "%y.%m" ))
-	set(df.info,NULL,	"lRNA.hb4tr_LT",as.character( df.info[,lRNA.hb4tr_LT], "%y.%m" ))
-	set(df.info,NULL,	"PosCD4_T1", 	as.character( df.info[,PosCD4_T1], "%y.%m" ))
-	set(df.info,NULL,	"AnyT_T1", 		as.character( df.info[,AnyT_T1], "%y.%m" ))
+	if(class(df.info$NegT)=='Date')
+	{
+		tmp		<- which(df.info[, as.POSIXlt(NegT)$mday==1 & as.POSIXlt(NegT)$mon==0])				#since NegT were reset, these are the ones with inaccurate month
+		set(df.info,NULL,	"NegT", 		as.character( df.info[,NegT], "%y.%m" ))
+		set(df.info, tmp,	"NegT", 		paste(df.info[tmp,substr(NegT,1,3)],'??',sep='') )		
+	}
+	if(class(df.info$NegT)!='Date')
+		set(df.info,NULL,	"NegT", 		as.character(df.info[,NegT]))
+	if(class(df.info$AnyPos_T1)=='Date')
+	{
+		tmp		<- which(df.info[, as.POSIXlt(AnyPos_T1)$mday==31 & as.POSIXlt(AnyPos_T1)$mon==11])	#since AnyPos_T1 were reset, these are the ones with inaccurate month
+		set(df.info,NULL,	"AnyPos_T1",	as.character( df.info[,AnyPos_T1], "%y.%m" ))
+		set(df.info, tmp, 	"AnyPos_T1", 	paste(df.info[tmp,substr(AnyPos_T1,1,3)],'??',sep='') )		
+	}
+	if(class(df.info$AnyPos_T1)!='Date')
+		set(df.info,NULL,	"AnyPos_T1", 		as.character(df.info[,AnyPos_T1]))	
+	if(class(df.info$PosSeqT)=='Date')
+		set(df.info,NULL,	"PosSeqT", 		as.character( df.info[,PosSeqT], "%y.%m" ))
+	if(class(df.info$PosSeqT)!='Date')
+		set(df.info,NULL,	"PosSeqT", 		as.character( df.info[,PosSeqT] ))	
+	if(class(df.info$lRNA.hb4tr_LT)=='Date')
+		set(df.info,NULL,	"lRNA.hb4tr_LT",as.character( df.info[,lRNA.hb4tr_LT], "%y.%m" ))
+	if(class(df.info$lRNA.hb4tr_LT)!='Date')
+		set(df.info,NULL,	"lRNA.hb4tr_LT",as.character( df.info[,lRNA.hb4tr_LT]))	
+	if(class(df.info$PosCD4_T1)=='Date')
+		set(df.info,NULL,	"PosCD4_T1", 	as.character( df.info[,PosCD4_T1], "%y.%m" ))
+	if(class(df.info$PosCD4_T1)!='Date')
+		set(df.info,NULL,	"PosCD4_T1", 	as.character( df.info[,PosCD4_T1]))	
+	if(class(df.info$AnyT_T1)=='Date')
+		set(df.info,NULL,	"AnyT_T1", 		as.character( df.info[,AnyT_T1], "%y.%m" ))
+	if(class(df.info$AnyT_T1)!='Date')
+		set(df.info,NULL,	"AnyT_T1", 		as.character( df.info[,AnyT_T1]))
 	#	
 	#	set isAcute to either Y or M or N
 	set(df.info,NULL,"isAcute", 		as.character( df.info[,isAcute]))

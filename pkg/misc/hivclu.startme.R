@@ -13,8 +13,7 @@
 # file: hivclu.startme.R
 #
 # usage from R:
-#> setwd("/Users/Oliver/git/hivclust/pkg")
-#> source("misc/hivclu.startme.R")
+#> setwd("/Users/Oliver/git/hivclust/pkg"); source("misc/hivclu.startme.R")
 # usage from bash:
 #> cd /Users/Oliver/git/hivclust/pkg
 #> misc/hivclu.startme.R --help

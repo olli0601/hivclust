@@ -127,7 +127,7 @@ hivc.db.getlRNA.T1andTS<- function(df.cross, lRNA.bTS.quantile= 0.75, lRNA.aTS.q
 						lRNAi_aTS		= lRNAi_aTS,
 						lRNA.hb4tr_LT	= lRNA.hb4tr_LT[1], 
 						lRNA.early		= lRNA.early[1]				) 							 	
-			},by=FASTASampleCode]
+			},by=idx]
 	if(verbose)	cat(paste("\nnumber of seq with PosCD4_T1 CD4_T1  PosCD4_TS CD4_TS is n=",nrow(ans)))
 	df.cross[,lRNAi:=NULL]
 	ans	
@@ -168,7 +168,7 @@ hivc.db.getCD4.T1andTS<- function(df.cross, verbose=1, CD4.HIVNeg.min= 500, CD4.
 					CD4_TS <- CD4_bTS <- CD4_aTS <- NA_real_
 				}
 				list(PosCD4_T1=PosCD4[z], CD4_T1=CD4[z], PosCD4_TS=PosCD4_TS, CD4_TS=CD4_TS, CD4_bTS=CD4_bTS, CD4_aTS=CD4_aTS	 ) 	
-			},by=FASTASampleCode]
+			},by=idx]
 	
 	if(verbose)	cat(paste("\nnumber of seq with PosCD4_T1 CD4_T1  PosCD4_TS CD4_TS is n=",nrow(ans)))
 	ans

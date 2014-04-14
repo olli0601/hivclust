@@ -389,15 +389,13 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		if(verbose)		cat(paste("\nREMOVE"))
 		print(subset(df.all, is.na(PosT)))
 		df.all	<- subset(df.all, !is.na(PosT))
-		df.all	<- df.all[, setdiff( colnames(df.all), c("PoslRNA_T1","lRNA_T1","AnyT_T1")), with=FALSE]
+		df.all	<- df.all[, setdiff( colnames(df.all), c("PoslRNA_T1","lRNA_T1")), with=FALSE]
 		# 	add preliminary AnyPos_T1	-- since PosT conservative we are good to set irrespective of PosT_Acc	
 		df.all[, AnyPos_T1:=PosSeqT]
 		tmp		<- which( df.all[, !is.na(PosT) & ( is.na(PosSeqT) | PosT<PosSeqT ) ] )
 		if(verbose)		cat(paste("\nbuilding prel AnyPos_T1. Number of seq with !is.na(PosT) & ( is.na(PosSeqT) | PosT<PosSeqT ), n=",length(tmp)))
 		set(df.all, tmp, "AnyPos_T1", df.all[tmp, PosT])	
 		if(nrow(subset(df.all, is.na(AnyPos_T1))))	stop("unexpected NA in AnyPos_T1")
-		
-		
 		#	check for invalid NegT and set to NA	-- we would only know that NegT is before AnyPosT and this is not helpful
 		df.all	<- hivc.db.resetNegTbyAnyPosT(df.all)				
 		#
@@ -412,13 +410,13 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		#
 		if(verbose)		cat(paste("\nadding virology data"))
 		load(file.viro)
-		df.cross	<- merge( subset(df.all, select=c(FASTASampleCode,Patient,AnyPos_T1,PosT,PosSeqT,NegT,NegT_Acc)), df, allow.cartesian=T, by="Patient" )
+		df.all[, idx:=seq_len(nrow(df.all))]
+		df.cross	<- merge( subset(df.all, select=c(idx,FASTASampleCode,Patient,AnyPos_T1,PosT,PosSeqT,AnyT_T1,NegT,NegT_Acc)), df, allow.cartesian=T, by="Patient" )
 		#	checking manually AnyPos_T1>PosRNA & lRNA<3
-		if(verbose)		cat(paste("\ncheck manually AnyPos_T1>PosRNA & lRNA<3 -- THIS IS ASSUMED OK including 2004G180"))
-		tmp	<- subset(df.cross, AnyPos_T1>PosRNA & lRNA<3)
+		if(verbose)		cat(paste("\ncheck manually AnyPos_T1>PosRNA & lRNA<3 -- THIS IS ASSUMED OK"))
+		tmp	<- subset(df.cross, AnyPos_T1>PosRNA & AnyT_T1>PosRNA  & lRNA<3)
 		tmp[,diff:=tmp[, difftime(PosRNA,AnyPos_T1, units="weeks")]]
 		print( subset(tmp, diff< -10) )		
-		#subset(df.cross, FASTASampleCode=="2004G180")
 		#		
 		#	checking manually NegT>PosRNA
 		#
@@ -428,20 +426,17 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		print( subset(df.cross, NegT_Acc=="No" & NegT>PosRNA) )
 		# 	compute lRNA_T1 and lRNA_TS
 		tmp			<- hivc.db.getlRNA.T1andTS(df.cross, lRNA.bTS.quantile= 0.75, lRNA.aTS.quantile= 0.25, lRNAi.min= log10(1e4), verbose=1)
-		df.all		<- merge(df.all, tmp, all.x=1, by="FASTASampleCode")
-		#	set NegT of 2004G180 to NA
-		set(df.all, df.all[, which(Patient=='M29967')], 'NegT', NA)
-		set(df.all, df.all[, which(Patient=='M29967')], 'NegT_Acc', NA_character_)
-		#	reset NegT by lRNA_T1
-		df.all<- hivc.db.resetNegTbyPoslRNA_T1(df.all)
+		df.all		<- merge(df.all, tmp, all.x=1, by="idx")
+		#	reset NegT by lRNA_T1 -- there is an error in here
+		df.all		<- hivc.db.resetNegTbyPoslRNA_T1(df.all)
 		# 	reset preliminary AnyPos_T1
-		tmp		<- df.all[, list(AnyPos_T1=min(AnyPos_T1,PoslRNA_T1, na.rm=1)), by="FASTASampleCode"]
-		if(verbose)	cat(paste("\nnumber of seq with PoslRNA_T1<AnyPos_T1, n=",nrow(tmp),"RESETTING"))
-		set(df.all,NULL,"AnyPos_T1",tmp[,AnyPos_T1])		
-		if(verbose)	cat(paste("\nnumber of seq with NegT==AnyPos_T1 --> RESETTING"))
-		print(subset(df.all, NegT==AnyPos_T1))
+		tmp			<- df.all[, which(AnyPos_T1>PoslRNA_T1)]
+		if(verbose)	cat(paste("\nnumber AnyPos_T1>PoslRNA_T1 --> RESETTING",length(tmp)))
+		set(df.all,tmp,"AnyPos_T1",df.all[tmp,PoslRNA_T1])	
+		if(verbose)	cat(paste("\nnumber of seq with NegT==AnyPos_T1 --> RESETTING NegT"))
+		print(subset(df.all, NegT==AnyPos_T1, c(idx, Patient, NegT, NegT_Acc, PosT, PosT_Acc, AnyPos_T1, AnyT_T1, PoslRNA_T1, lRNA_T1)))
 		tmp		<- df.all[, which(NegT==AnyPos_T1)]
-		set(df.all, tmp, 'NegT', df.all[tmp, AnyPos_T1-6*30])
+		set(df.all, tmp, 'NegT', df.all[tmp, AnyPos_T1-3*30])
 		set(df.all, tmp, 'NegT_Acc', 'No')
 		#
 		#	add CD4 count data
@@ -451,12 +446,12 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		if(length(which(df[,is.na(PosCD4_T1)])))	stop("unexpected NA in PosCD4_T1")
 		if(length(which(df[, is.na(PosCD4)]))) stop("unexpected NA in PosCD4")
 		if(length(which(df[, is.na(CD4)]))) stop("unexpected NA in CD4")
-		df.cross	<- merge( subset(df.all, select=c(FASTASampleCode,Patient,AnyPos_T1,PosT,PosSeqT,PoslRNA_T1,NegT,NegT_Acc)), subset(df, select=c(Patient,PosCD4,CD4)), allow.cartesian=T, by="Patient" )
+		df.cross	<- merge( subset(df.all, select=c(idx,FASTASampleCode,Patient,AnyPos_T1,PosT,PosSeqT,PoslRNA_T1,NegT,NegT_Acc)), subset(df, select=c(Patient,PosCD4,CD4)), allow.cartesian=T, by="Patient" )
 		# delete entries where NegT>PosCD4
 		df.cross	<- hivc.db.resetCD4byNegT(df.cross, with.NegT_Acc.No=1, verbose=1)
 		# compute CD4_T1 and CD4_TS -- do not use on df[,CD4_T1] because some CD4 measurements might correspond to healthy patients
 		tmp		<- hivc.db.getCD4.T1andTS(df.cross, CD4.HIVNeg.min= 500)
-		df.all	<- merge(df.all, tmp, by="FASTASampleCode", all.x=1)
+		df.all	<- merge(df.all, tmp, by="idx", all.x=1)
 		#
 		# manually checked remaining PosCD4_T1 < AnyPos_T1 -- overall plausible
 		#
@@ -464,6 +459,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		#	tmp[, diff:=as.numeric(tmp[,difftime(PosCD4_T1,AnyPos_T1, units="weeks")])]
 		# 	subset(tmp,diff< -10)
 		#
+#TODO
 		if(verbose)		cat(paste("\ncheck manually PosCD4_T1 < AnyPos_T1 -- THIS IS ASSUMED OK"))
 		tmp	<- subset(df.all, PosCD4_T1 < AnyPos_T1, c(FASTASampleCode, Patient, AnyPos_T1, PosSeqT, PosT, PosT_Acc, PoslRNA_T1, lRNA_T1,  PosCD4_T1, CD4_T1))
 		print( tmp , nrow=400)
@@ -1420,7 +1416,9 @@ project.hivc.Excel2dataframe.Viro<- function()
 	if(verbose)		cat(paste("\nsetting number of entries to NA, n=",length(tmp)))
 	set(df,tmp,"PosRNA",NA)
 	tmp		<- which( df[, Patient=="M12735" & as.character(PosRNA)=="1986-04-29"] )
-	set(df,tmp,"PosRNA",NA)	
+	set(df,tmp,"PosRNA",NA)		
+	tmp		<- which( df[, Patient=="M29967" & as.character(PosRNA)=="1998-07-09"] )
+	set(df,tmp,"PosRNA",NA)		
 	# remove is.na(PosRNA) and !is.na(RNA)
 	df		<- subset(df, !is.na(PosRNA) & !is.na(RNA))
 	if(verbose)		cat(paste("\nnumber of entries with !is.na(PosRNA) & !is.na(RNA), n=",nrow(df)))	
@@ -1644,7 +1642,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#						
 	#if(verbose) cat(paste("\nremoving duplicate entries"))
 	#df		<- df[, list(RNA=mean(RNA)), by=c('Patient','PosRNA')]
-	i#f(verbose) cat(paste("\nnumber of entries after duplicates removed, n=",nrow(df)))
+	#if(verbose) cat(paste("\nnumber of entries after duplicates removed, n=",nrow(df)))
 	setkey(df, Patient, PosRNA)
 	#
 	df[,"lRNA":=round(log10( df[,RNA] ), d=3)]		
@@ -1750,6 +1748,28 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	set(df, NULL, "RegionHospital", factor(df[,RegionHospital], levels=c(1,2,3,4,5,6), labels=c("Amst","N","E","S","W","Curu")))
 	setkey(df,Patient)
 	str(df)
+	
+	#reset NegT date
+	tmp	<- df[, which(Patient=='M40895' & MyDateNeg1=='2011-04-06')]	
+ 	set(df, tmp, 'MyDateNeg1', as.Date('2010-04-06'))
+	set(df, tmp, 'NegT_Acc', 'No')
+	tmp	<- df[, which(Patient=='M29536' & MyDateNeg1=='1994-07-07')]	
+	set(df, tmp, 'MyDateNeg1', as.Date('1994-07-02'))	
+	tmp	<- df[, which(Patient=='M14759' & MyDateNeg1=='1991-09-15')]
+	set(df, tmp, 'MyDateNeg1', as.Date('1991-08-015'))	
+	tmp	<- df[, which(Patient=='M29967' & MyDateNeg1=='2000-07-15')]
+	set(df, tmp, 'MyDateNeg1', NA)
+	set(df, tmp, 'NegT_Acc', NA_character_)	
+	tmp	<- df[, which(Patient=='M30654' & MyDateNeg1=='2004-05-15')]
+	set(df, tmp, 'MyDateNeg1', NA)
+	set(df, tmp, 'NegT_Acc', NA_character_)	
+	tmp	<- df[, which(Patient=='M35339' & MyDateNeg1=='2007-08-15')]
+	set(df, tmp, 'MyDateNeg1', NA)
+	set(df, tmp, 'NegT_Acc', NA_character_)
+	tmp	<- df[, which(Patient=='M35513' & MyDateNeg1=='2007-10-15')]
+	set(df, tmp, 'MyDateNeg1', NA)
+	set(df, tmp, 'NegT_Acc', NA_character_)
+	
 	
 	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
 	if(verbose) cat(paste("\nsave to", file))	
