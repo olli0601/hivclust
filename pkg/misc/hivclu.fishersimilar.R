@@ -4166,10 +4166,10 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				{
 					YX.m3.bs			<- merge( YX.m3, tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ], by='Patient', allow.cartesian=TRUE )
 					tryCatch({ 
-						tmp				<- project.athena.Fisheretal.betareg(YX.m3.bs, formula, include.colnames, gamlss.BE.limit.u=c( c(0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 1)), verbose=1 )
-						betafit.or.bs	<- tmp$betafit.or
-						betafit.rr.bs	<- tmp$betafit.rr
-						bs.repeat		<- ifelse( tmp$gamlss.BE.limit>gamlss.BE.required.limit, 0, 1 )
+						tmp2			<- project.athena.Fisheretal.betareg(YX.m3.bs, formula, include.colnames, gamlss.BE.limit.u=c( c(0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 1)), verbose=1 )
+						betafit.or.bs	<- tmp2$betafit.or
+						betafit.rr.bs	<- tmp2$betafit.rr
+						bs.repeat		<- ifelse( tmp2$gamlss.BE.limit>gamlss.BE.required.limit, 0, 1 )
 					}, error=function(e){ bs.repeat<<- 1})																
 				}					
 				#	odds ratio and risk ratio
@@ -7573,39 +7573,112 @@ project.athena.Fisheretal.sensitivity<- function()
 {
 	require(data.table)
 	require(ape)
-	stop()
-	indir					<- paste(DATA,"tmp",sep='/')		
-	indircov				<- paste(DATA,"derived",sep='/')
+	#stop()
+	indir					<- paste(DATA,"fisheretal",sep='/')		
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	insignat				<- "Wed_Dec_18_11:37:00_2013"
 	outdir					<- paste(DATA,"fisheretal",sep='/')
-	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+	method.risk				<- c('m21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
 	
-	if(0)
+	runs.opt				<- list()
+	if(1)
 	{
-		infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs100",sep="_")
-		insignat				<- "Thu_Aug_01_17/05/23_2013"	
-		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast2_140201'
-		clu.infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_seroneg-130"
-		clu.insignat			<- "Tue_Aug_26_09:13:47_2013"
-		clu.infilexml.template	<- "sasky_sdr06"
-		clu.infilexml.opt		<- "rsu815"				
+		run.opt							<- list()
+		run.opt$method					<- '3c'
+		run.opt$method.nodectime		<- 'any'
+		run.opt$method.dating			<- 'gmrf'
+		run.opt$infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		run.opt$infiletree				<- paste(run.opt$infile,"examlbs500",sep="_")							
+		run.opt$clu.infilexml.opt		<- "mph4clutx4tip"
+		run.opt$clu.infilexml.template	<- "um192rhU2080"	
+		run.opt$outfile					<- paste(run.opt$infile,'Ac=MY_D=35_gmrf',sep='_')
+		runs.opt[[length(runs.opt)+1]]	<- run.opt
 	}
 	if(1)
 	{
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"				
-		clu.indir				<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/sasky_sdr06_-DR-RC-SH+LANL_alrh160'
-		clu.infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		clu.insignat			<- "Wed_Dec_18_11:37:00_2013"
-		clu.infilexml.opt		<- "alrh160"
-		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=2_sasky',sep='_')
+		run.opt							<- list()
+		run.opt$method					<- '3d'
+		run.opt$method.nodectime		<- 'any'
+		run.opt$method.dating			<- 'gmrf'
+		run.opt$infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		run.opt$infiletree				<- paste(run.opt$infile,"examlbs500",sep="_")							
+		run.opt$clu.infilexml.opt		<- "mph4clutx4tip"
+		run.opt$clu.infilexml.template	<- "um192rhU2080"	
+		run.opt$outfile					<- paste(run.opt$infile,'Ac=MY_D=35_gmrf',sep='_')
+		runs.opt[[length(runs.opt)+1]]	<- run.opt
 	}
-
+	if(1)
+	{
+		run.opt							<- list()
+		run.opt$method					<- '3c'
+		run.opt$method.nodectime		<- 'any'
+		run.opt$method.dating			<- 'sasky'
+		run.opt$infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		run.opt$infiletree				<- paste(run.opt$infile,"examlbs500",sep="_")									
+		run.opt$clu.infilexml.opt		<- "clrh80"
+		run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+		run.opt$outfile					<- paste(run.opt$infile,'Ac=MY_D=35_sasky',sep='_')
+		runs.opt[[length(runs.opt)+1]]	<- run.opt
+	}
+	if(1)
+	{
+		run.opt							<- list()
+		run.opt$method					<- '3d'
+		run.opt$method.nodectime		<- 'any'
+		run.opt$method.dating			<- 'sasky'
+		run.opt$infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		run.opt$infiletree				<- paste(run.opt$infile,"examlbs500",sep="_")									
+		run.opt$clu.infilexml.opt		<- "clrh80"
+		run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+		run.opt$outfile					<- paste(run.opt$infile,'Ac=MY_D=35_sasky',sep='_')
+		runs.opt[[length(runs.opt)+1]]	<- run.opt
+	}
+	
+	
+	runs.opt	<- lapply( runs.opt, function(run.opt)
+			{
+				method			<- paste(run.opt$method, ifelse(run.opt$method.nodectime=='any','a','m'), sep='')
+				files			<- list.files(indir)		
+				files			<- files[ sapply(files, function(x) 	grepl(run.opt$outfile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) &
+																		grepl(paste('_Yscore',method,'_',sep=''), x, fixed=1) &
+																		grepl('R$',x) ) ]
+				tmp				<- sapply(method.risk, function(x){
+																		tmp	<- which(grepl(paste('_',x,'.',sep=''), files, fixed=1))
+																		ifelse(length(tmp)==0, NA_character_, files[tmp])
+																	})				
+				ans				<- data.table(file=tmp, method.brl=method, method.nodectime=run.opt$method.nodectime, method.dating=run.opt$method.dating, method.risk=method.risk)				
+			})
+	runs.opt	<- do.call('rbind', runs.opt)
+	setkey(runs.opt, method.dating, method.brl)	
+		
+	#
+	subset(runs.opt, is.na(file))
+	
+			 															 															 
+			
+	method.risk
+	
+		tmp			<- regexpr('_clu_[0-9]+',files)
+		if(any(tmp<0))	stop('unexpected _clu_ files')
+		tmp			<- regmatches( files, tmp) 
+		cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+		tmp			<- regmatches( files, regexpr('_pool_[0-9]+',files)) 
+		run.id		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+		file.info	<- data.table(file=files, cluster=cluster, run.id=run.id )
+		setkey(file.info, cluster)
+		if(!is.na(clu))
+			file.info	<- subset( file.info, cluster==clu )
+		cat(paste('\nnumber of files to process, n=',nrow(file.info)))
+		
+	}
+	
+	
+	save.file		<- paste(indir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+	
 	methods			<- c('3am','3bm','3aa')
 	YX				<- lapply(methods, function(method)
 			{
@@ -8031,7 +8104,7 @@ hivc.prog.betareg.estimaterisks<- function()
 {
 	require(data.table)
 	require(ape)
-	#stop()
+	stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')

@@ -636,8 +636,9 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
 	
-	#method.risk<- c('m21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
-	method.risk<- c('m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
+	#method.risk	<- c('m21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
+	#method.risk	<- c('m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
+	method.risk		<- c('m3.ni','m3.tni','m3.tnicvNo')
 	dummy	<- sapply(method.risk, function(x)
 			{
 				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, outdir=outdir, outfile=outfile, resume=1, verbose=1)
