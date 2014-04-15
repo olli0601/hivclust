@@ -218,23 +218,23 @@ hivc.db.reset.PosT1byCD4T1<- function(df.all, verbose=1)
 	if(verbose) cat(paste("\nnumber of PosCD4_T1 < AnyPos_T1 with AnyPos_T1==XX-12-31, reset, n=",length(tmp)))
 	set(df.all, tmp, 'AnyPos_T1', df.all[tmp, PosCD4_T1])
 	
+	tmp	<- df.all[, which(PosCD4_T1 < AnyPos_T1 & as.POSIXlt(AnyPos_T1)$mon==10 & as.POSIXlt(AnyPos_T1)$mday==11)] 
+	if(verbose) cat(paste("\nnumber of PosCD4_T1 < AnyPos_T1 with AnyPos_T1==XX-11-11, reset, n=",length(tmp)))
+	set(df.all, tmp, 'AnyPos_T1', df.all[tmp, PosCD4_T1])
 	
-	serocon.nacc.dy		<- which( df[, NegT_Acc=="No" & !is.na(NegT) & as.POSIXlt(NegT)$mday==15] )
-	serocon.nacc.mody	<- which( df[, NegT_Acc=="No" & !is.na(NegT) & as.POSIXlt(NegT)$mon==6 & as.POSIXlt(NegT)$mday==1] )
-	if(verbose) cat(paste("\nnumber of uncertain NegT, day only, n=",length(serocon.nacc.dy)))
-	if(verbose) cat(paste("\nnumber of uncertain NegT, month & day, n=",length(serocon.nacc.mody)))
-	# reset serocon.nacc.dy
-	tmp							<- as.POSIXlt(df[serocon.nacc.dy,NegT] )
-	tmp$mday					<- nacc.dy.dy
-	set(df, serocon.nacc.dy, "NegT", as.Date(tmp))
-	#set(df, serocon.nacc.dy, "NegT_Acc", "Yes")
-	# reset serocon.nacc.mody
-	tmp							<- as.POSIXlt(df[serocon.nacc.mody,NegT] )
-	tmp$mday					<- nacc.mody.dy
-	tmp$mon						<- nacc.mody.mo
-	set(df, serocon.nacc.mody, "NegT", as.Date(tmp))
-	#set(df, serocon.nacc.mody, "NegT_Acc", "Yes")
-	df
+	tmp	<- df.all[, which(PosCD4_T1 < AnyPos_T1 & as.POSIXlt(AnyPos_T1)$mon==6 & as.POSIXlt(AnyPos_T1)$mday==15)] 
+	if(verbose) cat(paste("\nnumber of PosCD4_T1 < AnyPos_T1 with AnyPos_T1==XX-07-15, reset, n=",length(tmp)))
+	set(df.all, tmp, 'AnyPos_T1', df.all[tmp, PosCD4_T1])
+		
+	#tmp	<- subset(df.all, PosCD4_T1 < AnyPos_T1, c(FASTASampleCode, Patient, AnyPos_T1, PosSeqT, PosT, PosT_Acc, PoslRNA_T1, lRNA_T1,  PosCD4_T1, CD4_T1))
+	#tmp[, diff:= difftime(PosCD4_T1, AnyPos_T1, units='days')]
+	
+	#rest unclear - reset
+	tmp	<- df.all[, which(PosCD4_T1 < AnyPos_T1)]
+	if(verbose) cat(paste("\nnumber of PosCD4_T1 < AnyPos_T1 with other patterns, reset, n=",length(tmp)))
+	set(df.all, tmp, 'AnyPos_T1', df.all[tmp, PosCD4_T1])
+	
+	df.all
 }
 ######################################################################################
 hivc.db.getplot.newdiagnosesbyCD4<- function(df, plot.file=NULL, plot.file.p=NULL, plot.ylab=NULL, verbose=1)

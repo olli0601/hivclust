@@ -471,26 +471,8 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		# compute CD4_T1 and CD4_TS -- do not use on df[,CD4_T1] because some CD4 measurements might correspond to healthy patients
 		tmp		<- hivc.db.getCD4.T1andTS(df.cross, CD4.HIVNeg.min= 500)
 		df.all	<- merge(df.all, tmp, by="idx", all.x=1)
-		#
-		# manually checked remaining PosCD4_T1 < AnyPos_T1 -- overall plausible
-		#
-		#	tmp		<- subset(df.all,!is.na(PosCD4_T1) & difftime(PosCD4_T1,AnyPos_T1, units="weeks")< 0)
-		#	tmp[, diff:=as.numeric(tmp[,difftime(PosCD4_T1,AnyPos_T1, units="weeks")])]
-		# 	subset(tmp,diff< -10)
-		#
-#TODO
-
-
-
-		if(verbose)		cat(paste("\ncheck manually PosCD4_T1 < AnyPos_T1 -- THIS IS ASSUMED OK"))
-		tmp	<- subset(df.all, PosCD4_T1 < AnyPos_T1, c(FASTASampleCode, Patient, AnyPos_T1, PosSeqT, PosT, PosT_Acc, PoslRNA_T1, lRNA_T1,  PosCD4_T1, CD4_T1))
-		tmp[, diff:= difftime(PosCD4_T1, AnyPos_T1, units='days')]
-		
-		print(subset(tmp, diff< -60) , nrow=500)
-		tmp		<- which(df.all[,!is.na(PosCD4_T1) & PosCD4_T1<AnyPos_T1])
-		if(verbose)		cat(paste("\nnumber of seq with !is.na(PosCD4_T1) & PosCD4_T1<AnyPos_T1, n=",length(tmp)))
-		if(verbose)		cat(paste("\nnumber of patients with !is.na(PosCD4_T1) & PosCD4_T1<AnyPos_T1, n=",length(unique(df.all[tmp,Patient]))))
-		set(df.all, tmp, "AnyPos_T1", df.all[tmp,PosCD4_T1])
+		# manually checked remaining PosCD4_T1 < AnyPos_T1
+		df.all	<- hivc.db.reset.PosT1byCD4T1(df.all, verbose=1)
 		#		
 		setkey(df.all, PosSeqT)
 		setkey(df.all, Patient)
@@ -505,6 +487,8 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		if(verbose)		cat(paste("\nnumber of seq with !is.na(AnyT_T1) & AnyT_T1<AnyPos_T1, n=",length(tmp),"SET AnyPos_T1 to lower value"))
 		set(df.all, tmp, "AnyPos_T1", df.all[tmp,AnyT_T1])
 		df.all[, AnyT_T1_Acc:=NULL]
+		
+		df.all[, idx:=NULL]
 		#	round numbers
 		#set(df.all, NULL, "TrI.p", round(df.all[,TrI.p],d=2))
 		#set(df.all, NULL, "TrI.mo", round(df.all[,TrI.mo],d=1))
