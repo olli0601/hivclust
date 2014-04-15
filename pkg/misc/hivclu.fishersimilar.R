@@ -4052,16 +4052,16 @@ project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, g
 	gamlss.BE.limit.i	<- gamlss.BE.limit.u[1]
 	YX.m3b				<- copy(YX.m3)	
 	set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.i)], 'score.Y', gamlss.BE.limit.i)
-	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3b[, include.colnames, with=FALSE]), family=BE(mu.link='logit'), trace=0)	
-	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3b[, include.colnames, with=FALSE]), family=BE(mu.link='log'), trace=0)	
+	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0)	
+	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0)	
 	tryCatch({
 				for(i in seq_along(gamlss.BE.limit.u)[-1])
 				{
 					#print(gamlss.BE.limit.u[i])			
 					YX.m3b	<- copy(YX.m3)	
 					set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.u[i])], 'score.Y', gamlss.BE.limit.u[i])
-					tmp.or				<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3b[, include.colnames, with=FALSE]), family=BE(mu.link='logit'), trace=0, start.from=betafit.or)
-					tmp.rr				<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3b[, include.colnames, with=FALSE]), family=BE(mu.link='log'), trace=0, start.from=betafit.rr)
+					tmp.or				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, start.from=betafit.or)
+					tmp.rr				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=betafit.rr)
 					gamlss.BE.limit		<- gamlss.BE.limit.u[i]	#not run if error in gamlss
 					betafit.rr			<- tmp.rr				#not run if error in gamlss
 					betafit.or			<- tmp.or				#not run if error in gamlss
@@ -4071,10 +4071,294 @@ project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, g
 	
 	if(verbose) cat(paste('\nsuccess: gamlss beta regression for score<=',gamlss.init$BE.limit))
 	set(YX.m3, YX.m3[, which(score.Y>gamlss.init$BE.limit)], 'score.Y', gamlss.init$BE.limit)
-	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3[, include.colnames, with=FALSE]), family=BE(mu.link='logit'), trace=0, start.from=gamlss.init$start.from.or)
-	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(YX.m3[, include.colnames, with=FALSE]), family=BE(mu.link='log'), trace=0, start.from=gamlss.init$start.from.rr)
+	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, start.from=gamlss.init$start.from.or)
+	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=gamlss.init$start.from.rr)
 	
 	list(betafit.or=betafit.or, betafit.rr=betafit.rr, gamlss.BE.limit=gamlss.init$BE.limit)
+}
+predict.gamlss<- function (object, what = c("mu", "sigma", "nu", "tau"), newdata = NULL, 
+		type = c("link", "response", "terms"), terms = NULL, se.fit = FALSE, 
+		data = NULL, ...) 
+{
+	concat <- function(..., names = NULL) {
+		tmp <- list(...)
+		if (is.null(names)) 
+			names <- names(tmp)
+		if (is.null(names)) 
+			names <- sapply(as.list(match.call()), deparse)[-1]
+		if (any(sapply(tmp, is.matrix) | sapply(tmp, is.data.frame))) {
+			len <- sapply(tmp, function(x) c(dim(x), 1)[1])
+			len[is.null(len)] <- 1
+			data <- rbind(...)
+		}
+		else {
+			len <- sapply(tmp, length)
+			data <- unlist(tmp)
+		}
+		namelist <- factor(rep(names, len), levels = names)
+		return(data.frame(data, source = namelist))
+	}
+	if (is.null(newdata)) {
+		predictor <- lpred(object, what = what, type = type, 
+				terms = terms, se.fit = se.fit, ...)
+		return(predictor)
+	}
+	if (se.fit) 
+		warning(" se.fit = TRUE is not supported for new data values at the moment \n")
+	if (!(inherits(newdata, "data.frame"))) 
+		stop("newdata must be a data frame ")
+	what <- match.arg(what)
+	type <- match.arg(type)
+	Call <- object$call
+	data <- data1 <- if (is.null(data)) {
+				if (!is.null(Call$data)) 
+					eval(Call$data)
+				else stop("define the original data using the option data")
+			}
+			else data
+	#data<- na.omit(data)	
+	data <- data[match(names(newdata), names(data))]
+	#data<- data[intersect(names(data), names(newdata))]
+#print(names(data))
+	#newdata<- newdata[intersect(names(data), names(newdata))]
+#print(names(newdata))	
+#print(dim(newdata))	
+	data <- concat(data, newdata)
+#print(dim(data))
+#str(data)
+	parform <- formula(object, what)
+	if (length(parform) == 3) 
+		parform[2] <- NULL
+	Terms <- terms(parform)
+	offsetVar <- if (!is.null(off.num <- attr(Terms, "offset"))) 
+		eval(attr(Terms, "variables")[[off.num + 1]], data)
+	m <- model.frame(Terms, data, xlev = object[[paste(what, 
+							"xlevels", sep = ".")]])
+	X <- model.matrix(Terms, data, contrasts = object$contrasts)
+	y <- object[[paste(what, "lp", sep = ".")]]
+	w <- object[[paste(what, "wt", sep = ".")]]
+	onlydata <- data$source == "data"
+	smo.mat <- object[[paste(what, "s", sep = ".")]]
+	if (!is.null(off.num)) 
+		y <- (y - offsetVar[onlydata])
+	if (!is.null(smo.mat)) {
+		n.smooths <- dim(smo.mat)[2]
+		y <- (y - smo.mat %*% rep(1, n.smooths))
+	}
+	refit <- lm.wfit(X[onlydata, , drop = FALSE], y, w)
+	if (abs(sum(resid(refit))) > 0.1 || abs(sum(coef(object, 
+							what = what) - coef(refit), na.rm = TRUE)) > 1e-05) 
+		warning(paste("There is a discrepancy  between the original and the re-fit", 
+						" \n used to achieve 'safe' predictions \n ", sep = ""))
+	coef <- refit$coef
+	nX <- dimnames(X)
+	rownames <- nX[[1]][!onlydata]
+	nrows <- sum(!onlydata)
+	nac <- is.na(coef)
+	assign.coef <- attr(X, "assign")
+	collapse <- type != "terms"
+	Xpred <- X[!onlydata, ]
+	Xpred <- matrix(Xpred, nrow = nrows)
+	if (!collapse) {
+		aa <- attr(X, "assign")
+		ll <- attr(Terms, "term.labels")
+		if (attr(Terms, "intercept") > 0) 
+			ll <- c("(Intercept)", ll)
+		aaa <- factor(aa, labels = ll)
+		asgn <- split(order(aa), aaa)
+		hasintercept <- attr(Terms, "intercept") > 0
+		p <- refit$qr$rank
+		p1 <- seq(len = p)
+		piv <- refit$qr$pivot[p1]
+		if (hasintercept) {
+			asgn$"(Intercept)" <- NULL
+			avx <- colMeans(X[onlydata, ])
+			termsconst <- sum(avx[piv] * coef[piv])
+		}
+		nterms <- length(asgn)
+		pred <- matrix(ncol = nterms, nrow = nrows)
+		dimnames(pred) <- list(rownames(newdata), names(asgn))
+		if (hasintercept) 
+			Xpred <- sweep(Xpred, 2, avx)
+		unpiv <- rep.int(0, NCOL(Xpred))
+		unpiv[piv] <- p1
+		for (i in seq(1, nterms, length = nterms)) {
+			iipiv <- asgn[[i]]
+			ii <- unpiv[iipiv]
+			iipiv[ii == 0] <- 0
+			pred[, i] <- if (any(iipiv > 0)) 
+						Xpred[, iipiv, drop = FALSE] %*% coef[iipiv]
+					else 0
+		}
+		attr(pred, "constant") <- if (hasintercept) 
+					termsconst
+				else 0
+		if (!is.null(terms)) {
+			pred <- pred[, terms, drop = FALSE]
+		}
+	}
+	else {
+		pred <- drop(Xpred[, !nac, drop = FALSE] %*% coef[!nac])
+		if (!is.null(off.num) && collapse) 
+			pred <- pred + offsetVar[!onlydata]
+	}
+	if (!is.null(smo.mat)) {
+		cat("new prediction", "\n")
+		smooth.labels <- dimnames(smo.mat)[[2]]
+		pred.s <- array(0, c(nrows, n.smooths), list(names(pred), 
+						dimnames(smo.mat)[[2]]))
+		smooth.calls <- lapply(m[smooth.labels], attr, "call")
+		data <- subset(m, onlydata, drop = FALSE)
+		attr(data, "class") <- NULL
+		new.m <- subset(m, !onlydata, drop = FALSE)
+		attr(new.m, "class") <- NULL
+		residuals <- if (!is.null(off.num)) 
+					object[[paste(what, "wv", sep = ".")]] - object[[paste(what, 
+									"lp", sep = ".")]] + offsetVar[onlydata]
+				else object[[paste(what, "wv", sep = ".")]] - object[[paste(what, 
+									"lp", sep = ".")]]
+		for (TT in smooth.labels) {
+			if (is.matrix(m[[TT]])) {
+				nm <- names(attributes(m[[TT]]))
+				attributes(data[[TT]]) <- attributes(m[[TT]])[nm[-c(1, 
+										2)]]
+			}
+			else attributes(data[[TT]]) <- attributes(m[[TT]])
+			Call <- smooth.calls[[TT]]
+			Call$xeval <- substitute(new.m[[TT]], list(TT = TT))
+			z <- residuals + smo.mat[, TT]
+			pred.s[, TT] <- eval(Call)
+		}
+		if (type == "terms") {
+			pred[, smooth.labels] <- pred[, smooth.labels] + 
+					pred.s[, smooth.labels]
+		}
+		else pred <- drop(pred + pred.s %*% rep(1, n.smooths))
+	}
+	if (type == "response") {
+		if (is(eval(parse(text = object$family[[1]])), "gamlss.family")) {
+			pred <- eval(parse(text = object$family[[1]]))[[paste(what, 
+							"linkinv", sep = ".")]](pred)
+		}
+		else {
+			pred <- gamlss.family(eval(parse(text = paste(family(object)[1], 
+											"(", what, ".link=", eval(parse(text = (paste("object$", 
+																				what, ".link", sep = "")))), ")", sep = ""))))[[paste(what, 
+							"linkinv", sep = ".")]](pred)
+		}
+	}
+	pred
+}
+######################################################################################
+lm.wfit<- function (x, y, w, offset = NULL, method = "qr", tol = 1e-07, 
+		singular.ok = TRUE, ...) 
+{
+	if (is.null(n <- nrow(x))) 
+		stop("'x' must be a matrix")
+	if (n == 0) 
+		stop("0 (non-NA) cases")
+	ny <- NCOL(y)
+	if (is.matrix(y) && ny == 1L) 
+		y <- drop(y)
+	if (!is.null(offset)) 
+		y <- y - offset
+	if (NROW(y) != n | length(w) != n) 
+		stop("incompatible dimensions")
+	if (any(w < 0 | is.na(w))) 
+		stop("missing or negative weights not allowed")
+	if (method != "qr") 
+		warning(gettextf("method = '%s' is not supported. Using 'qr'", 
+						method), domain = NA)
+	dots <- list(...)
+	if (length(dots) > 1L) 
+		warning("extra arguments ", paste(sQuote(names(dots)), 
+						sep = ", "), " are disregarded.", domain = NA)
+	else if (length(dots) == 1L) 
+		warning("extra argument ", sQuote(names(dots)), " is disregarded.", 
+				domain = NA)
+	x.asgn <- attr(x, "assign")
+	zero.weights <- any(w == 0)
+	if (zero.weights) {
+		save.r <- y
+		save.f <- y
+		save.w <- w
+		ok <- w != 0
+		nok <- !ok
+		w <- w[ok]
+		x0 <- x[!ok, , drop = FALSE]
+		x <- x[ok, , drop = FALSE]
+		n <- nrow(x)
+		y0 <- if (ny > 1L) 
+					y[!ok, , drop = FALSE]
+				else y[!ok]
+		y <- if (ny > 1L) 
+					y[ok, , drop = FALSE]
+				else y[ok]
+	}
+	p <- ncol(x)
+	if (p == 0) {
+		return(list(coefficients = numeric(), residuals = y, 
+						fitted.values = 0 * y, weights = w, rank = 0L, df.residual = length(y)))
+	}
+	wts <- sqrt(w)
+	z <- .Call(stats:::C_Cdqrls, x * wts, y * wts, tol)
+	if (!singular.ok && z$rank < p) 
+		stop("singular fit encountered")
+	coef <- z$coefficients
+	pivot <- z$pivot
+	r1 <- seq_len(z$rank)
+	dn <- colnames(x)
+	if (is.null(dn)) 
+		dn <- paste0("x", 1L:p)
+	nmeffects <- c(dn[pivot[r1]], rep.int("", n - z$rank))
+	r2 <- if (z$rank < p) 
+				(z$rank + 1L):p
+			else integer()
+	if (is.matrix(y)) {
+		coef[r2, ] <- NA
+		if (z$pivoted) 
+			coef[pivot, ] <- coef
+		dimnames(coef) <- list(dn, colnames(y))
+		dimnames(z$effects) <- list(nmeffects, colnames(y))
+	}
+	else {
+		coef[r2] <- NA
+		if (z$pivoted) 
+			coef[pivot] <- coef
+		names(coef) <- dn
+		names(z$effects) <- nmeffects
+	}
+	z$coefficients <- coef
+	z$residuals <- z$residuals/wts
+	z$fitted.values <- y - z$residuals
+	z$weights <- w
+	if (zero.weights) {
+		coef[is.na(coef)] <- 0
+		f0 <- x0 %*% coef
+		if (ny > 1) {
+			save.r[ok, ] <- z$residuals
+			save.r[nok, ] <- y0 - f0
+			save.f[ok, ] <- z$fitted.values
+			save.f[nok, ] <- f0
+		}
+		else {
+			save.r[ok] <- z$residuals
+			save.r[nok] <- y0 - f0
+			save.f[ok] <- z$fitted.values
+			save.f[nok] <- f0
+		}
+		z$residuals <- save.r
+		z$fitted.values <- save.f
+		z$weights <- save.w
+	}
+	if (!is.null(offset)) 
+		z$fitted.values <- z$fitted.values + offset
+	if (z$pivoted) 
+		colnames(z$qr) <- colnames(x)[z$pivot]
+	qr <- z[c("qr", "qraux", "pivot", "tol", "rank")]
+	c(z[c("coefficients", "residuals", "fitted.values", "effects", 
+							"weights", "rank")], list(assign = x.asgn, qr = structure(qr, 
+							class = "qr"), df.residual = n - z$rank))
 }
 ######################################################################################
 project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=1e3, gamlss.BE.required.limit=0.99 )
@@ -4086,43 +4370,54 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 	betafit.or		<- tmp$betafit.or
 	betafit.rr		<- tmp$betafit.rr
 	stopifnot(tmp$gamlss.BE.limit>gamlss.BE.required.limit)
-	
+		
 	#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7 )
 	#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7, k=YX.m3[, log(round(sum(w)))])
 	#sapply( list(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7), '[[', 'pseudo.r.squared')
-	
+	#str(X.seq)
+	#str(YX.m3)
 	#	odds ratio and risk ratio
 	cat(paste('\nodds ratios and risk ratios'))
 	risk.ans	<- subset(risk.df, coef!=coef.ref)[, 	{										
 				tmp				<- copy(predict.df)
 				tmp2			<- copy(predict.df)
-				set(tmp, NULL, risk, factor(factor))
+				set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
 				corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-				if(length(corisk))
+				if(!length(corisk))	
+					corisk<- NULL				
+				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
+				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))				
+				if(nrow(tmp))	#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
 				{
-					tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
-					tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
+					#tryCatch({
+					tmp[, predict:= predict(betafit.or, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]
+					tmp2[, predict:= predict(betafit.or, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]
+					tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)			
+					#	} , error=function(e){ print(e$message); tmp<<- NA_real_ })
 				}
-				#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
-				options(warn=-1)
-				tryCatch( tmp	<- weighted.mean(exp(predict(betafit.or, newdata=tmp, data=YX.m3, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.or, newdata=tmp2, data=YX.m3, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_})
-				options(warn=0)
+				else
+					tmp			<- NA_real_		
 				list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
-			},by=c('coef','coef.ref')]	
+			},by=c('coef','coef.ref')]
 	tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
 				tmp				<- copy(predict.df)
 				tmp2			<- copy(predict.df)
-				set(tmp, NULL, risk, factor(factor))
+				set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
 				corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-				if(length(corisk))
-				{
-					tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
-					tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
-				}
+				if(!length(corisk))	
+					corisk<- NULL				
+				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
+				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))
+				
 				#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
-				options(warn=-1)
-				tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr, newdata=tmp, data=YX.m3, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.rr, newdata=tmp2, data=YX.m3, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_})
-				options(warn=0)
+				if(nrow(tmp))	
+				{
+					tmp[, predict:= predict(betafit.rr, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]
+					tmp2[, predict:= predict(betafit.rr, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]
+					tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)							
+				}
+				else
+					tmp			<- NA_real_					
 				list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
 			},by=c('coef','coef.ref')]
 	risk.ans	<- rbind(risk.ans, tmp)	
@@ -4134,13 +4429,18 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 	cat(paste('\nnumber and proportion of transmissions'))
 	tmp			<- risk.df[, 		{
 				tmp					<- copy(predict.df)
-				set(tmp, NULL, risk, factor(factor))
+				set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
 				corisk				<- intersect(colnames(risk.df), colnames(predict.df))
-				if(length(corisk))
-					tmp				<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)
-				options(warn=-1)
-				tryCatch( tmp		<- weighted.mean(exp(predict(betafit.rr, newdata=tmp, data=YX.m3, type='link')),w=tmp[,w], na.rm=TRUE), error=function(e){ print(e$message); tmp<<- NA_real_})
-				options(warn=0)
+				if(!length(corisk))	
+					corisk<- NULL				
+				tmp					<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))
+				if(nrow(tmp))	
+				{
+					tmp[, predict:= predict(betafit.rr, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]				
+					tmp				<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)							
+				}
+				else
+					tmp				<- NA_real_	
 				tmp[2]				<- sum( YX.m3[ which(as.character(YX.m3[, risk, with=FALSE][[1]])==factor), w] )
 				list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N', expbeta=ifelse(tmp[2]<2*EPS, 0., tmp[1]), n=tmp[2] )
 			},by= 'coef']
@@ -4155,7 +4455,7 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 	tmp			<- subset(risk.ans, stat=='PY' )[, sum(v)]
 	tmp			<- subset(risk.ans, risk.ref=='None')[, list( stat='RI', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='P'] / ( v[stat=='PY'] / tmp ) ), by='coef']
 	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
-	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))	
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 	#	Bootstraps	on ratio and on prob
 	cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
 	tmp			<- lapply(seq_len(bs.n), function(bs.i)
@@ -4179,46 +4479,58 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{
 							tmp				<- copy(predict.df)
 							tmp2			<- copy(predict.df)
-							set(tmp, NULL, risk, factor(factor))
+							set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
 							corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-							if(length(corisk))
-							{
-								tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
-								tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
-							}
+							if(!length(corisk))	
+								corisk<- NULL
+							tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
+							tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))
 							#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
-							options(warn=-1)
-							tryCatch( tmp	<- weighted.mean(exp(predict(betafit.or.bs, newdata=tmp, data=YX.m3.bs, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.or.bs, newdata=tmp2, data=YX.m3.bs, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ tmp<<- NA_real_})
-							options(warn=0)
+							if(nrow(tmp))	
+							{
+								tmp[, predict:= predict(betafit.or.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
+								tmp2[, predict:= predict(betafit.or.bs, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
+								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)							
+							}
+							else
+								tmp			<- NA_real_	
 							list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
 						},by=c('coef','coef.ref')]
 				tmp					<- subset(risk.df, coef!=coef.ref)[, 	{
 							tmp				<- copy(predict.df)
 							tmp2			<- copy(predict.df)
-							set(tmp, NULL, risk, factor(factor))
+							set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
 							corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-							if(length(corisk))
+							if(!length(corisk))	
+								corisk<- NULL
+							tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
+							tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))							
+							if(nrow(tmp))	
 							{
-								tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
-								tmp2		<- merge(tmp2[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref)
+								tmp[, predict:= predict(betafit.rr.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
+								tmp2[, predict:= predict(betafit.rr.bs, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
+								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)							
 							}
-							#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
-							options(warn=-1)
-							tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr.bs, newdata=tmp, data=YX.m3.bs, type='link')),w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(predict(betafit.rr.bs, newdata=tmp2, data=YX.m3.bs, type='link')),w=tmp2[,w], na.rm=TRUE), error=function(e){ tmp<<- NA_real_})
-							options(warn=0)
+							else
+								tmp			<- NA_real_
 							list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
 						},by=c('coef','coef.ref')]
 				risk.ans.bs			<- rbind(risk.ans.bs, tmp)																
 				#	for proportions		
 				tmp			<- risk.df[, 		{
 							tmp				<- copy(predict.df)
-							set(tmp, NULL, risk, factor(factor))
+							set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
 							corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-							if(length(corisk))
-								tmp			<- merge(tmp[,setdiff( colnames(predict.df), colnames(risk.df) ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk)											
-							options(warn=-1)
-							tryCatch( tmp	<- weighted.mean(exp(predict(betafit.rr.bs, newdata=tmp, data=YX.m3.bs, type='link')),w=tmp[,w], na.rm=TRUE), error=function(e){ tmp<<- NA_real_})
-							options(warn=0)
+							if(!length(corisk))	
+								corisk<- NULL
+							tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
+							if(nrow(tmp))	
+							{
+								tmp[, predict:= predict(betafit.rr.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]							
+								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)							
+							}
+							else
+								tmp			<- NA_real_
 							tmp[2]			<- sum( YX.m3.bs[ which(as.character(YX.m3.bs[, risk, with=FALSE][[1]])==factor), w] )																												
 							list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat='prob', v=ifelse(tmp[2]<2*EPS, 0., tmp[1]) )
 						},by= 'coef']
@@ -4260,6 +4572,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 		cat(paste('\nstratify by', method))
 		if(substr(method,1,5)=='m2wmx')
 		{
+			#X.seq		<- X.seq[sample(1:nrow(X.seq),2e6),]
 			YX			<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )
 			X.seq		<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
 		}
@@ -4330,7 +4643,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 						set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage))])
 						
 						predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.seq[, levels(stage)]), w=1.)			
-						risk.df			<- data.table(risk='stage',factor=factor(X.seq[, levels(stage)], levels=factor(X.seq[, levels(stage)])))
+						risk.df			<- data.table(risk='stage',factor=factor(X.seq[, levels(stage)], levels=factor(X.seq[, levels(stage)])), w=1. )
 						risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 						tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep(paste('ART.suA.Y',tp,sep='.'),nrow(risk.df)))
 						risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
@@ -4423,7 +4736,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 											lRNA.mx=subset(YX, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)],
 											ART.pulse=factor('No',levels=c('No','Yes')), ART.I=factor('No',levels=c('No','Yes')), ART.F=factor('No',levels=c('No','Yes')), ART.P=factor('No',levels=c('No','Yes')), ART.A=factor('No',levels=c('No','Yes')),
 											w=1.)
-			risk.df			<- data.table( risk= c(rep('stage',9), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3.NRT.PI','ART.l3','ART.g3','ART.3.NRT','ART.3.PI','ART.3.NNRT','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NNRT.PI', rep('Yes',5)))
+			risk.df			<- data.table( risk= c(rep('stage',9), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3.NRT.PI','ART.l3','ART.g3','ART.3.NRT','ART.3.PI','ART.3.NNRT','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NNRT.PI', rep('Yes',5)) )
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]			
 			risk.df			<- merge(risk.df, risk.df[, {
 															tmp				<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( lRNA.mx, na.rm=TRUE )]
@@ -8160,7 +8473,7 @@ hivc.prog.betareg.estimaterisks<- function()
 {
 	require(data.table)
 	require(ape)
-	#stop()
+	stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
@@ -8296,7 +8609,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method		<- paste(method,'a',sep='')
 	if(method.nodectime=='map')
 		method		<- paste(method,'m',sep='')
-	resume			<- 0
+	resume			<- 1
 	adjust.AcuteByNegT=0.75
 	#
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
@@ -8381,7 +8694,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
-	resume			<- 0
+	resume			<- 1
 	rm.zero.score	<- TRUE
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT_',method,'_tATHENAclu','.R',sep='')	
 	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
@@ -8420,8 +8733,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	
 	ri.PT			<- subset(YX, select=c(Patient, t))[, list(n.t.infw= length(unique(t))), by='Patient']
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_',method,'_tATHENAseq','.R',sep='')
-	X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.PT, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
-	stop()
+	X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.PT, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)	
 	#
 	#	endpoint: first VL suppressed
 	#
