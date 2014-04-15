@@ -5171,6 +5171,7 @@ project.athena.Fisheretal.YX.model3.ARTriskgroups<- function(YX, clumsm.info, cd
 ######################################################################################
 project.athena.Fisheretal.YX.model3.v1.ARTriskgroups<- function(YX, clumsm.info, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.cascade=NA, score.Y.cut=1e-2)
 {
+	# cd4.cut= c(-1, 350, 550, 5000); cd4.label=c('D1<=350','D1<=550','D1>550'); plot.file.cascade=NA; score.Y.cut=1e-2
 	require(betareg)
 	#	Treatment cascade & ART risk groups
 	#	prop and odds by traditional categories 	undiagnosed, 	undiagnosed&evidence acute, 	diagnosed by CD4 at diagnosis
@@ -8473,7 +8474,7 @@ hivc.prog.betareg.estimaterisks<- function()
 {
 	require(data.table)
 	require(ape)
-	stop()
+	#stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
@@ -8481,7 +8482,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	
+	resume					<- 1
 	if(0)
 	{
 		method					<- '3c'
@@ -8507,8 +8508,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		outfile					<- paste(infile,'Ac=MY_D=2_sasky',sep='_')		
 	}
 	if(1)
-	{
-		resume					<- 1
+	{		
 		method					<- '3c'
 		method.nodectime		<- 'any'
 		method.risk				<- 'm21st.cas'
@@ -8608,8 +8608,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.nodectime=='any')
 		method		<- paste(method,'a',sep='')
 	if(method.nodectime=='map')
-		method		<- paste(method,'m',sep='')
-	resume			<- 1
+		method		<- paste(method,'m',sep='')	
 	adjust.AcuteByNegT=0.75
 	#
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
@@ -8738,7 +8737,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	endpoint: first VL suppressed
 	#
 	#X.seq<- X.seq[sample(1:nrow(X.seq),2e6),]
-	resume			<- 1
+	resume			<- 0
 	bs.n			<- 1e3
 	if(method.risk=='m21st.cas')
 	{
