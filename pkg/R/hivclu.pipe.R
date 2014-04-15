@@ -613,7 +613,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "um192rhU2080"	
 		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
 	}
-	if(0)
+	if(1)
 	{
 		method					<- '3d'
 		method.nodectime		<- 'any'
@@ -624,7 +624,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(1)
+	if(0)
 	{
 		method					<- '3c'
 		method.nodectime		<- 'any'
@@ -644,7 +644,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 				cat(cmd)
 				#stop()
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=80, hpc.mem="30800mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="30800mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 				hivc.cmd.hpccaller(outdir, outfile, cmd)			

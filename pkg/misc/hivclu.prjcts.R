@@ -438,6 +438,24 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		tmp		<- df.all[, which(NegT==AnyPos_T1)]
 		set(df.all, tmp, 'NegT', df.all[tmp, AnyPos_T1-3*30])
 		set(df.all, tmp, 'NegT_Acc', 'No')
+		df.all[,AnyT_T1:=NULL]
+		#
+		#	add Treatment dates
+		#
+		if(verbose)		cat(paste("\nadding treatment data"))
+		load(file.treatment)
+		df			<- subset(df, select=c(Patient, StartTime, StopTime, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel, TrI.n, TrI.mo, TrI.p, AnyT_T1, AnyT_T1_Acc, HAART_T1))
+		tmp			<- subset(df, select=c(Patient, TrI.n, AnyT_T1, AnyT_T1_Acc ))
+		setkey(tmp, Patient)
+		df.all		<- merge(df.all, unique(tmp), all.x=1, by="Patient")		
+		#	compare treatment history relative to PosSeqT		
+		df.cross	<- merge( subset(df.all, select=c(idx,FASTASampleCode,Patient,PosSeqT)), df, allow.cartesian=T, by="Patient" )
+		tmp			<- hivc.db.getTrIMo(df.cross)
+		df.all		<- merge(df.all, tmp, all.x=1, by="FASTASampleCode")
+		
+		
+		
+		
 		#
 		#	add CD4 count data
 		#
@@ -460,26 +478,18 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		# 	subset(tmp,diff< -10)
 		#
 #TODO
+
+
+
 		if(verbose)		cat(paste("\ncheck manually PosCD4_T1 < AnyPos_T1 -- THIS IS ASSUMED OK"))
 		tmp	<- subset(df.all, PosCD4_T1 < AnyPos_T1, c(FASTASampleCode, Patient, AnyPos_T1, PosSeqT, PosT, PosT_Acc, PoslRNA_T1, lRNA_T1,  PosCD4_T1, CD4_T1))
-		print( tmp , nrow=400)
+		tmp[, diff:= difftime(PosCD4_T1, AnyPos_T1, units='days')]
+		
+		print(subset(tmp, diff< -60) , nrow=500)
 		tmp		<- which(df.all[,!is.na(PosCD4_T1) & PosCD4_T1<AnyPos_T1])
 		if(verbose)		cat(paste("\nnumber of seq with !is.na(PosCD4_T1) & PosCD4_T1<AnyPos_T1, n=",length(tmp)))
 		if(verbose)		cat(paste("\nnumber of patients with !is.na(PosCD4_T1) & PosCD4_T1<AnyPos_T1, n=",length(unique(df.all[tmp,Patient]))))
 		set(df.all, tmp, "AnyPos_T1", df.all[tmp,PosCD4_T1])
-		#
-		#	add Treatment dates
-		#
-		if(verbose)		cat(paste("\nadding treatment data"))
-		load(file.treatment)
-		df			<- subset(df, select=c(Patient, StartTime, StopTime, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel, TrI.n, TrI.mo, TrI.p, AnyT_T1, AnyT_T1_Acc, HAART_T1))
-		tmp			<- subset(df, select=c(Patient, TrI.n, AnyT_T1, AnyT_T1_Acc ))
-		setkey(tmp, Patient)
-		df.all		<- merge(df.all, unique(tmp), all.x=1, by="Patient")		
-		#	compare treatment history relative to PosSeqT		
-		df.cross	<- merge( subset(df.all, select=c(FASTASampleCode,Patient,PosSeqT)), df, allow.cartesian=T, by="Patient" )
-		tmp			<- hivc.db.getTrIMo(df.cross)
-		df.all		<- merge(df.all, tmp, all.x=1, by="FASTASampleCode")
 		#		
 		setkey(df.all, PosSeqT)
 		setkey(df.all, Patient)

@@ -84,7 +84,7 @@ hivc.db.getTrIMo<- function(df.cross, verbose=1)
 				}					
 				list( 	TrImo_bTS	= TrImo_bTS, 
 						TrImo_aTS	= TrImo_aTS			)																					
-			}, by=FASTASampleCode]
+			}, by=idx]
 	set(ans,NULL,"TrImo_bTS",round(ans[,TrImo_bTS],d=1))
 	set(ans,NULL,"TrImo_aTS",round(ans[,TrImo_aTS],d=1))
 	if(verbose)	cat(paste("\nnumber of entries, n=",nrow(ans)))
