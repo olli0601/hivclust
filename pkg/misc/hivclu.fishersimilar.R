@@ -1899,13 +1899,31 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 	list(tpairs=df.tpairs.brl, linked=msm.linked, unlinked=msm.unlinked.bytime)	
 }
 ######################################################################################
-project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'))
+project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infile.viro, infile.immu, infile.treatment, infiletree=NULL, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'))
 {
 	#	adjust.AcuteByNegT<- 0.75
-	#	fixed input args
+	#	fixed input args in !is.na(infiletree)
 	opt.brl			<- "dist.brl.casc" 
 	thresh.brl		<- 0.096
-	thresh.bs		<- 0.8					
+	thresh.bs		<- 0.8	
+	#
+	#	load patient RNA
+	#
+	load(infile.viro)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
+	df.viro				<- df
+	#
+	#	load patient CD4
+	#
+	load(infile.immu)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
+	df.immu				<- df
+	#
+	#	load patient regimen
+	#
+	load(infile.treatment)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
+	df.treatment		<- df			
 	#
 	# 	recent msm 
 	#
@@ -1966,6 +1984,7 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	msm.recent		<- subset( df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') )
 	setkey(msm.recent, isAcute)
 	msm.recent		<- msm.recent[adjust.AcuteSelect,]
+	set(msm.recent, NULL, 'Trm', msm.recent[,factor(as.character(Trm))])
 	cat(paste('\nmsm isAcute: #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
 	# 	recent msm seroconverters
 	msm.recentsc	<- subset( msm.recent, !is.na(NegT))
@@ -1973,35 +1992,41 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	#
 	#	load clustering msm
 	#
-	argv			<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=1)
-	argv			<<- unlist(strsplit(argv,' '))		
-	msm				<- hivc.prog.get.clustering.MSM()
-	clumsm.info		<- msm$df.cluinfo
-	#	update clumsm.info with latest values from df.all
-	clumsm.info		<- merge( df.all, subset(clumsm.info, select=c(FASTASampleCode, cluster, Node, clu.npat, clu.ntip, clu.nFrgnInfection, clu.fPossAcute, clu.AnyPos_T1, clu.bwpat.medbrl)), by='FASTASampleCode')
-	set(clumsm.info, NULL, 'clu.AnyPos_T1', hivc.db.Date2numeric(clumsm.info[,clu.AnyPos_T1]))
-	#	fixup
-	setkey(clumsm.info, Patient)
-	tmp		<- clumsm.info[, list(ok= all(AnyPos_T1==min(AnyPos_T1))) ,by='Patient']
-	for(x in subset(tmp, !ok)[, unique(Patient)])
+	if(!is.null(infiletree))
 	{
-		z	<- clumsm.info[, which(Patient==x)]		
-		set( clumsm.info, z, 'AnyPos_T1', clumsm.info[z, min(AnyPos_T1)])
+		argv			<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=1)
+		argv			<<- unlist(strsplit(argv,' '))		
+		msm				<- hivc.prog.get.clustering.MSM()
+		clumsm.info		<- msm$df.cluinfo
+		#	update clumsm.info with latest values from df.all
+		clumsm.info		<- merge( df.all, subset(clumsm.info, select=c(FASTASampleCode, cluster, Node, clu.npat, clu.ntip, clu.nFrgnInfection, clu.fPossAcute, clu.AnyPos_T1, clu.bwpat.medbrl)), by='FASTASampleCode')
+		set(clumsm.info, NULL, 'clu.AnyPos_T1', hivc.db.Date2numeric(clumsm.info[,clu.AnyPos_T1]))
+		#	fixup
+		setkey(clumsm.info, Patient)
+		tmp		<- clumsm.info[, list(ok= all(AnyPos_T1==min(AnyPos_T1))) ,by='Patient']
+		for(x in subset(tmp, !ok)[, unique(Patient)])
+		{
+			z	<- clumsm.info[, which(Patient==x)]		
+			set( clumsm.info, z, 'AnyPos_T1', clumsm.info[z, min(AnyPos_T1)])
+		}
+		# 	recently infected MSM in cluster
+		setkey(clumsm.info, isAcute)	
+		clumsm.recent	<- clumsm.info[adjust.AcuteSelect,] 
+		clumsm.recent	<- subset( clumsm.recent, Trm%in%c('MSM','BI') )
+		set(clumsm.recent, NULL, 'Trm', clumsm.recent[,factor(as.character(Trm))])
+		# 	recent seroconcerverters in cluster
+		clumsm.recentsc	<- subset( clumsm.recent, !is.na(NegT))
+		cat(paste('\nmsm clustering: #seq=',nrow(clumsm.info),'#patient=',length(clumsm.info[,unique(Patient)]),'#cluster=',length(clumsm.info[,unique(cluster)])))		
+		cat(paste('\nmsm clustering isAcute: #seq=',nrow(clumsm.recent),'#patient=',length(clumsm.recent[,unique(Patient)]),'#cluster=',length(clumsm.recent[,unique(cluster)])))
+		cat(paste('\nmsm clustering isAcute & !is.na(NegT): #seq=',nrow(clumsm.recentsc),'#patient=',length(clumsm.recentsc[,unique(Patient)]),'#cluster=',length(clumsm.recentsc[,unique(cluster)])))
+		
+		ans<- list(df.all=df.all, df.viro=df.viro, df.immu=df.immu, df.treatment=df.treatment, clumsm.info=clumsm.info, df.select=clumsm.recent, clumsm.subtrees=msm$cluphy.subtrees, clumsm.ph=msm$cluphy)
 	}
-	# 	recently infected MSM in cluster
-	setkey(clumsm.info, isAcute)	
-	clumsm.recent	<- clumsm.info[adjust.AcuteSelect,] 
-	clumsm.recent	<- subset( clumsm.recent, Trm%in%c('MSM','BI') )
-	set(clumsm.recent, NULL, 'Trm', clumsm.recent[,factor(as.character(Trm))])
-	# 	recent seroconcerverters in cluster
-	clumsm.recentsc	<- subset( clumsm.recent, !is.na(NegT))
-	cat(paste('\nmsm clustering: #seq=',nrow(clumsm.info),'#patient=',length(clumsm.info[,unique(Patient)]),'#cluster=',length(clumsm.info[,unique(cluster)])))		
-	cat(paste('\nmsm clustering isAcute: #seq=',nrow(clumsm.recent),'#patient=',length(clumsm.recent[,unique(Patient)]),'#cluster=',length(clumsm.recent[,unique(cluster)])))
-	cat(paste('\nmsm clustering isAcute & !is.na(NegT): #seq=',nrow(clumsm.recentsc),'#patient=',length(clumsm.recentsc[,unique(Patient)]),'#cluster=',length(clumsm.recentsc[,unique(cluster)])))
-	#
-	#	make selection
-	#
-	list(df.all=df.all, clumsm.info=clumsm.info, df.select=clumsm.recent, clumsm.subtrees=msm$cluphy.subtrees, clumsm.ph=msm$cluphy)
+	else
+	{
+		ans<- list(df.all=df.all, df.viro=df.viro, df.immu=df.immu, df.treatment=df.treatment, clumsm.info=clumsm.info, df.select=msm.recent )
+	}
+	ans	
 }
 ######################################################################################
 project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos<- function(clumsm.info, df.denom, any.pos.grace.yr= 0.5, select.if.transmitter.seq.unique=TRUE)
@@ -2509,26 +2534,8 @@ project.athena.Fisheretal.t2inf.explore.chronic<- function(indircov, infilecov)
 	lines(age1, m4d$coefficients["(Intercept)"] + m4d$coefficients["AnyPos_a"]*age1, col='black')
 }
 ######################################################################################
-project.athena.Fisheretal.get.data.for.selection<- function(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov, method.nodectime='any')
+project.athena.Fisheretal.get.dated.phylo.for.selection<- function(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, method.nodectime='any')
 {
-	file.cov				<- paste(indircov,"/",infilecov,".R",sep='')
-	file.viro				<- paste(indircov,"/ATHENA_2013_03_Viro.R",sep='/')
-	file.immu				<- paste(indircov,"/ATHENA_2013_03_Immu.R",sep='/')
-	file.treatment			<- paste(indircov,"/ATHENA_2013_03_Regimens.R",sep='/')		
-	#	load patient demographic data	(loads df.all)
-	load(file.cov)				
-	#	load patient RNA
-	load(file.viro)
-	set(df, NULL, 'Patient', df[, as.character(Patient)])
-	df.viro				<- df				
-	#	load patient CD4				
-	load(file.immu)
-	set(df, NULL, 'Patient', df[, as.character(Patient)])
-	df.immu				<- df
-	#	load patient regimen
-	load(file.treatment)
-	set(df, NULL, 'Patient', df[, as.character(Patient)])
-	df.treatment		<- df		
 	#
 	#	collect files containing dated cluster phylogenies
 	files		<- list.files(clu.indir)
@@ -2552,7 +2559,7 @@ project.athena.Fisheretal.get.data.for.selection<- function(df.tpairs, clu.indir
 	}			
 	#	combine dated cluster phylogenies
 	clu			<- hivc.beast2out.combine.clu.trees(clu.indir, file.info, method.nodectime=method.nodectime)
-	list(clu=clu, df.viro=df.viro, df.immu=df.immu, df.treatment=df.treatment, df.tpairs=df.tpairs.reduced)
+	list(clu=clu, df.tpairs=df.tpairs.reduced)
 }
 ######################################################################################
 project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, file, pdf.height=400)
@@ -4140,8 +4147,6 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
 			},by=c('coef','coef.ref')]
 	risk.ans	<- rbind(risk.ans, tmp)	
-	print(risk.ans)
-	stop()
 	#	person years in infection window
 	cat(paste('\nperson years across infection windows'))
 	tmp			<- risk.df[, list(risk=risk, factor=factor, risk.ref="None", factor.ref="None", coef.ref="None", stat="PY", v=length(which(as.character(X.seq[, risk, with=FALSE][[1]])==factor))), by='coef']
@@ -7488,6 +7493,10 @@ project.athena.Fisheretal.exact.repro<- function()
 	indircov				<- paste(DATA,"derived",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infile.viro.study		<- paste(indircov,"/ATHENA_2013_03_Viro.R",sep='/')
+	infile.immu.study		<- paste(indircov,"/ATHENA_2013_03_Immu.R",sep='/')
+	infile.treatment.study	<- paste(indircov,"/ATHENA_2013_03_Regimens.R",sep='/')		
+	
 	if(0)
 	{
 		infile					<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"
@@ -7526,8 +7535,11 @@ project.athena.Fisheretal.exact.repro<- function()
 	#
 	#	select infected individuals and return in df.select
 	#
-	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=NA, adjust.NegT4Acute=1, adjust.AcuteSelect='Yes')
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, file.viro, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=NA, adjust.NegT4Acute=1, adjust.AcuteSelect='Yes')
 	df.denom		<- tmp$df.select
+	df.viro			<- tmp$df.viro
+	df.immu			<- tmp$df.immu
+	df.treatment	<- tmp$df.treatment
 	clumsm.subtrees	<- tmp$clumsm.subtrees
 	clumsm.info		<- tmp$clumsm.info
 	setkey(clumsm.info, cluster)
@@ -7550,12 +7562,8 @@ project.athena.Fisheretal.exact.repro<- function()
 	#df.tpairs	<- subset(df.tpairs, cluster%in%c(1502,1508,1510))
 	#df.tpairs.save<- copy(df.tpairs)
 	#df.tpairs<- df.tpairs.save[1:100,]
-	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov)	
+	tmp						<- project.athena.Fisheretal.get.dated.phylo.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template)	
 	df.tpairs				<- tmp$df.tpairs
-	df.all					<- tmp$df.all
-	df.viro					<- tmp$df.viro
-	df.immu					<- tmp$df.immu
-	df.treatment			<- tmp$df.treatment
 	cluphy					<- tmp$clu$cluphy
 	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
 	cluphy.info				<- tmp$clu$cluphy.info
@@ -8234,7 +8242,15 @@ hivc.prog.betareg.estimaterisks<- function()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
-	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infile.cov.study		<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infile.viro.study		<- paste(indircov,"ATHENA_2013_03_Viro.R",sep='/')
+	infile.immu.study		<- paste(indircov,"ATHENA_2013_03_Immu.R",sep='/')
+	infile.treatment.study	<- paste(indircov,"ATHENA_2013_03_Regimens.R",sep='/')
+	infile.cov.all			<- "ATHENA_2013_03_AllSeqPatientCovariates_AllMSM"
+	infile.viro.all			<- paste(indircov,"ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+	infile.immu.all			<- paste(indircov,"ATHENA_2013_03_Immu_AllMSM.R",sep='/')
+	infile.treatment.all	<- paste(indircov,"ATHENA_2013_03_Regimens_AllMSM.R",sep='/')		
+	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
@@ -8296,7 +8312,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,10),
 									infilecov= return(substr(arg,12,nchar(arg))),NA)	}))
-		if(length(tmp)>0) infilecov<- tmp[1]
+		if(length(tmp)>0) infile.cov.study<- tmp[1]
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,11),
 									infiletree= return(substr(arg,13,nchar(arg))),NA)	}))
@@ -8346,7 +8362,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		print(infile)
 		print(insignat)
 		print(indircov)
-		print(infilecov)
+		print(infile.cov.study)
 		print(infiletree)
 		print(clu.infilexml.opt)
 		print(clu.infilexml.template)
@@ -8369,15 +8385,29 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
 	#
-	tmp				<- project.athena.Fisheretal.t2inf(indircov, infilecov, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2)
+	tmp				<- project.athena.Fisheretal.t2inf(indircov, infile.cov.study, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2)
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args
 	#
-	#	select infected individuals and return in df.select
+	#	get data relating to full population (MSM including those without seq)
 	#
-	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infilecov, infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'))	
+	tmp					<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'))	
+	df.all.allmsm		<- tmp$df.all	
+	df.viro.allmsm		<- tmp$df.viro
+	df.immu.allmsm		<- tmp$df.immu
+	df.treatment.allmsm	<- tmp$df.treatment
+	tmp					<- tmp$df.select
+	setkey(tmp, Patient)
+	ri.allmsm			<- unique(tmp)
+	#
+	#	get data relating to study population (subtype B sequ)
+	#
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'))	
 	df.all			<- tmp$df.all
 	df.denom		<- tmp$df.select
+	df.viro			<- tmp$df.viro
+	df.immu			<- tmp$df.immu
+	df.treatment	<- tmp$df.treatment	
 	clumsm.subtrees	<- tmp$clumsm.subtrees
 	clumsm.info		<- tmp$clumsm.info
 	clumsm.ph		<- tmp$clumsm.ph
@@ -8438,14 +8468,11 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get time stamped data (if clusters missing, confine df.tpairs to available clusters)
 	#
-	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov, method.nodectime=method.nodectime)
+	tmp						<- project.athena.Fisheretal.get.dated.phylo.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, method.nodectime=method.nodectime)
 	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime
 	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
 	cluphy.info				<- tmp$clu$cluphy.info
 	cluphy					<- tmp$clu$cluphy	
-	df.viro					<- tmp$df.viro
-	df.immu					<- tmp$df.immu
-	df.treatment			<- tmp$df.treatment
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
@@ -8456,7 +8483,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	YX.part1		<- merge( YX.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)
 	YX.part1[, class:='pt']
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'.R',sep='')	
-	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)
+	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
 	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']
 	tperiod.info[, t.period.max:=c(tperiod.info[-1, t.period.min], t.endctime)]	
@@ -8481,14 +8508,50 @@ hivc.prog.betareg.estimaterisks<- function()
 		YXS.part1		<- do.call('rbind',list(YX.part1, subset(YXS.part1, select=colnames(YX.part1))))		#put potential transmitters and potential non-transmitters together		
 		YXS.part1		<- merge( YXS.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)	
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_RICT_tATHENAseq','.R',sep='')
-		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)		
+		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)		
 	}
 	#
-	#	get timelines for all candidate transmitters in df.all to the recently infected RI.PT
+	#	get timelines for all clustering candidate transmitters to the recently infected RI.PT
 	#	
 	ri.PT			<- subset(YX, select=c(Patient, t))[, list(n.t.infw= length(unique(t))), by='Patient']
+	tmp				<- copy(clumsm.info)
+	setkey(tmp, Patient)
+	tmp				<- unique(tmp)	
+	tmp[, FASTASampleCode:=NULL]
+	tmp[, cluster:=NULL]
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_',method,'_tATHENAclu','.R',sep='')
+	X.clu			<- project.athena.Fisheretal.YX.part1(tmp, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.PT, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+	X.clu	<- NULL
+	gc()
+	#
+	#	get timelines for all candidate transmitters in df.all (anyone with subtype B sequ) to the recently infected RI.PT
+	#	
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_',method,'_tATHENAseq','.R',sep='')
 	X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.PT, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)	
+	X.seq	<- NULL
+	gc()
+	#
+	#	get timelines for all candidate transmitters in ATHENA.MSM (anyone with MSM exposure group irrespective of sequ available or not) to the recently infected RI.PT
+	#	
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_',method,'_tATHENAmsm','.R',sep='')
+	X.msm			<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.PT, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+	X.msm	<- NULL
+	gc()
+	#
+	#X.clu	<- X.clu[sample(seq_len(nrow(X.clu)), 1e6),]
+	#X.msm	<- X.msm[sample(seq_len(nrow(X.msm)), 3e6),]
+	#
+	#	characteristics of RI(with potential direct transmitter) and RI(in all.msm)
+	#	
+	ri.PT.su				<- project.athena.Fisheretal.RI.summarize(ri.PT, df.all, tperiod.info, info=clumsm.info, with.seq=TRUE, with.cluster=TRUE, cols=c('lRNA_T1','CD4_T1','AnyPos_A','SC_dt','PosCD4_dt','PoslRNA_dt'))
+	unique(subset(ri.allmsm, select=Patient)) 
+	ri.allmsm.su			<- project.athena.Fisheretal.RI.summarize(unique(subset(ri.allmsm, select=Patient)), df.all.allmsm, tperiod.info, info=NULL, with.seq=FALSE, with.cluster=FALSE, cols=c('lRNA_T1','CD4_T1','AnyPos_A','SC_dt','PosCD4_dt','PoslRNA_dt'))	
+	ri.allmsm.resolution	<- project.athena.Fisheretal.CT.resolution(df.all.allmsm, t.startctime=1994)
+	ri.allmsm.l2c			<- project.athena.Fisheretal.CT.link2care(df.all.allmsm, link2care.cut=c(-Inf,15/365,30/365,3/12,Inf), link2care.label=c('<=15d','<=30d','<=3m','>3m'), t.startctime=1994)
+	save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_RIMSM_',method,'_info','.R',sep='')
+	save(ri.PT.su, ri.allmsm.su, ri.allmsm.resolution, ri.allmsm.l2c, file=save.file)
+	
+	stop()
 	#
 	#	endpoint: first VL suppressed
 	#
@@ -8501,6 +8564,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
 		YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
 	}
+	if(method.risk=='m21st.cas.clu')
+	{
+		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
+	}	
 	#
 	#	endpoint: all VL in infection window suppressed
 	#
@@ -8509,6 +8578,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
 		YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
+	if(method.risk=='m2wmx.cas.clu')
+	{		
+		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
 	#
 	#	endpoint: VL at time t suppressed
@@ -8519,6 +8594,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
 		YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	}
+	if(method.risk=='m2t.cas.clu')
+	{					
+		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+	}
 	#
 	#	trends: all VL in infection window suppressed
 	#
@@ -8527,13 +8608,23 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
 		YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=NA, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	}
+	if(method.risk=='m2wmx.tp.clu')
+	{
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, plot.file.varyvl=NA, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+	}
 	#		
 	#	treatment risk groups: only overlapping indicators
 	# 
 	if(method.risk=='m3.i')
 	{	
-	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
-	YX.m3.ARTi.risk		<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTi.risk		<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
+	if(method.risk=='m3.i.clu')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTi.risk		<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
 	#		
 	#	treatment risk groups: number drug + overlapping indicators
@@ -8543,6 +8634,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTni.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
+	if(method.risk=='m3.ni.clu')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTni.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	#		
 	#	treatment risk groups: number drug conditional no indicators + separate indicators
 	#		
@@ -8550,6 +8646,11 @@ hivc.prog.betareg.estimaterisks<- function()
 	{	
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
+	if(method.risk=='m3.nic.clu')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
 	#		
 	#	treatment risk groups: number/type drug + overlapping indicators
@@ -8559,6 +8660,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTtni.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
+	if(method.risk=='m3.tni.clu')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtni.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	#		
 	#	treatment risk groups: number/type drug conditional no indicators + separate indicators
 	#	
@@ -8566,6 +8672,11 @@ hivc.prog.betareg.estimaterisks<- function()
 	{	
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTtnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
+	if(method.risk=='m3.tnic.clu')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
 	#		
 	#	treatment risk groups: number/type drug + overlapping indicators + bs(lRNA.mx, knots=c(3,4.5), degree=1)
@@ -8575,6 +8686,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTtniv.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
+	if(method.risk=='m3.tniv.clu')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtniv.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	#		
 	#	treatment risk groups: number/type drug + overlapping indicators + bs(lRNA.mx, knots=c(3,4.5), degree=1)
 	#	
@@ -8583,34 +8699,15 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTtnicvNo.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
-	
+	if(method.risk=='m3.tnicvNo.clu')
+	{	
+		save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtnicvNo.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}
 	stop()
 		
 		
 		
-	#	proportions across time
-	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2time','.pdf',sep='')
-	YX.m2time.p		<- project.athena.Fisheretal.YX.model2.time(YX, clumsm.info, df.viro, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file=plot.file)
-	
-	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_results.R',sep='')
-	cat(paste('\nsave to',save.file))
-	ans				<- list(	YX.m2.VL1.or=YX.m2.VL1.or, YX.m2.VL1.p=YX.m2.VL1.p, 
-			YX.m2.VLmxw.or=YX.m2.VLmxw.or, YX.m2.VLmxw.p=YX.m2.VLmxw.p, 
-			YX.m2time.p=YX.m2time.p, 
-			YX.m3.p=YX.m3.p, YX.m3.or.art=YX.m3.or.art )
-	save(ans, file=save.file)
-	#
-	#	characteristics of RI with at least one direct transmitter
-	#	
-	ri.PT.su		<- project.athena.Fisheretal.RI.summarize(ri.PT, df.all, tperiod.info, info=clumsm.info, with.seq=TRUE, with.cluster=TRUE, cols=c('lRNA_T1','CD4_T1','AnyPos_A','SC_dt','PosCD4_dt','PoslRNA_dt'))
-	#
-	#	characteristics of RI in ATHENA.seq		TODO replace with RI in ATHENA
-	#			
-	ri.SEQ			<- subset(df.all, select=unique(Patient))
-	ri.SEQ.su		<- project.athena.Fisheretal.RI.summarize(ri.SEQ, df.all, tperiod.info, info=NULL, with.seq=FALSE, with.cluster=FALSE, cols=c('lRNA_T1','CD4_T1','AnyPos_A','SC_dt','PosCD4_dt','PoslRNA_dt'))
-	#	resolution and link to care for everyone in ATHENA.seq	TODO replace with ATHENA
-	ct.resolution	<- project.athena.Fisheretal.CT.resolution(df.all, t.startctime=1994)
-	ct.l2c			<- project.athena.Fisheretal.CT.link2care(df.all, link2care.cut=c(-Inf,15/365,30/365,3/12,Inf), link2care.label=c('<=15d','<=30d','<=3m','>3m'), t.startctime=1994)
 	#	set transmitter risk groups 
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_',method,'_tATHENAseq_table','.R',sep='')
 	resume			<- FALSE
@@ -8627,14 +8724,11 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get data for selection
 	#	
-	tmp						<- project.athena.Fisheretal.get.data.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, indircov, infilecov, method.nodectime=method.nodectime)
+	tmp						<- project.athena.Fisheretal.get.dated.phylo.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, method.nodectime=method.nodectime)
 	#df.all2					<- subset(clumsm.info, select=c(Patient, cluster))
 	#setkey(df.all2, Patient)
 	#df.all2					<- merge( tmp$df.all, unique(df.all2), by='Patient', all.x=TRUE )
 	df.tpairs				<- tmp$df.tpairs
-	df.viro					<- tmp$df.viro
-	df.immu					<- tmp$df.immu
-	df.treatment			<- tmp$df.treatment
 	cluphy					<- tmp$clu$cluphy
 	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
 	cluphy.info				<- tmp$clu$cluphy.info
