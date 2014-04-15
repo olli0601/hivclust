@@ -212,6 +212,31 @@ hivc.db.reset.inaccurateNegT<- function(df, nacc.dy.dy= 1, nacc.mody.mo= 0, nacc
 	df
 }
 ######################################################################################
+hivc.db.reset.PosT1byCD4T1<- function(df.all, verbose=1)
+{	
+	tmp	<- df.all[, which(PosCD4_T1 < AnyPos_T1 & as.POSIXlt(AnyPos_T1)$mon==11 & as.POSIXlt(AnyPos_T1)$mday==31)] 
+	if(verbose) cat(paste("\nnumber of PosCD4_T1 < AnyPos_T1 with AnyPos_T1==XX-12-31, reset, n=",length(tmp)))
+	set(df.all, tmp, 'AnyPos_T1', df.all[tmp, PosCD4_T1])
+	
+	
+	serocon.nacc.dy		<- which( df[, NegT_Acc=="No" & !is.na(NegT) & as.POSIXlt(NegT)$mday==15] )
+	serocon.nacc.mody	<- which( df[, NegT_Acc=="No" & !is.na(NegT) & as.POSIXlt(NegT)$mon==6 & as.POSIXlt(NegT)$mday==1] )
+	if(verbose) cat(paste("\nnumber of uncertain NegT, day only, n=",length(serocon.nacc.dy)))
+	if(verbose) cat(paste("\nnumber of uncertain NegT, month & day, n=",length(serocon.nacc.mody)))
+	# reset serocon.nacc.dy
+	tmp							<- as.POSIXlt(df[serocon.nacc.dy,NegT] )
+	tmp$mday					<- nacc.dy.dy
+	set(df, serocon.nacc.dy, "NegT", as.Date(tmp))
+	#set(df, serocon.nacc.dy, "NegT_Acc", "Yes")
+	# reset serocon.nacc.mody
+	tmp							<- as.POSIXlt(df[serocon.nacc.mody,NegT] )
+	tmp$mday					<- nacc.mody.dy
+	tmp$mon						<- nacc.mody.mo
+	set(df, serocon.nacc.mody, "NegT", as.Date(tmp))
+	#set(df, serocon.nacc.mody, "NegT_Acc", "Yes")
+	df
+}
+######################################################################################
 hivc.db.getplot.newdiagnosesbyCD4<- function(df, plot.file=NULL, plot.file.p=NULL, plot.ylab=NULL, verbose=1)
 {
 	set(df, NULL, "AnyPos_T1", hivc.db.Date2numeric(df[,AnyPos_T1]))

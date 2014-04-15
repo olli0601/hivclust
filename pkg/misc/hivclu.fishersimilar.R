@@ -4080,6 +4080,7 @@ project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, g
 project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=1e3, gamlss.BE.required.limit=0.99 )
 {
 	require(gamlss)
+	options(warn=0)
 	#
 	cat(paste('\nbeta regression for formula=',formula))	 
 	tmp				<- project.athena.Fisheretal.betareg(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( c(0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
@@ -4105,11 +4106,11 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))				
 				if(nrow(tmp))	#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
 				{
-					#tryCatch({
+					tryCatch({
 					tmp[, predict:= predict(betafit.or, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]
 					tmp2[, predict:= predict(betafit.or, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]
 					tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)			
-					#	} , error=function(e){ print(e$message); tmp<<- NA_real_ })
+					}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
 				}
 				else
 					tmp			<- NA_real_		
@@ -4128,9 +4129,11 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
 				if(nrow(tmp))	
 				{
+					tryCatch({
 					tmp[, predict:= predict(betafit.rr, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]
 					tmp2[, predict:= predict(betafit.rr, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]
-					tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)							
+					tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)
+					}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
 				}
 				else
 					tmp			<- NA_real_					
@@ -4152,8 +4155,10 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				tmp					<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))
 				if(nrow(tmp))	
 				{
+					tryCatch({
 					tmp[, predict:= predict(betafit.rr, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]				
-					tmp				<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)							
+					tmp				<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)
+					}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
 				}
 				else
 					tmp				<- NA_real_	
@@ -4204,9 +4209,11 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 							#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
 							if(nrow(tmp))	
 							{
+								tryCatch({
 								tmp[, predict:= predict(betafit.or.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
 								tmp2[, predict:= predict(betafit.or.bs, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
-								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)							
+								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)
+								}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
 							}
 							else
 								tmp			<- NA_real_	
@@ -4223,9 +4230,11 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 							tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))							
 							if(nrow(tmp))	
 							{
+								tryCatch({
 								tmp[, predict:= predict(betafit.rr.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
 								tmp2[, predict:= predict(betafit.rr.bs, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
-								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)							
+								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)
+								}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
 							}
 							else
 								tmp			<- NA_real_
@@ -4242,8 +4251,10 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 							tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
 							if(nrow(tmp))	
 							{
+								tryCatch({
 								tmp[, predict:= predict(betafit.rr.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]							
-								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)							
+								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)
+								}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
 							}
 							else
 								tmp			<- NA_real_

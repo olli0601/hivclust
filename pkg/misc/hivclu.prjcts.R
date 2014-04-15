@@ -451,11 +451,12 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		#	compare treatment history relative to PosSeqT		
 		df.cross	<- merge( subset(df.all, select=c(idx,FASTASampleCode,Patient,PosSeqT)), df, allow.cartesian=T, by="Patient" )
 		tmp			<- hivc.db.getTrIMo(df.cross)
-		df.all		<- merge(df.all, tmp, all.x=1, by="FASTASampleCode")
-		
-		
-		
-		
+		df.all		<- merge(df.all, tmp, all.x=1, by="idx")		
+		tmp			<- subset(df.all, AnyT_T1<AnyPos_T1)
+		if(verbose)		cat(paste("\ncheck manually AnyT_T1<AnyPos_T1 -- THIS IS ASSUMED OK"))
+		print(tmp, n=300)
+		tmp			<- df.all[, which(AnyT_T1<AnyPos_T1)]
+		set(df.all, tmp, 'AnyPos_T1', df.all[tmp, AnyT_T1])		
 		#
 		#	add CD4 count data
 		#
