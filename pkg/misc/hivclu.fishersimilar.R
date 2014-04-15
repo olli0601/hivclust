@@ -4140,6 +4140,8 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
 			},by=c('coef','coef.ref')]
 	risk.ans	<- rbind(risk.ans, tmp)	
+	print(risk.ans)
+	stop()
 	#	person years in infection window
 	cat(paste('\nperson years across infection windows'))
 	tmp			<- risk.df[, list(risk=risk, factor=factor, risk.ref="None", factor.ref="None", coef.ref="None", stat="PY", v=length(which(as.character(X.seq[, risk, with=FALSE][[1]])==factor))), by='coef']
