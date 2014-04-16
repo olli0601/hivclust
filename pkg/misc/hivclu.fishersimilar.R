@@ -7863,6 +7863,98 @@ project.athena.Fisheretal.check<- function()
 			})
 }
 ######################################################################################
+project.athena.Fisheretal.characteristics<- function()
+{
+	require(data.table)
+	require(ape)
+	indir					<- paste(DATA,"fisheretal_data",sep='/')		
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	outdir					<- paste(DATA,"fisheretal",sep='/')
+	infile.cov.study		<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infile.viro.study		<- paste(indircov,"ATHENA_2013_03_Viro.R",sep='/')
+	infile.immu.study		<- paste(indircov,"ATHENA_2013_03_Immu.R",sep='/')
+	infile.treatment.study	<- paste(indircov,"ATHENA_2013_03_Regimens.R",sep='/')
+	infile.cov.all			<- "ATHENA_2013_03_AllSeqPatientCovariates_AllMSM"
+	infile.viro.all			<- paste(indircov,"ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+	infile.immu.all			<- paste(indircov,"ATHENA_2013_03_Immu_AllMSM.R",sep='/')
+	infile.treatment.all	<- paste(indircov,"ATHENA_2013_03_Regimens_AllMSM.R",sep='/')		
+	
+	t.period				<- 1/8
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+	resume					<- 1
+	verbose					<- 1
+	if(0)
+	{
+		method					<- '3c'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm21st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"					
+		clu.infilexml.opt		<- "mph4clutx4tip"
+		clu.infilexml.template	<- "um192rhU2080"	
+		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
+	}
+	if(0)
+	{
+		method					<- '3d'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm21st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"					
+		clu.infilexml.opt		<- "mph4clutx4tip"
+		clu.infilexml.template	<- "um192rhU2080"	
+		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
+	}	
+	if(0)
+	{		
+		method					<- '3d'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm21st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+	}
+	if(1)
+	{		
+		method					<- '3c'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm21st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+	}
+	
+	
+	if(method.nodectime=='any')
+		method		<- paste(method,'a',sep='')
+	if(method.nodectime=='map')
+		method		<- paste(method,'m',sep='')	
+	
+	file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_RIMSM_',method,'_info','.R',sep='')
+	cat(paste('\nload',file))
+	tmp		<- load(file)
+	save(ri.PT.su, ri.allmsm.su, ri.allmsm.resolution, ri.allmsm.l2c, file=save.file)
+	
+	
+	ri.PT.su$rin
+	ri.allmsm.su$rin
+	
+	subset(ri.PT.su$rip, stat=='p')
+	subset(ri.allmsm.su$rip, stat=='p')
+	
+	subset(ri.PT.su$ris, stat=='quantile_0.5')
+	subset(ri.allmsm.su$ris, stat=='quantile_0.5')
+}
+######################################################################################
 project.athena.Fisheretal.sensitivity<- function()
 {
 	require(data.table)

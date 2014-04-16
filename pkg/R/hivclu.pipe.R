@@ -613,7 +613,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "um192rhU2080"	
 		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
 	}
-	if(0)
+	if(1)
 	{
 		method					<- '3d'
 		method.nodectime		<- 'any'
@@ -624,7 +624,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(1)
+	if(0)
 	{
 		method					<- '3c'
 		method.nodectime		<- 'any'
@@ -637,15 +637,15 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	}
 	
 	method.risk	<- c('m21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
-	method.risk	<- c('m3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj','m21st.cas.clu','m2wmx.cas.clu','m2t.cas.clu','m2wmx.tp.clu','m3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tnic.clu','m3.tniv.clu','m3.tnicvNo.clu')
-	method.risk	<- c('m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj')
+	method.risk	<- c('m3.nic.clu.adj','m3.tnic.clu.adj','m21st.cas.clu','m2wmx.cas.clu','m2t.cas.clu','m2wmx.tp.clu','m3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tnic.clu','m3.tniv.clu','m3.tnicvNo.clu')
+	#method.risk	<- c('m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj')
 	#method.risk	<- c('m21st.cas')
 	dummy	<- sapply(method.risk, function(x)
 			{
 				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 				cat(cmd)
 				#stop()
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="79800mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="30800mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 				hivc.cmd.hpccaller(outdir, outfile, cmd)			
