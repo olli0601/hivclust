@@ -4466,7 +4466,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			ans			<- list()
 			ans$risk	<- do.call('rbind',tmp)		
 		}
-		if(method=='m2wmx.tp.adj')
+		if(method=='m2wmx.tp.clu.adj')
 		{
 			set(YX, NULL, 'stage', YX[, stage.tperiod])
 			set(X.seq, NULL, 'stage', X.seq[, stage.tperiod])			
