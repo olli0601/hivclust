@@ -636,11 +636,11 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
 	
-	method.risk	<- c('m21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
-	method.risk	<- c('m3.nic.clu.adj','m3.tnic.clu.adj','m21st.cas.clu','m2wmx.cas.clu','m2t.cas.clu','m2wmx.tp.clu','m3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tnic.clu','m3.tniv.clu','m3.tnicvNo.clu')
-	method.risk	<- c('m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj')
-	method.risk	<- c('m3.nicv','m3.nicv.clu','m3.tnicv','m3.tnicv.clu')
-	#method.risk	<- c('m3.nicv.clu.adj','m3.tnicv.clu.adj')
+
+	method.risk	<- c('m3.nicv','m3.nicv.clu','m3.tnicv','m3.tnicv.clu','m21st.cas.clu','m2wmx.cas.clu','m2t.cas.clu','m2wmx.tp.clu','m3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tnic.clu','m3.tniv.clu','m3.tnicvNo.clu','m21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
+	#method.risk	<- c('m3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj')
+
+
 	
 	dummy	<- sapply(method.risk, function(x)
 			{

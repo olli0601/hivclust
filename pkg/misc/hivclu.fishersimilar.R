@@ -5929,30 +5929,41 @@ project.athena.Fisheretal.YX.model3.v2<- function(YX, clumsm.info, vl.suppressed
 		formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1'
 		set(YX.m3, NULL, 'stage', YX.m3[, ART.ntstage.c])			
 		formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
-		set(YX.m3, NULL, 'stage', YX.m3[, ART.ntstage.no.c])
-		formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
+		#set(YX.m3, NULL, 'stage', YX.m3[, ART.ntstage.no.c])
+		#formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
 		#set(YX.m3, NULL, 'stage', YX.m3[, ART.ntstage.c])			
 		#formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=2)+stage-1'		
 		#
 		YX.m3b			<- na.omit(subset(YX.m3, select=c(score.Y, lRNA.mx, stage, ART.pulse, ART.I, ART.F, ART.P, ART.A, CDCC, CD4, fw.up.med, t.period, t.Age, t.AnyPos_T1, t.RegionHospital, w)))
 		YX.m3b[, table(stage)]
-		tmp				<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3b, score.Y>0.3)))
-		betafit.rr 		<- betareg(formula=formula, link='log', weights=w, data = YX.m3b, start=list(tmp))
-		YX.m3b[, score.Y.b:= predict(betafit.rr, type='response')]
+		
+		tmp				<- project.athena.Fisheretal.betareg(YX.m3b, formula, c('score.Y','w','lRNA.mx','stage'), gamlss.BE.limit.u=c( c(0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
+		betafit.rr		<- tmp$betafit.rr
+		
+		tmp				<- predict(betafit.rr, type='response', se.fit=TRUE)		
+		YX.m3b[, score.Y.b:= tmp$fit]
+		YX.m3b[, score.Y.su:= tmp$fit+tmp$se.fit]
+		YX.m3b[, score.Y.sl:= tmp$fit-tmp$se.fit]
+		set(YX.m3b, YX.m3b[, which(score.Y.su>1)], 'score.Y.su', 1.)
+		set(YX.m3b, YX.m3b[, which(score.Y.sl<0)], 'score.Y.sl', 0.)
+		
 		tmp				<- YX.m3b[, list(mean.score.Y.b= mean(score.Y.b, na.rm=TRUE)), by='stage']
 		setkey(tmp, mean.score.Y.b)
 		set(YX.m3b, NULL, 'stage', YX.m3b[, factor( stage, levels=tmp[, stage])])
-		ggplot(YX.m3b, aes(x = lRNA.mx, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + facet_grid(. ~ stage, margins=FALSE)
+		ggplot(YX.m3b, aes(x = lRNA.mx, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + geom_smooth(aes(y= score.Y.s), stat='identity') + facet_grid(. ~ stage, margins=FALSE)
 		#YX.m3b[, c:= t.Age<25]				
 		#YX.m3b[, c:= t.AnyPos_T1<2008]
 		#YX.m3b[, c:= t.period%in%c('1','2')]
+		YX.m3b[, c:= t.period]
 		#YX.m3b[, c:= t.Age>45]	
 		#YX.m3b[, c:= t.RegionHospital]
 		#YX.m3b[, c:= fw.up.med>0.5]
 		#YX.m3b[, c:= CDCC=='Yes']
 		#YX.m3b[, c:= CD4<300]
-		YX.m3b[, c:= CD4>500]
-		ggplot(YX.m3b, aes(x = lRNA.mx, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + facet_grid(. ~ stage + c, margins=FALSE)
+		#YX.m3b[, c:= CD4>500]		
+		ggplot(YX.m3b, aes(x = lRNA.mx, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + geom_smooth(aes(y= score.Y.su), colour="#999999", stat='identity') + geom_smooth(aes(y= score.Y.sl), colour="#999999", stat='identity') + facet_grid(c ~ stage, margins=FALSE)
+		setkey(YX.m3b, c, lRNA.mx)
+		#ggplot(YX.m3b, aes(x = lRNA.mx, y = score.Y)) + geom_polygon(mapping=aes(x=c(lRNA.mx,rev(lRNA.mx)), y=c(score.Y.su,rev(score.Y.sl))), stat='identity', colour="#999999") + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + facet_grid(c ~ stage, margins=FALSE)
 		
 		
 		#	plot relationship of pDT ~ lRNA by ART risk group	-- treat indicators in separate row
@@ -9221,7 +9232,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	endpoint: first VL suppressed
 	#
 	#X.seq<- X.seq[sample(1:nrow(X.seq),2e6),]
-	resume			<- 0
+	resume			<- 1
 	bs.n			<- 1e3
 	if(method.risk=='m21st.cas')
 	{
