@@ -4291,7 +4291,7 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 	list(risk=risk.ans, fit.or=betafit.or, fit.rr=betafit.rr, risk.bs=risk.ans.bs)
 }
 ######################################################################################
-project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.viro, X.msm=NULL, df.all.allmsm=NULL, df.viro.allmsm=NULL, plot.file.varyvl=NA, plot.file.or=NA, bs.n=1e3, resume=TRUE, save.file=NA, method=NA)
+project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.viro, X.msm=NULL, df.all.allmsm=NULL, df.viro.allmsm=NULL, plot.file.or=NA, bs.n=1e3, resume=TRUE, save.file=NA, method=NA)
 {	
 	if(resume & !is.na(save.file))
 	{
@@ -4304,64 +4304,37 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 	{
 		stopifnot(method%in%c(	'm3.i','m3.ni','m3.nic','m3.tni','m3.tniv','m3.tnic','m3.nicv','m3.tnicv','m3.tnicvNo','m21st.cas','m2t.cas','m2wmx.cas','m2wmx.tp',
 								'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tniv.clu','m3.tnic.clu','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu','m21st.cas.clu','m2t.cas.clu','m2wmx.cas.clu','m2wmx.tp.clu',
-								'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj'))
-		cat(paste('\nstratify by', method))
-		if(substr(method,1,5)=='m2wmx')
-		{
-			#X.seq		<- X.seq[sample(1:nrow(X.seq),2e6),]
-			YX			<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )
-			#YX			<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
-			X.seq		<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
-			X.msm		<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm, df.all.allmsm, df.viro.allmsm, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
-		}
-		if(substr(method,1,3)=='m2t')
-		{
-			YX			<- project.athena.Fisheretal.YX.model2.stratify.VLt(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
-			X.seq		<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
-			X.msm		<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.msm, df.all.allmsm, df.viro.allmsm, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
-		}
-		if(substr(method,1,5)=='m21st')
-		{
-			YX			<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)	
-			X.seq		<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
-			X.msm		<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.msm, df.all.allmsm, df.viro.allmsm, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
-		}		
-		if(substr(method,1,2)=='m3')
-		{					
-			YX			<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all)	
-			X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all)
-			X.msm		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.msm, df.all.allmsm)
-		}
-		gc()
+								'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj',
+								'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj','m21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp.adj'))		
 		cat(paste('\nregression on data set by method', method))
 		if(method%in%c('m21st.cas','m21st.cas.clu'))
 		{  
 			formula			<- 'score.Y ~ stage-1'
 			include.colnames<- c('score.Y','w','stage')
-			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.seq[, levels(stage)])])
-			predict.df		<- data.table(stage=factor('ART1.su.Y', levels=X.seq[, levels(stage)]), w=1.)			
-			risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)])
+			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.den[, levels(stage)])])
+			predict.df		<- data.table(stage=factor('ART1.su.Y', levels=X.den[, levels(stage)]), w=1.)			
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART1.su.Y',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))	
 		}
-		if(method=='m21st.cas.clu.adj')
+		if(method%in%c('m21st.cas.adj','m21st.cas.clu.adj'))
 		{  
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.seq[, table(stage)] / nrow(X.seq) )
+			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4370,12 +4343,12 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			#						
 			formula			<- 'score.Y ~ stage-1'
 			include.colnames<- c('score.Y','w','stage')			
-			predict.df		<- data.table(stage=factor('ART1.su.Y', levels=X.seq[, levels(stage)]), w=1.)			
+			predict.df		<- data.table(stage=factor('ART1.su.Y', levels=X.den[, levels(stage)]), w=1.)			
 			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)])
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART1.su.Y',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$bias.adj	<- bias.adj
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
@@ -4383,7 +4356,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk'],
 							risk.df[,	{
@@ -4395,30 +4368,30 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 		{  
 			formula			<- 'score.Y ~ stage-1'
 			include.colnames<- c('score.Y','w','stage')
-			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.seq[, levels(stage)])])
-			predict.df		<- data.table(stage=factor('ART.su.Y', levels=X.seq[, levels(stage)]), w=1.)			
-			risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)])
+			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.den[, levels(stage)])])
+			predict.df		<- data.table(stage=factor('ART.su.Y', levels=X.den[, levels(stage)]), w=1.)			
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.su.Y',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))	
 		}
-		if(method=='m2t.cas.clu.adj')
+		if(method%in%c('m2t.cas.adj','m2t.cas.clu.adj'))
 		{  
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.seq[, table(stage)] / nrow(X.seq) )
+			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4432,7 +4405,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.su.Y',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$bias.adj	<- bias.adj
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
@@ -4440,7 +4413,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk'],
 							risk.df[,	{
@@ -4452,30 +4425,30 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 		{  
 			formula			<- 'score.Y ~ stage-1'
 			include.colnames<- c('score.Y','w','stage')
-			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.seq[, levels(stage)])])			
-			predict.df		<- data.table(stage=factor('ART.suA.Y', levels=X.seq[, levels(stage)]), w=1.)			
-			risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)])
+			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.den[, levels(stage)])])			
+			predict.df		<- data.table(stage=factor('ART.suA.Y', levels=X.den[, levels(stage)]), w=1.)			
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.suA.Y',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))						
 		}
-		if(method=='m2wmx.cas.clu.adj')
+		if(method%in%c('m2wmx.cas.adj','m2wmx.cas.clu.adj'))
 		{  
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.seq[, table(stage)] / nrow(X.seq) )
+			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4489,7 +4462,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.suA.Y',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$bias.adj	<- bias.adj
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
@@ -4497,7 +4470,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk'],
 							risk.df[,	{
@@ -4508,23 +4481,23 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 		if(method%in%c('m2wmx.tp','m2wmx.tp.clu'))
 		{
 			set(YX, NULL, 'stage', YX[, stage.tperiod])
-			set(X.seq, NULL, 'stage', X.seq[, stage.tperiod])			
+			set(X.den, NULL, 'stage', X.den[, stage.tperiod])			
 			formula			<- 'score.Y ~ stage-1'
 			include.colnames<- c('score.Y','w','stage')
 			YX.orig			<- copy(YX)
-			X.seq.orig		<- copy(X.seq)
+			X.den.orig		<- copy(X.den)
 			tmp				<- lapply( YX.orig[, levels(t.period)], function(tp)
 					{
 						YX				<- subset(YX.orig, t.period==tp)						
-						X.seq			<- subset(X.seq.orig, t.period==tp)
-						set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage))])
-						set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.seq[, levels(stage)])])
-						predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.seq[, levels(stage)]), w=1.)									
-						risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)])
+						X.den			<- subset(X.den.orig, t.period==tp)
+						set(X.den, NULL, 'stage', X.den[,factor(as.character(stage))])
+						set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
+						predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.den[, levels(stage)]), w=1.)									
+						risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
 						risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 						tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep(paste('ART.suA.Y',tp,sep='.'),nrow(risk.df)))
 						risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-						ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+						ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 						ans				<- ans$risk
 						options(warn=-1)
 						ans[, t.period:=tp]						
@@ -4534,25 +4507,25 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			ans			<- list()
 			ans$risk	<- do.call('rbind',tmp)		
 		}
-		if(method=='m2wmx.tp.clu.adj')
+		if(method%in%c('m2wmx.tp.adj','m2wmx.tp.clu.adj'))
 		{
 			set(YX, NULL, 'stage', YX[, stage.tperiod])
-			set(X.seq, NULL, 'stage', X.seq[, stage.tperiod])			
+			set(X.den, NULL, 'stage', X.den[, stage.tperiod])			
 			formula			<- 'score.Y ~ stage-1'
 			include.colnames<- c('score.Y','w','stage')
 			YX.orig			<- copy(YX)
-			X.seq.orig		<- copy(X.seq)
+			X.den.orig		<- copy(X.den)
 			X.msm.orig		<- copy(X.msm)			
 			tmp				<- lapply( YX.orig[, levels(t.period)], function(tp)
 					{
 						YX				<- subset(YX.orig, t.period==tp)						
-						X.seq			<- subset(X.seq.orig, t.period==tp)
+						X.den			<- subset(X.den.orig, t.period==tp)
 						X.msm			<- subset(X.msm.orig, t.period==tp)						
 						set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])						
 						set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-						set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+						set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 						#	adjust weight by selection bias weights			
-						bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.seq[, table(stage)] / nrow(X.seq) )
+						bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 						bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 						set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 						YX				<- merge( YX, bias.adj, by='stage' )
@@ -4565,7 +4538,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 						tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep(paste('ART.suA.Y',tp,sep='.'),nrow(risk.df)))
 						risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
 						#
-						ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+						ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 						ans				<- ans$risk
 						options(warn=-1)
 						ans[, t.period:=tp]						
@@ -4580,25 +4553,25 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			#	ART indicators only						
 			formula			<- 'score.Y ~ ART.pulse+ART.I+ART.F+ART.P+ART.A-1'
 			include.colnames<- c('score.Y','w','ART.pulse','ART.I','ART.F','ART.P','ART.A')			
-			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.seq[, levels(ART.pulse)])])
-			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.seq[, levels(ART.I)])])
-			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.seq[, levels(ART.F)])])
-			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.seq[, levels(ART.P)])])
-			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.seq[, levels(ART.A)])])
+			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.den[, levels(ART.pulse)])])
+			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.den[, levels(ART.I)])])
+			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.den[, levels(ART.F)])])
+			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.den[, levels(ART.P)])])
+			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.den[, levels(ART.A)])])
 			predict.df		<- data.table( 	ART.pulse=factor('No',levels=c('No','Yes')), ART.I=factor('No',levels=c('No','Yes')), ART.F=factor('No',levels=c('No','Yes')), ART.P=factor('No',levels=c('No','Yes')), ART.A=factor('No',levels=c('No','Yes')),
 											w=1.)
 			risk.df			<- data.table( risk= c('ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=rep('Yes',5) )
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('ART.pulse',nrow(risk.df)), factor.ref= rep('No',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
 			ans$risk.table	<- do.call('rbind',list(
 										risk.df[,	{
 												z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 												list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 											},by='risk'],
 							 			risk.df[,	{
-												z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+												z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 												list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 											},by='risk']))			
 		}
@@ -4607,30 +4580,30 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			#	ART indicators and number of drugs
 			#	ART.nDrug.c independent of indicators			
 			set(YX, NULL, 'stage', YX[, ART.nDrug.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.nDrug.c])
-			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.seq[, levels(stage)])])
-			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.seq[, levels(ART.pulse)])])
-			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.seq[, levels(ART.I)])])
-			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.seq[, levels(ART.F)])])
-			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.seq[, levels(ART.P)])])
-			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.seq[, levels(ART.A)])])			
+			set(X.den, NULL, 'stage', X.den[, ART.nDrug.c])
+			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
+			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.den[, levels(ART.pulse)])])
+			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.den[, levels(ART.I)])])
+			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.den[, levels(ART.F)])])
+			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.den[, levels(ART.P)])])
+			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.den[, levels(ART.A)])])			
 			formula			<- 'score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1'
 			include.colnames<- c('score.Y','w','stage','ART.pulse','ART.I','ART.F','ART.P','ART.A')
-			predict.df		<- data.table(	stage=factor('ART.3', levels=X.seq[, levels(stage)]), 
+			predict.df		<- data.table(	stage=factor('ART.3', levels=X.den[, levels(stage)]), 
 											ART.pulse=factor('No',levels=c('No','Yes')), ART.I=factor('No',levels=c('No','Yes')), ART.F=factor('No',levels=c('No','Yes')), ART.P=factor('No',levels=c('No','Yes')), ART.A=factor('No',levels=c('No','Yes')),
 											w=1.)
 			risk.df			<- data.table( risk= c(rep('stage',3), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3','ART.l3','ART.g3', rep('Yes',5)))
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))				
 		}
@@ -4638,36 +4611,36 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 		{
 			#	number of drugs conditional on no indicators and ART indicators (not overlapping)  
 			set(YX, NULL, 'stage', YX[, ART.nstage.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.nstage.c])
-			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.seq[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[, ART.nstage.c])
+			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
 			formula			<- 'score.Y ~ stage-1'
 			include.colnames<- c('score.Y','w','stage')
-			predict.df		<- data.table(stage=factor('ART.3', levels=X.seq[, levels(stage)]), w=1.)			
-			risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)])
+			predict.df		<- data.table(stage=factor('ART.3', levels=X.den[, levels(stage)]), w=1.)			
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))				
 		}
-		if(method=='m3.nic.clu.adj')
+		if(method%in%c('m3.nic.adj','m3.nic.clu.adj'))
 		{
 			#	number of drugs conditional on no indicators and ART indicators (not overlapping)  
 			set(YX, NULL, 'stage', YX[, ART.nstage.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.nstage.c])
+			set(X.den, NULL, 'stage', X.den[, ART.nstage.c])
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(ART.nstage.c))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.seq[, table(stage)] / nrow(X.seq) )
+			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4681,7 +4654,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$bias.adj	<- bias.adj
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
@@ -4689,7 +4662,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk'],
 							risk.df[,	{
@@ -4701,14 +4674,14 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 		{
 			#	number of drugs conditional on no indicators and ART indicators (not overlapping)  
 			set(YX, NULL, 'stage', YX[, ART.nstage.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.nstage.c])
-			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.seq[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[, ART.nstage.c])
+			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
 			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
 			include.colnames<- c('score.Y','w','lRNA.mx','stage')
-			predict.df		<- data.table(	stage=factor('ART.3', levels=X.seq[, levels(stage)]), 
+			predict.df		<- data.table(	stage=factor('ART.3', levels=X.den[, levels(stage)]), 
 											lRNA.mx=subset(YX, stage=='ART.3')[, mean(lRNA.mx, na.rm=TRUE)],
 											w=1.)			
-			risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)])
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			risk.df			<- merge(risk.df, risk.df[, {
 															tmp				<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( lRNA.mx, na.rm=TRUE )]
@@ -4716,27 +4689,27 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 														}, by='coef'], by='coef')			
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))
 		}
-		if(method=='m3.nicv.clu.adj')
+		if(method%in%c('m3.nicv.adj','m3.nicv.clu.adj'))
 		{
 			#	number of drugs conditional on no indicators and ART indicators (not overlapping)  
 			set(YX, NULL, 'stage', YX[, ART.nstage.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.nstage.c])
+			set(X.den, NULL, 'stage', X.den[, ART.nstage.c])
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(ART.nstage.c))])
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.seq[, table(stage)] / nrow(X.seq) )
+			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4745,10 +4718,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			#
 			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
 			include.colnames<- c('score.Y','w','lRNA.mx','stage')
-			predict.df		<- data.table(	stage=factor('ART.3', levels=X.seq[, levels(stage)]), 
+			predict.df		<- data.table(	stage=factor('ART.3', levels=X.den[, levels(stage)]), 
 					lRNA.mx=subset(YX, stage=='ART.3')[, mean(lRNA.mx, na.rm=TRUE)],
 					w=1.)			
-			risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)])
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			risk.df			<- merge(risk.df, risk.df[, {
 								tmp				<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( lRNA.mx, na.rm=TRUE )]
@@ -4756,7 +4729,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 							}, by='coef'], by='coef')			
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$bias.adj	<- bias.adj
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
@@ -4764,7 +4737,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk'],
 							risk.df[,	{
@@ -4777,30 +4750,30 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			#	ART indicators and number/type of drugs
 			#	ART.tnDrug.c independent of indicators
 			set(YX, NULL, 'stage', YX[, ART.tnDrug.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.tnDrug.c])
-			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.seq[, levels(stage)])])
-			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.seq[, levels(ART.pulse)])])
-			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.seq[, levels(ART.I)])])
-			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.seq[, levels(ART.F)])])
-			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.seq[, levels(ART.P)])])
-			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.seq[, levels(ART.A)])])						
+			set(X.den, NULL, 'stage', X.den[, ART.tnDrug.c])
+			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
+			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.den[, levels(ART.pulse)])])
+			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.den[, levels(ART.I)])])
+			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.den[, levels(ART.F)])])
+			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.den[, levels(ART.P)])])
+			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.den[, levels(ART.A)])])						
 			formula			<- 'score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1'
 			include.colnames<- c('score.Y','w','stage','ART.pulse','ART.I','ART.F','ART.P','ART.A')
-			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), 
+			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.den[, levels(stage)]), 
 											ART.pulse=factor('No',levels=c('No','Yes')), ART.I=factor('No',levels=c('No','Yes')), ART.F=factor('No',levels=c('No','Yes')), ART.P=factor('No',levels=c('No','Yes')), ART.A=factor('No',levels=c('No','Yes')),
 											w=1.)
 			risk.df			<- data.table( risk= c(rep('stage',9), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3.NRT.PI','ART.l3','ART.g3','ART.3.NRT','ART.3.PI','ART.3.NNRT','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NNRT.PI', rep('Yes',5)))
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))
 		}
@@ -4809,16 +4782,16 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			#	ART indicators and number/type of drugs
 			#	ART.tnDrug.c independent of indicators
 			set(YX, NULL, 'stage', YX[, ART.tnDrug.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.tnDrug.c])	
-			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.seq[, levels(stage)])])
-			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.seq[, levels(ART.pulse)])])
-			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.seq[, levels(ART.I)])])
-			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.seq[, levels(ART.F)])])
-			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.seq[, levels(ART.P)])])
-			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.seq[, levels(ART.A)])])						
+			set(X.den, NULL, 'stage', X.den[, ART.tnDrug.c])	
+			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
+			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.den[, levels(ART.pulse)])])
+			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.den[, levels(ART.I)])])
+			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.den[, levels(ART.F)])])
+			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.den[, levels(ART.P)])])
+			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.den[, levels(ART.A)])])						
 			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1'
 			include.colnames<- c('score.Y','w','stage','lRNA.mx','ART.pulse','ART.I','ART.F','ART.P','ART.A')
-			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), 
+			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.den[, levels(stage)]), 
 											lRNA.mx=subset(YX, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)],
 											ART.pulse=factor('No',levels=c('No','Yes')), ART.I=factor('No',levels=c('No','Yes')), ART.F=factor('No',levels=c('No','Yes')), ART.P=factor('No',levels=c('No','Yes')), ART.A=factor('No',levels=c('No','Yes')),
 											w=1.)
@@ -4830,14 +4803,14 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 														}, by='coef'], by='coef')			
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))
 		}
@@ -4845,36 +4818,36 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)  
 			set(YX, NULL, 'stage', YX[, ART.ntstage.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.ntstage.c])
-			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.seq[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[, ART.ntstage.c])
+			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
 			formula			<- 'score.Y ~ stage-1'
 			include.colnames<- c('score.Y','w','stage')
-			predict.df		<- data.table(stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), w=1.)			
-			risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)])
+			predict.df		<- data.table(stage=factor('ART.3.NRT.PI', levels=X.den[, levels(stage)]), w=1.)			
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))
 		}
-		if(method=='m3.tnic.clu.adj')
+		if(method%in%c('m3.tnic.adj','m3.tnic.clu.adj'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
 			set(YX, NULL, 'stage', YX[, ART.ntstage.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.ntstage.c])
+			set(X.den, NULL, 'stage', X.den[, ART.ntstage.c])
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(ART.ntstage.c))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.seq[, table(stage)] / nrow(X.seq) )
+			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4888,7 +4861,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$bias.adj	<- bias.adj
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
@@ -4896,7 +4869,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk'],
 							risk.df[,	{
@@ -4908,11 +4881,11 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
 			set(YX, NULL, 'stage', YX[, ART.ntstage.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.ntstage.c])			
-			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.seq[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[, ART.ntstage.c])			
+			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
 			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
 			include.colnames<- c('score.Y','w','stage','lRNA.mx')
-			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), 
+			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.den[, levels(stage)]), 
 											lRNA.mx=subset(YX, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)], w=1.	)
 			risk.df			<- data.table( risk= rep('stage',14), factor=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]			
@@ -4922,27 +4895,27 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 														}, by='coef'], by='coef')			
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))
 		}
-		if(method=='m3.tnicv.clu.adj')
+		if(method%in%c('m3.tnicv.adj','m3.tnicv.clu.adj'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
 			set(YX, NULL, 'stage', YX[, ART.ntstage.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.ntstage.c])
+			set(X.den, NULL, 'stage', X.den[, ART.ntstage.c])
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(ART.ntstage.c))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / X.msm[, length(which(!is.na(stage)))] ) / ( X.seq[, table(stage)] / X.seq[, length(which(!is.na(stage)))] )
+			bias.adj		<- ( X.msm[, table(stage)] / X.msm[, length(which(!is.na(stage)))] ) / ( X.den[, table(stage)] / X.den[, length(which(!is.na(stage)))] )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)			
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4951,7 +4924,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			#	
 			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
 			include.colnames<- c('score.Y','w','stage','lRNA.mx')
-			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), 
+			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.den[, levels(stage)]), 
 					lRNA.mx=subset(YX, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)], w=1.	)
 			risk.df			<- data.table( risk= rep('stage',14), factor=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]			
@@ -4961,7 +4934,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 							}, by='coef'], by='coef')			
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$bias.adj	<- bias.adj
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
@@ -4969,7 +4942,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk'],
 							risk.df[,	{
@@ -4981,12 +4954,12 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
 			set(YX, NULL, 'stage', YX[, ART.ntstage.no.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.ntstage.no.c])
+			set(X.den, NULL, 'stage', X.den[, ART.ntstage.no.c])
 			YX				<- subset(YX, !is.na(stage) & !is.na(lRNA.mx))
-			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.seq[, levels(stage)])])
+			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
 			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
 			include.colnames<- c('score.Y','w','stage','lRNA.mx')
-			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), 
+			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.den[, levels(stage)]), 
 											lRNA.mx=subset(YX, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)], w=1.	)
 			risk.df			<- data.table( risk= rep('stage',14), factor=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]			
@@ -4996,28 +4969,28 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 							}, by='coef'], by='coef')			
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))
 		}
-		if(method=='m3.tnicvNo.clu.adj')
+		if(method%in%c('m3.tnicvNo.adj','m3.tnicvNo.clu.adj'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
 			set(YX, NULL, 'stage', YX[, ART.ntstage.no.c])
-			set(X.seq, NULL, 'stage', X.seq[, ART.ntstage.no.c])
+			set(X.den, NULL, 'stage', X.den[, ART.ntstage.no.c])
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(ART.ntstage.no.c))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			set(X.seq, NULL, 'stage', X.seq[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			YX				<- subset(YX, !is.na(stage) & !is.na(lRNA.mx))
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / X.msm[, length(which(!is.na(stage)))] ) / ( X.seq[, table(stage)] / X.seq[, length(which(!is.na(stage)))] )
+			bias.adj		<- ( X.msm[, table(stage)] / X.msm[, length(which(!is.na(stage)))] ) / ( X.den[, table(stage)] / X.den[, length(which(!is.na(stage)))] )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)			
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -5026,7 +4999,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 			#	
 			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
 			include.colnames<- c('score.Y','w','stage','lRNA.mx')
-			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.seq[, levels(stage)]), 
+			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=X.den[, levels(stage)]), 
 					lRNA.mx=subset(YX, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)], w=1.	)
 			risk.df			<- data.table( risk= rep('stage',14), factor=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]			
@@ -5036,7 +5009,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 							}, by='coef'], by='coef')			
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$bias.adj	<- bias.adj
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
@@ -5044,7 +5017,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.seq, df.all, df.vi
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk'],
 							risk.df[,	{
@@ -8299,12 +8272,12 @@ project.athena.Fisheretal.sensitivity<- function()
 	require(data.table)
 	require(ape)
 	#stop()
-	resume					<- 
-	indir					<- paste(DATA,"fisheretal_140417",sep='/')		
+	resume					<- 1 
+	indir					<- paste(DATA,"fisheretal_140421",sep='/')		
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140417",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140421",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
@@ -8431,13 +8404,39 @@ project.athena.Fisheretal.sensitivity<- function()
 	}
 	
 	#	check cascade RR
-	tmp	<- subset(runs.risk, method.risk%in%c("m21st.cas","m2wmx.cas","m2t.cas") & stat=='RR' & factor.ref!='None' & factor%in%c('ART.su.N','ART1.su.N','ART.suA.N'))
+	tmp	<- subset(runs.risk, grepl('m2',method.risk,fixed=1) & stat=='RR' & factor.ref!='None' & factor%in%c('ART.su.N','ART1.su.N','ART.suA.N'))
 	setkey(tmp, method.risk, method.brl, method.dating)
 	tmp
 	#	check cascade OR
 	tmp	<- subset(runs.risk, method.risk%in%c("m21st.cas","m2wmx.cas","m2t.cas") & stat=='OR' & factor.ref!='None' & factor%in%c('ART.su.N','ART1.su.N','ART.suA.N'))
 	setkey(tmp, method.risk, method.brl, method.dating)
 	tmp	
+	#	check cascade P
+	tmp	<- subset(runs.risk, grepl('m2',method.risk,fixed=1) & !grepl('tp',method.risk,fixed=1) & stat=='P' )
+	tmp[,  list(cv= sd(v, na.rm=TRUE)/mean(v, na.rm=TRUE), mean=mean(v, na.rm=TRUE) ) , by='factor']
+	#	no huge variation in sensitivity	
+	
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & !grepl('tp',method.risk,fixed=1) & grepl('m2wmx',method.risk,fixed=1) & stat=='P')
+
+	
+
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & !grepl('tp',method.risk,fixed=1) & grepl('m2wmx',method.risk,fixed=1) & stat=='RI')
+
+	
+	pPWYI.UAy.X.seq<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' & factor=='UAy')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' )[, sum(v)]
+	pPWYI.UAy.X.clu<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas.clu' & stat=='PY' & factor=='UAy')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas.clu' & stat=='PY' )[, sum(v)]
+	pPWYI.UAy.X.clu.adj<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas.clu.adj' & stat=='PY' & factor=='UAy')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas.clu.adj' & stat=='PY' )[, sum(v)]
+	
+	pPWYI.UAy.X.seq<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' & factor=='UAy')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' )[, sum(v)]
+	pPWYI.UAy.X.clu<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas.clu' & stat=='PY' & factor=='UAy')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas.clu' & stat=='PY' )[, sum(v)]
+	
+	pPWYI.SuAY.X.seq<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' & factor=='ART.suA.Y')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' )[, sum(v)]
+	
+	subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='P' & factor=='UAy')[,v] 
+	
+	setkey(tmp, method.risk, method.brl, method.dating)
+	tmp	
+	
 	#	compare fit of cascade models with aic		 															 															 
 	tmp	<- subset(runs.fit, 	method.risk%in%c("m21st.cas","m2wmx.cas","m2t.cas") )
 	setkey(tmp, method.brl, method.dating, method.risk)
@@ -9182,6 +9181,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for all clustering candidate transmitters to the recently infected RI.PT
 	#	
+	X.clu				<- NULL
 	if(grepl('.clu',method.risk,fixed=1))
 	{		
 		tmp				<- copy(clumsm.info)
@@ -9205,6 +9205,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for all candidate transmitters in ATHENA.MSM (anyone with MSM exposure group irrespective of sequ available or not) to the recently infected RI.PT
 	#	
+	X.msm				<- NULL
 	if(substr(method.risk, nchar(method.risk)-2, nchar(method.risk))=='adj')
 	{
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_',method,'_tATHENAmsm','.R',sep='')
@@ -9227,7 +9228,43 @@ hivc.prog.betareg.estimaterisks<- function()
 		ri.allmsm.l2c			<- project.athena.Fisheretal.CT.link2care(df.all.allmsm, link2care.cut=c(-Inf,15/365,30/365,3/12,Inf), link2care.label=c('<=15d','<=30d','<=3m','>3m'), t.startctime=1994)
 		save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_RIMSM_',method,'_info','.R',sep='')
 		save(ri.PT.su, ri.allmsm.su, ri.allmsm.resolution, ri.allmsm.l2c, file=save.file)	
+	}	
+	#
+	#	stratify
+	#	
+	cat(paste('\nstratify by', method))
+	if(substr(method.risk,1,5)=='m2wmx')
+	{
+		plot.file.varyvl	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+		YX					<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )
+		X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.clu, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
+		X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
+		X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm, df.all.allmsm, df.viro.allmsm, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA, plot.file.or=NA )
+	}
+	if(substr(method.risk,1,3)=='m2t')
+	{
+		plot.file.varyvl	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+		YX					<- project.athena.Fisheretal.YX.model2.stratify.VLt(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)
+		X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.clu, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
+		X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
+		X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.msm, df.all.allmsm, df.viro.allmsm, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
+	}
+	if(substr(method.risk,1,5)=='m21st')
+	{
+		plot.file.varyvl	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+		YX					<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=plot.file.varyvl)
+		X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.clu, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
+		X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.seq, df.all, df.viro, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
+		X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.msm, df.all.allmsm, df.viro.allmsm, vl.suppressed=log10(1e3), cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), plot.file.varyvl=NA)
 	}		
+	if(substr(method.risk,1,2)=='m3')
+	{					
+		YX			<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all)	
+		X.clu		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.clu, df.all)
+		X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all)
+		X.msm		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.msm, df.all.allmsm)
+	}
+	gc()
 	#
 	#	endpoint: first VL suppressed
 	#
@@ -9235,64 +9272,70 @@ hivc.prog.betareg.estimaterisks<- function()
 	resume			<- 1
 	bs.n			<- 1e3
 	if(method.risk=='m21st.cas')
-	{
-		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+	{		
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
+		YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
 	}
 	if(method.risk=='m21st.cas.clu')
-	{
-		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+	{		
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
+		YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
 	}	
-	if(method.risk=='m21st.cas.clu.adj')
-	{
-		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+	if(method.risk=='m21st.cas.adj')
+	{	
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
+		YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
+	}		
+	if(method.risk=='m21st.cas.clu.adj')
+	{	
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VL1.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
 	}	
 	#
 	#	endpoint: all VL in infection window suppressed
 	#
 	if(method.risk=='m2wmx.cas')
-	{		
-		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+	{			
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+		YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
 	if(method.risk=='m2wmx.cas.clu')
-	{		
-		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+	{				
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+		YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
-	if(method.risk=='m2wmx.cas.clu.adj')
-	{		
-		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+	if(method.risk=='m2wmx.cas.adj')
+	{				
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+		YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}		
+	if(method.risk=='m2wmx.cas.clu.adj')
+	{				
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VLmx.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}	
 	#
 	#	endpoint: VL at time t suppressed
 	#
 	if(method.risk=='m2t.cas')
-	{					
-		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+	{							
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+		YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	}
 	if(method.risk=='m2t.cas.clu')
-	{					
-		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+	{							
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+		YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	}
-	if(method.risk=='m2t.cas.clu.adj')
-	{					
-		plot.file.varyvl<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+	if(method.risk=='m2t.cas.adj')
+	{							
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+		YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+	}		
+	if(method.risk=='m2t.cas.clu.adj')
+	{							
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VLt.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	}	
 	#
 	#	trends: all VL in infection window suppressed
@@ -9300,17 +9343,22 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.risk=='m2wmx.tp')
 	{
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.varyvl=NA, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+		YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	}
 	if(method.risk=='m2wmx.tp.clu')
 	{
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.varyvl=NA, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+		YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	}
+	if(method.risk=='m2wmx.tp.adj')
+	{
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+	}		
 	if(method.risk=='m2wmx.tp.clu.adj')
 	{
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
-		YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.varyvl=NA, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+		YX.m2.VLmxtp.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	}	
 	#		
 	#	treatment risk groups: only overlapping indicators
@@ -9351,6 +9399,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
+	if(method.risk=='m3.nic.adj')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}		
 	if(method.risk=='m3.nic.clu.adj')
 	{	
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
@@ -9369,6 +9422,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
+	if(method.risk=='m3.nicv.adj')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}			
 	if(method.risk=='m3.nicv.clu.adj')
 	{	
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
@@ -9400,6 +9458,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTtnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
+	if(method.risk=='m3.tnic.adj')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}	
 	if(method.risk=='m3.tnic.clu.adj')
 	{	
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
@@ -9418,6 +9481,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTtnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
+	if(method.risk=='m3.tnicv.adj')
+	{	
+		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtnic.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}		
 	if(method.risk=='m3.tnicv.clu.adj')
 	{	
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
@@ -9449,6 +9517,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
 		YX.m3.ARTtnicvNo.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	}
+	if(method.risk=='m3.tnicvNo.adj')
+	{	
+		save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
+		YX.m3.ARTtnicvNo.risk	<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+	}	
 	if(method.risk=='m3.tnicvNo.clu.adj')
 	{	
 		save.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')
