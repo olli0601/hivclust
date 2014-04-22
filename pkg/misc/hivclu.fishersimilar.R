@@ -4681,7 +4681,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 		}		
 		if(grepl('m2wmx.tp', method) & !grepl('adj', method))
 		{
-			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
+			tp				<- regmatches(method, regexpr('tp[0-9]', method))
 			cat(paste('\nprocess time period',tp))
 			tp				<- substr(tp, 3, 3)
 			YX				<- subset(YX, t.period==tp)						
@@ -4711,7 +4711,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 		}
 		if(grepl('m2wmx.tp', method) & grepl('adj', method))
 		{
-			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
+			tp				<- regmatches(method, regexpr('tp[0-9]', method))
 			cat(paste('\nprocess time period',tp))
 			tp				<- substr(tp, 3, 3)
 			YX				<- subset(YX, t.period==tp)						
@@ -4757,7 +4757,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 		}
 		if(grepl('m2Bwmx.tp', method) & !grepl('adj', method))
 		{
-			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
+			tp				<- regmatches(method, regexpr('tp[0-9]', method))
 			cat(paste('\nprocess time period',tp))
 			tp				<- substr(tp, 3, 3)
 			YX				<- subset(YX, t.period==tp)						
@@ -4787,7 +4787,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 		}
 		if(grepl('m2Bwmx.tp', method) & grepl('adj', method))
 		{
-			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
+			tp				<- regmatches(method, regexpr('tp[0-9]', method))
 			cat(paste('\nprocess time period',tp))
 			tp				<- substr(tp, 3, 3)
 			YX				<- subset(YX, t.period==tp)						
@@ -8870,6 +8870,7 @@ project.athena.Fisheretal.sensitivity<- function()
 						tmp	<- load( paste(indir, file, sep='/') )
 						list( AIC= AIC(ans$fit.rr), logLik=logLik(ans$fit.rr), method.risk=method.risk, method.dating=method.dating, method.nodectime=method.nodectime, method.brl=method.brl )
 					}, by=file]
+		runs.fit[, file:=NULL]
 		file			<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.fit.R", sep='')
 		save(runs.fit, file=file)		
 	}
@@ -8898,17 +8899,10 @@ project.athena.Fisheretal.sensitivity<- function()
 	
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & grepl('m2wmx',method.risk,fixed=1) & stat=='RR')
 
-tmp	<- subset(runs.risk, grepl('m2',method.risk,fixed=1) & stat=='RR' & factor.ref!='None' & factor%in%c('ART.su.N','ART1.su.N','ART.suA.N'))
-setkey(tmp, method.risk, method.brl, method.dating)
-tmp
-
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & !grepl('tp',method.risk,fixed=1) & grepl('m2wmx',method.risk,fixed=1) & stat=='P')
-
-	
-
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & !grepl('tp',method.risk,fixed=1) & grepl('m2wmx',method.risk,fixed=1) & stat=='RI')
-
-	
+	tmp	<- subset(runs.risk, grepl('m2',method.risk,fixed=1) & stat=='RR' & factor.ref!='None' & factor%in%c('ART.su.N','ART1.su.N','ART.suA.N'))
+	setkey(tmp, method.risk, method.brl, method.dating)
+	tmp
+		
 	pPWYI.UAy.X.seq<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' & factor=='UAy')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' )[, sum(v)]
 	pPWYI.UAy.X.clu<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas.clu' & stat=='PY' & factor=='UAy')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas.clu' & stat=='PY' )[, sum(v)]
 	pPWYI.UAy.X.clu.adj<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas.clu.adj' & stat=='PY' & factor=='UAy')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas.clu.adj' & stat=='PY' )[, sum(v)]
@@ -8918,10 +8912,6 @@ tmp
 	
 	pPWYI.SuAY.X.seq<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' & factor=='ART.suA.Y')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' )[, sum(v)]
 	
-	subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='P' & factor=='UAy')[,v] 
-	
-	setkey(tmp, method.risk, method.brl, method.dating)
-	tmp	
 	
 	#	compare fit of cascade models with aic		 															 															 
 	tmp	<- subset(runs.fit, 	method.risk%in%c("m21st.cas","m2wmx.cas","m2t.cas") )
@@ -8936,41 +8926,40 @@ tmp
 	subset(runs.risk, method.risk%in%c("m3.tnic","m3.tni",'m3.tnicvNo') & stat=='RR'	& factor.ref=='ART.3.NRT.PI' & factor%in%c('ART.3.NRT.NNRT'))
 	
 	#	compare fit of ART risk factor models 
-	tmp	<- subset(runs.fit, 	method.risk%in%c(	"m3.i", "m3.ni",  "m3.nic",  "m3.tni", "m3.tnic", "m3.tniv", "m3.tnicvNo",        
-													"m3.i.clu", "m3.ni.clu", "m3.nic.clu", "m3.tni.clu", "m3.tnic.clu", "m3.tniv.clu", "m3.tnicvNo.clu", 
-													"m3.nic.clu.adj", "m3.tnic.clu.adj"))	
+	tmp	<- subset(runs.fit, 	method.risk%in%c(	"m3.i", "m3.ni",  "m3.nic",  "m3.tni", "m3.tnic", "m3.tniv", "m3.tnicv", "m3.tnicvNo",        
+													"m3.i.clu", "m3.ni.clu", "m3.nic.clu", "m3.tni.clu", "m3.tnic.clu", "m3.tniv.clu", "m3.tnicvNo.clu",
+													'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj' ))	
 	tmp[, dAIC:= AIC-min(AIC)]
 	setkey(tmp, dAIC, method.brl, method.dating, method.risk)
 	tmp
-	setkey(tmp, method.brl, method.dating, dAIC)
-	tmp
-	
-	
+	#	best sasky 3da		m3.nic.adj m3.nicv.adj m3.tnic.adj m3.tnicv.adj
+	tmp	<- subset(runs.risk, grepl('m3.tnic',method.risk,fixed=1) & !grepl('clu',method.risk,fixed=1) & stat=='RR' & (factor=='ART.I' | risk=='ART.I'))
+	tmp[, list(v=mean(v), l95.bs=mean(l95.bs), u95.bs=mean(u95.bs))]
+	#	ART.I always significant among 		"m3.tnic"        "m3.tnicvNo"     "m3.tnic.adj"    "m3.tnicv.adj"   "m3.tnicvNo.adj"
+	#	1.564469 1.273714 1.920072
+	tmp	<- subset(runs.risk, grepl('m3.tnic',method.risk,fixed=1) & !grepl('clu',method.risk,fixed=1) & stat=='RR' & (factor=='ART.pulse.Y' | risk=='ART.pulse'))
+	tmp[, list(v=mean(v), l95.bs=mean(l95.bs), u95.bs=mean(u95.bs))]
+	#	ART.pulse always significant among 		"m3.tnic"        "m3.tnicvNo"     "m3.tnic.adj"    "m3.tnicv.adj"   "m3.tnicvNo.adj"
+	#	1.564469 1.273714 1.920072
+	tmp	<- subset(runs.risk, grepl('m3.tnic',method.risk,fixed=1) & !grepl('clu',method.risk,fixed=1) & stat=='RR' & (factor=='ART.F' | risk=='ART.F'))
+	tmp[, list(v=mean(v), l95.bs=mean(l95.bs), u95.bs=mean(u95.bs))]
+	#	ART.F NOT significant for	"m3.tnicvNo"   "m3.tnicvNo.adj"
+	#	1.34313 1.066642 1.673151
+	#	check ART risk factor model type/number drugs"
+	tmp	<- subset(runs.risk, grepl('m3.tnic',method.risk,fixed=1) & !grepl('clu',method.risk,fixed=1) & stat=='RR' & (factor=='ART.P' | risk=='ART.P'))
+	tmp[, list(v=mean(v), l95.bs=mean(l95.bs), u95.bs=mean(u95.bs))]
+	#	ART.P NEVER significant	
+	#	1.182005 0.8575869 1.581313
+	tmp	<- subset(runs.risk, grepl('m3.tnic',method.risk,fixed=1) & !grepl('clu',method.risk,fixed=1) & stat=='RR' & (factor=='ART.A' | risk=='ART.A'))
+	tmp[, list(v=mean(v), l95.bs=mean(l95.bs), u95.bs=mean(u95.bs))]
+	#	ART.A typically NOT significant
+	#	1.466913 0.9311993 1.757025
 	
 
-	#	check ART risk factor model type/number drugs"
-	subset(runs.risk, grepl('m3.',method.risk,fixed=1) & stat=='RR' & (factor=='ART.I' | risk=='ART.I'))[, list(v=mean(v), l95.bs=mean(l95.bs), u95.bs=mean(u95.bs))]
-	tmp	<- subset(runs.risk, grepl('m3.',method.risk,fixed=1) & stat=='RR' & (factor=='ART.I' | risk=='ART.I') & l95.bs<1)	
-	setkey(tmp, method.brl, method.dating, method.risk)
-	tmp
-		
-	subset(runs.risk, grepl('m3.',method.risk,fixed=1) & stat=='RR' & (factor=='ART.F' | risk=='ART.F'))[, list(v=mean(v), l95.bs=mean(l95.bs), u95.bs=mean(u95.bs))]
-	tmp	<- subset(runs.risk, grepl('m3.',method.risk,fixed=1) & stat=='RR' & (factor=='ART.F' | risk=='ART.F') & l95.bs<1)	
-	setkey(tmp, method.brl, method.dating, method.risk)
-	tmp
 	
-	subset(runs.risk, grepl('m3.',method.risk,fixed=1) & stat=='RR' & (factor=='ART.P' | risk=='ART.P'))[, list(v=mean(v), l95.bs=mean(l95.bs), u95.bs=mean(u95.bs))]
-	tmp	<- subset(runs.risk, grepl('m3.',method.risk,fixed=1) & stat=='RR' & (factor=='ART.P' | risk=='ART.P') & l95.bs<1)
-	tmp	<- subset(runs.risk, grepl('m3.',method.risk,fixed=1) & stat=='RR' & (factor=='ART.P' | risk=='ART.P') & l95.bs>1)
-	setkey(tmp, method.brl, method.dating, method.risk)
-	tmp
-	
-	subset(runs.risk, grepl('m3.',method.risk,fixed=1) & stat=='RR' & (factor=='ART.pulse' | risk=='ART.pulse'))[, list(v=mean(v), l95.bs=mean(l95.bs), u95.bs=mean(u95.bs))]
-	tmp	<- subset(runs.risk, grepl('m3.',method.risk,fixed=1) & stat=='RR' & (factor=='ART.pulse' | risk=='ART.pulse') & l95.bs<1)
-	#tmp	<- subset(runs.risk, grepl('m3.',method.risk,fixed=1) & stat=='RR' & (factor=='ART.pulse' | risk=='ART.pulse') & l95.bs>1)
-	setkey(tmp, method.brl, method.dating, method.risk)
-	tmp
-	
+	subset(runs.risk,  method.risk%in%c('m3.tnicv','m3.tnicv.adj') & stat=='RR' )
+
+
 	tmp	<- subset(runs.risk, method.risk%in%c("m3.i","m3.ni","m3.nic","m3.tnic","m3.tni") & stat=='RR' & (factor=='ART.pulse' | risk=='ART.pulse') & l95.bs<1)	
 	setkey(tmp, method.brl, method.dating, method.risk)
 	tmp
