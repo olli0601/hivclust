@@ -641,6 +641,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	method.risk	<- c('m21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp.adj','m3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj')
 
 	method.risk	<- c('m2B1st.cas','m2Bwmx.cas','m2Bt.cas','m2Bwmx.tp')
+	method.risk	<- c('m2Bwmx.tp')
 	#method.risk	<- c('m2B1st.cas.adj','m2Bt.cas.adj','m2Bwmx.cas.adj','m2Bwmx.tp.adj')
 
 	dummy	<- sapply(method.risk, function(x)
