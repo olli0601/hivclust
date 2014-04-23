@@ -4291,7 +4291,7 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 	list(risk=risk.ans, fit.or=betafit.or, fit.rr=betafit.rr, risk.bs=risk.ans.bs)
 }
 ######################################################################################
-project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.viro, X.msm=NULL, df.all.allmsm=NULL, df.viro.allmsm=NULL, plot.file.or=NA, bs.n=1e3, resume=TRUE, save.file=NA, method=NA)
+project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.viro, X.msm=NULL, X.clu=NULL, df.all.allmsm=NULL, df.viro.allmsm=NULL, plot.file.or=NA, bs.n=1e3, resume=TRUE, save.file=NA, method=NA)
 {	
 	if(resume & !is.na(save.file))
 	{
@@ -4305,7 +4305,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 		stopifnot(method%in%c(	'm3.i','m3.ni','m3.nic','m3.tni','m3.tniv','m3.tnic','m3.nicv','m3.tnicv','m3.tnicvNo','m21st.cas','m2t.cas','m2wmx.cas','m2wmx.tp','m2B1st.cas','m2Bt.cas','m2Bwmx.cas', 'm2Bwmx.tp1', 'm2Bwmx.tp2', 'm2Bwmx.tp3', 'm2Bwmx.tp4',								
 								'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tniv.clu','m3.tnic.clu','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu','m21st.cas.clu','m2t.cas.clu','m2wmx.cas.clu','m2wmx.tp.clu','m2B1st.cas.clu','m2Bt.cas.clu','m2Bwmx.cas.clu','m2Bwmx.tp1.clu', 'm2Bwmx.tp2.clu', 'm2Bwmx.tp3.clu', 'm2Bwmx.tp4.clu',
 								'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj','m2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj',
-								'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj','m21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp.adj','m2B1st.cas.adj','m2Bt.cas.adj','m2Bwmx.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj'))		
+								'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj','m21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp.adj','m2B1st.cas.adj','m2Bt.cas.adj','m2Bwmx.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj'))
+		stopifnot( grepl('clu',method)==!is.null(X.clu) )		
 		cat(paste('\nregression on data set by method', method))
 		if(method%in%c('m21st.cas','m21st.cas.clu'))
 		{  
@@ -4338,8 +4339,15 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			#	adjust weight by selection bias weights	
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, CD41st])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])												
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4400,8 +4408,15 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			#	adjust weight by selection bias weights	
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, CD4t])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])												
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )							
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4462,8 +4477,15 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			#	adjust weight by selection bias weights	
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, CD41st])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])												
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )			
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4524,8 +4546,15 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])						
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			#	adjust weight by selection bias weights
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, CD4t])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])												
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )			
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4587,7 +4616,14 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, CD41st])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])												
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4649,7 +4685,14 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, CD4t])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])								
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4727,7 +4770,15 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			if(grepl('clu',method))
+			{
+				X.clu		<- subset(X.clu, t.period==tp)
+				set(X.clu, NULL, 'stage', X.clu[, CD41st.tperiod])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])								
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4802,7 +4853,15 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			if(grepl('clu',method))
+			{
+				X.clu		<- subset(X.clu, t.period==tp)
+				set(X.clu, NULL, 'stage', X.clu[, CD4t.tperiod])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])				
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -4829,78 +4888,6 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')												
 									},by='risk']))				
-		}
-		
-		
-		if(method%in%c('m2Bwmx.tp','m2Bwmx.tp.clu'))
-		{
-			set(YX, NULL, 'stage', YX[, CD4t.tperiod])
-			set(X.den, NULL, 'stage', X.den[, CD4t.tperiod])			
-			formula			<- 'score.Y ~ stage-1'
-			include.colnames<- c('score.Y','w','stage')
-			YX.orig			<- copy(YX)
-			X.den.orig		<- copy(X.den)
-			tmp				<- lapply( YX.orig[, levels(t.period)], function(tp)
-					{
-						YX				<- subset(YX.orig, t.period==tp)						
-						X.den			<- subset(X.den.orig, t.period==tp)
-						set(X.den, NULL, 'stage', X.den[,factor(as.character(stage))])
-						set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
-						predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.den[, levels(stage)]), w=1.)									
-						risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
-						risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
-						tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep(paste('ART.suA.Y',tp,sep='.'),nrow(risk.df)))
-						risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-						ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
-						ans				<- ans$risk
-						options(warn=-1)
-						ans[, t.period:=tp]						
-						options(warn=0)
-						ans
-					})			
-			ans			<- list()
-			ans$risk	<- do.call('rbind',tmp)		
-		}
-		if(method%in%c('m2Bwmx.tp.adj','m2Bwmx.tp.clu.adj'))
-		{
-			set(YX, NULL, 'stage', YX[, CD4t.tperiod])
-			set(X.den, NULL, 'stage', X.den[, CD4t.tperiod])			
-			formula			<- 'score.Y ~ stage-1'
-			include.colnames<- c('score.Y','w','stage')
-			YX.orig			<- copy(YX)
-			X.den.orig		<- copy(X.den)
-			X.msm.orig		<- copy(X.msm)			
-			tmp				<- lapply( YX.orig[, levels(t.period)], function(tp)
-					{
-						YX				<- subset(YX.orig, t.period==tp)						
-						X.den			<- subset(X.den.orig, t.period==tp)
-						X.msm			<- subset(X.msm.orig, t.period==tp)						
-						set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])						
-						set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-						set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
-						#	adjust weight by selection bias weights			
-						bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
-						bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
-						set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
-						YX				<- merge( YX, bias.adj, by='stage' )
-						set(bias.adj, NULL, 'w.b', bias.adj[,w.b] * YX[, sum(w)] / YX[, sum(w*w.b)] )
-						set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
-						#
-						predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=YX[, levels(stage)]), w=1.)									
-						risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)])
-						risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
-						tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep(paste('ART.suA.Y',tp,sep='.'),nrow(risk.df)))
-						risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-						#
-						ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
-						ans				<- ans$risk
-						options(warn=-1)
-						ans[, t.period:=tp]						
-						options(warn=0)
-						ans
-					})			
-			ans			<- list()
-			ans$risk	<- do.call('rbind',tmp)		
 		}
 		if(method%in%c('m3.i','m3.i.clu'))
 		{
@@ -4994,7 +4981,14 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, ART.nstage.c])
+				set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])				
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -5063,7 +5057,14 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, ART.nstage.c])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])				
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -5201,7 +5202,14 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, ART.ntstage.c])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])				
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.clu[, table(stage)] / nrow(X.clu) )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / nrow(X.msm) ) / ( X.den[, table(stage)] / nrow(X.den) )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -5269,7 +5277,14 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / X.msm[, length(which(!is.na(stage)))] ) / ( X.den[, table(stage)] / X.den[, length(which(!is.na(stage)))] )
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, ART.ntstage.c])
+				set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])				
+				bias.adj	<- ( X.msm[, table(stage)] / X.msm[, length(which(!is.na(stage)))] ) / ( X.clu[, table(stage)] / X.clu[, length(which(!is.na(stage)))] )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / X.msm[, length(which(!is.na(stage)))] ) / ( X.den[, table(stage)] / X.den[, length(which(!is.na(stage)))] )			
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)			
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -5344,7 +5359,14 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			YX				<- subset(YX, !is.na(stage) & !is.na(lRNA.mx))
 			#	adjust weight by selection bias weights			
-			bias.adj		<- ( X.msm[, table(stage)] / X.msm[, length(which(!is.na(stage)))] ) / ( X.den[, table(stage)] / X.den[, length(which(!is.na(stage)))] )
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, ART.ntstage.no.c])
+				set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+				bias.adj	<- ( X.msm[, table(stage)] / X.msm[, length(which(!is.na(stage)))] ) / ( X.clu[, table(stage)] / X.clu[, length(which(!is.na(stage)))] )
+			}
+			else
+				bias.adj	<- ( X.msm[, table(stage)] / X.msm[, length(which(!is.na(stage)))] ) / ( X.den[, table(stage)] / X.den[, length(which(!is.na(stage)))] )
 			bias.adj		<- cbind( data.table(stage=factor(rownames(bias.adj))), data.table(w.b=unclass(bias.adj)) )
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)			
 			YX				<- merge( YX, bias.adj, by='stage' )
@@ -8872,7 +8894,14 @@ project.athena.Fisheretal.sensitivity<- function()
 					}, by=file]
 		runs.fit[, file:=NULL]
 		file			<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.fit.R", sep='')
-		save(runs.fit, file=file)		
+		save(runs.fit, file=file)	
+						
+		file	<- subset(runs.opt, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2wmx.cas.adj')[,file]
+		tmp		<- load( paste(indir, file, sep='/') )
+		tmp		<- ans$risk.table
+		tmp		<- merge(tmp, tmp[, list(risk=risk, factor=factor, prop= round( n/sum(n), d=3)  ), by='stat'], by=c('risk','factor','stat'))
+		
+		
 	}
 	
 	#	check cascade RR
@@ -8889,13 +8918,20 @@ project.athena.Fisheretal.sensitivity<- function()
 	tmp[,  list(cv= sd(v, na.rm=TRUE)/mean(v, na.rm=TRUE), mean=mean(v, na.rm=TRUE) ) , by='factor']
 	
 	
-	#	check cascade m2mww
+	#	check cascade m2mww.cas
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='RR')
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='P')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='RI')
-	
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='RI')	
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY')
 	tmp[, PYpc:= v/sum(v, na.rm=TRUE)]
+	#	check cascade m2mww.cas.adj
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2wmx.cas.adj' & stat=='RR')
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2wmx.cas.adj' & stat=='P')
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2wmx.cas.adj' & stat=='RI')	
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2wmx.cas.adj' & stat=='PY')
+	tmp[, PYpc:= v/sum(v, na.rm=TRUE)]
+
+	
 	
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & grepl('m2wmx',method.risk,fixed=1) & stat=='RR')
 
@@ -8956,10 +8992,22 @@ project.athena.Fisheretal.sensitivity<- function()
 	#	1.466913 0.9311993 1.757025
 	
 
+	#	Table 3
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicv.adj') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.adj') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicvNo.adj') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	
-	subset(runs.risk,  method.risk%in%c('m3.tnicv','m3.tnicv.adj') & stat=='RR' )
-
-
+	
+	file	<- subset(runs.opt, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m3.tnic.adj')[,file]
+	tmp		<- load( paste(indir, file, sep='/') )
+	tmp		<- ans$YX
+	tmp[, table(stage)]
+	
+	
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.adj') & stat=='PY', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.adj') & stat=='P', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	
 	tmp	<- subset(runs.risk, method.risk%in%c("m3.i","m3.ni","m3.nic","m3.tnic","m3.tni") & stat=='RR' & (factor=='ART.pulse' | risk=='ART.pulse') & l95.bs<1)	
 	setkey(tmp, method.brl, method.dating, method.risk)
 	tmp
@@ -9697,7 +9745,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(substr(method.risk, nchar(method.risk)-2, nchar(method.risk))=='adj')
 	{
 		ri.PT.su				<- project.athena.Fisheretal.RI.summarize(ri.PT, df.all, tperiod.info, info=clumsm.info, with.seq=TRUE, with.cluster=TRUE, cols=c('lRNA_T1','CD4_T1','AnyPos_A','SC_dt','PosCD4_dt','PoslRNA_dt'))
-		unique(subset(ri.allmsm, select=Patient)) 
+		#unique(subset(ri.allmsm, select=Patient)) 
 		ri.allmsm.su			<- project.athena.Fisheretal.RI.summarize(unique(subset(ri.allmsm, select=Patient)), df.all.allmsm, tperiod.info, info=NULL, with.seq=FALSE, with.cluster=FALSE, cols=c('lRNA_T1','CD4_T1','AnyPos_A','SC_dt','PosCD4_dt','PoslRNA_dt'))		
 		ri.allmsm.resolution	<- project.athena.Fisheretal.CT.resolution(df.all.allmsm, df.viro.allmsm, df.immu.allmsm, t.startctime=1994, t.endctime=t.endctime)
 		ri.allmsm.l2c			<- project.athena.Fisheretal.CT.link2care(df.all.allmsm, link2care.cut=c(-Inf,15/365,30/365,3/12,Inf), link2care.label=c('<=15d','<=30d','<=3m','>3m'), t.startctime=1994)
@@ -9755,7 +9803,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.risk%in%c('m21st.cas.adj','m2B1st.cas.adj'))
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)						
 	if(method.risk%in%c('m21st.cas.clu.adj','m2B1st.cas.clu.adj'))
-		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)					
+		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, X.clu=X.clu, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)					
 	#
 	#	endpoint: all VL in infection window suppressed
 	#
@@ -9766,7 +9814,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.risk%in%c('m2wmx.cas.adj','m2Bwmx.cas.adj'))
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)			
 	if(method.risk%in%c('m2wmx.cas.clu.adj','m2Bwmx.cas.clu.adj'))
-		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, X.clu=X.clu, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	#
 	#	endpoint: VL at time t suppressed
 	#
@@ -9777,7 +9825,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.risk%in%c('m2t.cas.adj','m2Bt.cas.adj'))
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	if(method.risk%in%c('m2t.cas.clu.adj','m2Bt.cas.clu.adj'))
-		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, X.clu=X.clu, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm,  plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	#
 	#	trends: all VL in infection window suppressed
 	#	
@@ -9788,7 +9836,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(any(sapply(c('m2wmx.tp','m2Bwmx.tp'), grepl, x=method.risk)) & !grepl('clu',method.risk) & grepl('adj',method.risk))
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	if(any(sapply(c('m2wmx.tp','m2Bwmx.tp'), grepl, x=method.risk)) & grepl('clu',method.risk) & grepl('adj',method.risk))
-		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
+		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, X.clu=X.clu, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	#		
 	#	treatment risk groups: only overlapping indicators
 	# 
@@ -9814,7 +9862,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.risk=='m3.nic.adj')
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	if(method.risk=='m3.nic.clu.adj')
-		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, X.clu=X.clu, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	#		
 	#	treatment risk groups: number drug conditional no indicators + separate indicators + bs(lRNA.mx, knots=c(3,4.5), degree=1)
 	#		
@@ -9825,7 +9873,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.risk=='m3.nicv.adj')
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	if(method.risk=='m3.nicv.clu.adj')
-		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, X.clu=X.clu, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	#		
 	#	treatment risk groups: number/type drug + overlapping indicators
 	#	
@@ -9843,7 +9891,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.risk=='m3.tnic.adj')
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	if(method.risk=='m3.tnic.clu.adj')
-		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, X.clu=X.clu, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	#		
 	#	treatment risk groups: number/type drug conditional no indicators + separate indicators + bs(lRNA.mx, knots=c(3,4.5), degree=1)
 	#	
@@ -9854,7 +9902,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.risk=='m3.tnicv.adj')
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	if(method.risk=='m3.tnicv.clu.adj')
-		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, X.clu=X.clu, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	#		
 	#	treatment risk groups: number/type drug + overlapping indicators + bs(lRNA.mx, knots=c(3,4.5), degree=1)
 	#	
@@ -9872,7 +9920,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.risk=='m3.tnicvNo.adj')
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	if(method.risk=='m3.tnicvNo.clu.adj')
-		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
+		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, X.clu=X.clu, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)
 	
 	stop()
 		
