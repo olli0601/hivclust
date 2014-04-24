@@ -4808,7 +4808,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage))])
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.den[, levels(stage)]), w=1.)									
-			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref='ART.suA.Y')
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
@@ -4860,7 +4860,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			#
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.msm[, levels(stage)]), w=1.)									
-			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref='ART.suA.Y')
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
@@ -4898,7 +4898,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage))])
 			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.den[, levels(stage)])])
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.den[, levels(stage)]), w=1.)									
-			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref='ART.suA.Y')
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
@@ -4949,7 +4949,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			#
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.msm[, levels(stage)]), w=1.)									
-			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref='ART.suA.Y')
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
