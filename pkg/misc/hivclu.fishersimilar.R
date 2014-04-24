@@ -4302,10 +4302,18 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 	}
 	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
 	{
-		stopifnot(method%in%c(	'm3.i','m3.ni','m3.nic','m3.tni','m3.tniv','m3.tnic','m3.nicv','m3.tnicv','m3.tnicvNo','m21st.cas','m2t.cas','m2wmx.cas','m2wmx.tp','m2B1st.cas','m2Bt.cas','m2Bwmx.cas', 'm2Bwmx.tp1', 'm2Bwmx.tp2', 'm2Bwmx.tp3', 'm2Bwmx.tp4',								
-								'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tniv.clu','m3.tnic.clu','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu','m21st.cas.clu','m2t.cas.clu','m2wmx.cas.clu','m2wmx.tp.clu','m2B1st.cas.clu','m2Bt.cas.clu','m2Bwmx.cas.clu','m2Bwmx.tp1.clu', 'm2Bwmx.tp2.clu', 'm2Bwmx.tp3.clu', 'm2Bwmx.tp4.clu',
-								'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj','m2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj',
-								'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj','m21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp.adj','m2B1st.cas.adj','m2Bt.cas.adj','m2Bwmx.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj'))
+		stopifnot(method%in%c(	'm21st.cas','m2t.cas','m2wmx.cas','m2wmx.tp1','m2wmx.tp2', 'm2wmx.tp3','m2wmx.tp4',
+								'm2B1st.cas','m2Bt.cas','m2Bwmx.cas', 'm2Bwmx.tp1', 'm2Bwmx.tp2', 'm2Bwmx.tp3', 'm2Bwmx.tp4',
+								'm21st.cas.clu','m2t.cas.clu','m2wmx.cas.clu','m2wmx.tp1.clu','m2wmx.tp2.clu','m2wmx.tp3.clu','m2wmx.tp4.clu',
+								'm2B1st.cas.clu','m2Bt.cas.clu','m2Bwmx.cas.clu','m2Bwmx.tp1.clu', 'm2Bwmx.tp2.clu', 'm2Bwmx.tp3.clu', 'm2Bwmx.tp4.clu',
+								'm21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp1.adj','m2wmx.tp2.adj','m2wmx.tp3.adj','m2wmx.tp4.adj',
+								'm2B1st.cas.adj','m2Bt.cas.adj','m2Bwmx.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj',
+								'm21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp1.clu.adj','m2wmx.tp2.clu.adj','m2wmx.tp3.clu.adj','m2wmx.tp4.clu.adj',
+								'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj',								
+								'm3.i','m3.ni','m3.nic','m3.tni','m3.tniv','m3.tnic','m3.nicv','m3.tnicv','m3.tnicvNo',								
+								'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tniv.clu','m3.tnic.clu','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu',
+								'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj',
+								'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj'))
 		stopifnot( grepl('clu',method)==!is.null(X.clu) )		
 		cat(paste('\nregression on data set by method', method))
 		if(method%in%c('m21st.cas','m21st.cas.clu'))
@@ -7353,6 +7361,7 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	tmp[, CD41st:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
 	setnames(tmp, 'Patient', 't.Patient')
 	set(tmp, tmp[, which(is.na(CD41st))], 'CD41st', 'D1.NA')
+	gc()
 	YX.m2	<- merge(YX.m2, subset(tmp, select=c(t.Patient, CD41st)), by='t.Patient', all.x=TRUE)	
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Yes')], 'CD41st', 'UAy')
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'CD41st', 'UAm')
@@ -7373,7 +7382,8 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 				names(z)	<- cd4.label
 				z
 			}, by='Patient']
-	setnames(tmp, 'Patient', 't.Patient')		
+	setnames(tmp, 'Patient', 't.Patient')	
+	gc()
 	YX.m2		<- merge(YX.m2, tmp, by='t.Patient', all.x=TRUE)
 	YX.m2[, CD4t:=NA_character_]
 	set(YX.m2, YX.m2[, which(stage=='Diag' & t>Dtg500)], 'CD4t', 'Dtg500')
@@ -7658,6 +7668,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	tmp[, CD41st:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
 	setnames(tmp, 'Patient', 't.Patient')
 	set(tmp, tmp[, which(is.na(CD41st))], 'CD41st', 'D1.NA')
+	gc()
 	YX.m2	<- merge(YX.m2, subset(tmp, select=c(t.Patient, CD41st)), by='t.Patient', all.x=TRUE)	
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Yes')], 'CD41st', 'UAy')
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'CD41st', 'UAm')
@@ -7679,6 +7690,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 				z
 			}, by='Patient']
 	setnames(tmp, 'Patient', 't.Patient')		
+	gc()
 	YX.m2		<- merge(YX.m2, tmp, by='t.Patient', all.x=TRUE)
 	YX.m2[, CD4t:=NA_character_]
 	set(YX.m2, YX.m2[, which(stage=='Diag' & t>Dtg500)], 'CD4t', 'Dtg500')
@@ -7810,6 +7822,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	tmp[, CD41st:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
 	setnames(tmp, 'Patient', 't.Patient')
 	set(tmp, tmp[, which(is.na(CD41st))], 'CD41st', 'D1.NA')
+	gc()
 	YX.m2	<- merge(YX.m2, subset(tmp, select=c(t.Patient, CD41st)), by='t.Patient', all.x=TRUE)	
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Yes')], 'CD41st', 'UAy')
 	set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'CD41st', 'UAm')
@@ -7830,7 +7843,8 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 				names(z)	<- cd4.label
 				z
 			}, by='Patient']
-	setnames(tmp, 'Patient', 't.Patient')		
+	setnames(tmp, 'Patient', 't.Patient')	
+	gc()
 	YX.m2		<- merge(YX.m2, tmp, by='t.Patient', all.x=TRUE)
 	YX.m2[, CD4t:=NA_character_]
 	set(YX.m2, YX.m2[, which(stage=='Diag' & t>Dtg500)], 'CD4t', 'Dtg500')
@@ -8765,11 +8779,11 @@ project.athena.Fisheretal.sensitivity<- function()
 	require(ape)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_140421",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140423",sep='/')		
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140421",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140423",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
@@ -8778,6 +8792,8 @@ project.athena.Fisheretal.sensitivity<- function()
 									'm21st.cas.clu','m2wmx.cas.clu','m2t.cas.clu','m2wmx.tp.clu',
 									'm21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj',
 									'm21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp.adj',
+									'm2B1st.cas','m2Bwmx.cas','m2Bt.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4',
+									'm2B1st.cas.adj','m2Bwmx.cas.adj','m2Bt.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj',
 									'm3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo',
 									'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tnic.clu','m3.tniv.clu','m3.tnicvNo.clu',
 									'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj',
@@ -9569,6 +9585,13 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.nodectime=='map')
 		method		<- paste(method,'m',sep='')	
 	adjust.AcuteByNegT=0.75
+	if(resume)
+	{
+		files		<- list.files(outdir)
+		if(!length(files))	stop('no input files matching criteria')
+		files		<- files[ sapply(files, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('Yscore',method,sep=''), x, fixed=1) & grepl(paste(method.risk,'.R',sep=''),x, fixed=1)  ) ]		
+		stopifnot(length(files)==0)		
+	}
 	#
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
 	#
@@ -9719,12 +9742,9 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for all candidate transmitters in df.all (anyone with subtype B sequ) to the recently infected RI.PT
 	#	
-	if(!grepl('.clu',method.risk,fixed=1))
-	{
-		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_',method,'_tATHENAseq','.R',sep='')
-		X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.PT, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)	
-		gc()		
-	}
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_',method,'_tATHENAseq','.R',sep='')
+	X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.PT, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)	
+	gc()		
 	#
 	#	get timelines for all candidate transmitters in ATHENA.MSM (anyone with MSM exposure group irrespective of sequ available or not) to the recently infected RI.PT
 	#	
