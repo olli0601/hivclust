@@ -4337,6 +4337,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 								'm2B1st.cas.adj','m2Bt.cas.adj','m2Bwmx.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj',
 								'm21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp1.clu.adj','m2wmx.tp2.clu.adj','m2wmx.tp3.clu.adj','m2wmx.tp4.clu.adj',
 								'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj',								
+								'm2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens',
+								'm2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens',
 								'm3.i','m3.ni','m3.nic','m3.tni','m3.tniv','m3.tnic','m3.nicv','m3.tnicv','m3.tnicvNo',								
 								'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tniv.clu','m3.tnic.clu','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu',
 								'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj',
@@ -4793,7 +4795,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')												
 									},by='risk']))
 		}		
-		if(grepl('m2wmx.tp', method) & !grepl('adj', method))
+		if(grepl('m2wmx.tp', method) & !grepl('adj', method) & !grepl('cens', method))
 		{
 			tp				<- regmatches(method, regexpr('tp[0-9]', method))
 			cat(paste('\nprocess time period',tp))
@@ -4883,7 +4885,86 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')												
 									},by='risk']))				
 		}
-		if(grepl('m2Bwmx.tp', method) & !grepl('adj', method))
+		if(grepl('m2wmx.tp', method) & grepl('cens', method))
+		{
+			tp				<- regmatches(method, regexpr('tp[0-9]', method))
+			cat(paste('\nprocess time period',tp))
+			tp				<- substr(tp, 3, 3)
+			set(YX, NULL, 'stage', YX[, CD41st.tperiod])
+			set(X.den, NULL, 'stage', X.den[, CD41st.tperiod])	
+			set(X.msm, NULL, 'stage', X.msm[, CD41st.tperiod])	
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
+			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, CD41st.tperiod])
+				set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])												
+			}
+			cens.table		<- do.call('rbind',list(
+							risk.df[,	{
+											z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+											list(stage=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+										},by='risk'],
+							risk.df[,	{
+											if(grepl('clu',method))
+												z	<- table( X.Xlu[, risk, with=FALSE], useNA='ifany')
+											else
+												z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+											list(stage=rownames(z), n=as.numeric(unclass(z)), stat='X')												
+										},by='risk'],
+							risk.df[,	{
+											z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+											list(stage=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')												
+										},by='risk']))		
+			cens.table[, t.period:=cens.table[, substr(stage, nchar(stage), nchar(stage))]]
+			cens.table[, stage2:=cens.table[, substr(stage, 1, nchar(stage)-2)]]
+			for(f in c('U','UAy','UAm'))
+				for(z in cens.table[, unique(t.period)])	
+					set(cens.table, cens.table[, which(stage2==f & stat=='X.msm' & t.period==z)], 'n',  cens.table[which(stage2==f & stat=='X.msm' & t.period%in%c('2',z)), max(n)])
+			cens.table		<- merge(cens.table, cens.table[, list(stage=stage, p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','stage'))
+			YX				<- subset(YX, t.period==tp)						
+			X.den			<- subset(X.den, t.period==tp)
+			X.msm			<- subset(X.msm, t.period==tp)
+			cens.table		<- subset(cens.table, t.period==tp)
+			gc()
+			formula			<- 'score.Y ~ stage-1'
+			include.colnames<- c('score.Y','w','stage')
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
+			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			bias.adj		<- cens.table[, list(w.b= p[stat=='X.msm']/p[stat=='X']),by='stage']
+			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
+			YX				<- merge( YX, bias.adj, by='stage' )
+			set(bias.adj, NULL, 'w.b', bias.adj[,w.b] * YX[, sum(w)] / YX[, sum(w*w.b)] )
+			set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
+			#
+			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.msm[, levels(stage)]), w=1.)									
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
+			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
+			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
+			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans$bias.adj	<- bias.adj
+			ans$cens.table	<- cens.table
+			ans$risk.table	<- do.call('rbind',list(
+							risk.df[,	{
+										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')												
+									},by='risk']))				
+		}
+		if(grepl('m2Bwmx.tp', method) & !grepl('adj', method) & !grepl('cens', method))
 		{
 			tp				<- regmatches(method, regexpr('tp[0-9]', method))
 			cat(paste('\nprocess time period',tp))
@@ -4958,6 +5039,86 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
 			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans$bias.adj	<- bias.adj
+			ans$risk.table	<- do.call('rbind',list(
+							risk.df[,	{
+										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')												
+									},by='risk']))				
+		}
+		if(grepl('m2Bwmx.tp', method) & grepl('cens', method))
+		{
+			tp				<- regmatches(method, regexpr('tp[0-9]', method))
+			cat(paste('\nprocess time period',tp))
+			tp				<- substr(tp, 3, 3)
+			set(YX, NULL, 'stage', YX[, CD4t.tperiod])
+			set(X.den, NULL, 'stage', X.den[, CD4t.tperiod])	
+			set(X.msm, NULL, 'stage', X.msm[, CD4t.tperiod])	
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
+			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			if(grepl('clu',method))
+			{
+				set(X.clu, NULL, 'stage', X.clu[, CD4t.tperiod])
+				set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])												
+			}
+			cens.table		<- do.call('rbind',list(
+							risk.df[,	{
+										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+										list(stage=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+									},by='risk'],
+							risk.df[,	{
+										if(grepl('clu',method))
+											z	<- table( X.Xlu[, risk, with=FALSE], useNA='ifany')
+										else
+											z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+										list(stage=rownames(z), n=as.numeric(unclass(z)), stat='X')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+										list(stage=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')												
+									},by='risk']))		
+			cens.table[, t.period:=cens.table[, substr(stage, nchar(stage), nchar(stage))]]
+			cens.table[, stage2:=cens.table[, substr(stage, 1, nchar(stage)-2)]]
+			for(f in c('U','UAy','UAm'))
+				for(z in cens.table[, unique(t.period)])	
+					set(cens.table, cens.table[, which(stage2==f & stat=='X.msm' & t.period==z)], 'n',  cens.table[which(stage2==f & stat=='X.msm' & t.period%in%c('2',z)), max(n)])
+			cens.table		<- merge(cens.table, cens.table[, list(stage=stage, p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','stage'))
+			YX				<- subset(YX, t.period==tp)						
+			X.den			<- subset(X.den, t.period==tp)
+			X.msm			<- subset(X.msm, t.period==tp)
+			cens.table		<- subset(cens.table, t.period==tp)
+			gc()
+			formula			<- 'score.Y ~ stage-1'
+			include.colnames<- c('score.Y','w','stage')
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
+			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			#	adjust weight by selection bias weights			
+			bias.adj		<- cens.table[, list(w.b= p[stat=='X.msm']/p[stat=='X']),by='stage']
+			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
+			YX				<- merge( YX, bias.adj, by='stage' )
+			set(bias.adj, NULL, 'w.b', bias.adj[,w.b] * YX[, sum(w)] / YX[, sum(w*w.b)] )
+			set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
+			#
+			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.msm[, levels(stage)]), w=1.)									
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
+			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
+			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
+			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, X.den, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans$bias.adj	<- bias.adj
+			ans$cens.table	<- cens.table
 			ans$risk.table	<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
@@ -9070,15 +9231,76 @@ project.athena.Fisheretal.sensitivity<- function()
 	#	check P cascade m2Bwmx.cas across 3ca 3da gmrf sasky
 	#	3ca vs 3da 	more sensitive than gmrf vs sasky
 	tmp	<- subset(runs.risk, method.nodectime=='any'  & method.risk=='m2Bwmx.cas' & stat=='P')
-
+	#
 	#	Table 2
+	#
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='RR')
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='P')
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='RI')	
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='PY')
-	
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='PY')	
 	tmp	<- subset(runs.table, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='YX')
-
+	#
+	#	MODEL 2B time trends
+	#
+	run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & stat=='P', c(risk, factor, stat, v, l95.bs, u95.bs))
+	run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & stat=='N', c(risk, factor, stat, v, l95.bs, u95.bs))	
+	setkey(run.tp, factor)
+	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
+	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
+	run.tp[, cascade.stage:=run.tp[, substr(factor, 1, 1)]]
+	set(run.tp, run.tp[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
+	set(run.tp, run.tp[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
+	set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')
+	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
+	ggplot(subset(run.tp, !is.na(v)), aes(x=t.period, y=v, colour=factor, group=factor)) + labs(x="calendar time periods", y="proportion of transmissions") + #scale_colour_brewer(palette="Set3") + 
+				geom_point() + geom_line(aes(linetype=factor)) + geom_ribbon(aes(ymin=l95.bs, ymax=u95.bs, linetype=NA, fill=factor), alpha=0.3) + facet_grid(. ~ cascade.stage, margins=FALSE)
+		
+	#	PYIW trends in %	
+	run.tp	<- subset(runs.table, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk), c(risk, factor, stat, n, prop))	
+	setkey(run.tp, factor)	
+	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
+	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
+	run.tp[, cascade.stage:=run.tp[, substr(factor, 1, 1)]]
+	set(run.tp, run.tp[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
+	set(run.tp, run.tp[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
+	set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')
+	set(run.tp, run.tp[,which(stat=='X')], 'stat', 'study population')
+	set(run.tp, run.tp[,which(stat=='X.msm')], 'stat', 'cohort')
+	set(run.tp, run.tp[,which(stat=='YX')], 'stat', 'potential transmitter')
+	set(run.tp, NULL, 'stat', run.tp[, factor(stat, levels=c('potential transmitter','study population','cohort'))])
+	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
+	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=prop, colour=factor, group=factor)) + labs(x="calendar time periods", y="proportion PYIW") + #scale_colour_brewer(palette="Set3") + 
+			geom_point() + geom_line(aes(linetype=factor)) + facet_grid(stat ~ cascade.stage, margins=FALSE)
+	#	PYIW trends in #	
+	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=n, colour=factor, group=factor)) + labs(x="calendar time periods", y="PYIW") + #scale_colour_brewer(palette="Set3") + 
+			geom_point() + geom_line(aes(linetype=factor)) + facet_grid(stat ~ cascade.stage, scales='free', margins=FALSE)
+	file	<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWtotal.pdf", sep='')
+	ggsave(file=file, w=8,h=8)
+	#	PYIW adjusted for censoring
+	run.tp[, na:= n] 
+	for(z in run.tp[, unique(t.period)])
+	{		
+		set(run.tp, run.tp[, which(factor=='U' & stat=='cohort' & t.period==z)], 'na',  run.tp[which(factor=='U' & stat=='cohort' & t.period%in%c('2',z)), max(na)])
+		set(run.tp, run.tp[, which(factor=='UAy' & stat=='cohort' & t.period==z)], 'na',  run.tp[which(factor=='UAy' & stat=='cohort' & t.period%in%c('2',z)), max(na)])
+		set(run.tp, run.tp[, which(factor=='UAm' & stat=='cohort' & t.period==z)], 'na',  run.tp[which(factor=='UAm' & stat=='cohort' & t.period%in%c('2',z)), max(na)])		
+	}
+	#set(run.tp, run.tp[, which(factor=='ART.suA.Y' & stat=='cohort' & t.period=='4')], 'na', run.tp[which(factor=='ART.suA.Y' & stat=='cohort' & t.period=='3' ), na])
+	#	PYIW trends in # with adjustment for censoring
+	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=n, colour=factor, group=factor)) + labs(x="calendar time periods", y="PYIW") + #scale_colour_brewer(palette="Set3") + 
+			geom_point(data=subset(run.tp, !is.na(n) & n!=na), aes(y=na), shape=8) + geom_point() +  geom_line(aes(linetype=factor)) + facet_grid(stat ~ cascade.stage, scales='free', margins=FALSE)
+	file	<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWtotal_adjcens.pdf", sep='')
+	ggsave(file=file, w=8,h=8)
+	
+	run.tp	<- merge( run.tp, run.tp[, list(factor=factor, propa= na/sum(na, na.rm=TRUE)), by=c('t.period','stat')], by=c('t.period','stat','factor'))
+	#	PYIW trends in % with adjustment for censoring
+	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=prop, colour=factor, group=factor)) + labs(x="calendar time periods", y="PYIW") + #scale_colour_brewer(palette="Set3") + 
+			geom_point() +  geom_point(data=subset(run.tp, !is.na(n) & prop!=propa), aes(y=propa), shape=8) + geom_line(data=subset(run.tp, !is.na(n) & prop!=propa), aes(y=propa), colour='black') + geom_line(aes(linetype=factor)) + facet_grid(stat ~ cascade.stage, margins=FALSE)
+	file	<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWprop_adjcens.pdf", sep='')
+	ggsave(file=file, w=8,h=8)
+	
+	
+	subset(run.tp, cascade.stage=='Undiagnosed' & stat=='cohort')
+	
 	#	check ART risk factor model type/number drugs" ART NRT.NNRTI vs NRT.PI
 	subset(runs.risk, method.risk%in%c("m3.tnic","m3.tni",'m3.tnicvNo') & stat=='RR'	& factor.ref=='ART.3.NRT.PI' & factor%in%c('ART.3.NRT.NNRT'))
 	
@@ -9852,8 +10074,8 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for all candidate transmitters in ATHENA.MSM (anyone with MSM exposure group irrespective of sequ available or not) to the recently infected RI.PT
 	#	
-	X.msm				<- NULL
-	if(substr(method.risk, nchar(method.risk)-2, nchar(method.risk))=='adj')
+	X.msm				<- NULL	
+	if(grepl('adj',method.risk) | grepl('cens',method.risk))
 	{
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPDT_',method,'_tATHENAmsm','.R',sep='')
 		X.msm			<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.PT, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
@@ -9866,7 +10088,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	characteristics of RI(with potential direct transmitter) and RI(in all.msm)
 	#	
-	if(substr(method.risk, nchar(method.risk)-2, nchar(method.risk))=='adj')
+	if(grepl('adj',method.risk))
 	{
 		ri.PT.su				<- project.athena.Fisheretal.RI.summarize(ri.PT, df.all, tperiod.info, info=clumsm.info, with.seq=TRUE, with.cluster=TRUE, cols=c('lRNA_T1','CD4_T1','AnyPos_A','SC_dt','PosCD4_dt','PoslRNA_dt'))
 		#unique(subset(ri.allmsm, select=Patient)) 
@@ -9953,13 +10175,13 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	trends: all VL in infection window suppressed
 	#	
-	if(any(sapply(c('m2wmx.tp','m2Bwmx.tp'), grepl, x=method.risk)) & !grepl('clu',method.risk) & !grepl('adj',method.risk))
+	if(any(sapply(c('m2wmx.tp','m2Bwmx.tp'), grepl, x=method.risk)) & !grepl('clu',method.risk) & !grepl('adj',method.risk) & !grepl('cens',method.risk))
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
-	if(any(sapply(c('m2wmx.tp','m2Bwmx.tp'), grepl, x=method.risk)) & grepl('clu',method.risk) & !grepl('adj',method.risk))
+	if(any(sapply(c('m2wmx.tp','m2Bwmx.tp'), grepl, x=method.risk)) & grepl('clu',method.risk) & !grepl('adj',method.risk) & !grepl('cens',method.risk))
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.clu, df.all, df.viro, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
-	if(any(sapply(c('m2wmx.tp','m2Bwmx.tp'), grepl, x=method.risk)) & !grepl('clu',method.risk) & grepl('adj',method.risk))
+	if(any(sapply(c('m2wmx.tp','m2Bwmx.tp'), grepl, x=method.risk)) & !grepl('clu',method.risk) & (grepl('adj',method.risk) | grepl('cens',method.risk)))
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
-	if(any(sapply(c('m2wmx.tp','m2Bwmx.tp'), grepl, x=method.risk)) & grepl('clu',method.risk) & grepl('adj',method.risk))
+	if(any(sapply(c('m2wmx.tp','m2Bwmx.tp'), grepl, x=method.risk)) & grepl('clu',method.risk) & (grepl('adj',method.risk) | grepl('cens',method.risk)))
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.seq, df.all, df.viro, X.msm=X.msm, X.clu=X.clu, df.all.allmsm=df.all.allmsm, df.viro.allmsm=df.viro.allmsm, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method=method.risk)	
 	#		
 	#	treatment risk groups: only overlapping indicators
