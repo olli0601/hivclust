@@ -647,6 +647,9 @@ hivc.pipeline.betareg.estimate.risks<- function()
 						'm2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj')
 	method.risk	<- c(	'm2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens')	
 	method.risk	<- c(	'm3.nicv','m3.tnicv','m3.tnicvNo','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu'	)	
+	#use to pre-compute tables
+	method.risk	<- c( 	'm2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj','m3.tnicvNo.clu.adj', 'm3.tnic.clu.adj', 'm3.nic.clu.adj'	)
+	
 	
 	dummy	<- sapply(method.risk, function(x)
 			{

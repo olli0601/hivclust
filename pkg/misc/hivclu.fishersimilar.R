@@ -5688,6 +5688,341 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 	ans
 }
 ######################################################################################
+project.athena.Fisheretal.estimate.risk.table<- function(YX, X.den, X.msm, X.clu, resume=TRUE, save.file=NA, method=NA)
+{	
+	if(resume & !is.na(save.file))
+	{
+		options(show.error.messages = FALSE)		
+		readAttempt		<- try(suppressWarnings(load(save.file)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",save.file))					
+		options(show.error.messages = TRUE)		
+	}
+	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
+	{
+		cat(paste('\ntables by method', method))
+		ans	<- NULL		
+		if(substr(method,1,2)=='m2' || (substr(method,1,2)=='m3' && grepl('nic',method)))
+		{
+			
+			tp				<- regmatches(method, regexpr('tp[0-9]', method))
+			tp				<- ifelse(length(tp), paste('.',substr(tp, 3, 3),sep=''), '')
+			if(grepl('m21st',method))
+			{
+				factor.ref.v	<- paste('ART1.su.Y',tp,sep='')
+				risktp.col		<- 'CD41st.tperiod'
+				risk.col		<- 'CD41st'
+			}
+			if(grepl('m2B1st',method))
+			{
+				factor.ref.v	<- paste('ART1.su.Y',tp,sep='')
+				risktp.col		<- 'CD4t.tperiod'
+				risk.col		<- 'CD4t'
+			}
+			if(grepl('m2t',method))
+			{
+				factor.ref.v	<- paste('ART.su.Y',tp,sep='')
+				risktp.col		<- 'CD41st.tperiod'
+				risk.col		<- 'CD41st'
+			}
+			if(grepl('m2Bt',method))
+			{
+				factor.ref.v	<- paste('ART.su.Y',tp,sep='')
+				risktp.col		<- 'CD4t.tperiod'
+				risk.col		<- 'CD4t'
+			}
+			if(grepl('m2wmax',method))
+			{
+				factor.ref.v	<- paste('ART.suA.Y',tp,sep='')
+				risktp.col		<- 'CD41st.tperiod'
+				risk.col		<- 'CD41st'
+			}
+			if(grepl('m2Bwmax',method))
+			{
+				factor.ref.v	<- paste('ART.suA.Y',tp,sep='')
+				risktp.col		<- 'CD4t.tperiod'
+				risk.col		<- 'CD4t'
+			}			
+			if(grepl('m3',method) & grepl('nic',method) & !grepl('tnic',method))
+			{
+				factor.ref.v	<- paste('ART.3',tp,sep='')
+				risktp.col		<- 'ART.nstage.c.tperiod'
+				risk.col		<- 'ART.nstage.c'
+				YX[, ART.nstage.c.tperiod:= YX[, paste(ART.nstage.c, t.period, sep='.')]]
+				set(YX, YX[,which(is.na(ART.nstage.c))], risktp.col, NA_character_)
+				X.den[, ART.nstage.c.tperiod:= X.den[, paste(ART.nstage.c, t.period, sep='.')]]
+				set(X.den, X.den[,which(is.na(ART.nstage.c))], risktp.col, NA_character_)
+				X.clu[, ART.nstage.c.tperiod:= X.clu[, paste(ART.nstage.c, t.period, sep='.')]]
+				set(X.clu, X.clu[,which(is.na(ART.nstage.c))], risktp.col, NA_character_)
+				X.msm[, ART.nstage.c.tperiod:= X.msm[, paste(ART.nstage.c, t.period, sep='.')]]
+				set(X.msm, X.msm[,which(is.na(ART.nstage.c))], risktp.col, NA_character_)
+			}
+			if(grepl('m3',method) & grepl('tnic',method) & !grepl('No',method))
+			{
+				factor.ref.v	<- paste('ART.3.NRT.PI',tp,sep='')
+				risktp.col		<- 'ART.ntstage.c.tperiod'
+				risk.col		<- 'ART.ntstage.c'
+				YX[, ART.ntstage.c.tperiod:= YX[, paste(ART.ntstage.c, t.period, sep='.')]]
+				set(YX, YX[,which(is.na(ART.ntstage.c))], risktp.col, NA_character_)
+				X.den[, ART.ntstage.c.tperiod:= X.den[, paste(ART.ntstage.c, t.period, sep='.')]]
+				set(X.den, X.den[,which(is.na(ART.ntstage.c))], risktp.col, NA_character_)
+				X.clu[, ART.ntstage.c.tperiod:= X.clu[, paste(ART.ntstage.c, t.period, sep='.')]]
+				set(X.clu, X.clu[,which(is.na(ART.ntstage.c))], risktp.col, NA_character_)
+				X.msm[, ART.ntstage.c.tperiod:= X.msm[, paste(ART.ntstage.c, t.period, sep='.')]]
+				set(X.msm, X.msm[,which(is.na(ART.ntstage.c))], risktp.col, NA_character_)
+			}
+			if(grepl('m3',method) & grepl('tnic',method) & grepl('No',method))
+			{
+				factor.ref.v	<- paste('ART.3.NRT.PI',tp,sep='')
+				risktp.col		<- 'ART.ntstage.no.c.tperiod'
+				risk.col		<- 'ART.ntstage.no.c'
+				YX[, stage:=NA_character_]
+				YX[, ART.ntstage.c.tperiod:= YX[, paste(ART.ntstage.c, t.period, sep='.')]]
+				set(YX, YX[,which(is.na(ART.ntstage.no.c))], risktp.col, NA_character_)
+				X.den[, ART.ntstage.no.c.tperiod:= X.den[, paste(ART.ntstage.no.c, t.period, sep='.')]]
+				set(X.den, X.den[,which(is.na(ART.ntstage.no.c))], risktp.col, NA_character_)
+				X.clu[, ART.ntstage.no.c.tperiod:= X.clu[, paste(ART.ntstage.no.c, t.period, sep='.')]]
+				set(X.clu, X.clu[,which(is.na(ART.ntstage.no.c))], risktp.col, NA_character_)
+				X.msm[, ART.ntstage.no.c.tperiod:= X.msm[, paste(ART.ntstage.no.c, t.period, sep='.')]]
+				set(X.msm, X.msm[,which(is.na(ART.ntstage.no.c))], risktp.col, NA_character_)
+			}			
+			gc()
+			#	get cens.table
+			set(YX, NULL, 'stage', YX[[risktp.col]])				
+			set(X.clu, NULL, 'stage', X.clu[[risktp.col]])
+			set(X.den, NULL, 'stage', X.den[[risktp.col]])
+			set(X.msm, NULL, 'stage', X.msm[[risktp.col]])
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])									
+			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
+			cens.table		<- do.call('rbind',list(
+							risk.df[,	{
+										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.clu[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')
+									},by='risk']))
+			cens.table[, t.period:=cens.table[, substr(factor, nchar(factor), nchar(factor))]]
+			cens.table[, factor2:=cens.table[, substr(factor, 1, nchar(factor)-2)]]
+			for(f in c('U','UAy','UAm'))
+				for(z in cens.table[, unique(t.period)])	
+					set(cens.table, cens.table[, which(factor2==f & stat=='X.msm' & t.period==z)], 'n',  cens.table[which(factor2==f & stat=='X.msm' & t.period%in%c('2',z)), max(n)])
+			cens.table		<- merge(cens.table, cens.table[, list(factor=factor, p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))			
+			#	if 'tp' is not '', reduce data to t.period
+			if(tp!='')
+			{
+				tp			<- substr(tp, 2, 2)
+				YX			<- subset(YX, t.period==tp)
+				X.clu		<- subset(X.clu, t.period==tp)
+				X.den		<- subset(X.den, t.period==tp)
+				X.msm		<- subset(X.msm, t.period==tp)
+				cens.table	<- subset(cens.table, t.period==tp)
+				gc()
+			}
+			#	if 'tp' is '', reset 'stage' so we use the global risk.col instead of the one stratified by t.period
+			if(tp=='')
+			{
+				set(YX, NULL, 'stage', YX[[risk.col]])				
+				set(X.clu, NULL, 'stage', X.clu[[risk.col]])
+				set(X.den, NULL, 'stage', X.den[[risk.col]])
+				set(X.msm, NULL, 'stage', X.msm[[risk.col]])				
+			}
+			ans$cens.table	<- cens.table
+			#	censoring + bias adjustment
+			ans$adj.cens.seq<- cens.table[, list(w.b= p[stat=='X.msm']/p[stat=='X.seq']),by=c('risk','factor')]
+			#	censoring + bias + clustering adjustment
+			ans$adj.cens.clu<- cens.table[, list(w.b= p[stat=='X.msm']/p[stat=='X.clu']),by=c('risk','factor')]
+			#	subsetting or resetting: need to readjust levels
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])									
+			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=factor.ref.v)
+			#	risk tables
+			risk.table		<- do.call('rbind',list(
+							risk.df[,	{
+										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.clu[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')
+									},by='risk']))
+			risk.table		<- merge(risk.table, risk.table[, list(factor=factor, p= n/sum(n, na.rm=TRUE)), by='stat'], by=c('stat','factor'))
+			ans$risk.table	<- risk.table
+			#	bias + clustering adjustment
+			ans$adj.clu			<- risk.table[, list(w.b= p[stat=='X.msm']/p[stat=='X.clu']),by=c('risk','factor')]
+			#	bias adjustment
+			ans$adj.seq			<- risk.table[, list(w.b= p[stat=='X.msm']/p[stat=='X.seq']),by=c('risk','factor')]			
+		}		
+		if(method%in%c('m3.i','m3.i.clu'))
+		{
+			#	ART indicators only						
+			#formula			<- 'score.Y ~ ART.pulse+ART.I+ART.F+ART.P+ART.A-1'
+			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.msm[, levels(ART.pulse)])])
+			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.msm[, levels(ART.I)])])
+			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.msm[, levels(ART.F)])])
+			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.msm[, levels(ART.P)])])
+			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.msm[, levels(ART.A)])])
+			
+			set(X.den, NULL, 'ART.pulse', X.den[,factor(as.character(ART.pulse), levels=X.msm[, levels(ART.pulse)])])
+			set(X.den, NULL, 'ART.I', X.den[,factor(as.character(ART.I), levels=X.msm[, levels(ART.I)])])
+			set(X.den, NULL, 'ART.F', X.den[,factor(as.character(ART.F), levels=X.msm[, levels(ART.F)])])
+			set(X.den, NULL, 'ART.P', X.den[,factor(as.character(ART.P), levels=X.msm[, levels(ART.P)])])
+			set(X.den, NULL, 'ART.A', X.den[,factor(as.character(ART.A), levels=X.msm[, levels(ART.A)])])
+			
+			set(X.clu, NULL, 'ART.pulse', X.clu[,factor(as.character(ART.pulse), levels=X.msm[, levels(ART.pulse)])])
+			set(X.clu, NULL, 'ART.I', X.clu[,factor(as.character(ART.I), levels=X.msm[, levels(ART.I)])])
+			set(X.clu, NULL, 'ART.F', X.clu[,factor(as.character(ART.F), levels=X.msm[, levels(ART.F)])])
+			set(X.clu, NULL, 'ART.P', X.clu[,factor(as.character(ART.P), levels=X.msm[, levels(ART.P)])])
+			set(X.clu, NULL, 'ART.A', X.clu[,factor(as.character(ART.A), levels=X.msm[, levels(ART.A)])])
+							
+			risk.df			<- data.table( risk= c('ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=rep('Yes',5) )
+			ans$risk.table	<- do.call('rbind',list(
+							risk.df[,	{
+										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.clu[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')												
+									},by='risk']))			
+		}
+		if(method%in%c('m3.ni','m3.ni.clu'))
+		{
+			#	ART indicators and number of drugs
+			#	formula			<- 'score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1'			
+			set(YX, NULL, 'stage', YX[, ART.nDrug.c])
+			set(X.clu, NULL, 'stage', X.clu[, ART.nDrug.c])
+			set(X.den, NULL, 'stage', X.den[, ART.nDrug.c])
+			set(X.msm, NULL, 'stage', X.msm[, ART.nDrug.c])
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
+			
+			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.msm[, levels(ART.pulse)])])
+			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.msm[, levels(ART.I)])])
+			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.msm[, levels(ART.F)])])
+			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.msm[, levels(ART.P)])])
+			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.msm[, levels(ART.A)])])
+			
+			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.den, NULL, 'ART.pulse', X.den[,factor(as.character(ART.pulse), levels=X.msm[, levels(ART.pulse)])])
+			set(X.den, NULL, 'ART.I', X.den[,factor(as.character(ART.I), levels=X.msm[, levels(ART.I)])])
+			set(X.den, NULL, 'ART.F', X.den[,factor(as.character(ART.F), levels=X.msm[, levels(ART.F)])])
+			set(X.den, NULL, 'ART.P', X.den[,factor(as.character(ART.P), levels=X.msm[, levels(ART.P)])])
+			set(X.den, NULL, 'ART.A', X.den[,factor(as.character(ART.A), levels=X.msm[, levels(ART.A)])])
+			
+			set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.clu, NULL, 'ART.pulse', X.clu[,factor(as.character(ART.pulse), levels=X.msm[, levels(ART.pulse)])])
+			set(X.clu, NULL, 'ART.I', X.clu[,factor(as.character(ART.I), levels=X.msm[, levels(ART.I)])])
+			set(X.clu, NULL, 'ART.F', X.clu[,factor(as.character(ART.F), levels=X.msm[, levels(ART.F)])])
+			set(X.clu, NULL, 'ART.P', X.clu[,factor(as.character(ART.P), levels=X.msm[, levels(ART.P)])])
+			set(X.clu, NULL, 'ART.A', X.clu[,factor(as.character(ART.A), levels=X.msm[, levels(ART.A)])])
+			
+			risk.df			<- data.table( risk= c(rep('stage',3), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3','ART.l3','ART.g3', rep('Yes',5)))			
+			ans$risk.table	<- do.call('rbind',list(
+							risk.df[,	{
+										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.clu[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')												
+									},by='risk']))				
+		}
+		if(method%in%c('m3.tni','m3.tni.clu','m3.tniv','m3.tniv.clu'))
+		{
+			#	'score.Y ~ stage+ART.pulse+ART.I+ART.F+ART.P+ART.A-1'
+			set(YX, NULL, 'stage', YX[, ART.tnDrug.c])
+			set(X.clu, NULL, 'stage', X.clu[, ART.tnDrug.c])
+			set(X.den, NULL, 'stage', X.den[, ART.tnDrug.c])
+			set(X.msm, NULL, 'stage', X.msm[, ART.tnDrug.c])
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
+			
+			set(YX, NULL, 'stage', YX[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(YX, NULL, 'ART.pulse', YX[,factor(as.character(ART.pulse), levels=X.msm[, levels(ART.pulse)])])
+			set(YX, NULL, 'ART.I', YX[,factor(as.character(ART.I), levels=X.msm[, levels(ART.I)])])
+			set(YX, NULL, 'ART.F', YX[,factor(as.character(ART.F), levels=X.msm[, levels(ART.F)])])
+			set(YX, NULL, 'ART.P', YX[,factor(as.character(ART.P), levels=X.msm[, levels(ART.P)])])
+			set(YX, NULL, 'ART.A', YX[,factor(as.character(ART.A), levels=X.msm[, levels(ART.A)])])
+			
+			set(X.den, NULL, 'stage', X.den[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.den, NULL, 'ART.pulse', X.den[,factor(as.character(ART.pulse), levels=X.msm[, levels(ART.pulse)])])
+			set(X.den, NULL, 'ART.I', X.den[,factor(as.character(ART.I), levels=X.msm[, levels(ART.I)])])
+			set(X.den, NULL, 'ART.F', X.den[,factor(as.character(ART.F), levels=X.msm[, levels(ART.F)])])
+			set(X.den, NULL, 'ART.P', X.den[,factor(as.character(ART.P), levels=X.msm[, levels(ART.P)])])
+			set(X.den, NULL, 'ART.A', X.den[,factor(as.character(ART.A), levels=X.msm[, levels(ART.A)])])
+			
+			set(X.clu, NULL, 'stage', X.clu[,factor(as.character(stage), levels=X.msm[, levels(stage)])])
+			set(X.clu, NULL, 'ART.pulse', X.clu[,factor(as.character(ART.pulse), levels=X.msm[, levels(ART.pulse)])])
+			set(X.clu, NULL, 'ART.I', X.clu[,factor(as.character(ART.I), levels=X.msm[, levels(ART.I)])])
+			set(X.clu, NULL, 'ART.F', X.clu[,factor(as.character(ART.F), levels=X.msm[, levels(ART.F)])])
+			set(X.clu, NULL, 'ART.P', X.clu[,factor(as.character(ART.P), levels=X.msm[, levels(ART.P)])])
+			set(X.clu, NULL, 'ART.A', X.clu[,factor(as.character(ART.A), levels=X.msm[, levels(ART.A)])])
+			
+			risk.df			<- data.table( risk= c(rep('stage',9), 'ART.pulse','ART.I','ART.F','ART.P','ART.A'), factor=c('ART.3.NRT.PI','ART.l3','ART.g3','ART.3.NRT','ART.3.PI','ART.3.NNRT','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NNRT.PI', rep('Yes',5)))
+			ans$risk.table	<- do.call('rbind',list(
+							risk.df[,	{
+										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.clu[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq')												
+									},by='risk'],
+							risk.df[,	{
+										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')												
+									},by='risk']))
+		}
+		if(!is.na(save.file))
+		{			
+			cat(paste('\nsave to file', save.file))
+			save(ans, file=save.file)
+		}
+	}
+	ans
+}
+######################################################################################
 project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'), return.only.ART=TRUE, plot.file.cascade=NA, score.Y.cut=1e-2)
 {	
 	#	Treatment cascade & ART risk groups
@@ -5705,7 +6040,7 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	if(0)
 	{
 		set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
-		set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')	
+		set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')				
 		set(YX.m3, YX.m3[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
 		set(YX.m3, YX.m3[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )				
 		#	stratify Diag by first CD4 after diagnosis
@@ -5725,9 +6060,7 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	if(1)
 	{
 		set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
-		set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')	
-		set(YX.m3, YX.m3[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAy' )
-		set(YX.m3, YX.m3[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stage', 'DAm' )						
+		set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')									
 	}
 	YX.m3[, stage.orig:= stage]
 	if(return.only.ART)
@@ -5751,8 +6084,17 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No' & ART.F=='No' & ART.P=='No' & ART.A=='No' & is.na(ART.ntstage.no.c) & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.ntstage.no.c', 11L)				
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No' & ART.F=='No' & ART.P=='No' & ART.A=='No' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.ntstage.no.c', 12L)	#-- these are all on pulsed, need to take out	
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No' & ART.F=='No' & ART.P=='No' & ART.A=='No' & is.na(ART.ntstage.no.c) & ART.nNRT==0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.ntstage.no.c', 13L)
-	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No' & ART.F=='No' & ART.P=='No' & ART.A=='No' & is.na(ART.ntstage.no.c) & ART.nNRT==0 & ART.nPI==0 & ART.nNNRT>0)], 'ART.ntstage.no.c', 14L)	
-	set(YX.m3, NULL, 'ART.ntstage.no.c', YX.m3[, factor(ART.ntstage.no.c, levels=1:14, labels=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No' & ART.F=='No' & ART.P=='No' & ART.A=='No' & is.na(ART.ntstage.no.c) & ART.nNRT==0 & ART.nPI==0 & ART.nNNRT>0)], 'ART.ntstage.no.c', 14L)
+	if(!return.only.ART)
+	{
+		set(YX.m3, YX.m3[, which(stage=='U')], 'ART.ntstage.no.c', 15L)
+		set(YX.m3, YX.m3[, which(stage=='UAy')], 'ART.ntstage.no.c', 16L)
+		set(YX.m3, YX.m3[, which(stage=='UAm')], 'ART.ntstage.no.c', 17L)
+		set(YX.m3, YX.m3[, which(stage=='Diag')], 'ART.ntstage.no.c', 18L)
+		set(YX.m3, NULL, 'ART.ntstage.no.c', YX.m3[, factor(ART.ntstage.no.c, levels=1:18, labels=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT','U','UAy','UAm','Diag'))])
+	}
+	else
+		set(YX.m3, NULL, 'ART.ntstage.no.c', YX.m3[, factor(ART.ntstage.no.c, levels=1:14, labels=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
 	#YX.m3[, table(ART.ntstage.no.c)]
 	#
 	#	ART indication risk factors
@@ -5774,9 +6116,18 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	YX.m3[, ART.nDrug.c:=NA_integer_]
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug<3)], 'ART.nDrug.c', 2L)
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3)], 'ART.nDrug.c', 1L)
-	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'ART.nDrug.c', 3L)
-	set(YX.m3, NULL, 'ART.nDrug.c', YX.m3[, factor(ART.nDrug.c, levels=1:3, labels=c('ART.3','ART.l3','ART.g3'))])
-	if( return.only.ART && YX.m3[, any(is.na(ART.nDrug.c))] ) stop('unexpected NA in ART.nDrug.c')
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug>3)], 'ART.nDrug.c', 3L)	
+	if(!return.only.ART)
+	{
+		set(YX.m3, YX.m3[, which(stage=='U')], 'ART.nDrug.c', 4L)
+		set(YX.m3, YX.m3[, which(stage=='UAy')], 'ART.nDrug.c', 5L)
+		set(YX.m3, YX.m3[, which(stage=='UAm')], 'ART.nDrug.c', 6L)
+		set(YX.m3, YX.m3[, which(stage=='Diag')], 'ART.nDrug.c', 7L)
+		set(YX.m3, NULL, 'ART.nDrug.c', YX.m3[, factor(ART.nDrug.c, levels=1:7, labels=c('ART.3','ART.l3','ART.g3','U','UAy','UAm','Diag'))])
+	}
+	else
+		set(YX.m3, NULL, 'ART.nDrug.c', YX.m3[, factor(ART.nDrug.c, levels=1:3, labels=c('ART.3','ART.l3','ART.g3'))])
+	if( YX.m3[, any(is.na(ART.nDrug.c))] ) stop('unexpected NA in ART.nDrug.c')
 	#	type of drugs for ART.3 
 	#	set reference group for dummy coding to ART.3.NRT.PI
 	#	include pulse as separate
@@ -5809,8 +6160,17 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	#-- these are all on pulsed, need to take out
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.tnDrug.c', 2L)		
 	#set(YX.m3, YX.m3[, which(ART.P=='Yes' | ART.A=='Yes' | ART.F=='Yes')], 'ART.tnDrug.c', NA_integer_)		#exclude ART with indication		
-	set(YX.m3, NULL, 'ART.tnDrug.c', YX.m3[, factor(ART.tnDrug.c, levels=1:9, labels=c('ART.3.NRT.PI','ART.3.NRT','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
-	if( return.only.ART && YX.m3[, any(is.na(ART.tnDrug.c))] ) stop('unexpected NA in ART.tnDrug.c')		
+	if(!return.only.ART)
+	{
+		set(YX.m3, YX.m3[, which(stage=='U')], 'ART.tnDrug.c', 10L)
+		set(YX.m3, YX.m3[, which(stage=='UAy')], 'ART.tnDrug.c', 11L)
+		set(YX.m3, YX.m3[, which(stage=='UAm')], 'ART.tnDrug.c', 12L)
+		set(YX.m3, YX.m3[, which(stage=='Diag')], 'ART.tnDrug.c', 13L)
+		set(YX.m3, NULL, 'ART.tnDrug.c', YX.m3[, factor(ART.tnDrug.c, levels=1:13, labels=c('ART.3.NRT.PI','ART.3.NRT','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT','U','UAy','UAm','Diag'))])
+	}
+	else
+		set(YX.m3, NULL, 'ART.tnDrug.c', YX.m3[, factor(ART.tnDrug.c, levels=1:9, labels=c('ART.3.NRT.PI','ART.3.NRT','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
+	if( YX.m3[, any(is.na(ART.tnDrug.c))] ) stop('unexpected NA in ART.tnDrug.c')		
 	#	number and type of drugs for ART.3 
 	#	set reference group for dummy coding to ART.3.NRT.PI
 	#	do not include pulse as separate
@@ -5842,8 +6202,17 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.nstage.c) & ART.nDrug<3 & ART.nDrug>0)], 'ART.nstage.c', 7L)		
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.nstage.c) & ART.nDrug>3)], 'ART.nstage.c', 8L)
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.nstage.c) & ART.nDrug==3)], 'ART.nstage.c', 1L)
-	set(YX.m3, NULL, 'ART.nstage.c', YX.m3[, factor(ART.nstage.c, levels=1:8, labels=c('ART.3','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3'))])
-	if( return.only.ART && YX.m3[, any(is.na(ART.nstage.c))] ) stop('unexpected ART.nstage.c')
+	if(!return.only.ART)
+	{
+		set(YX.m3, YX.m3[, which(stage=='U')], 'ART.nstage.c', 9L)
+		set(YX.m3, YX.m3[, which(stage=='UAy')], 'ART.nstage.c', 10L)
+		set(YX.m3, YX.m3[, which(stage=='UAm')], 'ART.nstage.c', 11L)
+		set(YX.m3, YX.m3[, which(stage=='Diag')], 'ART.nstage.c', 12L)
+		set(YX.m3, NULL, 'ART.nstage.c', YX.m3[, factor(ART.nstage.c, levels=1:12, labels=c('ART.3','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','U','UAy','UAm','Diag'))])		
+	}
+	else
+		set(YX.m3, NULL, 'ART.nstage.c', YX.m3[, factor(ART.nstage.c, levels=1:8, labels=c('ART.3','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3'))])
+	if( YX.m3[, any(is.na(ART.nstage.c))] ) stop('unexpected ART.nstage.c')
 	#
 	#	number and type of drugs conditional on no indication
 	#
@@ -5863,8 +6232,17 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.nDrug==3 & ART.nNRT==0 & ART.nNNRT>0 & ART.nPI>0)], 'ART.ntstage.c', 12L)	#-- these are all on pulsed, need to take out	
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nNRT==0 & ART.nPI>0 & ART.nNNRT==0)], 'ART.ntstage.c', 13L)
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & is.na(ART.ntstage.c) & ART.nNRT==0 & ART.nPI==0 & ART.nNNRT>0)], 'ART.ntstage.c', 14L)	
-	set(YX.m3, NULL, 'ART.ntstage.c', YX.m3[, factor(ART.ntstage.c, levels=1:14, labels=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
-	if( return.only.ART && YX.m3[, any(is.na(ART.ntstage.c))] ) stop('unexpected ART.ntstage.c')
+	if(!return.only.ART)
+	{
+		set(YX.m3, YX.m3[, which(stage=='U')], 'ART.ntstage.c', 15L)
+		set(YX.m3, YX.m3[, which(stage=='UAy')], 'ART.ntstage.c', 16L)
+		set(YX.m3, YX.m3[, which(stage=='UAm')], 'ART.ntstage.c', 17L)
+		set(YX.m3, YX.m3[, which(stage=='Diag')], 'ART.ntstage.c', 18L)
+		set(YX.m3, NULL, 'ART.ntstage.c', YX.m3[, factor(ART.ntstage.c, levels=1:18, labels=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT','U','UAy','UAm','Diag'))])
+	}
+	else
+		set(YX.m3, NULL, 'ART.ntstage.c', YX.m3[, factor(ART.ntstage.c, levels=1:14, labels=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
+	if( YX.m3[, any(is.na(ART.ntstage.c))] ) stop('unexpected ART.ntstage.c')
 	#
 	#	add mx viral load during infection window
 	#
@@ -10191,14 +10569,22 @@ hivc.prog.betareg.estimaterisks<- function()
 			X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.seq, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
 			X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
 		}
-	}			
+	}				
 	if(substr(method.risk,1,2)=='m3')
-	{					
-		YX			<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all)	
-		X.clu		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.clu, df.all)
-		X.seq		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all)
-		X.msm		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.msm, df.all.allmsm)
+	{			
+		return.only.ART	<- FALSE
+		#return.only.ART	<- TRUE
+		YX				<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, return.only.ART=return.only.ART)	
+		X.clu			<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.clu, df.all, return.only.ART=return.only.ART)
+		X.seq			<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, return.only.ART=return.only.ART)
+		X.msm			<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.msm, df.all.allmsm, return.only.ART=return.only.ART)
 	}
+	if(grepl('adj',method.risk) & grepl('clu',method.risk))
+	{
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables_',method.risk,'.R',sep='')
+		tmp				<- project.athena.Fisheretal.estimate.risk.table(YX, X.seq, X.msm, X.clu, resume=TRUE, save.file=save.file, method=method.risk)
+		stop()
+	}	
 	gc()
 	#
 	#	endpoint: first VL suppressed
