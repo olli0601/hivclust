@@ -4812,7 +4812,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.den[, levels(stage)]), w=1.)									
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
@@ -4864,7 +4864,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.msm[, levels(stage)]), w=1.)									
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
@@ -4901,6 +4901,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 				set(X.clu, NULL, 'stage', X.clu[, CD41st.tperiod])
 				set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])												
 			}
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			cens.table		<- do.call('rbind',list(
 							risk.df[,	{
 											z	<- table( YX[, risk, with=FALSE], useNA='ifany')
@@ -4942,7 +4943,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.msm[, levels(stage)]), w=1.)									
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
@@ -4981,7 +4982,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.den[, levels(stage)]), w=1.)									
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
@@ -5032,7 +5033,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.msm[, levels(stage)]), w=1.)									
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
@@ -5069,6 +5070,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 				set(X.clu, NULL, 'stage', X.clu[, CD4t.tperiod])
 				set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])												
 			}
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			cens.table		<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
@@ -5111,7 +5113,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.msm[, levels(stage)]), w=1.)									
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='D' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
 			tmp				<- X.den[, levels(stage)][ substr(X.den[, levels(stage)],1,1)=='A' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= X.den[, levels(stage)][ X.den[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
@@ -9253,8 +9255,7 @@ project.athena.Fisheretal.sensitivity<- function()
 	set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')
 	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
 	ggplot(subset(run.tp, !is.na(v)), aes(x=t.period, y=v, colour=factor, group=factor)) + labs(x="calendar time periods", y="proportion of transmissions") + #scale_colour_brewer(palette="Set3") + 
-				geom_point() + geom_line(aes(linetype=factor)) + geom_ribbon(aes(ymin=l95.bs, ymax=u95.bs, linetype=NA, fill=factor), alpha=0.3) + facet_grid(. ~ cascade.stage, margins=FALSE)
-		
+				geom_point() + geom_line(aes(linetype=factor)) + geom_ribbon(aes(ymin=l95.bs, ymax=u95.bs, linetype=NA, fill=factor), alpha=0.3) + facet_grid(. ~ cascade.stage, margins=FALSE)		
 	#	PYIW trends in %	
 	run.tp	<- subset(runs.table, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk), c(risk, factor, stat, n, prop))	
 	setkey(run.tp, factor)	
@@ -9268,7 +9269,22 @@ project.athena.Fisheretal.sensitivity<- function()
 	set(run.tp, run.tp[,which(stat=='X.msm')], 'stat', 'cohort')
 	set(run.tp, run.tp[,which(stat=='YX')], 'stat', 'potential transmitter')
 	set(run.tp, NULL, 'stat', run.tp[, factor(stat, levels=c('potential transmitter','study population','cohort'))])
-	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
+	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','cART initiated'))])	
+	tmp		<- data.table( factor.legend= c('Undiagnosed,\nStrong evidence for acute infection',
+											'Undiagnosed,\nSome evidence for acute infection',
+											'Undiagnosed,\nNo evidence for acute infection',
+											'Diagnosed,\nStrong evidence for acute infection\nuntil 3 months after diagnosis',
+											'Diagnosed,\nSome evidence for acute infection\nuntil 3 months after diagnosis',
+											'Diagnosed,\nNo evidence for acute infection,\nmin CD4 > 500',
+											'Diagnosed,\nNo evidence for acute infection,\nmin CD4 > 350',
+											'Diagnosed,\nNo evidence for acute infection,\nmin CD4 < 350',
+											'Diagnosed,\nNo evidence for acute infection,\nmissing 1st CD4',
+											'ART initiated,\nViral load missing',
+											'ART initiated,\nViral load permanently\nsuppressed', 
+											'ART initiated,\nViral load not permanently\nsuppressed'),
+							factor=c("UAy","UAm","U","Dtl500","Dtl350","Dtg500","Dt.NA","DAy","DAm","ART.vlNA","ART.suA.Y","ART.suA.N"))
+	run.tp	<- merge(run.tp, tmp, by='factor')				
+					
 	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=prop, colour=factor, group=factor)) + labs(x="calendar time periods", y="proportion PYIW") + #scale_colour_brewer(palette="Set3") + 
 			geom_point() + geom_line(aes(linetype=factor)) + facet_grid(stat ~ cascade.stage, margins=FALSE)
 	#	PYIW trends in #	
@@ -9286,15 +9302,22 @@ project.athena.Fisheretal.sensitivity<- function()
 	}
 	#set(run.tp, run.tp[, which(factor=='ART.suA.Y' & stat=='cohort' & t.period=='4')], 'na', run.tp[which(factor=='ART.suA.Y' & stat=='cohort' & t.period=='3' ), na])
 	#	PYIW trends in # with adjustment for censoring
-	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=n, colour=factor, group=factor)) + labs(x="calendar time periods", y="PYIW") + #scale_colour_brewer(palette="Set3") + 
-			geom_point(data=subset(run.tp, !is.na(n) & n!=na), aes(y=na), shape=8) + geom_point() +  geom_line(aes(linetype=factor)) + facet_grid(stat ~ cascade.stage, scales='free', margins=FALSE)
+	require(RColorBrewer)
+	require(grid)
+	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=n, colour=factor.legend, group=factor.legend)) + labs(x="calendar time periods", y="PYIW") + 
+			scale_colour_manual(name='Transmission times', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(run.tp[,length(unique(factor.legend))])) +
+			#theme(legend.position="bottom") + guides(colour=guide_legend(nrow=3)) +
+			theme(legend.key.size=unit(13,'mm')) + 
+			geom_point(data=subset(run.tp, !is.na(n) & n!=na), aes(y=na), shape=8, show_guide= FALSE) + geom_point() +  geom_line(aes(linetype=factor.legend), show_guide= FALSE) + facet_grid(stat ~ cascade.stage, scales='free', margins=FALSE) 
+			
+	
 	file	<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWtotal_adjcens.pdf", sep='')
 	ggsave(file=file, w=8,h=8)
 	
 	run.tp	<- merge( run.tp, run.tp[, list(factor=factor, propa= na/sum(na, na.rm=TRUE)), by=c('t.period','stat')], by=c('t.period','stat','factor'))
 	#	PYIW trends in % with adjustment for censoring
 	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=prop, colour=factor, group=factor)) + labs(x="calendar time periods", y="PYIW") + #scale_colour_brewer(palette="Set3") + 
-			geom_point() +  geom_point(data=subset(run.tp, !is.na(n) & prop!=propa), aes(y=propa), shape=8) + geom_line(data=subset(run.tp, !is.na(n) & prop!=propa), aes(y=propa), colour='black') + geom_line(aes(linetype=factor)) + facet_grid(stat ~ cascade.stage, margins=FALSE)
+			geom_point(data=subset(run.tp, !is.na(n) & prop!=propa), aes(y=propa), shape=8) + geom_point() +  geom_line(data=subset(run.tp, !is.na(n) & prop!=propa), aes(y=propa), colour='black') + geom_line(aes(linetype=factor)) + facet_grid(stat ~ cascade.stage, margins=FALSE)
 	file	<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWprop_adjcens.pdf", sep='')
 	ggsave(file=file, w=8,h=8)
 	
