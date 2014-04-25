@@ -4117,6 +4117,9 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 					tmp			<- tmp[1,]
 				if( nrow(unique(tmp2[, setdiff(colnames(tmp2),'w'), with=FALSE]))==1 )
 					tmp2		<- tmp2[1,]
+				
+				str(tmp)
+				str(tmp2)
 				if(nrow(tmp))	#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
 				{
 					#tryCatch({
@@ -4931,14 +4934,14 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			gc()
 			formula			<- 'score.Y ~ stage-1'
 			include.colnames<- c('score.Y','w','stage')
-			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
-			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			bias.adj		<- cens.table[, list(w.b= p[stat=='X.msm']/p[stat=='X']),by='stage']
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
 			set(bias.adj, NULL, 'w.b', bias.adj[,w.b] * YX[, sum(w)] / YX[, sum(w*w.b)] )
 			set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
+			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])						
+			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.msm[, levels(stage)]), w=1.)									
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
@@ -5100,15 +5103,15 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.den, df.all, df.vi
 			gc()
 			formula			<- 'score.Y ~ stage-1'
 			include.colnames<- c('score.Y','w','stage')
-			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
-			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#	adjust weight by selection bias weights			
 			bias.adj		<- cens.table[, list(w.b= p[stat=='X.msm']/p[stat=='X']),by='stage']
 			set(bias.adj, bias.adj[, which(is.infinite(w.b))], 'w.b', 1.)
 			YX				<- merge( YX, bias.adj, by='stage' )
 			set(bias.adj, NULL, 'w.b', bias.adj[,w.b] * YX[, sum(w)] / YX[, sum(w*w.b)] )
 			set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
+			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])						
+			set(YX, NULL, 'stage', YX[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			#
 			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=X.msm[, levels(stage)]), w=1.)									
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
