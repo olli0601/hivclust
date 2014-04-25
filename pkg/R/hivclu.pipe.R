@@ -645,9 +645,8 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	method.risk	<- c(	'm2Bwmx.tp1', 'm2Bwmx.tp2', 'm2Bwmx.tp3', 'm2Bwmx.tp4',
 						'm2Bwmx.tp1.adj', 'm2Bwmx.tp2.adj', 'm2Bwmx.tp3.adj', 'm2Bwmx.tp4.adj',
 						'm2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj')
-	method.risk	<- c(	'm2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens')				
-	#method.risk	<- c('m2Bwmx.tp1.adj', 'm2Bwmx.tp2.adj', 'm2Bwmx.tp3.adj', 'm2Bwmx.tp4.adj')
-	
+	method.risk	<- c(	'm2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens')	
+	method.risk	<- c(	'm3.nicv','m3.tnicv','m3.tnicvNo','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu'	)	
 	
 	dummy	<- sapply(method.risk, function(x)
 			{

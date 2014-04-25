@@ -4157,6 +4157,22 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
 			},by=c('coef','coef.ref')]
 	risk.ans	<- rbind(risk.ans, tmp)	
+	#	term-wise risk ratio
+	cat(paste('\nodds ratios and risk ratios'))	
+	tmp			<- subset(risk.df, coef!=coef.ref)[, 	{
+				tmp				<- copy(predict.df)
+				tmp2			<- copy(predict.df)
+				set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
+				set(tmp2, NULL, risk, factor(factor.ref, levels=levels( predict.df[[risk]] )))
+				#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
+				tryCatch({
+								tmp		<- predict(betafit.rr, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), terms=risk, type='terms')
+								tmp2	<- predict(betafit.rr, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), terms=risk, type='terms')								
+								tmp		<- exp( tmp[,risk] - tmp2[,risk] )
+							}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
+				list(stat= 'RR.term', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
+			},by=c('coef','coef.ref')]
+	risk.ans	<- rbind(risk.ans, tmp)	
 	#	person years in infection window
 	cat(paste('\nperson years across infection windows'))
 	setkey(risk.df, coef)
@@ -4219,59 +4235,74 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				#	odds ratio and risk ratio
 				setkey(risk.df, coef.ref, coef)
 				risk.ans.bs			<- subset(risk.df, coef!=coef.ref)[, 	{
-							tmp				<- copy(predict.df)
-							tmp2			<- copy(predict.df)
-							set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
-							set(tmp2, NULL, risk, factor(factor.ref, levels=levels( predict.df[[risk]] )))
-							corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-							if(!length(corisk))	
-								corisk<- NULL
-							tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
-							tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))
-							#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
-							if(nrow(tmp))	
-							{
-								if( nrow(unique(tmp[, setdiff(colnames(tmp),'w'), with=FALSE]))==1 )
-									tmp		<- tmp[1,]
-								if( nrow(unique(tmp2[, setdiff(colnames(tmp2),'w'), with=FALSE]))==1 )
-									tmp2	<- tmp2[1,]															
-								tryCatch({
-								tmp[, predict:= predict(betafit.or.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
-								tmp2[, predict:= predict(betafit.or.bs, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
-								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)
-								}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
-							}
-							else
-								tmp			<- NA_real_	
-							list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
+																				tmp				<- copy(predict.df)
+																				tmp2			<- copy(predict.df)
+																				set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
+																				set(tmp2, NULL, risk, factor(factor.ref, levels=levels( predict.df[[risk]] )))
+																				corisk			<- intersect(colnames(risk.df), colnames(predict.df))
+																				if(!length(corisk))	
+																					corisk<- NULL
+																				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
+																				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))
+																				#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
+																				if(nrow(tmp))	
+																				{
+																					if( nrow(unique(tmp[, setdiff(colnames(tmp),'w'), with=FALSE]))==1 )
+																						tmp		<- tmp[1,]
+																					if( nrow(unique(tmp2[, setdiff(colnames(tmp2),'w'), with=FALSE]))==1 )
+																						tmp2	<- tmp2[1,]															
+																					tryCatch({
+																					tmp[, predict:= predict(betafit.or.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
+																					tmp2[, predict:= predict(betafit.or.bs, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
+																					tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)
+																					}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
+																				}
+																				else
+																					tmp			<- NA_real_	
+																				list(stat= 'OR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
 						},by=c('coef','coef.ref')]
 				tmp					<- subset(risk.df, coef!=coef.ref)[, 	{
-							tmp				<- copy(predict.df)
-							tmp2			<- copy(predict.df)
-							set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
-							set(tmp2, NULL, risk, factor(factor.ref, levels=levels( predict.df[[risk]] )))
-							corisk			<- intersect(colnames(risk.df), colnames(predict.df))
-							if(!length(corisk))	
-								corisk<- NULL
-							tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
-							tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))							
-							if(nrow(tmp))	
-							{
-								if( nrow(unique(tmp[, setdiff(colnames(tmp),'w'), with=FALSE]))==1 )
-									tmp		<- tmp[1,]
-								if( nrow(unique(tmp2[, setdiff(colnames(tmp2),'w'), with=FALSE]))==1 )
-									tmp2	<- tmp2[1,]															
-								tryCatch({
-								tmp[, predict:= predict(betafit.rr.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
-								tmp2[, predict:= predict(betafit.rr.bs, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
-								tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)
-								}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
-							}
-							else
-								tmp			<- NA_real_
-							list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
-						},by=c('coef','coef.ref')]
-				risk.ans.bs			<- rbind(risk.ans.bs, tmp)																
+																				tmp				<- copy(predict.df)
+																				tmp2			<- copy(predict.df)
+																				set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
+																				set(tmp2, NULL, risk, factor(factor.ref, levels=levels( predict.df[[risk]] )))
+																				corisk			<- intersect(colnames(risk.df), colnames(predict.df))
+																				if(!length(corisk))	
+																					corisk<- NULL
+																				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
+																				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))							
+																				if(nrow(tmp))	
+																				{
+																					if( nrow(unique(tmp[, setdiff(colnames(tmp),'w'), with=FALSE]))==1 )
+																						tmp		<- tmp[1,]
+																					if( nrow(unique(tmp2[, setdiff(colnames(tmp2),'w'), with=FALSE]))==1 )
+																						tmp2	<- tmp2[1,]															
+																					tryCatch({
+																					tmp[, predict:= predict(betafit.rr.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
+																					tmp2[, predict:= predict(betafit.rr.bs, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), type='link')]
+																					tmp			<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)/weighted.mean(exp(tmp2[,predict]), w=tmp2[,w], na.rm=TRUE)
+																					}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
+																				}
+																				else
+																					tmp			<- NA_real_
+																				list(stat= 'RR', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )
+																			},by=c('coef','coef.ref')]
+				risk.ans.bs			<- rbind(risk.ans.bs, tmp)		
+				#term wise risk ratio
+				tmp					<- subset(risk.df, coef!=coef.ref)[, 	{
+																				tmp				<- copy(predict.df)
+																				tmp2			<- copy(predict.df)
+																				set(tmp, NULL, risk, factor(factor, levels=levels( predict.df[[risk]] )))
+																				set(tmp2, NULL, risk, factor(factor.ref, levels=levels( predict.df[[risk]] )))
+																				#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
+																				tryCatch({
+																							tmp		<- predict(betafit.rr.bs, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), terms=risk, type='terms')
+																							tmp2	<- predict(betafit.rr.bs, newdata=as.data.frame(tmp2), data=na.omit(as.data.frame(YX.m3.bs[, include.colnames, with=FALSE])), terms=risk, type='terms')								
+																							tmp		<- exp( tmp[,risk] - tmp2[,risk] )
+																						}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
+																				list(stat= 'RR.term', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
+																			},by=c('coef','coef.ref')]
+				risk.ans.bs			<- rbind(risk.ans.bs, tmp)					
 				#	for proportions		
 				setkey(risk.df, coef)
 				tmp			<- unique(risk.df)[, 		{
