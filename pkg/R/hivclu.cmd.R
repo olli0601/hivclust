@@ -957,7 +957,8 @@ hivc.cmd.hpccaller<- function(outdir, outfile, cmd)
 		file	<- paste(outdir,'/',outfile,'.sh',sep='')
 		cat(paste("\nwrite Shell script to\n",file,"\nStart this shell file manually\n"))
 		cat(cmd,file=file)
-		Sys.chmod(file, mode = "777")		
+		Sys.chmod(file, mode = "777")	
+		Sys.sleep(1)
 	}
 	
 }

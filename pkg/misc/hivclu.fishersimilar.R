@@ -10544,10 +10544,12 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	stratify
 	#	
+	return.only.ART	<- FALSE
+	#return.only.ART	<- TRUE
 	cat(paste('\nstratify by', method))
 	if(substr(method.risk,1,2)=='m2')
 	{
-		plot.file.varyvl	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
+		plot.file.varyvl	<- ifelse(return.only.ART, paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep=''), NA)
 		if(any(sapply(c('m2wmx','m2Bwmx'), grepl, x=method.risk)))
 		{
 			YX					<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )
@@ -10571,9 +10573,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		}
 	}				
 	if(substr(method.risk,1,2)=='m3')
-	{			
-		return.only.ART	<- FALSE
-		#return.only.ART	<- TRUE
+	{							
 		YX				<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, return.only.ART=return.only.ART)	
 		X.clu			<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.clu, df.all, return.only.ART=return.only.ART)
 		X.seq			<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(X.seq, df.all, return.only.ART=return.only.ART)
@@ -10586,8 +10586,8 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m2B1st',method.risk))		save.file	<- 'm2B1st'
 		if(grepl('m2t',method.risk))		save.file	<- 'm2t'
 		if(grepl('m2Bt',method.risk))		save.file	<- 'm2Bt'
-		if(grepl('m2wmax',method.risk))		save.file	<- 'm2wmax'
-		if(grepl('m2Bwmax',method.risk))	save.file	<- 'm2Bwmax'
+		if(grepl('m2wmx',method.risk))		save.file	<- 'm2wmx'
+		if(grepl('m2Bwmx',method.risk))		save.file	<- 'm2Bwmx'
 		if(grepl('m3.i',method.risk) & !grepl('m3.ni',method.risk))								save.file	<- 'm3.i'	
 		if(grepl('m3',method.risk) & grepl('ni',method.risk) & !grepl('nic',method.risk))		save.file	<- 'm3.ni'
 		if(grepl('m3',method.risk) & grepl('tni',method.risk) & !grepl('tnic',method.risk))		save.file	<- 'm3.tni'
@@ -10598,7 +10598,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')		
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables_',save.file,'.R',sep='')
-		tmp				<- project.athena.Fisheretal.estimate.risk.table(YX, X.seq, X.msm, X.clu, resume=TRUE, save.file=save.file, method=method.risk)
+		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX, X.seq, X.msm, X.clu, resume=TRUE, save.file=save.file, method=method.risk)
 		stop()
 	}	
 	gc()
