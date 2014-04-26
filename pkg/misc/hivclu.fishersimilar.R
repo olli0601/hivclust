@@ -5730,13 +5730,13 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX, X.den, X.msm, X.clu
 				risktp.col		<- 'CD4t.tperiod'
 				risk.col		<- 'CD4t'
 			}
-			if(grepl('m2wmax',method))
+			if(grepl('m2wmx',method))
 			{
 				factor.ref.v	<- paste('ART.suA.Y',tp,sep='')
 				risktp.col		<- 'CD41st.tperiod'
 				risk.col		<- 'CD41st'
 			}
-			if(grepl('m2Bwmax',method))
+			if(grepl('m2Bwmx',method))
 			{
 				factor.ref.v	<- paste('ART.suA.Y',tp,sep='')
 				risktp.col		<- 'CD4t.tperiod'
