@@ -11347,7 +11347,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	check if we have precomputed tables
 	#
 	X.tables			<- NULL
-	if(0)
+	if(1)
 	{
 		save.file		<- NA
 		if(grepl('m21st',method.risk))		save.file	<- 'm21st'
