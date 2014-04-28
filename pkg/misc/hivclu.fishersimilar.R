@@ -6366,7 +6366,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			return(ans)	
 		}			
 		cat(paste('\ntables by method', method))		
-		if(substr(method,1,2)=='m2' || (substr(method,1,2)=='m3' && grepl('nic',method)))
+		if(substr(method,1,2)=='m2' || substr(method,1,2)=='m4' || (substr(method,1,2)=='m3' && grepl('nic',method)))
 		{
 			
 			tp				<- regmatches(method, regexpr('tp[0-9]', method))
@@ -6449,7 +6449,15 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				X.clu			<- subset(X.clu, !is.na(ART.ntstage.no.c))
 				X.msm[, ART.ntstage.no.c.tperiod:= X.msm[, paste(ART.ntstage.no.c, t.period, sep='.')]]
 				X.msm			<- subset(X.msm, !is.na(ART.ntstage.no.c))
+			}
+			if(grepl('m4.Bwmx',method))
+			{
+				#	adjust CD4t -- cannot adjust VL or the independent acute categories
+				factor.ref.v	<- paste('Dtg500',tp,sep='')
+				risktp.col		<- 'CD4t.tperiod'
+				risk.col		<- 'CD4t'
 			}			
+			
 			gc()
 			#	get cens.table
 			set(YX, NULL, 'stage', YX[[risktp.col]])				
@@ -11339,7 +11347,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	check if we have precomputed tables
 	#
 	X.tables			<- NULL
-	if(1)
+	if(0)
 	{
 		save.file		<- NA
 		if(grepl('m21st',method.risk))		save.file	<- 'm21st'

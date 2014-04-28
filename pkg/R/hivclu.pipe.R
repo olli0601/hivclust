@@ -655,7 +655,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk	<- c(	'm2Bwmx.cas.cens','m2Bwmx.cas.clu.cens','m2Bwmx.cas.censp','m2Bwmx.cas.clu.censp' )
 	# use to pre-compute tables
 	#method.risk	<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj'	)	
-	#method.risk	<- c( 	'm4.Bwmxv.clu.adj' )
+	method.risk	<- c( 	'm4.Bwmxv.clu.adj' )
 	
 	dummy	<- sapply(method.risk, function(x)
 			{
@@ -663,7 +663,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 				cat(cmd)
 				#stop()
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="1800mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
+				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="69000mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
