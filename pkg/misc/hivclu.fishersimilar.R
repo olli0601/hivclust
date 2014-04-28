@@ -10738,7 +10738,8 @@ hivc.prog.betareg.estimaterisks<- function()
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2013-03-01"))	#hivc.db.Date2numeric(as.Date("2011-01-01"))
+	#t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
+	t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2011-01-01"))
 	t.recent.endctime		<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period
 	resume					<- 1
 	verbose					<- 1
@@ -10752,7 +10753,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		insignat				<- "Wed_Dec_18_11:37:00_2013"					
 		clu.infilexml.opt		<- "mph4clutx4tip"
 		clu.infilexml.template	<- "um192rhU2080"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')),sep='')
+		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',sep='')
 	}
 	if(0)
 	{
@@ -10764,7 +10765,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		insignat				<- "Wed_Dec_18_11:37:00_2013"					
 		clu.infilexml.opt		<- "mph4clutx4tip"
 		clu.infilexml.template	<- "um192rhU2080"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')),sep='')
+		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',sep='')
 	}	
 	if(1)
 	{		
@@ -10776,7 +10777,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
 		clu.infilexml.opt		<- "clrh80"
 		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')),sep='')
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}
 	if(0)
 	{		
@@ -10788,7 +10789,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
 		clu.infilexml.opt		<- "clrh80"
 		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')),sep='')
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}
 	if(exists("argv"))
 	{
@@ -10855,6 +10856,11 @@ hivc.prog.betareg.estimaterisks<- function()
 									method.nodectime= return(substr(arg,19,nchar(arg))),NA)	}))
 		if(length(tmp)>0) method.nodectime<- tmp[1]		
 	}	
+	clu.infile		<- infile
+	clu.indir		<- indir
+	clu.insignat	<- insignat	
+	outfile			<- paste( outfile, ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')), sep='')
+	
 	if(verbose)
 	{
 		print(indir)
@@ -10871,11 +10877,6 @@ hivc.prog.betareg.estimaterisks<- function()
 		print(method.risk)
 		print(method.nodectime)
 	}
-	clu.infile		<- infile
-	clu.indir		<- indir
-	clu.insignat	<- insignat
-	
-	
 	if(method.nodectime=='any')
 		method		<- paste(method,'a',sep='')
 	if(method.nodectime=='map')
