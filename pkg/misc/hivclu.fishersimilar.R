@@ -6259,10 +6259,23 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 									},by='risk']))
 			cens.table[, t.period:=cens.table[, substr(factor, nchar(factor), nchar(factor))]]
 			cens.table[, factor2:=cens.table[, substr(factor, 1, nchar(factor)-2)]]
+			cens.table		<- merge(cens.table, cens.table[, list(factor=factor, p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
+			#	adjust for censoring, keeping number of undiagnosed as in tperiod=='2'
+			cens.table[, n.adjbyNU:=n]
 			for(f in c('U','UAy','UAm'))
 				for(z in cens.table[, unique(t.period)])	
-					set(cens.table, cens.table[, which(factor2==f & stat=='X.msm' & t.period==z)], 'n',  cens.table[which(factor2==f & stat=='X.msm' & t.period%in%c('2',z)), max(n)])
-			cens.table		<- merge(cens.table, cens.table[, list(factor=factor, p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))			
+					set(cens.table, cens.table[, which(factor2==f & stat=='X.msm' & t.period==z)], 'n.adjbyNU',  cens.table[which(factor2==f & stat=='X.msm' & t.period%in%c('2',z)), max(n.adjbyNU)])
+			#	adjust for censoring, keeping proportion of undiagnosed as in tperiod=='2'
+			cens.table[, n.adjbyPU:=n]
+			for(z in run.tp[, unique(t.period)])
+			{
+				tmp		<- rbind(	unadjusted	= sapply(c('U','UAy','UAm'), function(f2)	tmp2	<- subset(run.tp, factor==f2 & stat=='cohort' & t.period==z)[, p]),
+									adjusted	= sapply(c('U','UAy','UAm'), function(f2)	tmp2	<- subset(run.tp, factor==f2 & stat=='cohort' & t.period%in%c('2',z))[, max(p) ])		)						
+				tmp		<- run.tp[which(stat=='cohort' & t.period==z), sum[1] * tmp['adjusted',] * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
+				for(f in c('U','UAy','UAm'))
+					set(run.tp, run.tp[, which(factor==f & stat=='cohort' & t.period==z)], 'n.adjbyPU',  tmp[f])				
+			}
+			cens.table	<- merge(cens.table, cens.table[, list(factor=factor, p.adjbyNU= n.adjbyNU/sum(n.adjbyNU, na.rm=TRUE), p.adjbyPU= n.adjbyPU/sum(n.adjbyPU, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
 			#	if 'tp' is not '', reduce data to t.period
 			if(tp!='')
 			{
@@ -9879,14 +9892,12 @@ project.athena.Fisheretal.sensitivity<- function()
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	method.risk				<- c(	'm21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp',
-									'm21st.cas.clu','m2wmx.cas.clu','m2t.cas.clu','m2wmx.tp.clu',
-									'm21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj',
-									'm21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp.adj',
-									'm2B1st.cas','m2Bwmx.cas','m2Bt.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4',
+	method.risk				<- c(	'm2B1st.cas','m2Bwmx.cas','m2Bt.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4',
 									'm2B1st.cas.adj','m2Bwmx.cas.adj','m2Bt.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj',
-									'm3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo',
-									'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tnic.clu','m3.tniv.clu','m3.tnicvNo.clu',
+									'm2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens',
+									'm2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens',
+									'm3.i','m3.ni','m3.nic','m3.nicv','m3.tni','m3.tnic','m3.tnicv','m3.tniv','m3.tnicvNo',
+									'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.nicv.clu','m3.tni.clu','m3.tnic.clu','m3.tnicv.clu','m3.tniv.clu','m3.tnicvNo.clu',
 									'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj',
 									'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj')
 							
@@ -10010,7 +10021,8 @@ project.athena.Fisheretal.sensitivity<- function()
 					cat(paste('\nprocess file=',file))
 					tmp	<- load(tmp)					
 					ans	<- ans$risk.table
-					ans	<- merge(ans, ans[, list(risk=risk, factor=factor, prop= round( n/sum(n), d=3)  ), by='stat'], by=c('risk','factor','stat'))
+					if(!any(colnames(ans)=='p'))
+						ans	<- merge(ans, ans[, list(risk=risk, factor=factor, p= n/sum(n)  ), by='stat'], by=c('risk','factor','stat'))
 					ans[, method.risk:=method.risk]
 					ans[, method.dating:=method.dating]
 					ans[, method.nodectime:=method.nodectime]
@@ -10023,6 +10035,8 @@ project.athena.Fisheretal.sensitivity<- function()
 		save(runs.table, file=file)			
 	}
 	
+	file<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_Wed_Dec_18_11:37:00_2013_Yscore3da_model2_m2Bwmx.tp1.cens.R"
+	load(paste(indir, file, sep='/'))
 	#
 	#	MODEL 2
 	#
@@ -10064,6 +10078,9 @@ project.athena.Fisheretal.sensitivity<- function()
 	#	compare fit of cascade models with aic		 															 															 
 	tmp	<- subset(runs.fit, 	method.risk%in%c("m21st.cas","m2wmx.cas","m2t.cas") )
 	setkey(tmp, method.brl, method.dating, method.risk)
+	#	compare fit of models with reduced RR through cascade
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2B1st.cas' & stat=='RR')
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bt.cas' & stat=='RR')
 	tmp
 	#	cascade with m2wm.cas
 	subset(runs.risk, method.risk=="m2wmx.cas" & stat=='RR' & factor.ref=='ART.suA.Y' & method.brl=='3da')
@@ -10097,8 +10114,10 @@ project.athena.Fisheretal.sensitivity<- function()
 	#
 	#	MODEL 2B time trends
 	#
-	run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & stat=='P', c(risk, factor, stat, v, l95.bs, u95.bs))
-	run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & stat=='N', c(risk, factor, stat, v, l95.bs, u95.bs))	
+	run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & grepl('cens',method.risk) & !grepl('clu',method.risk) & stat=='P', c(risk, factor, stat, v, l95.bs, u95.bs, method.risk))
+	run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & grepl('adj',method.risk) & !grepl('clu',method.risk) & stat=='P', c(risk, factor, stat, v, l95.bs, u95.bs, method.risk))
+	run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & grepl('cens',method.risk) & grepl('clu',method.risk) & stat=='P', c(risk, factor, stat, v, l95.bs, u95.bs, method.risk))
+	#run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & stat=='N', c(risk, factor, stat, v, l95.bs, u95.bs, method.risk))	
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
@@ -10136,15 +10155,27 @@ project.athena.Fisheretal.sensitivity<- function()
 					'ART initiated,\nViral load permanently\nsuppressed', 
 					'ART initiated,\nViral load not permanently\nsuppressed')
 	tmp		<- data.table( factor.legend= factor(tmp), factor=c("UAy","UAm","U","Dtl500","Dtl350","Dtg500","Dt.NA","DAy","DAm","ART.vlNA","ART.suA.Y","ART.suA.N"))
-	run.tp	<- merge(run.tp, tmp, by='factor')				
+	run.tp	<- merge(run.tp, tmp, by='factor')	
+	run.tp	<- merge( run.tp, run.tp[, list(sum=sum(n)),by=c('stat','t.period')],by=c('stat','t.period') )
+	subset(run.tp, stat=='cohort' & cascade.stage=='Undiagnosed')
 	#	PYIW adjusted for censoring
 	run.tp[, na:= n] 
+	run.tp[, propa:= prop] 
 	for(z in run.tp[, unique(t.period)])
-	{		
-		set(run.tp, run.tp[, which(factor=='U' & stat=='cohort' & t.period==z)], 'na',  run.tp[which(factor=='U' & stat=='cohort' & t.period%in%c('2',z)), max(na)])
-		set(run.tp, run.tp[, which(factor=='UAy' & stat=='cohort' & t.period==z)], 'na',  run.tp[which(factor=='UAy' & stat=='cohort' & t.period%in%c('2',z)), max(na)])
-		set(run.tp, run.tp[, which(factor=='UAm' & stat=='cohort' & t.period==z)], 'na',  run.tp[which(factor=='UAm' & stat=='cohort' & t.period%in%c('2',z)), max(na)])		
+	{
+		tmp		<- rbind(	unadjusted=sapply(c('U','UAy','UAm'), function(f2)	tmp2	<- subset(run.tp, factor==f2 & stat=='cohort' & t.period==z)[, propa ]),
+							adjusted=sapply(c('U','UAy','UAm'), function(f2)	tmp2	<- subset(run.tp, factor==f2 & stat=='cohort' & t.period%in%c('2',z))[, max(propa) ])		)						
+		tmp		<- run.tp[which(stat=='cohort' & t.period==z), sum[1] * tmp['adjusted',] * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
+		for(f in c('U','UAy','UAm'))
+			set(run.tp, run.tp[, which(factor==f & stat=='cohort' & t.period==z)], 'na',  tmp[f])				
 	}
+	run.tp[, propa:= NULL]
+	#for(z in run.tp[, unique(t.period)])
+	#{		
+	#	set(run.tp, run.tp[, which(factor=='U' & stat=='cohort' & t.period==z)], 'na',  run.tp[which(factor=='U' & stat=='cohort' & t.period%in%c('2',z)), max(na)])
+	#	set(run.tp, run.tp[, which(factor=='UAy' & stat=='cohort' & t.period==z)], 'na',  run.tp[which(factor=='UAy' & stat=='cohort' & t.period%in%c('2',z)), max(na)])
+	#	set(run.tp, run.tp[, which(factor=='UAm' & stat=='cohort' & t.period==z)], 'na',  run.tp[which(factor=='UAm' & stat=='cohort' & t.period%in%c('2',z)), max(na)])		
+	#}
 	run.tp	<- merge( run.tp, run.tp[, list(factor=factor, propa= na/sum(na, na.rm=TRUE)), by=c('t.period','stat')], by=c('t.period','stat','factor'))
 	
 	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=prop, colour=factor, group=factor)) + labs(x="calendar time periods", y="proportion PYIW") + #scale_colour_brewer(palette="Set3") + 
@@ -10223,6 +10254,7 @@ project.athena.Fisheretal.sensitivity<- function()
 	
 
 	#	Table 3
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicvNo') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )	
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicv.adj') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.adj') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
@@ -10808,7 +10840,8 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	check if we have precomputed tables
 	#
-	if(1)
+	X.tables			<- NULL
+	if(0)
 	{
 		save.file		<- NA
 		if(grepl('m21st',method.risk))		save.file	<- 'm21st'
