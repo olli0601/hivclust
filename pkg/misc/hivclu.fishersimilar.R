@@ -8747,6 +8747,18 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	YX.m2[, t.ARTSu_T1:=NULL]
 	YX.m2[, stage.orig:=NULL]
 	gc()
+	#
+	#	add tperiod
+	#
+	if('t.period'%in%colnames(YX.m2))
+	{
+		cat(paste('\nadding CD4t.tperiod\n'))	
+		YX.m2[, CD41st.tperiod:= paste(CD41st, t.period,sep='.')]
+		YX.m2[, CD4t.tperiod:= paste(CD4t, t.period,sep='.')]
+		set(YX.m2, NULL, 'CD4t.tperiod', YX.m2[, factor(as.character(CD4t.tperiod))])
+		set(YX.m2, NULL, 'CD41st.tperiod', YX.m2[, factor(as.character(CD41st.tperiod))])		
+	}
+	gc()	
 	YX.m2
 }
 ######################################################################################
@@ -9056,6 +9068,18 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	YX.m2[, PoslRNA_TL:=NULL]
 	YX.m2[, lRNA_TL:=NULL]
 	gc()
+	#
+	#	add tperiod
+	#
+	if('t.period'%in%colnames(YX.m2))
+	{
+		cat(paste('\nadding CD4t.tperiod\n'))	
+		YX.m2[, CD41st.tperiod:= paste(CD41st, t.period,sep='.')]
+		YX.m2[, CD4t.tperiod:= paste(CD4t, t.period,sep='.')]
+		set(YX.m2, NULL, 'CD4t.tperiod', YX.m2[, factor(as.character(CD4t.tperiod))])
+		set(YX.m2, NULL, 'CD41st.tperiod', YX.m2[, factor(as.character(CD41st.tperiod))])		
+	}
+	gc()	
 	YX.m2
 }
 ######################################################################################
