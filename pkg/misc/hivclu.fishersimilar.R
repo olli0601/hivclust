@@ -4824,7 +4824,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		}
 		if(method%in%c(	'm4.Bwmxv','m4.Bwmxv.clu','m4.Bwmxv.adj','m4.Bwmxv.clu.adj','m4.Bwmxv.cens','m4.Bwmxv.clu.cens','m4.Bwmxv.censp','m4.Bwmxv.clu.censp'))				
 		{  
-			YX				<- subset(YX, !is.na(lRNA.mx) & !is.na(Am) & !is.na(Ay) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
+			YX				<- subset(YX, !is.na(lRNA.mx) & !is.na(Acute) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
 			#	censoring adjustment of CD4t
 			if(grepl('cens', method))
 			{	
@@ -4849,13 +4849,12 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}												
 			#
-			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.5,4.5), degree=1)+stage+Am+Ay-1'
-			include.colnames<- c('score.Y','w','stage','lRNA.mx','Ay','Am')			
+			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.5,4.5), degree=1)+stage+Acute-1'
+			include.colnames<- c('score.Y','w','stage','lRNA.mx','Acute')			
 			predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
 											lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
-											Ay=factor('No',levels=c('No','Yes')), Am=factor('No',levels=c('No','Yes')), w=1.)			
-			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref='Dtg500')
-			risk.df			<- rbind(risk.df, data.table( risk= c('Ay','Am'), factor='Yes', risk.ref= c('Ay','Am'), factor.ref='No')) 			
+											Acute=factor('No',levels=c('No','Maybe','Yes')), w=1.)						
+			risk.df			<- data.table( risk='Acute', factor=c('Yes','Maybe','No'), risk.ref= 'Acute', factor.ref='No') 			
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			risk.df[, coef.ref:=paste(risk.df[,risk.ref],risk.df[,factor.ref],sep='')]
 			risk.df			<- merge(risk.df, risk.df[, {
@@ -6577,7 +6576,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=factor.ref.v)
-			risk.df			<- rbind(risk.df, data.table( risk= c('Ay','Am'), factor='Yes', risk.ref= c('Ay','Am'), factor.ref='No'))
+			risk.df			<- rbind(risk.df, data.table( risk='Acute', factor=c('No','Maybe','Yes'), risk.ref='Acute', factor.ref='No'))
 			#	risk tables
 			risk.table		<- do.call('rbind',list(
 							risk.df[,	{
@@ -9402,25 +9401,21 @@ project.athena.Fisheretal.YX.model4.stratify.Diagnosed<- function(YX.m2, df.immu
 	#
 	#	set acute as independent additive effect
 	#
-	YX.m2[, Am:='No']
-	YX.m2[, Ay:='No']
-	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'Ay', 'Yes' )
-	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'Am', 'Yes' )
-	set(YX.m2, NULL, 'Am', YX.m2[, factor(Am, levels=c('No','Yes'))])
-	set(YX.m2, NULL, 'Ay', YX.m2[, factor(Ay, levels=c('No','Yes'))])
+	YX.m2[, Acute:='No']
+	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'Acute', 'Yes' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'Acute', 'Maybe' )
+	set(YX.m2, NULL, 'Acute', YX.m2[, factor(Acute, levels=c('No','Maybe','Yes'))])
+	
 	#
 	#	set acute as independent additive effect and ignore missing Acute
 	#
-	YX.m2[, AmNo:=NA_character_]
-	YX.m2[, AyNo:=NA_character_]	
-	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'AyNo', 'Yes' )
-	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 >= 0.25)], 'AyNo', 'No' )
-	set(YX.m2, YX.m2[, which((t.isAcute=='No' | t.isAcute=='Maybe') & stage=='Diag')], 'AyNo', 'No' )	
-	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'AmNo', 'Yes' )
-	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 >= 0.25)], 'AmNo', 'No' )
-	set(YX.m2, YX.m2[, which((t.isAcute=='No' | t.isAcute=='Yes') & stage=='Diag')], 'AmNo', 'No' )	
-	set(YX.m2, NULL, 'AmNo', YX.m2[, factor(AmNo, levels=c('No','Yes'))])
-	set(YX.m2, NULL, 'AyNo', YX.m2[, factor(AyNo, levels=c('No','Yes'))])	
+	YX.m2[, AcuteNo:=NA_character_]	
+	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'AcuteNo', 'Yes' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 >= 0.25)], 'AcuteNo', 'No' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'AcuteNo', 'Maybe' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 >= 0.25)], 'AcuteNo', 'No' )
+	set(YX.m2, YX.m2[, which(t.isAcute=='No' & stage=='Diag')], 'AcuteNo', 'No' )	
+	set(YX.m2, NULL, 'AcuteNo', YX.m2[, factor(AcuteNo, levels=c('No','Maybe','Yes'))])	
 	#
 	#	add max viral load
 	#
@@ -9443,9 +9438,9 @@ project.athena.Fisheretal.YX.model4.stratify.Diagnosed<- function(YX.m2, df.immu
 	#	subset
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD4t, CD4t.tperiod, Am, Ay, AmNo, AyNo  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD4t, CD4t.tperiod, Acute, AcuteNo  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD4t, CD4t.tperiod, Am, Ay, AmNo, AyNo  ))
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD4t, CD4t.tperiod, Acute, AcuteNo  ))
 	if(return.only.Diag)
 		YX.m2	<- subset(YX.m2, stage=='Diag')
 	gc()
