@@ -655,9 +655,8 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#	try this censp first			
 	method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.cens','m2Bwmx.clu.cens','m2Bwmx.censp','m2Bwmx.clu.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )			
 	# use to pre-compute tables
-	method.risk	<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj'	)
-	method.risk	<- c( 	'm3.tnicvNo.clu.adj'	)
-	#method.risk	<- c( 	'm2B1st.cas.clu.adj' )
+	method.risk	<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj'	)	
+	method.risk	<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj' )
 	
 	dummy	<- sapply(method.risk, function(x)
 			{
