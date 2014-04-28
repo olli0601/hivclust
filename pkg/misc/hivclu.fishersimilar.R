@@ -4822,6 +4822,52 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))
 		}
+		if(method%in%c(	'm4.Bwmxv','m4.Bwmxv.clu','m4.Bwmxv.adj','m4.Bwmxv.clu.adj','m4.Bwmxv.cens','m4.Bwmxv.clu.cens','m4.Bwmxv.censp','m4.Bwmxv.clu.censp'))				
+		{  
+			YX				<- subset(YX, !is.na(lRNA.mx) & !is.na(Am) & !is.na(Ay) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
+			#	censoring adjustment of CD4t
+			if(grepl('cens', method))
+			{	
+				set(YX, NULL, 'stage', factor(as.character(YX[,CD4t.tperiod])))
+				tmp			<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')	
+				if(grepl('censp', method))
+					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
+				else
+					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
+				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
+				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
+				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
+			}
+			set(YX, NULL, 'stage', factor(as.character(YX[,CD4t])))
+			#	sequence adjustment (not censoring) of CD4t
+			if(grepl('adj', method))
+			{
+				tmp			<- ifelse(grepl(method, 'clu'), 'adj.clu', 'adj.seq')
+				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )				
+				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
+			}												
+			#
+			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.5,4.5), degree=1)+stage+Am+Ay-1'
+			include.colnames<- c('score.Y','w','stage','lRNA.mx','Ay','Am')			
+			predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
+											lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
+											Ay=factor('No',levels=c('No','Yes')), Am=factor('No',levels=c('No','Yes')), w=1.)			
+			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref='Dtg500')
+			risk.df			<- rbind(risk.df, data.table( risk= c('Ay','Am'), factor='Yes', risk.ref= c('Ay','Am'), factor.ref='No')) 			
+			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
+			risk.df[, coef.ref:=paste(risk.df[,risk.ref],risk.df[,factor.ref],sep='')]
+			risk.df			<- merge(risk.df, risk.df[, {
+								tmp				<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( lRNA.mx, na.rm=TRUE )]
+								list(lRNA.mx=ifelse(is.nan(tmp), YX[, mean( lRNA.mx, na.rm=TRUE )], tmp))
+							}, by='coef'], by='coef')		
+			tmp				<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
+			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
+			setnames(risk.df, 'n', 'PY')
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
+		}	
+		
 		if(method%in%c('m3.tniv','m3.tniv.clu'))
 		{
 			#	TODO
@@ -6468,7 +6514,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])
-			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
+			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])									
 			cens.table		<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
@@ -6531,6 +6577,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=factor.ref.v)
+			risk.df			<- rbind(risk.df, data.table( risk= c('Ay','Am'), factor='Yes', risk.ref= c('Ay','Am'), factor.ref='No'))
 			#	risk tables
 			risk.table		<- do.call('rbind',list(
 							risk.df[,	{
@@ -6549,7 +6596,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')
 									},by='risk']))
-			risk.table		<- merge(risk.table, risk.table[, list(factor=factor, p= n/sum(n, na.rm=TRUE)), by='stat'], by=c('stat','factor'))
+			risk.table		<- merge(risk.table, risk.table[, list(factor=factor, p= n/sum(n, na.rm=TRUE)), by=c('stat','risk')], by=c('stat','risk','factor'))
 			ans$risk.table	<- risk.table
 			#	bias + clustering adjustment
 			ans$adj.clu			<- risk.table[, list(w.b= p[stat=='X.msm']/p[stat=='X.clu']),by=c('risk','factor')]
@@ -11657,7 +11704,9 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(grepl('m2',method.risk))
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
 	if(grepl('m3',method.risk))
-		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')	
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')	
+	if(grepl('m4',method.risk))
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model4_',method.risk,'.R',sep='')		
 	tmp					<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, plot.file.or=NA, bs.n=1e3, resume=resume, save.file=save.file, method=method.risk)					
 	
 	stop()
