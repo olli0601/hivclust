@@ -1899,7 +1899,7 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 	list(tpairs=df.tpairs.brl, linked=msm.linked, unlinked=msm.unlinked.bytime)	
 }
 ######################################################################################
-project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infile.viro, infile.immu, infile.treatment, infiletree=NULL, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'))
+project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infile.viro, infile.immu, infile.treatment, infiletree=NULL, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'), t.recent.endctime=2013.)
 {
 	#	adjust.AcuteByNegT<- 0.75
 	#	fixed input args in !is.na(infiletree)
@@ -1982,6 +1982,8 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	#
 	#
 	msm.recent		<- subset( df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') )
+	msm.recent		<- subset(msm.recent, AnyPos_T1<t.recent.endctime)
+	cat(paste('\nmsm before endctime',t.recent.endctime,': #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
 	setkey(msm.recent, isAcute)
 	msm.recent		<- msm.recent[adjust.AcuteSelect,]
 	set(msm.recent, NULL, 'Trm', msm.recent[,factor(as.character(Trm))])
@@ -2014,8 +2016,10 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 		clumsm.recent	<- clumsm.info[adjust.AcuteSelect,] 
 		clumsm.recent	<- subset( clumsm.recent, Trm%in%c('MSM','BI') )
 		set(clumsm.recent, NULL, 'Trm', clumsm.recent[,factor(as.character(Trm))])
+		clumsm.recent		<- subset(clumsm.recent, AnyPos_T1<t.recent.endctime)
+		cat(paste('\nmsm clustering before endctime',t.recent.endctime,': #seq=',nrow(clumsm.recent),'#patient=',length(clumsm.recent[,unique(Patient)])))		
 		# 	recent seroconcerverters in cluster
-		clumsm.recentsc	<- subset( clumsm.recent, !is.na(NegT))
+		clumsm.recentsc	<- subset( clumsm.recent, !is.na(NegT))		
 		cat(paste('\nmsm clustering: #seq=',nrow(clumsm.info),'#patient=',length(clumsm.info[,unique(Patient)]),'#cluster=',length(clumsm.info[,unique(cluster)])))		
 		cat(paste('\nmsm clustering isAcute: #seq=',nrow(clumsm.recent),'#patient=',length(clumsm.recent[,unique(Patient)]),'#cluster=',length(clumsm.recent[,unique(cluster)])))
 		cat(paste('\nmsm clustering isAcute & !is.na(NegT): #seq=',nrow(clumsm.recentsc),'#patient=',length(clumsm.recentsc[,unique(Patient)]),'#cluster=',length(clumsm.recentsc[,unique(cluster)])))
@@ -6267,13 +6271,13 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 					set(cens.table, cens.table[, which(factor2==f & stat=='X.msm' & t.period==z)], 'n.adjbyNU',  cens.table[which(factor2==f & stat=='X.msm' & t.period%in%c('2',z)), max(n.adjbyNU)])
 			#	adjust for censoring, keeping proportion of undiagnosed as in tperiod=='2'
 			cens.table[, n.adjbyPU:=n]
-			for(z in run.tp[, unique(t.period)])
+			for(z in cens.table[, unique(t.period)])
 			{
-				tmp		<- rbind(	unadjusted	= sapply(c('U','UAy','UAm'), function(f2)	tmp2	<- subset(run.tp, factor==f2 & stat=='cohort' & t.period==z)[, p]),
-									adjusted	= sapply(c('U','UAy','UAm'), function(f2)	tmp2	<- subset(run.tp, factor==f2 & stat=='cohort' & t.period%in%c('2',z))[, max(p) ])		)						
-				tmp		<- run.tp[which(stat=='cohort' & t.period==z), sum[1] * tmp['adjusted',] * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
+				tmp		<- rbind(	unadjusted	= sapply(c('U','UAy','UAm'), function(f2)	tmp2	<- subset(cens.table, factor==f2 & stat=='cohort' & t.period==z)[, p]),
+									adjusted	= sapply(c('U','UAy','UAm'), function(f2)	tmp2	<- subset(cens.table, factor==f2 & stat=='cohort' & t.period%in%c('2',z))[, max(p) ])		)						
+				tmp		<- cens.table[which(stat=='cohort' & t.period==z), sum[1] * tmp['adjusted',] * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
 				for(f in c('U','UAy','UAm'))
-					set(run.tp, run.tp[, which(factor==f & stat=='cohort' & t.period==z)], 'n.adjbyPU',  tmp[f])				
+					set(cens.table, cens.table[, which(factor==f & stat=='cohort' & t.period==z)], 'n.adjbyPU',  tmp[f])				
 			}
 			cens.table	<- merge(cens.table, cens.table[, list(factor=factor, p.adjbyNU= n.adjbyNU/sum(n.adjbyNU, na.rm=TRUE), p.adjbyPU= n.adjbyPU/sum(n.adjbyPU, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
 			#	if 'tp' is not '', reduce data to t.period
@@ -10688,8 +10692,10 @@ hivc.prog.betareg.estimaterisks<- function()
 	infile.treatment.all	<- paste(indircov,"ATHENA_2013_03_Regimens_AllMSM.R",sep='/')		
 	
 	t.period				<- 1/8
-	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+	t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2013-03-01"))	#hivc.db.Date2numeric(as.Date("2011-01-01"))
+	t.recent.endctime		<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period
 	resume					<- 1
 	verbose					<- 1
 	if(0)
@@ -10702,7 +10708,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		insignat				<- "Wed_Dec_18_11:37:00_2013"					
 		clu.infilexml.opt		<- "mph4clutx4tip"
 		clu.infilexml.template	<- "um192rhU2080"	
-		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
+		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')),sep='')
 	}
 	if(0)
 	{
@@ -10714,7 +10720,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		insignat				<- "Wed_Dec_18_11:37:00_2013"					
 		clu.infilexml.opt		<- "mph4clutx4tip"
 		clu.infilexml.template	<- "um192rhU2080"	
-		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
+		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')),sep='')
 	}	
 	if(1)
 	{		
@@ -10726,7 +10732,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
 		clu.infilexml.opt		<- "clrh80"
 		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')),sep='')
 	}
 	if(0)
 	{		
@@ -10738,7 +10744,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
 		clu.infilexml.opt		<- "clrh80"
 		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')),sep='')
 	}
 	if(exists("argv"))
 	{
@@ -10841,7 +10847,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	check if we have precomputed tables
 	#
 	X.tables			<- NULL
-	if(1)
+	if(0)
 	{
 		save.file		<- NA
 		if(grepl('m21st',method.risk))		save.file	<- 'm21st'
@@ -10860,9 +10866,9 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')		
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables_',save.file,'.R',sep='')
-		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=save.file, method=method.risk)		
+		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=save.file, method=method.risk)
+		if(!is.null(X.tables))	cat('\nloaded X.tables')
 	}
-
 	#
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
 	#
@@ -10874,7 +10880,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	if(1)
 	{
-		tmp					<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'))	
+		tmp					<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime)	
 		df.all.allmsm		<- tmp$df.all	
 		df.viro.allmsm		<- tmp$df.viro
 		df.immu.allmsm		<- tmp$df.immu
@@ -10886,7 +10892,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get data relating to study population (subtype B sequ)
 	#
-	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'))	
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime)	
 	df.all			<- tmp$df.all
 	df.denom		<- tmp$df.select
 	df.viro			<- tmp$df.viro
