@@ -648,15 +648,14 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	method.risk	<- c(	'm2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens')	
 	method.risk	<- c(	'm3.nicv','m3.tnicv','m3.tnicvNo','m3.nicv.adj','m3.tnicv.adj','m3.tnicvNo.adj','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu','m2Bwmx.tp1.cens')	
 	#	if below works, also do this censp 
-	method.risk	<- c(	'm2B1st.cas.cens','m2B1st.clu.cens','m2B1st.cas.censp','m2B1st.clu.censp',
-						'm2Bt.cas.cens','m2Bt.cas.clu.cens','m2Bt.cas.censp','m2Bt.cas.clu.censp',
-						'm3.nicv.cens','m3.tnicv.cens','m3.nicv.clu.cens','m3.tnicv.clu.cens','m3.tnicvNo.cens',
-						'm3.nicv.censp','m3.tnicv.censp','m3.nicv.clu.censp','m3.tnicv.clu.censp','m3.tnicvNo.censp')
+	method.risk	<- c(	'm2B1st.cas.cens','m2B1st.cas.clu.cens','m2B1st.cas.censp','m2B1st.cas.clu.censp','m2Bt.cas.cens','m2Bt.cas.clu.cens','m2Bt.cas.censp','m2Bt.cas.clu.censp'		)
+	#method.risk	<- c(	'm3.nicv.cens','m3.tnicv.cens','m3.nicv.clu.cens','m3.tnicv.clu.cens','m3.tnicvNo.cens','m3.nicv.censp','m3.tnicv.censp','m3.nicv.clu.censp','m3.tnicv.clu.censp','m3.tnicvNo.censp')
 	#	try this censp first			
-	method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.cens','m2Bwmx.clu.cens','m2Bwmx.censp','m2Bwmx.clu.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )			
+	#method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
+	#method.risk	<- c(	'm2Bwmx.cas.cens','m2Bwmx.cas.clu.cens','m2Bwmx.cas.censp','m2Bwmx.cas.clu.censp' )
 	# use to pre-compute tables
-	method.risk	<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj'	)	
-	method.risk	<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj' )
+	#method.risk	<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj'	)	
+	#method.risk	<- c( 	'm4.Bwmxv.clu.adj' )
 	
 	dummy	<- sapply(method.risk, function(x)
 			{
@@ -664,6 +663,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 				cat(cmd)
 				#stop()
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="1800mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
 				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="69000mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
