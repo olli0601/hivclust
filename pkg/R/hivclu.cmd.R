@@ -408,7 +408,7 @@ hivc.cmd.get.firstseq<- function(indir, infile, signat.in, signat.out, outdir=in
 }	
 ######################################################################################
 #' @export
-hivc.cmd.betareg.estimate.risks<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, outdir=indir, outfile=infile, prog= PR.BETAREG.ESTRISK, resume=1, verbose=1)
+hivc.cmd.betareg.estimate.risks<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, outdir=indir, outfile=infile, prog= PR.BETAREG.ESTRISK, resume=1, verbose=1)
 {
 	cmd		<- "#######################################################
 # start: run beta regression and estimate risks
@@ -416,7 +416,7 @@ hivc.cmd.betareg.estimate.risks<- function(indir, infile, insignat, indircov, in
 	cmd		<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
 	#default commands
 	cmd		<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov, " -infiletree=",infiletree, sep='')
-	cmd		<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -method=",method," -method.nodectime=",method.nodectime," -method.risk=",method.risk, sep='')
+	cmd		<- paste(cmd," -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -method=",method," -method.nodectime=",method.nodectime," -method.risk=",method.risk, " -method.recentctime=",method.recentctime,sep='')
 	cmd		<- paste(cmd," -outdir=",outdir," -outfile=",outfile, sep='')
 	#verbose stuff
 	cmd		<- paste(cmd,paste("\necho \'end ",prog,"\'",sep=''))

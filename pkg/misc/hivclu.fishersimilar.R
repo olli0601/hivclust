@@ -11333,14 +11333,12 @@ hivc.prog.betareg.estimaterisks<- function()
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
-	#t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2011-01-01"))
-	t.recent.endctime		<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period
 	resume					<- 1
 	verbose					<- 1
 	if(0)
 	{
 		method					<- '3c'
+		method.recentctime		<- '2013-03-01'
 		method.nodectime		<- 'any'
 		method.risk				<- 'm21st.cas'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -11353,6 +11351,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(0)
 	{
 		method					<- '3d'
+		method.recentctime		<- '2013-03-01'
 		method.nodectime		<- 'any'
 		method.risk				<- 'm21st.cas'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -11362,21 +11361,10 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "um192rhU2080"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',sep='')
 	}	
-	if(1)
-	{		
-		method					<- '3d'
-		method.nodectime		<- 'any'
-		method.risk				<- 'm2B1st.cas'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		clu.infilexml.opt		<- "clrh80"
-		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
-	}
 	if(0)
 	{		
 		method					<- '3c'
+		method.recentctime		<- '2013-03-01'
 		method.nodectime		<- 'any'
 		method.risk				<- 'm21st.cas'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -11386,6 +11374,33 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}
+	if(1)
+	{		
+		method					<- '3d'
+		method.recentctime		<- '2013-03-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm2B1st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+	}	
+	if(0)
+	{		
+		method					<- '3d'
+		method.recentctime		<- '2013-03-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm2B1st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+	}
+	
 	if(exists("argv"))
 	{
 		tmp<- na.omit(sapply(argv,function(arg)
@@ -11449,12 +11464,20 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,17),
 									method.nodectime= return(substr(arg,19,nchar(arg))),NA)	}))
-		if(length(tmp)>0) method.nodectime<- tmp[1]		
+		if(length(tmp)>0) method.nodectime<- tmp[1]			
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									method.recentctime= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method.recentctime<- tmp[1]	
+		
+		
 	}	
-	clu.infile		<- infile
-	clu.indir		<- indir
-	clu.insignat	<- insignat	
-	outfile			<- paste( outfile, ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')), sep='')
+	clu.infile			<- infile
+	clu.indir			<- indir
+	clu.insignat		<- insignat	
+	t.recent.endctime	<- hivc.db.Date2numeric(as.Date(method.recentctime))	
+	t.recent.endctime	<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period	
+	outfile				<- paste( outfile, ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')), sep='')
 	
 	if(verbose)
 	{
