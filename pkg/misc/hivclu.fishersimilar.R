@@ -3111,7 +3111,40 @@ project.athena.Fisheretal.YX.model4.v2<- function(YX, clumsm.info, vl.suppressed
 		sapply( list(YX.m2.fitmx, YX.m2.fitgm), '[[', 'pseudo.r.squared' )
 		AIC(YX.m2.fitmx, YX.m2.fitgm)
 	}
+	if(1)
+	{
+		YX.m4		<- project.athena.Fisheretal.YX.model4.stratify.Diagnosed(YX, df.immu, return.only.Diag=TRUE )
+		set(YX.m4, NULL, 'stage', YX.m4[, factor(as.character(CD4t))])		
+		#	non parametric fit for t.Age
+		#	suggests: Age knots 30, 45		
+		YX.m4s		<- subset( YX.m4, Acute=='No' )
+		ggplot(YX.m4s, aes(x = t.Age, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ stage, margins=TRUE)
 		
+		include.colnames	<- c('score.Y','w','stage','Acute','lRNA.mx','t.Age')
+		tmp					<- project.athena.Fisheretal.betareg(YX.m4, 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+bs(t.Age, knots=c(30,45), degree=1)+stage+Acute-1', include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
+		betafit.rr			<- tmp$betafit.rr
+		
+		#	non parametric fit for calendar time
+		#	suggests: knot at 2011, two degrees
+		ggplot(YX.m4s, aes(x = t, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ stage, margins=TRUE)
+		
+		include.colnames	<- c('score.Y','w','t','stage','Acute')
+		tmp					<- project.athena.Fisheretal.betareg(YX.m4, 'score.Y ~ bs(t, knots=c(2011), degree=2)+stage+Acute-1', include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
+		betafit.rr			<- tmp$betafit.rr
+		tmp					<- predict(betafit.rr, type='response', se.fit=TRUE)		
+		YX.m4[, score.Y.b:= tmp$fit]
+		YX.m4[, score.Y.su:= tmp$fit+tmp$se.fit]
+		YX.m4[, score.Y.sl:= tmp$fit-tmp$se.fit]
+		set(YX.m4, YX.m4[, which(score.Y.su>1)], 'score.Y.su', 1.)
+		set(YX.m4, YX.m4[, which(score.Y.sl<0)], 'score.Y.sl', 0.)
+		ggplot(YX.m4, aes(x = t, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + geom_ribbon(aes(ymin= score.Y.sl, ymax= score.Y.su, linetype=NA), alpha=0.3) + facet_grid(Acute ~ stage, margins=FALSE)
+		
+		#	add CDCC t.RegionHospital
+		include.colnames	<- c('score.Y','w','stage','Acute','lRNA.mx','t.Age','t','t.RegionHospital','t2.care.t1','CDCC')
+		tmp					<- project.athena.Fisheretal.betareg(YX.m4, 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+bs(t.Age, knots=c(30,45), degree=1)+bs(t, knots=c(2011), degree=2)+stage+Acute+t.RegionHospital+t2.care.t1+CDCC-1', include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
+		betafit.rr			<- tmp$betafit.rr
+		
+	}
 	
 }
 ######################################################################################
@@ -4824,7 +4857,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		}
 		if(method%in%c(	'm4.Bwmxv','m4.Bwmxv.clu','m4.Bwmxv.adj','m4.Bwmxv.clu.adj','m4.Bwmxv.cens','m4.Bwmxv.clu.cens','m4.Bwmxv.censp','m4.Bwmxv.clu.censp'))				
 		{  
-			YX				<- subset(YX, !is.na(lRNA.mx) & !is.na(Acute) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
+			if(!grepl('No', method))
+				YX			<- subset(YX, !is.na(lRNA.mx) & !is.na(Acute) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
+			if(grepl('No', method))
+				YX			<- subset(YX, !is.na(lRNA.mx) & !is.na(AcuteNo) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
 			#	censoring adjustment of CD4t
 			if(grepl('cens', method))
 			{	
@@ -4832,7 +4868,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				tmp			<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')	
 				if(grepl('censp', method))
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
-				else
+				if(!grepl('censp', method))
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
 				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
 				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
@@ -6595,19 +6631,19 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			#	risk tables
 			risk.table		<- do.call('rbind',list(
 							risk.df[,	{
-										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+										z	<- table( YX[, risk, with=FALSE])
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.clu[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.clu[, risk, with=FALSE])
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.den[, risk, with=FALSE])
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+										z	<- table( X.msm[, risk, with=FALSE])
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')
 									},by='risk']))
 			risk.table		<- merge(risk.table, risk.table[, list(factor=factor, p= n/sum(n, na.rm=TRUE)), by=c('stat','risk')], by=c('stat','risk','factor'))
@@ -9420,7 +9456,8 @@ project.athena.Fisheretal.YX.model4.stratify.Diagnosed<- function(YX.m2, df.immu
 	set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'Acute', 'Yes' )
 	set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'Acute', 'Maybe' )
 	set(YX.m2, NULL, 'Acute', YX.m2[, factor(Acute, levels=c('No','Maybe','Yes'))])
-	
+	#	CDCC
+	set(YX.m2, NULL, 'CDCC', YX.m2[, factor(CDCC)])
 	#
 	#	set acute as independent additive effect and ignore missing Acute
 	#
@@ -9453,9 +9490,9 @@ project.athena.Fisheretal.YX.model4.stratify.Diagnosed<- function(YX.m2, df.immu
 	#	subset
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD4t, CD4t.tperiod, Acute, AcuteNo  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD4t, CD4t.tperiod, Acute, AcuteNo, t.Age, t.RegionHospital, t2.care.t1  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD4t, CD4t.tperiod, Acute, AcuteNo  ))
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD4t, CD4t.tperiod, Acute, AcuteNo, t.Age, t.RegionHospital, t2.care.t1  ))
 	if(return.only.Diag)
 		YX.m2	<- subset(YX.m2, stage=='Diag')
 	gc()
