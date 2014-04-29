@@ -4849,12 +4849,24 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}												
 			#
-			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.5,4.5), degree=1)+stage+Acute-1'
-			include.colnames<- c('score.Y','w','stage','lRNA.mx','Acute')			
-			predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
-											lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
-											Acute=factor('No',levels=c('No','Maybe','Yes')), w=1.)						
-			risk.df			<- data.table( risk='Acute', factor=c('Yes','Maybe','No'), risk.ref= 'Acute', factor.ref='No') 			
+			if(grepl('No', method))
+			{
+				formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.5,4.5), degree=1)+stage+AcuteNo-1'
+				include.colnames<- c('score.Y','w','stage','lRNA.mx','AcuteNo')			
+				predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
+												lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
+												AcuteNo=factor('No',levels=c('No','Maybe','Yes')), w=1.)						
+				risk.df			<- data.table( risk='AcuteNo', factor=c('Yes','Maybe','No'), risk.ref= 'AcuteNo', factor.ref='No') 							
+			}
+			if(!grepl('No', method))
+			{
+				formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.5,4.5), degree=1)+stage+Acute-1'
+				include.colnames<- c('score.Y','w','stage','lRNA.mx','Acute')			
+				predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
+						lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
+						Acute=factor('No',levels=c('No','Maybe','Yes')), w=1.)						
+				risk.df			<- data.table( risk='Acute', factor=c('Yes','Maybe','No'), risk.ref= 'Acute', factor.ref='No') 							
+			}
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			risk.df[, coef.ref:=paste(risk.df[,risk.ref],risk.df[,factor.ref],sep='')]
 			risk.df			<- merge(risk.df, risk.df[, {
@@ -6576,7 +6588,10 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=factor.ref.v)
 			if(grepl('m4.Bwmx',method))
+			{
 				risk.df		<- rbind(risk.df, data.table( risk='Acute', factor=c('No','Maybe','Yes'), risk.ref='Acute', factor.ref='No'))
+				risk.df		<- rbind(risk.df, data.table( risk='AcuteNo', factor=c('No','Maybe','Yes'), risk.ref='AcuteNo', factor.ref='No'))
+			}
 			#	risk tables
 			risk.table		<- do.call('rbind',list(
 							risk.df[,	{
@@ -11260,7 +11275,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
 	t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
-	t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2011-01-01"))
+	#t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2011-01-01"))
 	t.recent.endctime		<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period
 	resume					<- 1
 	verbose					<- 1
