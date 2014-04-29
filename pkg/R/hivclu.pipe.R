@@ -656,7 +656,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk	<- c(	'm2Bwmx.cas.cens','m2Bwmx.cas.clu.cens','m2Bwmx.cas.censp','m2Bwmx.cas.clu.censp' )
 	# use to pre-compute tables
 	#method.risk	<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj'	)	
-	method.risk	<- c( 	'm4.Bwmxv.clu.adj' )
+	#method.risk	<- c( 	'm4.Bwmxv.clu.adj' )
 	
 	dummy	<- sapply(method.risk, function(x)
 			{
