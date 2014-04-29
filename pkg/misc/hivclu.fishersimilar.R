@@ -4854,88 +4854,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 										z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))
-		}
-		if(method%in%c(	'm4.Bwmxv','m4.Bwmxv.clu','m4.Bwmxv.adj','m4.Bwmxv.clu.adj','m4.Bwmxv.cens','m4.Bwmxv.clu.cens','m4.Bwmxv.censp','m4.Bwmxv.clu.censp',
-						'm4.BwmxvNo','m4.BwmxvNo.clu','m4.BwmxvNo.adj','m4.BwmxvNo.clu.adj','m4.BwmxvNo.cens','m4.BwmxvNo.clu.cens','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp',
-						'm4.BwmxvMv','m4.BwmxvMv.clu','m4.BwmxvMv.adj','m4.BwmxvMv.clu.adj','m4.BwmxvMv.cens','m4.BwmxvMv.clu.cens','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp',))				
-		{  
-			if(!grepl('No', method))
-				YX			<- subset(YX, !is.na(lRNA.mx) & !is.na(Acute) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
-			if(grepl('No', method))
-				YX			<- subset(YX, !is.na(lRNA.mx) & !is.na(AcuteNo) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
-			#	censoring adjustment of CD4t
-			if(grepl('cens', method))
-			{	
-				set(YX, NULL, 'stage', factor(as.character(YX[,CD4t.tperiod])))
-				tmp			<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')	
-				if(grepl('censp', method))
-					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
-				if(!grepl('censp', method))
-					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
-				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
-				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
-				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
-				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
-			}
-			set(YX, NULL, 'stage', factor(as.character(YX[,CD4t])))
-			#	sequence adjustment (not censoring) of CD4t
-			if(grepl('adj', method))
-			{
-				tmp			<- ifelse(grepl(method, 'clu'), 'adj.clu', 'adj.seq')
-				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )				
-				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
-				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
-			}												
-			#
-			if(!grepl('No', method) & !grepl('Mv', method))
-			{
-				formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.5,4.5), degree=1)+stage+Acute-1'
-				include.colnames<- c('score.Y','w','stage','lRNA.mx','Acute')			
-				predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
-						lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
-						Acute=factor('No',levels=c('No','Maybe','Yes')), w=1.)						
-				risk.df			<- data.table( risk='Acute', factor=c('Yes','Maybe','No'), risk.ref= 'Acute', factor.ref='No') 							
-			}
-			if(!grepl('No', method) & grepl('Mv', method))
-			{
-				formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+bs(t.Age, knots=c(30,45), degree=1)+bs(t, knots=c(2011), degree=2)+stage+Acute+t.RegionHospital+t2.care.t1+CDCC-1'
-				include.colnames<- c('score.Y','w','stage','lRNA.mx','Acute','t.Age','t','t.RegionHospital','t2.care.t1','CDCC')			
-				predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
-												lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
-												t.Age=subset(YX, stage=='Dtl350')[, mean(t.Age, na.rm=TRUE)],
-												t=subset(YX, stage=='Dtl350')[, mean(t, na.rm=TRUE)],
-												t.RegionHospital=factor('Amst', levels=YX[, levels(t.RegionHospital)]),
-												t2.care.t1=factor('other', levels=YX[, levels(t2.care.t1)]),
-												CDCC=factor('No', levels=YX[, levels(CDCC)]),
-												Acute=factor('No',levels=c('No','Maybe','Yes')), w=1.)						
-				risk.df			<- data.table( risk='Acute', factor=c('Yes','Maybe','No'), risk.ref= 'Acute', factor.ref='No') 							
-			}
-			if(grepl('No', method))
-			{
-				formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.5,4.5), degree=1)+stage+AcuteNo-1'
-				include.colnames<- c('score.Y','w','stage','lRNA.mx','AcuteNo')			
-				predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
-						lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
-						AcuteNo=factor('No',levels=c('No','Maybe','Yes')), w=1.)						
-				risk.df			<- data.table( risk='AcuteNo', factor=c('Yes','Maybe','No'), risk.ref= 'AcuteNo', factor.ref='No') 							
-			}
-			
-			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
-			risk.df[, coef.ref:=paste(risk.df[,risk.ref],risk.df[,factor.ref],sep='')]
-			risk.df			<- merge(risk.df, risk.df[, {
-										lRNA.mx		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( lRNA.mx, na.rm=TRUE )]
-										lRNA.mx		<- ifelse(is.nan(lRNA.mx), YX[, mean( lRNA.mx, na.rm=TRUE )], lRNA.mx)
-										t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
-										t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
-										t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
-										t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
-										list(lRNA.mx=lRNA.mx, t.Age=t.Age, t=t)
-							}, by='coef'], by='coef')		
-			tmp				<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
-			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
-			setnames(risk.df, 'n', 'PY')
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
-		}			
+		}				
 		if(method%in%c('m3.tniv','m3.tniv.clu'))
 		{
 			#	TODO
@@ -4992,6 +4911,47 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}
+			set(YX, NULL, 'stage', YX[, factor(as.character(ART.ntstage.c))])
+			#	sequence adjustment (not censoring)
+			if(grepl('adj', method))
+			{
+				tmp			<- ifelse(grepl(method, 'clu'), 'adj.clu', 'adj.seq')
+				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )				
+				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
+			}												
+			#
+			formula			<- 'score.Y ~ stage-1'
+			include.colnames<- c('score.Y','w','stage')
+			predict.df		<- data.table(stage=factor('ART.3.NRT.PI', levels=YX[, levels(stage)]), w=1.)			
+			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)])
+			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
+			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
+			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
+			tmp				<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
+			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
+			setnames(risk.df, 'n', 'PY')
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )						
+		}
+		if(method%in%c('m3.tnicMv','m3.tnicMv.clu','m3.tnicMv.adj','m3.tnicMv.clu.adj','m3.tnicMv.cens','m3.tnicMv.clu.cens','m3.tnicMv.censp','m3.tnicMv.clu.censp'))
+		{
+			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping) per time period
+			#	as loess suggests that non-recent NRTI+NNRTI is associated with increased score.Y
+			YX[, ART.ntstage.c.tperiod:= YX[, paste(ART.ntstage.c, t.period, sep='.')]]
+			set(YX, YX[,which(is.na(ART.ntstage.c))], 'ART.ntstage.c.tperiod', NA_character_)
+			set(YX, NULL, 'stage', YX[, factor(as.character(ART.ntstage.c.tperiod))])			
+			#	censoring adjustment
+			if(grepl('cens', method))
+			{				
+				tmp			<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')				
+				if(grepl('censp', method))
+					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
+				if(!grepl('censp', method))
+					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
+				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
+				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
+			}#TODO
 			set(YX, NULL, 'stage', YX[, factor(as.character(ART.ntstage.c))])
 			#	sequence adjustment (not censoring)
 			if(grepl('adj', method))
@@ -5106,7 +5066,88 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
 			setnames(risk.df, 'n', 'PY')
 			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
-		}			
+		}		
+		if(method%in%c(	'm4.Bwmxv','m4.Bwmxv.clu','m4.Bwmxv.adj','m4.Bwmxv.clu.adj','m4.Bwmxv.cens','m4.Bwmxv.clu.cens','m4.Bwmxv.censp','m4.Bwmxv.clu.censp',
+				'm4.BwmxvNo','m4.BwmxvNo.clu','m4.BwmxvNo.adj','m4.BwmxvNo.clu.adj','m4.BwmxvNo.cens','m4.BwmxvNo.clu.cens','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp',
+				'm4.BwmxvMv','m4.BwmxvMv.clu','m4.BwmxvMv.adj','m4.BwmxvMv.clu.adj','m4.BwmxvMv.cens','m4.BwmxvMv.clu.cens','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp'))				
+		{  
+			if(!grepl('No', method))
+				YX			<- subset(YX, !is.na(lRNA.mx) & !is.na(Acute) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
+			if(grepl('No', method))
+				YX			<- subset(YX, !is.na(lRNA.mx) & !is.na(AcuteNo) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
+			#	censoring adjustment of CD4t
+			if(grepl('cens', method))
+			{	
+				set(YX, NULL, 'stage', factor(as.character(YX[,CD4t.tperiod])))
+				tmp			<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')	
+				if(grepl('censp', method))
+					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
+				if(!grepl('censp', method))
+					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
+				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
+				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
+				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
+			}
+			set(YX, NULL, 'stage', factor(as.character(YX[,CD4t])))
+			#	sequence adjustment (not censoring) of CD4t
+			if(grepl('adj', method))
+			{
+				tmp			<- ifelse(grepl(method, 'clu'), 'adj.clu', 'adj.seq')
+				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )				
+				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
+			}												
+			#
+			if(!grepl('No', method) & !grepl('Mv', method))
+			{
+				formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.5,4.5), degree=1)+stage+Acute-1'
+				include.colnames<- c('score.Y','w','stage','lRNA.mx','Acute')			
+				predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
+						lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
+						Acute=factor('No',levels=c('No','Maybe','Yes')), w=1.)						
+				risk.df			<- data.table( risk='Acute', factor=c('Yes','Maybe','No'), risk.ref= 'Acute', factor.ref='No') 							
+			}
+			if(!grepl('No', method) & grepl('Mv', method))
+			{
+				formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+bs(t.Age, knots=c(30,45), degree=1)+bs(t, knots=c(2011), degree=2)+stage+Acute+t.RegionHospital+t2.care.t1+CDCC-1'
+				include.colnames<- c('score.Y','w','stage','lRNA.mx','Acute','t.Age','t','t.RegionHospital','t2.care.t1','CDCC')			
+				predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
+						lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
+						t.Age=subset(YX, stage=='Dtl350')[, mean(t.Age, na.rm=TRUE)],
+						t=subset(YX, stage=='Dtl350')[, mean(t, na.rm=TRUE)],
+						t.RegionHospital=factor('Amst', levels=YX[, levels(t.RegionHospital)]),
+						t2.care.t1=factor('other', levels=YX[, levels(t2.care.t1)]),
+						CDCC=factor('No', levels=YX[, levels(CDCC)]),
+						Acute=factor('No',levels=c('No','Maybe','Yes')), w=1.)						
+				risk.df			<- data.table( risk='Acute', factor=c('Yes','Maybe','No'), risk.ref= 'Acute', factor.ref='No') 							
+			}
+			if(grepl('No', method))
+			{
+				formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.5,4.5), degree=1)+stage+AcuteNo-1'
+				include.colnames<- c('score.Y','w','stage','lRNA.mx','AcuteNo')			
+				predict.df		<- data.table(	stage=factor('Dtl350', levels=YX[, levels(stage)]), 
+						lRNA.mx=subset(YX, stage=='Dtl350')[, mean(lRNA.mx, na.rm=TRUE)],
+						AcuteNo=factor('No',levels=c('No','Maybe','Yes')), w=1.)						
+				risk.df			<- data.table( risk='AcuteNo', factor=c('Yes','Maybe','No'), risk.ref= 'AcuteNo', factor.ref='No') 							
+			}
+			
+			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
+			risk.df[, coef.ref:=paste(risk.df[,risk.ref],risk.df[,factor.ref],sep='')]
+			risk.df			<- merge(risk.df, risk.df[, {
+								lRNA.mx		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( lRNA.mx, na.rm=TRUE )]
+								lRNA.mx		<- ifelse(is.nan(lRNA.mx), YX[, mean( lRNA.mx, na.rm=TRUE )], lRNA.mx)
+								t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
+								t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
+								t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
+								t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
+								list(lRNA.mx=lRNA.mx, t.Age=t.Age, t=t)
+							}, by='coef'], by='coef')		
+			tmp				<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
+			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
+			setnames(risk.df, 'n', 'PY')
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
+		}	
 		if(!is.na(save.file))
 		{
 			ans$YX			<- YX
@@ -7148,6 +7189,7 @@ project.athena.Fisheretal.YX.model3.ARTriskgroups<- function(YX, clumsm.info, cd
 	YX.m3[, U.score:=NULL]
 	set(YX.m3, YX.m3[,which(score.Y>1-score.Y.cut)], 'score.Y', 1-score.Y.cut)
 	set(YX.m3, YX.m3[,which(score.Y<score.Y.cut)], 'score.Y', score.Y.cut)
+	set(YX.m3, NULL, 'CDCC', YX.m3[, factor(CDCC)])
 	#	transmitter acute
 	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
 	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')	
@@ -7801,7 +7843,53 @@ project.athena.Fisheretal.YX.model3.v2<- function(YX, clumsm.info, vl.suppressed
 		tmp				<- YX.m3b[, list(mean.score.Y.b= mean(score.Y.b, na.rm=TRUE)), by='stage']
 		setkey(tmp, mean.score.Y.b)		 
 		set(YX.m3b, NULL, 'stage', YX.m3b[, factor( stage, levels=c( subset(tmp, !stage%in%c('Diag','DAy','DAm'))[,as.character(stage)],c('Diag','DAy','DAm') ))])
-		ggplot(YX.m3b, aes(x = lRNA.mx, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + facet_grid(. ~ stage, margins=FALSE)
+		ggplot(YX.m3b, aes(x = lRNA.mx, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + facet_grid(. ~ stage, margins=FALSE)		
+	}
+	if(1)
+	{
+		YX					<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, return.only.ART=TRUE)
+		YX.m3				<- copy(YX)
+		set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(ART.ntstage.c))])		
+		#	non parametric fit for t.Age
+		#	suggests: Age knots 30, 45	is OK	
+		ggplot(YX.m3, aes(x = t.Age, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ stage, margins=TRUE)
+		
+		include.colnames	<- c('score.Y','w','stage','lRNA.mx','t.Age')
+		tmp					<- project.athena.Fisheretal.betareg(YX.m4, 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+bs(t.Age, knots=c(30,45), degree=1)+stage-1', include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
+		betafit.rr			<- tmp$betafit.rr
+		
+		#	non parametric fit for calendar time
+		#	suggests: subset NRTI+NNRTI vs NRTI+PI and two separate calendar models with knots 2007, 2011
+		ggplot(YX.m3, aes(x = t, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ stage, margins=TRUE)
+
+		
+		set(YX.m3, NULL, 'stage', YX.m3[, factor(paste(as.character(ART.ntstage.c),'.',t.period,sep=''))])
+		include.colnames	<- c('score.Y','w','stage')
+		tmp					<- project.athena.Fisheretal.betareg(YX.m3, 'score.Y ~ stage-1', include.colnames, gamlss.BE.limit.u=c( c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
+		betafit.rr			<- tmp$betafit.rr
+		
+		
+		include.colnames	<- c('score.Y','w','stage','t','t.RegionHospital','CDCC')
+		tmp					<- project.athena.Fisheretal.betareg(YX.m3, 'score.Y ~ bs(t, knots=c(2007,2011), degree=2)+stage+t.RegionHospital-1', include.colnames, gamlss.BE.limit.u=c( c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
+		betafit.rr			<- tmp$betafit.rr
+		
+		#	interaction term does not work
+		YX.m3				<- subset(YX.m3, stage%in%c('ART.3.NRT.NNRT','ART.3.NRT.PI'))		
+		include.colnames	<- c('score.Y','w','t','stage')
+		tmp					<- project.athena.Fisheretal.betareg(YX.m3, 'score.Y ~ bs(t, knots=c(2011), degree=2):stage-1', include.colnames, gamlss.BE.limit.u=c( c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
+		betafit.rr			<- tmp$betafit.rr
+		tmp					<- predict(betafit.rr, type='response', se.fit=TRUE)		
+		YX.m4[, score.Y.b:= tmp$fit]
+		YX.m4[, score.Y.su:= tmp$fit+tmp$se.fit]
+		YX.m4[, score.Y.sl:= tmp$fit-tmp$se.fit]
+		set(YX.m4, YX.m4[, which(score.Y.su>1)], 'score.Y.su', 1.)
+		set(YX.m4, YX.m4[, which(score.Y.sl<0)], 'score.Y.sl', 0.)
+		ggplot(YX.m4, aes(x = t, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + geom_ribbon(aes(ymin= score.Y.sl, ymax= score.Y.su, linetype=NA), alpha=0.3) + facet_grid(Acute ~ stage, margins=FALSE)
+		
+		#	add CDCC t.RegionHospital
+		include.colnames	<- c('score.Y','w','stage','Acute','lRNA.mx','t.Age','t','t.RegionHospital','t2.care.t1','CDCC')
+		tmp					<- project.athena.Fisheretal.betareg(YX.m4, 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+bs(t.Age, knots=c(30,45), degree=1)+bs(t, knots=c(2011), degree=2)+stage+Acute+t.RegionHospital+t2.care.t1+CDCC-1', include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
+		betafit.rr			<- tmp$betafit.rr
 		
 	}
 }
