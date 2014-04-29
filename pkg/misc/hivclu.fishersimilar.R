@@ -11242,7 +11242,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
 	t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
-	#t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2011-01-01"))
+	t.recent.endctime		<- hivc.db.Date2numeric(as.Date("2011-01-01"))
 	t.recent.endctime		<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period
 	resume					<- 1
 	verbose					<- 1
