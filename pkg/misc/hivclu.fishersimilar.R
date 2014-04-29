@@ -6575,7 +6575,8 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=factor.ref.v)
-			risk.df			<- rbind(risk.df, data.table( risk='Acute', factor=c('No','Maybe','Yes'), risk.ref='Acute', factor.ref='No'))
+			if(grepl('m4.Bwmx',method))
+				risk.df		<- rbind(risk.df, data.table( risk='Acute', factor=c('No','Maybe','Yes'), risk.ref='Acute', factor.ref='No'))
 			#	risk tables
 			risk.table		<- do.call('rbind',list(
 							risk.df[,	{
@@ -10665,24 +10666,50 @@ project.athena.Fisheretal.sensitivity<- function()
 	#
 	#	MODEL 2B time trends
 	#
-	run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & grepl('cens',method.risk) & !grepl('clu',method.risk) & stat=='P', c(risk, factor, stat, v, l95.bs, u95.bs, method.risk))
-	run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & grepl('adj',method.risk) & !grepl('clu',method.risk) & stat=='P', c(risk, factor, stat, v, l95.bs, u95.bs, method.risk))
-	run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & grepl('cens',method.risk) & grepl('clu',method.risk) & stat=='P', c(risk, factor, stat, v, l95.bs, u95.bs, method.risk))
-	#run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & stat=='N', c(risk, factor, stat, v, l95.bs, u95.bs, method.risk))	
-	setkey(run.tp, factor)
-	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
-	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
-	run.tp[, cascade.stage:=run.tp[, substr(factor, 1, 1)]]
-	set(run.tp, run.tp[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
-	set(run.tp, run.tp[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
-	set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')
-	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
-	ggplot(subset(run.tp, !is.na(v)), aes(x=t.period, y=v, colour=factor, group=factor)) + labs(x="calendar time periods", y="proportion of transmissions") + #scale_colour_brewer(palette="Set3") + 
-				geom_point() + geom_line(aes(linetype=factor)) + geom_ribbon(aes(ymin=l95.bs, ymax=u95.bs, linetype=NA, fill=factor), alpha=0.3) + facet_grid(. ~ cascade.stage, margins=FALSE)		
+	method.risk.postfixs	<- c('cens','clu.cens','censp','clu.censp','adj')
+	tmp		<- sapply(method.risk.postfixs, function(method.risk.postfix)
+		{
+			cat(paste('\nprocess ',method.risk.postfix))
+			run.tp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & regexpr(paste('tp[0-9].',method.risk.postfix,'$',sep=''),method.risk)>1 & stat=='P', c(risk, factor, stat, v, l95.bs, u95.bs, method.risk))
+			setkey(run.tp, factor)
+			run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
+			set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
+			run.tp[, cascade.stage:=run.tp[, substr(factor, 1, 1)]]
+			set(run.tp, run.tp[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
+			set(run.tp, run.tp[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
+			set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')
+			set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
+			tmp		<- c(	'Undiagnosed,\nStrong evidence for acute infection',
+							'Undiagnosed,\nSome evidence for acute infection',
+							'Undiagnosed,\nNo evidence for acute infection',
+							'Diagnosed,\nStrong evidence for acute infection\nuntil 3 months after diagnosis',
+							'Diagnosed,\nSome evidence for acute infection\nuntil 3 months after diagnosis',
+							'Diagnosed,\nNo evidence for acute infection,\nmin CD4 > 500',
+							'Diagnosed,\nNo evidence for acute infection,\nmin CD4 > 350',
+							'Diagnosed,\nNo evidence for acute infection,\nmin CD4 < 350',
+							'Diagnosed,\nNo evidence for acute infection,\nmissing 1st CD4',
+							'ART initiated,\nViral load missing',
+							'ART initiated,\nViral load permanently\nsuppressed', 
+							'ART initiated,\nViral load not permanently\nsuppressed')
+			tmp		<- data.table( factor.legend= factor(tmp), factor=c("UAy","UAm","U","Dtl500","Dtl350","Dtg500","Dt.NA","DAy","DAm","ART.vlNA","ART.suA.Y","ART.suA.N"))
+			run.tp	<- merge(run.tp, tmp, by='factor')	
+			
+			ggplot(subset(run.tp, !is.na(v)), aes(x=t.period, y=v, colour=factor.legend, group=factor.legend)) + labs(x="calendar time periods", y="proportion of transmissions") +
+					scale_colour_manual(name='Transmission times', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(run.tp[,length(unique(factor.legend))])) +
+					scale_fill_manual(name='Transmission times', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(run.tp[,length(unique(factor.legend))])) +
+					theme(legend.key.size=unit(13,'mm')) + guides(colour = guide_legend(override.aes = list(size=5))) +
+					geom_ribbon(aes(ymin=l95.bs, ymax=u95.bs, linetype=NA, fill=factor.legend), show_guide= FALSE, alpha=0.3) + geom_point() + geom_line(aes(linetype=factor.legend), show_guide= FALSE) + facet_grid(. ~ cascade.stage, margins=FALSE)
+			file	<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "prop_m2wmx.tp_3da_",method.risk.postfix,".pdf", sep='')
+			cat(paste('\nsave to file',file))
+			ggsave(file=file, w=8,h=8)
+		})
+		
+		
 	#	PYIW trends in %	
-	run.tp	<- subset(runs.table, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk), c(risk, factor, stat, n, prop))	
-	setkey(run.tp, factor)	
+	run.tp	<- subset(runs.table, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & grepl('adj',method.risk) & !grepl('clu',method.risk) & !grepl('cens',method.risk), c(risk, factor, stat, n))	
+	setkey(run.tp, factor)		
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
+	run.tp	<- merge( run.tp, run.tp[, list(risk=risk, factor=factor, prop= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('risk','factor','stat','t.period') )
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
 	run.tp[, cascade.stage:=run.tp[, substr(factor, 1, 1)]]
 	set(run.tp, run.tp[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
@@ -10707,8 +10734,7 @@ project.athena.Fisheretal.sensitivity<- function()
 					'ART initiated,\nViral load not permanently\nsuppressed')
 	tmp		<- data.table( factor.legend= factor(tmp), factor=c("UAy","UAm","U","Dtl500","Dtl350","Dtg500","Dt.NA","DAy","DAm","ART.vlNA","ART.suA.Y","ART.suA.N"))
 	run.tp	<- merge(run.tp, tmp, by='factor')	
-	run.tp	<- merge( run.tp, run.tp[, list(sum=sum(n)),by=c('stat','t.period')],by=c('stat','t.period') )
-	subset(run.tp, stat=='cohort' & cascade.stage=='Undiagnosed')
+	run.tp	<- merge( run.tp, run.tp[, list(sum=sum(n)),by=c('stat','t.period')],by=c('stat','t.period') )	
 	#	PYIW adjusted for censoring
 	run.tp[, na:= n] 
 	run.tp[, propa:= prop] 
@@ -10728,44 +10754,36 @@ project.athena.Fisheretal.sensitivity<- function()
 	#	set(run.tp, run.tp[, which(factor=='UAm' & stat=='cohort' & t.period==z)], 'na',  run.tp[which(factor=='UAm' & stat=='cohort' & t.period%in%c('2',z)), max(na)])		
 	#}
 	run.tp	<- merge( run.tp, run.tp[, list(factor=factor, propa= na/sum(na, na.rm=TRUE)), by=c('t.period','stat')], by=c('t.period','stat','factor'))
-	
-	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=prop, colour=factor, group=factor)) + labs(x="calendar time periods", y="proportion PYIW") + #scale_colour_brewer(palette="Set3") + 
-			geom_point() + geom_line(aes(linetype=factor)) + facet_grid(stat ~ cascade.stage, margins=FALSE)
-	#	PYIW trends in #	
-	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=n, colour=factor, group=factor)) + labs(x="calendar time periods", y="PYIW") + #scale_colour_brewer(palette="Set3") + 
-			geom_point() + geom_line(aes(linetype=factor)) + facet_grid(stat ~ cascade.stage, scales='free', margins=FALSE)
-	file	<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWtotal.pdf", sep='')
-	ggsave(file=file, w=8,h=8)
-	#set(run.tp, run.tp[, which(factor=='ART.suA.Y' & stat=='cohort' & t.period=='4')], 'na', run.tp[which(factor=='ART.suA.Y' & stat=='cohort' & t.period=='3' ), na])
-	#	PYIW trends in # with adjustment for censoring
 	require(RColorBrewer)
-	require(grid)
+	require(grid)		
+	#	PYIW trends in # with adjustment for censoring
 	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=n, colour=factor.legend, group=factor.legend)) + labs(x="calendar time periods", y="PYIW") + 
 			scale_colour_manual(name='Transmission times', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(run.tp[,length(unique(factor.legend))])) +			
 			theme(legend.key.size=unit(13,'mm')) + guides(colour = guide_legend(override.aes = list(size=5))) + 
 			geom_point(data=subset(run.tp, !is.na(n) & n!=na), aes(y=na), shape=8, show_guide= FALSE) + geom_point() +  geom_line(aes(linetype=factor.legend), show_guide= FALSE) + facet_grid(stat ~ cascade.stage, scales='free', margins=FALSE) 
-	file	<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWtotal_adjcens.pdf", sep='')
+	file	<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "cens_m2wmx.tp_3da_PYIWtotal_PU_adjcens.pdf", sep='')
 	ggsave(file=file, w=8,h=8)
 	#	PYIW trends in % with adjustment for censoring
 	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=prop, colour=factor.legend, group=factor.legend)) + labs(x="calendar time periods", y="% PYIW") + 
 			scale_colour_manual(name='Transmission times', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(run.tp[,length(unique(factor.legend))])) +			
 			theme(legend.key.size=unit(13,'mm')) + guides(colour = guide_legend(override.aes = list(size=5))) + 			
-			geom_point(data=subset(run.tp, !is.na(n) & prop!=propa), aes(y=propa), shape=8, show_guide= FALSE) + geom_point() +  geom_line(data=subset(run.tp, !is.na(n) & prop!=propa), aes(y=propa), colour='black', show_guide= FALSE) + geom_line(aes(linetype=factor.legend), show_guide= FALSE) + facet_grid(stat ~ cascade.stage, margins=FALSE)
-	file	<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWprop_adjcens.pdf", sep='')
+			geom_point(data=subset(run.tp, !is.na(n) & prop!=propa), aes(y=propa), shape=8, show_guide= FALSE) + geom_point()  + geom_line(aes(linetype=factor.legend), show_guide= FALSE) + facet_grid(stat ~ cascade.stage, margins=FALSE)
+	file	<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "cens_m2wmx.tp_3da_PYIWprop_PU_adjcens.pdf", sep='')
 	ggsave(file=file, w=8,h=8)
+	
 	#	PYIW Margin in # before adjustment	
 	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=n, fill=factor.legend)) + labs(x="calendar time periods", y="PYIW") +
 			scale_fill_manual(name='Transmission times', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(run.tp[,length(unique(factor.legend))])) +			
 			theme(legend.key.size=unit(13,'mm')) + guides(colour = guide_legend(override.aes = list(size=5))) + 						
 			geom_bar(stat="identity") + facet_grid(stat ~ ., scales='free', margins=FALSE)
-	file	<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWtotalmargin.pdf", sep='')
+	file	<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWtotalmargin.pdf", sep='')
 	ggsave(file=file, w=8,h=8)
 	#	PYIW Margin in % before adjustment	
 	ggplot(subset(run.tp, !is.na(n)), aes(x=t.period, y=prop, fill=factor.legend)) + labs(x="calendar time periods", y="% PYIW") +
 			scale_fill_manual(name='Transmission times', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(run.tp[,length(unique(factor.legend))])) +			
 			theme(legend.key.size=unit(13,'mm')) + guides(colour = guide_legend(override.aes = list(size=5))) + 						
 			geom_bar(stat="identity") + facet_grid(stat ~ ., scales='free', margins=FALSE)
-	file	<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWpropmargin.pdf", sep='')
+	file	<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "m2wmx.tp_sasky_3da_PYIWpropmargin.pdf", sep='')
 	ggsave(file=file, w=8,h=8)
 	
 	
