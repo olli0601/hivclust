@@ -4933,7 +4933,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			setnames(risk.df, 'n', 'PY')
 			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )						
 		}
-		if(method%in%c('m3.tnicMv','m3.tnicMv.clu','m3.tnicMv.adj','m3.tnicMv.clu.adj','m3.tnicMv.cens','m3.tnicMv.clu.cens','m3.tnicMv.censp','m3.tnicMv.clu.censp'))
+		if(method%in%c('m3.tnicMv','m3.tnicMv.clu','m3.tnicMv.cens','m3.tnicMv.clu.cens','m3.tnicMv.censp','m3.tnicMv.clu.censp'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping) per time period
 			#	as loess suggests that non-recent NRTI+NNRTI is associated with increased score.Y
@@ -4951,27 +4951,32 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
-			}#TODO
-			set(YX, NULL, 'stage', YX[, factor(as.character(ART.ntstage.c))])
+			}			
 			#	sequence adjustment (not censoring)
-			if(grepl('adj', method))
+			if(0 & grepl('adj', method))
 			{
+				#TODO if we really want this, we need to get a separate X.tables with all time period for risk.table
 				tmp			<- ifelse(grepl(method, 'clu'), 'adj.clu', 'adj.seq')
 				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )				
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}												
 			#
-			formula			<- 'score.Y ~ stage-1'
-			include.colnames<- c('score.Y','w','stage')
-			predict.df		<- data.table(stage=factor('ART.3.NRT.PI', levels=YX[, levels(stage)]), w=1.)			
-			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)])
-			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
-			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
-			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
+			formula			<- 'score.Y ~ bs(t, knots=c(2007,2011), degree=2)+stage+t.RegionHospital-1'
+			include.colnames<- c('score.Y','w','stage','t','t.RegionHospital')
+			predict.df		<- data.table(stage=factor('ART.3.NRT.PI.4', levels=YX[, levels(stage)]), w=1.)
+			risk.df			<- data.table(risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref= 'ART.3.NRT.PI.4')
+			risk.df			<- rbind( risk.df, data.table(risk='stage', factor=paste( 'ART.3.NRT.NNRT', 1:4, sep='.'), risk.ref='stage', factor.ref= paste( 'ART.3.NRT.PI', 1:4, sep='.')) )
+			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
+			setkey(risk.df, risk, factor)
+			risk.df			<- merge(risk.df, unique(risk.df)[, {
+								tmp				<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
+								list(t=ifelse(is.nan(tmp), YX[, mean( t, na.rm=TRUE )], tmp))
+							}, by=c('risk','factor')], by=c('risk','factor'))			
 			tmp				<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
-			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
+			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)			
 			setnames(risk.df, 'n', 'PY')
+			#
 			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )						
 		}
 		if(method%in%c('m3.tnicv','m3.tnicv.clu','m3.tnicv.adj','m3.tnicv.clu.adj','m3.tnicv.cens','m3.tnicv.clu.cens','m3.tnicv.censp','m3.tnicv.clu.censp'))
@@ -6576,7 +6581,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				X.msm[, ART.nstage.c.tperiod:= X.msm[, paste(ART.nstage.c, t.period, sep='.')]]
 				set(X.msm, X.msm[,which(is.na(ART.nstage.c))], risktp.col, NA_character_)
 			}
-			if(grepl('m3',method) & grepl('tnic',method) & !grepl('No',method))
+			if(grepl('m3',method) & grepl('tnic',method) & !grepl('No',method) & !grepl('Mv',method))
 			{
 				factor.ref.v	<- paste('ART.3.NRT.PI',tp,sep='')
 				risktp.col		<- 'ART.ntstage.c.tperiod'
@@ -6595,6 +6600,21 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				factor.ref.v	<- paste('ART.3.NRT.PI',tp,sep='')
 				risktp.col		<- 'ART.ntstage.no.c.tperiod'
 				risk.col		<- 'ART.ntstage.no.c'
+				YX[, stage:=NA_character_]
+				YX[, ART.ntstage.no.c.tperiod:= YX[, paste(ART.ntstage.no.c, t.period, sep='.')]]
+				YX				<- subset(YX, !is.na(ART.ntstage.no.c))
+				X.den[, ART.ntstage.no.c.tperiod:= X.den[, paste(ART.ntstage.no.c, t.period, sep='.')]]
+				X.den			<- subset(X.den, !is.na(ART.ntstage.no.c))
+				X.clu[, ART.ntstage.no.c.tperiod:= X.clu[, paste(ART.ntstage.no.c, t.period, sep='.')]]
+				X.clu			<- subset(X.clu, !is.na(ART.ntstage.no.c))
+				X.msm[, ART.ntstage.no.c.tperiod:= X.msm[, paste(ART.ntstage.no.c, t.period, sep='.')]]
+				X.msm			<- subset(X.msm, !is.na(ART.ntstage.no.c))
+			}
+			if(grepl('m3',method) & grepl('tnic',method) & grepl('Mv',method))
+			{
+				factor.ref.v	<- paste('ART.3.NRT.PI.4',tp,sep='')
+				risktp.col		<- 'ART.ntstage.no.c.tperiod'
+				risk.col		<- 'ART.ntstage.no.c.tperiod'
 				YX[, stage:=NA_character_]
 				YX[, ART.ntstage.no.c.tperiod:= YX[, paste(ART.ntstage.no.c, t.period, sep='.')]]
 				YX				<- subset(YX, !is.na(ART.ntstage.no.c))
@@ -11607,12 +11627,13 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m2Bt',method.risk))		save.file	<- 'm2Bt'
 		if(grepl('m2wmx',method.risk))		save.file	<- 'm2wmx'
 		if(grepl('m2Bwmx',method.risk))		save.file	<- 'm2Bwmx'
-		if(grepl('m3.i',method.risk) & !grepl('m3.ni',method.risk))								save.file	<- 'm3.i'	
-		if(grepl('m3',method.risk) & grepl('ni',method.risk) & !grepl('nic',method.risk))		save.file	<- 'm3.ni'
-		if(grepl('m3',method.risk) & grepl('tni',method.risk) & !grepl('tnic',method.risk))		save.file	<- 'm3.tni'
-		if(grepl('m3',method.risk) & grepl('nic',method.risk) & !grepl('tnic',method.risk))		save.file	<- 'm3.nic'
-		if(grepl('m3',method.risk) & grepl('tnic',method.risk) & !grepl('No',method.risk))		save.file	<- 'm3.tnic'
-		if(grepl('m3',method.risk) & grepl('tnic',method.risk) & grepl('No',method.risk))		save.file	<- 'm3.tnicNo'
+		if(grepl('m3.i',method.risk) & !grepl('m3.ni',method.risk))															save.file	<- 'm3.i'	
+		if(grepl('m3',method.risk) & grepl('ni',method.risk) & !grepl('nic',method.risk))									save.file	<- 'm3.ni'
+		if(grepl('m3',method.risk) & grepl('tni',method.risk) & !grepl('tnic',method.risk))									save.file	<- 'm3.tni'
+		if(grepl('m3',method.risk) & grepl('nic',method.risk) & !grepl('tnic',method.risk))									save.file	<- 'm3.nic'
+		if(grepl('m3',method.risk) & grepl('tnic',method.risk) & !grepl('No',method.risk) & !grepl('Mv',method.risk))		save.file	<- 'm3.tnic'
+		if(grepl('m3',method.risk) & grepl('tnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.tnicNo'
+		if(grepl('m3',method.risk) & grepl('tnic',method.risk) & grepl('Mv',method.risk))									save.file	<- 'm3.tnicMv'
 		if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 		if(is.na(save.file))	stop('unknown method.risk')				
 		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
@@ -11885,8 +11906,9 @@ hivc.prog.betareg.estimaterisks<- function()
 			if(grepl('m3',method.risk) & grepl('ni',method.risk) & !grepl('nic',method.risk))		save.file	<- 'm3.ni'
 			if(grepl('m3',method.risk) & grepl('tni',method.risk) & !grepl('tnic',method.risk))		save.file	<- 'm3.tni'
 			if(grepl('m3',method.risk) & grepl('nic',method.risk) & !grepl('tnic',method.risk))		save.file	<- 'm3.nic'
-			if(grepl('m3',method.risk) & grepl('tnic',method.risk) & !grepl('No',method.risk))		save.file	<- 'm3.tnic'
+			if(grepl('m3',method.risk) & grepl('tnic',method.risk) & !grepl('No',method.risk) & !grepl('Mv',method.risk))		save.file	<- 'm3.tnic'
 			if(grepl('m3',method.risk) & grepl('tnic',method.risk) & grepl('No',method.risk))		save.file	<- 'm3.tnicNo'
+			if(grepl('m3',method.risk) & grepl('tnic',method.risk) & grepl('Mv',method.risk))		save.file	<- 'm3.tnicMv'
 			if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 			if(is.na(save.file))	stop('unknown method.risk')				
 			tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
