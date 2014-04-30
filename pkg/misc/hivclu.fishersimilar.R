@@ -4239,7 +4239,7 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				corisk			<- intersect(colnames(risk.df), colnames(predict.df))
 				if(!length(corisk))	
 					corisk<- NULL				
-				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))				
+				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))
 				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))
 				if(nrow(tmp))	#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
 				{
@@ -4588,7 +4588,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
 		}					
 		if(method%in%c(	'm2wmx.cas','m2wmx.cas.clu','m2wmx.cas.adj','m2wmx.cas.clu.adj','m2wmx.cas.cens','m2wmx.cas.clu.cens',
-						'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.adj','m2Bwmx.cas.clu.adj','m2Bwmx.cas.cens','m2Bwmx.cas.clu.cens','m2Bwmx.cas.censp','m2Bwmx.cas.clu.censp'))
+						'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.adj','m2Bwmx.cas.clu.adj','m2Bwmx.cas.cens','m2Bwmx.cas.clu.cens','m2Bwmx.cas.censp','m2Bwmx.cas.clu.censp',
+						'm2BwmxMv.cas','m2BwmxMv.cas.clu','m2BwmxMv.cas.adj','m2BwmxMv.cas.clu.adj','m2BwmxMv.cas.cens','m2BwmxMv.cas.clu.cens','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp'))
 		{  
 			#	censoring adjustment
 			if(grepl('cens', method))
@@ -4613,11 +4614,24 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )				
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
-			}												
+			}					
+			if(grepl('Mv', method))	
+			{
+				#ggplot(YX, aes(x = t, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ stage, margins=TRUE)	#d=2, 2007,2010
+				#ggplot(YX, aes(x = t.Age, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ stage, margins=TRUE)#d=1, 30,45				
+				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
+				formula			<- 'score.Y ~ bs(t.Age, knots=c(30,45), degree=1)+bs(t, knots=c(2007,2010), degree=2)+stage+t.RegionHospital-1'
+				predict.df		<- data.table(	stage=factor('ART.suA.Y', levels=YX[, levels(stage)]), 												
+												t.Age=subset(YX, stage=='ART.suA.Y')[, mean(t.Age, na.rm=TRUE)], t=subset(YX, stage=='ART.suA.Y')[, mean(t, na.rm=TRUE)],
+												t.RegionHospital=factor('Amst', levels=YX[, levels(t.RegionHospital)]),	w=1.)										
+			}
+			if(grepl('Mv', method))
+			{
+				formula			<- 'score.Y ~ stage-1'
+				include.colnames<- c('score.Y','w','stage')						
+				predict.df		<- data.table(stage=factor('ART.suA.Y', levels=YX[, levels(stage)]), w=1.)				
+			}			
 			#
-			formula			<- 'score.Y ~ stage-1'
-			include.colnames<- c('score.Y','w','stage')						
-			predict.df		<- data.table(stage=factor('ART.suA.Y', levels=YX[, levels(stage)]), w=1.)
 			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref='ART.suA.Y')
 			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='D' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
@@ -4625,6 +4639,17 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
 			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
+			if(grepl('Mv', method))
+			{
+				setkey(risk.df, risk, factor)
+				risk.df		<- merge(risk.df, unique(risk.df)[, {
+									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
+									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
+									t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
+									t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
+									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
+								}, by=c('risk','factor')], by=c('risk','factor'))						
+			}
 			tmp				<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
 			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
 			setnames(risk.df, 'n', 'PY')
@@ -4637,22 +4662,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			tp				<- substr(tp, 3, 3)
 			YX				<- subset(YX, t.period==tp)						
 			tmp				<- ifelse(grepl('m2wmx',method),"CD41st.tperiod","CD4t.tperiod")
-			set(YX, NULL, 'stage', YX[[tmp]])						
-			formula			<- 'score.Y ~ stage-1'
-			include.colnames<- c('score.Y','w','stage')			
-			
-			set(YX, NULL, 'stage', YX[,factor(as.character(stage))])
-			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=YX[, levels(stage)]), w=1.)									
-			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
-			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='D' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
-			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='A' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
-			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
-			tmp				<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
-			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
-			setnames(risk.df, 'n', 'PY')
+			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))						
 			#	sequence adjustment
 			if(grepl('adj', method))
 			{
@@ -4673,6 +4683,20 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}	
+			formula			<- 'score.Y ~ stage-1'
+			include.colnames<- c('score.Y','w','stage')						
+			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=YX[, levels(stage)]), w=1.)									
+			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
+			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='D' ]
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
+			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='A' ]
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
+			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
+			tmp				<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
+			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
+			setnames(risk.df, 'n', 'PY')
+			#
 			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )					
 		}
 		if(method%in%c('m3.i','m3.i.clu'))
@@ -8968,7 +8992,7 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	YX.m2		<- merge(YX.m2, tmp, by= 't.Patient', all.x=TRUE)	
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t  ))	
 	gc()
@@ -9296,7 +9320,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	#
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, lRNA_TL, PoslRNA_TL, CD41st, CD4t  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, lRNA_TL, PoslRNA_TL, CD41st, CD4t, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, lRNA_TL, PoslRNA_TL, CD41st, CD4t  ))	
 	#
@@ -9468,7 +9492,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))		
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t, lRNA.gm  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t, lRNA.gm, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, lRNA.gm  ))		
 	gc()
@@ -9699,7 +9723,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	set(YX.m2, YX.m2[, which(stage=='ART.started')], 'CD4t', 'ART.started' )	
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t  ))	
 	gc()
@@ -11499,7 +11523,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(0)
 	{		
 		method					<- '3d'
-		method.recentctime		<- '2013-03-01'
+		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2B1st.cas'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
