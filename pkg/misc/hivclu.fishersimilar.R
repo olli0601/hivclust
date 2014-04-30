@@ -4933,7 +4933,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			setnames(risk.df, 'n', 'PY')
 			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )						
 		}
-		if(method%in%c('m3.tnicMv','m3.tnicMv.clu','m3.tnicMv.cens','m3.tnicMv.clu.cens','m3.tnicMv.censp','m3.tnicMv.clu.censp'))
+		if(method%in%c('m3.tnicMv','m3.tnicMv.clu','m3.tnicMv.adj','m3.tnicMv.clu.adj','m3.tnicMv.cens','m3.tnicMv.clu.cens','m3.tnicMv.censp','m3.tnicMv.clu.censp'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping) per time period
 			#	as loess suggests that non-recent NRTI+NNRTI is associated with increased score.Y
@@ -4952,10 +4952,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}			
-			#	sequence adjustment (not censoring)
-			if(0 & grepl('adj', method))
-			{
-				#TODO if we really want this, we need to get a separate X.tables with all time period for risk.table
+			#	sequence adjustment (not censoring)			
+			if(grepl('adj', method))
+			{				
 				tmp			<- ifelse(grepl(method, 'clu'), 'adj.clu', 'adj.seq')
 				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )				
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
@@ -4964,7 +4963,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#
 			formula			<- 'score.Y ~ bs(t, knots=c(2007,2011), degree=2)+stage+t.RegionHospital-1'
 			include.colnames<- c('score.Y','w','stage','t','t.RegionHospital')
-			predict.df		<- data.table(stage=factor('ART.3.NRT.PI.4', levels=YX[, levels(stage)]), w=1.)
+			predict.df		<- data.table(	stage=factor('ART.3.NRT.PI.4', levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),
+											t=subset(YX, stage=='ART.3.NRT.PI.4')[, mean(t, na.rm=TRUE)], w=1.)
 			risk.df			<- data.table(risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref= 'ART.3.NRT.PI.4')
 			risk.df			<- rbind( risk.df, data.table(risk='stage', factor=paste( 'ART.3.NRT.NNRT', 1:4, sep='.'), risk.ref='stage', factor.ref= paste( 'ART.3.NRT.PI', 1:4, sep='.')) )
 			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
