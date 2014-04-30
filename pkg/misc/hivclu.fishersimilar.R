@@ -4961,7 +4961,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}												
 			#
-			formula			<- 'score.Y ~ bs(t, knots=c(2007,2011), degree=2)+stage+t.RegionHospital-1'
+			formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+stage+t.RegionHospital-1'
 			include.colnames<- c('score.Y','w','stage','t','t.RegionHospital')
 			predict.df		<- data.table(	stage=factor('ART.3.NRT.PI.4', levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),
 											t=subset(YX, stage=='ART.3.NRT.PI.4')[, mean(t, na.rm=TRUE)], w=1.)
@@ -7890,21 +7890,22 @@ project.athena.Fisheretal.YX.model3.v2<- function(YX, clumsm.info, vl.suppressed
 		
 		
 		include.colnames	<- c('score.Y','w','stage','t','t.RegionHospital','CDCC')
-		tmp					<- project.athena.Fisheretal.betareg(YX.m3, 'score.Y ~ bs(t, knots=c(2007,2011), degree=2)+stage+t.RegionHospital-1', include.colnames, gamlss.BE.limit.u=c( c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
+		#tmp					<- project.athena.Fisheretal.betareg(YX.m3, 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+stage+t.RegionHospital-1', include.colnames, gamlss.BE.limit.u=c( c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
+		tmp					<- project.athena.Fisheretal.betareg(YX.m3, 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+stage-1', include.colnames, gamlss.BE.limit.u=c( c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
 		betafit.rr			<- tmp$betafit.rr
+		tmp					<- predict(betafit.rr, type='response', se.fit=TRUE)		
+		YX.m3[, score.Y.b:= tmp$fit]
+		YX.m3[, score.Y.su:= tmp$fit+tmp$se.fit]
+		YX.m3[, score.Y.sl:= tmp$fit-tmp$se.fit]
+		set(YX.m3, YX.m3[, which(score.Y.su>1)], 'score.Y.su', 1.)
+		set(YX.m3, YX.m3[, which(score.Y.sl<0)], 'score.Y.sl', 0.)
+		ggplot(YX.m3, aes(x = t, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + geom_ribbon(aes(ymin= score.Y.sl, ymax= score.Y.su, linetype=NA), alpha=0.3) + facet_grid(. ~ stage, margins=FALSE)
 		
 		#	interaction term does not work
 		YX.m3				<- subset(YX.m3, stage%in%c('ART.3.NRT.NNRT','ART.3.NRT.PI'))		
 		include.colnames	<- c('score.Y','w','t','stage')
 		tmp					<- project.athena.Fisheretal.betareg(YX.m3, 'score.Y ~ bs(t, knots=c(2011), degree=2):stage-1', include.colnames, gamlss.BE.limit.u=c( c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )		
 		betafit.rr			<- tmp$betafit.rr
-		tmp					<- predict(betafit.rr, type='response', se.fit=TRUE)		
-		YX.m4[, score.Y.b:= tmp$fit]
-		YX.m4[, score.Y.su:= tmp$fit+tmp$se.fit]
-		YX.m4[, score.Y.sl:= tmp$fit-tmp$se.fit]
-		set(YX.m4, YX.m4[, which(score.Y.su>1)], 'score.Y.su', 1.)
-		set(YX.m4, YX.m4[, which(score.Y.sl<0)], 'score.Y.sl', 0.)
-		ggplot(YX.m4, aes(x = t, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + geom_ribbon(aes(ymin= score.Y.sl, ymax= score.Y.su, linetype=NA), alpha=0.3) + facet_grid(Acute ~ stage, margins=FALSE)
 		
 		#	add CDCC t.RegionHospital
 		include.colnames	<- c('score.Y','w','stage','Acute','lRNA.mx','t.Age','t','t.RegionHospital','t2.care.t1','CDCC')
