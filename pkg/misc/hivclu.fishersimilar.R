@@ -4829,7 +4829,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				tmp			<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
 				if(grepl('censp', method))
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
-				else
+				if(!grepl('censp', method))
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
 				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
@@ -4976,7 +4976,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X')												
 									},by='risk']))
 		}
-		if(method%in%c('m3.tnic','m3.tnic.clu','m3.tnic.adj','m3.tnic.clu.adj','m3.tnic.cens','m3.tnic.clu.cens','m3.tnic.censp','m3.tnic.clu.censp'))
+		if(method%in%c(	'm3.tnic','m3.tnic.clu','m3.tnic.adj','m3.tnic.clu.adj','m3.tnic.cens','m3.tnic.clu.cens','m3.tnic.censp','m3.tnic.clu.censp',
+						'm3.tnicMV','m3.tnicMV.clu','m3.tnicMV.adj','m3.tnicMV.clu.adj','m3.tnicMV.cens','m3.tnicMV.clu.cens','m3.tnicMV.censp','m3.tnicMV.clu.censp'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
 			#	censoring adjustment
@@ -4988,7 +4989,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				tmp			<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')				
 				if(grepl('censp', method))
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
-				else
+				if(!grepl('censp', method))
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
 				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
@@ -5004,13 +5005,33 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}												
 			#
-			formula			<- 'score.Y ~ stage-1'
-			include.colnames<- c('score.Y','w','stage')
-			predict.df		<- data.table(stage=factor('ART.3.NRT.PI', levels=YX[, levels(stage)]), w=1.)			
-			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)])
+			if(!grepl('MV', method))
+			{
+				formula			<- 'score.Y ~ stage-1'
+				include.colnames<- c('score.Y','w','stage')
+				predict.df		<- data.table(stage=factor('ART.3.NRT.PI', levels=YX[, levels(stage)]), w=1.)				
+			}
+			if(grepl('MV', method))
+			{
+				formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'
+				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
+				predict.df		<- data.table(	stage=factor('ART.3.NRT.PI', levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),
+												t=subset(YX, stage=='ART.3.NRT.PI')[, mean(t, na.rm=TRUE)], t.Age=subset(YX, stage=='ART.3.NRT.PI')[, mean(t.Age, na.rm=TRUE)], w=1.)
+			}			
+			risk.df			<- data.table(risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref= 'ART.3.NRT.PI')
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
-			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
-			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
+			risk.df[, coef.ref:=paste(risk.df[,risk.ref],risk.df[,factor.ref],sep='')]			
+			if(grepl('MV', method))
+			{
+				setkey(risk.df, risk, factor)
+				risk.df		<- merge(risk.df, unique(risk.df)[, {
+									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
+									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
+									t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
+									t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
+									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
+								}, by=c('risk','factor')], by=c('risk','factor'))						
+			}			
 			tmp				<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
 			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
 			risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/sum(n[stat==tmp])), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)
@@ -5110,7 +5131,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			setnames(risk.df, 'n', 'PY')
 			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}		
-		if(method%in%c('m3.tnicvNo','m3.tnicvNo.clu','m3.tnicvNo.adj','m3.tnicvNo.clu.adj','m3.tnicvNo.cens','m3.tnicvNo.clu.cens','m3.tnicvNo.censp','m3.tnicvNo.clu.censp'))
+		if(method%in%c(	'm3.tnicNo','m3.tnicNo.clu','m3.tnicNo.adj','m3.tnicNo.clu.adj','m3.tnicNo.cens','m3.tnicNo.clu.cens','m3.tnicNo.censp','m3.tnicNo.clu.censp',
+						'm3.tnicvNo','m3.tnicvNo.clu','m3.tnicvNo.adj','m3.tnicvNo.clu.adj','m3.tnicvNo.cens','m3.tnicvNo.clu.cens','m3.tnicvNo.censp','m3.tnicvNo.clu.censp'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
 			#	censoring adjustment
@@ -5140,19 +5162,29 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}												
 			#
-			formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
-			include.colnames<- c('score.Y','w','stage','lRNA.mx')
-			predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=YX[, levels(stage)]), 
-											lRNA.mx=subset(YX, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)], w=1.	)
-									
-			risk.df			<- data.table( risk='stage', factor=YX[, levels(stage)])
-			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]			
-			risk.df			<- merge(risk.df, risk.df[, {
-								tmp				<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( lRNA.mx, na.rm=TRUE )]
-								list(lRNA.mx=ifelse(is.nan(tmp), YX[, mean( lRNA.mx, na.rm=TRUE )], tmp))
-							}, by='coef'], by='coef')			
-			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
-			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])			
+			if(!grepl('tnicv', method))
+			{
+				formula			<- 'score.Y ~ stage-1'
+				include.colnames<- c('score.Y','w','stage')
+				predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=YX[, levels(stage)]), w=1.	)				
+			}										
+			if(grepl('tnicv', method))
+			{
+				formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
+				include.colnames<- c('score.Y','w','stage','lRNA.mx')
+				predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=YX[, levels(stage)]), 
+												lRNA.mx=subset(YX, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)], w=1.	)				
+			}									
+			risk.df			<- data.table( risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref='ART.3.NRT.PI' )
+			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
+			risk.df[, coef.ref:=paste(risk.df[,risk.ref],risk.df[,factor.ref],sep='')]
+			if(grepl('tnicv', method))
+			{				
+				risk.df		<- merge(risk.df, risk.df[, {
+															tmp				<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( lRNA.mx, na.rm=TRUE )]
+															list(lRNA.mx=ifelse(is.nan(tmp), YX[, mean( lRNA.mx, na.rm=TRUE )], tmp))
+														}, by='coef'], by='coef')
+			}
 			tmp				<- ifelse(grepl(method, 'clu'), 'X.clu', 'X.seq')
 			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
 			risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/sum(n[stat==tmp])), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)

@@ -663,13 +663,13 @@ hivc.pipeline.betareg.estimate.risks<- function()
 						'm2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj')
 	method.risk	<- c(	'm2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens')	
 	method.risk	<- c(	'm3.nicv','m3.tnicv','m3.tnicvNo','m3.nicv.adj','m3.tnicv.adj','m3.tnicvNo.adj','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu','m2Bwmx.tp1.cens')	
-	#	if below works, also do this censp 
 	method.risk	<- c(	'm2B1st.cas.cens','m2B1st.cas.clu.cens','m2B1st.cas.censp','m2B1st.cas.clu.censp','m2Bt.cas.cens','m2Bt.cas.clu.cens','m2Bt.cas.censp','m2Bt.cas.clu.censp'		)
-	method.risk	<- c(	'm3.nicv.cens','m3.tnicv.cens','m3.nicv.clu.cens','m3.tnicv.clu.cens','m3.tnicvNo.cens','m3.nicv.censp','m3.tnicv.censp','m3.nicv.clu.censp','m3.tnicv.clu.censp','m3.tnicvNo.censp')
-	method.risk	<- c(	'm3.tnicvNo.cens','m3.tnicvNo.censp','m3.tnicvNo.clu.cens','m3.tnicvNo.clu.censp')			
-	#	basic censp runs			
-	method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp','m2BwmxMv.cas','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp' )
-	#method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp', 'm2Bwmx.cas.censp','m2Bwmx.cas.clu.censp' )	
+	#	basic model 3 runs 
+	method.risk	<- c(	'm3.tnic','m3.tnic.clu','m3.tnic.censp','m3.tnic.clu.censp','m3.tnicMV.censp','m3.tnicMV.clu.censp',
+						'm3.tnicNo.censp','m3.tnicNo.clu.censp','m3.tnicv.censp','m3.nicv.clu.censp' )
+	#	basic m2Bwmx runs			
+	method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp','m2BwmxMv.cas','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp' )	
+	method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )	
 	#	Acute higher than VL, which we can check after diagnosis
 	#method.risk	<- c( 'm4.Bwmxv','m4.Bwmxv.adj','m4.Bwmxv.censp','m4.Bwmxv.clu.censp','m4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp','m4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp' )
 	#	NRTI+NNRTI puzzle
@@ -688,7 +688,8 @@ hivc.pipeline.betareg.estimate.risks<- function()
 				cat(cmd)
 				#stop()
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="1800mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=22, hpc.mem="1900mb")
+				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="79000mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
