@@ -668,7 +668,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	method.risk	<- c(	'm3.nicv.cens','m3.tnicv.cens','m3.nicv.clu.cens','m3.tnicv.clu.cens','m3.tnicvNo.cens','m3.nicv.censp','m3.tnicv.censp','m3.nicv.clu.censp','m3.tnicv.clu.censp','m3.tnicvNo.censp')
 	method.risk	<- c(	'm3.tnicvNo.cens','m3.tnicvNo.censp','m3.tnicvNo.clu.cens','m3.tnicvNo.clu.censp')			
 	#	basic censp runs			
-	method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.adj' )
+	method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp','m2BwmxMv.cas','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp' )
 	#method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp', 'm2Bwmx.cas.censp','m2Bwmx.cas.clu.censp' )	
 	#	Acute higher than VL, which we can check after diagnosis
 	#method.risk	<- c( 'm4.Bwmxv','m4.Bwmxv.adj','m4.Bwmxv.censp','m4.Bwmxv.clu.censp','m4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp','m4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp' )
