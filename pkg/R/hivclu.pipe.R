@@ -627,7 +627,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(1)
+	if(0)
 	{
 		method					<- '3d'
 		method.recentctime		<- '2013-03-01'
@@ -639,7 +639,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(0)
+	if(1)
 	{
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
@@ -668,13 +668,14 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	method.risk	<- c(	'm3.nicv.cens','m3.tnicv.cens','m3.nicv.clu.cens','m3.tnicv.clu.cens','m3.tnicvNo.cens','m3.nicv.censp','m3.tnicv.censp','m3.nicv.clu.censp','m3.tnicv.clu.censp','m3.tnicvNo.censp')
 	method.risk	<- c(	'm3.tnicvNo.cens','m3.tnicvNo.censp','m3.tnicvNo.clu.cens','m3.tnicvNo.clu.censp')			
 	#	basic censp runs			
-	method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp', 'm2Bwmx.cas.censp','m2Bwmx.cas.clu.censp' )	
+	method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.adj' )
+	#method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp', 'm2Bwmx.cas.censp','m2Bwmx.cas.clu.censp' )	
 	#	Acute higher than VL, which we can check after diagnosis
 	#method.risk	<- c( 'm4.Bwmxv','m4.Bwmxv.adj','m4.Bwmxv.censp','m4.Bwmxv.clu.censp','m4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp','m4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp' )
 	#	NRTI+NNRTI puzzle
-	method.risk	<- c( 	'm3.tnicMv', 'm3.tnicMv.adj','m3.tnicMv.clu.adj', 'm3.tnicMv.censp','m3.tnicMv.clu.censp'	)
+	#method.risk	<- c( 	'm3.tnicMv', 'm3.tnicMv.adj','m3.tnicMv.clu.adj', 'm3.tnicMv.censp','m3.tnicMv.clu.censp'	)
 	#	m2Bwmx -- adjust for t.Age, t, t.RegionHospital
-	method.risk	<- c('m2BwmxMv.cas','m2BwmxMv.cas.adj','m2BwmxMv.cas.clu.adj','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp')
+	#method.risk	<- c('m2BwmxMv.cas','m2BwmxMv.cas.adj','m2BwmxMv.cas.clu.adj','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp')
 	# use to pre-compute tables
 	#method.risk		<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj','m4.Bwmxv.clu.adj', 'm3.tnicMv.clu.adj'	)	
 	
