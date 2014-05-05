@@ -667,22 +667,23 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#	basic model 3 runs 	mem=1800
 	method.risk	<- c(	'm3.tnic','m3.tnic.clu','m3.tnic.censp','m3.tnic.clu.censp','m3.tnicv.censp','m3.tnicv.clu.censp' )
 	#	basic model 3 runs, mem=3800 				
-	method.risk	<- c(	'm3.tnicMV.censp','m3.tnicMV.clu.censp','m3.tnicNo.censp','m3.tnicNo.clu.censp' )
-	method.risk	<- c(	'm3.tnicNo.censp','m3.tnicNo.clu.censp' )
+	#method.risk	<- c(	'm3.tnicMV.censp','m3.tnicMV.clu.censp','m3.tnicNo.censp','m3.tnicNo.clu.censp' )
+	#method.risk	<- c(	'm3.tnicNo.censp','m3.tnicNo.clu.censp' )
+	method.risk	<- c(	'm3.tnicMV','m3.tnicMV.adj','m3.tnicMV.censp','m3.tnicMV.clu.censp','m3.tnicMv','m3.tnicMv.adj','m3.tnicMv.censp','m3.tnicMv.clu.censp' )
 	#	basic m2Bwmx runs	mem=1800
-	method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
+	#method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
 	#	basic m2Bwmx runs	mem=3800
-	method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp')
+	#method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp')
 	#	basic m2Bwmx runs	mem=7800
-	method.risk	<- c(	'm2BwmxMv.cas','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp' )
+	#method.risk	<- c(	'm2B1stMv.cas.adj', 'm2BwmxMv.cas','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp' )
 	#	basic m2B1st runs	mem=3800
 	#method.risk	<- c(	'm2B1st.cas','m2B1st.cas.clu','m2B1st.cas.censp')
 	#	basic m2B1st runs	mem=7800
-	method.risk	<- c(	'm2B1stMv.cas','m2B1stMv.cas.censp','m2B1stMv.cas.clu.censp' )	
+	#method.risk	<- c(	'm2B1stMv.cas','m2B1stMv.cas.censp','m2B1stMv.cas.clu.censp' )	
 	#	basic m2Bt runs	mem=3800
 	#method.risk	<- c(	'm2Bt.cas','m2Bt.cas.clu','m2Bt.cas.censp')
 	#	basic m2Bt runs	mem=7800
-	method.risk	<- c(	'm2BtMv.cas','m2BtMv.cas.censp','m2BtMv.cas.clu.censp' )	
+	#method.risk	<- c(	'm2BtMv.cas','m2BtMv.cas.censp','m2BtMv.cas.clu.censp' )	
 	
 	#	Acute higher than VL, which we can check after diagnosis
 	#method.risk	<- c( 'm4.Bwmxv','m4.Bwmxv.adj','m4.Bwmxv.censp','m4.Bwmxv.clu.censp','m4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp','m4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp' )
@@ -703,8 +704,8 @@ hivc.pipeline.betareg.estimate.risks<- function()
 				#stop()
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="1800mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=22, hpc.mem="1900mb")
-				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
+				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="79000mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					

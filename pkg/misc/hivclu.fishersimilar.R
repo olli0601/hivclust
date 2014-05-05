@@ -3024,6 +3024,112 @@ project.athena.Fisheretal.YX.model5<- function(YX, clumsm.info, vl.suppressed=lo
 	}
 }
 ######################################################################################
+project.athena.Fisheretal.YX.model2.v2<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000) )
+{
+	save.file	<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YX3da.R"
+	YX			<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)
+	
+	YX.mx		<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
+	set(YX.mx, NULL, 'stage', factor(YX.mx$CD4t))
+	YX.1st		<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
+	set(YX.1st, NULL, 'stage', factor(YX.1st$CD4t))
+	YX.t		<- project.athena.Fisheretal.YX.model2.stratify.VLt(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
+	set(YX.t, NULL, 'stage', factor(YX.t$CD4t))
+
+	require(betareg)
+	require(gamlss)
+	formula			<- 'score.Y ~ bs(t.Age, knots=c(30,45), degree=1)+bs(t, knots=c(2007,2010), degree=2)+stage+t.RegionHospital-1'
+	include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
+	tmp				<- project.athena.Fisheretal.betareg(YX.mx, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
+	start			<- c( coef(tmp$betafit.rr), 1. )
+	YXf.mx 			<- betareg(as.formula(formula), link='log', weights=w, data=YX.mx, start=start)	
+	tmp				<- project.athena.Fisheretal.betareg(YX.1st, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
+	start			<- c( coef(tmp$betafit.rr), 1. )
+	YXf.1st 		<- betareg(as.formula(formula), link='log', weights=w, data=YX.1st, start=start)	
+	tmp				<- project.athena.Fisheretal.betareg(YX.t, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
+	start			<- c( coef(tmp$betafit.rr), 1. )
+	YXf.t	 		<- betareg(as.formula(formula), link='log', weights=w, data=YX.t, start=start)
+	
+	#pseudo R2
+	sapply(list(YXf.mx, YXf.t, YXf.1st), '[[','pseudo.r.squared')
+	#	0.08514063 0.08404726 0.07683612
+	
+	tmp		<- c(	'Undiagnosed,\nEvidence for acute infection\nat diagnosis',
+			'Undiagnosed,\nEvidence for recent infection\nat diagnosis',
+			'Undiagnosed,\nNo recent infection',
+			'Diagnosed < 3mo,\nEvidence for acute infection\nat diagnosis',
+			'Diagnosed < 3mo,\nEvidence for recent infection\nat diagnosis',
+			'Diagnosed,\nlowest CD4 to date\n> 500',
+			'Diagnosed,\nlowest CD4 to date\n> 350',
+			'Diagnosed,\nlowest CD4 to date\n<= 350',
+			'Diagnosed,\nmissing 1st CD4',
+			'ART initiated,\nVL missing',
+			'ART initiated,\nVL continually\nsuppressed', 
+			'ART initiated,\nVL not continually\nsuppressed')
+	tmp		<- data.table( stage.legend= factor(tmp), stage=c("UAy","UAm","U","DAy","DAm","Dtg500","Dtl500","Dtl350","Dt.NA","ART.vlNA","ART.suA.Y","ART.suA.N"))
+	YX.mx	<- merge(YX.mx, tmp, by='stage')	
+	
+	
+	#regression figures	-  calendar time
+	formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+stage-1'
+	include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')	
+	tmp				<- project.athena.Fisheretal.betareg(YX.mx, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
+	tmp$predict		<- predict(tmp$betafit.rr, type='response', se.fit=TRUE)		
+	YX.mx[, score.Y.b:= tmp$predict$fit]
+	YX.mx[, score.Y.su:= tmp$predict$fit+tmp$predict$se.fit]
+	YX.mx[, score.Y.sl:= tmp$predict$fit-tmp$predict$se.fit]
+	set(YX.mx, YX.mx[, which(score.Y.su>1)], 'score.Y.su', 1.)
+	set(YX.mx, YX.mx[, which(score.Y.sl<0)], 'score.Y.sl', 0.)
+	YX.mx			<- merge(YX.mx, YX.mx[, list(mean.score.Y.b= mean(score.Y.b, na.rm=TRUE)), by='stage'], by='stage')
+	setkey(YX.mx, mean.score.Y.b)		 
+	ggplot(YX.mx, aes(x = t, y = score.Y)) + geom_point(aes(size=w)) + 
+			labs(x="Calendar time", y='Prob direct HIV-1 transmission') +
+			geom_smooth(aes(y= score.Y.b), stat='identity') + geom_ribbon(aes(ymin= score.Y.sl, ymax= score.Y.su, linetype=NA), alpha=0.3) + facet_grid(. ~ stage.legend, margins=FALSE)
+	file	<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "Yscore3da_model2_m2Bwmx_calendartime.pdf", sep='')
+	cat(paste('\nsave to file',file))
+	ggsave(file=file, w=24,h=8)
+	
+	#regression figures	-  t.Age
+	formula			<- 'score.Y ~ bs(t.Age, knots=c(30,45), degree=1)+stage-1'
+	include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
+	tmp				<- project.athena.Fisheretal.betareg(YX.mx, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
+	tmp$predict		<- predict(tmp$betafit.rr, type='response', se.fit=TRUE)		
+	YX.mx[, score.Y.b:= tmp$predict$fit]
+	YX.mx[, score.Y.su:= tmp$predict$fit+tmp$predict$se.fit]
+	YX.mx[, score.Y.sl:= tmp$predict$fit-tmp$predict$se.fit]
+	set(YX.mx, YX.mx[, which(score.Y.su>1)], 'score.Y.su', 1.)
+	set(YX.mx, YX.mx[, which(score.Y.sl<0)], 'score.Y.sl', 0.)
+	YX.mx[, mean.score.Y.b:=NULL]
+	YX.mx			<- merge(YX.mx, YX.mx[, list(mean.score.Y.b= mean(score.Y.b, na.rm=TRUE)), by='stage'], by='stage')
+	setkey(YX.mx, mean.score.Y.b)		 
+	ggplot(YX.mx, aes(x = t.Age, y = score.Y)) + geom_point(aes(size=w)) + 
+			labs(x="Age of transmitter at potential transmission time", y='Prob direct HIV-1 transmission') +
+			geom_smooth(aes(y= score.Y.b), stat='identity') + geom_ribbon(aes(ymin= score.Y.sl, ymax= score.Y.su, linetype=NA), alpha=0.3) + facet_grid(. ~ stage.legend, margins=FALSE)
+	file	<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "Yscore3da_model2_m2Bwmx_tAge.pdf", sep='')
+	cat(paste('\nsave to file',file))
+	ggsave(file=file, w=24,h=8)
+	
+	#regression figures	-  t + t.RegionHospital
+	formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+stage+t.RegionHospital-1'
+	include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
+	tmp				<- project.athena.Fisheretal.betareg(YX.mx, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
+	tmp$predict		<- predict(tmp$betafit.rr, type='response', se.fit=TRUE)		
+	YX.mx[, score.Y.b:= tmp$predict$fit]
+	YX.mx[, score.Y.su:= tmp$predict$fit+tmp$predict$se.fit]
+	YX.mx[, score.Y.sl:= tmp$predict$fit-tmp$predict$se.fit]
+	set(YX.mx, YX.mx[, which(score.Y.su>1)], 'score.Y.su', 1.)
+	set(YX.mx, YX.mx[, which(score.Y.sl<0)], 'score.Y.sl', 0.)
+	YX.mx[, mean.score.Y.b:=NULL]
+	YX.mx			<- merge(YX.mx, YX.mx[, list(mean.score.Y.b= mean(score.Y.b, na.rm=TRUE)), by='stage'], by='stage')
+	setkey(YX.mx, mean.score.Y.b)		 
+	ggplot(YX.mx, aes(x = t, y = score.Y)) + geom_point(aes(size=w)) + 
+			labs(x="Calendar time", y='Prob direct HIV-1 transmission') +
+			geom_smooth(aes(y= score.Y.b), stat='identity') + geom_ribbon(aes(ymin= score.Y.sl, ymax= score.Y.su, linetype=NA), alpha=0.3) + facet_grid(stage.legend ~ t.RegionHospital, margins=FALSE)
+	file	<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "Yscore3da_model2_m2Bwmx_calendartimeRegionHospital.pdf", sep='')
+	cat(paste('\nsave to file',file))
+	ggsave(file=file, w=12,h=24)	
+}
+######################################################################################
 project.athena.Fisheretal.YX.model4.v2<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000) )
 {
 	require(betareg)
@@ -4181,12 +4287,14 @@ project.athena.Fisheretal.YX.model4.v1<- function(YX, clumsm.info, vl.suppressed
 }
 ######################################################################################
 #	wrapper to betareg to come up with better starting values due to scores close to 0 and 1
-project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( seq(0.95, 0.99, 0.01),seq(0.991, 1, 0.001)), verbose=0)
+project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( seq(0.95, 0.99, 0.01),seq(0.991, 1, 0.001)), exclude.zero=FALSE, verbose=0)
 {
 	require(gamlss)
 	gamlss.BE.limit.i	<- gamlss.BE.limit.u[1]
 	YX.m3b				<- copy(YX.m3)	
-	set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.i)], 'score.Y', gamlss.BE.limit.i)
+	set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.i )], 'score.Y', gamlss.BE.limit.i)
+	if(exclude.zero)
+		set(YX.m3b, YX.m3b[, which((1-gamlss.BE.limit.i)<score.Y)], 'score.Y', 1-gamlss.BE.limit.i)
 	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0)	
 	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0)	
 	tryCatch({
@@ -4195,6 +4303,8 @@ project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, g
 					#print(gamlss.BE.limit.u[i])			
 					YX.m3b	<- copy(YX.m3)	
 					set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.u[i])], 'score.Y', gamlss.BE.limit.u[i])
+					if(exclude.zero)
+						set(YX.m3b, YX.m3b[, which((1-gamlss.BE.limit.u[i])<score.Y)], 'score.Y', 1-gamlss.BE.limit.u[i])
 					tmp.or				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, start.from=betafit.or)
 					tmp.rr				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=betafit.rr)
 					gamlss.BE.limit		<- gamlss.BE.limit.u[i]	#not run if error in gamlss
@@ -4206,19 +4316,20 @@ project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, g
 	
 	if(verbose) cat(paste('\nsuccess: gamlss beta regression for score<=',gamlss.init$BE.limit))
 	set(YX.m3, YX.m3[, which(score.Y>gamlss.init$BE.limit)], 'score.Y', gamlss.init$BE.limit)
+	if(exclude.zero)
+		set(YX.m3, YX.m3[, which((1-gamlss.init$BE.limit)<score.Y)], 'score.Y', 1-gamlss.init$BE.limit)
 	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, start.from=gamlss.init$start.from.or)
-	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=gamlss.init$start.from.rr)
-	
+	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=gamlss.init$start.from.rr)	
 	list(betafit.or=betafit.or, betafit.rr=betafit.rr, gamlss.BE.limit=gamlss.init$BE.limit)
 }
 ######################################################################################
-project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=1e3, gamlss.BE.required.limit=0.99 )
+project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=1e3, gamlss.BE.required.limit=0.99, exclude.zero=FALSE )
 {
 	require(gamlss)
 	options(warn=0)
 	#
 	cat(paste('\nbeta regression for formula=',formula))	 
-	tmp				<- project.athena.Fisheretal.betareg(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
+	tmp				<- project.athena.Fisheretal.betareg(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1, exclude.zero=exclude.zero )
 	betafit.or		<- tmp$betafit.or
 	betafit.rr		<- tmp$betafit.rr
 	stopifnot(tmp$gamlss.BE.limit>gamlss.BE.required.limit)
@@ -5036,8 +5147,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
 				if(!grepl('censp', method))
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
-				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
-				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )
+				tmp			<- data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] )
+				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
+				YX			<- merge( YX, tmp, by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}
 			set(YX, NULL, 'stage', YX[, factor(as.character(ART.ntstage.c))])
@@ -5045,8 +5158,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('adj', method))
 			{
 				tmp			<- ifelse(grepl(method, 'clu'), 'adj.clu', 'adj.seq')
-				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )				
-				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )	
+				tmp			<- data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] )
+				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
+				YX			<- merge( YX, tmp, by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}												
 			#
@@ -5081,7 +5196,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
 			risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/sum(n[stat==tmp])), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)
 			setnames(risk.df, 'n', 'PY')
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )						
+			if(grepl('MV', method))
+				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, exclude.zero=TRUE )
+			if(!grepl('MV', method))
+				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, exclude.zero=FALSE )						
 		}
 		if(method%in%c('m3.tnicMv','m3.tnicMv.clu','m3.tnicMv.adj','m3.tnicMv.clu.adj','m3.tnicMv.cens','m3.tnicMv.clu.cens','m3.tnicMv.censp','m3.tnicMv.clu.censp'))
 		{
@@ -5098,8 +5216,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
 				if(!grepl('censp', method))
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
-				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
-				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )		
+				tmp			<- data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] )
+				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
+				YX			<- merge( YX, tmp, by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}			
 			#	sequence adjustment (not censoring)			
@@ -5107,7 +5227,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			{				
 				tmp			<- ifelse(grepl(method, 'clu'), 'adj.clu', 'adj.seq')
 				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )				
-				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				tmp			<- data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] )
+				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
+				YX			<- merge( YX, tmp, by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}												
 			#
@@ -5128,7 +5250,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/sum(n[stat==tmp])), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)
 			setnames(risk.df, 'n', 'PY')
 			#
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )						
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, exclude.zero=TRUE )						
 		}
 		if(method%in%c('m3.tnicv','m3.tnicv.clu','m3.tnicv.adj','m3.tnicv.clu.adj','m3.tnicv.cens','m3.tnicv.clu.cens','m3.tnicv.censp','m3.tnicv.clu.censp'))
 		{
@@ -5144,8 +5266,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
 				else
 					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
-				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
-				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )	
+				tmp			<- data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] )
+				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
+				YX			<- merge( YX, tmp, by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}
 			set(YX, NULL, 'stage', YX[, factor(as.character(ART.ntstage.c))])
@@ -5153,8 +5277,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('adj', method))
 			{
 				tmp			<- ifelse(grepl(method, 'clu'), 'adj.clu', 'adj.seq')
-				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )				
-				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
+				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )
+				tmp			<- data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] )
+				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
+				YX			<- merge( YX, tmp, by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}												
 			#
@@ -7935,7 +8061,7 @@ project.athena.Fisheretal.YX.model3.v2<- function(YX, clumsm.info, vl.suppressed
 		YX.m3		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, cd4.cut= c(-1, 350, 550, 5000), cd4.label=c('D1<=350','D1<=550','D1>550'))	
 		
 		#non parametric fit
-		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ ART.nDrug.c, margins=TRUE)
+		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "loess") + facet_grid(. ~ ART.nDrug.c, margins=TRUE)		
 		
 		#ns spline have no order, only knots or dfs		
 		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method = "lm", formula= y~ns(x,2), size=1) + facet_grid(. ~ ART.nDrug.c, margins=TRUE)
@@ -8014,21 +8140,38 @@ project.athena.Fisheretal.YX.model3.v2<- function(YX, clumsm.info, vl.suppressed
 	}
 	if(1)
 	{
-		YX.m3		<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, return.only.ART=FALSE)
+		YX.m3			<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, return.only.ART=1)
 		set(YX.m3, NULL, 'stage', YX.m3[, ART.ntstage.c])
-		tmp			<- YX.m3[, which(is.na(stage))]
+		tmp				<- YX.m3[, which(is.na(stage))]
 		set(YX.m3, tmp, 'stage', YX.m3[tmp, stage.orig])
 		set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])
 		formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=1)+stage-1'
-		#formula			<- 'score.Y ~ bs(lRNA.mx, knots=c(3.00001,4.5), degree=2)+stage-1'
-		YX.m3b			<- na.omit(subset(YX.m3, select=c(score.Y, lRNA.mx, stage, ART.pulse, ART.I, ART.F, ART.P, ART.A, CDCC, CD4, fw.up.med, t.period, t.Age, t.AnyPos_T1, t.RegionHospital, w)))
-		tmp				<- coef(betareg(formula=formula, link='log', weights=w, data = subset(YX.m3b, score.Y>0.1)))
-		betafit.rr 		<- betareg(formula=formula, link='log', weights=w, data = YX.m3b, start=list(tmp))
-		YX.m3b[, score.Y.b:= predict(betafit.rr, type='response')]
-		tmp				<- YX.m3b[, list(mean.score.Y.b= mean(score.Y.b, na.rm=TRUE)), by='stage']
+		include.colnames<- c('score.Y','w','stage','lRNA.mx')	
+		YX.m3			<- subset(YX.m3, !is.na(lRNA.mx))
+		tmp				<- project.athena.Fisheretal.betareg(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1 )
+		tmp$predict		<- predict(tmp$betafit.rr, type='response', se.fit=TRUE)		
+		YX.m3[, score.Y.b:= tmp$predict$fit]
+		YX.m3[, score.Y.su:= tmp$predict$fit+tmp$predict$se.fit]
+		YX.m3[, score.Y.sl:= tmp$predict$fit-tmp$predict$se.fit]
+		set(YX.m3, YX.m3[, which(score.Y.su>1)], 'score.Y.su', 1.)
+		set(YX.m3, YX.m3[, which(score.Y.sl<0)], 'score.Y.sl', 0.)
+		
+		tmp		<- c(	"triple cART\nNNRTI + PI","triple cART\nNRTI + PI","Patient requested\ntherapy change",
+						"triple cART\nNRTI + NNRTI + PI","triple cART\nNRT + NNRT","Failure","Pulsed\ncART",
+						"#drugs<3","Non-adherence","#drugs>3","Interruption","triple cART\nNRTI" )
+		tmp		<- data.table( stage.legend= factor(tmp), stage=c("ART.3.NNRT.PI","ART.3.NRT.PI","ART.P","ART.3.NRT.PI.NNRT","ART.3.NRT.NNRT","ART.F","ART.pulse.Y","ART.l3","ART.A","ART.g3","ART.I","ART.3.NRT"))
+		YX.m3	<- merge(YX.m3, tmp, by='stage')
+		
+		tmp				<- YX.m3[, list(stage.legend=stage.legend[1], mean.score.Y.b= mean(score.Y.b, na.rm=TRUE)), by='stage']
 		setkey(tmp, mean.score.Y.b)		 
-		set(YX.m3b, NULL, 'stage', YX.m3b[, factor( stage, levels=c( subset(tmp, !stage%in%c('Diag','DAy','DAm'))[,as.character(stage)],c('Diag','DAy','DAm') ))])
-		ggplot(YX.m3b, aes(x = lRNA.mx, y = score.Y)) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + facet_grid(. ~ stage, margins=FALSE)		
+		set(YX.m3, NULL, 'stage.legend', YX.m3[, factor( stage.legend, levels=tmp[, stage.legend])])		
+		
+		ggplot(YX.m3, aes(x = lRNA.mx, y = score.Y)) + 
+				labs(x="max log10 viral load during infection window", y='Prob direct HIV-1 transmission') + 
+				geom_ribbon(aes(ymin= score.Y.sl, ymax= score.Y.su, linetype=NA), alpha=0.3) + geom_point(aes(size=w)) + geom_smooth(aes(y= score.Y.b), stat='identity') + facet_grid(. ~ stage.legend, margins=FALSE)
+		file	<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "Yscore3da_model2_m3tnicv.pdf", sep='')
+		cat(paste('\nsave to file',file))
+		ggsave(file=file, w=24,h=8)		
 	}
 	if(1)
 	{
@@ -10785,20 +10928,20 @@ project.athena.Fisheretal.sensitivity<- function()
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	method.risk				<- c(	'm2B1st.cas','m2Bwmx.cas','m2BwmxMv.cas','m2Bt.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4',
-									'm2B1st.cas.adj','m2Bwmx.cas.adj','m2BwmxMv.cas.adj','m2Bt.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj',
-									'm2B1st.cas.cens','m2Bwmx.cas.cens','m2BwmxMv.cas.cens','m2Bt.cas.cens','m2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens',
-									'm2B1st.cas.clu.cens','m2Bwmx.cas.clu.cens','m2BwmxMv.cas.clu.cens','m2Bt.cas.clu.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens',
-									'm2B1st.cas.censp','m2Bwmx.cas.censp','m2BwmxMv.cas.censp','m2Bt.cas.censp','m2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp',
-									'm2B1st.cas.clu.censp','m2Bwmx.cas.clu.censp','m2BwmxMv.cas.clu.censp','m2Bt.cas.clu.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp',
-									'm3.i','m3.ni','m3.nic','m3.nicv','m3.tni','m3.tnic','m3.tnicv','m3.tniv','m3.tnicNo','m3.tnicvNo','m3.tnicMv',
-									'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.nicv.clu','m3.tni.clu','m3.tnic.clu','m3.tnicv.clu','m3.tniv.clu','m3.tnicNo.clu','m3.tnicvNo.clu','m3.tnicMv.clu',
-									'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicNo.adj','m3.tnicvNo.adj','m3.tnicMv.adj',
-									'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj','m3.tnicvNo.clu.adj','m3.tnicMv.clu.adj',									
-									'm3.nic.cens','m3.nicv.cens','m3.tnic.cens','m3.tnicv.cens','m3.tnicvNo.cens','m3.tnicvNo.cens','m3.tnicMv.cens',
-									'm3.nic.clu.cens','m3.nicv.clu.cens','m3.tnic.clu.cens','m3.tnicv.clu.cens','m3.tnicNo.clu.cens','m3.tnicvNo.clu.cens','m3.tnicMv.clu.cens',									
-									'm3.nic.censp','m3.nicv.censp','m3.tnic.censp','m3.tnicv.censp','m3.tnicNo.censp','m3.tnicvNo.censp','m3.tnicMv.censp',
-									'm3.nic.clu.censp','m3.nicv.clu.censp','m3.tnic.clu.censp','m3.tnicv.clu.censp','m3.tnicNo.clu.censp','m3.tnicvNo.clu.censp','m3.tnicMv.clu.censp',
+	method.risk				<- c(	'm2B1st.cas','m2B1stMv.cas','m2Bwmx.cas','m2BwmxMv.cas','m2Bt.cas','m2BtMv.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4',
+									'm2B1st.cas.adj','m2B1stMv.cas.adj','m2Bwmx.cas.adj','m2BwmxMv.cas.adj','m2Bt.cas.adj','m2BtMv.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj',
+									'm2B1st.cas.cens','m2B1stMv.cas.cens','m2Bwmx.cas.cens','m2BwmxMv.cas.cens','m2Bt.cas.cens','m2BtMv.cas.cens','m2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens',
+									'm2B1st.cas.clu.cens','m2B1stMv.cas.clu.cens','m2Bwmx.cas.clu.cens','m2BwmxMv.cas.clu.cens','m2Bt.cas.clu.cens','m2BtMv.cas.clu.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens',
+									'm2B1st.cas.censp','m2B1stMv.cas.censp','m2Bwmx.cas.censp','m2BwmxMv.cas.censp','m2Bt.cas.censp','m2BtMv.cas.censp','m2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp',
+									'm2B1st.cas.clu.censp','m2B1stMv.cas.clu.censp','m2Bwmx.cas.clu.censp','m2BwmxMv.cas.clu.censp','m2Bt.cas.clu.censp','m2BtMv.cas.clu.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp',
+									'm3.i','m3.ni','m3.nic','m3.nicv','m3.tni','m3.tnic','m3.tnicv','m3.tniv','m3.tnicNo','m3.tnicvNo','m3.tnicMv','m3.tnicMV',
+									'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.nicv.clu','m3.tni.clu','m3.tnic.clu','m3.tnicv.clu','m3.tniv.clu','m3.tnicNo.clu','m3.tnicvNo.clu','m3.tnicMv.clu','m3.tnicMV.clu',
+									'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicNo.adj','m3.tnicvNo.adj','m3.tnicMv.adj','m3.tnicMV.adj',
+									'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj','m3.tnicvNo.clu.adj','m3.tnicMv.clu.adj','m3.tnicMV.clu.adj',									
+									'm3.nic.cens','m3.nicv.cens','m3.tnic.cens','m3.tnicv.cens','m3.tnicvNo.cens','m3.tnicvNo.cens','m3.tnicMv.cens','m3.tnicMV.cens',
+									'm3.nic.clu.cens','m3.nicv.clu.cens','m3.tnic.clu.cens','m3.tnicv.clu.cens','m3.tnicNo.clu.cens','m3.tnicvNo.clu.cens','m3.tnicMv.clu.cens','m3.tnicMV.clu.cens',									
+									'm3.nic.censp','m3.nicv.censp','m3.tnic.censp','m3.tnicv.censp','m3.tnicNo.censp','m3.tnicvNo.censp','m3.tnicMv.censp','m3.tnicMV.censp',
+									'm3.nic.clu.censp','m3.nicv.clu.censp','m3.tnic.clu.censp','m3.tnicv.clu.censp','m3.tnicNo.clu.censp','m3.tnicvNo.clu.censp','m3.tnicMv.clu.censp','m3.tnicMV.clu.censp',
 									'm4.Bwmxv','m4.Bwmxv.adj','m4.Bwmxv.censp','m4.Bwmxv.clu.censp',
 									'm4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp',
 									'm4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp'
@@ -11036,6 +11179,7 @@ project.athena.Fisheretal.sensitivity<- function()
 	pPWYI.SuAY.X.seq<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' & factor=='ART.suA.Y')[,v] / subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk=='m2wmx.cas' & stat=='PY' )[, sum(v)]
 	#	compare fit of cascade models with aic		 															 															 
 	tmp	<- subset(runs.fit, 	method.risk%in%c("m21st.cas","m2wmx.cas","m2t.cas") )
+	tmp	<- subset(runs.fit, 	method.risk%in%c("m21st.cas","m2wmx.cas","m2t.cas") )
 	setkey(tmp, method.brl, method.dating, method.risk)
 	#	compare fit of models with reduced RR through cascade
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2B1st.cas' & stat=='RR')
@@ -11053,10 +11197,24 @@ project.athena.Fisheretal.sensitivity<- function()
 	setkey(tmp, method.risk, method.brl, method.dating)
 	tmp	
 	#	compare fit of cascade models with aic	
-	tmp	<- subset(runs.fit, 	grepl('m2B',method.risk,fixed=1) & grepl('cas',method.risk,fixed=1))
+	tmp	<- subset(runs.fit, 	grepl('m2B',method.risk,fixed=1) & grepl('cas',method.risk,fixed=1) & method.recentctime=='2011' )
+	tmp	<- subset(runs.fit, 	method.risk%in%c('m2BwmxMv.cas.censp','m2B1stMv.cas.censp','m2BtMv.cas.censp') & method.recentctime=='2011' )	
 	tmp[, dAIC:= AIC-min(AIC)]
 	setkey(tmp, method.brl, method.dating, dAIC)
 	tmp
+	#AIC   logLik        method.risk method.dating method.nodectime method.brl method.recentctime      dAIC
+	#1: -646.9299 347.4649 m2BwmxMv.cas.censp         sasky              any        3da               2011  0.000000
+	#2: -644.7719 346.3860   m2BtMv.cas.censp         sasky              any        3da               2011  2.157926
+	#3: -631.2340 338.6170 m2B1stMv.cas.censp         sasky              any        3da               2011 15.695878	
+	tmp	<- subset(runs.fit, 	method.risk%in%c('m2Bwmx.cas.censp','m2B1st.cas.censp','m2Bt.cas.censp') & method.recentctime=='2011' )	
+	tmp[, dAIC:= AIC-min(AIC)]
+	setkey(tmp, method.brl, method.dating, dAIC)
+	tmp
+	#AIC   logLik      method.risk method.dating method.nodectime method.brl method.recentctime       dAIC
+	#1: -1278.502 652.2511 m2Bwmx.cas.censp         sasky              any        3da               2011  0.0000000
+	#2: -1277.646 651.8229   m2Bt.cas.censp         sasky              any        3da               2011  0.8563968
+	#3: -1252.392 638.1961 m2B1st.cas.censp         sasky              any        3da               2011 26.1100020
+	
 	#	check P cascade m2Bwmx.cas vs m2Bwmx.cas.adj for 3ca
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3ca' & method.dating=='sasky' & method.risk%in%c('m2Bwmx.cas','m2Bwmx.cas.adj') & stat=='P')
 	#	check P cascade m2Bwmx.cas across 3ca 3da gmrf sasky
@@ -11077,10 +11235,40 @@ project.athena.Fisheretal.sensitivity<- function()
 	#
 	#	Table 2	2011
 	#
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & method.recentctime=='2011' & stat=='RR')
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & method.recentctime=='2011' & stat=='P')
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & method.recentctime=='2011' & stat=='RI')
+
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & method.recentctime=='2011' & stat=='RR')
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & method.recentctime=='2011' & stat=='P')
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & method.recentctime=='2011' & stat=='RI')
 	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & method.recentctime=='2011' & stat=='PY')
+	
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term')
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term.ptx')
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.censp' & method.recentctime=='2011' & stat=='P')
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.censp' & method.recentctime=='2011' & stat=='RI')
+	
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.clu.censp' & method.recentctime=='2011' & stat=='RR.term')
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.clu.censp' & method.recentctime=='2011' & stat=='RR.term.ptx')
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.clu.censp' & method.recentctime=='2011' & stat=='P')
+	#
+	#	Discussion Table 2	2011
+	#
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2B1stMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term')
+	#	stageART1.su.Y RR.term 		stage ART1.su.N    stage  ART1.su.Y 0.9220069 0.7417764 1.1670814
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2B1stMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term.ptx')
+	#	stageART1.su.Y RR.term.ptx  stage ART1.su.N    stage  ART1.su.Y 1.5168634 1.2203526 1.9200541
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BtMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term')
+	#	stageART.su.Y RR.term 		stage ART.su.N    stage   ART.su.Y 1.2250153 1.0512000 1.4260882
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BtMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term.ptx')
+	#	stageART.su.Y RR.term.ptx 	stage ART.su.N    stage   ART.su.Y 1.16682507 1.00126628 1.35834670
+
+	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.clu' & method.recentctime=='2011' & stat=='P')
+	#10:         stageU     None    P stage         U     None       None 0.403064883 0.3724971136 0.433277166
+	#11:       stageUAm     None    P stage       UAm     None       None 0.099488782 0.0820996822 0.119894347
+	#12:       stageUAy     None    P stage       UAy     None       None 0.078653832 0.0616273946 0.095428790
+
 	#
 	#	MODEL 2B time trends
 	#
@@ -11302,13 +11490,36 @@ project.athena.Fisheretal.sensitivity<- function()
 	#	ART.A typically NOT significant
 	#	1.466913 0.9311993 1.757025
 	
-
-	#	Table 3	
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicv.clu.censp') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#
+	#	Table 3		2011
+	#
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic') & stat=='RR' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.censp') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicv.clu.censp') & method.recentctime=='2011' & stat=='RR.term', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )	
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.censp') & stat=='RR' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicNo.censp') & stat=='RR' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.censp') & stat=='P' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.censp') & stat=='RI' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicNo.censp') & stat=='RI' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicv.clu.censp') & method.recentctime=='2011' & stat=='RI', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#
+	#	Table 3		2013
+	#
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.censp') & method.recentctime=='2013-03-01' & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.adj') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicvNo.adj') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicNo.censp')  & method.recentctime=='2013-03-01' & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicMV.censp') & method.recentctime=='2013-03-01' & stat=='RR.term', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicMV.censp') & method.recentctime=='2013-03-01' & stat=='P', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicMV.censp') & method.recentctime=='2013-03-01' & stat=='RI', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicNo.censp')  & method.recentctime=='2013-03-01' & stat=='RI', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#
+	#	Discussion Table 3 2013
+	#
+	#load('~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140423/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_Wed_Dec_18_11:37:00_2013_Yscore3da_model3_m3.tnicMv.censp.R')
+	#subset(ans$risk, stat=='RI')[1:15,]
+	#6:    stageART.3.NRT.NNRT.1     None   RI stage    ART.3.NRT.NNRT.1     None       None  1.808131352 0.756608272  2.94686081
+	#7:    stageART.3.NRT.NNRT.2     None   RI stage    ART.3.NRT.NNRT.2     None       None  1.088841518 0.512451518  2.06105674
+	#8:    stageART.3.NRT.NNRT.3     None   RI stage    ART.3.NRT.NNRT.3     None       None  3.510524184 2.223360693  4.69201930
+	#9:    stageART.3.NRT.NNRT.4     None   RI stage    ART.3.NRT.NNRT.4     None       None  8.577500887 5.990828733 11.51541840
 	
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicNo.clu.censp') & stat=='RR' & method.recentctime=='2013-03-01', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	
@@ -11920,7 +12131,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}
-	if(0)
+	if(1)
 	{		
 		method					<- '3d'
 		method.recentctime		<- '2013-03-01'
@@ -11933,7 +12144,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}	
-	if(1)
+	if(0)
 	{		
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
