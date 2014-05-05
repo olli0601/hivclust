@@ -715,11 +715,10 @@ hivc.pipeline.betareg.estimate.risks<- function()
 ######################################################################################
 hivc.pipeline.various<- function()
 {
-	stop()
-	dir.name<- DATA		 
+	dir.name	<- DATA		 
 	signat.in	<- "Wed_May__1_17/08/15_2013"
 	signat.out	<- "Wed_May__1_17/08/15_2013"		
-	cmd			<- ''
+	
 
 	if(0)	#align sequences in fasta file with Clustalo
 	{
@@ -735,6 +734,7 @@ hivc.pipeline.various<- function()
 		indir		<- paste(dir.name,"tmp",sep='/')
 		infile		<- "ATHENA_2013_03_SeqMaster.R"		
 		outdir		<- paste(dir.name,"tmp",sep='/')
+		cmd			<- ''
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
 	if(0)	#compute raw pairwise genetic distances accounting correctly for ambiguous IUPAC nucleotides 
@@ -747,7 +747,7 @@ hivc.pipeline.various<- function()
 		insignat	<- "Thu_Aug_01_17/05/23_2013"
 		cmd			<- hivc.cmd.get.geneticdist(indir, infile, insignat, gd.max, outdir=indir)
 		
-		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')					
+		outfile		<- paste("pipeline",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')		
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q="pqeph")
 		cat(cmd)
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
@@ -758,12 +758,19 @@ hivc.pipeline.various<- function()
 		indir		<- paste(dir.name,"tmp",sep='/')
 		infile		<- "ATHENA_2013_03_SeqMaster.R"		
 		outdir		<- paste(dir.name,"tmp",sep='/')
+		cmd			<- ''
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
+	}
+	if(1)
+	{
+		outdir		<- dir.name		
+		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="79000mb")
 	}
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 	outdir	<- paste(dir.name,"tmp",sep='/')
-	outfile	<- paste("pipeline",signat,sep='.')					
-	lapply(cmd, function(x)
+	outfile	<- paste("vrs",signat,sep='.')					
+	dummy	<- lapply(cmd, function(x)
 			{				
 				#x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
 				cat(x)

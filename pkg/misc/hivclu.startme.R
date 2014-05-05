@@ -65,7 +65,7 @@ EPS			<<- 1e-12
 #default.fun	<- "project.hivc.get.geneticdist.from.sdc"
 #default.fun		<- "project.bezemer2013a.figs"
 #default.fun		<-"project.bezemer2013b.rates"
-default.fun		<- "project.hivc.clustering"
+#default.fun		<- "project.hivc.clustering"
 #default.fun	<- "project.hivc.beast"
 #default.fun	<- "hivc.prog.get.clustering.precompute"
 #default.fun	<- "project.gccontent"
@@ -79,9 +79,11 @@ default.fun		<- "project.hivc.clustering"
 #default.fun 	<- "hivc.pipeline.BEAST"
 #default.fun		<- "hivc.pipeline.BEASTout"
 #default.fun		<- "hivc.prog.betareg.estimaterisks"
-default.fun		<- "hivc.pipeline.betareg.estimate.risks"
+#default.fun		<- "hivc.pipeline.betareg.estimate.risks"
+#default.fun		<- "project.athena.Fisheretal.numbers"
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
+default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -378,6 +380,7 @@ if(length(args))
 					RECOMB.CHECKCANDIDATES	= "hivc.prog.recombination.check.candidates",
 					RECOMB.PLOTINCONGRUENCE	= "hivc.prog.recombination.plot.incongruence",
 					BETAREG.ESTRISK			= "hivc.prog.betareg.estimaterisks",
+					BETAREG.NUMBERS			= "project.athena.Fisheretal.numbers"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)

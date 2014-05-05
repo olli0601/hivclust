@@ -12070,6 +12070,282 @@ project.athena.Fisheretal.RI.summarize<- function(ri, df.all, tperiod.info, info
 	list(rin=rin, ris=ris, rip=rip)
 }
 ######################################################################################
+project.athena.Fisheretal.numbers<- function()
+{
+	require(data.table)
+	require(ape)
+	#stop()
+	indir					<- paste(DATA,"fisheretal_data",sep='/')		
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	outdir					<- paste(DATA,"fisheretal",sep='/')
+	infile.cov.study		<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infile.viro.study		<- paste(indircov,"ATHENA_2013_03_Viro.R",sep='/')
+	infile.immu.study		<- paste(indircov,"ATHENA_2013_03_Immu.R",sep='/')
+	infile.treatment.study	<- paste(indircov,"ATHENA_2013_03_Regimens.R",sep='/')
+	infile.cov.all			<- "ATHENA_2013_03_AllSeqPatientCovariates_AllMSM"
+	infile.viro.all			<- paste(indircov,"ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+	infile.immu.all			<- paste(indircov,"ATHENA_2013_03_Immu_AllMSM.R",sep='/')
+	infile.treatment.all	<- paste(indircov,"ATHENA_2013_03_Regimens_AllMSM.R",sep='/')		
+	
+	t.period				<- 1/8
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+	resume					<- 1
+	verbose					<- 1
+	if(0)
+	{
+		method					<- '3c'
+		method.recentctime		<- '2013-03-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm21st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"					
+		clu.infilexml.opt		<- "mph4clutx4tip"
+		clu.infilexml.template	<- "um192rhU2080"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',sep='')
+	}
+	if(0)
+	{
+		method					<- '3d'
+		method.recentctime		<- '2013-03-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm21st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"					
+		clu.infilexml.opt		<- "mph4clutx4tip"
+		clu.infilexml.template	<- "um192rhU2080"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',sep='')
+	}	
+	if(0)
+	{		
+		method					<- '3c'
+		method.recentctime		<- '2013-03-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm21st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+	}
+	if(0)
+	{		
+		method					<- '3d'
+		method.recentctime		<- '2013-03-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm2B1st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+	}	
+	if(1)
+	{		
+		method					<- '3d'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm2B1st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+	}
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									insignat= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) insignat<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,9),
+									indircov= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indircov<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,10),
+									infilecov= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile.cov.study<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,11),
+									infiletree= return(substr(arg,13,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infiletree<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,14),
+									infilexml.opt= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) clu.infilexml.opt<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									infilexml.template= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) clu.infilexml.template<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,8),
+									outfile= return(substr(arg,10,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outfile<- tmp[1]						
+		#		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]
+		#
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									method= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,12),
+									method.risk= return(substr(arg,14,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method.risk<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,17),
+									method.nodectime= return(substr(arg,19,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method.nodectime<- tmp[1]			
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,19),
+									method.recentctime= return(substr(arg,21,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method.recentctime<- tmp[1]	
+		
+		
+	}	
+	clu.infile			<- infile
+	clu.indir			<- indir
+	clu.insignat		<- insignat	
+	t.recent.endctime	<- hivc.db.Date2numeric(as.Date(method.recentctime))	
+	t.recent.endctime	<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period	
+	outfile				<- paste( outfile, ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')), sep='')
+	
+	if(verbose)
+	{
+		print(indir)
+		print(infile)
+		print(insignat)
+		print(indircov)
+		print(infile.cov.study)
+		print(infiletree)
+		print(clu.infilexml.opt)
+		print(clu.infilexml.template)
+		print(outdir)
+		print(outfile)
+		print(method)
+		print(method.risk)
+		print(method.nodectime)
+	}
+	if(method.nodectime=='any')
+		method		<- paste(method,'a',sep='')
+	if(method.nodectime=='map')
+		method		<- paste(method,'m',sep='')	
+	adjust.AcuteByNegT=0.75
+	if(resume)
+	{		
+		files		<- list.files(outdir)		
+		files		<- files[ sapply(files, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('Yscore',method,sep=''), x, fixed=1) & !grepl('tables', x, fixed=1) & grepl(paste(method.risk,'.R',sep=''),x, fixed=1)  ) ]		
+		stopifnot(length(files)==0)		
+	}
+	ans				<- list()
+	#
+	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
+	#
+	tmp				<- project.athena.Fisheretal.t2inf(indircov, infile.cov.study, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2)
+	predict.t2inf	<- tmp$predict.t2inf
+	t2inf.args		<- tmp$t2inf.args
+	#
+	#	get data relating to full population (MSM including those without seq)
+	#
+	tmp					<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime)	
+	df.all.allmsm		<- tmp$df.all	
+	df.viro.allmsm		<- tmp$df.viro
+	df.immu.allmsm		<- tmp$df.immu
+	df.treatment.allmsm	<- tmp$df.treatment
+	tmp					<- tmp$df.select
+	setkey(tmp, Patient)
+	ri.allmsm			<- unique(tmp)	
+	ri.allmsm			<- subset(ri.allmsm, AnyPos_T1>=1994.416 & AnyPos_T1<2011)
+	tmp					<- ri.allmsm
+	ans$ri				<- data.table(ri='allmsm', recent.n=nrow(tmp), acute.n= tmp[, length(which(isAcute=='Yes'))], MSM.n=tmp[, length(which(Trm=='MSM'))], BI.n=tmp[, length(which(Trm=='BI'))] )
+	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIMSM_',method,'_tATHENAmsm','.R',sep='')
+	tmp					<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.allmsm, df.tpairs=NULL, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+	ans$pyiw			<- data.table(pyiw='allseq', PYIW=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))])
+	tmp					<- NULL
+	gc()	
+	#
+	#	get data relating to study population (subtype B sequ)
+	#
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime)	
+	df.all			<- tmp$df.all
+	df.denom		<- tmp$df.select
+	df.viro			<- tmp$df.viro
+	df.immu			<- tmp$df.immu
+	df.treatment	<- tmp$df.treatment	
+	clumsm.subtrees	<- tmp$clumsm.subtrees
+	clumsm.info		<- tmp$clumsm.info
+	clumsm.ph		<- tmp$clumsm.ph
+	setkey(clumsm.info, cluster)
+	#	
+	#	RI with at least one sequence
+	#	
+	ri.allseq			<- subset(merge(subset(df.all,select=c(Patient)), ri.allmsm, by='Patient'), !is.na(PosSeqT))
+	setkey(ri.allseq, Patient)
+	ri.allseq			<- unique(ri.allseq)
+	tmp					<- ri.allseq
+	ans$ri				<- rbind(ans$ri, data.table(ri='allseq', recent.n=nrow(tmp), acute.n= tmp[, length(which(isAcute=='Yes'))], MSM.n=tmp[, length(which(Trm=='MSM'))], BI.n=tmp[, length(which(Trm=='BI'))] ))
+	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RISEQ_',method,'_tATHENAseq','.R',sep='')
+	tmp					<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.allseq, df.tpairs=NULL, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+	ans$pyiw			<- rbind(ans$pyiw, data.table(pyiw='allseq', PYIW=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))]))
+	tmp					<- NULL
+	gc()
+	#	
+	#	RI with at least one sequence > 500 & no evidence for recombination
+	#	
+	load( paste(indir,'/', infile, '_', gsub('/',':',insignat), '.R', sep='') )
+	ri.allph			<- merge( data.table(FASTASampleCode=rownames(seq.PROT.RT)), ri.allseq, by='FASTASampleCode' )
+	tmp					<- ri.allph
+	ans$ri				<- rbind(ans$ri, data.table(ri='allph', recent.n=nrow(tmp), acute.n= tmp[, length(which(isAcute=='Yes'))], MSM.n=tmp[, length(which(Trm=='MSM'))], BI.n=tmp[, length(which(Trm=='BI'))] ))
+	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPH_',method,'_tATHENAseq','.R',sep='')
+	tmp					<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.allph, df.tpairs=NULL, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+	ans$pyiw			<- rbind(ans$pyiw, data.table(pyiw='allph', PYIW=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))]))
+	tmp					<- NULL
+	gc()		
+	#	
+	#	RI in MSM cluster
+	#	
+	ri.allclu			<- df.denom
+	setkey(ri.allclu, Patient)
+	ri.allclu			<- unique(ri.allclu)
+	tmp					<- ri.allclu
+	ans$ri				<- rbind(ans$ri, data.table(ri='allclu', recent.n=nrow(tmp), acute.n= tmp[, length(which(isAcute=='Yes'))], MSM.n=tmp[, length(which(Trm=='MSM'))], BI.n=tmp[, length(which(Trm=='BI'))] ))
+	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICLU_',method,'_tATHENAseq','.R',sep='')
+	tmp					<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.allclu, df.tpairs=NULL, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)	
+	ans$pyiw			<- rbind(ans$pyiw, data.table(pyiw='allclu', PYIW=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))]))
+	tmp					<- NULL
+	gc()		
+	#
+	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'numbers_',method,'.R',sep='')
+	cat(paste('save numbers to ',save.file))
+	save(ans, file=save.file)	
+}
+######################################################################################
 hivc.prog.betareg.estimaterisks<- function()
 {
 	require(data.table)
