@@ -669,7 +669,8 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#	basic model 3 runs, mem=3800 				
 	#method.risk	<- c(	'm3.tnicMV.censp','m3.tnicMV.clu.censp','m3.tnicNo.censp','m3.tnicNo.clu.censp' )
 	#method.risk	<- c(	'm3.tnicNo.censp','m3.tnicNo.clu.censp' )
-	method.risk	<- c(	'm3.tnicMV','m3.tnicMV.adj','m3.tnicMV.censp','m3.tnicMV.clu.censp','m3.tnicMv','m3.tnicMv.adj','m3.tnicMv.censp','m3.tnicMv.clu.censp' )
+	#method.risk	<- c(	'm3.tnicMV','m3.tnicMV.adj','m3.tnicMV.censp','m3.tnicMV.clu.censp','m3.tnicMv','m3.tnicMv.adj','m3.tnicMv.censp','m3.tnicMv.clu.censp' )
+	method.risk		<- c(	'm3.tnicNoMV','m3.tnicNoMV.adj','m3.tnicNoMV.censp','m3.tnicNoMV.clu.censp' )
 	#	basic m2Bwmx runs	mem=1800
 	#method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
 	#	basic m2Bwmx runs	mem=3800

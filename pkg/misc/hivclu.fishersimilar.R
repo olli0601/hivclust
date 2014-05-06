@@ -590,7 +590,7 @@ project.athena.Fisheretal.v2.YX<- function(df.all, clumsm.info, df.tpairs, df.im
 	YX	
 }
 ######################################################################################
-project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, t.period=0.25, save.file=NA, resume=1, method='3aa')
+project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
 {
 	if(resume && !is.na(save.file))
 	{
@@ -639,9 +639,9 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t
 		Y.U						<- project.athena.Fisheretal.Y.transmitterinfected(YX.part1)		
 		#	screen for likely missed intermediates/sources
 		plot.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'missed_',method,'.pdf',sep='')		
-		YX.tpairs				<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=Y.coal, cut.date=0.5, cut.brl=1e-3, any.pos.grace.yr= 3.5, rm.zero.score=rm.zero.score, plot.file=plot.file)
+		YX.tpairs.select		<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=Y.coal, cut.date=0.5, cut.brl=1e-3, any.pos.grace.yr= 3.5, rm.zero.score=rm.zero.score, plot.file=plot.file)
 		#	take branch length weight ONLY to derive "score.Y"
-		Y.score					<- merge( YX.tpairs, subset(Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, brl, score.brl.TPp, score.brl.TPd)), by=c('FASTASampleCode','t.FASTASampleCode'))
+		Y.score					<- merge( YX.tpairs.select, subset(Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, brl, score.brl.TPp, score.brl.TPd)), by=c('FASTASampleCode','t.FASTASampleCode'))
 		#	keep only one (Patient, t.Patient) pair if there are multiple sequences per individual. Take the one with largest brl score
 		tmp						<- Y.score[,	{	
 													z<- which.min(brl)
@@ -679,10 +679,16 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t
 		if(!is.na(save.file))
 		{
 			cat(paste('\nsave YX to file', save.file))
-			save(YX, file=save.file)
+			if(!save.all)
+				save(YX, file=save.file)
+			if(save.all)
+				save(YX, YX.tpairs, df.all, Y.brl, Y.U, Y.coal, file=save.file)
 		}
 	}
-	YX	
+	if(!save.all)
+		return( YX )
+	if(save.all)
+		return( list(YX=YX, YX.tpairs=YX.tpairs, df.all=df.all, Y.brl=Y.brl, Y.U=Y.U, Y.coal=Y.coal) )
 }
 ######################################################################################
 project.athena.Fisheretal.v3.YX<- function(df.all, clumsm.info, df.tpairs, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, cluphy, cluphy.info, cluphy.map.nodectime, insignat, indircov, infilecov, infiletree, outdir, outfile, t.period=0.25, t.endctime=2013., save.file=NA, resume=1, method='3aa')
@@ -1613,8 +1619,9 @@ project.athena.Fisheretal.v3.Y.rm.missedtransmitter<- function(df.tpairs, Y.brl,
 	nmissed
 }
 ######################################################################################
-project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=NULL, cut.date=0.5, cut.brl=1e-3, any.pos.grace.yr= 3.5, rm.zero.score=FALSE, plot.file=NA)
+project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=NULL, cut.date=0.5, cut.brl=1e-3, any.pos.grace.yr= 3.5, rm.zero.score=FALSE, plot.file=NA, pyiw=NULL)
 {
+	#cut.date=0.5; cut.brl=1e-3; any.pos.grace.yr= 3.5; rm.zero.score=FALSE
 	missed					<- merge(YX.tpairs, Y.brl, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE)
 	if(!is.null(Y.coal))
 		missed				<- merge(missed, Y.coal, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE)
@@ -1648,30 +1655,41 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	}
 	#	simple rule for screening out missed sources, using genetics and dates
 	if(1)
-	{		
-		setkey(missed, FASTASampleCode, t.FASTASampleCode)
-		missed					<- unique(missed)
-		cat(paste('\nprop of tpairs that meet the BRL.TN cutoff:', nrow(subset( missed, score.brl.TN<cut.brl ))/nrow(missed) ))		
+	{	
 		set(missed, missed[, which(score.brl.TN>=cut.brl)], 'score.Y', 0.)
+		if(!is.null(pyiw))
+			pyiw	<- rbind(pyiw, data.table(pop='with.unlinkedbydeath', t.py= nrow(subset(missed, score.Y>0))*t.period, t.n= subset(missed, score.Y>0)[, length(unique(t.Patient))], n= subset(missed, score.Y>0)[, length(unique(Patient))] ))
 		if(!is.null(Y.coal))
-		{
-			cat(paste('\nprop of tpairs that meet the BRL.TN & COAL cutoff:', nrow(subset( missed, score.brl.TN<cut.brl &  coal.after.t.NegT>cut.date))/nrow(missed)  ))
+		{	
+			cat(paste('\nprop of PYIW that meet the BRL.TN & COAL cutoff:', nrow(subset( missed, score.brl.TN<cut.brl &  coal.after.t.NegT>cut.date))/nrow(missed)  ))
 			set(missed, missed[, which(!is.na(coal.after.t.NegT) & coal.after.t.NegT<=cut.date)], 'score.Y', 0.)
-			cat(paste('\nnumber of pn pairs with score.Y>0:',missed[, length(which(is.na(coal.after.t.NegT) & class=='pn' & score.Y>0))]))			
-		}						
+			if(!is.null(pyiw))
+				pyiw	<- rbind(pyiw, data.table(pop='with.coal', t.py= nrow(subset(missed, score.Y>0))*t.period, t.n= subset(missed, score.Y>0)[, length(unique(t.Patient))], n= subset(missed, score.Y>0)[, length(unique(Patient))] ))
+			cat(paste('\nnumber of pn PYIW with score.Y>0:',missed[, length(which(is.na(coal.after.t.NegT) & class=='pn' & score.Y>0))]))			
+		}		
+		setkey(missed, FASTASampleCode, t.FASTASampleCode)
+		missed					<- unique(missed)								
 	}
 	#	effect on distribution of branch lengths
 	if(!is.na(plot.file))
 	{
-		pdf(file=plot.file, 5, 5)
-		hist( subset(Y.brl, brl<0.15)[, brl], breaks=seq(0,0.15,0.002), col='blue')		
-		hist( subset(missed, score.Y>0)[, brl], breaks=seq(0,0.15,0.002), border=NA, col='red', add=TRUE)
-		dev.off()		
-		pdf(file=paste( substr(plot.file,1,nchar(plot.file)-4),'ptvspn.pdf',sep='' ), 5, 5)
-		hist( subset(missed, class=='pt')[, brl], breaks=seq(0,0.5,0.002), col='green')		
-		hist( subset(missed, class=='pn')[, brl], breaks=seq(0,0.5,0.002), border=NA, col='red', add=TRUE)
-		legend('topright',bty='n',border=NA,fill=c('green','red'),legend=c('pt','pn'))
-		dev.off()
+		missed[, cutoff:= 'Study pairs']
+		set(missed, missed[, which(coal.after.t.NegT<=cut.date)], 'cutoff', 'P( Coalesence outside transmitter ) > 0.5')
+		set(missed, missed[, which(score.brl.TN>=cut.brl)], 'cutoff', 'GD > GD(Unlinked-by-Death)')
+		tmp		<- missed[, list( FASTASampleCode=FASTASampleCode[which.min(brl)], t.FASTASampleCode=t.FASTASampleCode[which.min(brl)] ), by=c('Patient','t.Patient')]
+		tmp		<- merge(subset(tmp, select=c(FASTASampleCode, t.FASTASampleCode)), missed, by=c('FASTASampleCode','t.FASTASampleCode'))
+		setkey(tmp, Patient, t.Patient)
+		set(tmp, NULL, 'cutoff', tmp[, factor(cutoff, levels=c('Study pairs', 'P( Coalesence outside transmitter ) > 0.5', 'GD > GD(Unlinked-by-Death)'))])
+		ggplot(tmp, aes(x= brl, fill=cutoff)) + labs(x="Genetic distance", y='Clustering patient pairs with at least one recently infected MSM') +
+			scale_fill_brewer(palette='Set1') + theme(legend.justification=c(1,1), legend.position=c(1,1)) +
+			geom_histogram(binwidth=0.002)		
+		cat(paste('\nsave to file',plot.file))
+		ggsave(file=plot.file, w=6,h=6)	
+		#pdf(file=paste( substr(plot.file,1,nchar(plot.file)-4),'ptvspn.pdf',sep='' ), 5, 5)
+		#hist( subset(missed, class=='pt')[, brl], breaks=seq(0,0.5,0.002), col='green')		
+		#hist( subset(missed, class=='pn')[, brl], breaks=seq(0,0.5,0.002), border=NA, col='red', add=TRUE)
+		#legend('topright',bty='n',border=NA,fill=c('green','red'),legend=c('pt','pn'))
+		#dev.off()
 	}
 	#
 	missed		<- subset( missed, select=c(cluster, Patient, FASTASampleCode, t.Patient, t.FASTASampleCode, score.Y, class))
@@ -1679,7 +1697,10 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	cat(paste('\n#potential with score.Y>0 transmitters after screening for missed invidivuals, n=',  subset(missed, score.Y>0)[, length(unique(t.Patient))]))
 	if(rm.zero.score)
 		missed	<- subset(missed, score.Y>0)
-	missed
+	if(is.null(pyiw))
+		return(missed)
+	if(!is.null(pyiw))
+		return(list(missed=missed, pyiw=pyiw))
 }
 ######################################################################################
 project.athena.Fisheretal.v2.Y.weight<- function(YX)
@@ -5303,6 +5324,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}		
 		if(method%in%c(	'm3.tnicNo','m3.tnicNo.clu','m3.tnicNo.adj','m3.tnicNo.clu.adj','m3.tnicNo.cens','m3.tnicNo.clu.cens','m3.tnicNo.censp','m3.tnicNo.clu.censp',
+						'm3.tnicNoMV','m3.tnicNoMV.clu','m3.tnicNoMV.adj','m3.tnicNoMV.clu.adj','m3.tnicNoMV.cens','m3.tnicNoMV.clu.cens','m3.tnicNoMV.censp','m3.tnicNoMV.clu.censp',
 						'm3.tnicvNo','m3.tnicvNo.clu','m3.tnicvNo.adj','m3.tnicvNo.clu.adj','m3.tnicvNo.cens','m3.tnicvNo.clu.cens','m3.tnicvNo.censp','m3.tnicvNo.clu.censp'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
@@ -5333,7 +5355,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}												
 			#
-			if(!grepl('tnicv', method))
+			if(!grepl('tnicv', method) & !grepl('MV', method))
 			{
 				formula			<- 'score.Y ~ stage-1'
 				include.colnames<- c('score.Y','w','stage')
@@ -5345,10 +5367,28 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				include.colnames<- c('score.Y','w','stage','lRNA.mx')
 				predict.df		<- data.table( 	stage=factor('ART.3.NRT.PI', levels=YX[, levels(stage)]), 
 												lRNA.mx=subset(YX, stage=='ART.3.NRT.PI')[, mean(lRNA.mx, na.rm=TRUE)], w=1.	)				
-			}									
+			}			
+			if(grepl('MV', method))
+			{
+				formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'
+				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
+				predict.df		<- data.table(	stage=factor('ART.3.NRT.PI', levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),
+						t=subset(YX, stage=='ART.3.NRT.PI')[, mean(t, na.rm=TRUE)], t.Age=subset(YX, stage=='ART.3.NRT.PI')[, mean(t.Age, na.rm=TRUE)], w=1.)
+			}						
 			risk.df			<- data.table( risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref='ART.3.NRT.PI' )
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			risk.df[, coef.ref:=paste(risk.df[,risk.ref],risk.df[,factor.ref],sep='')]
+			if(grepl('MV', method))
+			{
+				setkey(risk.df, risk, factor)
+				risk.df		<- merge(risk.df, unique(risk.df)[, {
+									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
+									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
+									t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
+									t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
+									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
+								}, by=c('risk','factor')], by=c('risk','factor'))						
+			}						
 			if(grepl('tnicv', method))
 			{				
 				risk.df		<- merge(risk.df, risk.df[, {
@@ -5360,7 +5400,11 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
 			risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/sum(n[stat==tmp])), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)
 			setnames(risk.df, 'n', 'PY')
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			if(grepl('MV', method))
+				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, exclude.zero=TRUE )
+			if(!grepl('MV', method))
+				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, exclude.zero=FALSE )
 		}		
 		if(method%in%c(	'm4.Bwmxv','m4.Bwmxv.clu','m4.Bwmxv.adj','m4.Bwmxv.clu.adj','m4.Bwmxv.cens','m4.Bwmxv.clu.cens','m4.Bwmxv.censp','m4.Bwmxv.clu.censp',
 				'm4.BwmxvNo','m4.BwmxvNo.clu','m4.BwmxvNo.adj','m4.BwmxvNo.clu.adj','m4.BwmxvNo.cens','m4.BwmxvNo.clu.cens','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp',
@@ -11521,6 +11565,29 @@ project.athena.Fisheretal.sensitivity<- function()
 	#8:    stageART.3.NRT.NNRT.3     None   RI stage    ART.3.NRT.NNRT.3     None       None  3.510524184 2.223360693  4.69201930
 	#9:    stageART.3.NRT.NNRT.4     None   RI stage    ART.3.NRT.NNRT.4     None       None  8.577500887 5.990828733 11.51541840
 	
+	load('~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140502/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3da_model3_m3.tnicMv.censp.R')
+	subset(ans$risk, stat=='RR.term' & grepl('ART.3.NRT.NNRT',factor), c(stat,  risk, factor, risk.ref, factor.ref, v, l95.bs, u95.bs))
+	#1: RR.term stage ART.3.NRT.NNRT.1    stage ART.3.NRT.PI.1 0.9781159 0.9273252 1.022842
+	#2: RR.term stage ART.3.NRT.NNRT.2    stage ART.3.NRT.PI.2 1.0123271 0.9784862 1.060893
+	#3: RR.term stage ART.3.NRT.NNRT.3    stage ART.3.NRT.PI.3 0.8285269 0.6074497 1.009864
+	#4: RR.term stage ART.3.NRT.NNRT.4    stage ART.3.NRT.PI.4 1.0570842 0.9914231 1.181377
+	subset(ans$risk, stat=='RI' & grepl('ART.3.NRT.NNRT',factor), c(stat,  risk, factor, risk.ref, factor.ref, v, l95.bs, u95.bs))
+	#stat  risk           factor risk.ref factor.ref          v    l95.bs    u95.bs
+	#1:   RI stage ART.3.NRT.NNRT.1     None       None  2.5427069 1.2375280  3.948260
+	#2:   RI stage ART.3.NRT.NNRT.2     None       None  0.9158267 0.4055032  1.579756
+	#3:   RI stage ART.3.NRT.NNRT.3     None       None  1.9853509 1.1650754  2.969651
+	#4:   RI stage ART.3.NRT.NNRT.4     None       None 11.3235305 8.7699394 14.071799
+	load('~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140502/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3da_model3_m3.tnicMv.R')
+	subset(ans$risk, stat=='RR.term' & grepl('ART.3.NRT.NNRT',factor), c(stat,  risk, factor, risk.ref, factor.ref, v, l95.bs, u95.bs))
+	#1: RR.term stage ART.3.NRT.NNRT.1    stage ART.3.NRT.PI.1 0.9942548 0.9596633 1.031161
+	#2: RR.term stage ART.3.NRT.NNRT.2    stage ART.3.NRT.PI.2 1.0030236 0.9748414 1.030545
+	#3: RR.term stage ART.3.NRT.NNRT.3    stage ART.3.NRT.PI.3 0.8220470 0.5911150 1.015663
+	#4: RR.term stage ART.3.NRT.NNRT.4    stage ART.3.NRT.PI.4 1.0573672 0.9947761 1.182816
+	load('~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140502/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3da_model3_m3.tnicMV.clu.censp.R')
+	#	RR.term stage ART.3.NRT.NNRT    stage ART.3.NRT.PI 0.9854419 0.9207526 1.05917
+	load('~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140502/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_Wed_Dec_18_11:37:00_2013_Yscore3da_model3_m3.tnicMV.clu.censp.R')
+	#	RR.term stage ART.3.NRT.NNRT    stage ART.3.NRT.PI 1.297844 1.038884 1.681846
+
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicNo.clu.censp') & stat=='RR' & method.recentctime=='2013-03-01', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	
 	tmp	<- subset(runs.table,  method.risk%in%c('m3.tnic') & stat=='RR' & method.recentctime=='2011' )
@@ -12337,10 +12404,32 @@ project.athena.Fisheretal.numbers<- function()
 	ans$ri				<- rbind(ans$ri, data.table(ri='allclu', recent.n=nrow(tmp), acute.n= tmp[, length(which(isAcute=='Yes'))], MSM.n=tmp[, length(which(Trm=='MSM'))], BI.n=tmp[, length(which(Trm=='BI'))] ))
 	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICLU_',method,'_tATHENAseq','.R',sep='')
 	tmp					<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.allclu, df.tpairs=NULL, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)	
-	ans$pyiw			<- rbind(ans$pyiw, data.table(pyiw='allclu', PYIW=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))]))
+	ans$pyiw			<- rbind(ans$pyiw, data.table(pop='allclu', t.py=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))], n=tmp[, length(unique(Patient))]))
 	tmp					<- NULL
 	gc()		
-	#
+	#	
+	#	RI in MSM cluster that meet AnyPos_T1 < 3.5 yr
+	#	
+	df.tpairs			<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos(clumsm.info, df.denom, any.pos.grace.yr= 3.5, select.if.transmitter.seq.unique=FALSE)
+	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT_',method,'_tATHENAclu','.R',sep='')	
+	tmp					<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+	ans$pyiw			<- rbind(ans$pyiw, data.table(pop='with.Diag', t.py=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))], n=tmp[, length(unique(Patient))]))	
+	#	
+	#	RI in MSM cluster with AnyPos_T1 < 3.5 yr + genetic distance smaller than 0.1% quantile of unlinked by death
+	#	
+	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_all.R',sep='')
+	tmp					<- merge( tmp, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)
+	tmp[, class:='pt']
+	tmp					<- project.athena.Fisheretal.YX.part2(tmp, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=TRUE, t.period=t.period, save.file=save.file, save.all=TRUE, resume=resume, method=method)
+	YX.tpairs			<- tmp$YX.tpairs
+	df.all				<- tmp$df.all
+	Y.brl				<- tmp$Y.brl
+	Y.U					<- tmp$Y.U
+	Y.coal				<- tmp$Y.coal
+	plot.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'missed_',method,'.pdf',sep='')		
+	tmp					<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=Y.coal, cut.date=0.5, cut.brl=1e-3, any.pos.grace.yr= 3.5, rm.zero.score=TRUE, plot.file=plot.file, pyiw=ans$pyiw)
+	
+	
 	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'numbers_',method,'.R',sep='')
 	cat(paste('save numbers to ',save.file))
 	save(ans, file=save.file)	
@@ -12407,7 +12496,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}
-	if(1)
+	if(0)
 	{		
 		method					<- '3d'
 		method.recentctime		<- '2013-03-01'
@@ -12420,7 +12509,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}	
-	if(0)
+	if(1)
 	{		
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
