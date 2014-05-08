@@ -766,7 +766,7 @@ hivc.pipeline.various<- function()
 	{
 		outdir		<- dir.name		
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="79000mb")
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
 	}
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 	outdir	<- paste(dir.name,"tmp",sep='/')

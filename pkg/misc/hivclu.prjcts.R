@@ -2412,6 +2412,86 @@ project.ukca.TPTN.bootstrapvalues<- function(dir.name= DATA)
 	hivc.phy.get.TP.and.TN.bootstrapvalues(ph, bs.linked.bypatient, ph.mrca=ph.mrca ,df.seqinfo=NULL, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=NULL, dist.brl=NULL, thresh.brl=0.096, plot.file=plot.file, verbose= 1)	
 }
 ######################################################################################
+project.athena.Niaetal.similar<- function()
+{
+	require(data.table)
+	require(ape)
+	indir						<- paste(DATA,"tmp",sep='/')		
+	indircov					<- paste(DATA,"derived",sep='/')
+	outdir						<- paste(DATA,"NiaMSC",sep='/')	
+	infile.cov					<- paste(indircov,"ATHENA_2013_03_AllSeqPatientCovariates.R",sep='/')
+	infile.viro					<- paste(indircov,"ATHENA_2013_03_Viro.R",sep='/')
+	infile.immu					<- paste(indircov,"ATHENA_2013_03_Immu.R",sep='/')
+	infile.treatment			<- paste(indircov,"ATHENA_2013_03_Regimens.R",sep='/')
+	infile.seq					<- paste(indir,'/',"ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_",gsub('/',':',"Wed_Dec_18_11:37:00_2013"),".R",sep='')
+	#
+	#	load patient RNA
+	#
+	load(infile.viro)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
+	df.viro				<- df
+	#
+	#	load patient CD4
+	#
+	load(infile.immu)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
+	df.immu				<- df
+	#
+	#	load patient regimen
+	#
+	load(infile.treatment)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
+	df.treatment		<- df		
+	#
+	#	load all covariates
+	#
+	load(infile.cov)
+	set(df.all, NULL, 'Patient', df.all[, as.character(Patient)])
+	df.demo				<- df.all		
+	#
+	#	load sequences
+	#
+	load(infile.seq)	
+	#
+	#	anonymize
+	#
+	tmp			<- unique(subset( df.demo, select=Patient))
+	tmp[, Patient.new:= paste('P',seq_len(nrow(tmp)),sep='')]
+	df.demo	<- merge(df.demo, tmp, by='Patient')
+	df.demo	<- subset( df.demo, select=c(Patient, Patient.new, FASTASampleCode, PosSeqT, DateBorn, Sex, CountryBorn, RegionOrigin, DateDied, Subtype, isAcute, NegT,
+						NegT_Acc, PosT, PosT_Acc, CountryInfection, Trm, DateLastContact, RegionHospital, DateFirstEverCDCC, isDead, AnyPos_T1, PoslRNA_T1, lRNA_T1, PosCD4_T1, CD4_T1, AnyT_T1 ))
+	
+	tmp			<- unique(subset( df.demo, select=c(Patient.new, FASTASampleCode, PosSeqT)))
+	setkey(tmp, Patient.new, PosSeqT)
+	tmp			<- cbind( tmp, tmp[, list(FASTASampleCode.new= paste('S',substr(Patient.new,2,nchar(Patient.new)),'-',seq_along(FASTASampleCode), sep='')),by=Patient.new])
+	df.demo		<- merge(df.demo, subset(tmp, select=c(FASTASampleCode, FASTASampleCode.new)), by='FASTASampleCode')
+	
+	setnames( df.demo, c('Patient', 'Patient.new', 'FASTASampleCode', 'FASTASampleCode.new'), c('Patient.old', 'Patient', 'FASTASampleCode.old', 'FASTASampleCode') )	
+	setnames( df.treatment, 'Patient', 'Patient.old')
+	setnames( df.viro, 'Patient', 'Patient.old')
+	setnames( df.immu, 'Patient', 'Patient.old')
+	df.treatment	<- merge(unique(subset(df.demo, select=c(Patient, Patient.old))), df.treatment, by='Patient.old')
+	df.viro			<- merge(unique(subset(df.demo, select=c(Patient, Patient.old))), df.viro, by='Patient.old')
+	df.immu			<- merge(unique(subset(df.demo, select=c(Patient, Patient.old))), df.immu, by='Patient.old')
+	
+	tmp				<- subset(df.demo, select=c(FASTASampleCode, FASTASampleCode.old) )
+	setkey(tmp, FASTASampleCode.old)
+	rownames(seq.PROT.RT)	<- tmp[rownames(seq.PROT.RT), ][, FASTASampleCode]
+	#	save with keys
+	file			<- paste(outdir, 'data_with_keys.R',sep='/')
+	save(df.demo, df.treatment, df.viro, df.immu, seq.PROT.RT, file=file)
+	
+	df.treatment[, Patient.old:=NULL]
+	df.viro[, Patient.old:=NULL]
+	df.immu[, Patient.old:=NULL]
+	df.demo[, Patient.old:=NULL]
+	df.demo[, FASTASampleCode.old:=NULL]
+	#	save without keys
+	file			<- paste(outdir, 'data_without_keys.R',sep='/')
+	save(df.demo, df.treatment, df.viro, df.immu, seq.PROT.RT, file=file)
+
+}
+######################################################################################
 project.athena.Xavieretal.similar<- function()
 {
 	require(data.table)
