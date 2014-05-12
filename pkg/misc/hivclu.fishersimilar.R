@@ -1735,7 +1735,7 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	{	
 		set(missed, missed[, which(score.brl.TN>=cut.brl)], 'score.Y', 0.)
 		if(!is.null(pyiw))
-			pyiw	<- rbind(pyiw, data.table(pop='with.unlinkedbydeath', t.py= nrow(subset(missed, score.Y>0))*t.period, t.n= subset(missed, score.Y>0)[, length(unique(t.Patient))], n= subset(missed, score.Y>0)[, length(unique(Patient))] ))
+			pyiw	<- rbind(pyiw, data.table(pop='with.unlinkedbydeath', t.py= nrow(subset(missed, score.Y>0))*t.period, t.n= subset(missed, score.Y>0)[, length(unique(t.Patient))], n= subset(missed, score.Y>0)[, length(unique(Patient))] ))		
 		if(!is.null(Y.coal))
 		{	
 			cat(paste('\nprop of PYIW that meet the BRL.TN & COAL cutoff:', nrow(subset( missed, score.brl.TN<cut.brl &  coal.after.t.NegT>cut.date))/nrow(missed)  ))
@@ -12493,7 +12493,7 @@ project.athena.Fisheretal.numbers<- function()
 	ans$ri				<- data.table(ri='allmsm', recent.n=nrow(tmp), acute.n= tmp[, length(which(isAcute=='Yes'))], MSM.n=tmp[, length(which(Trm=='MSM'))], BI.n=tmp[, length(which(Trm=='BI'))] )
 	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIMSM_',method,'_tATHENAmsm','.R',sep='')
 	tmp					<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.allmsm, df.tpairs=NULL, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
-	ans$pyiw			<- data.table(pyiw='allseq', PYIW=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))])
+	ans$pyiw			<- data.table(pop='allmsm', t.py=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))], n=tmp[, length(unique(Patient))])
 	tmp					<- NULL
 	gc()	
 	#
@@ -12527,7 +12527,7 @@ project.athena.Fisheretal.numbers<- function()
 	ans$ri				<- rbind(ans$ri, data.table(ri='allseq', recent.n=nrow(tmp), acute.n= tmp[, length(which(isAcute=='Yes'))], MSM.n=tmp[, length(which(Trm=='MSM'))], BI.n=tmp[, length(which(Trm=='BI'))] ))
 	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RISEQ_',method,'_tATHENAseq','.R',sep='')
 	tmp					<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.allseq, df.tpairs=NULL, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
-	ans$pyiw			<- rbind(ans$pyiw, data.table(pyiw='allseq', PYIW=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))]))
+	ans$pyiw			<- rbind(ans$pyiw, data.table(pop='allseq', t.py=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))], n=tmp[, length(unique(Patient))]))
 	tmp					<- NULL
 	gc()
 	#	
@@ -12539,7 +12539,7 @@ project.athena.Fisheretal.numbers<- function()
 	ans$ri				<- rbind(ans$ri, data.table(ri='allph', recent.n=nrow(tmp), acute.n= tmp[, length(which(isAcute=='Yes'))], MSM.n=tmp[, length(which(Trm=='MSM'))], BI.n=tmp[, length(which(Trm=='BI'))] ))
 	save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RIPH_',method,'_tATHENAseq','.R',sep='')
 	tmp					<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.allph, df.tpairs=NULL, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
-	ans$pyiw			<- rbind(ans$pyiw, data.table(pyiw='allph', PYIW=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))]))
+	ans$pyiw			<- rbind(ans$pyiw, data.table(pop='allph', t.py=nrow(tmp)*t.period, t.n=tmp[, length(unique(t.Patient))], n=tmp[, length(unique(Patient))]))
 	tmp					<- NULL
 	gc()		
 	#	
