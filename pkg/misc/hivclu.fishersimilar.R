@@ -4470,7 +4470,9 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				if(!length(corisk))	
 					corisk<- NULL				
 				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))
+				setkey(tmp, NULL)
 				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))
+				setkey(tmp2, NULL)
 				if(nrow(tmp))	#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
 				{
 					if( nrow(unique(tmp[, setdiff(colnames(tmp),'w'), with=FALSE]))==1 )
@@ -4495,8 +4497,10 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				corisk			<- intersect(colnames(risk.df), colnames(predict.df))
 				if(!length(corisk))	
 					corisk<- NULL				
-				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
+				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))
+				setkey(tmp, NULL)
 				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))
+				setkey(tmp2, NULL)
 				#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
 				if(nrow(tmp))	
 				{
@@ -4567,10 +4571,12 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				if(!length(corisk))	
 					corisk<- NULL				
 				tmp					<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3[which( YX.m3[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))
+				setkey(tmp, NULL)
 				if(nrow(tmp))	
 				{
+					
 					if( nrow(unique(tmp[, setdiff(colnames(tmp),'w'), with=FALSE]))==1 )
-						tmp			<- tmp[1,]									
+						tmp			<- tmp[1,]		
 					tryCatch({
 					tmp[, predict:= predict(betafit.rr, newdata=as.data.frame(tmp), data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), type='link')]				
 					tmp				<- weighted.mean(exp(tmp[,predict]), w=tmp[,w], na.rm=TRUE)
@@ -4593,11 +4599,23 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 	set(tmp, NULL, 'v', tmp[, expbeta*n*PTx/sum(expbeta*n*PTx)])
 	set(tmp, NULL, 'stat', 'P.ptx')
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
-	#	relative infectiousness and relative infectiousness assuming no transmissions from Not.PT
+	#	number of transmissions and proportions by raw count
+	tmp			<- unique(risk.df)[, 	{
+							tmp	<- sum( YX.m3[ which(as.character(YX.m3[, risk, with=FALSE][[1]])==factor), score.Y*w] )
+							list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N.raw', v=tmp )
+						}, by='coef']
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	tmp			<- tmp[, {
+							list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'P.raw', v=v/sum(tmp[,v]) )
+						}, by='coef']
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#	relative infectiousness and 
+	#	relative infectiousness assuming no transmissions from Not.PT and
+	#	raw relative infectiousness
 	cat(paste('\nrelative infectiousness'))
 	tmp			<- subset(risk.ans, stat=='PY' )[, sum(v)]
-	tmp			<- subset(risk.ans, risk.ref=='None')[, list( 	stat=c('RI','RI.ptx'), risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', 
-																v= c( v[stat=='P'], v[stat=='P.ptx']) / ( v[stat=='PY'] / tmp ) ), by='coef']
+	tmp			<- subset(risk.ans, risk.ref=='None')[, list( 	stat=c('RI','RI.ptx','RI.raw'), risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', 
+																v= c( v[stat=='P'], v[stat=='P.ptx'], v[stat=='P.raw']) / ( v[stat=='PY'] / tmp ) ), by='coef']
 	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 	#	Bootstraps	on ratio and on prob
@@ -4629,8 +4647,10 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 																				corisk			<- intersect(colnames(risk.df), colnames(predict.df))
 																				if(!length(corisk))	
 																					corisk<- NULL
-																				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
+																				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))
+																				setkey(tmp, NULL)
 																				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))
+																				setkey(tmp2, NULL)
 																				#	with corisks E(exp(beta*X)) != exp(beta*E(X)) so it s all a bit more complicated:
 																				if(nrow(tmp))	
 																				{
@@ -4656,8 +4676,10 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 																				corisk			<- intersect(colnames(risk.df), colnames(predict.df))
 																				if(!length(corisk))	
 																					corisk<- NULL
-																				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
-																				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))							
+																				tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))
+																				setkey(tmp, NULL)
+																				tmp2			<- na.omit(merge(tmp2[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk.ref, with=FALSE][[1]]==factor.ref ), c(risk.ref,corisk,'w'), with=FALSE], by=risk.ref))
+																				setkey(tmp2, NULL)
 																				if(nrow(tmp))	
 																				{
 																					if( nrow(unique(tmp[, setdiff(colnames(tmp),'w'), with=FALSE]))==1 )
@@ -4689,7 +4711,14 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 																						}, error=function(e){ print(e$message); tmp<<- NA_real_ }, warning=function(w){ print(w$message); tmp<<- NA_real_ })
 																				list(stat= 'RR.term', risk=risk, factor=factor, risk.ref=risk.ref, factor.ref=factor.ref, v=tmp )										
 																			},by=c('coef','coef.ref')]
-				risk.ans.bs			<- rbind(risk.ans.bs, tmp)					
+				risk.ans.bs			<- rbind(risk.ans.bs, tmp)
+				#	raw number of transmissions
+				setkey(risk.df, coef)
+				tmp			<- unique(risk.df)[, 	{
+														tmp	<- sum( YX.m3.bs[ which(as.character(YX.m3.bs[, risk, with=FALSE][[1]])==factor), score.Y*w] )
+														list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'N.raw', v=tmp )
+													}, by='coef']
+				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 				#	for proportions		
 				setkey(risk.df, coef)
 				tmp			<- unique(risk.df)[, 		{
@@ -4698,7 +4727,8 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 							corisk			<- intersect(colnames(risk.df), colnames(predict.df))
 							if(!length(corisk))	
 								corisk<- NULL
-							tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))											
+							tmp				<- na.omit(merge(tmp[,setdiff( colnames(predict.df), c(colnames(risk.df),'w') ), with=FALSE], YX.m3.bs[which( YX.m3.bs[, risk, with=FALSE][[1]]==factor ), c(risk,corisk,'w'), with=FALSE], by=risk))
+							setkey(tmp, NULL)
 							if(nrow(tmp))	
 							{
 								if( nrow(unique(tmp[, setdiff(colnames(tmp),'w'), with=FALSE]))==1 )
@@ -4719,6 +4749,7 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				risk.ans.bs[, bs:=bs.i]
 			})
 	risk.ans.bs	<- do.call('rbind',tmp)
+	#
 	tmp			<- risk.ans.bs[, list(stat='N', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', v= v[stat=='prob']*v[stat=='n'] ), by=c('bs','coef')]
 	set(tmp, tmp[, which(v==0)],'v', NA_real_)
 	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
@@ -4753,6 +4784,19 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
 	set(tmp, NULL, 'stat', 'RI.ptx')
 	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
+	#
+	tmp			<- subset(risk.ans.bs, stat=='N.raw')	
+	tmp			<- tmp[, {
+				list(coef=coef, risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'P.raw', v=v/sum(v) )
+			}, by='bs']
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))
+	#	RI.raw
+	tmp			<- merge( subset(risk.ans.bs, stat=='P.raw'), subset(risk.ans, stat=='PY', select=c(coef, v)), by='coef' )
+	tmp[, v:= v.x/( v.y/subset(risk.ans, stat=='PY')[, sum(v)] )]
+	set(tmp, NULL, 'stat', 'RI.raw')
+	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
+	#
 	tmp			<- risk.ans.bs[,	list(l95.bs=quantile(v, prob=0.025, na.rm=TRUE), u95.bs=quantile(v, prob=0.975, na.rm=TRUE)), by=c('coef','coef.ref','stat')]
 	risk.ans	<- merge(risk.ans, tmp, by=c('coef','coef.ref','stat'), all.x=TRUE)
 	#	
@@ -4909,7 +4953,6 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 						'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.adj','m2Bwmx.cas.clu.adj','m2Bwmx.cas.cens','m2Bwmx.cas.clu.cens','m2Bwmx.cas.censp','m2Bwmx.cas.clu.censp',
 						'm2BwmxMv.cas','m2BwmxMv.cas.clu','m2BwmxMv.cas.adj','m2BwmxMv.cas.clu.adj','m2BwmxMv.cas.cens','m2BwmxMv.cas.clu.cens','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp'))
 		{  
-			adjust			<- NULL
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
@@ -4924,10 +4967,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 				tmp			<- ifelse(grepl(method.risk, 'clu'), 'X.clu', 'X.seq')			
-				adjust		<- X.tables$cens.table[, list(n.adjbyPU= sum(n.adjbyPU), factor=factor2), by=c('risk','factor2','stat')]				
+				#adjust		<- X.tables$cens.table[, list(n.adjbyPU= sum(n.adjbyPU), factor=factor2), by=c('risk','factor2','stat')]				
 				#tmp			<- tmp[, list(factor=factor[stat=='X.msm'], n.adjbyPU.Top= n.adjbyPU[stat=='X.msm'], n.adjbyPU.Bottom= n.adjbyPU[stat=='X.seq'], n.adjbyPU.BottomS= sum(n.adjbyPU[stat=='X.seq']), n.adjbyPU.TopS= sum(n.adjbyPU[stat=='X.msm'])  ), by= 'risk']				
-				#tmp[, w.b:= (n.adjbyPU.Top / n.adjbyPU.TopS) / (n.adjbyPU.Bottom / n.adjbyPU.BottomS) ]				
-				adjust		<- adjust[, list(factor=factor[stat=='X.msm'], w.b= n.adjbyPU[stat=='X.msm'] / n.adjbyPU[stat==tmp] * sum(n.adjbyPU[stat==tmp]) / sum(n.adjbyPU[stat=='X.msm'])  ), by= 'risk']				
+				#tmp[, w.b:= (n.adjbyPU.Top / n.adjbyPU.TopS) / (n.adjbyPU.Bottom / n.adjbyPU.BottomS) ]		
+				#adjust		<- adjust[, list(factor=factor[stat=='X.msm'], w.b= n.adjbyPU[stat=='X.msm'] / n.adjbyPU[stat==tmp] * sum(n.adjbyPU[stat==tmp]) / sum(n.adjbyPU[stat=='X.msm'])  ), by= 'risk']				
 			}
 			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st","CD4t")
 			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
@@ -4935,9 +4978,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('adj', method.risk))
 			{
 				tmp			<- ifelse(grepl(method.risk, 'clu'), 'adj.clu', 'adj.seq')
-				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] )
-				adjust		<- data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] )
-				YX			<- merge( YX, adjust, by='stage' )
+				tmp			<- subset( X.tables[[tmp]], factor%in%YX[, levels(stage)] ) 
+				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}					
 			if(grepl('Mv', method.risk))	
@@ -4976,7 +5018,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}			
 			tmp				<- ifelse(grepl(method.risk, 'clu'), 'X.clu', 'X.seq')
-			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)	#	add numer infection windows ( *t.period, this is PYIW ) 
+			risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)	#	add numer infection windows ( *t.period, this is PYIW )
+			#adjust[, n.adjbyPU[stat=='YX']/(n.adjbyPU[stat=='X.msm']-n.adjbyPU[stat=='YX']), by='factor']
 			risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/sum(n[stat==tmp])), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)			
 			setnames(risk.df, 'n', 'PY')
 			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
