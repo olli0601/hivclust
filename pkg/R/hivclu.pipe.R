@@ -676,9 +676,9 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#	basic m2Bwmx runs	mem=3800
 	#method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp')
 	#	basic m2BXXXMv runs	mem=7800
-	method.risk	<- c(	'm2BwmxMv.cas','m2BwmxMv.cas.adj','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp', 
-			 			'm2B1stMv.cas', 'm2B1stMv.cas.adj', 'm2B1stMv.cas.censp', 'm2B1stMv.cas.clu.censp', 
-						'm2BtMv.cas', 'm2BtMv.cas.adj', 'm2BtMv.cas.censp', 'm2BtMv.cas.clu.censp' )
+	#method.risk	<- c(	'm2BwmxMv.cas','m2BwmxMv.cas.adj','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp', 
+	#		 			'm2B1stMv.cas', 'm2B1stMv.cas.adj', 'm2B1stMv.cas.censp', 'm2B1stMv.cas.clu.censp', 
+	#					'm2BtMv.cas', 'm2BtMv.cas.adj', 'm2BtMv.cas.censp', 'm2BtMv.cas.clu.censp' )
 	#	basic m2B1st runs	mem=3800
 	#method.risk	<- c(	'm2B1st.cas','m2B1st.cas.clu','m2B1st.cas.censp')
 	#	basic m2Bt runs	mem=3800

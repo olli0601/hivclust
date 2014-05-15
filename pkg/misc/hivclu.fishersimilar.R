@@ -12553,6 +12553,8 @@ project.athena.Fisheretal.numbers<- function()
 	clumsm.ph		<- tmp$clumsm.ph
 	setkey(clumsm.info, cluster)
 	#
+	df.tpairs		<- project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos(clumsm.info, df.denom, any.pos.grace.yr= 3.5, select.if.transmitter.seq.unique=FALSE)
+	#
 	#	get time stamped data (if clusters missing, confine df.tpairs to available clusters)
 	#
 	tmp						<- project.athena.Fisheretal.get.dated.phylo.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, method.nodectime=method.nodectime)
