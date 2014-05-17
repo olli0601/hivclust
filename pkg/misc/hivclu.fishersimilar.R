@@ -1974,6 +1974,8 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 	#
 	if(!is.na(plot.file))
 	{
+		require(grid)
+		require(ggplot2)
 		tmp		<- do.call('rbind', list(	data.table(brl= msm.linked[,brl], group='Sequence pairs\nfrom same host'), data.table(brl= msm.unlinked.bytime[,brl], group='Sequence pairs\nfrom patients unlinked by death'),
 											data.table(brl= df.tpairs.brl[,brl], group='Clustering sequence pairs\nwith at least one sequence\nfrom a recently infected MSM')		))
 		set(tmp, NULL, 'group', tmp[, factor(group, levels=c('Clustering sequence pairs\nwith at least one sequence\nfrom a recently infected MSM', 'Sequence pairs\nfrom same host', 'Sequence pairs\nfrom patients unlinked by death'))])
@@ -4401,26 +4403,87 @@ project.athena.Fisheretal.YX.model4.v1<- function(YX, clumsm.info, vl.suppressed
 }
 ######################################################################################
 #	wrapper to betareg to come up with better starting values due to scores close to 0 and 1
-project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( seq(0.95, 0.99, 0.01),seq(0.991, 1, 0.001)), exclude.zero=FALSE, verbose=0)
+#	gamlss.BE.limit.l<- c(1e-3, 1e-4, 1e-5, 1e-6, 0)
+project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( seq(0.95, 0.99, 0.01),seq(0.991, 1, 0.001)), gamlss.BE.limit.l=c(0), verbose=0)
 {
 	require(gamlss)
+	options(warn=2)
 	gamlss.BE.limit.i	<- gamlss.BE.limit.u[1]
 	YX.m3b				<- copy(YX.m3)	
 	set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.i )], 'score.Y', gamlss.BE.limit.i)
-	if(exclude.zero)
-		set(YX.m3b, YX.m3b[, which((1-gamlss.BE.limit.i)<score.Y)], 'score.Y', 1-gamlss.BE.limit.i)
-	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0)	
-	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0)	
+	set(YX.m3b, YX.m3b[, which(score.Y<gamlss.BE.limit.l[1])], 'score.Y', gamlss.BE.limit.l[1])
+	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0)
+	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0)		#, control=gamlss.control(c.crit=1e-8, gd.tol=5), i.control=glim.control(glm.trace=TRUE, bf.trace=TRUE)
+	#	keep lower limit fixed and try increase upper limit until 1
 	tryCatch({
 				for(i in seq_along(gamlss.BE.limit.u)[-1])
 				{
 					#print(gamlss.BE.limit.u[i])			
 					YX.m3b	<- copy(YX.m3)	
 					set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.u[i])], 'score.Y', gamlss.BE.limit.u[i])
+					set(YX.m3b, YX.m3b[, which(score.Y<gamlss.BE.limit.l[1])], 'score.Y', gamlss.BE.limit.l[1])
+					tmp.or				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, start.from=betafit.or)
+					tmp.rr				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=betafit.rr)		#, method=mixed(10,50), control=gamlss.control(c.crit=1e-8, gd.tol=6)
+					#print(tmp.rr)
+					gamlss.BE.limit		<- gamlss.BE.limit.u[i]	#not run if error in gamlss
+					betafit.rr			<- tmp.rr				#not run if error in gamlss
+					betafit.or			<- tmp.or				#not run if error in gamlss
+				}
+				gamlss.init	<- list(start.from.rr=betafit.rr, start.from.or=betafit.or, BE.limit.u=gamlss.BE.limit)
+			}, error=function(e){ print(e$message); gamlss.init<<- list(start.from.rr=betafit.rr, start.from.or=betafit.or, BE.limit.u=gamlss.BE.limit)})
+	#	keep highest upper limit that works and try to decrease lower limit 
+	if(gamlss.BE.limit.l[1]>0)
+	{
+		tryCatch({
+					for(i in seq_along(gamlss.BE.limit.l)[-1])
+					{
+						#print(gamlss.BE.limit.l[i])			
+						YX.m3b	<- copy(YX.m3)	
+						set(YX.m3b, YX.m3b[, which(score.Y>gamlss.init$BE.limit.u)], 'score.Y', gamlss.init$BE.limit.u)					
+						set(YX.m3b, YX.m3b[, which(score.Y<gamlss.BE.limit.l[i])], 'score.Y', gamlss.BE.limit.l[i])
+						tmp.or				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, start.from=betafit.or )
+						tmp.rr				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=betafit.rr )		#, method=mixed(10,50), control=gamlss.control(c.crit=1e-8, gd.tol=6)
+						#print(tmp.rr)
+						gamlss.BE.limit		<- gamlss.BE.limit.l[i]	#not run if error in gamlss
+						betafit.rr			<- tmp.rr				#not run if error in gamlss
+						betafit.or			<- tmp.or				#not run if error in gamlss
+					}
+					gamlss.init	<- list(start.from.rr=betafit.rr, start.from.or=betafit.or, BE.limit.l=gamlss.BE.limit, BE.limit.u=gamlss.init$BE.limit.u)
+				}, error=function(e){ print(e$message); gamlss.init<<- list(start.from.rr=betafit.rr, start.from.or=betafit.or, BE.limit.l=gamlss.BE.limit, BE.limit.u=gamlss.init$BE.limit.u)})				
+	}	
+	if(verbose) cat(paste('\nsuccess: gamlss beta regression for score<=',gamlss.init$BE.limit.u,'and score>=',gamlss.init$BE.limit.l))
+	set(YX.m3, YX.m3[, which(score.Y>gamlss.init$BE.limit.u)], 'score.Y', gamlss.init$BE.limit.u)
+	set(YX.m3, YX.m3[, which(score.Y<gamlss.init$BE.limit.l)], 'score.Y', gamlss.init$BE.limit.l)
+	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, start.from=gamlss.init$start.from.or)
+	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=gamlss.init$start.from.rr)
+	options(warn=1)
+	list(betafit.or=betafit.or, betafit.rr=betafit.rr, gamlss.BE.limit.u=gamlss.init$BE.limit.u)
+}
+######################################################################################
+project.athena.Fisheretal.v1.betareg<- function(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( seq(0.95, 0.99, 0.01),seq(0.991, 1, 0.001)), exclude.zero=FALSE, verbose=0)
+{
+	require(gamlss)
+	options(warn=2)
+	gamlss.BE.limit.i	<- gamlss.BE.limit.u[1]
+	YX.m3b				<- copy(YX.m3)	
+	set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.i )], 'score.Y', gamlss.BE.limit.i)
+	if(exclude.zero)
+		set(YX.m3b, YX.m3b[, which((1-gamlss.BE.limit.i)<score.Y)], 'score.Y', 1-gamlss.BE.limit.i)
+	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, method=mixed(10,50))
+	print('H')
+	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=1, method=CG(), control=gamlss.control(c.crit=1e-8, gd.tol=5), i.control=glim.control(glm.trace=TRUE, bf.trace=TRUE, cc=1e-8))
+	
+	tryCatch({
+				for(i in seq_along(gamlss.BE.limit.u)[-1])
+				{
+					print(gamlss.BE.limit.u[i])			
+					YX.m3b	<- copy(YX.m3)	
+					set(YX.m3b, YX.m3b[, which(score.Y>gamlss.BE.limit.u[i])], 'score.Y', gamlss.BE.limit.u[i])
 					if(exclude.zero)
 						set(YX.m3b, YX.m3b[, which((1-gamlss.BE.limit.u[i])<score.Y)], 'score.Y', 1-gamlss.BE.limit.u[i])
-					tmp.or				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, start.from=betafit.or)
-					tmp.rr				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=betafit.rr)
+					tmp.or				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, start.from=betafit.or, n.cyc=50 )
+					tmp.rr				<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3b[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=1, start.from=betafit.rr, method=mixed(10,50), control=gamlss.control(c.crit=1e-8, gd.tol=6))
+					print(tmp.rr)
 					gamlss.BE.limit		<- gamlss.BE.limit.u[i]	#not run if error in gamlss
 					betafit.rr			<- tmp.rr				#not run if error in gamlss
 					betafit.or			<- tmp.or				#not run if error in gamlss
@@ -4433,19 +4496,20 @@ project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, g
 	if(exclude.zero)
 		set(YX.m3, YX.m3[, which((1-gamlss.init$BE.limit)<score.Y)], 'score.Y', 1-gamlss.init$BE.limit)
 	betafit.or			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), family=BE(mu.link='logit'), trace=0, start.from=gamlss.init$start.from.or)
-	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=gamlss.init$start.from.rr)	
+	betafit.rr			<- gamlss(as.formula(formula), weights=w, data=na.omit(as.data.frame(YX.m3[, include.colnames, with=FALSE])), family=BE(mu.link='log'), trace=0, start.from=gamlss.init$start.from.rr)
+	options(warn=1)
 	list(betafit.or=betafit.or, betafit.rr=betafit.rr, gamlss.BE.limit=gamlss.init$BE.limit)
 }
 ######################################################################################
-project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=1e3, gamlss.BE.required.limit=0.99, exclude.zero=FALSE )
+project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=1e3, gamlss.BE.required.limit=0.99, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0) )
 {
 	require(gamlss)
 	options(warn=0)
 	#
 	cat(paste('\nbeta regression for formula=',formula))	 
-	tmp				<- project.athena.Fisheretal.betareg(YX.m3, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1)), verbose=1, exclude.zero=exclude.zero )
-	betafit.or		<- tmp$betafit.or
+	tmp				<- project.athena.Fisheretal.betareg(YX.m3, formula, include.colnames, gamlss.BE.limit.u=gamlss.BE.limit.u, gamlss.BE.limit.l=gamlss.BE.limit.l, verbose=1)
 	betafit.rr		<- tmp$betafit.rr
+	betafit.or		<- tmp$betafit.or	
 	stopifnot(tmp$gamlss.BE.limit>gamlss.BE.required.limit)
 		
 	#AIC(YX.m3.fit1, YX.m3.fit2, YX.m3.fit3, YX.m3.fit2b, YX.m3.fit4, YX.m3.fit5, YX.m3.fit6, YX.m3.fit7 )
@@ -4631,7 +4695,7 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 				{
 					YX.m3.bs			<- merge( YX.m3, tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ], by='Patient', allow.cartesian=TRUE )
 					tryCatch({ 
-						tmp2			<- project.athena.Fisheretal.betareg(YX.m3.bs, formula, include.colnames, gamlss.BE.limit.u=c( c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 1)), verbose=1 )
+						tmp2			<- project.athena.Fisheretal.betareg(YX.m3.bs, formula, include.colnames, gamlss.BE.limit.u=gamlss.BE.limit.u, gamlss.BE.limit.l=gamlss.BE.limit.l, verbose=1 )
 						betafit.or.bs	<- tmp2$betafit.or
 						betafit.rr.bs	<- tmp2$betafit.rr
 						bs.repeat		<- ifelse( tmp2$gamlss.BE.limit>gamlss.BE.required.limit, 0, 1 )
@@ -5354,9 +5418,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/sum(n[stat==tmp])), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)
 			setnames(risk.df, 'n', 'PY')
 			if(grepl('MV', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, exclude.zero=TRUE )
+				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
 			if(!grepl('MV', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, exclude.zero=FALSE )						
+				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0) )						
 		}
 		if(method.risk%in%c('m3.tnicMv','m3.tnicMv.clu','m3.tnicMv.adj','m3.tnicMv.clu.adj','m3.tnicMv.cens','m3.tnicMv.clu.cens','m3.tnicMv.censp','m3.tnicMv.clu.censp'))
 		{
@@ -5407,7 +5471,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/sum(n[stat==tmp])), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)
 			setnames(risk.df, 'n', 'PY')
 			#
-			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, exclude.zero=TRUE )						
+			ans				<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )						
 		}
 		if(method.risk%in%c('m3.tnicv','m3.tnicv.clu','m3.tnicv.adj','m3.tnicv.clu.adj','m3.tnicv.cens','m3.tnicv.clu.cens','m3.tnicv.censp','m3.tnicv.clu.censp'))
 		{
@@ -5537,9 +5601,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/sum(n[stat==tmp])), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)
 			setnames(risk.df, 'n', 'PY')			
 			if(grepl('MV', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, exclude.zero=TRUE )
+				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
 			if(!grepl('MV', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, exclude.zero=FALSE )
+				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0) )
 		}		
 		if(method.risk%in%c(	'm4.Bwmxv','m4.Bwmxv.clu','m4.Bwmxv.adj','m4.Bwmxv.clu.adj','m4.Bwmxv.cens','m4.Bwmxv.clu.cens','m4.Bwmxv.censp','m4.Bwmxv.clu.censp',
 				'm4.BwmxvNo','m4.BwmxvNo.clu','m4.BwmxvNo.adj','m4.BwmxvNo.clu.adj','m4.BwmxvNo.cens','m4.BwmxvNo.clu.cens','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp',
@@ -11098,11 +11162,11 @@ project.athena.Fisheretal.sensitivity<- function()
 	require(ape)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_140502",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140517",sep='/')		
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140502",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140517",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
@@ -11710,6 +11774,7 @@ project.athena.Fisheretal.sensitivity<- function()
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.censp') & stat=='RI' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicNo.censp') & stat=='RI' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicv.clu.censp') & method.recentctime=='2011' & stat=='RI', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicMV.adj') & method.recentctime=='2011' & stat=='RI', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.censp') & stat=='RR' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	#               factor            v       l95.bs      u95.bs
