@@ -12816,7 +12816,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	resume					<- 0
+	resume					<- 1
 	verbose					<- 1
 	if(0)
 	{
@@ -13114,7 +13114,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
-	resume			<- 0
+	resume			<- 1
 	rm.zero.score	<- TRUE
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT_',method,'_tATHENAclu','.R',sep='')	
 	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
@@ -13271,6 +13271,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
 			save.file		<- NA
+			resume			<- 0
 			if(grepl('m21st',method.risk))		save.file	<- 'm21st'
 			if(grepl('m2B1st',method.risk))		save.file	<- 'm2B1st'
 			if(grepl('m2t',method.risk))		save.file	<- 'm2t'
@@ -13289,7 +13290,7 @@ hivc.prog.betareg.estimaterisks<- function()
 			tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')		
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables_',save.file,'.R',sep='')
-			X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX, X.seq, X.msm, X.clu, resume=TRUE, save.file=save.file, method=method.risk)
+			X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX, X.seq, X.msm, X.clu, resume=resume, save.file=save.file, method=method.risk)
 			stop()
 		}
 		X.clu<- X.seq<- X.msm<- NULL
