@@ -838,7 +838,7 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	#	process treatment change reasons
 	#
 	if(any(!is.na(df[, Reason7])))	stop("unexpected !NA after Reason7")
-	df.TrCh.noreason		<- which( df[, is.na(Reason1)&is.na(Reason2)&is.na(Reason3)&is.na(Reason4)&is.na(Reason5)&is.na(Reason6)] )		
+	df.TrCh.noreason		<- which( df[, is.na(Reason1)&is.na(Reason2)&is.na(Reason3)&is.na(Reason4)&is.na(Reason5)&is.na(Reason6)&(NoDrug!=0) ] )		
 	#	TR.failure
 	tmp						<-	rep(0, nrow(df))
 	tmp[ df.TrCh.noreason ]	<- NA
