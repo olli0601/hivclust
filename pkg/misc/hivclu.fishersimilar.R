@@ -1884,9 +1884,9 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 		missed				<- merge(missed, Y.coal, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE)
 	missed					<- merge(missed, Y.U, by=c('Patient','t.Patient'), allow.cartesian=TRUE, all.x=TRUE)
 	if(!is.null(Y.coal))
-		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, score.brl.TN, coal.after.i.AnyPos_T1, coal.after.t.NegT, score.Inf, score.t.inf, brl, class))
+		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, score.brl.TN, score.brl.TPp, coal.after.i.AnyPos_T1, coal.after.t.NegT, score.Inf, score.t.inf, brl, class))
 	if(is.null(Y.coal))
-		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, score.brl.TN, score.Inf, score.t.inf, brl, class))
+		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, score.brl.TN, score.brl.TPp, score.Inf, score.t.inf, brl, class))
 	#
 	set(missed, missed[, which(is.na(brl))], 'score.brl.TN', missed[, max(score.brl.TN,na.rm=TRUE)])		#deselected short or recombinant seqs
 	set(missed, missed[, which(is.na(brl))], 'brl', missed[, max(brl,na.rm=TRUE)])							#deselected short or recombinant seqs
@@ -1929,7 +1929,7 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	}
 	if(1)
 	{
-		cat(paste('\nnumber of pairs with zero brl.score=', missed[,length(which(score.brl.TPp==0))] ))
+		cat(paste('\nnumber of pairs with zero brl.score=', missed[,length(which(score.brl.TPp==0 & score.Y>0))] ))
 		missed	<- subset(missed, score.brl.TPp>0)
 	}
 	#	effect on distribution of branch lengths
