@@ -633,7 +633,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t
 		if(substr(method,1,2)=='3g')	#similar to central brl, use dependence on time between sampling dates				
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= -1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)		
 		
-		if(all(substr(method,1,2)!=c('3c','3d')))	stop('brlweight: method not supported')		
+		if(all(substr(method,1,2)!=c('3c','3d','3e','3f','3g')))	stop('brlweight: method not supported')		
 		#	U [0,1]: prob that pot transmitter is still infected at time t. Needed to determine time of infection for transmitter (as quantile of the surival distribution)
 		Y.U						<- project.athena.Fisheretal.Y.infectiontime(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.min=0.01, score.set.value=NA, method='for.transmitter')
 		#	COAL [0,1]: prob that coalescence is within the transmitter
@@ -1926,6 +1926,11 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 		}		
 		setkey(missed, FASTASampleCode, t.FASTASampleCode)
 		missed					<- unique(missed)								
+	}
+	if(1)
+	{
+		cat(paste('\nnumber of pairs with zero brl.score=', missed[,length(which(score.brl.TPp==0))] ))
+		missed	<- subset(missed, score.brl.TPp>0)
 	}
 	#	effect on distribution of branch lengths
 	if(!is.na(plot.file))
