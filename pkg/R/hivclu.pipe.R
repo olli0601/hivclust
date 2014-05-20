@@ -615,7 +615,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(0)
+	if(1)
 	{
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
@@ -651,7 +651,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(1)
+	if(0)
 	{
 		method					<- '3g'
 		method.recentctime		<- '2011-01-01'
@@ -676,20 +676,23 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	method.risk	<- c(	'm3.nicv','m3.tnicv','m3.tnicvNo','m3.nicv.adj','m3.tnicv.adj','m3.tnicvNo.adj','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu','m2Bwmx.tp1.cens')	
 	method.risk	<- c(	'm2B1st.cas.cens','m2B1st.cas.clu.cens','m2B1st.cas.censp','m2B1st.cas.clu.censp','m2Bt.cas.cens','m2Bt.cas.clu.cens','m2Bt.cas.censp','m2Bt.cas.clu.censp'		)
 	#	basic model 3 runs 	mem=1800
-	method.risk	<- c(	'm3.tnic','m3.tnic.clu','m3.tnic.censp','m3.tnic.clu.censp','m3.tnicv.censp','m3.tnicv.clu.censp' )
+	#method.risk	<- c(	'm3.tnic','m3.tnic.clu','m3.tnic.censp','m3.tnic.clu.censp','m3.tnicv.censp','m3.tnicv.clu.censp' )
 	#	basic model 3 runs, mem=3800 				
 	#method.risk	<- c(	'm3.tnicMV.censp','m3.tnicMV.clu.censp','m3.tnicNo.censp','m3.tnicNo.clu.censp' )
 	#method.risk	<- c(	'm3.tnicNo.censp','m3.tnicNo.clu.censp' )
-	method.risk		<- c(	'm3.tnicMV','m3.tnicMV.adj','m3.tnicMV.clu.adj'	)#,'m3.tnicMV.clu.censp','m3.tnicMv','m3.tnicMv.adj','m3.tnicMv.censp','m3.tnicMv.clu.censp' )
-	method.risk		<- c(	'm3.tnicNoMV','m3.tnicNoMV.adj','m3.tnicNoMV.clu.adj' )
+	#method.risk		<- c(	'm3.tnicMV','m3.tnicMV.adj','m3.tnicMV.clu.adj'	)#,'m3.tnicMV.clu.censp','m3.tnicMv','m3.tnicMv.adj','m3.tnicMv.censp','m3.tnicMv.clu.censp' )
+	#method.risk		<- c(	'm3.tnicNoMV','m3.tnicNoMV.adj','m3.tnicNoMV.clu.adj' )
+	method.risk		<- c(	'm3.tnicMV.adj','m3.tnicMV.clu.adj','m3.tnicNoMV.adj','m3.tnicNoMV.clu.adj' )
 	#	basic m2Bwmx runs	mem=1800
 	#method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
+	##method.risk	<- c(	'm2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
 	#	basic m2Bwmx runs	mem=3800
 	#method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp')
 	#	basic m2BXXXMv runs	mem=7800
 	#method.risk	<- c(	'm2BwmxMv.cas','m2BwmxMv.cas.adj','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp', 
 	#		 			'm2B1stMv.cas', 'm2B1stMv.cas.adj', 'm2B1stMv.cas.censp', 'm2B1stMv.cas.clu.censp', 
 	#					'm2BtMv.cas', 'm2BtMv.cas.adj', 'm2BtMv.cas.censp', 'm2BtMv.cas.clu.censp' )
+	##method.risk	<- c(	'm2BwmxMv.cas.clu.censp', 'm2B1stMv.cas.clu.censp', 'm2BtMv.cas.clu.censp' )
 	#	basic m2B1st runs	mem=3800
 	#method.risk	<- c(	'm2B1st.cas','m2B1st.cas.clu','m2B1st.cas.censp')
 	#	basic m2Bt runs	mem=3800
@@ -700,7 +703,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#	NRTI+NNRTI puzzle
 	#method.risk	<- c( 	'm3.tnicMv', 'm3.tnicMv.adj','m3.tnicMv.clu.adj', 'm3.tnicMv.censp','m3.tnicMv.clu.censp'	)
 	# use to pre-compute tables
-	method.risk		<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj', 'm4.Bwmxv.clu.adj', 'm3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicNo.clu.adj','m3.tnicMv.clu.adj')
+	#method.risk		<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj', 'm4.Bwmxv.clu.adj', 'm3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicNo.clu.adj','m3.tnicMv.clu.adj')
 	
 	
 	dummy	<- sapply(method.risk, function(x)
@@ -710,9 +713,9 @@ hivc.pipeline.betareg.estimate.risks<- function()
 				#stop()
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="1800mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=22, hpc.mem="1900mb")
-				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="79000mb")
+				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="79000mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 				hivc.cmd.hpccaller(outdir, outfile, cmd)			
