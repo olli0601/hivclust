@@ -621,10 +621,18 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t
 		plot.file.score			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_score','.pdf',sep='')
 		plot.file.both			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_both','.pdf',sep='')
 		plot.file.one			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_one','.pdf',sep='')
-		if(substr(method,1,2)=='3c')		
+		#brl.linked.max.brlr= 0.02; brl.linked.min.brl= 1e-4; brl.linked.max.dt= 10; brl.linked.min.dt= 1; 
+		if(substr(method,1,2)=='3c')					
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.04, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
-		if(substr(method,1,2)=='3d')		
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
+		if(substr(method,1,2)=='3d')	#expect central brl	
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)		
+		if(substr(method,1,2)=='3e')	#expect large brl				
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.0175, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
+		if(substr(method,1,2)=='3f')	#expect small brl				
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.005, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= -1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)		
+		if(substr(method,1,2)=='3g')	#similar to central brl, use dependence on time between sampling dates				
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= -1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)		
+		
 		if(all(substr(method,1,2)!=c('3c','3d')))	stop('brlweight: method not supported')		
 		#	U [0,1]: prob that pot transmitter is still infected at time t. Needed to determine time of infection for transmitter (as quantile of the surival distribution)
 		Y.U						<- project.athena.Fisheretal.Y.infectiontime(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.min=0.01, score.set.value=NA, method='for.transmitter')
@@ -962,6 +970,12 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	tmp					<- merge( data.table(FASTASampleCode=Y.rawbrl.linked[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
 	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
 	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, tmp, by='t.FASTASampleCode')
+	#	order with respect to PosSeqT
+	tmp					<- subset(Y.rawbrl.linked, t.PosSeqT>PosSeqT)
+	setnames(tmp, c("t.FASTASampleCode","t.PosSeqT","t.AnyT_T1"), c("a.FASTASampleCode","a.PosSeqT","a.AnyT_T1"))
+	setnames(tmp, c("FASTASampleCode","PosSeqT","AnyT_T1"), c("t.FASTASampleCode","t.PosSeqT","t.AnyT_T1"))
+	setnames(tmp, c("a.FASTASampleCode","a.PosSeqT","a.AnyT_T1"), c("FASTASampleCode","PosSeqT","AnyT_T1"))
+	Y.rawbrl.linked		<- rbind( subset(Y.rawbrl.linked, t.PosSeqT<=PosSeqT), tmp, use.names=TRUE )	
 	if(class(df.all$PosSeqT)=='Date')
 		set(Y.rawbrl.linked, NULL, 'PosSeqT', hivc.db.Date2numeric(Y.rawbrl.linked[,PosSeqT]))
 	if(class(df.all$t.PosSeqT)=='Date')
@@ -974,15 +988,32 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT<=AnyT_T1)], 'b4T', 'only.RI')
 	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT<=t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'only.T')
 	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'none')
-	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, data.table(b4T= Y.rawbrl.linked[, unique(b4T)], col=c('green','red','orange','yellow')), by='b4T' )	
+	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, data.table(b4T= Y.rawbrl.linked[, unique(b4T)], col=c('green','red','orange')), by='b4T' )	
 	set(Y.rawbrl.linked, NULL, 'b4T', Y.rawbrl.linked[, factor(b4T)])
 	Y.rawbrl.linked[, dt:= abs(PosSeqT-t.PosSeqT)]		
 	Y.rawbrl.linked[, brlr:= brl/dt]
-	#
-	
-	tmp				<- c('both sampling dates\nafter cART initiation','both sampling dates\nbefore cART initiation','sampling dates before and\nafter cART initiation','sampling dates before and\nafter cART initiation')
-	Y.rawbrl.linked	<- merge( Y.rawbrl.linked, data.table(b4T= c('none','both','only.RI','only.T'), b4T.long=tmp), by='b4T' )
-	set(Y.rawbrl.linked, NULL, 'b4T.long', Y.rawbrl.linked[, factor(b4T.long)])
+	#	add treatment complications: any of ART.P ART.F ART.I ART.A yes before PosSeqT
+	if(0)
+	{
+		tmp				<- subset(df.treatment, select=c(Patient, StopTime, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel))
+		set(tmp, NULL, 'StopTime', hivc.db.Date2numeric(tmp[,StopTime]))
+		tmp				<- merge(tmp, subset( Y.rawbrl.linked, select=c(Patient, PosSeqT) ), by='Patient', allow.cartesian=TRUE)
+		tmp				<- subset(tmp, StopTime<=PosSeqT)	
+		tmp				<- tmp[, list( ART.C=any( sapply(.SD, function(z) any(z=='Yes', na.rm=TRUE)) ) ), by=c('Patient','PosSeqT'), .SDcols=c('TrI','TrCh.failure','TrCh.adherence','TrCh.patrel')]
+		Y.rawbrl.linked	<- merge( Y.rawbrl.linked, tmp, by=c('Patient','PosSeqT'), all.x=TRUE )
+		tmp				<- Y.rawbrl.linked[, which(b4T!='both' & ART.C==FALSE)]
+		set(Y.rawbrl.linked, tmp, 'b4T', Y.rawbrl.linked[tmp, paste(b4T,'NoART.C',sep='')])
+		
+		tmp				<- c('both sampling dates\nbefore cART initiation','sampling dates before and\nafter cART initiation\nNo complication','both sampling dates\nafter cART initiation\nNo complication','sampling dates before and\nafter cART initiation','both sampling dates\nafter cART initiation')
+		Y.rawbrl.linked	<- merge( Y.rawbrl.linked, data.table(b4T= c('both','only.TNoART.C','noneNoART.C','only.T','none'), b4T.long=tmp), by='b4T' )
+		set(Y.rawbrl.linked, NULL, 'b4T.long', Y.rawbrl.linked[, factor(b4T.long, levels=tmp)])		
+	}
+	if(1)
+	{
+		tmp				<- c('both sampling dates\nafter cART initiation','both sampling dates\nbefore cART initiation','sampling dates before and\nafter cART initiation')
+		Y.rawbrl.linked	<- merge( Y.rawbrl.linked, data.table(b4T= c('none','both','only.T'), b4T.long=tmp), by='b4T' )
+		set(Y.rawbrl.linked, NULL, 'b4T.long', Y.rawbrl.linked[, factor(b4T.long)])			
+	}	
 	ggplot(Y.rawbrl.linked, aes(x=dt, y=brl)) +	ylim(0, 0.37) + labs(x="years between sampling dates", y='substitutions / site') +
 			geom_point(size=0.7) + stat_smooth(method = "loess") + facet_grid(. ~ b4T.long, scales='free_x', margins=FALSE)
 	plot.file		<- paste(substr(plot.file.both,1,nchar(plot.file.both)-8),'raw_dt_gd.pdf',sep='')
@@ -991,7 +1022,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	#	EXCLUDE options
 	#
 	Y.rawbrl.linked		<- subset( Y.rawbrl.linked, dt!=0 )
-	
+	#	brl.linked.max.brlr<- 0.01; brl.linked.min.brl<- 1e-12; brl.linked.min.dt<- -1
 	cat(paste('\nY.rawbrl.linked all, n=',nrow(Y.rawbrl.linked)))
 	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  brlr<=brl.linked.max.brlr)
 	cat(paste('\nY.rawbrl.linked max brlr ',brl.linked.max.brlr,' excluded, n=',nrow(Y.rawbrl.linked)))
@@ -1004,29 +1035,24 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	#
 	# wilcox test for same mean
 	#
-	test	<- list( 	both.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),
-						both.only.RI= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)] ),
-						both.none= 		wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)] ),
-						only.RI.T= 		wilcox.test( subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),
-						none.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),
-						none.only.RI= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)] )	)
+	test	<- list( 	both.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),				
+						both.none= 		wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)] ),						
+						none.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] )		)
 	cat(paste('\nwilcox test for same mean'))
 	print( sapply(test, '[[', 'p.value') )
 	# KS test for same distribution
-	test	<- list( 	both.only.T= 	ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)]),
-						both.only.RI= 	ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)] ),
+	test	<- list( 	both.only.T= 	ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)]),						
 						both.none= 		ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)] ),
-						only.RI.T= 		ks.test( subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),
-						none.only.T= 	ks.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),
-						none.only.RI= 	ks.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.RI')[, log10(brl)] )	)
+						none.only.T= 	ks.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] )		)
 	cat(paste('\nKS test for same distribution'))
 	print( sapply(test, '[[', 'p.value') )
 	
+	#ggplot(Y.rawbrl.linked, aes(x=dt, y=brl)) + labs(x="years between sampling dates", y='substitutions / site') +
+	#		geom_point(size=0.7) + stat_smooth(method = "loess") + facet_grid(. ~ b4T.long, scales='free_x', margins=FALSE)	
 	ggplot(subset(Y.rawbrl.linked, b4T!='none'), aes(x=dt, y=brl)) + labs(x="years between sampling dates", y='substitutions / site') +
 			geom_point(size=0.7) + stat_smooth(method = "loess") + facet_grid(. ~ b4T.long, scales='free_x', margins=FALSE)
 	plot.file		<- paste(substr(plot.file.both,1,nchar(plot.file.both)-8),'excluded_dt_gd.pdf',sep='')
-	ggsave(file=plot.file, w=6, h=6)
-	
+	ggsave(file=plot.file, w=6, h=6)	
 	#
 	#	fit distributions to data 
 	#
@@ -1084,7 +1110,10 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		brl				<- subset(Y.rawbrl.linked, b4T!='both' & b4T!='none'  & brlr<=0.01)[,brlz]
 		ml.zaga.one		<- gamlss(brl~1, family=ZAGA)
 		ml.zaga.one.p	<- ad.test(brl, pZAGA, mu=exp(ml.zaga.one[['mu.coefficients']]), sigma=exp(ml.zaga.one[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga.one[['nu.coefficients']])) )$p.value
-		cat(paste('\nbest ZAGA pvalue for one b4T=', ml.zaga.one.p))			
+		cat(paste('\nbest ZAGA pvalue for one b4T=', ml.zaga.one.p))	
+		ml.zaga.dt.data	<- subset(Y.rawbrl.linked, b4T=='both', select=c(brlz, dt)  )		
+		#ml.zaga.dt		<- gamlss(brlz~dt, family=ZAGA, data=ml.zaga.dt.data)
+		ml.zaga.dt		<- gamlss(brlz~dt, sigma.formula= ~dt, nu.formula= ~dt, family=ZAGA, data=ml.zaga.dt.data)
 	}
 	if(0)
 	{
@@ -1098,14 +1127,17 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	#
 	#	others
 	#
-	mle.exp		<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'exp')
-	mle.ga		<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'gamma')
-	mle.ln		<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'lnorm')
-	mle.w		<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'weibull')
-	mle.exp.one	<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'exp')
-	mle.ga.one	<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'gamma')
-	mle.ln.one	<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'lnorm')
-	mle.w.one	<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'weibull')
+	mle.exp			<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'exp')
+	mle.ga			<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'gamma')
+	mle.exp.one		<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'exp')
+	mle.ga.one		<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'gamma')
+	if(length(setdiff(substr(method,1,2), c('3f','3g'))))
+	{
+		mle.ln		<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'lnorm')
+		mle.w		<- fitdist(subset(Y.rawbrl.linked, b4T=='both')[,brl], 'weibull')	
+		mle.ln.one	<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'lnorm')
+		mle.w.one	<- fitdist(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], 'weibull')		
+	}
 	#	plot
 	if(!is.na(plot.file.both))
 	{
@@ -1115,10 +1147,13 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		denscomp(mle.exp, addlegend=FALSE, xlab='exp')		
 		qqcomp(mle.ga, addlegend=FALSE, main='gamma')
 		denscomp(mle.ga, addlegend=FALSE, xlab='gamma')
-		qqcomp(mle.ln, addlegend=FALSE, main='ln')
-		denscomp(mle.ln, addlegend=FALSE, xlab='ln')
-		qqcomp(mle.w, addlegend=FALSE, main='weibull')
-		denscomp(mle.w, addlegend=FALSE, xlab='weibull')
+		if(length(setdiff(substr(method,1,2), c('3f','3g'))))
+		{
+			qqcomp(mle.ln, addlegend=FALSE, main='ln')
+			denscomp(mle.ln, addlegend=FALSE, xlab='ln')
+			qqcomp(mle.w, addlegend=FALSE, main='weibull')
+			denscomp(mle.w, addlegend=FALSE, xlab='weibull')			
+		}
 		dev.off()
 		###		zero adjusted for ZAGA
 		brl				<- subset(Y.rawbrl.linked, b4T=='both')[,brlz]
@@ -1136,7 +1171,35 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		qplot(sample=brl, geom = "point", stat = "qq", pch='sampling dates before\nand after cART initiation', distribution = qZAGA, dparams = list(mu=exp(ml.zaga[['mu.coefficients']]), sigma=exp(ml.zaga[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga[['nu.coefficients']])))) + 
 				geom_abline(slope = slope, intercept = int) + labs(x='Zero-inflated Gamma', y='empirical') +
 				theme(legend.justification=c(0,1), legend.position=c(0,1), legend.key.size=unit(13,'mm'), legend.title = element_blank())
-		ggsave(file=paste(substr(plot.file.both,1,nchar(plot.file.both)-4),'_zagaqq','.pdf',sep=''), w=4,h=6)		
+		ggsave(file=paste(substr(plot.file.both,1,nchar(plot.file.both)-4),'_zagaqq','.pdf',sep=''), w=4,h=6)
+		###		Exponential
+		brl.cdf[, predicted:= pexp( brl.cdf[,brl], rate=mle.exp$estimate['rate'] )] 
+		ggplot( data=melt(brl.cdf, id='brl'), aes(x=brl, y=value, colour=variable)) + labs(x='substitutions / site', y='c.d.f.') + 
+				scale_colour_brewer(name='Exponential for\nsampling dates before\nand after cART initiation ', palette='Paired') + geom_point(data=subset(melt(brl.cdf, id='brl'), variable=='empirical'), show_guide=FALSE ) +
+				geom_line() + theme(legend.justification=c(1,0), legend.position=c(1,0), legend.key.size=unit(13,'mm'))		
+		ggsave(file=paste(substr(plot.file.both,1,nchar(plot.file.both)-4),'_expcdf','.pdf',sep=''), w=4,h=6)
+		qv 		<- quantile(brl, c(.25, .75))
+		qt 		<- qexp(c(.25, .75), rate=mle.exp$estimate['rate'])
+		slope 	<- diff(qv)/diff(qt)
+		int 	<- qv[1] - slope * qt[1]	
+		qplot(sample=brl, geom = "point", stat = "qq", pch='sampling dates before\nand after cART initiation', distribution = qexp, dparams = list(rate=mle.exp$estimate['rate'])) + 
+				geom_abline(slope = slope, intercept = int) + labs(x='Exponential', y='empirical') +
+				theme(legend.justification=c(0,1), legend.position=c(0,1), legend.key.size=unit(13,'mm'), legend.title = element_blank())
+		ggsave(file=paste(substr(plot.file.both,1,nchar(plot.file.both)-4),'_expqq','.pdf',sep=''), w=4,h=6)
+		###		Gamma
+		brl.cdf[, predicted:= pgamma( brl.cdf[,brl], shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'] )] 
+		ggplot( data=melt(brl.cdf, id='brl'), aes(x=brl, y=value, colour=variable)) + labs(x='substitutions / site', y='c.d.f.') + 
+				scale_colour_brewer(name='Gamma for\nsampling dates before\nand after cART initiation ', palette='Paired') + geom_point(data=subset(melt(brl.cdf, id='brl'), variable=='empirical'), show_guide=FALSE ) +
+				geom_line() + theme(legend.justification=c(1,0), legend.position=c(1,0), legend.key.size=unit(13,'mm'))		
+		ggsave(file=paste(substr(plot.file.both,1,nchar(plot.file.both)-4),'_gacdf','.pdf',sep=''), w=4,h=6)
+		qv 		<- quantile(brl, c(.25, .75))
+		qt 		<- qgamma(c(.25, .75), shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'] )
+		slope 	<- diff(qv)/diff(qt)
+		int 	<- qv[1] - slope * qt[1]	
+		qplot(sample=brl, geom = "point", stat = "qq", pch='sampling dates before\nand after cART initiation', distribution = qgamma, dparams = list(shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'])) + 
+				geom_abline(slope = slope, intercept = int) + labs(x='Gamma', y='empirical') +
+				theme(legend.justification=c(0,1), legend.position=c(0,1), legend.key.size=unit(13,'mm'), legend.title = element_blank())
+		ggsave(file=paste(substr(plot.file.both,1,nchar(plot.file.both)-4),'_gammaqq','.pdf',sep=''), w=4,h=6)		
 	}
 	if(0)
 	{
@@ -1160,10 +1223,13 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		denscomp(mle.exp.one, addlegend=FALSE, xlab='exp')		
 		qqcomp(mle.ga.one, addlegend=FALSE, main='gamma')
 		denscomp(mle.ga.one, addlegend=FALSE, xlab='gamma')
-		qqcomp(mle.ln.one, addlegend=FALSE, main='ln')
-		denscomp(mle.ln.one, addlegend=FALSE, xlab='ln')
-		qqcomp(mle.w.one, addlegend=FALSE, main='weibull')
-		denscomp(mle.w.one, addlegend=FALSE, xlab='weibull')
+		if(length(setdiff(substr(method,1,2), c('3f','3g'))))
+		{			
+			qqcomp(mle.ln.one, addlegend=FALSE, main='ln')
+			denscomp(mle.ln.one, addlegend=FALSE, xlab='ln')
+			qqcomp(mle.w.one, addlegend=FALSE, main='weibull')
+			denscomp(mle.w.one, addlegend=FALSE, xlab='weibull')
+		}
 		dev.off()
 		###		zero adjusted for ZAGA
 		brl				<- subset(Y.rawbrl.linked, b4T!='both' & b4T!='none' )[,brlz]
@@ -1181,7 +1247,35 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		qplot(sample=brl, geom = "point", stat = "qq", pch='both sampling dates\nbefore cART initiation', distribution = qZAGA, dparams = list(mu=exp(ml.zaga.one[['mu.coefficients']]), sigma=exp(ml.zaga.one[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga.one[['nu.coefficients']])))) + 
 				geom_abline(slope = slope, intercept = int) + labs(x='Zero-inflated Gamma', y='empirical') +
 				theme(legend.justification=c(0,1), legend.position=c(0,1), legend.key.size=unit(13,'mm'), legend.title = element_blank())
-		ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_zagaqq','.pdf',sep=''), w=4,h=6)
+		ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_zagaqq','.pdf',sep=''), w=4,h=6)		
+		###		Exponential
+		brl.cdf[, predicted:= pexp( brl.cdf[,brl], rate=mle.exp.one$estimate['rate'] )] 
+		ggplot( data=melt(brl.cdf, id='brl'), aes(x=brl, y=value, colour=variable)) + labs(x='substitutions / site', y='c.d.f.') + 
+				scale_colour_brewer(name='Exponential for\both sampling dates\nbefore cART initiation', palette='Paired') + geom_point(data=subset(melt(brl.cdf, id='brl'), variable=='empirical'), show_guide=FALSE ) +
+				geom_line() + theme(legend.justification=c(1,0), legend.position=c(1,0), legend.key.size=unit(13,'mm'))		
+		ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_expcdf','.pdf',sep=''), w=4,h=6)
+		qv 		<- quantile(brl, c(.25, .75))
+		qt 		<- qexp(c(.25, .75), rate=mle.exp.one$estimate['rate'])
+		slope 	<- diff(qv)/diff(qt)
+		int 	<- qv[1] - slope * qt[1]	
+		qplot(sample=brl, geom = "point", stat = "qq", pch='both sampling dates\nbefore cART initiation', distribution = qexp, dparams = list(rate=mle.exp.one$estimate['rate'])) + 
+				geom_abline(slope = slope, intercept = int) + labs(x='Exponential', y='empirical') +
+				theme(legend.justification=c(0,1), legend.position=c(0,1), legend.key.size=unit(13,'mm'), legend.title = element_blank())
+		ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_expqq','.pdf',sep=''), w=4,h=6)
+		###		Gamma
+		brl.cdf[, predicted:= pgamma( brl.cdf[,brl], shape=mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'] )] 
+		ggplot( data=melt(brl.cdf, id='brl'), aes(x=brl, y=value, colour=variable)) + labs(x='substitutions / site', y='c.d.f.') + 
+				scale_colour_brewer(name='Gamma for\nboth sampling dates\nbefore cART initiation', palette='Paired') + geom_point(data=subset(melt(brl.cdf, id='brl'), variable=='empirical'), show_guide=FALSE ) +
+				geom_line() + theme(legend.justification=c(1,0), legend.position=c(1,0), legend.key.size=unit(13,'mm'))		
+		ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_gacdf','.pdf',sep=''), w=4,h=6)
+		qv 		<- quantile(brl, c(.25, .75))
+		qt 		<- qgamma(c(.25, .75), shape=mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'] )
+		slope 	<- diff(qv)/diff(qt)
+		int 	<- qv[1] - slope * qt[1]	
+		qplot(sample=brl, geom = "point", stat = "qq", pch='both sampling dates\nbefore cART initiation', distribution = qgamma, dparams = list(shape=mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'])) + 
+				geom_abline(slope = slope, intercept = int) + labs(x='Gamma', y='empirical') +
+				theme(legend.justification=c(0,1), legend.position=c(0,1), legend.key.size=unit(13,'mm'), legend.title = element_blank())
+		ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_gammaqq','.pdf',sep=''), w=4,h=6)	
 	}
 	if(0)
 	{
@@ -1210,7 +1304,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	Y.brl			<- copy(Y.rawbrl)	
 	Y.brl[, score.brl.TN:= p.rawbrl.unlinked(brl)]
 	
-	if(substr(method,1,2)=='3c')	#ignore zeros use Gamma
+	if(substr(method,1,2)%in%c('3c','3e'))	#ignore zeros use Gamma
 	{
 		cat(paste('\nBoth b4T: MLE param:',paste( mle.ga$estimate, collapse=' ')))
 		cat(paste('\nOne b4T: MLE param:',paste( mle.ga.one$estimate, collapse=' ')))
@@ -1229,9 +1323,8 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		tmp<- Y.brl[, which(b4T=='one')]
 		set(Y.brl, tmp, 'score.brl.TPp', pgamma(Y.brl[tmp,brl], shape=2*mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'], lower.tail=FALSE) )
 		Y.brl[, score.brl.TPd:= score.brl.TPp]		
-		Y.brl[, dt:= abs(PosSeqT-t.PosSeqT)]
 	}	
-	if(substr(method,1,2)=='3d')	#dont ignore zeros - use zero adjusted Gamma
+	if(substr(method,1,2)%in%c('3d','3f'))	#dont ignore zeros - use zero adjusted Gamma
 	{
 		tmp			<- c( exp(ml.zaga[['mu.coefficients']]), exp(ml.zaga[['sigma.coefficients']]), 1/(1+exp(-ml.zaga[['nu.coefficients']])) )
 		cat(paste('\nZAGA Both b4T: MLE param:',paste( tmp, collapse=' ')))
@@ -1264,15 +1357,101 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( Y.brl[,brlz],  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
 		tmp				<- tmp / (1-ml.zaga.pa['nu']*ml.zaga.pa['nu'])				
 		Y.brl[, score.brl.TPp:= 1-tmp]
-		tmp				<- Y.brl[, which(b4T=='one')]
-		tmp				<- 2*ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) + (1-ml.zaga.one.pa['nu'])*(1-ml.zaga.one.pa['nu'])*pgamma( Y.brl[tmp,brlz],  shape=2*ml.zaga.one.pa['shape'], scale=ml.zaga.one.pa['scale'] ) 
-		tmp				<- tmp / (1-ml.zaga.one.pa['nu']*ml.zaga.one.pa['nu'])				
-		set(Y.brl, Y.brl[, which(b4T=='one')], 'score.brl.TPp', 1-tmp )
-		
+		if(substr(method,1,2)=='3d')
+		{
+			tmp				<- Y.brl[, which(b4T=='one')]
+			tmp				<- 2*ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) + (1-ml.zaga.one.pa['nu'])*(1-ml.zaga.one.pa['nu'])*pgamma( Y.brl[tmp,brlz],  shape=2*ml.zaga.one.pa['shape'], scale=ml.zaga.one.pa['scale'] ) 
+			tmp				<- tmp / (1-ml.zaga.one.pa['nu']*ml.zaga.one.pa['nu'])				
+			set(Y.brl, Y.brl[, which(b4T=='one')], 'score.brl.TPp', 1-tmp )			
+		}		
 		Y.brl[, score.brl.TPd:= score.brl.TPp]		
-		Y.brl[, dt:= abs(PosSeqT-t.PosSeqT)]
+		Y.brl[, dt:= abs(PosSeqT-t.PosSeqT)]		
+	}
+	if(substr(method,1,2)=='3g')	#dont ignore zeros - use zero adjusted Gamma. Ignore after cART initiation. Ignore convolution.
+	{
+		Y.brl[, brlz:=brl]		 
+		set(Y.brl, Y.brl[, which(brlz<1e-4)], 'brlz', 0)
+		Y.brl			<- merge( Y.brl, unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )	
+		tmp				<- merge( data.table(FASTASampleCode=Y.brl[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		Y.brl			<- merge( Y.brl, tmp, by='t.FASTASampleCode')
+		Y.brl[, dt:= abs(PosSeqT-t.PosSeqT)]				
+		Y.brl[, mu:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(Y.brl, select=c(brlz, dt))), what='mu', type='link' ) )]
+		Y.brl[, sigma:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(Y.brl, select=c(brlz, dt))), what='sigma', type='link' ) )]
+		Y.brl[, nu:=1/(1+exp( -predict( ml.zaga.dt, newdata=as.data.frame(subset(Y.brl, select=c(brlz, dt))), what='nu', type='link' ) ))]		
+		Y.brl[, score.brl.TPp:= pZAGA(brlz, mu=mu, sigma=sigma, nu=nu, lower.tail=FALSE)/(1-nu)]
+		Y.brl[, score.brl.TPd:= score.brl.TPp]
+	}
+	if(!is.na(plot.file.score) && substr(method,1,2)=='3g')
+	{
+		#ZAGA parameters
+		plot.df	<- data.table(dt=seq(0,10,0.1))
+		plot.df[, mu:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='mu', type='link' ) )]
+		plot.df[, sigma:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='sigma', type='link' ) )]
+		plot.df[, nu:=1/(1+exp( -predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='nu', type='link' ) ))]				
+		ggplot( data=melt( plot.df, id.vars='dt', variable.name='parameter' ), aes(x=dt, y=value, group=parameter, colour=parameter)) +
+				theme(legend.justification=c(1,0.4), legend.position=c(1,0.4), legend.key.size=unit(13,'mm')) + 
+				scale_colour_brewer(name='parameters of\nzero-inflated Gamma', palette='Set1') +
+				labs(x="years between\nsequence sampling dates", y='parameter value') +
+				geom_line()
+		ggsave(file=paste(substr(plot.file.score,1,nchar(plot.file.score)-4),'_ZAGAparam','.pdf',sep=''), w=4, h=6)
+		#score by dt
+		plot.df	<- data.table(dt=seq(1,5,1))
+		plot.df[, mu:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='mu', type='link' ) )]
+		plot.df[, sigma:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='sigma', type='link' ) )]
+		plot.df[, nu:=1/(1+exp( -predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='nu', type='link' ) ))]				
+		plot.df	<- merge(plot.df, as.data.table( expand.grid(brl=seq(0,0.05,0.001), dt=seq(1,5,1)) ), by='dt')
+		plot.df[, y:= pZAGA(brl, mu=mu, sigma=sigma, nu=nu, lower.tail=FALSE)]
+		plot.df[, yc:= pZAGA(brl, mu=mu, sigma=sigma, nu=nu, lower.tail=FALSE)/(1-nu)]
+		set(plot.df, NULL, 'dt', plot.df[, factor(dt)])
+		ggplot( data=plot.df, aes(x=brl, y=yc, group=dt, colour=dt))	+
+				scale_colour_brewer(name='years between\nsequence sampling dates', palette='Set1') +
+				theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(13,'mm')) +
+				labs(x="substitutions / site", y='probability of\ndirect HIV-1 transmission') +
+				geom_line()
+		ggsave(file=paste(substr(plot.file.score,1,nchar(plot.file.score)-4),'_ZAGAdt','.pdf',sep=''), w=4, h=6)			
 	}	
-	if(!is.na(plot.file.score))
+	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3c','3e'))
+	{
+		plot.df			<- subset(Y.rawbrl.linked, b4T!='none' )
+		plot.df[, score.brl.TPp:= pgamma(plot.df[,brl], shape=2*mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'], lower.tail=FALSE)]
+		tmp<- plot.df[, which(b4T=='one')]
+		set(plot.df, tmp, 'score.brl.TPp', pgamma(plot.df[tmp,brl], shape=2*mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'], lower.tail=FALSE) )
+		setkey(plot.df, b4T.long, brl)
+		tmp				<- plot.df[, list(brl=brl, empirical=seq_len(length(brl))/length(brl)), by='b4T.long']			
+		tmp				<- tmp[, list(empirical=tail(empirical,1)), by=c('b4T.long','brl')]
+		set(tmp, NULL, 'empirical', tmp[,1-empirical])
+		plot.df			<- merge(plot.df, tmp, by=c('b4T.long','brl'))		
+		plot.df[, shape:= mle.ga$estimate['shape']]
+		plot.df[, rate:= mle.ga$estimate['rate']]		
+		tmp				<- plot.df[,which(b4T!='both')]
+		set(plot.df, tmp, 'shape', mle.ga.one$estimate['shape'])
+		set(plot.df, tmp, 'rate', mle.ga.one$estimate['rate'])		
+		tmp2			<- plot.df[, list( b4T=b4T, brl=brl, v=1-pgamma(brl, rate=rate, shape=shape), group='Gamma' ), by='b4T.long']		
+		tmp				<- subset(plot.df, select=c(b4T.long, b4T, brl, score.brl.TPp))
+		tmp[, group:='convoluted\nGamma']
+		setnames(tmp, 'score.brl.TPp', 'v')
+		plot.df			<- subset(plot.df, select=c(b4T.long, b4T, brl, empirical))
+		plot.df[, group:='empirical']
+		setnames(plot.df, 'empirical', 'v')		
+		plot.df			<- do.call('rbind', list(plot.df, tmp, tmp2) )
+		
+		ggplot( plot.df , aes(x=brl, y=v, colour=group, group=group)) + scale_colour_brewer(palette='Set1') + labs(x="substitutions / site", y='survival') +
+				theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(13,'mm')) +
+				geom_line() + facet_grid(. ~ b4T.long, scales='free_x', margins=FALSE)
+		ggsave(file=paste(substr(plot.file.score,1,nchar(plot.file.score)-4),'_cmpwithinhost','.pdf',sep=''), w=8, h=6)
+		
+		
+		Y.brl[, dummy:= score.brl.TPp*30]	
+		set(Y.brl, Y.brl[, which(b4T=='both')], 'b4T.long', 'both sampling dates\nbefore cART initiation')
+		set(Y.brl, Y.brl[, which(b4T!='both')], 'b4T.long', 'sampling dates before\nand after cART initiation')
+		ggplot(data=Y.brl, aes(x=brl, fill=b4T.long)) + 
+				theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(13,'mm')) + scale_fill_brewer(name='treatment status', palette='Paired') +
+				labs(x="substitutions / site", y='Clustering sequence pairs\nwith at least one sequence\nfrom a recently infected MSM') +
+				geom_histogram(aes(y= ..density..), binwidth=0.003, show_guide=FALSE) + geom_line(aes(x=brl, y=dummy)) + facet_grid(. ~ b4T.long, scales='free_y', margins=FALSE)
+		ggsave(file=plot.file.score, w=8, h=6)			
+	}		
+	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3d','3f'))
 	{
 		plot.df			<- subset(Y.rawbrl.linked, b4T!='none' )
 		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( plot.df[,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( plot.df[,brlz],  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
@@ -12846,10 +13025,23 @@ hivc.prog.betareg.estimaterisks<- function()
 	}	
 	if(0)
 	{		
-		method					<- '3c'
+		method					<- '3d'
 		method.recentctime		<- '2013-03-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm21st.cas'
+		method.risk				<- 'm2B1st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+	}	
+	if(0)
+	{		
+		method					<- '3e'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm2B1st.cas'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
@@ -12859,8 +13051,21 @@ hivc.prog.betareg.estimaterisks<- function()
 	}
 	if(0)
 	{		
-		method					<- '3d'
-		method.recentctime		<- '2013-03-01'
+		method					<- '3f'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm2B1st.cas'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+	}
+	if(0)
+	{		
+		method					<- '3g'
+		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2B1st.cas'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -12993,7 +13198,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	check if we have precomputed tables
 	#
 	X.tables			<- NULL
-	if(0)
+	if(1)
 	{
 		save.file		<- NA
 		if(grepl('m21st',method.risk))		save.file	<- 'm21st'

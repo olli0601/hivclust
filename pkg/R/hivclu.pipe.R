@@ -593,7 +593,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	
 	if(0)
 	{
-		method					<- '3c'
+		method					<- '3d'
 		method.recentctime		<- '2013-03-01'
 		method.nodectime		<- 'any'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -610,36 +610,12 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		method.nodectime		<- 'any'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"					
-		infilexml.opt			<- "mph4clutx4tip"
-		infilexml.template		<- "um192rhU2080"	
-		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3c'
-		method.recentctime		<- '2013-03-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
 		infilexml.opt			<- "clrh80"
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
 	if(0)
-	{
-		method					<- '3d'
-		method.recentctime		<- '2013-03-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(1)
 	{
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
@@ -651,7 +627,42 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	
+	if(0)
+	{
+		method					<- '3e'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		infilexml.opt			<- "clrh80"
+		infilexml.template		<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+	}
+	if(0)
+	{
+		method					<- '3f'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		infilexml.opt			<- "clrh80"
+		infilexml.template		<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+	}
+	if(1)
+	{
+		method					<- '3g'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		infilexml.opt			<- "clrh80"
+		infilexml.template		<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+	}
 	#method.risk	<- c('m3.nicv','m3.nicv.clu','m3.tnicv','m3.tnicv.clu','m21st.cas.clu','m2wmx.cas.clu','m2t.cas.clu','m2wmx.tp.clu','m3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tnic.clu','m3.tniv.clu','m3.tnicvNo.clu','m21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
 	#method.risk	<- c('m3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj')
 	#method.risk	<- c('m21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp1.adj', 'm2wmx.tp2.adj', 'm2wmx.tp3.adj', 'm2wmx.tp4.adj','m3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj')
@@ -689,10 +700,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#	NRTI+NNRTI puzzle
 	#method.risk	<- c( 	'm3.tnicMv', 'm3.tnicMv.adj','m3.tnicMv.clu.adj', 'm3.tnicMv.censp','m3.tnicMv.clu.censp'	)
 	# use to pre-compute tables
-	method.risk		<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj', 'm4.Bwmxv.clu.adj')
-	method.risk		<- c(	'm3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicNo.clu.adj','m3.tnicMv.clu.adj'	)	
-	
-	
+	method.risk		<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj', 'm4.Bwmxv.clu.adj', 'm3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicNo.clu.adj','m3.tnicMv.clu.adj')
 	
 	
 	dummy	<- sapply(method.risk, function(x)
