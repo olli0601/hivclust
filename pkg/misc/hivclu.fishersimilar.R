@@ -1111,9 +1111,10 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		ml.zaga.one		<- gamlss(brl~1, family=ZAGA)
 		ml.zaga.one.p	<- ad.test(brl, pZAGA, mu=exp(ml.zaga.one[['mu.coefficients']]), sigma=exp(ml.zaga.one[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga.one[['nu.coefficients']])) )$p.value
 		cat(paste('\nbest ZAGA pvalue for one b4T=', ml.zaga.one.p))	
-		ml.zaga.dt.data	<- subset(Y.rawbrl.linked, b4T=='both', select=c(brlz, dt)  )		
+		ml.zaga.dt.data	<- as.data.frame(subset(Y.rawbrl.linked, b4T=='both', select=c(brlz, dt)  ))		
 		#ml.zaga.dt		<- gamlss(brlz~dt, family=ZAGA, data=ml.zaga.dt.data)
 		ml.zaga.dt		<- gamlss(brlz~dt, sigma.formula= ~dt, nu.formula= ~dt, family=ZAGA, data=ml.zaga.dt.data)
+		print(ml.zaga.dt.data[1:10,])
 	}
 	if(0)
 	{
@@ -1376,9 +1377,9 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
 		Y.brl			<- merge( Y.brl, tmp, by='t.FASTASampleCode')
 		Y.brl[, dt:= abs(PosSeqT-t.PosSeqT)]				
-		Y.brl[, mu:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(Y.brl, select=c(brlz, dt))), what='mu', type='link' ) )]
-		Y.brl[, sigma:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(Y.brl, select=c(brlz, dt))), what='sigma', type='link' ) )]
-		Y.brl[, nu:=1/(1+exp( -predict( ml.zaga.dt, newdata=as.data.frame(subset(Y.brl, select=c(brlz, dt))), what='nu', type='link' ) ))]		
+		Y.brl[, mu:=exp( predict( ml.zaga.dt, data=ml.zaga.dt.data, newdata=as.data.frame(subset(Y.brl, select=c(brlz, dt))), what='mu', type='link' ) )]
+		Y.brl[, sigma:=exp( predict( ml.zaga.dt, data=ml.zaga.dt.data, newdata=as.data.frame(subset(Y.brl, select=c(brlz, dt))), what='sigma', type='link' ) )]
+		Y.brl[, nu:=1/(1+exp( -predict( ml.zaga.dt, data=ml.zaga.dt.data, newdata=as.data.frame(subset(Y.brl, select=c(brlz, dt))), what='nu', type='link' ) ))]		
 		Y.brl[, score.brl.TPp:= pZAGA(brlz, mu=mu, sigma=sigma, nu=nu, lower.tail=FALSE)/(1-nu)]
 		Y.brl[, score.brl.TPd:= score.brl.TPp]
 	}
@@ -1386,9 +1387,9 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	{
 		#ZAGA parameters
 		plot.df	<- data.table(dt=seq(0,10,0.1))
-		plot.df[, mu:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='mu', type='link' ) )]
-		plot.df[, sigma:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='sigma', type='link' ) )]
-		plot.df[, nu:=1/(1+exp( -predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='nu', type='link' ) ))]				
+		plot.df[, mu:=exp( predict( ml.zaga.dt, data=ml.zaga.dt.data, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='mu', type='link' ) )]
+		plot.df[, sigma:=exp( predict( ml.zaga.dt, data=ml.zaga.dt.data, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='sigma', type='link' ) )]
+		plot.df[, nu:=1/(1+exp( -predict( ml.zaga.dt, data=ml.zaga.dt.data, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='nu', type='link' ) ))]				
 		ggplot( data=melt( plot.df, id.vars='dt', variable.name='parameter' ), aes(x=dt, y=value, group=parameter, colour=parameter)) +
 				theme(legend.justification=c(1,0.4), legend.position=c(1,0.4), legend.key.size=unit(13,'mm')) + 
 				scale_colour_brewer(name='parameters of\nzero-inflated Gamma', palette='Set1') +
@@ -1397,9 +1398,9 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		ggsave(file=paste(substr(plot.file.score,1,nchar(plot.file.score)-4),'_ZAGAparam','.pdf',sep=''), w=4, h=6)
 		#score by dt
 		plot.df	<- data.table(dt=seq(1,5,1))
-		plot.df[, mu:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='mu', type='link' ) )]
-		plot.df[, sigma:=exp( predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='sigma', type='link' ) )]
-		plot.df[, nu:=1/(1+exp( -predict( ml.zaga.dt, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='nu', type='link' ) ))]				
+		plot.df[, mu:=exp( predict( ml.zaga.dt, data=ml.zaga.dt.data, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='mu', type='link' ) )]
+		plot.df[, sigma:=exp( predict( ml.zaga.dt, data=ml.zaga.dt.data, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='sigma', type='link' ) )]
+		plot.df[, nu:=1/(1+exp( -predict( ml.zaga.dt, data=ml.zaga.dt.data, newdata=as.data.frame(subset(plot.df, select=c(dt))), what='nu', type='link' ) ))]				
 		plot.df	<- merge(plot.df, as.data.table( expand.grid(brl=seq(0,0.05,0.001), dt=seq(1,5,1)) ), by='dt')
 		plot.df[, y:= pZAGA(brl, mu=mu, sigma=sigma, nu=nu, lower.tail=FALSE)]
 		plot.df[, yc:= pZAGA(brl, mu=mu, sigma=sigma, nu=nu, lower.tail=FALSE)/(1-nu)]
