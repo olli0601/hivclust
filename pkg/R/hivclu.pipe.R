@@ -683,16 +683,19 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk		<- c(	'm3.tnicMV','m3.tnicMV.adj','m3.tnicMV.clu.adj'	)#,'m3.tnicMV.clu.censp','m3.tnicMv','m3.tnicMv.adj','m3.tnicMv.censp','m3.tnicMv.clu.censp' )
 	#method.risk		<- c(	'm3.tnicNoMV','m3.tnicNoMV.adj','m3.tnicNoMV.clu.adj' )
 	##method.risk		<- c(	'm3.tnicMV.adj','m3.tnicMV.clu.adj','m3.tnicNoMV.adj','m3.tnicNoMV.clu.adj' )
+	##method.risk		<- c(	'm3.tnicMV','m3.tnicMV.clu','m3.tnicNoMV','m3.tnicNoMV.clu' )
 	#	basic m2Bwmx runs	mem=1800
 	#method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
 	##method.risk	<- c(	'm2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
+	##method.risk	<- c(	'm2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4' )
 	#	basic m2Bwmx runs	mem=3800
 	#method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp')
 	#	basic m2BXXXMv runs	mem=7800
 	#method.risk	<- c(	'm2BwmxMv.cas','m2BwmxMv.cas.adj','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp', 
 	#		 			'm2B1stMv.cas', 'm2B1stMv.cas.adj', 'm2B1stMv.cas.censp', 'm2B1stMv.cas.clu.censp', 
 	#					'm2BtMv.cas', 'm2BtMv.cas.adj', 'm2BtMv.cas.censp', 'm2BtMv.cas.clu.censp' )
-	method.risk	<- c(	'm2BwmxMv.cas.clu.censp', 'm2B1stMv.cas.clu.censp', 'm2BtMv.cas.clu.censp' )
+	##method.risk	<- c(	'm2BwmxMv.cas.clu.censp', 'm2B1stMv.cas.clu.censp', 'm2BtMv.cas.clu.censp' )
+	method.risk	<- c(	'm2BwmxMv.cas.clu', 'm2B1stMv.cas.clu', 'm2BtMv.cas.clu','m2BwmxMv.cas', 'm2B1stMv.cas', 'm2BtMv.cas' )
 	#	basic m2B1st runs	mem=3800
 	#method.risk	<- c(	'm2B1st.cas','m2B1st.cas.clu','m2B1st.cas.censp')
 	#	basic m2Bt runs	mem=3800
