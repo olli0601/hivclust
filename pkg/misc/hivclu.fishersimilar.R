@@ -5754,7 +5754,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('adj', method.risk) | grepl('censp', method.risk))				
 				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
 		}	
-		if(grepl('m2wmx.tp', method.risk) | grepl('m2Bwmx.tp', method.risk))
+		if(grepl('m2wmx.tp', method.risk) | grepl('m2wmxMv.tp', method.risk) | grepl('m2Bwmx.tp', method.risk) | grepl('m2BwmxMv.tp', method.risk))
 		{
 			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			cat(paste('\nprocess time period',tp))
