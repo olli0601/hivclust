@@ -5470,6 +5470,8 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 ######################################################################################
 project.athena.Fisheretal.estimate.risk.wrap.add2riskdf<- function(method.risk, risk.df, X.tables)
 {	
+	tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
+	tp				<- ifelse(length(tp), paste('.',substr(tp, 3, 3),sep=''), '')	
 	risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat=='X.clu', c(risk, factor, n)), by=c('risk','factor'), all.x=1)
 	setnames(risk.df, 'n', 'PYs')
 	tmp				<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
@@ -5481,32 +5483,37 @@ project.athena.Fisheretal.estimate.risk.wrap.add2riskdf<- function(method.risk, 
 	setkey(risk.df, risk, factor)
 	risk.df[, PYe5:= PYe0] 	
 	tmp		<- unique(risk.df)[, sum(PYe5)/0.95*0.05]
-	set(risk.df, risk.df[, which(factor=='U')], 'PYe5', risk.df[factor=='U', PYe5+tmp] )
+	set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe5', risk.df[factor==paste('U',tp,sep=''), PYe5+tmp] )
 	#PYe7
 	risk.df[, PYe7:= PYe0]
 	tmp		<- unique(risk.df)[, sum(PYe7)/0.93*0.07]
-	set(risk.df, risk.df[, which(factor=='U')], 'PYe7', risk.df[factor=='U', PYe7+tmp] )
+	set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe7', risk.df[factor==paste('U',tp,sep=''), PYe7+tmp] )
 	#PYe3
 	risk.df[, PYe3:= PYe0]
 	tmp		<- unique(risk.df)[, sum(PYe3)/0.97*0.03]
-	set(risk.df, risk.df[, which(factor=='U')], 'PYe3', risk.df[factor=='U', PYe3+tmp] )
+	set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe3', risk.df[factor==paste('U',tp,sep=''), PYe3+tmp] )
 	#PYe censoring by constant proportion
-	tmp		<- subset(X.tables$cens.table, stat=='X.msm')[, list(risk=risk[1], PYe0cp= sum(n.adjbyPU)) , by='factor2']
-	setnames(tmp, 'factor2', 'factor')			
+	if(grepl('tp[0-9]', method.risk))
+		tmp		<- subset(X.tables$cens.table, stat=='X.msm')[, list(risk=risk, PYe0cp= n.adjbyPU) , by='factor']
+	if(!grepl('tp[0-9]', method.risk))
+	{
+		tmp		<- subset(X.tables$cens.table, stat=='X.msm')[, list(risk=risk[1], PYe0cp= sum(n.adjbyPU)) , by='factor2']
+		setnames(tmp, 'factor2', 'factor')
+	}					
 	risk.df	<- merge(risk.df, tmp, by=c('risk','factor'), all.x=1)
 	#PYe5cp
 	setkey(risk.df, risk, factor)
 	risk.df[, PYe5cp:= PYe0cp] 	
 	tmp		<- unique(risk.df)[, sum(PYe5cp)/0.95*0.05]
-	set(risk.df, risk.df[, which(factor=='U')], 'PYe5cp', risk.df[factor=='U', PYe5cp+tmp] )
+	set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe5cp', risk.df[factor==paste('U',tp,sep=''), PYe5cp+tmp] )
 	#PYe7cp
 	risk.df[, PYe7cp:= PYe0cp]
-	tmp		<- unique(risk.df)[, sum(PYe5cp)/0.93*0.07]
-	set(risk.df, risk.df[, which(factor=='U')], 'PYe7cp', risk.df[factor=='U', PYe7cp+tmp] )
+	tmp		<- unique(risk.df)[, sum(PYe7cp)/0.93*0.07]
+	set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe7cp', risk.df[factor==paste('U',tp,sep=''), PYe7cp+tmp] )
 	#PYe3cp
 	risk.df[, PYe3cp:= PYe0cp]
 	tmp		<- unique(risk.df)[, sum(PYe3cp)/0.97*0.03]
-	set(risk.df, risk.df[, which(factor=='U')], 'PYe3cp', risk.df[factor=='U', PYe3cp+tmp] )
+	set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe3cp', risk.df[factor==paste('U',tp,sep=''), PYe3cp+tmp] )
 	risk.df
 }
 ######################################################################################
@@ -5781,9 +5788,20 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}	
-			formula			<- 'score.Y ~ stage-1'
-			include.colnames<- c('score.Y','w','stage')						
-			predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=YX[, levels(stage)]), w=1.)									
+			if(grepl('Mv', method.risk))	
+			{
+				include.colnames<- c('score.Y','w','stage','t.Age','t.RegionHospital')
+				formula			<- 'score.Y ~ bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'				
+				predict.df		<- data.table(	stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=YX[, levels(stage)]), 												
+												t.Age=subset(YX, stage==paste('ART.suA.Y',tp,sep='.'))[, mean(t.Age, na.rm=TRUE)],
+												t.RegionHospital=factor('Amst', levels=YX[, levels(t.RegionHospital)]),	w=1.)										
+			}
+			if(!grepl('Mv', method.risk))
+			{				
+				formula			<- 'score.Y ~ stage-1'
+				include.colnames<- c('score.Y','w','stage')						
+				predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=YX[, levels(stage)]), w=1.)
+			}
 			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='D' ]
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
@@ -5791,7 +5809,15 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
 			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
-			
+			if(grepl('Mv', method.risk))
+			{
+				setkey(risk.df, risk, factor)
+				risk.df		<- merge(risk.df, unique(risk.df)[, {
+									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
+									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
+									list(t.Age=t.Age, t.RegionHospital='Amst')
+								}, by=c('risk','factor')], by=c('risk','factor'))						
+			}			
 			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			if(!grepl('adj', method.risk) & !grepl('censp', method.risk))
 				ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
@@ -13415,6 +13441,7 @@ project.athena.Fisheretal.numbers<- function()
 ######################################################################################
 hivc.prog.betareg.estimaterisks<- function()
 {
+	require(reshape2)
 	require(data.table)
 	require(ape)
 	#stop()
