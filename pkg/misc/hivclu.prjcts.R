@@ -650,7 +650,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 {
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
-	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')
+	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')
 	
 	NA.time			<- c("01/01/1911","01/11/1911","11/11/1911")	
 	MAX.time		<- c("")
@@ -838,7 +838,37 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	#	process treatment change reasons
 	#
 	if(any(!is.na(df[, Reason7])))	stop("unexpected !NA after Reason7")
-	df.TrCh.noreason		<- which( df[, is.na(Reason1)&is.na(Reason2)&is.na(Reason3)&is.na(Reason4)&is.na(Reason5)&is.na(Reason6)&(NoDrug!=0) ] )		
+	df.TrCh.noreason		<- which( df[, is.na(Reason1)&is.na(Reason2)&is.na(Reason3)&is.na(Reason4)&is.na(Reason5)&is.na(Reason6)&(NoDrug!=0) ] )
+	#	TR.addition
+	tmp	<- na.omit(c( 	df[df.TrCh.noreason, AZT]<=df[df.TrCh.noreason+1, AZT] &
+				df[df.TrCh.noreason, ddI]<=df[df.TrCh.noreason+1, ddI] &
+				df[df.TrCh.noreason, ddC]<=df[df.TrCh.noreason+1, ddC] &
+				df[df.TrCh.noreason, d4T]<=df[df.TrCh.noreason+1, d4T] &
+				df[df.TrCh.noreason, dTC]<=df[df.TrCh.noreason+1, dTC] &
+				df[df.TrCh.noreason, IDV]<=df[df.TrCh.noreason+1, IDV] & 
+				df[df.TrCh.noreason, SAQ]<=df[df.TrCh.noreason+1, SAQ] &
+				df[df.TrCh.noreason, RTV]<=df[df.TrCh.noreason+1, RTV] &
+				df[df.TrCh.noreason, NVP]<=df[df.TrCh.noreason+1, NVP] &
+				df[df.TrCh.noreason, EFV]<=df[df.TrCh.noreason+1, EFV] &
+				df[df.TrCh.noreason, ETR]<=df[df.TrCh.noreason+1, ETR] &
+				df[df.TrCh.noreason, RPV]<=df[df.TrCh.noreason+1, RPV] &
+				df[df.TrCh.noreason, NFV]<=df[df.TrCh.noreason+1, NFV] &
+				df[df.TrCh.noreason, ABC]<=df[df.TrCh.noreason+1, ABC] &
+				df[df.TrCh.noreason, LPV]<=df[df.TrCh.noreason+1, LPV] &
+				df[df.TrCh.noreason, ATV]<=df[df.TrCh.noreason+1, ATV] &
+				df[df.TrCh.noreason, ENF]<=df[df.TrCh.noreason+1, ENF] &
+				df[df.TrCh.noreason, TDF]<=df[df.TrCh.noreason+1, TDF] &
+				df[df.TrCh.noreason, TPV]<=df[df.TrCh.noreason+1, TPV] &
+				df[df.TrCh.noreason, FPV]<=df[df.TrCh.noreason+1, FPV] &
+				df[df.TrCh.noreason, FTC]<=df[df.TrCh.noreason+1, FTC] &
+				df[df.TrCh.noreason, DRV]<=df[df.TrCh.noreason+1, DRV] &
+				df[df.TrCh.noreason, MVC]<=df[df.TrCh.noreason+1, MVC] &
+				df[df.TrCh.noreason, RAL]<=df[df.TrCh.noreason+1, RAL]		))	
+	#tmp						<- df[df.TrCh.noreason, NoDrug+1]==df[df.TrCh.noreason+1, NoDrug]	
+	df[, TrCh.addition:=0]
+	set(df, df.TrCh.noreason[tmp], 'TrCh.addition', 1)
+	df[, TrCh.addition:= factor(TrCh.addition,levels=c(0,1),labels=c("No","Yes"))]
+	df.TrCh.noreason		<- df.TrCh.noreason[!tmp]
 	#	TR.failure
 	tmp						<-	rep(0, nrow(df))
 	tmp[ df.TrCh.noreason ]	<- NA
