@@ -680,7 +680,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t
 										t.period, stage, U.score, contact, CDCC, lRNA, CD4, 														#main covariates							
 										t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.pulse, ART.nDrug, ART.nNRT, ART.nNNRT, ART.nPI, fw.up.mx, fw.up.med, t2.care.t1, t2.vl.supp, 		#secondary covariates
 										t.AnyPos_T1,  t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, t.Trm, Trm,												#other 
-										FASTASampleCode, t.FASTASampleCode, w, w.i, w.t, class										#other							
+										FASTASampleCode, t.FASTASampleCode, w, w.i, w.in, w.t, class										#other							
 								))
 		setkey(YX, t, t.Patient, Patient)		
 		#
@@ -1990,7 +1990,7 @@ project.athena.Fisheretal.YX.weight<- function(YX)
 	tmp		<- subset(YX, select=c(Patient, t.Patient, score.brl.TPd))
 	setkey(tmp, Patient, t.Patient)
 	tmp		<- unique(tmp)	
-	tmp		<- tmp[,	list(w.i=score.brl.TPd/sum(score.brl.TPd), t.Patient=t.Patient), by='Patient']	
+	tmp		<- tmp[,	list(w.i=score.brl.TPd/sum(score.brl.TPd), w.in=1/length(t.Patient), t.Patient=t.Patient), by='Patient']
 	if( tmp[,sum(w.i)]!=YX[, length(unique(Patient))] )	stop('unexpected weight')	
 	YX		<- merge(YX, tmp, by=c('Patient','t.Patient')) 
 	set(YX, NULL, 'w', YX[, w*w.i])
@@ -5535,6 +5535,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 						'm2B1st.cas','m2B1st.cas.clu','m2B1st.cas.adj','m2B1st.cas.clu.adj','m2B1st.cas.cens','m2B1st.cas.clu.cens','m2B1st.cas.censp','m2B1st.cas.clu.censp',
 						'm2B1stMv.cas','m2B1stMv.cas.clu','m2B1stMv.cas.adj','m2B1stMv.cas.clu.adj','m2B1stMv.cas.cens','m2B1stMv.cas.clu.cens','m2B1stMv.cas.censp','m2B1stMv.cas.clu.censp'))
 		{  
+			#	use weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
@@ -5607,6 +5610,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 						'm2Bt.cas','m2Bt.cas.clu','m2Bt.cas.adj','m2Bt.cas.clu.adj','m2Bt.cas.cens','m2Bt.cas.clu.cens','m2Bt.cas.censp','m2Bt.cas.clu.censp',
 						'm2BtMv.cas','m2BtMv.cas.clu','m2BtMv.cas.adj','m2BtMv.cas.clu.adj','m2BtMv.cas.cens','m2BtMv.cas.clu.cens','m2BtMv.cas.censp','m2BtMv.cas.clu.censp'))
 		{  
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])			
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
@@ -5680,6 +5686,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 						'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.adj','m2Bwmx.cas.clu.adj','m2Bwmx.cas.cens','m2Bwmx.cas.clu.cens','m2Bwmx.cas.censp','m2Bwmx.cas.clu.censp',
 						'm2BwmxMv.cas','m2BwmxMv.cas.clu','m2BwmxMv.cas.adj','m2BwmxMv.cas.clu.adj','m2BwmxMv.cas.cens','m2BwmxMv.cas.clu.cens','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp'))
 		{  
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
@@ -5758,6 +5767,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		}	
 		if(grepl('m2wmx.tp', method.risk) | grepl('m2wmxMv.tp', method.risk) | grepl('m2Bwmx.tp', method.risk) | grepl('m2BwmxMv.tp', method.risk))
 		{
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])						
 			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			cat(paste('\nprocess time period',tp))
 			tp				<- substr(tp, 3, 3)
@@ -5889,7 +5901,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		}
 		if(method.risk%in%c('m3.nic','m3.nic.clu','m3.nic.adj','m3.nic.clu.adj','m3.nic.cens','m3.nic.clu.cens','m3.nic.censp','m3.nic.clu.censp'))
 		{
-			#	number of drugs conditional on no indicators and ART indicators (not overlapping)  
+			#	number of drugs conditional on no indicators and ART indicators (not overlapping)
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -5938,6 +5953,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		if(method.risk%in%c('m3.nicv','m3.nicv.clu','m3.nicv.adj','m3.nicv.clu.adj','m3.nicv.cens','m3.nicv.clu.cens','m3.nicv.censp','m3.nicv.clu.censp'))
 		{
 			#	number of drugs conditional on no indicators and ART indicators (not overlapping)  
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -6064,6 +6082,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 						'm3.tnicMV','m3.tnicMV.clu','m3.tnicMV.adj','m3.tnicMV.clu.adj','m3.tnicMV.cens','m3.tnicMV.clu.cens','m3.tnicMV.censp','m3.tnicMV.clu.censp'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -6142,6 +6163,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			YX[, ART.ntstage.c.tperiod:= YX[, paste(ART.ntstage.c, t.period, sep='.')]]
 			set(YX, YX[,which(is.na(ART.ntstage.c))], 'ART.ntstage.c.tperiod', NA_character_)
 			set(YX, NULL, 'stage', YX[, factor(as.character(ART.ntstage.c.tperiod))])			
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -6193,6 +6217,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		if(method.risk%in%c('m3.tnicv','m3.tnicv.clu','m3.tnicv.adj','m3.tnicv.clu.adj','m3.tnicv.cens','m3.tnicv.clu.cens','m3.tnicv.censp','m3.tnicv.clu.censp'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -6250,6 +6277,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 						'm3.tnicvNo','m3.tnicvNo.clu','m3.tnicvNo.adj','m3.tnicvNo.clu.adj','m3.tnicvNo.cens','m3.tnicvNo.clu.cens','m3.tnicvNo.censp','m3.tnicvNo.clu.censp'))
 		{
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -6340,6 +6370,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				'm4.BwmxvNo','m4.BwmxvNo.clu','m4.BwmxvNo.adj','m4.BwmxvNo.clu.adj','m4.BwmxvNo.cens','m4.BwmxvNo.clu.cens','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp',
 				'm4.BwmxvMv','m4.BwmxvMv.clu','m4.BwmxvMv.adj','m4.BwmxvMv.clu.adj','m4.BwmxvMv.cens','m4.BwmxvMv.clu.cens','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp'))				
 		{  
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i])						
 			if(!grepl('No', method.risk))
 				YX			<- subset(YX, !is.na(lRNA.mx) & !is.na(Acute) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
 			if(grepl('No', method.risk))
@@ -10585,7 +10618,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	#
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, lRNA_TL, PoslRNA_TL, CD41st, CD4t, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, lRNA_TL, PoslRNA_TL, CD41st, CD4t, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, lRNA_TL, PoslRNA_TL, CD41st, CD4t  ))	
 	#
@@ -10757,7 +10790,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))		
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t, lRNA.gm, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, CD41st, CD4t, lRNA.gm, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, lRNA.gm  ))		
 	gc()
@@ -10988,7 +11021,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	set(YX.m2, YX.m2[, which(stage=='ART.started')], 'CD4t', 'ART.started' )	
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, CD41st, CD4t, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t  ))	
 	gc()

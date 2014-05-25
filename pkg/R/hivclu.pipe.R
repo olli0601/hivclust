@@ -689,6 +689,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	##method.risk	<- c(	'm2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
 	##method.risk	<- c(	'm2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4' )
 	method.risk	<- c(	'm2BwmxMv.tp1.clu','m2BwmxMv.tp2.clu','m2BwmxMv.tp3.clu','m2BwmxMv.tp4.clu','m2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4' )
+	method.risk	<- c(	'm2BwmxMv.tp1.clu.now','m2BwmxMv.tp2.clu.now','m2BwmxMv.tp3.clu.now','m2BwmxMv.tp4.clu.now','m2BwmxMv.tp1.now','m2BwmxMv.tp2.now','m2BwmxMv.tp3.now','m2BwmxMv.tp4.now' )
 	#	basic m2Bwmx runs	mem=3800
 	#method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp')
 	#	basic m2BXXXMv runs	mem=7800
@@ -707,7 +708,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#	NRTI+NNRTI puzzle
 	#method.risk	<- c( 	'm3.tnicMv', 'm3.tnicMv.adj','m3.tnicMv.clu.adj', 'm3.tnicMv.censp','m3.tnicMv.clu.censp'	)
 	# use to pre-compute tables
-	#method.risk		<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj', 'm4.Bwmxv.clu.adj', 'm3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicNo.clu.adj','m3.tnicMv.clu.adj')
+	method.risk		<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj', 'm4.Bwmxv.clu.adj', 'm3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicNo.clu.adj','m3.tnicMv.clu.adj')
 	
 	
 	dummy	<- sapply(method.risk, function(x)
@@ -717,9 +718,9 @@ hivc.pipeline.betareg.estimate.risks<- function()
 				#stop()
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="1800mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=22, hpc.mem="1900mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
+				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
-				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="79000mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="79000mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 				hivc.cmd.hpccaller(outdir, outfile, cmd)			
