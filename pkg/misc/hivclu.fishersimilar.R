@@ -4903,19 +4903,28 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 	setkey(risk.df, risk, factor)
 	tmp			<- merge(tmp, subset(unique(risk.df), select=c(risk, factor, PTx, PYs, PYe0, PYe5, PYe7, PYe3, PYe0cp, PYe5cp, PYe7cp, PYe3cp)), by=c('risk','factor'))
 	#set(tmp, NULL, 'v', tmp[, expbeta*PTx*PYs/sum(expbeta*PTx*PYs)])
-	set(tmp, NULL, 'v', tmp[, expbeta*PTx*n/sum(expbeta*PTx*n)])
+	set(tmp, NULL, 'v', tmp[, expbeta*PTx*n/sum(expbeta*PTx*n)])	
 	set(tmp, NULL, 'stat', 'P.ptx')
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
-	#	P.ptx, adjusted by sampling bias
+	#	P.ptx, adjusted by sampling bias and censoring
 	tmp			<- merge(tmp, tmp[, list(	risk=risk, factor=factor,
-											rho.e0= PYe0/PYs*sum(PYs)/sum(PYe0), rho.e5= PYe5/PYs*sum(PYs)/sum(PYe5), rho.e7= PYe7/PYs*sum(PYs)/sum(PYe7), rho.e3= PYe3/PYs*sum(PYs)/sum(PYe3),
-											rho.e0cp= PYe0cp/PYs*sum(PYs)/sum(PYe0cp), rho.e5cp= PYe5cp/PYs*sum(PYs)/sum(PYe5cp), rho.e7cp= PYe7cp/PYs*sum(PYs)/sum(PYe7cp), rho.e3cp= PYe3cp/PYs*sum(PYs)/sum(PYe3cp)		)], by= c('risk','factor'))					
-	tmp			<- melt( tmp[, list(   coef=coef, risk=risk, factor=factor, coef.ref=coef.ref, risk.ref=risk.ref, factor.ref=factor.ref, 
+											rho.e0= PYe0/PYs, rho.e5= PYe5/PYs, rho.e7= PYe7/PYs, rho.e3= PYe3/PYs,
+											rho.e0cp= PYe0cp/PYs, rho.e5cp= PYe5cp/PYs, rho.e7cp= PYe7cp/PYs, rho.e3cp= PYe3cp/PYs		)], by= c('risk','factor'))
+	tmp			<- melt( tmp[, list(   	coef=coef, risk=risk, factor=factor, coef.ref=coef.ref, risk.ref=risk.ref, factor.ref=factor.ref, 
 										P.e0=expbeta*n*rho.e0 / sum(expbeta*n*rho.e0), P.e5=expbeta*n*rho.e5 / sum(expbeta*n*rho.e5), P.e7=expbeta*n*rho.e7 / sum(expbeta*n*rho.e7), P.e3=expbeta*n*rho.e3 / sum(expbeta*n*rho.e3),  
 										P.e0cp=expbeta*n*rho.e0cp / sum(expbeta*n*rho.e0cp), P.e5cp=expbeta*n*rho.e5cp / sum(expbeta*n*rho.e5cp), P.e7cp=expbeta*n*rho.e7cp / sum(expbeta*n*rho.e7cp), P.e3cp=expbeta*n*rho.e3cp / sum(expbeta*n*rho.e3cp),
-										P.ptx.e0=expbeta*PTx*PYs*rho.e0 / sum(expbeta*PTx*PYs*rho.e0), P.ptx.e5=expbeta*PTx*PYs*rho.e5 / sum(expbeta*PTx*PYs*rho.e5), P.ptx.e7=expbeta*PTx*PYs*rho.e7 / sum(expbeta*PTx*PYs*rho.e7), P.ptx.e3=expbeta*PTx*PYs*rho.e3 / sum(expbeta*PTx*PYs*rho.e3),  
-										P.ptx.e0cp=expbeta*PTx*PYs*rho.e0cp / sum(expbeta*PTx*PYs*rho.e0cp), P.ptx.e5cp=expbeta*PTx*PYs*rho.e5cp / sum(expbeta*PTx*PYs*rho.e5cp), P.ptx.e7cp=expbeta*PTx*PYs*rho.e7cp / sum(expbeta*PTx*PYs*rho.e7cp), P.ptx.e3cp=expbeta*PTx*PYs*rho.e3cp / sum(expbeta*PTx*PYs*rho.e3cp)	)],
-						 id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name='v' )
+										P.ptx.e0=expbeta*PTx*n*rho.e0 / sum(expbeta*PTx*n*rho.e0), P.ptx.e5=expbeta*PTx*n*rho.e5 / sum(expbeta*PTx*n*rho.e5), P.ptx.e7=expbeta*PTx*n*rho.e7 / sum(expbeta*PTx*n*rho.e7), P.ptx.e3=expbeta*PTx*n*rho.e3 / sum(expbeta*PTx*n*rho.e3),  
+										P.ptx.e0cp=expbeta*PTx*n*rho.e0cp / sum(expbeta*PTx*n*rho.e0cp), P.ptx.e5cp=expbeta*PTx*n*rho.e5cp / sum(expbeta*PTx*n*rho.e5cp), P.ptx.e7cp=expbeta*PTx*n*rho.e7cp / sum(expbeta*PTx*n*rho.e7cp), P.ptx.e3cp=expbeta*PTx*n*rho.e3cp / sum(expbeta*PTx*n*rho.e3cp)	)],
+										id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name='v' )	
+	#tmp			<- merge(tmp, tmp[, list(	risk=risk, factor=factor,
+	#										rho.e0= PYe0/PYs*sum(PYs)/sum(PYe0), rho.e5= PYe5/PYs*sum(PYs)/sum(PYe5), rho.e7= PYe7/PYs*sum(PYs)/sum(PYe7), rho.e3= PYe3/PYs*sum(PYs)/sum(PYe3),
+	#										rho.e0cp= PYe0cp/PYs*sum(PYs)/sum(PYe0cp), rho.e5cp= PYe5cp/PYs*sum(PYs)/sum(PYe5cp), rho.e7cp= PYe7cp/PYs*sum(PYs)/sum(PYe7cp), rho.e3cp= PYe3cp/PYs*sum(PYs)/sum(PYe3cp)		)], by= c('risk','factor'))					
+	#tmp			<- melt( tmp[, list(   coef=coef, risk=risk, factor=factor, coef.ref=coef.ref, risk.ref=risk.ref, factor.ref=factor.ref, 
+	#									P.e0=expbeta*n*rho.e0 / sum(expbeta*n*rho.e0), P.e5=expbeta*n*rho.e5 / sum(expbeta*n*rho.e5), P.e7=expbeta*n*rho.e7 / sum(expbeta*n*rho.e7), P.e3=expbeta*n*rho.e3 / sum(expbeta*n*rho.e3),  
+	#									P.e0cp=expbeta*n*rho.e0cp / sum(expbeta*n*rho.e0cp), P.e5cp=expbeta*n*rho.e5cp / sum(expbeta*n*rho.e5cp), P.e7cp=expbeta*n*rho.e7cp / sum(expbeta*n*rho.e7cp), P.e3cp=expbeta*n*rho.e3cp / sum(expbeta*n*rho.e3cp),
+	#									P.ptx.e0=expbeta*PTx*PYs*rho.e0 / sum(expbeta*PTx*PYs*rho.e0), P.ptx.e5=expbeta*PTx*PYs*rho.e5 / sum(expbeta*PTx*PYs*rho.e5), P.ptx.e7=expbeta*PTx*PYs*rho.e7 / sum(expbeta*PTx*PYs*rho.e7), P.ptx.e3=expbeta*PTx*PYs*rho.e3 / sum(expbeta*PTx*PYs*rho.e3),  
+	#									P.ptx.e0cp=expbeta*PTx*PYs*rho.e0cp / sum(expbeta*PTx*PYs*rho.e0cp), P.ptx.e5cp=expbeta*PTx*PYs*rho.e5cp / sum(expbeta*PTx*PYs*rho.e5cp), P.ptx.e7cp=expbeta*PTx*PYs*rho.e7cp / sum(expbeta*PTx*PYs*rho.e7cp), P.ptx.e3cp=expbeta*PTx*PYs*rho.e3cp / sum(expbeta*PTx*PYs*rho.e3cp)	)],
+	#									 id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name='v' )
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 	#	number of transmissions and proportions by raw count
 	tmp			<- unique(risk.df)[, 	{
@@ -4927,18 +4936,29 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 				list(risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef.ref='None', stat= 'P.raw', v=v/sum(tmp[,v]) )
 			}, by='coef']
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#	P.raw, adjusted by sampling bias and censoring	
+	tmp			<- merge(subset(risk.ans, stat=='N.raw'), subset(unique(risk.df), select=c(risk, factor, PTx, PYs, PYe0, PYe5, PYe7, PYe3, PYe0cp, PYe5cp, PYe7cp, PYe3cp)), by=c('risk','factor'))
+	tmp			<- merge(tmp, tmp[, list(	risk=risk, factor=factor,
+							rho.e0= PYe0/PYs, rho.e5= PYe5/PYs, rho.e7= PYe7/PYs, rho.e3= PYe3/PYs,
+							rho.e0cp= PYe0cp/PYs, rho.e5cp= PYe5cp/PYs, rho.e7cp= PYe7cp/PYs, rho.e3cp= PYe3cp/PYs		)], by= c('risk','factor'))
+	tmp			<- melt( tmp[, 	list(   	coef=coef, risk=risk, factor=factor, coef.ref=coef.ref, risk.ref=risk.ref, factor.ref=factor.ref, 
+							P.raw.e0=v*rho.e0 / sum(v*rho.e0), P.raw.e5=v*rho.e5 / sum(v*rho.e5), P.raw.e7=v*rho.e7 / sum(v*rho.e7), P.raw.e3=v*rho.e3 / sum(v*rho.e3),
+							P.raw.e0cp=v*rho.e0cp / sum(v*rho.e0cp), P.raw.e5cp=v*rho.e5cp / sum(v*rho.e5cp), P.raw.e7cp=v*rho.e7cp / sum(v*rho.e7cp), P.raw.e3cp=v*rho.e3cp / sum(v*rho.e3cp))],
+			id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name='v' )
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 	#	relative infectiousness and 
 	#	relative infectiousness assuming no transmissions from Not.PT and
 	#	raw relative infectiousness
 	cat(paste('\nrelative infectiousness'))
-	tmp			<- subset(risk.ans, stat=='PYs' )[, sum(v)]
-	tmp			<- subset(risk.ans, risk.ref=='None')[, list( 	stat=c('RI','RI.ptx','RI.raw','RI.e0','RI.e5','RI.e7','RI.e3','RI.e0cp','RI.e5cp','RI.e7cp','RI.e3cp','RI.ptx.e0','RI.ptx.e5','RI.ptx.e7','RI.ptx.e3','RI.ptx.e0cp','RI.ptx.e5cp','RI.ptx.e7cp','RI.ptx.e3cp'), 
-																risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', 
-																v= c( v[stat=='P'], v[stat=='P.ptx'], v[stat=='P.raw'], 
-																	  v[stat=='P.e0'], v[stat=='P.e5'], v[stat=='P.e7'], v[stat=='P.e3'],v[stat=='P.e0cp'], v[stat=='P.e5cp'], v[stat=='P.e7cp'], v[stat=='P.e3cp'],
-																	  v[stat=='P.ptx.e0'], v[stat=='P.ptx.e5'], v[stat=='P.ptx.e7'], v[stat=='P.ptx.e3'],v[stat=='P.ptx.e0cp'], v[stat=='P.ptx.e5cp'], v[stat=='P.ptx.e7cp'], v[stat=='P.ptx.e3cp']) / ( v[stat=='PYs'] / tmp ) ),
-														by='coef']
-	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)
+	tmp			<- subset(risk.ans, stat=='PYs' )
+	set(tmp, NULL, 'pPYs', tmp[, v/sum(v, na.rm=TRUE)])	
+	tmp			<- merge( subset(risk.ans, stat%in%c(	'P','P.ptx','P.raw',
+														'P.e0','P.e5','P.e7','P.e3','P.e0cp','P.e5cp','P.e7cp','P.e3cp',
+														'P.ptx.e0','P.ptx.e5','P.ptx.e7','P.ptx.e3','P.ptx.e0cp','P.ptx.e5cp','P.ptx.e7cp','P.ptx.e3cp',
+														'P.raw.e0','P.raw.e5','P.raw.e7','P.raw.e3','P.raw.e0cp','P.raw.e5cp','P.raw.e7cp','P.raw.e3cp'		)), subset(tmp, select=c(risk, factor, pPYs)), by=c('risk','factor'))
+	set(tmp, NULL, 'v', tmp[, v/pPYs])
+	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)	
+	set(tmp, NULL, 'stat', tmp[, gsub('P','RI',stat)])
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 	#	Bootstraps	on ratio and on prob
 	cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
@@ -5073,8 +5093,8 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 	setkey(risk.df, risk, factor)
 	tmp			<- subset(unique(risk.df), select=c(risk, factor, PTx, PYs, PYe0, PYe5, PYe7, PYe3, PYe0cp, PYe5cp, PYe7cp, PYe3cp))
 	tmp			<- merge(tmp, tmp[, list(	risk=risk, factor=factor,
-							rho.e0= PYe0/PYs*sum(PYs)/sum(PYe0), rho.e5= PYe5/PYs*sum(PYs)/sum(PYe5), rho.e7= PYe7/PYs*sum(PYs)/sum(PYe7), rho.e3= PYe3/PYs*sum(PYs)/sum(PYe3),
-							rho.e0cp= PYe0cp/PYs*sum(PYs)/sum(PYe0cp), rho.e5cp= PYe5cp/PYs*sum(PYs)/sum(PYe5cp), rho.e7cp= PYe7cp/PYs*sum(PYs)/sum(PYe7cp), rho.e3cp= PYe3cp/PYs*sum(PYs)/sum(PYe3cp)		)], by= c('risk','factor'))					
+							rho.e0= PYe0/PYs, rho.e5= PYe5/PYs, rho.e7= PYe7/PYs, rho.e3= PYe3/PYs,
+							rho.e0cp= PYe0cp, rho.e5cp= PYe5cp/PYs, rho.e7cp= PYe7cp/PYs, rho.e3cp= PYe3cp/PYs		)], by= c('risk','factor'))					
 	tmp			<- merge(subset(risk.ans.bs, stat=='prob'), tmp, by=c('risk','factor'))
 	setnames(tmp, 'v', 'expbeta')
 	tmp[, stat:=NULL]
@@ -5083,14 +5103,28 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 	tmp			<- melt( tmp[, list(   coef=coef, risk=risk, factor=factor, coef.ref=coef.ref, risk.ref=risk.ref, factor.ref=factor.ref, 
 							P.e0=expbeta*n*rho.e0 / sum(expbeta*n*rho.e0), P.e5=expbeta*n*rho.e5 / sum(expbeta*n*rho.e5), P.e7=expbeta*n*rho.e7 / sum(expbeta*n*rho.e7), P.e3=expbeta*n*rho.e3 / sum(expbeta*n*rho.e3),  
 							P.e0cp=expbeta*n*rho.e0cp / sum(expbeta*n*rho.e0cp), P.e5cp=expbeta*n*rho.e5cp / sum(expbeta*n*rho.e5cp), P.e7cp=expbeta*n*rho.e7cp / sum(expbeta*n*rho.e7cp), P.e3cp=expbeta*n*rho.e3cp / sum(expbeta*n*rho.e3cp),
-							P.ptx.e0=expbeta*PTx*PYs*rho.e0 / sum(expbeta*PTx*PYs*rho.e0), P.ptx.e5=expbeta*PTx*PYs*rho.e5 / sum(expbeta*PTx*PYs*rho.e5), P.ptx.e7=expbeta*PTx*PYs*rho.e7 / sum(expbeta*PTx*PYs*rho.e7), P.ptx.e3=expbeta*PTx*PYs*rho.e3 / sum(expbeta*PTx*PYs*rho.e3),  
-							P.ptx.e0cp=expbeta*PTx*PYs*rho.e0cp / sum(expbeta*PTx*PYs*rho.e0cp), P.ptx.e5cp=expbeta*PTx*PYs*rho.e5cp / sum(expbeta*PTx*PYs*rho.e5cp), P.ptx.e7cp=expbeta*PTx*PYs*rho.e7cp / sum(expbeta*PTx*PYs*rho.e7cp), P.ptx.e3cp=expbeta*PTx*PYs*rho.e3cp / sum(expbeta*PTx*PYs*rho.e3cp)	), by='bs'],
+							P.ptx.e0=expbeta*PTx*n*rho.e0 / sum(expbeta*PTx*n*rho.e0), P.ptx.e5=expbeta*PTx*n*rho.e5 / sum(expbeta*PTx*n*rho.e5), P.ptx.e7=expbeta*PTx*n*rho.e7 / sum(expbeta*PTx*n*rho.e7), P.ptx.e3=expbeta*PTx*n*rho.e3 / sum(expbeta*PTx*n*rho.e3),  
+							P.ptx.e0cp=expbeta*PTx*n*rho.e0cp / sum(expbeta*PTx*n*rho.e0cp), P.ptx.e5cp=expbeta*PTx*n*rho.e5cp / sum(expbeta*PTx*n*rho.e5cp), P.ptx.e7cp=expbeta*PTx*n*rho.e7cp / sum(expbeta*PTx*n*rho.e7cp), P.ptx.e3cp=expbeta*PTx*n*rho.e3cp / sum(expbeta*PTx*n*rho.e3cp)	), by='bs'],
 						id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref','bs'), variable.name='stat', value.name='v' )
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))
+	#	P.raw, adjusted by sampling bias and censoring
+	tmp			<- subset(unique(risk.df), select=c(risk, factor, PTx, PYs, PYe0, PYe5, PYe7, PYe3, PYe0cp, PYe5cp, PYe7cp, PYe3cp))
+	tmp			<- merge(tmp, tmp[, list(	risk=risk, factor=factor,
+							rho.e0= PYe0/PYs, rho.e5= PYe5/PYs, rho.e7= PYe7/PYs, rho.e3= PYe3/PYs,
+							rho.e0cp= PYe0cp, rho.e5cp= PYe5cp/PYs, rho.e7cp= PYe7cp/PYs, rho.e3cp= PYe3cp/PYs		)], by= c('risk','factor'))					
+	tmp			<- merge(subset(risk.ans.bs, stat=='N.raw'), tmp, by=c('risk','factor'))
+	tmp			<- melt( tmp[, 	list(   	coef=coef, risk=risk, factor=factor, coef.ref=coef.ref, risk.ref=risk.ref, factor.ref=factor.ref, 
+											P.raw.e0=v*rho.e0 / sum(v*rho.e0), P.raw.e5=v*rho.e5 / sum(v*rho.e5), P.raw.e7=v*rho.e7 / sum(v*rho.e7), P.raw.e3=v*rho.e3 / sum(v*rho.e3),  
+											P.raw.e0cp=v*rho.e0cp / sum(v*rho.e0cp), P.raw.e5cp=v*rho.e5cp / sum(v*rho.e5cp), P.raw.e7cp=v*rho.e7cp / sum(v*rho.e7cp), P.raw.e3cp=v*rho.e3cp / sum(v*rho.e3cp)	), by='bs'],
+								id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref','bs'), variable.name='stat', value.name='v' )
 	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))
 	#	RI and RI.ptx, adjusted by sampling bias and censoring
 	tmp			<- subset(risk.ans, stat=='PYs' )
 	set(tmp, NULL, 'pPYs', tmp[, v/sum(v, na.rm=TRUE)])	
-	tmp			<- merge( subset(risk.ans.bs, stat%in%c('P','P.ptx','P.raw','P.e0','P.e5','P.e7','P.e3','P.e0cp','P.e5cp','P.e7cp','P.e3cp','P.ptx.e0','P.ptx.e5','P.ptx.e7','P.ptx.e3','P.ptx.e0cp','P.ptx.e5cp','P.ptx.e7cp','P.ptx.e3cp')), subset(tmp, select=c(risk, factor, pPYs)), by=c('risk','factor'))
+	tmp			<- merge( subset(risk.ans.bs, stat%in%c('P','P.ptx','P.raw',
+														'P.e0','P.e5','P.e7','P.e3','P.e0cp','P.e5cp','P.e7cp','P.e3cp',
+														'P.ptx.e0','P.ptx.e5','P.ptx.e7','P.ptx.e3','P.ptx.e0cp','P.ptx.e5cp','P.ptx.e7cp','P.ptx.e3cp',
+														'P.raw.e0','P.raw.e5','P.raw.e7','P.raw.e3','P.raw.e0cp','P.raw.e5cp','P.raw.e7cp','P.raw.e3cp')), subset(tmp, select=c(risk, factor, pPYs)), by=c('risk','factor'))
 	set(tmp, NULL, 'v', tmp[, v/pPYs])
 	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)	
 	set(tmp, NULL, 'stat', tmp[, gsub('P','RI',stat)])
@@ -5473,11 +5507,11 @@ project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, p
 project.athena.Fisheretal.estimate.risk.wrap.add2riskdf<- function(method.risk, risk.df, X.tables)
 {	
 	tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
-	tp				<- ifelse(length(tp), paste('.',substr(tp, 3, 3),sep=''), '')	
-	risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat=='X.clu', c(risk, factor, n)), by=c('risk','factor'), all.x=1)
-	setnames(risk.df, 'n', 'PYs')
+	tp				<- ifelse(length(tp), paste('.',substr(tp, 3, 3),sep=''), '')
 	tmp				<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
-	risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/sum(n[stat==tmp])), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)	
+	risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
+	setnames(risk.df, 'n', 'PYs')	
+	risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/n[stat=='X.clu']), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)	
 	#PYe	
 	risk.df	<- merge(risk.df, subset(X.tables$risk.table, stat=='X.msm', c(risk, factor, n)), by=c('risk','factor'), all.x=1)
 	setnames(risk.df, 'n', 'PYe0')
@@ -5537,7 +5571,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		{  
 			#	use weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
@@ -5612,7 +5646,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		{  
 			#	use cluster weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])			
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])			
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
@@ -5681,14 +5715,12 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			if(grepl('adj', method.risk) | grepl('censp', method.risk))				
 				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )							
-		}					
-		if(method.risk%in%c(	'm2wmx.cas','m2wmx.cas.clu','m2wmx.cas.adj','m2wmx.cas.clu.adj','m2wmx.cas.cens','m2wmx.cas.clu.cens',
-						'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.adj','m2Bwmx.cas.clu.adj','m2Bwmx.cas.cens','m2Bwmx.cas.clu.cens','m2Bwmx.cas.censp','m2Bwmx.cas.clu.censp',
-						'm2BwmxMv.cas','m2BwmxMv.cas.clu','m2BwmxMv.cas.adj','m2BwmxMv.cas.clu.adj','m2BwmxMv.cas.cens','m2BwmxMv.cas.clu.cens','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp'))
+		}		
+		if(grepl('m2wmx.cas', method.risk) | grepl('m2wmxMv.cas', method.risk) | grepl('m2wmx.cas', method.risk) )
 		{  
 			#	use cluster weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])						
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
@@ -5769,7 +5801,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		{
 			#	use cluster weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])						
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			cat(paste('\nprocess time period',tp))
 			tp				<- substr(tp, 3, 3)
@@ -5904,7 +5936,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#	number of drugs conditional on no indicators and ART indicators (not overlapping)
 			#	use cluster weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])						
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -5955,7 +5987,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#	number of drugs conditional on no indicators and ART indicators (not overlapping)  
 			#	use cluster weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])						
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -6084,7 +6116,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
 			#	use cluster weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])						
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -6165,7 +6197,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			set(YX, NULL, 'stage', YX[, factor(as.character(ART.ntstage.c.tperiod))])			
 			#	use cluster weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])						
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -6219,7 +6251,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
 			#	use cluster weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])						
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -6279,7 +6311,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#	number/type of drugs conditional on no indicators and ART indicators (not overlapping)
 			#	use cluster weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])						
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -6372,7 +6404,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		{  
 			#	use cluster weights?
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])						
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			if(!grepl('No', method.risk))
 				YX			<- subset(YX, !is.na(lRNA.mx) & !is.na(Acute) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
 			if(grepl('No', method.risk))
@@ -11942,8 +11974,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	method.risk				<- c(	'm2B1st.cas','m2B1stMv.cas','m2Bwmx.cas','m2BwmxMv.cas','m2Bt.cas','m2BtMv.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4','m2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4',
-									'm2B1st.cas.clu','m2B1stMv.cas.clu','m2Bwmx.cas.clu','m2BwmxMv.cas.clu','m2Bt.cas.clu','m2BtMv.cas.clu','m2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2BwmxMv.tp1.clu','m2BwmxMv.tp2.clu','m2BwmxMv.tp3.clu','m2BwmxMv.tp4.clu',
+	method.risk				<- c(	'm2B1st.cas','m2B1stMv.cas','m2Bwmx.cas','m2BwmxMv.cas','m2Bt.cas','m2BtMv.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4','m2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4','m2BwmxMv.tp1.now','m2BwmxMv.tp2.now','m2BwmxMv.tp3.now','m2BwmxMv.tp4.now',
+									'm2B1st.cas.clu','m2B1stMv.cas.clu','m2Bwmx.cas.clu','m2BwmxMv.cas.clu','m2Bt.cas.clu','m2BtMv.cas.clu','m2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2BwmxMv.tp1.clu','m2BwmxMv.tp2.clu','m2BwmxMv.tp3.clu','m2BwmxMv.tp4.clu','m2BwmxMv.tp1.clu.now','m2BwmxMv.tp2.clu.now','m2BwmxMv.tp3.clu.now','m2BwmxMv.tp4.clu.now',
 									'm2B1st.cas.adj','m2B1stMv.cas.adj','m2Bwmx.cas.adj','m2BwmxMv.cas.adj','m2Bt.cas.adj','m2BtMv.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj',
 									'm2B1st.cas.cens','m2B1stMv.cas.cens','m2Bwmx.cas.cens','m2BwmxMv.cas.cens','m2Bt.cas.cens','m2BtMv.cas.cens','m2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens',
 									'm2B1st.cas.clu.cens','m2B1stMv.cas.clu.cens','m2Bwmx.cas.clu.cens','m2BwmxMv.cas.clu.cens','m2Bt.cas.clu.cens','m2BtMv.cas.clu.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens',
@@ -12317,7 +12349,11 @@ project.athena.Fisheretal.sensitivity<- function()
 	#
 	#	MODEL 2B time trends
 	#
-	run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl('clu',method.risk) & grepl('P',stat) )	
+	ylab		<- "proportion of transmissions"
+	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & grepl('P',stat) )
+	#method.clu	<- 'clu'
+	run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('P',stat) )
+	method.clu	<- 'seq'
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
@@ -12349,8 +12385,8 @@ project.athena.Fisheretal.sensitivity<- function()
 						scale_colour_manual(name='Transmission times', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(run.tp[,length(unique(factor.legend))])) +
 						scale_fill_manual(name='Transmission times', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(run.tp[,length(unique(factor.legend))])) +
 						theme(legend.key.size=unit(13,'mm')) + guides(colour = guide_legend(override.aes = list(size=5))) +
-						geom_ribbon(aes(ymin=l95.bs, ymax=u95.bs, linetype=NA, fill=factor.legend), show_guide= FALSE, alpha=0.3) + geom_point() + geom_line(aes(linetype=factor.legend), show_guide= FALSE) + facet_grid(. ~ cascade.stage, margins=FALSE)
-				file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "prop_m2wmx.tp_3da_",stat.select[i],'_', subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.recentctime],".pdf", sep='')
+						geom_ribbon(aes(ymin=l95.bs, ymax=u95.bs, linetype=NA, fill=factor.legend), show_guide= FALSE, alpha=0.3) + geom_point() + geom_line(aes(linetype=factor.legend), show_guide= FALSE) + facet_grid(. ~ cascade.stage, margins=FALSE)				
+				file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', stat.select[i],'_',subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.risk],"_prop_",method.clu,'_',subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.brl],'_', subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.recentctime],".pdf", sep='')
 				cat(paste('\nsave to file',file))
 				ggsave(file=file, w=8,h=8)				
 			})
