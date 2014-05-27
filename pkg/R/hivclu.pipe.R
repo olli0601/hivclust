@@ -651,7 +651,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(0)
+	if(1)
 	{
 		method					<- '3g'
 		method.recentctime		<- '2011-01-01'
