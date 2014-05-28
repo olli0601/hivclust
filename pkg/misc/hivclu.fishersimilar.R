@@ -895,26 +895,22 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 						if(nrow(tmp)>1)	
 						{
 							tmp		<- cbind( subset(tmp, select=c(dt, dZAGA)), data.table( dtms= tmp[,rev(dt)], dZAGA2= tmp[,rev(dZAGA)]) )
-							dZAGA2	<- tmp[-nrow(tmp), sum(dZAGA*dZAGA2)*diff(dt[1:2])*diff(dt[1:2])]
+							dZAGA2	<- tmp[-nrow(tmp), sum(dZAGA*dZAGA2)*diff(dt[1:2])]
 						}		
 						else
-							dZAGA2	<- tmp[1, dZAGA*dZAGA*0.0125*0.0125]
+							dZAGA2	<- tmp[1, dZAGA*dZAGA*0.0125]
 						list( dZAGA2=dZAGA2, dZAGA=dZAGA, mu=mu, sigma=sigma, nu=nu )
 					}, by=c('b4T','brlz', 'dt')]
+			Y.brlc	<- merge( subset(Y.brlc, select=c(b4T, brlz, dt, dZAGA=dZAGA, mu=mu, sigma=sigma, nu=nu)), Y.brlc[, list(brlz=brlz, dZAGA2=dZAGA2/sum(dZAGA2)), by=c('b4T','dt')], by=c('b4T','brlz', 'dt') )			
+			Y.brlc	<- merge( Y.brlc, Y.brlc[, list(brlz=brlz, sZAGA2=1-cumsum(dZAGA2)), by=c('b4T','dt')], by=c('b4T','brlz', 'dt') )
+			Y.brlc[, sZAGA:= pZAGA(brlz, mu=mu, sigma=sigma, nu=nu, lower.tail=FALSE)]
 			if(!is.na(save.file.3ha))
 			{
 				cat(paste('\nsave Y.brlc to file',save.file.3ha))
 				save(Y.brlc, file=save.file.3ha)
 			}	
 			stop()
-			#normalize dZAGA2 to density? dZAGA2 is now discrete pdf that sums to 1. 
-			Y.brlc	<- Y.brlc[, {
-						tmp			<- c(dt,brlz)
-						tmp2		<- b4T						
-						tmp			<- subset(Y.brlc, dt<=tmp[1] & brlz==tmp[2] & b4T==tmp2)						
-						list(pZAGA2=tmp[, sum(dZAGA2, na.rm=TRUE)], dZAGA2=dZAGA2, mu=mu, sigma=sigma, nu=nu)	
-					}, by=c('b4T','brlz', 'dt')]	
-			set(Y.brlc, NULL, 'pZAGA2', Y.brlc[, 1-pZAGA2])			
+						
 		}		
 		#score by dt
 		ggplot( data=Y.brlc, aes(x=brlz, y=yc, group=dt, colour=dt))	+
@@ -2940,7 +2936,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 	#	add P.ptx
 	tmp			<- risk.ans.bs[, list(stat='P.ptx', risk=risk[1], factor=factor[1], risk.ref='None', factor.ref='None', coef.ref='None', expbeta= v[stat=='prob'], n=v[stat=='n'] ), by=c('bs','coef')]
 	setkey(risk.df, risk, factor)
-	setkey(tmp, risk, factor)
+	setkey(tmp, risk, factor, bs)
 	tmp			<- merge(unique(tmp), subset(unique(risk.df), select=c(risk, factor, PTx)), by=c('risk','factor'))
 	tmp			<- merge(subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, bs)), tmp[, list(coef=coef, v= expbeta*n*PTx / sum(expbeta*n*PTx)),by='bs'], by=c('bs','coef')) 
 	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref,  factor.ref, v, bs)))
@@ -2955,7 +2951,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 	tmp			<- subset(unique(risk.df), select=c(risk, factor, PTx, PYs, PYe0, PYe5, PYe7, PYe3, PYe0cp, PYe5cp, PYe7cp, PYe3cp))
 	tmp			<- merge(tmp, tmp[, list(	risk=risk, factor=factor,
 							rho.e0= PYe0/PYs, rho.e5= PYe5/PYs, rho.e7= PYe7/PYs, rho.e3= PYe3/PYs,
-							rho.e0cp= PYe0cp, rho.e5cp= PYe5cp/PYs, rho.e7cp= PYe7cp/PYs, rho.e3cp= PYe3cp/PYs		)], by= c('risk','factor'))					
+							rho.e0cp= PYe0cp/PYs, rho.e5cp= PYe5cp/PYs, rho.e7cp= PYe7cp/PYs, rho.e3cp= PYe3cp/PYs		)], by= c('risk','factor'))					
 	tmp			<- merge(subset(risk.ans.bs, stat=='prob'), tmp, by=c('risk','factor'))
 	setnames(tmp, 'v', 'expbeta')
 	tmp[, stat:=NULL]
@@ -2972,7 +2968,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 	tmp			<- subset(unique(risk.df), select=c(risk, factor, PTx, PYs, PYe0, PYe5, PYe7, PYe3, PYe0cp, PYe5cp, PYe7cp, PYe3cp))
 	tmp			<- merge(tmp, tmp[, list(	risk=risk, factor=factor,
 							rho.e0= PYe0/PYs, rho.e5= PYe5/PYs, rho.e7= PYe7/PYs, rho.e3= PYe3/PYs,
-							rho.e0cp= PYe0cp, rho.e5cp= PYe5cp/PYs, rho.e7cp= PYe7cp/PYs, rho.e3cp= PYe3cp/PYs		)], by= c('risk','factor'))					
+							rho.e0cp= PYe0cp/PYs, rho.e5cp= PYe5cp/PYs, rho.e7cp= PYe7cp/PYs, rho.e3cp= PYe3cp/PYs		)], by= c('risk','factor'))					
 	tmp			<- merge(subset(risk.ans.bs, stat=='N.raw'), tmp, by=c('risk','factor'))
 	tmp			<- melt( tmp[, 	list(   	coef=coef, risk=risk, factor=factor, coef.ref=coef.ref, risk.ref=risk.ref, factor.ref=factor.ref, 
 											P.raw.e0=v*rho.e0 / sum(v*rho.e0), P.raw.e5=v*rho.e5 / sum(v*rho.e5), P.raw.e7=v*rho.e7 / sum(v*rho.e7), P.raw.e3=v*rho.e3 / sum(v*rho.e3),  
@@ -7753,7 +7749,45 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 			runs.opt[[length(runs.opt)+1]]	<- run.opt
 		}
-		
+		if(1)
+		{
+			run.opt							<- list()
+			run.opt$method					<- '3e'
+			run.opt$method.recentctime		<- '2011'
+			run.opt$method.nodectime		<- 'any'
+			run.opt$method.dating			<- 'sasky'
+			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
+			run.opt$clu.infilexml.opt		<- "clrh80"
+			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+			runs.opt[[length(runs.opt)+1]]	<- run.opt
+		}
+		if(1)
+		{
+			run.opt							<- list()
+			run.opt$method					<- '3f'
+			run.opt$method.recentctime		<- '2011'
+			run.opt$method.nodectime		<- 'any'
+			run.opt$method.dating			<- 'sasky'
+			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
+			run.opt$clu.infilexml.opt		<- "clrh80"
+			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+			runs.opt[[length(runs.opt)+1]]	<- run.opt
+		}
+		if(1)
+		{
+			run.opt							<- list()
+			run.opt$method					<- '3g'
+			run.opt$method.recentctime		<- '2011'
+			run.opt$method.nodectime		<- 'any'
+			run.opt$method.dating			<- 'sasky'
+			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
+			run.opt$clu.infilexml.opt		<- "clrh80"
+			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+			runs.opt[[length(runs.opt)+1]]	<- run.opt
+		}
 		runs.opt	<- lapply( runs.opt, function(run.opt)
 				{
 					method			<- paste(run.opt$method, ifelse(run.opt$method.nodectime=='any','a','m'), sep='')
@@ -7992,10 +8026,10 @@ project.athena.Fisheretal.sensitivity<- function()
 	#	MODEL 2B time trends
 	#
 	ylab		<- "proportion of transmissions"
-	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & grepl('P',stat) )
-	#method.clu	<- 'clu'
-	run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('P',stat) )
-	method.clu	<- 'seq'
+	run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	method.clu	<- 'clu'
+	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('P',stat) )
+	#method.clu	<- 'seq'
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
@@ -9243,7 +9277,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "um192rhU2080"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',sep='')
 	}	
-	if(0)
+	if(1)
 	{		
 		method					<- '3d'
 		method.recentctime		<- '2013-03-01'
@@ -9282,7 +9316,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}
-	if(1)
+	if(0)
 	{		
 		method					<- '3g'
 		method.recentctime		<- '2011-01-01'
