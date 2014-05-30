@@ -409,7 +409,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t
 		#	re-arrange a little
 		YX						<- subset(YX, select=	c(	t, t.Patient, Patient, cluster, score.Y, 																	#triplets identifiers and Y score
 										t.period, stage, U.score, contact, CDCC, lRNA, CD4, 														#main covariates							
-										t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.pulse, ART.nDrug, ART.nNRT, ART.nNNRT, ART.nPI, fw.up.mx, fw.up.med, t2.care.t1, t2.vl.supp, 		#secondary covariates
+										t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.T, ART.pulse, ART.nDrug, ART.nNRT, ART.nNNRT, ART.nPI, ART.nBoost, ART.TDF.EFV.FTC, fw.up.mx, fw.up.med, t2.care.t1, t2.vl.supp, 		#secondary covariates
 										t.AnyPos_T1,  t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, t.Trm, Trm,												#other 
 										FASTASampleCode, t.FASTASampleCode, w, w.i, w.in, w.t, class										#other							
 								))
@@ -1360,7 +1360,7 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 	list(tpairs=df.tpairs.brl, linked=msm.linked, unlinked=msm.unlinked.bytime)	
 }
 ######################################################################################
-project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infile.viro, infile.immu, infile.treatment, infiletree=NULL, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'), t.recent.endctime=2013.)
+project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infile.viro, infile.immu, infile.treatment, infiletree=NULL, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'), t.recent.startctime=1996., t.recent.endctime=2013.)
 {
 	#	adjust.AcuteByNegT<- 0.75
 	#	fixed input args in !is.na(infiletree)
@@ -1442,9 +1442,9 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	}
 	#
 	#
-	msm.recent		<- subset( df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') )
-	msm.recent		<- subset(msm.recent, AnyPos_T1<t.recent.endctime)
-	cat(paste('\nmsm before endctime',t.recent.endctime,': #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
+	msm.recent		<- subset( df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') )	
+	msm.recent		<- subset(msm.recent, t.recent.startctime<=AnyPos_T1 & AnyPos_T1<t.recent.endctime)
+	cat(paste('\nmsm after startctime',t.recent.startctime,'before endctime',t.recent.endctime,': #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
 	setkey(msm.recent, isAcute)
 	msm.recent		<- msm.recent[adjust.AcuteSelect,]
 	set(msm.recent, NULL, 'Trm', msm.recent[,factor(as.character(Trm))])
@@ -1477,8 +1477,8 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 		clumsm.recent	<- clumsm.info[adjust.AcuteSelect,] 
 		clumsm.recent	<- subset( clumsm.recent, Trm%in%c('MSM','BI') )
 		set(clumsm.recent, NULL, 'Trm', clumsm.recent[,factor(as.character(Trm))])
-		clumsm.recent		<- subset(clumsm.recent, AnyPos_T1<t.recent.endctime)
-		cat(paste('\nmsm clustering before endctime',t.recent.endctime,': #seq=',nrow(clumsm.recent),'#patient=',length(clumsm.recent[,unique(Patient)])))		
+		clumsm.recent		<- subset(clumsm.recent, t.recent.startctime<=AnyPos_T1 & AnyPos_T1<t.recent.endctime)
+		cat(paste('\nmsm clustering after startctime',t.recent.startctime,'before endctime',t.recent.endctime,': #seq=',nrow(clumsm.recent),'#patient=',length(clumsm.recent[,unique(Patient)])))		
 		# 	recent seroconcerverters in cluster
 		clumsm.recentsc	<- subset( clumsm.recent, !is.na(NegT))		
 		cat(paste('\nmsm clustering: #seq=',nrow(clumsm.info),'#patient=',length(clumsm.info[,unique(Patient)]),'#cluster=',length(clumsm.info[,unique(cluster)])))		
@@ -2151,7 +2151,10 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, clumsm.info, df.viro, d
 	incare.t[, stage:='Diag']
 	cat(paste('\nincare.t entries, n=',nrow(incare.t)))
 	#	prepare treatment variables for potential transmitters
-	treat		<- subset(df.treatment, select=c(Patient, AnyT_T1, StartTime, StopTime, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel, NoDrug, NoNRT, NoNNRT, NoPI)) 
+	treat		<- subset(df.treatment, select=c(Patient, AnyT_T1, StartTime, StopTime, TrI, TrCh.failure, TrVL.failure, TrCh.toxicity, TrCh.adherence, TrCh.patrel, NoDrug, NoNRT, NoNNRT, NoPI, NoBoost, TDF, EFV, FTC))
+	treat[, TDF.EFV.FTC:= as.numeric(TDF & EFV & FTC)]	#Atripla ingredients	
+	set(treat, treat[, which(is.na(TrVL.failure) & TrCh.failure=='No')], 'TrVL.failure', 'No')
+	set(treat, treat[, which(is.na(TrVL.failure) & TrCh.failure=='Yes')], 'TrVL.failure', 'Yes')	
 	treat		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), treat, by='Patient' )
 	set(treat, NULL, 'AnyT_T1', hivc.db.Date2numeric(treat[,AnyT_T1]))
 	set(treat, NULL, 'StopTime', hivc.db.Date2numeric(treat[,StopTime]))
@@ -2171,7 +2174,8 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, clumsm.info, df.viro, d
 	treat.t		<- merge(subset(incare.t, select=c(Patient, t)), treat, by='Patient', allow.cartesian=TRUE )	
 	treat.t		<- subset( treat.t, StartTime<=t+t.period/2 & t+t.period/2<StopTime )
 	cat(paste('\ntreat.t entries, n=',nrow(treat.t)))
-	setnames(treat.t, c('TrI','TrCh.failure','TrCh.adherence','TrCh.patrel','NoDrug','NoNRT','NoNNRT','NoPI'), c('ART.I','ART.F','ART.A','ART.P','ART.nDrug','ART.nNRT','ART.nNNRT','ART.nPI'))
+	setnames(treat.t, c('TrI','TrVL.failure','TrCh.toxicity','TrCh.adherence','TrCh.patrel','NoDrug','NoNRT','NoNNRT','NoPI','NoBoost','TDF.EFV.FTC'), c('ART.I','ART.F','ART.T','ART.A','ART.P','ART.nDrug','ART.nNRT','ART.nNNRT','ART.nPI','ART.nBoost','ART.TDF.EFV.FTC'))
+	treat.t		<- subset(treat.t, select=c(Patient,t,AnyT_T1,StartTime,StopTime,ART.I,ART.F,ART.T,ART.A,ART.P,ART.nDrug,ART.nNRT,ART.nNNRT,ART.nPI,ART.nBoost,ART.TDF.EFV.FTC))
 	#	merge incare and treatment timelines
 	incare.t	<- merge(incare.t, treat.t, all.x=1, by=c('Patient','t'))	
 	#	set ever on ART per period t		(avoid AnyT_T1 as it may give periods that would start with treatment interruption)
@@ -9249,7 +9253,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	resume					<- 1
+	resume					<- 0
 	verbose					<- 1
 	if(0)
 	{
@@ -9277,7 +9281,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "um192rhU2080"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',sep='')
 	}	
-	if(1)
+	if(0)
 	{		
 		method					<- '3d'
 		method.recentctime		<- '2013-03-01'
@@ -9329,7 +9333,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}	
-	if(0)
+	if(1)
 	{		
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
@@ -9487,7 +9491,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	if(1)
 	{
-		tmp					<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime)	
+		tmp					<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime, t.recent.startctime=1996.0)	
 		df.all.allmsm		<- tmp$df.all	
 		df.viro.allmsm		<- tmp$df.viro
 		df.immu.allmsm		<- tmp$df.immu
@@ -9499,7 +9503,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get data relating to study population (subtype B sequ)
 	#
-	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime)	
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime, t.recent.startctime=1996.0)	
 	df.all			<- tmp$df.all
 	df.denom		<- tmp$df.select
 	df.viro			<- tmp$df.viro
@@ -9573,7 +9577,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
-	resume			<- 1
+	resume			<- 0
 	rm.zero.score	<- TRUE
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT_',method,'_tATHENAclu','.R',sep='')	
 	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)

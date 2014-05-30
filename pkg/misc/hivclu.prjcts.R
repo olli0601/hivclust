@@ -651,11 +651,11 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 {
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
 	file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
-	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')	
-	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')	
+	file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
 	
 	load(file.viro)
-	df.viro		<- subset(df, lRNA>3, select=c(Patient, PosRNA, lRNA))
+	df.viro		<- subset(df, select=c(Patient, PosRNA, lRNA))
 	
 	NA.time			<- c("01/01/1911","01/11/1911","11/11/1911")	
 	MAX.time		<- c("")
@@ -936,20 +936,21 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	tmp$mday			<- 31
 	tmp$mon				<- 11
 	set(df, nacc, "AnyT_T1", as.Date(tmp))		
-	#	add virological failure as defined by VL>1e3 if 3 months after ART.start
+	#	add largest lRNA at least 3 months after therapy start.
 	tmp					<- subset(df, select=c(Patient, AnyT_T1)) 
 	setkey(tmp, Patient)
-	tmp					<- merge(unique(tmp), df.viro, by='Patient')
-	tmp					<- merge(subset(df, select=c(Patient, AnyT_T1, StartTime, StopTime)), subset(tmp, AnyT_T1<PosRNA, select=c(Patient, PosRNA, lRNA)), by='Patient', allow.cartesian=TRUE, all.x=TRUE)	
-	tmp					<- subset(tmp, is.na(PosRNA) | (StartTime<=PosRNA & PosRNA<StopTime))	
+	tmp					<- merge(unique(tmp), df.viro, by='Patient')	
+	tmp					<- merge(subset(df, select=c(Patient, AnyT_T1, StartTime, StopTime)), subset(tmp, difftime(PosRNA, AnyT_T1, units='days')>90,select=c(Patient, PosRNA, lRNA)), by='Patient', allow.cartesian=TRUE, all.x=TRUE)
+	tmp					<- subset(tmp, is.na(PosRNA) | (StartTime<=PosRNA & PosRNA<StopTime))
 	tmp					<- tmp[, {
-										z<- which.max(PosRNA)
-										list(AnyT_T1=AnyT_T1[z], PosRNA= PosRNA[z], lRNA=lRNA[z])
+										z<- which.max(lRNA)
+										list(AnyT_T1=AnyT_T1[z], PosRNA.mx= PosRNA[z], lRNA.mx=lRNA[z])
 									}, by=c('Patient','StartTime','StopTime')]
-	tmp					<- subset(tmp, difftime(PosRNA, AnyT_T1, units='days')>90)
-	tmp[, TR.VLabove1e3:='Yes']
-	df					<- merge( df, subset(tmp, select=c(Patient, StartTime, StopTime, TR.VLabove1e3, PosRNA, lRNA)), by=c('Patient','StartTime','StopTime'), all.x=TRUE)
-	set(df, df[, which(is.na(TR.VLabove1e3))], 'TR.VLabove1e3', 'No')
+	df					<- merge( df, subset(tmp, select=c(Patient, StartTime, StopTime, PosRNA.mx, lRNA.mx)), by=c('Patient','StartTime','StopTime'), all.x=TRUE)
+	#	set failure by viral load during treatment period
+	df[, TrVL.failure:=factor( df[, lRNA.mx>3], levels=c(FALSE, TRUE), labels=c('No','Yes'))]	
+	#subset(df, TrVL.failure=='No' & TrCh.failure=='Yes')	viro failure can be indicated for VL < 1e3
+	#subset(df, TrVL.failure=='No' & TrCh.failure=='Yes' & lRNA.mx<log10(200), select=c(Patient, StartTime, StopTime, AnyT_T1, PosRNA.mx, lRNA.mx))	#some are really suspicious!
 	#
 	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')
 	if(verbose) cat(paste("\nsave to", file))
