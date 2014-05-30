@@ -650,14 +650,21 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 {
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
-	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')
+	file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
+	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')	
+	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+	
+	load(file.viro)
+	df.viro		<- subset(df, lRNA>3, select=c(Patient, PosRNA, lRNA))
 	
 	NA.time			<- c("01/01/1911","01/11/1911","11/11/1911")	
 	MAX.time		<- c("")
 	TR.notyet		<- "30/03/2013"
-	TR.failure 		<- c(21, 24, 25, 31, 32, 34, 35, 36) 	#either viro or immu failure, dose escalation, toxicity, new CDC-B/C event, interaction with other medication
+	TR.failure 		<- c(21, 31 ) 							#viro failure
+	TR.immufailure	<- c(32, 35)							#either immu failure or new CDC-B/C event
+	TR.toxicity  	<- c(24, 34) 							#toxicity
 	TR.adherence	<- c(47)
-	TR.patrel		<- c(23, 33, 42, 43)					#either patient s decision, desired pregnancy
+	TR.patrel		<- c(23, 33, 42, 43)					#either patient s decision, desired pregnancy or pregnancy
 	#read REGIMEN csv data file and preprocess	
 	df				<- read.csv(file, stringsAsFactors=FALSE)							
 	
@@ -874,6 +881,16 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	tmp[ df.TrCh.noreason ]	<- NA
 	tmp[ which(df[, Reason1%in%TR.failure | Reason2%in%TR.failure | Reason3%in%TR.failure | Reason4%in%TR.failure | Reason5%in%TR.failure | Reason6%in%TR.failure ]) ]<- 1
 	df[, TrCh.failure:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
+	#	TR.immufailure
+	tmp						<-	rep(0, nrow(df))
+	tmp[ df.TrCh.noreason ]	<- NA
+	tmp[ which(df[, Reason1%in%TR.immufailure | Reason2%in%TR.immufailure | Reason3%in%TR.immufailure | Reason4%in%TR.immufailure | Reason5%in%TR.immufailure | Reason6%in%TR.immufailure ]) ]<- 1
+	df[, TrCh.immufailure:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]	
+	#	TR.toxicity
+	tmp						<-	rep(0, nrow(df))
+	tmp[ df.TrCh.noreason ]	<- NA
+	tmp[ which(df[, Reason1%in%TR.toxicity | Reason2%in%TR.toxicity | Reason3%in%TR.toxicity | Reason4%in%TR.toxicity | Reason5%in%TR.toxicity | Reason6%in%TR.toxicity ]) ]<- 1
+	df[, TrCh.toxicity:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]		
 	#	TR.adherence
 	tmp						<-	rep(0, nrow(df))
 	tmp[ df.TrCh.noreason ]	<- NA
@@ -919,6 +936,20 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	tmp$mday			<- 31
 	tmp$mon				<- 11
 	set(df, nacc, "AnyT_T1", as.Date(tmp))		
+	#	add virological failure as defined by VL>1e3 if 3 months after ART.start
+	tmp					<- subset(df, select=c(Patient, AnyT_T1)) 
+	setkey(tmp, Patient)
+	tmp					<- merge(unique(tmp), df.viro, by='Patient')
+	tmp					<- merge(subset(df, select=c(Patient, AnyT_T1, StartTime, StopTime)), subset(tmp, AnyT_T1<PosRNA, select=c(Patient, PosRNA, lRNA)), by='Patient', allow.cartesian=TRUE, all.x=TRUE)	
+	tmp					<- subset(tmp, is.na(PosRNA) | (StartTime<=PosRNA & PosRNA<StopTime))	
+	tmp					<- tmp[, {
+										z<- which.max(PosRNA)
+										list(AnyT_T1=AnyT_T1[z], PosRNA= PosRNA[z], lRNA=lRNA[z])
+									}, by=c('Patient','StartTime','StopTime')]
+	tmp					<- subset(tmp, difftime(PosRNA, AnyT_T1, units='days')>90)
+	tmp[, TR.VLabove1e3:='Yes']
+	df					<- merge( df, subset(tmp, select=c(Patient, StartTime, StopTime, TR.VLabove1e3, PosRNA, lRNA)), by=c('Patient','StartTime','StopTime'), all.x=TRUE)
+	set(df, df[, which(is.na(TR.VLabove1e3))], 'TR.VLabove1e3', 'No')
 	#
 	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')
 	if(verbose) cat(paste("\nsave to", file))

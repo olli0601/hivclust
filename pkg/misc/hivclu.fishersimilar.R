@@ -2754,7 +2754,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 	set(tmp, tmp[, which(v==0)],'v', NA_real_)
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 	set(tmp, NULL, 'stat', 'P')
-	set(tmp, NULL, 'v', tmp[, v/sum(expbeta*n)])
+	set(tmp, NULL, 'v', tmp[, v/sum(v)])
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 	#	P.ptx
 	setkey(risk.df, risk, factor)
@@ -2976,7 +2976,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 								id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref','bs'), variable.name='stat', value.name='v' )
 	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))
 	#	RI and RI.ptx, adjusted by sampling bias and censoring
-	tmp			<- subset(risk.ans, stat=='PYs' )
+	tmp			<- subset(risk.ans, stat=='PYs' ) 
 	set(tmp, NULL, 'pPYs', tmp[, v/sum(v, na.rm=TRUE)])	
 	tmp			<- merge( subset(risk.ans.bs, stat%in%c('P','P.ptx','P.raw',
 														'P.e0','P.e5','P.e7','P.e3','P.e0cp','P.e5cp','P.e7cp','P.e3cp',
@@ -8028,8 +8028,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	ylab		<- "proportion of transmissions"
 	run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	method.clu	<- 'clu'
-	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('P',stat) )
-	#method.clu	<- 'seq'
+	run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('P',stat) )
+	method.clu	<- 'seq'
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
