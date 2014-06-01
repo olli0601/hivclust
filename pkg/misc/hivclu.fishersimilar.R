@@ -5131,6 +5131,9 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	}
 	else
 		set(YX.m3, NULL, 'ART.ntastage.c', YX.m3[, factor(ART.ntastage.c, levels=1:17, labels=c('ART.3.NRT.PIB','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.T','ART.l3','ART.g3','ART.3.NRT.PINB','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
+	
+	print(subset(YX.m3, is.na(ART.ntastage.c)))
+	
 	if( YX.m3[, any(is.na(ART.ntastage.c))] ) stop('unexpected ART.ntastage.c')
 	
 	#
