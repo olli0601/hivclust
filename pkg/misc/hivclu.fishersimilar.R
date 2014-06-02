@@ -4782,17 +4782,21 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			cens.table		<- merge(cens.table, cens.table[, list(factor=factor, sum=sum(n, na.rm=TRUE), p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
 			#	adjust for censoring, keeping number of undiagnosed as in tperiod=='2'
 			cens.table[, n.adjbyNU:=n]
-			for(f in c('U','UAy','UAm'))
+			if(grepl('m2Bt',method) | grepl('m2B1st',method) | grepl('m2Bwmx',method))
+				cens.Ugroups	<- c('U','UA')
+			if(!(grepl('m2Bt',method) | grepl('m2B1st',method) | grepl('m2Bwmx',method)))
+				cens.Ugroups	<- c('U','UAy','UAm')			
+			for(f in cens.Ugroups)
 				for(z in cens.table[, unique(t.period)])	
 					set(cens.table, cens.table[, which(factor2==f & stat=='X.msm' & t.period==z)], 'n.adjbyNU',  cens.table[which(factor2==f & stat=='X.msm' & t.period%in%c('2',z)), max(n.adjbyNU)])
 			#	adjust for censoring, keeping proportion of undiagnosed as in tperiod=='2'
-			cens.table[, n.adjbyPU:=n]
+			cens.table[, n.adjbyPU:=n]			
 			for(z in cens.table[, unique(t.period)])
 			{
-				tmp		<- rbind(	unadjusted	= sapply(c('U','UAy','UAm'), function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period==z)[, p]),
-									adjusted	= sapply(c('U','UAy','UAm'), function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period%in%c('2',z))[, max(p, na.rm=TRUE) ])		)		
+				tmp		<- rbind(	unadjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period==z)[, p]),
+									adjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period%in%c('2',z))[, max(p, na.rm=TRUE) ])		)
 				tmp		<- cens.table[which(stat=='X.msm' & t.period==z), sum[1] * tmp['adjusted',] * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
-				for(f2 in c('U','UAy','UAm'))
+				for(f2 in cens.Ugroups)
 					set(cens.table, cens.table[, which(factor2==f2 & stat=='X.msm' & t.period==z)], 'n.adjbyPU',  tmp[f2])				
 			}
 			cens.table	<- merge(cens.table, cens.table[, list(factor=factor, p.adjbyNU= n.adjbyNU/sum(n.adjbyNU, na.rm=TRUE), p.adjbyPU= n.adjbyPU/sum(n.adjbyPU, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
@@ -9985,7 +9989,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
-	resume			<- 0
+	resume			<- 1
 	rm.zero.score	<- TRUE
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT',method.PDT,'_',method,'_tATHENAclu','.R',sep='')	
 	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
