@@ -9828,8 +9828,6 @@ hivc.prog.betareg.estimaterisks<- function()
 	t.recent.endctime	<- hivc.db.Date2numeric(as.Date(method.recentctime))	
 	t.recent.endctime	<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period	
 	outfile				<- paste( outfile, ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')), sep='')
-	if(method.PDT=='PDT')
-		method.PDT		<- ''
 	
 	if(verbose)
 	{
@@ -9858,10 +9856,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		any.pos.grace.yr	<- Inf
 	if(resume)
 	{		
-		files		<- list.files(outdir)		
-		files		<- files[ sapply(files, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('Yscore',method,sep=''), x, fixed=1) & !grepl('tables', x, fixed=1) & grepl(paste(method.risk,'.R',sep=''),x, fixed=1)  ) ]		
+		files		<- list.files(outdir)			
+		files		<- files[ sapply(files, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('Yscore',method,sep=''), x, fixed=1) & grepl(paste('denom',method.PDT,sep=''), x) & !grepl('tables', x, fixed=1) & grepl(paste(method.risk,'.R',sep=''),x, fixed=1)  ) ]		
 		stopifnot(length(files)==0)		
 	}
+	if(method.PDT=='PDT')
+		method.PDT		<- ''	
 	#
 	#	check if we have precomputed tables
 	#
