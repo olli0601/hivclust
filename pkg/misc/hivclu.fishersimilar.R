@@ -10205,12 +10205,14 @@ hivc.prog.betareg.estimaterisks<- function()
 	#X.seq<- X.seq[sample(1:nrow(X.seq),2e6),]
 	resume				<- 1
 	bs.n				<- 1e3
+	if(method.PDT=='')
+		method.PDT<- 'PDT'
 	if(grepl('m2',method.risk))
-		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'.R',sep='')
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model2_',method.risk,'.R',sep='')
 	if(grepl('m3',method.risk))
-		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model3_',method.risk,'.R',sep='')	
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model3_',method.risk,'.R',sep='')	
 	if(grepl('m4',method.risk))
-		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model4_',method.risk,'.R',sep='')		
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model4_',method.risk,'.R',sep='')		
 	tmp					<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, plot.file.or=NA, bs.n=1e3, resume=resume, save.file=save.file, method.risk=method.risk)					
 	
 	stop()
