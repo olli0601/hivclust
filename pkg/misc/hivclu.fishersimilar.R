@@ -2288,7 +2288,7 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 		tmp	<- paste('t<=',age.cut[i],sep='')
 		set(YX.m5, YX.m5[, which(stage%in%c('U','Diag') & t.Age<=age.cut[i] & t.Age>age.cut[i-1])], 'tAb', tmp)
 	}		
-	set(YX.m5, NULL, 'tAb', YX.m5[, factor(as.character(tA))])
+	set(YX.m5, NULL, 'tAb', YX.m5[, factor(as.character(tAb))])
 	#	set Age of Transmitter and Age of recipient
 	setkey(YX.m5, t.Age, Age)
 	YX.m5[, tiAb:=NA_character_]
@@ -4651,9 +4651,17 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		if(method.risk%in%c(	'm5.tA','m5.tAMv','m5.tA.clu'	))				
 		{  
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i*w.in])									
-			set(YX, NULL, 'stage', YX[, factor(as.character(tA))])		
-			factor.ref			<- 't<=45'
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])		
+			if(grepl('Ab',method.risk))
+			{
+				set(YX, NULL, 'stage', YX[, factor(as.character(tAb))])		
+				factor.ref		<- 't<=48'				
+			}
+			if(!grepl('Ab',method.risk))
+			{
+				set(YX, NULL, 'stage', YX[, factor(as.character(tA))])		
+				factor.ref		<- 't<=45'				
+			}
 			#
 			if(!grepl('Mv', method.risk))
 			{
@@ -8130,17 +8138,17 @@ project.athena.Fisheretal.sensitivity<- function()
 	require(ape)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_140524",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140603",sep='/')		
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140524",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140603",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	method.risk				<- c(	'm2B1st.cas','m2B1stMv.cas','m2Bwmx.cas','m2BwmxMv.cas','m2Bt.cas','m2BtMv.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4','m2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4','m2BwmxMv.tp1.now','m2BwmxMv.tp2.now','m2BwmxMv.tp3.now','m2BwmxMv.tp4.now',
-									'm2B1st.cas.clu','m2B1stMv.cas.clu','m2Bwmx.cas.clu','m2BwmxMv.cas.clu','m2Bt.cas.clu','m2BtMv.cas.clu','m2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2BwmxMv.tp1.clu','m2BwmxMv.tp2.clu','m2BwmxMv.tp3.clu','m2BwmxMv.tp4.clu','m2BwmxMv.tp1.clu.now','m2BwmxMv.tp2.clu.now','m2BwmxMv.tp3.clu.now','m2BwmxMv.tp4.clu.now',
+	method.risk				<- c(	'm2B1st.cas','m2B1stMv.cas','m2Bwmx.cas','m2BwmxMv.cas','m2Bt.cas','m2BtMv.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4','m2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4','m2BwmxMv.tp1.now','m2BwmxMv.tp2.now','m2BwmxMv.tp3.now','m2BwmxMv.tp4.now','m2BtMv.tp1','m2BtMv.tp2','m2BtMv.tp3','m2BtMv.tp4',									
+									'm2B1st.cas.clu','m2B1stMv.cas.clu','m2Bwmx.cas.clu','m2BwmxMv.cas.clu','m2Bt.cas.clu','m2BtMv.cas.clu','m2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2BwmxMv.tp1.clu','m2BwmxMv.tp2.clu','m2BwmxMv.tp3.clu','m2BwmxMv.tp4.clu','m2BwmxMv.tp1.clu.now','m2BwmxMv.tp2.clu.now','m2BwmxMv.tp3.clu.now','m2BwmxMv.tp4.clu.now','m2BtMv.tp1.clu','m2BtMv.tp2.clu','m2BtMv.tp3.clu','m2BtMv.tp4.clu',
 									'm2B1st.cas.adj','m2B1stMv.cas.adj','m2Bwmx.cas.adj','m2BwmxMv.cas.adj','m2Bt.cas.adj','m2BtMv.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj',
 									'm2B1st.cas.cens','m2B1stMv.cas.cens','m2Bwmx.cas.cens','m2BwmxMv.cas.cens','m2Bt.cas.cens','m2BtMv.cas.cens','m2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens',
 									'm2B1st.cas.clu.cens','m2B1stMv.cas.clu.cens','m2Bwmx.cas.clu.cens','m2BwmxMv.cas.clu.cens','m2Bt.cas.clu.cens','m2BtMv.cas.clu.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens',
@@ -8178,7 +8186,8 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method					<- '3c'
 			run.opt$method.recentctime		<- ''
 			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'gmrf'		
+			run.opt$method.dating			<- 'gmrf'	
+			run.opt$method.denom			<- 'PDT'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")							
 			run.opt$clu.infilexml.opt		<- "mph4clutx4tip"
 			run.opt$clu.infilexml.template	<- "um192rhU2080"	
@@ -8192,6 +8201,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- ''
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'gmrf'
+			run.opt$method.denom			<- 'PDT'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")							
 			run.opt$clu.infilexml.opt		<- "mph4clutx4tip"
 			run.opt$clu.infilexml.template	<- "um192rhU2080"	
@@ -8205,6 +8215,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- ''
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'PDT'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8218,6 +8229,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- ''
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'PDT'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8231,6 +8243,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'gmrf'		
+			run.opt$method.denom			<- 'PDT'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")							
 			run.opt$clu.infilexml.opt		<- "mph4clutx4tip"
 			run.opt$clu.infilexml.template	<- "um192rhU2080"	
@@ -8244,6 +8257,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'gmrf'
+			run.opt$method.denom			<- 'PDT'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")							
 			run.opt$clu.infilexml.opt		<- "mph4clutx4tip"
 			run.opt$clu.infilexml.template	<- "um192rhU2080"	
@@ -8257,6 +8271,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'PDT'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8270,6 +8285,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'PDT'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8283,6 +8299,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'PDT'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8296,6 +8313,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'PDT'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8309,6 +8327,63 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'PDT'
+			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
+			run.opt$clu.infilexml.opt		<- "clrh80"
+			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+			runs.opt[[length(runs.opt)+1]]	<- run.opt
+		}
+		if(1)
+		{
+			run.opt							<- list()
+			run.opt$method					<- '3d'
+			run.opt$method.recentctime		<- '2011'
+			run.opt$method.nodectime		<- 'any'
+			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'CLU'
+			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
+			run.opt$clu.infilexml.opt		<- "clrh80"
+			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+			runs.opt[[length(runs.opt)+1]]	<- run.opt
+		}
+		if(1)
+		{
+			run.opt							<- list()
+			run.opt$method					<- '3e'
+			run.opt$method.recentctime		<- '2011'
+			run.opt$method.nodectime		<- 'any'
+			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'CLU'
+			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
+			run.opt$clu.infilexml.opt		<- "clrh80"
+			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+			runs.opt[[length(runs.opt)+1]]	<- run.opt
+		}
+		if(1)
+		{
+			run.opt							<- list()
+			run.opt$method					<- '3f'
+			run.opt$method.recentctime		<- '2011'
+			run.opt$method.nodectime		<- 'any'
+			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'CLU'
+			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
+			run.opt$clu.infilexml.opt		<- "clrh80"
+			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+			runs.opt[[length(runs.opt)+1]]	<- run.opt
+		}
+		if(1)
+		{
+			run.opt							<- list()
+			run.opt$method					<- '3g'
+			run.opt$method.recentctime		<- '2011'
+			run.opt$method.nodectime		<- 'any'
+			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'CLU'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8321,19 +8396,18 @@ project.athena.Fisheretal.sensitivity<- function()
 					files			<- list.files(indir)	
 					files			<- files[ sapply(files, function(x) 	grepl(paste(run.opt$outfile,run.opt$method.recentctime,sep='_'), x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) &
 																			ifelse(run.opt$method.recentctime=='', !grepl('2011',x), TRUE) &
+																			grepl(paste('_denom',run.opt$method.denom,'_',sep=''), x, fixed=1) &
 																			grepl(paste('_Yscore',method,'_',sep=''), x, fixed=1) &	grepl('R$',x) ) ]
 					tmp				<- sapply(method.risk, function(x){
 																			tmp	<- which(grepl(paste('_',x,'.R',sep=''), files, fixed=1))
 																			ifelse(length(tmp)==0, NA_character_, files[tmp])
 																		})				
-					ans				<- data.table(file=tmp, method.brl=method, method.nodectime=run.opt$method.nodectime, method.dating=run.opt$method.dating, method.risk=method.risk, method.recentctime=ifelse(run.opt$method.recentctime=='','2013-03-01',run.opt$method.recentctime))				
+					ans				<- data.table(file=tmp, method.brl=method, method.nodectime=run.opt$method.nodectime, method.dating=run.opt$method.dating, method.risk=method.risk, method.denom=run.opt$method.denom, method.recentctime=ifelse(run.opt$method.recentctime=='','2013-03-01',run.opt$method.recentctime))				
 				})
 		runs.opt	<- do.call('rbind', runs.opt)
 		setkey(runs.opt, method.dating, method.brl)	
-		
-		#	missing runs
-		print( subset(runs.opt, is.na(file)) )
 		runs.opt	<- subset(runs.opt, !is.na(file))
+		print(runs.opt)
 		#	load risk estimates
 		runs.risk	<- runs.opt[,	{
 					tmp	<- paste(indir, file, sep='/')
