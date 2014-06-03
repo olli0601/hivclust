@@ -4647,7 +4647,45 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)
 			if(grepl('adj', method.risk) | grepl('censp', method.risk))				
 				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)
-		}	
+		}
+		if(method.risk%in%c(	'm5.tA','m5.tAMv','m5.tA.clu'	))				
+		{  
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])									
+			set(YX, NULL, 'stage', YX[, factor(as.character(tA))])		
+			factor.ref			<- 't<=45'
+			#
+			if(!grepl('Mv', method.risk))
+			{
+				formula			<- 'score.Y ~ stage-1'
+				include.colnames<- c('score.Y','w','stage')
+				predict.df		<- data.table( 	stage=factor(factor.ref, levels=YX[, levels(stage)]), w=1.	)				
+			}										
+			if(grepl('Mv', method.risk))
+			{
+				formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'
+				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
+				predict.df		<- data.table(	stage=factor(factor.ref, levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),
+						t=subset(YX, stage==factor.ref)[, mean(t, na.rm=TRUE)], t.Age=subset(YX, stage==factor.ref)[, mean(t.Age, na.rm=TRUE)], w=1.)
+			}						
+			risk.df			<- data.table( risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref=factor.ref )			
+			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
+			risk.df[, coef.ref:=paste(risk.df[,risk.ref],risk.df[,factor.ref],sep='')]
+			if(grepl('Mv', method.risk))
+			{
+				setkey(risk.df, risk, factor)
+				risk.df		<- merge(risk.df, unique(risk.df)[, {
+									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
+									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
+									t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
+									t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
+									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
+								}, by=c('risk','factor')], by=c('risk','factor'))						
+			}						
+			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
+		}
 		if(!is.na(save.file))
 		{
 			ans$YX			<- YX
@@ -4682,7 +4720,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			return(ans)	
 		}			
 		cat(paste('\ntables by method', method))		
-		if(substr(method,1,2)=='m2' || substr(method,1,2)=='m4' || (substr(method,1,2)=='m3' && grepl('nic',method)))
+		if(substr(method,1,2)=='m2' || substr(method,1,2)=='m4' || substr(method,1,2)=='m5' || (substr(method,1,2)=='m3' && grepl('nic',method)))
 		{
 			
 			tp				<- regmatches(method, regexpr('tp[0-9]', method))
@@ -9843,7 +9881,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Bt.tp3'#'m2B1st.cas'
+		method.risk				<- 'm5.tA'#'m2Bt.tp3'#'m2B1st.cas'
 		method.PDT				<- ''	
 		method.PDT				<- 'CLU'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -10335,6 +10373,8 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model3_',method.risk,'.R',sep='')	
 	if(grepl('m4',method.risk))
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model4_',method.risk,'.R',sep='')		
+	if(grepl('m5',method.risk))
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model5_',method.risk,'.R',sep='')			
 	tmp					<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, plot.file.or=NA, bs.n=1e3, resume=resume, save.file=save.file, method.risk=method.risk)					
 	
 	stop()
