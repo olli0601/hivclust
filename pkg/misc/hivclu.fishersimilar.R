@@ -2311,12 +2311,10 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m5))
 		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, contact, fw.up.med, t.period, w, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, t.Age, t.RegionHospital  ))	
-	if(!'score.Y'%in%colnames(YX.m2))
+	if(!'score.Y'%in%colnames(YX.m5))
 		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, contact, fw.up.med, t.period, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod  ))	
 	gc()
 	YX.m5
-	
-	YX.m5[, list(T=sum(score.Y*w)), by='tA']
 }
 ######################################################################################
 project.athena.Fisheretal.YX.model5<- function(YX, clumsm.info, vl.suppressed=log10(1e3), acute.select=c('Yes','Maybe'), cd4.cut= c(-1, 350, 550, 5000) )
@@ -10100,7 +10098,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
-	resume			<- 0
+	resume			<- 1
 	rm.zero.score	<- TRUE
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT',method.PDT,'_',method,'_tATHENAclu','.R',sep='')	
 	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
