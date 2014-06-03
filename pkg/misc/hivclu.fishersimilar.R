@@ -2308,11 +2308,39 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 		YX.m5[, tiAb.tperiod:= paste(tiAb, t.period,sep='.')]
 		set(YX.m5, NULL, 'tiAb.tperiod', YX.m5[, factor(as.character(tiAb.tperiod))])
 	}	
+	#	set Age of Transmitter tA				
+	age.cut		<- c(-1, 20, 25, 30, 35, 40, 45, 50, 100)
+	YX.m5[, tAc:=NA_character_]
+	for(i in seq_along(age.cut)[-1])
+	{
+		tmp	<- paste('t<=',age.cut[i],sep='')
+		set(YX.m5, YX.m5[, which(stage%in%c('U','Diag') & t.Age<=age.cut[i] & t.Age>age.cut[i-1])], 'tAc', tmp)
+	}		
+	set(YX.m5, NULL, 'tAc', YX.m5[, factor(as.character(tAc))])
+	#	set Age of Transmitter and Age of recipient
+	setkey(YX.m5, t.Age, Age)
+	YX.m5[, tiAc:=NA_character_]
+	for(i in seq_along(age.cut)[-1])
+		for(j in seq.int(2, length(age.cut)))
+		{
+			tmp	<- paste('t<=',age.cut[i],'-i<=',age.cut[j],sep='')
+			set(YX.m5, YX.m5[, which(stage%in%c('U','Diag') & t.Age<=age.cut[i] & t.Age>age.cut[i-1] & Age<=age.cut[j] & Age>age.cut[j-1])], 'tiAc', tmp)	
+		}
+	set(YX.m5, NULL, 'tiAc', YX.m5[, factor(as.character(tiAc))])
+	#	add tperiod
+	if('t.period'%in%colnames(YX.m5))
+	{
+		cat(paste('\nadding tAc.tperiod and tiAc.tperiod\n'))	
+		YX.m5[, tAc.tperiod:= paste(tAc, t.period,sep='.')]
+		set(YX.m5, NULL, 'tAc.tperiod', YX.m5[, factor(as.character(tAc.tperiod))])
+		YX.m5[, tiAc.tperiod:= paste(tiAc, t.period,sep='.')]
+		set(YX.m5, NULL, 'tiAc.tperiod', YX.m5[, factor(as.character(tiAc.tperiod))])
+	}		
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m5))
-		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, contact, fw.up.med, t.period, w, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, t.Age, t.RegionHospital  ))	
+		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, contact, fw.up.med, t.period, w, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, tAc, tiAc, tAc.tperiod, tiAc.tperiod, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m5))
-		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, contact, fw.up.med, t.period, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod  ))	
+		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, contact, fw.up.med, t.period, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, tAc, tiAc, tAc.tperiod, tiAc.tperiod  ))	
 	gc()
 	YX.m5
 }
@@ -4692,7 +4720,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}						
 			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
+			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
 		}
 		if(!is.na(save.file))
 		{
@@ -4873,10 +4902,16 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			}			
 			if(grepl('m5.tAb',method))
 			{				
-				factor.ref.v	<- paste('t<=45',tp,sep='')
+				factor.ref.v	<- paste('t<=48',tp,sep='')
 				risktp.col		<- 'tAb.tperiod'
 				risk.col		<- 'tAb'
 			}			
+			if(grepl('m5.tAc',method))
+			{				
+				factor.ref.v	<- paste('t<=50',tp,sep='')
+				risktp.col		<- 'tAc.tperiod'
+				risk.col		<- 'tAc'
+			}						
 			if(grepl('m5.tiA',method))
 			{				
 				factor.ref.v	<- paste('t<=45-i<=45',tp,sep='')
@@ -4885,9 +4920,15 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			}			
 			if(grepl('m5.tiAb',method))
 			{				
-				factor.ref.v	<- paste('t<=45-i<=45',tp,sep='')
+				factor.ref.v	<- paste('t<=48-i<=48',tp,sep='')
 				risktp.col		<- 'tiAb.tperiod'
 				risk.col		<- 'tiAb'
+			}			
+			if(grepl('m5.tiAc',method))
+			{				
+				factor.ref.v	<- paste('t<=50-i<=50',tp,sep='')
+				risktp.col		<- 'tiAc.tperiod'
+				risk.col		<- 'tiAc'
 			}			
 			
 			gc()
@@ -10104,8 +10145,10 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 		if(grepl('m5.tA',method.risk))		save.file	<- 'm5.tA'
 		if(grepl('m5.tAb',method.risk))		save.file	<- 'm5.tAb'
+		if(grepl('m5.tAc',method.risk))		save.file	<- 'm5.tAc'
 		if(grepl('m5.tiA',method.risk))		save.file	<- 'm5.tiA'
-		if(grepl('m5.tiAb',method.risk))	save.file	<- 'm5.tiAb'		
+		if(grepl('m5.tiAb',method.risk))	save.file	<- 'm5.tiAb'
+		if(grepl('m5.tiAc',method.risk))	save.file	<- 'm5.tiAc'
 		if(is.na(save.file))	stop('unknown method.risk')				
 		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')		
@@ -10420,8 +10463,10 @@ hivc.prog.betareg.estimaterisks<- function()
 			if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 			if(grepl('m5.tA',method.risk))		save.file	<- 'm5.tA'
 			if(grepl('m5.tAb',method.risk))		save.file	<- 'm5.tAb'
+			if(grepl('m5.tAc',method.risk))		save.file	<- 'm5.tAc'
 			if(grepl('m5.tiA',method.risk))		save.file	<- 'm5.tiA'
-			if(grepl('m5.tiAb',method.risk))	save.file	<- 'm5.tiAb'					
+			if(grepl('m5.tiAb',method.risk))	save.file	<- 'm5.tiAb'
+			if(grepl('m5.tiAc',method.risk))	save.file	<- 'm5.tiAc'
 			if(is.na(save.file))	stop('unknown method.risk')				
 			tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')		
