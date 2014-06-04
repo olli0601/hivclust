@@ -317,7 +317,7 @@ project.athena.Fisheretal.tripletweights<- function(Y.score, save.file=NA)
 	triplet.weight
 }
 ######################################################################################
-project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
+project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
 {
 	if(resume && !is.na(save.file))
 	{
@@ -378,7 +378,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t
 		Y.U						<- project.athena.Fisheretal.Y.transmitterinfected(YX.part1)		
 		#	screen for likely missed intermediates/sources
 		plot.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'missed_',method,'.pdf',sep='')		
-		YX.tpairs.select		<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=Y.coal, cut.date=0.5, cut.brl=1e-3, any.pos.grace.yr= 3.5, rm.zero.score=rm.zero.score, plot.file=plot.file, t.period=t.period)
+		YX.tpairs.select		<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=Y.coal, cut.date=0.5, cut.brl=1e-3, any.pos.grace.yr= any.pos.grace.yr, rm.zero.score=rm.zero.score, plot.file=plot.file, t.period=t.period)
 		#	take branch length weight ONLY to derive "score.Y"
 		Y.score					<- merge( YX.tpairs.select, subset(Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, brl, score.brl.TPp, score.brl.TPd)), by=c('FASTASampleCode','t.FASTASampleCode'))
 		#	keep only one (Patient, t.Patient) pair if there are multiple sequences per individual. Take the one with largest brl score
@@ -1081,7 +1081,7 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 		set(missed, missed[, which(coal.after.t.NegT<0)], 'coal.after.t.NegT', 0.)		
 	}			
 	#	exclude transmitters if date of diagnosis exceeds date of diagnosis of RI by more than 'any.pos.grace.yr'
-	if(!is.na(any.pos.grace.yr))
+	if(!is.na(any.pos.grace.yr) & !is.infinite(any.pos.grace.yr))
 	{
 		tmp		<- subset( df.all, select=c(Patient, AnyPos_T1) )
 		setkey(tmp, Patient)
@@ -4784,8 +4784,8 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				factor.ref.v	<- paste('ART1.su.Y',tp,sep='')
 				#risktp.col		<- 'CD4t.tperiod'
 				#risk.col		<- 'CD4t'
-				risktp.col		<- 'CD4a.tperiod'
-				risk.col		<- 'CD4a'
+				risktp.col		<- 'CD4b.tperiod'
+				risk.col		<- 'CD4b'
 			}
 			if(grepl('m2t',method))
 			{
@@ -4796,8 +4796,8 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			if(grepl('m2Bt',method))
 			{
 				factor.ref.v	<- paste('ART.su.Y',tp,sep='')
-				risktp.col		<- 'CD4a.tperiod'
-				risk.col		<- 'CD4a'
+				risktp.col		<- 'CD4b.tperiod'
+				risk.col		<- 'CD4b'
 			}
 			if(grepl('m2wmx',method))
 			{
@@ -4808,8 +4808,8 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			if(grepl('m2Bwmx',method))
 			{
 				factor.ref.v	<- paste('ART.suA.Y',tp,sep='')
-				risktp.col		<- 'CD4a.tperiod'
-				risk.col		<- 'CD4a'
+				risktp.col		<- 'CD4b.tperiod'
+				risk.col		<- 'CD4b'
 			}			
 			if(grepl('m3',method) & grepl('nic',method) & !grepl('tnic',method))
 			{
@@ -5009,7 +5009,9 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				{
 					tmp		<- rbind(	unadjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period==z)[, p]),
 										adjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period%in%c('2',z))[, max(p, na.rm=TRUE) ])		)
-					tmp		<- cens.table[which(stat=='X.msm' & t.period==z), sum[1] * tmp['adjusted',] * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
+					tmp2	<- cens.table[which(stat=='X.msm' & t.period==z), sum[1] * sum(tmp['adjusted',]) * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
+					tmp		<- tmp['unadjusted',]/sum(tmp['unadjusted',]) * tmp2
+					print(tmp)
 					for(f2 in cens.Ugroups)
 						set(cens.table, cens.table[, which(factor2==f2 & stat=='X.msm' & t.period==z)], 'n.adjbyPU',  tmp[f2])				
 				}
@@ -6799,7 +6801,10 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	#	combine acute
 	YX.m2[, CD4a:=CD4t]
 	set(YX.m2, YX.m2[, which(CD4t=='UAy' | CD4t=='UAm')], 'CD4a', 'UA')
-	set(YX.m2, YX.m2[, which(CD4t=='DAy' | CD4t=='DAm')], 'CD4a', 'DA')	
+	set(YX.m2, YX.m2[, which(CD4t=='DAy' | CD4t=='DAm')], 'CD4a', 'DA')
+	#	treat missing acute separately
+	YX.m2[, CD4b:=CD4a]
+	set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4b', 'UAna')		
 	#	merge PoslRNA_T1
 	cat(paste('\nsetting PoslRNA_T1\n'))
 	tmp			<- unique(subset( df.all, select=c(Patient, PoslRNA_T1) ))
@@ -6807,9 +6812,9 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	YX.m2		<- merge(YX.m2, tmp, by= 't.Patient', all.x=TRUE)	
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t, CD4a, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))	
 	gc()
 	#
 	#	add suppressed to 'stage'
@@ -6877,6 +6882,8 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	tmp			<- YX.m2[, which(stage.orig=='ART.started')] 
 	set(YX.m2, tmp, 'CD4t', YX.m2[tmp, stage])	
 	set(YX.m2, NULL, 'CD4t', YX.m2[, factor(as.character(CD4t))])
+	set(YX.m2, tmp, 'CD4b', YX.m2[tmp, stage])	
+	set(YX.m2, NULL, 'CD4b', YX.m2[, factor(as.character(CD4b))])	
 	set(YX.m2, tmp, 'CD41st', YX.m2[tmp, stage])
 	set(YX.m2, NULL, 'CD41st', YX.m2[, factor(as.character(CD41st))])
 	#	set CD4a
@@ -6904,7 +6911,9 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 		YX.m2[, CD4t.tperiod:= paste(CD4t, t.period,sep='.')]
 		set(YX.m2, NULL, 'CD4t.tperiod', YX.m2[, factor(as.character(CD4t.tperiod))])
 		YX.m2[, CD4a.tperiod:= paste(CD4a, t.period,sep='.')]
-		set(YX.m2, NULL, 'CD4a.tperiod', YX.m2[, factor(as.character(CD4a.tperiod))])		
+		set(YX.m2, NULL, 'CD4a.tperiod', YX.m2[, factor(as.character(CD4a.tperiod))])
+		YX.m2[, CD4b.tperiod:= paste(CD4b, t.period,sep='.')]
+		set(YX.m2, NULL, 'CD4b.tperiod', YX.m2[, factor(as.character(CD4b.tperiod))])
 	}
 	gc()	
 	YX.m2
@@ -6980,7 +6989,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	#	combine acute
 	YX.m2[, CD4a:=CD4t]
 	set(YX.m2, YX.m2[, which(CD4t=='UAy' | CD4t=='UAm')], 'CD4a', 'UA')
-	set(YX.m2, YX.m2[, which(CD4t=='DAy' | CD4t=='DAm')], 'CD4a', 'DA')			
+	set(YX.m2, YX.m2[, which(CD4t=='DAy' | CD4t=='DAm')], 'CD4a', 'DA')		
+	#	treat missing acute separately
+	YX.m2[, CD4b:=CD4a]
+	set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4b', 'UAna')
 	#	merge PoslRNA_T1
 	cat(paste('\nsetting PoslRNA_T1\n'))
 	tmp			<- unique(subset( df.all, select=c(Patient, PoslRNA_T1) ))
@@ -6997,9 +7009,9 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	#
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, lRNA_TL, PoslRNA_TL, CD41st, CD4t, CD4a, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, lRNA_TL, PoslRNA_TL, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, lRNA_TL, PoslRNA_TL, CD41st, CD4t, CD4a  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, lRNA_TL, PoslRNA_TL, CD41st, CD4t, CD4a, CD4b  ))	
 	#
 	#	add suppressed to 'stage'
 	#
@@ -7059,8 +7071,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	tmp			<- YX.m2[, which(stage.orig=='ART.started')] 
 	set(YX.m2, tmp, 'CD4t', YX.m2[tmp, stage])
 	set(YX.m2, tmp, 'CD41st', YX.m2[tmp, stage])
+	set(YX.m2, tmp, 'CD4b', YX.m2[tmp, stage])
 	set(YX.m2, NULL, 'CD4t', YX.m2[, factor(as.character(CD4t))])
 	set(YX.m2, NULL, 'CD41st', YX.m2[, factor(as.character(CD41st))])
+	set(YX.m2, NULL, 'CD4b', YX.m2[, factor(as.character(CD4b))])
 	#	set CD4a
 	YX.m2		<- merge(YX.m2, YX.m2[, {
 					ans	<- list(t=t, lRNA.c2=stage)
@@ -7089,6 +7103,8 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 		set(YX.m2, NULL, 'CD4t.tperiod', YX.m2[, factor(as.character(CD4t.tperiod))])
 		YX.m2[, CD4a.tperiod:= paste(CD4a, t.period,sep='.')]
 		set(YX.m2, NULL, 'CD4a.tperiod', YX.m2[, factor(as.character(CD4a.tperiod))])
+		YX.m2[, CD4b.tperiod:= paste(CD4b, t.period,sep='.')]
+		set(YX.m2, NULL, 'CD4b.tperiod', YX.m2[, factor(as.character(CD4b.tperiod))])
 	}
 	gc()	
 	YX.m2
@@ -7164,7 +7180,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 	#	combine acute
 	YX.m2[, CD4a:=CD4t]
 	set(YX.m2, YX.m2[, which(CD4t=='UAy' | CD4t=='UAm')], 'CD4a', 'UA')
-	set(YX.m2, YX.m2[, which(CD4t=='DAy' | CD4t=='DAm')], 'CD4a', 'DA')		
+	set(YX.m2, YX.m2[, which(CD4t=='DAy' | CD4t=='DAm')], 'CD4a', 'DA')	
+	#	treat missing acute separately
+	YX.m2[, CD4b:=CD4a]
+	set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4b', 'UAna')	
 	# collect PoslRNA_TL and lRNA_TL
 	cat(paste('\nmerge df.viro\n'))
 	tmp		<- merge( unique(subset(clumsm.info, select=Patient)), subset(df.viro, select=c(Patient, PosRNA, lRNA)), by='Patient' )
@@ -7187,9 +7206,9 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))		
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, CD41st, CD4t, CD4a, lRNA.gm, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, CD41st, CD4t, CD4a, CD4b, lRNA.gm, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, lRNA.gm  ))		
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b, lRNA.gm  ))		
 	gc()
 	#
 	#	add suppressed to 'stage'
@@ -7237,8 +7256,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 	#	set CD41st and CD4t
 	tmp			<- YX.m2[, which(stage.orig=='ART.started')] 
 	set(YX.m2, tmp, 'CD4t', YX.m2[tmp, stage])
-	set(YX.m2, tmp, 'CD41st', YX.m2[tmp, stage])
 	set(YX.m2, NULL, 'CD4t', YX.m2[, factor(as.character(CD4t))])
+	set(YX.m2, tmp, 'CD4b', YX.m2[tmp, stage])
+	set(YX.m2, NULL, 'CD4b', YX.m2[, factor(as.character(CD4b))])	
+	set(YX.m2, tmp, 'CD41st', YX.m2[tmp, stage])	
 	set(YX.m2, NULL, 'CD41st', YX.m2[, factor(as.character(CD41st))])	
 	YX.m2[, stage.orig:=NULL]
 	YX.m2[, lRNA.c:=NULL]
@@ -7249,9 +7270,11 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 	{
 		cat(paste('\nadding CD4t.tperiod\n'))	
 		YX.m2[, CD41st.tperiod:= paste(CD41st, t.period,sep='.')]
+		set(YX.m2, NULL, 'CD41st.tperiod', YX.m2[, factor(as.character(CD41st.tperiod))])
 		YX.m2[, CD4t.tperiod:= paste(CD4t, t.period,sep='.')]
 		set(YX.m2, NULL, 'CD4t.tperiod', YX.m2[, factor(as.character(CD4t.tperiod))])
-		set(YX.m2, NULL, 'CD41st.tperiod', YX.m2[, factor(as.character(CD41st.tperiod))])		
+		YX.m2[, CD4b.tperiod:= paste(CD4b, t.period,sep='.')]
+		set(YX.m2, NULL, 'CD4b.tperiod', YX.m2[, factor(as.character(CD4b.tperiod))])		
 	}
 	gc()
 	YX.m2
@@ -7420,12 +7443,15 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	YX.m2[, CD4a:=CD4t]
 	set(YX.m2, YX.m2[, which(CD4t=='UAy' | CD4t=='UAm')], 'CD4a', 'UA')
 	set(YX.m2, YX.m2[, which(CD4t=='DAy' | CD4t=='DAm')], 'CD4a', 'DA')
+	#	treat missing acute separately
+	YX.m2[, CD4b:=CD4a]
+	set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4b', 'UAna')	
 	#
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, CD41st, CD4t, CD4a, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))	
 	gc()
 	#
 	#	add suppressed to 'stage'
@@ -7495,6 +7521,8 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	set(YX.m2, NULL, 'CD41st', YX.m2[, factor(as.character(CD41st))])
 	set(YX.m2, tmp, 'CD4t', YX.m2[tmp, lRNA.c])
 	set(YX.m2, NULL, 'CD4t', YX.m2[, factor(as.character(CD4t))])
+	set(YX.m2, tmp, 'CD4b', YX.m2[tmp, lRNA.c])
+	set(YX.m2, NULL, 'CD4b', YX.m2[, factor(as.character(CD4b))])	
 	set(YX.m2, tmp, 'CD4a', YX.m2[tmp, lRNA.c2])
 	set(YX.m2, NULL, 'CD4a', YX.m2[, factor(as.character(CD4a))])	
 	YX.m2[, stage.orig:=NULL]
@@ -7507,11 +7535,13 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	{
 		cat(paste('\nadding CD4t.tperiod\n'))	
 		YX.m2[, CD41st.tperiod:= paste(CD41st, t.period,sep='.')]
-		YX.m2[, CD4t.tperiod:= paste(CD4t, t.period,sep='.')]
-		YX.m2[, CD4a.tperiod:= paste(CD4a, t.period,sep='.')]
-		set(YX.m2, NULL, 'CD4t.tperiod', YX.m2[, factor(as.character(CD4t.tperiod))])
 		set(YX.m2, NULL, 'CD41st.tperiod', YX.m2[, factor(as.character(CD41st.tperiod))])
+		YX.m2[, CD4t.tperiod:= paste(CD4t, t.period,sep='.')]
+		set(YX.m2, NULL, 'CD4t.tperiod', YX.m2[, factor(as.character(CD4t.tperiod))])
+		YX.m2[, CD4a.tperiod:= paste(CD4a, t.period,sep='.')]
 		set(YX.m2, NULL, 'CD4a.tperiod', YX.m2[, factor(as.character(CD4a.tperiod))])
+		YX.m2[, CD4b.tperiod:= paste(CD4b, t.period,sep='.')]
+		set(YX.m2, NULL, 'CD4b.tperiod', YX.m2[, factor(as.character(CD4b.tperiod))])
 	}
 	gc()
 	YX.m2
@@ -8202,6 +8232,22 @@ project.athena.Fisheretal.characteristics<- function()
 	hist(tmp[, score.Y], breaks=100)
 }
 ######################################################################################
+project.athena.Fisheretal.compositionacute<- function()
+{
+	tmp<- df.all
+	setkey(tmp, Patient)
+	tmp<- unique(tmp)
+	tmp<- subset(tmp, AnyPos_T1>1996.6 & AnyPos_T1<2013.025, select=c(Patient, isAcute, AnyPos_T1))
+	set(tmp, tmp[, which(is.na(isAcute))],'isAcute', 'Missing')
+	
+	ggplot(tmp, aes(x=AnyPos_T1, fill=isAcute, colour=isAcute)) + geom_bar(aes(y=..count../sum(..count..)), binwidth=1, position='dodge')
+	ggplot(tmp, aes(x=AnyPos_T1, fill=isAcute, colour=isAcute)) + geom_bar(binwidth=1, position='fill')
+	
+	tmp<- subset(YX, select=c(Patient, t.Patient, w.i, score.Y))
+	setkey(tmp, Patient, t.Patient)
+	tmp<- unique(tmp)
+}
+######################################################################################
 project.athena.Fisheretal.sensitivity<- function()
 {
 	require(data.table)
@@ -8701,7 +8747,7 @@ project.athena.Fisheretal.sensitivity<- function()
 	ylab		<- "proportion of transmissions"
 	method.clu	<- 'clu'
 	method.deno	<- 'CLU'
-	method.deno	<- 'PDT'
+	#method.deno	<- 'PDT'
 	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BtMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#method.clu	<- 'seq'
@@ -10314,7 +10360,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	YX.part1[, class:='pt']
 	gc()
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'.R',sep='')	
-	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)
+	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, t.period=t.period, save.file=save.file, resume=resume, method=method)
 	gc()
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
 	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']
@@ -10342,7 +10388,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		YXS.part1		<- do.call('rbind',list(YX.part1, subset(YXS.part1, select=colnames(YX.part1))))		#put potential transmitters and potential non-transmitters together		
 		YXS.part1		<- merge( YXS.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)	
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_RICT_tATHENAseq','.R',sep='')
-		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, t.period=t.period, save.file=save.file, resume=resume, method=method)		
+		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, t.period=t.period, save.file=save.file, resume=resume, method=method)		
 	}
 	#
 	#	get timelines for all clustering candidate transmitters to the recently infected RI.PT
