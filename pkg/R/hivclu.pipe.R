@@ -716,7 +716,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk		<- c( 	'm3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicNo.clu.adj','m3.atnic.clu.adj','m3.atnicNo.clu.adj','m3.tnicMv.clu.adj')
 	#method.risk		<- c( 	'm2Bt.tp1.clu.adj', 'm2Bt.tp2.clu.adj', 'm2Bt.tp3.clu.adj', 'm2Bt.tp4.clu.adj')
 	method.risk			<- c( 	'm5.tA.clu.adj','m5.tAb.clu.adj','m5.tAc.clu.adj','m5.tiA.clu.adj','m5.tiAb.clu.adj','m5.tiAc.clu.adj')
-	method.risk			<- c( 	'm5.tAc.clu.adj','m5.tiAc.clu.adj')
+	method.risk			<- c( 	'm5.tA.clu.adj','m5.tiA.clu.adj','m5.tAb.clu.adj','m5.tiAb.clu.adj','m5.tA.TP.clu.adj','m5.tiA.TP.clu.adj','m5.tAb.TP.clu.adj','m5.tiAb.TP.clu.adj')
 	dummy	<- sapply(method.risk, function(x)
 			{
 				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, outdir=outdir, outfile=outfile, resume=1, verbose=1)

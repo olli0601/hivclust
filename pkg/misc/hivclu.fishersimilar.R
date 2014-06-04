@@ -2253,7 +2253,7 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 	set(YX.m5, YX.m5[, which(t<=2006.25)], 'stage', NA_character_)
 	YX.m5	<- subset(YX.m5, !is.na(stage))
 	#	set Age of Transmitter tA				
-	age.cut		<- c(-1, 20, 25, 30, 45, 100)
+	age.cut		<- c(-1, 20, 25, 30, 35, 45, 100)
 	YX.m5[, tA:=NA_character_]
 	for(i in seq_along(age.cut)[-1])
 	{
@@ -2281,7 +2281,7 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 		set(YX.m5, NULL, 'tiA.tperiod', YX.m5[, factor(as.character(tiA.tperiod))])
 	}	
 	#	set Age of Transmitter tA				
-	age.cut		<- c(-1, 28, 38, 48, 58, 100)
+	age.cut		<- c(-1, 20, 28, 38, 48, 58, 100)
 	YX.m5[, tAb:=NA_character_]
 	for(i in seq_along(age.cut)[-1])
 	{
@@ -4685,7 +4685,18 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				set(YX, NULL, 'stage', YX[, factor(as.character(tAb))])		
 				factor.ref		<- 't<=48'				
 			}
-			if(!grepl('Ab',method.risk))
+			if(grepl('Ac',method.risk))
+			{
+				set(YX, NULL, 'stage', YX[, factor(as.character(tAc))])		
+				factor.ref		<- 't<=45'				
+			}
+			if(grepl('Ac.TP',method.risk))
+			{
+				set(YX, NULL, 'stage', YX[, factor(as.character(tAc.tperiod))])		
+				factor.ref		<- 't<=45'				
+			}			
+			
+			if(!grepl('Ab',method.risk) & !grepl('Ac',method.risk))
 			{
 				set(YX, NULL, 'stage', YX[, factor(as.character(tA))])		
 				factor.ref		<- 't<=45'				
@@ -4902,7 +4913,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			}			
 			if(grepl('m5.tAb',method))
 			{				
-				factor.ref.v	<- paste('t<=48',tp,sep='')
+				factor.ref.v	<- paste('t<=45',tp,sep='')
 				risktp.col		<- 'tAb.tperiod'
 				risk.col		<- 'tAb'
 			}			
@@ -4912,6 +4923,24 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				risktp.col		<- 'tAc.tperiod'
 				risk.col		<- 'tAc'
 			}						
+			if(grepl('m5.tA.TP',method))
+			{				
+				factor.ref.v	<- paste('t<=45.4',tp,sep='')
+				risktp.col		<- 'tA.tperiod'
+				risk.col		<- 'tA.tperiod'
+			}			
+			if(grepl('m5.tAb.TP',method))
+			{				
+				factor.ref.v	<- paste('t<=45.4',tp,sep='')
+				risktp.col		<- 'tAb.tperiod'
+				risk.col		<- 'tAb.tperiod'
+			}			
+			if(grepl('m5.tAc.TP',method))
+			{				
+				factor.ref.v	<- paste('t<=50.4',tp,sep='')
+				risktp.col		<- 'tAc.tperiod'
+				risk.col		<- 'tAc.tperiod'
+			}									
 			if(grepl('m5.tiA',method))
 			{				
 				factor.ref.v	<- paste('t<=45-i<=45',tp,sep='')
@@ -4920,7 +4949,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			}			
 			if(grepl('m5.tiAb',method))
 			{				
-				factor.ref.v	<- paste('t<=48-i<=48',tp,sep='')
+				factor.ref.v	<- paste('t<=45-i<=45',tp,sep='')
 				risktp.col		<- 'tiAb.tperiod'
 				risk.col		<- 'tiAb'
 			}			
@@ -8462,6 +8491,7 @@ project.athena.Fisheretal.sensitivity<- function()
 					ans[, method.dating:=method.dating]
 					ans[, method.nodectime:=method.nodectime]
 					ans[, method.brl:=method.brl ]
+					ans[, method.denom:=method.denom]
 					ans[, method.recentctime:=method.recentctime ]
 					ans
 				},by='file']
@@ -8475,7 +8505,7 @@ project.athena.Fisheretal.sensitivity<- function()
 					{
 						cat(paste('\nprocess file=',file))
 						tmp	<- load( paste(indir, file, sep='/') )
-						list( AIC= AIC(ans$fit.rr), logLik=logLik(ans$fit.rr), method.risk=method.risk, method.dating=method.dating, method.nodectime=method.nodectime, method.brl=method.brl, method.recentctime=method.recentctime )
+						list( AIC= AIC(ans$fit.rr), logLik=logLik(ans$fit.rr), method.risk=method.risk, method.dating=method.dating, method.nodectime=method.nodectime, method.brl=method.brl, method.denom=method.denom, method.recentctime=method.recentctime )
 					}, by=file]
 		runs.fit[, file:=NULL]
 		file			<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.fit.R", sep='')
@@ -8493,6 +8523,7 @@ project.athena.Fisheretal.sensitivity<- function()
 					ans[, method.dating:=method.dating]
 					ans[, method.nodectime:=method.nodectime]
 					ans[, method.brl:=method.brl ]
+					ans[, method.denom:=method.denom]
 					ans[, method.recentctime:=method.recentctime ]
 					ans
 				},by='file']
@@ -8669,10 +8700,13 @@ project.athena.Fisheretal.sensitivity<- function()
 	#
 	ylab		<- "proportion of transmissions"
 	method.clu	<- 'clu'
-	run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
-	method.clu	<- 'seq'
-	run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('P',stat) )
-	run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('RI',stat) )
+	method.deno	<- 'CLU'
+	method.deno	<- 'PDT'
+	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BtMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	#method.clu	<- 'seq'
+	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('P',stat) )
+	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('RI',stat) )
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
@@ -8693,15 +8727,27 @@ project.athena.Fisheretal.sensitivity<- function()
 			'ART initiated,\nVL missing',
 			'ART initiated,\nVL continually\nsuppressed', 
 			'ART initiated,\nVL not continually\nsuppressed')
-	tmp		<- data.table( factor.legend= factor(tmp), factor=c("UAy","UAm","U","DAy","DAm","Dtg500","Dtl500","Dtl350","Dt.NA","ART.vlNA","ART.suA.Y","ART.suA.N"))
+	tmp		<- c(	'Undiagnosed,\nEvidence for acute infection\nat diagnosis',			
+			'Undiagnosed,\nNo recent infection',
+			'Diagnosed < 3mo,\nEvidence for acute infection\nat diagnosis',			
+			'Diagnosed,\nlowest CD4 to date\n> 500',
+			'Diagnosed,\nlowest CD4 to date\n> 350',
+			'Diagnosed,\nlowest CD4 to date\n<= 350',
+			'Diagnosed,\nmissing 1st CD4',
+			'ART initiated,\nVL missing',
+			'ART initiated,\nVL suppressed',
+			'ART initiated,\nVL partially\nsuppressed',
+			'ART initiated,\nVL not suppressed')
+	#tmp		<- data.table( factor.legend= factor(tmp), factor=c("UAy","UAm","U","DAy","DAm","Dtg500","Dtl500","Dtl350","Dt.NA","ART.vlNA","ART.suA.Y","ART.suA.N"))
+	tmp		<- data.table( factor.legend= factor(tmp), factor=c("UA","U","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.vlNA","ART.su.Y","ART.su.M","ART.su.N"))
 	run.tp	<- merge(run.tp, tmp, by='factor')	
 	#
 	stat.select	<- c(	'P','P.e0','P.e3','P.e5','P.e7','P.e0cp','P.e3cp','P.e5cp','P.e7cp',
 						'P.ptx','P.ptx.e0','P.ptx.e3','P.ptx.e5','P.ptx.e7','P.ptx.e0cp','P.ptx.e3cp','P.ptx.e5cp','P.ptx.e7cp',
 						'P.raw','P.raw.e0','P.raw.e5','P.raw.e7','P.raw.e3','P.raw.e0cp','P.raw.e5cp','P.raw.e7cp','P.raw.e3cp')
-	stat.select	<- c(	'RI','RI.e0','RI.e3','RI.e5','RI.e7','RI.e0cp','RI.e3cp','RI.e5cp','RI.e7cp',
-						'RI.ptx','RI.ptx.e0','RI.ptx.e3','RI.ptx.e5','RI.ptx.e7','RI.ptx.e0cp','RI.ptx.e3cp','RI.ptx.e5cp','RI.ptx.e7cp',
-						'RI.raw','RI.raw.e0','RI.raw.e5','RI.raw.e7','RI.raw.e3','RI.raw.e0cp','RI.raw.e5cp','RI.raw.e7cp','RI.raw.e3cp')
+	#stat.select	<- c(	'RI','RI.e0','RI.e3','RI.e5','RI.e7','RI.e0cp','RI.e3cp','RI.e5cp','RI.e7cp',
+	#					'RI.ptx','RI.ptx.e0','RI.ptx.e3','RI.ptx.e5','RI.ptx.e7','RI.ptx.e0cp','RI.ptx.e3cp','RI.ptx.e5cp','RI.ptx.e7cp',
+	#					'RI.raw','RI.raw.e0','RI.raw.e5','RI.raw.e7','RI.raw.e3','RI.raw.e0cp','RI.raw.e5cp','RI.raw.e7cp','RI.raw.e3cp')
 				
 	dummy	<- lapply(seq_along(stat.select), function(i)
 			{
@@ -8711,7 +8757,7 @@ project.athena.Fisheretal.sensitivity<- function()
 						scale_fill_manual(name='Transmission times', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(run.tp[,length(unique(factor.legend))])) +
 						theme(legend.key.size=unit(13,'mm')) + guides(colour = guide_legend(override.aes = list(size=5))) +
 						geom_ribbon(aes(ymin=l95.bs, ymax=u95.bs, linetype=NA, fill=factor.legend), show_guide= FALSE, alpha=0.3) + geom_point() + geom_line(aes(linetype=factor.legend), show_guide= FALSE) + facet_grid(. ~ cascade.stage, margins=FALSE)				
-				file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', stat.select[i],'_',subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.risk],"_prop_",method.clu,'_',subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.brl],'_', subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.recentctime],".pdf", sep='')
+				file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', stat.select[i],'_',subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.risk],"_prop_",method.clu,'_',subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.brl],'_denom',method.deno,'_', subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.recentctime],".pdf", sep='')
 				cat(paste('\nsave to file',file))
 				ggsave(file=file, w=8,h=8)				
 			})
@@ -9996,8 +10042,8 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm5.tA'#'m2Bt.tp3'#'m2B1st.cas'
-		method.PDT				<- ''	
+		method.risk				<- 'm5.tAc'#'m2Bt.cas'#'m2Bt.tp3'#'m2B1st.cas'#'m5.tA'#
+		method.PDT				<- 'PDT'	
 		method.PDT				<- 'CLU'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
@@ -10149,6 +10195,13 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m5.tiA',method.risk))		save.file	<- 'm5.tiA'
 		if(grepl('m5.tiAb',method.risk))	save.file	<- 'm5.tiAb'
 		if(grepl('m5.tiAc',method.risk))	save.file	<- 'm5.tiAc'
+		if(grepl('m5.tA.TP',method.risk))	save.file	<- 'm5.tA.TP'
+		if(grepl('m5.tAb.TP',method.risk))	save.file	<- 'm5.tAb.TP'
+		if(grepl('m5.tAc.TP',method.risk))	save.file	<- 'm5.tAc.TP'
+		if(grepl('m5.tiA.TP',method.risk))	save.file	<- 'm5.tiA.TP'
+		if(grepl('m5.tiAb.TP',method.risk))	save.file	<- 'm5.tiAb.TP'
+		if(grepl('m5.tiAc.TP',method.risk))	save.file	<- 'm5.tiAc.TP'
+		
 		if(is.na(save.file))	stop('unknown method.risk')				
 		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')		
@@ -10253,7 +10306,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
-	resume			<- 1
+	resume			<- 0
 	rm.zero.score	<- TRUE
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT',method.PDT,'_',method,'_tATHENAclu','.R',sep='')	
 	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
@@ -10467,6 +10520,12 @@ hivc.prog.betareg.estimaterisks<- function()
 			if(grepl('m5.tiA',method.risk))		save.file	<- 'm5.tiA'
 			if(grepl('m5.tiAb',method.risk))	save.file	<- 'm5.tiAb'
 			if(grepl('m5.tiAc',method.risk))	save.file	<- 'm5.tiAc'
+			if(grepl('m5.tA.TP',method.risk))	save.file	<- 'm5.tA.TP'
+			if(grepl('m5.tAb.TP',method.risk))	save.file	<- 'm5.tAb.TP'
+			if(grepl('m5.tAc.TP',method.risk))	save.file	<- 'm5.tAc.TP'
+			if(grepl('m5.tiA.TP',method.risk))	save.file	<- 'm5.tiA.TP'
+			if(grepl('m5.tiAb.TP',method.risk))	save.file	<- 'm5.tiAb.TP'
+			if(grepl('m5.tiAc.TP',method.risk))	save.file	<- 'm5.tiAc.TP'			
 			if(is.na(save.file))	stop('unknown method.risk')				
 			tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')		
