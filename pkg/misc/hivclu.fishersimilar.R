@@ -2280,6 +2280,7 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 		YX.m5[, tiA.tperiod:= paste(tiA, t.period,sep='.')]
 		set(YX.m5, NULL, 'tiA.tperiod', YX.m5[, factor(as.character(tiA.tperiod))])
 	}	
+	gc()
 	#	set Age of Transmitter tA				
 	age.cut		<- c(-1, 20, 28, 38, 48, 58, 100)
 	YX.m5[, tAb:=NA_character_]
@@ -2308,6 +2309,7 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 		YX.m5[, tiAb.tperiod:= paste(tiAb, t.period,sep='.')]
 		set(YX.m5, NULL, 'tiAb.tperiod', YX.m5[, factor(as.character(tiAb.tperiod))])
 	}	
+	gc()
 	#	set Age of Transmitter tA				
 	age.cut		<- c(-1, 20, 25, 30, 35, 40, 45, 50, 100)
 	YX.m5[, tAc:=NA_character_]
@@ -2336,6 +2338,7 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 		YX.m5[, tiAc.tperiod:= paste(tiAc, t.period,sep='.')]
 		set(YX.m5, NULL, 'tiAc.tperiod', YX.m5[, factor(as.character(tiAc.tperiod))])
 	}		
+	gc()
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m5))
 		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, contact, fw.up.med, t.period, w, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, tAc, tiAc, tAc.tperiod, tiAc.tperiod, t.Age, t.RegionHospital  ))	
@@ -5004,13 +5007,17 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			if(length(cens.Ugroups))
 				for(z in cens.table[, unique(t.period)])
 				{
-					tmp		<- rbind(	unadjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period==z)[, p]),
-										adjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period%in%c('2',z))[, max(p, na.rm=TRUE) ])		)
-					tmp2	<- cens.table[which(stat=='X.msm' & t.period==z), sum[1] * sum(tmp['adjusted',]) * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
-					tmp		<- tmp['unadjusted',]/sum(tmp['unadjusted',]) * tmp2
+					tmp			<- rbind(	unadjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period==z)[, p]),
+											adjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period%in%c('2',z))[, max(p, na.rm=TRUE) ])		)
+					print(tmp)			
+					tmp2		<- cens.table[which(stat=='X.msm' & t.period==z), sum[1] * sum(tmp['adjusted',]) * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
+					print(tmp2)
+					tmp2		<- tmp['unadjusted',]/sum(tmp['unadjusted',]) * tmp2
+					names(tmp2)	<- colnames(tmp)
 					print(tmp)
+					print(sum(tmp))
 					for(f2 in cens.Ugroups)
-						set(cens.table, cens.table[, which(factor2==f2 & stat=='X.msm' & t.period==z)], 'n.adjbyPU',  tmp[f2])				
+						set(cens.table, cens.table[, which(factor2==f2 & stat=='X.msm' & t.period==z)], 'n.adjbyPU',  tmp2[f2])				
 				}
 			cens.table	<- merge(cens.table, cens.table[, list(factor=factor, p.adjbyNU= n.adjbyNU/sum(n.adjbyNU, na.rm=TRUE), p.adjbyPU= n.adjbyPU/sum(n.adjbyPU, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
 			#	if 'tp' is not '', reduce data to t.period
@@ -10085,9 +10092,8 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm5.tAc'#'m2Bt.cas'#'m2Bt.tp3'#'m2B1st.cas'#'m5.tA'#
-		method.PDT				<- 'PDT'	
-		method.PDT				<- 'CLU'		
+		method.risk				<- 'm2Bt.cas'# 'm2Bt.cas'# 'm2Bt.tp3'# 'm2B1st.cas'# 'm5.tA' #
+		method.PDT				<- 'CLU'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
