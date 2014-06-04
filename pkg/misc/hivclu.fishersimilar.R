@@ -4993,12 +4993,9 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			cens.table		<- merge(cens.table, cens.table[, list(factor=factor, sum=sum(n, na.rm=TRUE), p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
 			#	adjust for censoring, keeping number of undiagnosed as in tperiod=='2'
 			cens.table[, n.adjbyNU:=n]
-			if(grepl('m2Bt',method) | grepl('m2B1st',method) | grepl('m2Bwmx',method))
-				cens.Ugroups	<- c('U','UA')
-			if(!(grepl('m2Bt',method) | grepl('m2B1st',method) | grepl('m2Bwmx',method)))
-				cens.Ugroups	<- c('U','UAy','UAm')
-			if(grepl('m5',method))
-				cens.Ugroups	<- c()
+			cens.Ugroups	<- unique(YX[[risk.col]])
+			cens.Ugroups	<- cens.Ugroups[ grepl('U',cens.Ugroups) ]
+			print(cens.Ugroups)
 			for(f in cens.Ugroups)
 				for(z in cens.table[, unique(t.period)])	
 					set(cens.table, cens.table[, which(factor2==f & stat=='X.msm' & t.period==z)], 'n.adjbyNU',  cens.table[which(factor2==f & stat=='X.msm' & t.period%in%c('2',z)), max(n.adjbyNU)])
