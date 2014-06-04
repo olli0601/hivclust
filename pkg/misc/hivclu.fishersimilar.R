@@ -5013,9 +5013,9 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 					tmp2		<- cens.table[which(stat=='X.msm' & t.period==z), sum[1] * sum(tmp['adjusted',]) * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
 					print(tmp2)
 					tmp2		<- tmp['unadjusted',]/sum(tmp['unadjusted',]) * tmp2
-					names(tmp2)	<- colnames(tmp)
-					print(tmp)
-					print(sum(tmp))
+					names(tmp2)	<- cens.Ugroups
+					print(tmp2)
+					print(sum(tmp2))
 					for(f2 in cens.Ugroups)
 						set(cens.table, cens.table[, which(factor2==f2 & stat=='X.msm' & t.period==z)], 'n.adjbyPU',  tmp2[f2])				
 				}
