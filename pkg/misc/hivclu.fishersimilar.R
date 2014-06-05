@@ -317,7 +317,7 @@ project.athena.Fisheretal.tripletweights<- function(Y.score, save.file=NA)
 	triplet.weight
 }
 ######################################################################################
-project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
+project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, thresh.pcoal=0.5, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
 {
 	if(resume && !is.na(save.file))
 	{
@@ -378,7 +378,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t
 		Y.U						<- project.athena.Fisheretal.Y.transmitterinfected(YX.part1)		
 		#	screen for likely missed intermediates/sources
 		plot.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'missed_',method,'.pdf',sep='')		
-		YX.tpairs.select		<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=Y.coal, cut.date=0.5, cut.brl=1e-3, any.pos.grace.yr= any.pos.grace.yr, rm.zero.score=rm.zero.score, plot.file=plot.file, t.period=t.period)
+		YX.tpairs.select		<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=Y.coal, cut.date=thresh.pcoal, cut.brl=1e-3, any.pos.grace.yr= any.pos.grace.yr, rm.zero.score=rm.zero.score, plot.file=plot.file, t.period=t.period)
 		#	take branch length weight ONLY to derive "score.Y"
 		Y.score					<- merge( YX.tpairs.select, subset(Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, brl, score.brl.TPp, score.brl.TPd)), by=c('FASTASampleCode','t.FASTASampleCode'))
 		#	keep only one (Patient, t.Patient) pair if there are multiple sequences per individual. Take the one with largest brl score
@@ -434,10 +434,13 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	require(reshape2)
 	require(ggplot2)
 	require(gamlss)
-	
-	setkey(Y.rawbrl.unlinked, brl)
+		
 	#	compute cdf for pairs given they are unlinked
-	p.rawbrl.unlinked	<- Y.rawbrl.unlinked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]		 
+	setkey(Y.rawbrl.unlinked, brl)
+	p.rawbrl.unlinked	<- Y.rawbrl.unlinked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]
+	setkey(Y.rawbrl.linked, brl)
+	p.rawbrl.linked		<- Y.rawbrl.linked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]
+	
 	#	compute sequence sampling times	to see if time between seq sampling times could be useful
 	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )	
 	tmp					<- merge( data.table(FASTASampleCode=Y.rawbrl.linked[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
@@ -779,6 +782,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	#
 	Y.brl			<- copy(Y.rawbrl)	
 	Y.brl[, score.brl.TN:= p.rawbrl.unlinked(brl)]
+	Y.brl[, score.brl.TP:= p.rawbrl.linked(brl)]
 	
 	if(substr(method,1,2)%in%c('3c','3e'))	#ignore zeros use Gamma
 	{
@@ -1052,7 +1056,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		#legend('topright', bty='n', fill= cols, border=NA, legend=legend.txt)		
 		#dev.off()		
 	}		
-	Y.brl		<- subset( Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, score.brl.TPd, score.brl.TPp, score.brl.TN, brl) )
+	Y.brl		<- subset( Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, score.brl.TPd, score.brl.TPp, score.brl.TN, score.brl.TP, brl) )
 	cat(paste('\nReturn brl score for #t.Patient seqs=',Y.brl[, length(unique(t.FASTASampleCode))]))
 	Y.brl		
 }
@@ -1065,9 +1069,9 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 		missed				<- merge(missed, Y.coal, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE)
 	missed					<- merge(missed, Y.U, by=c('Patient','t.Patient'), allow.cartesian=TRUE, all.x=TRUE)
 	if(!is.null(Y.coal))
-		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, score.brl.TN, score.brl.TPp, coal.after.i.AnyPos_T1, coal.after.t.NegT, score.Inf, score.t.inf, brl, class))
+		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, score.brl.TN, score.brl.TP, score.brl.TPp, coal.after.i.AnyPos_T1, coal.after.t.NegT, score.Inf, score.t.inf, brl, class))
 	if(is.null(Y.coal))
-		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, score.brl.TN, score.brl.TPp, score.Inf, score.t.inf, brl, class))
+		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, score.brl.TN, score.brl.TP, score.brl.TPp, score.Inf, score.t.inf, brl, class))
 	#
 	set(missed, missed[, which(is.na(brl))], 'score.brl.TN', missed[, max(score.brl.TN,na.rm=TRUE)])		#deselected short or recombinant seqs
 	set(missed, missed[, which(is.na(brl))], 'brl', missed[, max(brl,na.rm=TRUE)])							#deselected short or recombinant seqs
@@ -1078,7 +1082,7 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	if(!is.null(Y.coal))
 	{
 		set(missed, NULL, 'coal.after.t.NegT', missed[,coal.after.t.NegT-coal.after.i.AnyPos_T1])
-		set(missed, missed[, which(coal.after.t.NegT<0)], 'coal.after.t.NegT', 0.)		
+		set(missed, missed[, which(coal.after.t.NegT<0)], 'coal.after.t.NegT', NA_real_)		#transmission could simply have other direction		
 	}			
 	#	exclude transmitters if date of diagnosis exceeds date of diagnosis of RI by more than 'any.pos.grace.yr'
 	if(!is.na(any.pos.grace.yr) & !is.infinite(any.pos.grace.yr))
@@ -1094,25 +1098,54 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	#	simple rule for screening out missed sources, using genetics and dates
 	if(1)
 	{	
-		set(missed, missed[, which(score.brl.TN>=cut.brl)], 'score.Y', 0.)
+		set(missed, missed[, which(score.brl.TN>=cut.brl)], 'score.Y', NA_real_)
 		if(!is.null(pyiw))
 			pyiw	<- rbind(pyiw, data.table(pop='with.unlinkedbydeath', t.py= nrow(subset(missed, score.Y>0))*t.period, t.n= subset(missed, score.Y>0)[, length(unique(t.Patient))], n= subset(missed, score.Y>0)[, length(unique(Patient))] ))		
 		if(!is.null(Y.coal))
 		{	
 			cat(paste('\nprop of PYIW that meet the BRL.TN & COAL cutoff:', nrow(subset( missed, score.brl.TN<cut.brl &  coal.after.t.NegT>cut.date))/nrow(missed)  ))
-			set(missed, missed[, which(!is.na(coal.after.t.NegT) & coal.after.t.NegT<=cut.date)], 'score.Y', 0.)
+			set(missed, missed[, which(!is.na(coal.after.t.NegT) & coal.after.t.NegT<=cut.date)], 'score.Y', NA_real_)
 			if(!is.null(pyiw))
 				pyiw	<- rbind(pyiw, data.table(pop='with.coal', t.py= nrow(subset(missed, score.Y>0))*t.period, t.n= subset(missed, score.Y>0)[, length(unique(t.Patient))], n= subset(missed, score.Y>0)[, length(unique(Patient))] ))
 			cat(paste('\nnumber of pn PYIW with score.Y>0:',missed[, length(which(is.na(coal.after.t.NegT) & class=='pn' & score.Y>0))]))			
-		}		
-		setkey(missed, FASTASampleCode, t.FASTASampleCode)
-		missed					<- unique(missed)								
+		}												
 	}
+	#	simple rule for setting zero: brl score Y essentially zero. Define essentially zero by 1/non NA rows.
+	#	use score instead of within host BRL because these are not 'convoluted'
 	if(1)
 	{
-		cat(paste('\nnumber of pairs with zero brl.score=', missed[,length(which(score.brl.TPp==0 & score.Y>0))] ))
-		missed	<- subset(missed, score.brl.TPp>0)
+		subset(missed, !is.na(score.Y))
+		tmp	<- missed[, 1/length(which(!is.na(score.Y)))]
+		cat(paste('\nnumber of rows with non NA score - these are not tractable in the regression part, n=',tmp))
+		tmp	<- missed[, which(!is.na(score.Y) & score.brl.TPp<tmp)]
+		cat(paste('\nnumber of rows with !NA score and Yijt < 1/nrow(!is.na(Y)). Setting to NA score, n=',length(tmp)))
+		set(missed, tmp, 'score.Y', NA_real_)
+		tmp	<- missed[, 1/length(which(!is.na(score.Y)))]
+		cat(paste('\nnumber of rows with non NA score - these are not tractable in the regression part, n=',tmp))
+		tmp	<- missed[, which(is.na(score.Y) & score.brl.TPp<tmp)]
+		cat(paste('\nnumber of rows with NA score, n=', missed[, length(which(is.na(score.Y)))]  ))
+		cat(paste('\nnumber of rows with NA score and Yijt < 1/nrow(!is.na(Y)). Setting to ZERO, n=',length(tmp)))
+		set(missed, tmp, 'score.Y', 0.)
+		#	add also small COAL
+		tmp		<- missed[,  mean(!is.na(coal.after.t.NegT) & coal.after.t.NegT>cut.date)]		#proportion of rows that pass coal criterion for pos Yijt
+		cat(paste('\nproportion of rows that satisfy COAL criterion (for Yijt>0), p=',tmp))
+		tmp		<- missed[, quantile(coal.after.t.NegT, p=tmp)]			#cut-off for zero Yijt so that the same proportion is retained
+		cat(paste('\ncorresponding cut off for Yijt=0 is ',tmp))		#roughly p(COAL within transmitter)<0.25	
+		tmp		<- missed[,  which(is.na(score.Y) & !is.na(coal.after.t.NegT) & coal.after.t.NegT<tmp)]		
+		cat(paste('\nnumber of rows with NA score and COAL satisfying zero cut-off. Setting to ZERO, n=',length(tmp)))
+		set(missed, tmp, 'score.Y', 0.)		
 	}
+	cat(paste('\nnumber of rows with NA score (will be discarded, undeterminate), n=',nrow(subset(missed, is.na(score.Y)))  ))
+	cat(paste('\nproportion of rows with NA score (will be discarded, undeterminate), p=',nrow(subset(missed, is.na(score.Y)))/nrow(missed)  ))
+	setkey(missed, FASTASampleCode, t.FASTASampleCode)
+	missed		<- unique(missed)
+	missed		<- subset(missed, !is.na(score.Y))			
+	#	not any longer needed because zero score.brl.TPp is now always NA or ZERO
+	#if(1)
+	#{
+	#		cat(paste('\nnumber of pairs with zero brl.score=', missed[,length(which(score.brl.TPp==0 & score.Y>0))] ))
+	#	missed	<- subset(missed, score.brl.TPp>0)
+	#}
 	#	effect on distribution of branch lengths
 	if(!is.na(plot.file))
 	{
@@ -1136,8 +1169,12 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	}
 	#
 	missed		<- subset( missed, select=c(cluster, Patient, FASTASampleCode, t.Patient, t.FASTASampleCode, score.Y, class))
-	cat(paste('\n#infecteds with score.Y>0 after screening for missed invidivuals, n=',  subset(missed, score.Y>0)[, length(unique(Patient))]))
-	cat(paste('\n#potential with score.Y>0 transmitters after screening for missed invidivuals, n=',  subset(missed, score.Y>0)[, length(unique(t.Patient))]))
+	cat(paste('\n#intervals with score.Y>0, n=',  nrow(subset(missed, score.Y>0))))
+	cat(paste('\n#infecteds with score.Y>0, n=',  subset(missed, score.Y>0)[, length(unique(Patient))]))
+	cat(paste('\n#potential transmitters with score.Y>0, n=',  subset(missed, score.Y>0)[, length(unique(t.Patient))]))
+	cat(paste('\n#intervals with score.Y==0, n=',  nrow(subset(missed, score.Y==0))))
+	cat(paste('\n#infecteds with score.Y==0, n=',  subset(missed, score.Y==0)[, length(unique(Patient))]))
+	cat(paste('\n#potential transmitters with score.Y==0, n=',  subset(missed, score.Y==0)[, length(unique(t.Patient))]))	
 	if(rm.zero.score)
 		missed	<- subset(missed, score.Y>0)
 	if(is.null(pyiw))
@@ -1154,16 +1191,17 @@ project.athena.Fisheretal.YX.weight<- function(YX)
 	if( abs(nrow(unique( subset(YX, select=c(Patient, t.Patient)) ))-YX[, sum(w)])>5*EPS )	stop('unexpected weight')	
 	print( YX[, table(w)] )
 	#	add infected weight: every infected can only be infected by one transmitter
-	tmp		<- subset(YX, select=c(Patient, t.Patient, score.brl.TPd))
+	tmp		<- subset(YX, score.Y>0., select=c(Patient, t.Patient, score.brl.TPd))
 	setkey(tmp, Patient, t.Patient)
 	tmp		<- unique(tmp)	
 	tmp		<- tmp[,	list(w.i=score.brl.TPd/sum(score.brl.TPd), w.in=1/length(t.Patient), t.Patient=t.Patient), by='Patient']
-	if( tmp[,sum(w.i)]!=YX[, length(unique(Patient))] )	stop('unexpected weight')	
-	YX		<- merge(YX, tmp, by=c('Patient','t.Patient')) 
+	if( tmp[,sum(w.i)]!=tmp[, length(unique(Patient))] )	stop('unexpected weight')	
+	YX		<- merge(YX, tmp, by=c('Patient','t.Patient'), all.x=TRUE)
+	set(YX, YX[, which(is.na(w.i))], c('w.i','w.in'), 0.)
 	set(YX, NULL, 'w', YX[, w*w.i])
-	if( abs(YX[,sum(w)]-YX[, length(unique(Patient))])>5*EPS )	stop('unexpected weight')
+	if( abs(YX[,sum(w)]-subset(YX, score.Y>0)[, length(unique(Patient))])>5*EPS )	stop('unexpected weight')
 	#	weights are now normalised per 'Patient' but there are fewer infection EVENTS because Patient may also be a transmitter to t.Patient
-	triplet.weight				<- subset(YX, select=c(Patient, t.Patient))	
+	triplet.weight				<- subset(YX, score.Y>0, select=c(Patient, t.Patient))	
 	setkey(triplet.weight, Patient, t.Patient)
 	tmp							<- copy(triplet.weight)
 	setnames(tmp, colnames(tmp), paste('q.',colnames(tmp),sep='') )
@@ -1181,7 +1219,8 @@ project.athena.Fisheretal.YX.weight<- function(YX)
 	set(triplet.weight, triplet.weight[, which(is.na(w.t))], 'w.t', 1L)	
 	cat(paste('\nnumber of (i,j) and (j,i) pairs of the same infection event', triplet.weight[,length(which(w.t==2))] ))
 	set(triplet.weight, NULL, 'w.t', triplet.weight[, 1/as.double(w.t)])
-	YX		<- merge(YX, subset(triplet.weight, select=c(Patient, t.Patient, w.t)), by=c('Patient','t.Patient'))
+	YX		<- merge(YX, subset(triplet.weight, select=c(Patient, t.Patient, w.t)), by=c('Patient','t.Patient'), all.x=TRUE)
+	set(YX, YX[, which(is.na(w.t))], 'w.t', 1.)
 	set(YX, NULL, 'w', YX[, w*w.t])
 	YX[,score.brl.TPd:=NULL]
 	#	
@@ -1286,7 +1325,7 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 		tmp2				<- msm.linked[tmp, sc.t]
 		set(msm.linked, tmp, 'sc.t', msm.linked[tmp,sc.i])
 		set(msm.linked, tmp, 'sc.i', tmp2)
-		#	get brl between true negatives
+		#	get brl between true positives
 		msm.linked			<- msm.linked[, 	list( brl= brl[ my.lower.tri.index(brl.n, sc.t, sc.i) ], Patient=Patient) ,by=c('FASTASampleCode','t.FASTASampleCode')]
 		#
 		#	compute branch lengths between infected and all potential transmitters
@@ -2246,6 +2285,11 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 {
 	YX.m5	<- copy(YX)
 	YX.m5[, U.score:=NULL]
+	if('score.Y'%in%colnames(YX.m5))
+	{
+		tmp	<- YX.m5[, score.Y>0]
+		set(YX.m5, which(tmp), 'score.Y', YX.m5[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )
+	}			
 	#	remove Acute and ART
 	set(YX.m5, YX.m5[, which(t.isAcute=='Yes' | t.isAcute=='Maybe')], 'stage', NA_character_)
 	set(YX.m5, YX.m5[, which(grepl('ART',stage))], 'stage', NA_character_)
@@ -3473,7 +3517,15 @@ project.athena.Fisheretal.estimate.risk.wrap.add2riskdf<- function(method.risk, 
 	tp				<- ifelse(length(tp), paste('.',substr(tp, 3, 3),sep=''), '')
 	tmp				<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
 	risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
-	setnames(risk.df, 'n', 'PYs')	
+	setnames(risk.df, 'n', 'PYs')		
+	#rbind( risk.df[,	{
+	#				z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+	#				list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+	#			},by='risk'],
+	#	risk.df[,	{
+	#				z	<- table( YX.wz[, risk, with=FALSE], useNA='ifany')
+	#				list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX.wz')												
+	#			},by='risk'])[, list(PTx= n[stat=='YX']/n[stat=='YX.wz']), by=c('risk','factor')]
 	risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/n[stat=='X.clu']), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)	
 	#PYe	
 	risk.df	<- merge(risk.df, subset(X.tables$risk.table, stat=='X.msm', c(risk, factor, n)), by=c('risk','factor'), all.x=1)
@@ -3538,7 +3590,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
-				tmp			<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4a.tperiod")	
+				tmp			<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4b.tperiod")	
 				set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
 				tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')	
 				if(grepl('censp', method.risk))
@@ -3549,7 +3601,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}
-			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st","CD4a")
+			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st","CD4b")
 			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
 			#	sequence adjustment (not censoring)
 			if(grepl('adj', method.risk))
@@ -3613,7 +3665,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
-				tmp			<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4a.tperiod")	
+				tmp			<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4b.tperiod")	
 				set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
 				tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')	
 				if(grepl('censp', method.risk))
@@ -3624,7 +3676,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}
-			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st","CD4a")
+			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st","CD4b")
 			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
 			#	sequence adjustment (not censoring)
 			if(grepl('adj', method.risk))
@@ -3687,7 +3739,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
-				tmp			<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4a.tperiod")	
+				tmp			<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4b.tperiod")	
 				set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
 				tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')	
 				if(grepl('censp', method.risk))
@@ -3703,7 +3755,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				#tmp[, w.b:= (n.adjbyPU.Top / n.adjbyPU.TopS) / (n.adjbyPU.Bottom / n.adjbyPU.BottomS) ]		
 				#adjust		<- adjust[, list(factor=factor[stat=='X.msm'], w.b= n.adjbyPU[stat=='X.msm'] / n.adjbyPU[stat==tmp] * sum(n.adjbyPU[stat==tmp]) / sum(n.adjbyPU[stat=='X.msm'])  ), by= 'risk']				
 			}
-			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st","CD4a")
+			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st","CD4b")
 			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
 			#	sequence adjustment (not censoring)
 			if(grepl('adj', method.risk))
@@ -3762,15 +3814,17 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		}	
 		if(grepl('m2Bt.tp', method.risk) | grepl('m2BtMv.tp', method.risk))
 		{
-			#	use cluster weights?
-			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			cat(paste('\nprocess time period',tp))
 			tp				<- substr(tp, 3, 3)
 			YX				<- subset(YX, t.period==tp)						
-			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4a.tperiod")
+			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4b.tperiod")
 			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))						
+			#YX.wz			<- copy(YX)
+			#YX				<- subset(YX, score.Y>0.)
+			#	use cluster weights?
+			if(grepl('now',method.risk))
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])						
 			#	sequence adjustment
 			if(grepl('adj', method.risk))
 			{
@@ -3827,7 +3881,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}			
 			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )						
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0) )
+			#ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )						
 		}
 		if(grepl('m2wmx.tp', method.risk) | grepl('m2wmxMv.tp', method.risk) | grepl('m2Bwmx.tp', method.risk) | grepl('m2BwmxMv.tp', method.risk))
 		{
@@ -3838,7 +3893,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			cat(paste('\nprocess time period',tp))
 			tp				<- substr(tp, 3, 3)
 			YX				<- subset(YX, t.period==tp)						
-			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4a.tperiod")
+			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4b.tperiod")
 			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))						
 			#	sequence adjustment
 			if(grepl('adj', method.risk))
@@ -4244,6 +4299,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
 			}
 			set(YX, NULL, 'stage', YX[, factor(as.character(ART.ntastage.c))])
+			#YX.wz			<- copy(YX)
+			#YX				<- subset(YX, score.Y>0.)			
 			#	sequence adjustment (not censoring)
 			if(grepl('adj', method.risk))
 			{
@@ -5237,7 +5294,10 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	if(is.null(YX.m3))	return(NULL)
 	YX.m3[, U.score:=NULL]
 	if('score.Y'%in%colnames(YX.m3))
-		set(YX.m3, NULL, 'score.Y', YX.m3[,(score.Y*(nrow(YX.m3)-1)+0.5)/nrow(YX.m3)] )					
+	{
+		tmp		<- YX.m3[, score.Y>0] 
+		set(YX.m3, which(tmp), 'score.Y', YX.m3[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )	
+	}							
 	#	transmitter acute
 	if(0)
 	{
@@ -5543,7 +5603,10 @@ project.athena.Fisheretal.YX.model3.stratify.v1.ARTriskgroups<- function(YX, df.
 	YX.m3	<- copy(YX)
 	YX.m3[, U.score:=NULL]
 	if('score.Y'%in%colnames(YX.m3))
-		set(YX.m3, NULL, 'score.Y', YX.m3[,(score.Y*(nrow(YX.m3)-1)+0.5)/nrow(YX.m3)] )
+	{
+		tmp		<- YX.m3[, score.Y>0] 
+		set(YX.m3, which(tmp), 'score.Y', YX.m3[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )	
+	}							
 	#	transmitter acute
 	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Yes')], 'stage', 'UAy')
 	set(YX.m3, YX.m3[, which(stage=='U' & t.isAcute=='Maybe')], 'stage', 'UAm')	
@@ -6746,7 +6809,10 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	#score.Y.cut<- 1e-5
 	#set(YX.m2, YX.m2[,which(score.Y>1-score.Y.cut)], 'score.Y', 1-score.Y.cut)
 	if('score.Y'%in%colnames(YX.m2))
-		set(YX.m2, NULL, 'score.Y', YX.m2[,(score.Y*(nrow(YX.m2)-1)+0.5)/nrow(YX.m2)] )
+	{
+		tmp	<- YX.m2[, score.Y>0]
+		set(YX.m2, which(tmp), 'score.Y', YX.m2[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )
+	}		
 	#	
 	#	set CD41st
 	#
@@ -6934,7 +7000,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	#score.Y.cut<- 1e-5
 	#set(YX.m2, YX.m2[,which(score.Y>1-score.Y.cut)], 'score.Y', 1-score.Y.cut)
 	if('score.Y'%in%colnames(YX.m2))
-		set(YX.m2, NULL, 'score.Y', YX.m2[,(score.Y*(nrow(YX.m2)-1)+0.5)/nrow(YX.m2)] )
+	{
+		tmp	<- YX.m2[, score.Y>0]
+		set(YX.m2, which(tmp), 'score.Y', YX.m2[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )
+	}		
 	#	
 	#	set CD41st
 	#
@@ -7125,7 +7194,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 	#score.Y.cut<- 1e-5
 	#set(YX.m2, YX.m2[,which(score.Y>1-score.Y.cut)], 'score.Y', 1-score.Y.cut)
 	if('score.Y'%in%colnames(YX.m2))
-		set(YX.m2, NULL, 'score.Y', YX.m2[,(score.Y*(nrow(YX.m2)-1)+0.5)/nrow(YX.m2)] )
+	{
+		tmp	<- YX.m2[, score.Y>0]
+		set(YX.m2, which(tmp), 'score.Y', YX.m2[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )
+	}		
 	#	
 	#	set CD41st
 	#
@@ -7291,7 +7363,10 @@ project.athena.Fisheretal.YX.model4.stratify.Diagnosed<- function(YX.m2, df.immu
 	if(is.null(YX.m2))	return(NULL)
 	YX.m2[, U.score:=NULL]
 	if('score.Y'%in%colnames(YX.m2))
-		set(YX.m2, NULL, 'score.Y', YX.m2[,(score.Y*(nrow(YX.m2)-1)+0.5)/nrow(YX.m2)] )
+	{
+		tmp	<- YX.m2[, score.Y>0]
+		set(YX.m2, which(tmp), 'score.Y', YX.m2[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )
+	}		
 	#	
 	#	set CD4t
 	#	
@@ -7387,7 +7462,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	#score.Y.cut<- 1e-5
 	#set(YX.m2, YX.m2[,which(score.Y>1-score.Y.cut)], 'score.Y', 1-score.Y.cut)
 	if('score.Y'%in%colnames(YX.m2))
-		set(YX.m2, NULL, 'score.Y', YX.m2[,(score.Y*(nrow(YX.m2)-1)+0.5)/nrow(YX.m2)] )
+	{
+		tmp	<- YX.m2[, score.Y>0]
+		set(YX.m2, which(tmp), 'score.Y', YX.m2[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )
+	}		
 	#	
 	#	set CD41st
 	#
@@ -10355,20 +10433,21 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
-	resume			<- 1
-	rm.zero.score	<- TRUE
+	resume			<- 1	
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT',method.PDT,'_',method,'_tATHENAclu','.R',sep='')	
 	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
 	YX.part1		<- merge( YX.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)
 	YX.part1[, class:='pt']
 	gc()
+	thresh.pcoal	<- 0.5
+	rm.zero.score	<- TRUE	
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'.R',sep='')	
-	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, t.period=t.period, save.file=save.file, resume=resume, method=method)
+	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method)
 	gc()
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
 	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']
 	tperiod.info[, t.period.max:=c(tperiod.info[-1, t.period.min], t.endctime)]
-	ri.PT			<- subset(YX, select=c(Patient, t))[, list(n.t.infw= length(unique(t))), by='Patient']
+	ri.PT			<- subset(YX, score.Y>0, select=c(Patient, t))[, list(n.t.infw= length(unique(t))), by='Patient']
 	ri.CLU			<- unique(subset(df.tpairs, select=Patient))
 	#
 	#	Sensitivity analysis:
