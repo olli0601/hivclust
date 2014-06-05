@@ -4987,24 +4987,6 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				risktp.col		<- 'tAc.tperiod'
 				risk.col		<- 'tAc'
 			}						
-			if(grepl('m5.tA.TP',method))
-			{				
-				factor.ref.v	<- paste('t<=45.4',tp,sep='')
-				risktp.col		<- 'tA.tperiod'
-				risk.col		<- 'tA.tperiod'
-			}			
-			if(grepl('m5.tAb.TP',method))
-			{				
-				factor.ref.v	<- paste('t<=45.4',tp,sep='')
-				risktp.col		<- 'tAb.tperiod'
-				risk.col		<- 'tAb.tperiod'
-			}			
-			if(grepl('m5.tAc.TP',method))
-			{				
-				factor.ref.v	<- paste('t<=50.4',tp,sep='')
-				risktp.col		<- 'tAc.tperiod'
-				risk.col		<- 'tAc.tperiod'
-			}									
 			if(grepl('m5.tiA',method))
 			{				
 				factor.ref.v	<- paste('t<=45-i<=45',tp,sep='')
@@ -5022,8 +5004,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				factor.ref.v	<- paste('t<=50-i<=50',tp,sep='')
 				risktp.col		<- 'tiAc.tperiod'
 				risk.col		<- 'tiAc'
-			}			
-			
+			}						
 			gc()
 			#	get cens.table
 			set(YX, NULL, 'stage', YX[[risktp.col]])				
@@ -10327,11 +10308,8 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m5.tiAb',method.risk))	save.file	<- 'm5.tiAb'
 		if(grepl('m5.tiAc',method.risk))	save.file	<- 'm5.tiAc'
 		if(is.na(save.file))	stop('unknown method.risk')				
-		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
-		if(!grepl('m5',method.risk))
-			save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
-		if(grepl('m5',method.risk) & grepl('tp[0-9]',method.risk))
-			save.file		<- paste(save.file,'.TP',sep='')
+		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))		
+		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables',method.PDT,'_',save.file,'.R',sep='')
 		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=save.file, method=method.risk)
 		if(!is.null(X.tables))	cat('\nloaded X.tables')
@@ -10648,11 +10626,8 @@ hivc.prog.betareg.estimaterisks<- function()
 			if(grepl('m5.tiAb',method.risk))	save.file	<- 'm5.tiAb'
 			if(grepl('m5.tiAc',method.risk))	save.file	<- 'm5.tiAc'
 			if(is.na(save.file))	stop('unknown method.risk')				
-			tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
-			if(!grepl('m5',method.risk))
-				save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
-			if(grepl('m5',method.risk) & grepl('tp[0-9]',method.risk))
-				save.file		<- paste(save.file,'.TP',sep='')
+			tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))			
+			save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables',method.PDT,'_',save.file,'.R',sep='')
 			X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX, X.seq, X.msm, X.clu, resume=resume, save.file=save.file, method=method.risk)
 			stop()
