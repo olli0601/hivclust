@@ -2294,7 +2294,7 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 	set(YX.m5, YX.m5[, which(t.isAcute=='Yes' | t.isAcute=='Maybe')], 'stage', NA_character_)
 	set(YX.m5, YX.m5[, which(grepl('ART',stage))], 'stage', NA_character_)
 	#	remove early calendar times?
-	set(YX.m5, YX.m5[, which(t<=2006.25)], 'stage', NA_character_)
+	#set(YX.m5, YX.m5[, which(t<=2006.25)], 'stage', NA_character_)
 	YX.m5	<- subset(YX.m5, !is.na(stage))
 	#	set Age of Transmitter tA				
 	age.cut		<- c(-1, 20, 25, 30, 35, 45, 100)
@@ -3544,9 +3544,9 @@ project.athena.Fisheretal.estimate.risk.wrap.add2riskdf<- function(method.risk, 
 	tmp		<- unique(risk.df)[, sum(PYe3)/0.97*0.03]
 	set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe3', risk.df[factor==paste('U',tp,sep=''), PYe3+tmp] )
 	#PYe censoring by constant proportion
-	if(grepl('tp[0-9]', method.risk))
+	if(grepl('tp[0-9]', method.risk) || grepl('TP', method.risk) )
 		tmp		<- subset(X.tables$cens.table, stat=='X.msm')[, list(risk=risk, PYe0cp= n.adjbyPU) , by='factor']
-	if(!grepl('tp[0-9]', method.risk))
+	if(!grepl('tp[0-9]', method.risk) & !grepl('TP', method.risk) )
 	{
 		tmp		<- subset(X.tables$cens.table, stat=='X.msm')[, list(risk=risk[1], PYe0cp= sum(n.adjbyPU)) , by='factor2']
 		setnames(tmp, 'factor2', 'factor')
@@ -3555,16 +3555,25 @@ project.athena.Fisheretal.estimate.risk.wrap.add2riskdf<- function(method.risk, 
 	#PYe5cp
 	setkey(risk.df, risk, factor)
 	risk.df[, PYe5cp:= PYe0cp] 	
-	tmp		<- unique(risk.df)[, sum(PYe5cp)/0.95*0.05]
-	set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe5cp', risk.df[factor==paste('U',tp,sep=''), PYe5cp+tmp] )
+	if(any(risk.df[, grepl('U',factor)]))
+	{
+		tmp		<- unique(risk.df)[, sum(PYe5cp)/0.95*0.05]
+		set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe5cp', risk.df[factor==paste('U',tp,sep=''), PYe5cp+tmp] )
+	}
 	#PYe7cp
 	risk.df[, PYe7cp:= PYe0cp]
-	tmp		<- unique(risk.df)[, sum(PYe7cp)/0.93*0.07]
-	set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe7cp', risk.df[factor==paste('U',tp,sep=''), PYe7cp+tmp] )
+	if(any(risk.df[, grepl('U',factor)]))
+	{		
+		tmp		<- unique(risk.df)[, sum(PYe7cp)/0.93*0.07]
+		set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe7cp', risk.df[factor==paste('U',tp,sep=''), PYe7cp+tmp] )
+	}
 	#PYe3cp
 	risk.df[, PYe3cp:= PYe0cp]
-	tmp		<- unique(risk.df)[, sum(PYe3cp)/0.97*0.03]
-	set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe3cp', risk.df[factor==paste('U',tp,sep=''), PYe3cp+tmp] )
+	if(any(risk.df[, grepl('U',factor)]))
+	{		
+		tmp		<- unique(risk.df)[, sum(PYe3cp)/0.97*0.03]
+		set(risk.df, risk.df[, which(factor==paste('U',tp,sep=''))], 'PYe3cp', risk.df[factor==paste('U',tp,sep=''), PYe3cp+tmp] )
+	}
 	risk.df
 }
 ######################################################################################
@@ -4738,29 +4747,24 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 		}
 		if(method.risk%in%c(	'm5.tA','m5.tAMv','m5.tA.clu'	))				
 		{  
+			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
+			if(length(tp))
+			{
+				cat(paste('\nprocess time period',tp))
+				tp			<- substr(tp, 3, 3)
+				YX			<- subset(YX, t.period==tp)		
+				tp			<- paste('.', tp, sep='')				
+			}
+			if(!length(tp))
+				tp			<- ''
 			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i*w.in])		
-			if(grepl('Ab',method.risk))
-			{
-				set(YX, NULL, 'stage', YX[, factor(as.character(tAb))])		
-				factor.ref		<- 't<=48'				
-			}
-			if(grepl('Ac',method.risk))
-			{
-				set(YX, NULL, 'stage', YX[, factor(as.character(tAc))])		
-				factor.ref		<- 't<=45'				
-			}
-			if(grepl('Ac.TP',method.risk))
-			{
-				set(YX, NULL, 'stage', YX[, factor(as.character(tAc.tperiod))])		
-				factor.ref		<- 't<=45'				
-			}			
-			
+				set(YX, NULL, 'w', YX[, w/w.i*w.in])					
 			if(!grepl('Ab',method.risk) & !grepl('Ac',method.risk))
 			{
-				set(YX, NULL, 'stage', YX[, factor(as.character(tA))])		
-				factor.ref		<- 't<=45'				
-			}
+				risk.col		<- ifelse(nchar(tp), 'tA.tperiod', 'tA')				
+				factor.ref		<- paste('t<=45', tp, sep='')				
+			}			
+			set(YX, NULL, 'stage', factor(as.character(YX[[risk.col]])))
 			#
 			if(!grepl('Mv', method.risk))
 			{
@@ -4791,7 +4795,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}						
 			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
 			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
 		}
 		if(!is.na(save.file))
@@ -10322,16 +10326,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m5.tiA',method.risk))		save.file	<- 'm5.tiA'
 		if(grepl('m5.tiAb',method.risk))	save.file	<- 'm5.tiAb'
 		if(grepl('m5.tiAc',method.risk))	save.file	<- 'm5.tiAc'
-		if(grepl('m5.tA.TP',method.risk))	save.file	<- 'm5.tA.TP'
-		if(grepl('m5.tAb.TP',method.risk))	save.file	<- 'm5.tAb.TP'
-		if(grepl('m5.tAc.TP',method.risk))	save.file	<- 'm5.tAc.TP'
-		if(grepl('m5.tiA.TP',method.risk))	save.file	<- 'm5.tiA.TP'
-		if(grepl('m5.tiAb.TP',method.risk))	save.file	<- 'm5.tiAb.TP'
-		if(grepl('m5.tiAc.TP',method.risk))	save.file	<- 'm5.tiAc.TP'
-		
 		if(is.na(save.file))	stop('unknown method.risk')				
 		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
-		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')		
+		if(!grepl('m5',method.risk))
+			save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
+		if(grepl('m5',method.risk) & grepl('tp[0-9]',method.risk))
+			save.file		<- paste(save.file,'.TP',sep='')
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables',method.PDT,'_',save.file,'.R',sep='')
 		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=save.file, method=method.risk)
 		if(!is.null(X.tables))	cat('\nloaded X.tables')
@@ -10619,8 +10619,7 @@ hivc.prog.betareg.estimaterisks<- function()
 			X.clu			<- project.athena.Fisheretal.YX.model5.stratify(X.clu)
 			X.seq			<- project.athena.Fisheretal.YX.model5.stratify(X.seq)
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
-		}
-						
+		}						
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
@@ -10640,7 +10639,7 @@ hivc.prog.betareg.estimaterisks<- function()
 			if(grepl('m3',method.risk) & grepl('tnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.tnicNo'
 			if(grepl('m3',method.risk) & grepl('tnic',method.risk) & grepl('Mv',method.risk))									save.file	<- 'm3.tnicMv'
 			if(grepl('m3',method.risk) & grepl('atnic',method.risk) & !grepl('No',method.risk) & !grepl('Mv',method.risk))		save.file	<- 'm3.atnic'
-			if(grepl('m3',method.risk) & grepl('atnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.atnicNo'					
+			if(grepl('m3',method.risk) & grepl('atnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.atnicNo'				
 			if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 			if(grepl('m5.tA',method.risk))		save.file	<- 'm5.tA'
 			if(grepl('m5.tAb',method.risk))		save.file	<- 'm5.tAb'
@@ -10648,15 +10647,12 @@ hivc.prog.betareg.estimaterisks<- function()
 			if(grepl('m5.tiA',method.risk))		save.file	<- 'm5.tiA'
 			if(grepl('m5.tiAb',method.risk))	save.file	<- 'm5.tiAb'
 			if(grepl('m5.tiAc',method.risk))	save.file	<- 'm5.tiAc'
-			if(grepl('m5.tA.TP',method.risk))	save.file	<- 'm5.tA.TP'
-			if(grepl('m5.tAb.TP',method.risk))	save.file	<- 'm5.tAb.TP'
-			if(grepl('m5.tAc.TP',method.risk))	save.file	<- 'm5.tAc.TP'
-			if(grepl('m5.tiA.TP',method.risk))	save.file	<- 'm5.tiA.TP'
-			if(grepl('m5.tiAb.TP',method.risk))	save.file	<- 'm5.tiAb.TP'
-			if(grepl('m5.tiAc.TP',method.risk))	save.file	<- 'm5.tiAc.TP'			
 			if(is.na(save.file))	stop('unknown method.risk')				
 			tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
-			save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')		
+			if(!grepl('m5',method.risk))
+				save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
+			if(grepl('m5',method.risk) & grepl('tp[0-9]',method.risk))
+				save.file		<- paste(save.file,'.TP',sep='')
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables',method.PDT,'_',save.file,'.R',sep='')
 			X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX, X.seq, X.msm, X.clu, resume=resume, save.file=save.file, method=method.risk)
 			stop()
