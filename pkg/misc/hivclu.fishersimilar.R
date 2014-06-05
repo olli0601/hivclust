@@ -5036,6 +5036,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			cens.table[, t.period:=cens.table[, substr(factor, nchar(factor), nchar(factor))]]
 			cens.table[, factor2:=cens.table[, substr(factor, 1, nchar(factor)-2)]]
 			cens.table		<- merge(cens.table, cens.table[, list(factor=factor, sum=sum(n, na.rm=TRUE), p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
+			gc()
 			#	adjust for censoring, keeping number of undiagnosed as in tperiod=='2'
 			cens.table[, n.adjbyNU:=n]
 			cens.Ugroups	<- unique(YX[[risk.col]])
@@ -5046,22 +5047,21 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 					set(cens.table, cens.table[, which(factor2==f & stat=='X.msm' & t.period==z)], 'n.adjbyNU',  cens.table[which(factor2==f & stat=='X.msm' & t.period%in%c('2',z)), max(n.adjbyNU)])
 			#	adjust for censoring, keeping proportion of undiagnosed as in tperiod=='2'
 			cens.table[, n.adjbyPU:=n]		
+			gc()
 			if(length(cens.Ugroups))
 				for(z in cens.table[, unique(t.period)])
 				{
 					tmp			<- rbind(	unadjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period==z)[, p]),
-											adjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period%in%c('2',z))[, max(p, na.rm=TRUE) ])		)
-					print(tmp)			
+											adjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period%in%c('2',z))[, max(p, na.rm=TRUE) ])		)		
 					tmp2		<- cens.table[which(stat=='X.msm' & t.period==z), sum[1] * sum(tmp['adjusted',]) * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
-					print(tmp2)
 					tmp2		<- tmp['unadjusted',]/sum(tmp['unadjusted',]) * tmp2
 					names(tmp2)	<- cens.Ugroups
-					print(tmp2)
-					print(sum(tmp2))
 					for(f2 in cens.Ugroups)
 						set(cens.table, cens.table[, which(factor2==f2 & stat=='X.msm' & t.period==z)], 'n.adjbyPU',  tmp2[f2])				
 				}
+			gc()
 			cens.table	<- merge(cens.table, cens.table[, list(factor=factor, p.adjbyNU= n.adjbyNU/sum(n.adjbyNU, na.rm=TRUE), p.adjbyPU= n.adjbyPU/sum(n.adjbyPU, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
+			gc()
 			#	if 'tp' is not '', reduce data to t.period
 			if(tp!='')
 			{
@@ -5093,6 +5093,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				risk.df		<- rbind(risk.df, data.table( risk='Acute', factor=c('No','Maybe','Yes'), risk.ref='Acute', factor.ref='No'))
 				risk.df		<- rbind(risk.df, data.table( risk='AcuteNo', factor=c('No','Maybe','Yes'), risk.ref='AcuteNo', factor.ref='No'))
 			}
+			gc()
 			#	risk tables
 			risk.table		<- do.call('rbind',list(
 							risk.df[,	{
@@ -5312,6 +5313,7 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	YX.m3[, stage.orig:= stage]
 	if(return.only.ART)
 		YX.m3	<- subset( YX.m3,stage=='ART.started' )
+	gc()
 	#
 	#	number and type of drugs, comparing those with at least one indicator to those with confirmed No indicator
 	#	do this before we collapse the missing ART indicators into 'No'
@@ -5343,6 +5345,7 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	}
 	else
 		set(YX.m3, NULL, 'ART.ntstage.no.c', YX.m3[, factor(ART.ntstage.no.c, levels=1:15, labels=c('ART.3.NRT.PI','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.T','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
+	gc()
 	#
 	#	number and type of drugs, comparing those with at least one indicator to those with confirmed No indicator
 	#	do this before we collapse the missing ART indicators into 'No'
@@ -5376,6 +5379,7 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	}
 	else
 		set(YX.m3, NULL, 'ART.ntastage.no.c', YX.m3[, factor(ART.ntastage.no.c, levels=1:17, labels=c('ART.3.NRT.PIB','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.T','ART.l3','ART.g3','ART.3.NRT.PINB','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
+	gc()
 	#YX.m3[, table(ART.ntastage.no.c)]
 	#
 	#	ART indication risk factors
@@ -5411,6 +5415,7 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	else
 		set(YX.m3, NULL, 'ART.nDrug.c', YX.m3[, factor(ART.nDrug.c, levels=1:3, labels=c('ART.3','ART.l3','ART.g3'))])
 	if( YX.m3[, any(is.na(ART.nDrug.c))] ) stop('unexpected NA in ART.nDrug.c')
+	gc()
 	#	type of drugs for ART.3 
 	#	set reference group for dummy coding to ART.3.NRT.PI
 	#	include pulse as separate
@@ -5454,6 +5459,7 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	else
 		set(YX.m3, NULL, 'ART.tnDrug.c', YX.m3[, factor(ART.tnDrug.c, levels=1:9, labels=c('ART.3.NRT.PI','ART.3.NRT','ART.l3','ART.g3','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
 	if( YX.m3[, any(is.na(ART.tnDrug.c))] ) stop('unexpected NA in ART.tnDrug.c')		
+	gc()
 	#	number and type of drugs for ART.3 
 	#	set reference group for dummy coding to ART.3.NRT.PI
 	#	do not include pulse as separate
@@ -5557,19 +5563,17 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 		set(YX.m3, NULL, 'ART.ntastage.c', YX.m3[, factor(ART.ntastage.c, levels=1:21, labels=c('ART.3.NRT.PIB','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.T','ART.l3','ART.g3','ART.3.NRT.PINB','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT','U','UAy','UAm','Diag'))])
 	}
 	else
-		set(YX.m3, NULL, 'ART.ntastage.c', YX.m3[, factor(ART.ntastage.c, levels=1:17, labels=c('ART.3.NRT.PIB','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.T','ART.l3','ART.g3','ART.3.NRT.PINB','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
-	
-	print(subset(YX.m3, is.na(ART.ntastage.c)))
-	
+		set(YX.m3, NULL, 'ART.ntastage.c', YX.m3[, factor(ART.ntastage.c, levels=1:17, labels=c('ART.3.NRT.PIB','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.F','ART.T','ART.l3','ART.g3','ART.3.NRT.PINB','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])	
 	if( YX.m3[, any(is.na(ART.ntastage.c))] ) stop('unexpected ART.ntastage.c')
-	
+	gc()
 	#
 	#	add mx viral load during infection window
 	#
 	YX.m3	<- merge(YX.m3, YX.m3[, {
 						tmp<- which(!is.na(lRNA))
 						list( lRNA.mx= ifelse(length(tmp), max(lRNA[tmp]), NA_real_) )
-					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))								
+					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	gc()
 	#	focus after ART initiation
 	#YX.m3	<- subset( YX.m3, !stage%in%c('UAm','UAy','DAm','DAy','D1<=350','D1<=550','D1>550','D1.NA','U'))
 	set(YX.m3, NULL, 'stage', YX.m3[, factor(as.character(stage))])

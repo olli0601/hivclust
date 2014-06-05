@@ -2145,7 +2145,7 @@ project.hivc.clustering.compare.NoDR.to.NoRecombNoDR.to.NoShort<- function()
 	#
 	argv			<<- hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=resume)
 	argv			<<- unlist(strsplit(argv,' '))
-	nrc.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=clu.pre)
+	nrc.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=nrc.clu.pre)
 	#			
 	argv			<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl="dist.brl.casc", thresh.brl, thresh.bs, resume=resume)				 
 	argv			<<- unlist(strsplit(argv,' '))
