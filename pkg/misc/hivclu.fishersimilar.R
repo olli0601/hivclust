@@ -4745,7 +4745,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('adj', method.risk) | grepl('censp', method.risk))				
 				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)
 		}
-		if(method.risk%in%c(	'm5.tA','m5.tAMv','m5.tA.clu'	))				
+		if(grepl('m5',method.risk))				
 		{  
 			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			if(length(tp))
@@ -4774,10 +4774,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}										
 			if(grepl('Mv', method.risk))
 			{
-				formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'
-				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
+				formula			<- 'score.Y ~ stage+t.RegionHospital-1'
+				include.colnames<- c('score.Y','w','stage','t.RegionHospital')
 				predict.df		<- data.table(	stage=factor(factor.ref, levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),
-						t=subset(YX, stage==factor.ref)[, mean(t, na.rm=TRUE)], t.Age=subset(YX, stage==factor.ref)[, mean(t.Age, na.rm=TRUE)], w=1.)
+												w=1.)
 			}						
 			risk.df			<- data.table( risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref=factor.ref )			
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
@@ -4785,18 +4785,11 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('Mv', method.risk))
 			{
 				setkey(risk.df, risk, factor)
-				risk.df		<- merge(risk.df, unique(risk.df)[, {
-									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
-									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
-									t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
-									t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
-									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
-								}, by=c('risk','factor')], by=c('risk','factor'))						
+				risk.df		<- merge(risk.df, unique(risk.df)[, {	list( 	t.RegionHospital='Amst')		}, by=c('risk','factor')], by=c('risk','factor'))						
 			}						
 			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
 			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))			
 		}
 		if(!is.na(save.file))
 		{
@@ -8301,6 +8294,39 @@ project.athena.Fisheretal.characteristics<- function()
 	setkey(tmp, Patient, t.Patient)	
 	tmp	<- unique(tmp)
 	hist(tmp[, score.Y], breaks=100)
+}
+######################################################################################
+project.athena.Fisheretal.compositionage<- function()
+{
+	tperiod.info	<- structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.653, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.408, 2008.057, 2009.512, 
+							2011)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max"))
+	tmp				<- 1:4
+	method.risk		<- "m5.tA.tp1"
+	save.file		<-  "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3da_tablesCLU_m5.tA.tp"
+	tmp				<- lapply(tmp, function(tp)
+						{				
+							X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=paste(save.file, tp, '.R', sep=''), method=NULL)
+							X.tables$risk.table
+						})
+	risk.table		<- do.call('rbind',tmp)	
+	risk.table[, t.period:= substr(factor, nchar(factor), nchar(factor))]
+	risk.table		<- merge(risk.table, tperiod.info, by='t.period')
+	risk.table[, group:= substr(factor, 2, nchar(factor)-2) ]
+	set(risk.table, risk.table[, which(group=='<=100')], 'group', '>45')
+	
+	# plot number potential transmission intervals
+	ggplot(risk.table, aes(x=t.period, y=n, colour=group, group=group)) + labs(x="calendar time periods", y="# potential transmission intervals") +
+			scale_colour_manual(name='Age group', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(risk.table[,length(unique(group))])) +
+			geom_line() + 
+			facet_grid(stat ~ ., scales='free', margins=FALSE)
+	# plot proportion potential transmission intervals
+	ggplot(risk.table, aes(x=t.period, y=p, colour=group, group=group)) + labs(x="calendar time periods", y="# potential transmission intervals") +
+			scale_colour_manual(name='Age group', values = colorRampPalette(brewer.pal(9, "Set1"),interpolate='spline',space="Lab")(risk.table[,length(unique(group))])) +
+			geom_line() + 
+			facet_grid(stat ~ ., scales='free', margins=FALSE)
+	# look at bias compared to X.msm
+	ggplot(risk.table, aes(x=t.period, y=p, fill=stat, colour=stat)) + geom_bar(stat='identity', position='dodge')	+
+			facet_grid(. ~ group, scales='free', margins=FALSE)	
 }
 ######################################################################################
 project.athena.Fisheretal.compositionacute<- function()
