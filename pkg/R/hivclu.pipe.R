@@ -707,7 +707,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#	basic m2Bt runs	mem=3800
 	#method.risk	<- c(	'm2Bt.cas','m2Bt.cas.clu','m2Bt.cas.censp')
 	#	m5 runs
-	method.risk		<- c(	'm5.tA.tp1','m5.tA.tp2','m5.tA.tp3','m5.tA.tp4','m5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu')
+	#method.risk		<- c(	'm5.tA.tp1','m5.tA.tp2','m5.tA.tp3','m5.tA.tp4','m5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu')
 	#	Acute higher than VL, which we can check after diagnosis
 	#method.risk	<- c( 'm4.Bwmxv','m4.Bwmxv.adj','m4.Bwmxv.censp','m4.Bwmxv.clu.censp','m4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp','m4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp' )
 	#	NRTI+NNRTI puzzle
@@ -718,7 +718,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk		<- c( 	'm2Bt.tp1.clu.adj', 'm2Bt.tp2.clu.adj', 'm2Bt.tp3.clu.adj', 'm2Bt.tp4.clu.adj')
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tAb.clu.adj','m5.tAc.clu.adj','m5.tiA.clu.adj','m5.tiAb.clu.adj','m5.tiAc.clu.adj')
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tA.tp1.clu.adj','m5.tiA.tp1.clu.adj','m5.tA.tp2.clu.adj','m5.tiA.tp2.clu.adj','m5.tA.tp3.clu.adj','m5.tiA.tp3.clu.adj','m5.tA.tp4.clu.adj','m5.tiA.tp4.clu.adj')
-	#method.risk			<- c( 	'm2Bt.cas.clu.adj' )
+	method.risk			<- c( 	'm2Bt.cas.clu.adj' )
 	dummy	<- sapply(method.risk, function(x)
 			{
 				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, outdir=outdir, outfile=outfile, resume=1, verbose=1)

@@ -2108,6 +2108,29 @@ project.hivc.clustering.get.linked.and.unlinked<- function(dir.name= DATA)
 	}
 }
 ######################################################################################
+project.hivc.tables.fixup.m2Bwmx<- function()
+{
+	tps	<- 1:4
+	tmp	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3da_tablesCLU_m2Bwmx.tp'
+	#tmp	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3ea_tablesCLU_m2Bwmx.tp'
+	#tmp	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3fa_tablesCLU_m2Bwmx.tp'
+	#tmp	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3ga_tablesCLU_m2Bwmx.tp'
+
+	dummy	<- sapply(tps, function(tp)
+			{
+				file	<- paste(tmp, tp, '.R',sep='')
+				load(file)
+				set(ans$cens.table, NULL, 'factor', ans$cens.table[,gsub('SuA','ART.suA', factor)])
+				set(ans$cens.table, NULL, 'factor2', ans$cens.table[,gsub('SuA','ART.suA', factor2)])
+				set(ans$risk.table, NULL, 'factor', ans$risk.table[,gsub('SuA','ART.suA', factor)])
+				set(ans$adj.clu, NULL, 'factor', ans$adj.clu[,gsub('SuA','ART.suA', factor)])
+				set(ans$adj.seq, NULL, 'factor', ans$adj.seq[,gsub('SuA','ART.suA', factor)])
+				cat(paste('\n save to file',file))
+				save(ans, file=file)			
+			})
+	
+}
+######################################################################################
 project.hivc.clustering.compare.NoDR.to.NoRecombNoDR.to.NoShort<- function()
 {	
 	verbose		<- 1

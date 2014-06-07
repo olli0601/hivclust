@@ -7569,13 +7569,13 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	YX.m2[,lRNA.c:=NULL]
 	YX.m2	<- merge(YX.m2, YX.m2[, {
 						tmp<- which(!is.na(lRNA))
-						list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>vl.suppressed, 'SuA.N', 'SuA.Y'), 'ART.vlNA') )
+						list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>vl.suppressed, 'ART.suA.N', 'ART.suA.Y'), 'ART.vlNA') )
 					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)
 	gc()
 	YX.m2	<- merge(YX.m2, YX.m2[, {
 							ans	<- list(t=t, lRNA.c2=lRNA.c)
-							if( !all(lRNA.c=='SuA.Y' & stage.orig=='ART.started') )
-								ans$lRNA.c2[ lRNA.c=='SuA.Y' ]	<- 'SuA.M'
+							if( !all(lRNA.c=='ART.suA.Y' & stage.orig=='ART.started') )
+								ans$lRNA.c2[ lRNA.c=='ART.suA.Y' ]	<- 'ART.suA.M'
 							ans
 						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient','t'), all.x=TRUE)
 	gc()
@@ -8377,8 +8377,11 @@ project.athena.Fisheretal.sensitivity<- function()
 									'm3.nic.clu.censp','m3.nicv.clu.censp','m3.tnic.clu.censp','m3.tnicv.clu.censp','m3.tnicNo.clu.censp','m3.tnicvNo.clu.censp','m3.tnicMv.clu.censp','m3.tnicMV.clu.censp','m3.tnicNoMV.clu.censp','m3.atnic.clu.censp','m3.atnicNo.clu.censp','m3.atnicMV.clu.censp','m3.atnicNoMV.clu.censp',
 									'm4.Bwmxv','m4.Bwmxv.adj','m4.Bwmxv.censp','m4.Bwmxv.clu.censp',
 									'm4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp',
-									'm4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp'
+									'm4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp',
+									'm5.tA.tp1','m5.tA.tp2','m5.tA.tp3','m5.tA.tp4',
+									'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu'
 									)
+									
 	if(resume)
 	{
 		options(show.error.messages = FALSE)		
@@ -8847,6 +8850,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	#method.deno	<- 'PDT'
 	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BtMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3ga' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#method.clu	<- 'seq'
 	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('P',stat) )
 	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('clu',method.risk) & !grepl('now',method.risk) & grepl('RI',stat) )
@@ -8856,8 +8861,9 @@ project.athena.Fisheretal.sensitivity<- function()
 	run.tp[, cascade.stage:=run.tp[, substr(factor, 1, 1)]]
 	set(run.tp, run.tp[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
 	set(run.tp, run.tp[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
-	set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')
-	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
+	set(run.tp, run.tp[,which(cascade.stage=='D' & factor%in%c("Dtl500","Dtl350"))], 'cascade.stage', 'cART eligible')
+	set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')	
+	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','cART eligible','cART initiated'))])
 	tmp		<- c(	'Undiagnosed,\nEvidence for acute infection\nat diagnosis',
 			'Undiagnosed,\nEvidence for recent infection\nat diagnosis',
 			'Undiagnosed,\nNo recent infection',
@@ -8870,24 +8876,26 @@ project.athena.Fisheretal.sensitivity<- function()
 			'ART initiated,\nVL missing',
 			'ART initiated,\nVL continually\nsuppressed', 
 			'ART initiated,\nVL not continually\nsuppressed')
-	tmp		<- c(	'Undiagnosed,\nEvidence for acute infection\nat diagnosis',			
-			'Undiagnosed,\nNo recent infection',
-			'Diagnosed < 3mo,\nEvidence for acute infection\nat diagnosis',			
-			'Diagnosed,\nlowest CD4 to date\n> 500',
-			'Diagnosed,\nlowest CD4 to date\n> 350',
-			'Diagnosed,\nlowest CD4 to date\n<= 350',
-			'Diagnosed,\nmissing 1st CD4',
-			'ART initiated,\nVL missing',
-			'ART initiated,\nVL suppressed',
-			'ART initiated,\nVL partially\nsuppressed',
-			'ART initiated,\nVL not suppressed')
-	#tmp		<- data.table( factor.legend= factor(tmp), factor=c("UAy","UAm","U","DAy","DAm","Dtg500","Dtl500","Dtl350","Dt.NA","ART.vlNA","ART.suA.Y","ART.suA.N"))
-	tmp		<- data.table( factor.legend= factor(tmp), factor=c("UA","U","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.vlNA","ART.su.Y","ART.su.M","ART.su.N"))
+	tmp		<- c(	'Undiagnosed,\n Recent infection at diagnosis',	
+			'Undiagnosed,\n Chronic infection at diagnosis',
+			'Undiagnosed,\n Data on recency of infection\n at diagnosis not available',
+			'Diagnosed < 3mo,\n Recent infection at diagnosis',			
+			'Diagnosed,\n lowest CD4 to date\n> 500',
+			'Diagnosed,\n lowest CD4 to date\n> 350',
+			'Diagnosed,\n lowest CD4 to date\n<= 350',
+			'Diagnosed,\n missing 1st CD4',
+			'cART initiated,\n viral load not available',
+			'cART initiated,\n viral suppression',
+			'cART initiated,\n no viral suppression')
+	tmp		<- data.table( factor.legend= factor(tmp), factor=c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.vlNA","ART.suA.Y","ART.suA.N"))
+	#tmp		<- data.table( factor.legend= factor(tmp), factor=c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.vlNA","ART.su.Y","ART.su.N"))
 	run.tp	<- merge(run.tp, tmp, by='factor')	
 	#
-	stat.select	<- c(	'P','P.e0','P.e3','P.e5','P.e7','P.e0cp','P.e3cp','P.e5cp','P.e7cp',
-						'P.ptx','P.ptx.e0','P.ptx.e3','P.ptx.e5','P.ptx.e7','P.ptx.e0cp','P.ptx.e3cp','P.ptx.e5cp','P.ptx.e7cp',
-						'P.raw','P.raw.e0','P.raw.e5','P.raw.e7','P.raw.e3','P.raw.e0cp','P.raw.e5cp','P.raw.e7cp','P.raw.e3cp')
+	#stat.select	<- c(	'P','P.e0','P.e3','P.e5','P.e7','P.e0cp','P.e3cp','P.e5cp','P.e7cp',
+	#					'P.ptx','P.ptx.e0','P.ptx.e3','P.ptx.e5','P.ptx.e7','P.ptx.e0cp','P.ptx.e3cp','P.ptx.e5cp','P.ptx.e7cp',
+	#					'P.raw','P.raw.e0','P.raw.e5','P.raw.e7','P.raw.e3','P.raw.e0cp','P.raw.e5cp','P.raw.e7cp','P.raw.e3cp')
+	stat.select	<- c(	'P','P.e0','P.e0cp','P.ptx','P.ptx.e0','P.ptx.e0cp','P.raw','P.raw.e0','P.raw.e0cp')
+				
 	#stat.select	<- c(	'RI','RI.e0','RI.e3','RI.e5','RI.e7','RI.e0cp','RI.e3cp','RI.e5cp','RI.e7cp',
 	#					'RI.ptx','RI.ptx.e0','RI.ptx.e3','RI.ptx.e5','RI.ptx.e7','RI.ptx.e0cp','RI.ptx.e3cp','RI.ptx.e5cp','RI.ptx.e7cp',
 	#					'RI.raw','RI.raw.e0','RI.raw.e5','RI.raw.e7','RI.raw.e3','RI.raw.e0cp','RI.raw.e5cp','RI.raw.e7cp','RI.raw.e3cp')
@@ -9366,7 +9374,54 @@ project.athena.Fisheretal.sensitivity<- function()
 	ggsave(file=file, w=5,h=8)
 
 	
+	#
+	#	MODEL 5 time trends
+	#
+	tperiod.info<- structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.653, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.408, 2008.057, 2009.512, 
+						2011)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max"))
 
+	ylab		<- "Proportion of transmissions"
+	#ylab		<- "Relative transmissibility"
+	method.clu	<- 'clu'; method.deno	<- 'CLU'	
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tA.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tA.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	setkey(run.tp, factor)
+	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
+	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 2, nchar(factor)-2)])
+	set(run.tp, NULL, 'factor', run.tp[, gsub('<=100','45-',factor)])
+	set(run.tp, NULL, 'factor', run.tp[, gsub('<=20','<20',factor)])
+	set(run.tp, NULL, 'factor', run.tp[, gsub('<=25','20-24',factor)])
+	set(run.tp, NULL, 'factor', run.tp[, gsub('<=30','25-29',factor)])
+	set(run.tp, NULL, 'factor', run.tp[, gsub('<=35','30-34',factor)])
+	set(run.tp, NULL, 'factor', run.tp[, gsub('<=45','35-44',factor)])	
+	run.tp[, group:=NA_character_]
+	set(run.tp, run.tp[,which(grepl('3',factor) | grepl('4',factor))], 'group', '30 or older')
+	set(run.tp, run.tp[,which(grepl('2',factor))], 'group', 'below 30')	
+	set(run.tp, NULL, 'group', run.tp[, factor(group, levels=c('below 30','30 or older'))])
+	run.tp		<- merge(run.tp, tperiod.info,by='t.period')
+	set(run.tp, NULL, 't.period.min', run.tp[, round(t.period.min, d=1)])
+	set(run.tp, NULL, 't.period.max', run.tp[, round(t.period.max, d=1)])
+	run.tp[, t.period.long:= paste(round(t.period.min,d=1), '-\n', round(t.period.max,d=1),sep='')]
+	#
+	stat.select	<- c(	'P','P.e0','P.ptx','P.ptx.e0','P.raw','P.raw.e0')
+	if(0)
+	{
+		stat.select	<- c(	'RI','RI.e0','RI.ptx','RI.ptx.e0','RI.raw','RI.raw.e0')				
+	}	
+	dummy	<- lapply(seq_along(stat.select), function(i)
+			{
+				cat(paste('\nprocess', stat.select[i]))
+				ggplot(subset(run.tp, !is.na(v) & stat==stat.select[i]), aes(x=t.period.long, y=v, colour=factor, group=factor)) + labs(x="calendar time periods", y=ylab) +
+						#scale_colour_brewer(palette='RdBu') + scale_fill_brewer(palette='RdBu') + 
+						scale_colour_manual(name='from age group', values = c("#F4A582","#FF7F00","#B2182B","#92C5DE","#2166AC","#071D58")) +
+						scale_fill_manual(name='from age group', values = c("#F4A582","#FF7F00","#B2182B","#92C5DE","#2166AC","#071D58")) +
+						theme(legend.key.size=unit(13,'mm')) + guides(colour = guide_legend(override.aes = list(size=5))) +
+						geom_ribbon(aes(ymin=l95.bs, ymax=u95.bs, linetype=NA, fill=factor), show_guide= FALSE, alpha=0.4) + geom_point(size=2.5) + geom_line(size=1) + facet_grid(. ~ group, margins=FALSE)
+				file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', stat.select[i],'_',subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.risk],"_prop_",method.clu,'_',subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.brl],'_denom',method.deno,'_', subset(run.tp, !is.na(v) & stat==stat.select[i])[1, method.recentctime],".pdf", sep='')
+				cat(paste('\nsave to file',file))
+				ggsave(file=file, w=7,h=6)				
+			})
+	
 
 	
 	

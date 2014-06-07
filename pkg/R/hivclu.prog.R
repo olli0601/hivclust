@@ -1120,7 +1120,7 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 		outsignat		<- insignat	
 		file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')		
 		options(show.error.messages = FALSE)		
-		readAttempt<-try(suppressWarnings(load(file)))
+		readAttempt		<-try(suppressWarnings(load(file)))
 		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))			
 		options(show.error.messages = TRUE)		
 	}
