@@ -236,7 +236,7 @@ hivc.pipeline.clustering<- function()
 ######################################################################################
 hivc.pipeline.BEAST<- function()
 {
-	if(0)	#run BEAST 1.7.5 GMRF skyline
+	if(1)	#run BEAST 1.7.5 GMRF skyline
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		indircov			<- paste(DATA,"derived",sep='/')
@@ -298,7 +298,7 @@ hivc.pipeline.BEAST<- function()
 		hivc.prog.BEAST.generate.xml()		
 		quit("no")
 	}
-	if(1)		#generate BEAST2 BDSKYline xml file
+	if(0)		#generate BEAST2 BDSKYline xml file
 	{
 		indir				<- paste(DATA,"tmp",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
@@ -687,14 +687,13 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	##method.risk		<- c(	'm3.tnicMV.adj','m3.tnicMV.clu.adj','m3.tnicNoMV.adj','m3.tnicNoMV.clu.adj' )
 	##method.risk		<- c(	'm3.tnicMV','m3.tnicMV.clu','m3.tnicNoMV','m3.tnicNoMV.clu' )
 	#method.risk		<- c(	'm3.atnicMV','m3.atnicMV.clu','m3.atnicNoMV','m3.atnicNoMV.clu' )
-	method.risk			<- c('m3.btnicMV','m3.btnicNoMV','m3.btnicMV.clu','m3.btnicNoMV.clu')
+	method.risk			<- c('m3.btnicMV.clu','m3.btnicNoMV.clu','m3.btnicMV.clu.wstar','m3.btnicNoMV.clu.wstar')
 	#	basic m2Bwmx runs	mem=1800
 	#method.risk	<- c(	'm2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
 	##method.risk	<- c(	'm2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp' )
-	#method.risk		<- c(	'm2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4' )
-	#method.risk	<- c(	'm2BwmxMv.tp1.clu','m2BwmxMv.tp2.clu','m2BwmxMv.tp3.clu','m2BwmxMv.tp4.clu','m2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4' )
-	#method.risk	<- c(	'm2BwmxMv.tp1.clu.now','m2BwmxMv.tp2.clu.now','m2BwmxMv.tp3.clu.now','m2BwmxMv.tp4.clu.now','m2BwmxMv.tp1.now','m2BwmxMv.tp2.now','m2BwmxMv.tp3.now','m2BwmxMv.tp4.now' )
-	#method.risk		<- c(	'm2BtMv.tp1.clu','m2BtMv.tp2.clu','m2BtMv.tp3.clu','m2BtMv.tp4.clu','m2BtMv.tp1','m2BtMv.tp2','m2BtMv.tp3','m2BtMv.tp4' )
+	#method.risk	<- c(	'm2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4' )
+	method.risk		<- c(	'm2BwmxMv.tp1.clu','m2BwmxMv.tp2.clu','m2BwmxMv.tp3.clu','m2BwmxMv.tp4.clu','m2BwmxMv.tp1.clu.wstar','m2BwmxMv.tp2.clu.wstar','m2BwmxMv.tp3.clu.wstar','m2BwmxMv.tp4.clu.wstar',)	
+	method.risk		<- c(	'm2BtMv.tp1.clu','m2BtMv.tp2.clu','m2BtMv.tp3.clu','m2BtMv.tp4.clu','m2BtMv.tp1.clu.wstar','m2BtMv.tp2.clu.wstar','m2BtMv.tp3.clu.wstar','m2BtMv.tp4.clu.wstar')
 	#	basic m2Bwmx runs	mem=3800
 	#method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp')
 	#	basic m2BXXXMv runs	mem=7800
