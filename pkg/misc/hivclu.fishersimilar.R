@@ -2355,7 +2355,7 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 	}	
 	gc()
 	#	set Age of Transmitter tA				
-	age.cut		<- c(-1, 20, 25, 30, 35, 40, 45, 50, 100)
+	age.cut		<- c(-1, 20, 25, 30, 35, 40, 45, 100)
 	YX.m5[, tAc:=NA_character_]
 	for(i in seq_along(age.cut)[-1])
 	{
@@ -4922,10 +4922,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('wstar',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i])															
 			if(!grepl('Ab',method.risk) & !grepl('Ac',method.risk))
-			{
-				risk.col		<- ifelse(nchar(tp), 'tA.tperiod', 'tA')				
-				factor.ref		<- paste('t<=45', tp, sep='')				
-			}			
+				risk.col		<- ifelse(nchar(tp), 'tA.tperiod', 'tA')										
+			if(grepl('Ac',method.risk))
+				risk.col		<- ifelse(nchar(tp), 'tAc.tperiod', 'tAc')				
+			factor.ref		<- paste('t<=45', tp, sep='')	
 			set(YX, NULL, 'stage', factor(as.character(YX[[risk.col]])))
 			#
 			if(!grepl('Mv', method.risk))
