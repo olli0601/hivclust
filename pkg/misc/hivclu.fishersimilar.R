@@ -4810,7 +4810,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 								}, by='coef'], by='coef')
 			}			
 			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
 			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
 		}
 		if(grepl('m4',method.risk))				
@@ -5145,7 +5145,49 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				set(X.clu, X.clu[,which(is.na(ART.ntbstage.c))], risktp.col, NA_character_)
 				X.msm[, ART.ntbstage.c.tperiod:= X.msm[, paste(ART.ntbstage.c, t.period, sep='.')]]
 				set(X.msm, X.msm[,which(is.na(ART.ntbstage.c))], risktp.col, NA_character_)
-			}						
+			}
+			if(grepl('m3.indNo',method))
+			{
+				factor.ref.v	<- paste('ART.OK',tp,sep='')
+				risktp.col		<- 'ART.ind.no.c.tperiod'
+				risk.col		<- 'ART.ind.no.c'
+				YX[, ART.ind.no.c.tperiod:= YX[, paste(ART.ind.no.c, t.period, sep='.')]]
+				set(YX, YX[,which(is.na(ART.ind.no.c))], risktp.col, NA_character_)
+				X.den[, ART.ind.no.c.tperiod:= X.den[, paste(ART.ind.no.c, t.period, sep='.')]]
+				set(X.den, X.den[,which(is.na(ART.ind.no.c))], risktp.col, NA_character_)
+				X.clu[, ART.ind.no.c.tperiod:= X.clu[, paste(ART.ind.no.c, t.period, sep='.')]]
+				set(X.clu, X.clu[,which(is.na(ART.ind.no.c))], risktp.col, NA_character_)
+				X.msm[, ART.ind.no.c.tperiod:= X.msm[, paste(ART.ind.no.c, t.period, sep='.')]]
+				set(X.msm, X.msm[,which(is.na(ART.ind.no.c))], risktp.col, NA_character_)
+			}	
+			if(grepl('m3.n3No',method))
+			{
+				factor.ref.v	<- paste('ART.3.NRT.X',tp,sep='')
+				risktp.col		<- 'ART.n3.no.c.tperiod'
+				risk.col		<- 'ART.n3.no.c'
+				YX[, ART.n3.no.c.tperiod:= YX[, paste(ART.n3.no.c, t.period, sep='.')]]
+				set(YX, YX[,which(is.na(ART.n3.no.c))], risktp.col, NA_character_)
+				X.den[, ART.n3.no.c.tperiod:= X.den[, paste(ART.n3.no.c, t.period, sep='.')]]
+				set(X.den, X.den[,which(is.na(ART.n3.no.c))], risktp.col, NA_character_)
+				X.clu[, ART.n3.no.c.tperiod:= X.clu[, paste(ART.n3.no.c, t.period, sep='.')]]
+				set(X.clu, X.clu[,which(is.na(ART.n3.no.c))], risktp.col, NA_character_)
+				X.msm[, ART.n3.no.c.tperiod:= X.msm[, paste(ART.n3.no.c, t.period, sep='.')]]
+				set(X.msm, X.msm[,which(is.na(ART.n3.no.c))], risktp.col, NA_character_)
+			}	
+			if(grepl('m3.nnrtpi',method))
+			{
+				factor.ref.v	<- paste('ART.3.NRT.PIB',tp,sep='')
+				risktp.col		<- 'ART.nnrtpi.no.c.tperiod'
+				risk.col		<- 'ART.nnrtpi.no.c'
+				YX[, ART.nnrtpi.no.c.tperiod:= YX[, paste(ART.nnrtpi.no.c, t.period, sep='.')]]
+				set(YX, YX[,which(is.na(ART.nnrtpi.no.c))], risktp.col, NA_character_)
+				X.den[, ART.nnrtpi.no.c.tperiod:= X.den[, paste(ART.nnrtpi.no.c, t.period, sep='.')]]
+				set(X.den, X.den[,which(is.na(ART.nnrtpi.no.c))], risktp.col, NA_character_)
+				X.clu[, ART.nnrtpi.no.c.tperiod:= X.clu[, paste(ART.nnrtpi.no.c, t.period, sep='.')]]
+				set(X.clu, X.clu[,which(is.na(ART.nnrtpi.no.c))], risktp.col, NA_character_)
+				X.msm[, ART.nnrtpi.no.c.tperiod:= X.msm[, paste(ART.nnrtpi.no.c, t.period, sep='.')]]
+				set(X.msm, X.msm[,which(is.na(ART.nnrtpi.no.c))], risktp.col, NA_character_)
+			}	
 			if(grepl('m4.Bwmx',method))
 			{
 				#	adjust CD4t -- cannot adjust VL or the independent acute categories
@@ -5596,8 +5638,74 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	if(return.only.ART)
 		set(YX.m3, NULL, 'ART.ntbstage.no.c', YX.m3[, factor(ART.ntbstage.no.c, levels=1:15, labels=c('ART.3.NRT.PIB','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A','ART.l3','ART.g3','ART.3.NRT.PINB','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])
 	gc()
-	
-	#YX.m3[, table(ART.ntbstage.no.c)]
+	#
+	#	ART indicators
+	#	do this before we collapse the missing ART indicators into 'No'
+	#
+	#YX.m3[, ART.ind.no.c:=NULL]
+	YX.m3[, ART.ind.no.c:=NA_integer_]	
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.F=='Yes')], 'ART.ind.no.c', 6L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.T=='Yes')], 'ART.ind.no.c', 7L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.I=='Yes')], 'ART.ind.no.c', 3L)	
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.P=='Yes')], 'ART.ind.no.c', 4L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.A=='Yes')], 'ART.ind.no.c', 5L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='Yes')], 'ART.ind.no.c', 2L )			#ART.I excludes pulsed
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No' &  ART.P=='No' & ART.A=='No' &  ART.F=='No' & ART.T=='No' & is.na(ART.ind.no.c))], 'ART.ind.no.c', 1L)		
+	if(!return.only.ART)
+	{
+		set(YX.m3, YX.m3[, which(stage=='U')], 'ART.ind.no.c', 8L)
+		set(YX.m3, YX.m3[, which(stage=='UAy')], 'ART.ind.no.c', 9L)
+		set(YX.m3, YX.m3[, which(stage=='UAm')], 'ART.ind.no.c', 10L)
+		set(YX.m3, YX.m3[, which(stage=='Diag')], 'ART.ind.no.c', 11L)
+		set(YX.m3, NULL, 'ART.ind.no.c', YX.m3[, factor(ART.ind.no.c, levels=1:11, labels=c('ART.OK','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A','ART.F','ART.T','U','UAy','UAm','Diag'))])
+	}
+	if(return.only.ART)
+		set(YX.m3, NULL, 'ART.ind.no.c', YX.m3[, factor(ART.ind.no.c, levels=1:7, labels=c('ART.OK','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A','ART.F','ART.T'))])
+	gc()
+	#YX.m3[, table(ART.ind.no.c, useNA='ifany')]
+	#
+	#	number and type of drugs with ART.F and ART.T part of treatment, comparing those with at least one indicator to those with confirmed No indicator
+	#	do this before we collapse the missing ART indicators into 'No'
+	#
+	#YX.m3[, ART.n3.no.c:=NULL]
+	YX.m3[, ART.n3.no.c:=NA_integer_]
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No' & is.na(ART.n3.no.c) & ART.nDrug<3 & ART.nDrug>0)], 'ART.n3.no.c', 2L)		
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No' & is.na(ART.n3.no.c) & ART.nDrug>3)], 'ART.n3.no.c', 3L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No' & is.na(ART.n3.no.c) & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT==0)], 'ART.n3.no.c', 4L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No' & is.na(ART.n3.no.c) & ART.nNRT>0 & (ART.nPI>0 | ART.nNNRT>0))], 'ART.n3.no.c', 1L)
+	if(!return.only.ART)
+	{
+		set(YX.m3, YX.m3[, which(stage=='U')], 'ART.n3.no.c', 5L)
+		set(YX.m3, YX.m3[, which(stage=='UAy')], 'ART.n3.no.c', 6L)
+		set(YX.m3, YX.m3[, which(stage=='UAm')], 'ART.n3.no.c', 7L)
+		set(YX.m3, YX.m3[, which(stage=='Diag')], 'ART.n3.no.c', 8L)
+		set(YX.m3, NULL, 'ART.n3.no.c', YX.m3[, factor(ART.n3.no.c, levels=1:8, labels=c('ART.3.NRT.X','ART.l3','ART.g3','ART.3.NRT','U','UAy','UAm','Diag'))])
+	}
+	if(return.only.ART)
+		set(YX.m3, NULL, 'ART.n3.no.c', YX.m3[, factor(ART.n3.no.c, levels=1:4, labels=c('ART.3.NRT.X','ART.l3','ART.g3','ART.3.NRT'))])
+	gc()
+	#YX.m3[, table(ART.n3.no.c, useNA='ifany')]
+	#
+	#	number and type of drugs with ART.F and ART.T part of treatment, 
+	#	focus only on NRT+NNRTI Atripla, NRT+PIB, NRT+PINB
+	#
+	YX.m3[, ART.nnrtpi.no.c:=NA_integer_]
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nBoost>0 & ART.nNNRT==0)], 'ART.nnrtpi.no.c', 1L)	
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nBoost==0 & ART.nNNRT==0)], 'ART.nnrtpi.no.c', 2L)	
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 & ART.TDF.EFV.FTC==0)], 'ART.nnrtpi.no.c', 3L)
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 & ART.TDF.EFV.FTC==1)], 'ART.nnrtpi.no.c', 4L)	
+	if(!return.only.ART)
+	{
+		set(YX.m3, YX.m3[, which(stage=='U')], 'ART.nnrtpi.no.c', 5L)
+		set(YX.m3, YX.m3[, which(stage=='UAy')], 'ART.nnrtpi.no.c', 6L)
+		set(YX.m3, YX.m3[, which(stage=='UAm')], 'ART.nnrtpi.no.c', 7L)
+		set(YX.m3, YX.m3[, which(stage=='Diag')], 'ART.nnrtpi.no.c', 8L)
+		set(YX.m3, NULL, 'ART.nnrtpi.no.c', YX.m3[, factor(ART.nnrtpi.no.c, levels=1:8, labels=c('ART.3.NRT.PIB','ART.3.NRT.PINB','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE','U','UAy','UAm','Diag'))])
+	}
+	if(return.only.ART)
+		set(YX.m3, NULL, 'ART.nnrtpi.no.c', YX.m3[, factor(ART.nnrtpi.no.c, levels=1:4, labels=c('ART.3.NRT.PIB','ART.3.NRT.PINB','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE'))])
+	gc()
+	#YX.m3[, table(ART.nnrtpi.no.c, useNA='ifany')]
 	#
 	#	ART indication risk factors
 	#
@@ -7120,7 +7228,7 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	YX.m2		<- merge(YX.m2, tmp, by= 't.Patient', all.x=TRUE)	
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))	
 	gc()
@@ -7520,7 +7628,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))		
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, CD41st, CD4t, CD4a, CD4b, lRNA.gm, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, CD41st, CD4t, CD4a, CD4b, lRNA.gm, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b, lRNA.gm  ))		
 	gc()
@@ -7769,7 +7877,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	#
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))	
 	gc()
@@ -8607,11 +8715,11 @@ project.athena.Fisheretal.sensitivity<- function()
 	require(ape)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_140603",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140611",sep='/')		
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140603",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140611",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
@@ -8635,7 +8743,8 @@ project.athena.Fisheretal.sensitivity<- function()
 									'm4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp',
 									'm4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp',
 									'm5.tA.tp1','m5.tA.tp2','m5.tA.tp3','m5.tA.tp4',
-									'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu'
+									'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu',
+									'm5.tAc.tp1.clu','m5.tAc.tp2.clu','m5.tAc.tp3.clu','m5.tAc.tp4.clu','m5.tAc.tp1.clu.wstar','m5.tAc.tp2.clu.wstar','m5.tAc.tp3.clu.wstar','m5.tAc.tp4.clu.wstar'
 									)
 									
 	if(resume)
@@ -10685,7 +10794,10 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m3',method.risk) & grepl('atnic',method.risk) & !grepl('No',method.risk) & !grepl('Mv',method.risk))		save.file	<- 'm3.atnic'
 		if(grepl('m3',method.risk) & grepl('atnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.atnicNo'		
 		if(grepl('m3',method.risk) & grepl('btnic',method.risk) & !grepl('No',method.risk) & !grepl('Mv',method.risk))		save.file	<- 'm3.btnic'
-		if(grepl('m3',method.risk) & grepl('btnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.btnicNo'				
+		if(grepl('m3',method.risk) & grepl('btnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.btnicNo'
+		if(grepl('m3.indNo',method.risk))																					save.file	<- 'm3.indNo'
+		if(grepl('m3.n3No',method.risk))																					save.file	<- 'm3.n3No'
+		if(grepl('m3.nnrtpiNo',method.risk))																				save.file	<- 'm3.nnrtpiNo'
 		if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 		if(grepl('m5.tA',method.risk))		save.file	<- 'm5.tA'
 		if(grepl('m5.tAb',method.risk))		save.file	<- 'm5.tAb'
@@ -11005,7 +11117,10 @@ hivc.prog.betareg.estimaterisks<- function()
 			if(grepl('m3',method.risk) & grepl('atnic',method.risk) & !grepl('No',method.risk) & !grepl('Mv',method.risk))		save.file	<- 'm3.atnic'
 			if(grepl('m3',method.risk) & grepl('atnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.atnicNo'				
 			if(grepl('m3',method.risk) & grepl('btnic',method.risk) & !grepl('No',method.risk) & !grepl('Mv',method.risk))		save.file	<- 'm3.btnic'
-			if(grepl('m3',method.risk) & grepl('btnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.btnicNo'							
+			if(grepl('m3',method.risk) & grepl('btnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.btnicNo'
+			if(grepl('m3.indNo',method.risk))																					save.file	<- 'm3.indNo'
+			if(grepl('m3.n3No',method.risk))																					save.file	<- 'm3.n3No'
+			if(grepl('m3.nnrtpiNo',method.risk))																				save.file	<- 'm3.nnrtpiNo'			
 			if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 			if(grepl('m5.tA',method.risk))		save.file	<- 'm5.tA'
 			if(grepl('m5.tAb',method.risk))		save.file	<- 'm5.tAb'
