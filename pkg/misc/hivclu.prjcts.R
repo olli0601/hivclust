@@ -3420,7 +3420,48 @@ project.hivc.clustering.selectparticularclusters<- function()
 		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=3, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
 	}
 }
+
+project.hivc.examlclock<- function()
+{
+	require(ape)
+	require(adephylo)
+	indir				<- paste(DATA,"tmp",sep='/')
+	infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	infiletree			<- paste(infile,"examlbs500",sep="_")
+	indircov			<- paste(DATA,"derived",sep='/')
+	infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"	
+	insignat			<- "Wed_Dec_18_11:37:00_2013"		
+	file				<- paste(indir,'/',infiletree,'_',gsub('/',':',insignat),".R",sep='')
+	load(file)
+	tmp					<- node.depth.edgelength(ph)
+	df					<- data.table(FASTASampleCode= ph$tip.label, height=tmp[seq_len(Ntip(ph))])
 	
+	file				<- paste(indircov,'/',infilecov,".R",sep='')
+	load(file)
+	df			<- merge( subset(df.all, select=c(FASTASampleCode, Patient, PosSeqT, AnyPos_T1, AnyT_T1)), df, by='FASTASampleCode' )
+	set(df, NULL, 'PosSeqT', hivc.db.Date2numeric(df[,PosSeqT]))
+	set(df, NULL, 'AnyPos_T1', hivc.db.Date2numeric(df[,AnyPos_T1]))
+	set(df, NULL, 'AnyT_T1', hivc.db.Date2numeric(df[,AnyT_T1]))
+	df			<- subset(df, !is.na(PosSeqT))
+	ggplot(df, aes(x=PosSeqT, y=height)) + geom_point()
+	
+	df.clock	<- lm(height~PosSeqT, data=as.data.frame(subset(df, PosSeqT>1996.6)))
+	summary(df.clock)	
+	dfbh		<- df[, {
+						z<- which.min(PosSeqT)
+						list(FASTASampleCode=FASTASampleCode[z], PosSeqT= PosSeqT[z], height=height[z])
+					}, by='Patient']
+	dfbh.clock	<- lm(height~PosSeqT, data=as.data.frame(subset(dfbh, PosSeqT>1996.6)))
+	summary(dfbh.clock)		
+	dfb4T		<- subset(df, PosSeqT<AnyT_T1)	
+	ggplot(dfb4T, aes(x=PosSeqT, y=height)) + geom_point()
+	dfb4T.clock	<- lm(height~PosSeqT, data=as.data.frame(subset(dfb4T, PosSeqT>1996.6)))
+	summary(dfb4T.clock)
+	
+	df[, which.min(height)]
+	df[, min(PosSeqT)]
+}
+
 project.hivc.examl<- function(dir.name= DATA)
 {
 	require(ape)

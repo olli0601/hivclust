@@ -4916,11 +4916,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}										
 			if(grepl('MV', method.risk))
 			{
-				YX				<- subset(YX, !is.na(ART.F) & !is.na(ART.T) )
-				formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital+ART.F+ART.T-1'
-				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital','ART.F','ART.T')
-				predict.df		<- data.table(	stage=factor('ART.3.NRT.X', levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),
-												ART.F= factor('No', levels=YX[, levels(ART.F)]), ART.T= factor('No', levels=YX[, levels(ART.T)]),
+				YX				<- subset(YX, ART.F=='No' & ART.T=='No' )
+				formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'
+				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
+				predict.df		<- data.table(	stage=factor('ART.3.NRT.X', levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),												
 												t=subset(YX, stage=='ART.3.NRT.X')[, mean(t, na.rm=TRUE)], t.Age=subset(YX, stage=='ART.3.NRT.X')[, mean(t.Age, na.rm=TRUE)], w=1.)
 			}						
 			risk.df			<- data.table( risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref='ART.3.NRT.X' )			
@@ -4945,12 +4944,11 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
 									t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
 									t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
-									list(t.Age=t.Age, t=t, t.RegionHospital='Amst', ART.F='No',ART.T='No')
+									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}						
 			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			#ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
 		}
 		if(grepl('m3.nnrtpiNo',method.risk))
 		{
@@ -5003,12 +5001,11 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}										
 			if(grepl('MV', method.risk))
 			{
-				YX				<- subset(YX, !is.na(ART.F) & !is.na(ART.T) )
-				formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital+ART.F+ART.T-1'
-				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital','ART.F','ART.T')
-				predict.df		<- data.table(	stage=factor('ART.3.NRT.PIB', levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),
-						ART.F= factor('No', levels=YX[, levels(ART.F)]), ART.T= factor('No', levels=YX[, levels(ART.T)]),
-						t=subset(YX, stage=='ART.3.NRT.PIB')[, mean(t, na.rm=TRUE)], t.Age=subset(YX, stage=='ART.3.NRT.PIB')[, mean(t.Age, na.rm=TRUE)], w=1.)
+				YX				<- subset(YX, ART.F=='No' & ART.T=='No' )
+				formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'
+				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
+				predict.df		<- data.table(	stage=factor('ART.3.NRT.PIB', levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),						
+												t=subset(YX, stage=='ART.3.NRT.PIB')[, mean(t, na.rm=TRUE)], t.Age=subset(YX, stage=='ART.3.NRT.PIB')[, mean(t.Age, na.rm=TRUE)], w=1.)
 			}						
 			risk.df			<- data.table( risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref='ART.3.NRT.PIB' )
 			risk.df			<- rbind(risk.df, data.table(risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref= 'ART.3.ATRIPLALIKE'))
@@ -5033,12 +5030,11 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
 									t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
 									t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
-									list(t.Age=t.Age, t=t, t.RegionHospital='Amst', ART.F='No',ART.T='No')
+									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}						
 			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.25, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))		
 		}
 		if(grepl('m4',method.risk))				
 		{  
@@ -8951,15 +8947,15 @@ project.athena.Fisheretal.sensitivity<- function()
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	method.risk				<- c(	'm2B1st.cas','m2B1stMv.cas','m2Bwmx.cas','m2BwmxMv.cas','m2Bt.cas','m2BtMv.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4','m2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4','m2BwmxMv.tp1.now','m2BwmxMv.tp2.now','m2BwmxMv.tp3.now','m2BwmxMv.tp4.now','m2BtMv.tp1','m2BtMv.tp2','m2BtMv.tp3','m2BtMv.tp4',									
-									'm2B1st.cas.clu','m2B1stMv.cas.clu','m2Bwmx.cas.clu','m2BwmxMv.cas.clu','m2Bt.cas.clu','m2BtMv.cas.clu','m2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2BwmxMv.tp1.clu','m2BwmxMv.tp2.clu','m2BwmxMv.tp3.clu','m2BwmxMv.tp4.clu','m2BwmxMv.tp1.clu.now','m2BwmxMv.tp2.clu.now','m2BwmxMv.tp3.clu.now','m2BwmxMv.tp4.clu.now','m2BtMv.tp1.clu','m2BtMv.tp2.clu','m2BtMv.tp3.clu','m2BtMv.tp4.clu',
+	method.risk				<- c(	'm2B1st.cas','m2B1stMv.cas','m2Bwmx.cas','m2BwmxMv.cas','m2Bt.cas','m2BtMv.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4','m2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4','m2BwmxMv.tp1.now','m2BwmxMv.tp2.now','m2BwmxMv.tp3.now','m2BwmxMv.tp4.now','m2BtMv.tp1','m2BtMv.tp2','m2BtMv.tp3','m2BtMv.tp4','m2BtMv.tp1.wstar','m2BtMv.tp2.wstar','m2BtMv.tp3.wstar','m2BtMv.tp4.wstar','m2BwmxMv.tp1.wstar','m2BwmxMv.tp2.wstar','m2BwmxMv.tp3.wstar','m2BwmxMv.tp4.wstar',									
+									'm2B1st.cas.clu','m2B1stMv.cas.clu','m2Bwmx.cas.clu','m2BwmxMv.cas.clu','m2Bt.cas.clu','m2BtMv.cas.clu','m2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2BwmxMv.tp1.clu','m2BwmxMv.tp2.clu','m2BwmxMv.tp3.clu','m2BwmxMv.tp4.clu','m2BwmxMv.tp1.clu.now','m2BwmxMv.tp2.clu.now','m2BwmxMv.tp3.clu.now','m2BwmxMv.tp4.clu.now','m2BtMv.tp1.clu','m2BtMv.tp2.clu','m2BtMv.tp3.clu','m2BtMv.tp4.clu','m2BtMv.tp1.clu.wstar','m2BtMv.tp2.clu.wstar','m2BtMv.tp3.clu.wstar','m2BtMv.tp4.clu.wstar','m2BwmxMv.tp1.clu.wstar','m2BwmxMv.tp2.clu.wstar','m2BwmxMv.tp3.clu.wstar','m2BwmxMv.tp4.clu.wstar',
 									'm2B1st.cas.adj','m2B1stMv.cas.adj','m2Bwmx.cas.adj','m2BwmxMv.cas.adj','m2Bt.cas.adj','m2BtMv.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj',
 									'm2B1st.cas.cens','m2B1stMv.cas.cens','m2Bwmx.cas.cens','m2BwmxMv.cas.cens','m2Bt.cas.cens','m2BtMv.cas.cens','m2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens',
 									'm2B1st.cas.clu.cens','m2B1stMv.cas.clu.cens','m2Bwmx.cas.clu.cens','m2BwmxMv.cas.clu.cens','m2Bt.cas.clu.cens','m2BtMv.cas.clu.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens',
 									'm2B1st.cas.censp','m2B1stMv.cas.censp','m2Bwmx.cas.censp','m2BwmxMv.cas.censp','m2Bt.cas.censp','m2BtMv.cas.censp','m2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp',
 									'm2B1st.cas.clu.censp','m2B1stMv.cas.clu.censp','m2Bwmx.cas.clu.censp','m2BwmxMv.cas.clu.censp','m2Bt.cas.clu.censp','m2BtMv.cas.clu.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp',
-									'm3.i','m3.ni','m3.nic','m3.nicv','m3.tni','m3.tnic','m3.tnicv','m3.tniv','m3.tnicNo','m3.tnicvNo','m3.tnicMv','m3.tnicMV','m3.tnicNoMV','m3.atnic','m3.atnicNo','m3.atnicMV','m3.atnicNoMV','m3.tnicNoMV','m3.btnic','m3.btnicNo','m3.btnicMV','m3.btnicNoMV',
-									'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.nicv.clu','m3.tni.clu','m3.tnic.clu','m3.tnicv.clu','m3.tniv.clu','m3.tnicNo.clu','m3.tnicvNo.clu','m3.tnicMv.clu','m3.tnicMV.clu','m3.tnicNoMV.clu','m3.atnic.clu','m3.atnicNo.clu','m3.atnicMV.clu','m3.atnicNoMV.clu','m3.btnic.clu','m3.btnicNo.clu','m3.btnicMV.clu','m3.btnicNoMV.clu',
+									'm3.i','m3.ni','m3.nic','m3.nicv','m3.tni','m3.tnic','m3.tnicv','m3.tniv','m3.tnicNo','m3.tnicvNo','m3.tnicMv','m3.tnicMV','m3.tnicNoMV','m3.atnic','m3.atnicNo','m3.atnicMV','m3.atnicNoMV','m3.tnicNoMV','m3.btnic','m3.btnicNo','m3.btnicMV','m3.btnicNoMV','m3.indNo','m3.indNoMV','m3.n3No','m3.n3NoMV','m3.nnrtpiNo','m3.nnrtpiNoMV','m3.indNo.wstar','m3.indNoMV.wstar','m3.n3No.wstar','m3.n3NoMV.wstar','m3.nnrtpiNo.wstar','m3.nnrtpiNoMV.wstar',
+									'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.nicv.clu','m3.tni.clu','m3.tnic.clu','m3.tnicv.clu','m3.tniv.clu','m3.tnicNo.clu','m3.tnicvNo.clu','m3.tnicMv.clu','m3.tnicMV.clu','m3.tnicNoMV.clu','m3.atnic.clu','m3.atnicNo.clu','m3.atnicMV.clu','m3.atnicNoMV.clu','m3.btnic.clu','m3.btnicNo.clu','m3.btnicMV.clu','m3.btnicNoMV.clu','m3.indNo.clu','m3.indNoMV.clu','m3.n3No.clu','m3.n3NoMV.clu','m3.nnrtpiNo.clu','m3.nnrtpiNoMV.clu','m3.indNo.clu.wstar','m3.indNoMV.clu.wstar','m3.n3No.clu.wstar','m3.n3NoMV.clu.wstar','m3.nnrtpiNo.clu.wstar','m3.nnrtpiNoMV.clu.wstar',
 									'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicNo.adj','m3.tnicvNo.adj','m3.tnicMv.adj','m3.tnicMV.adj','m3.tnicNoMV.adj','m3.atnic.adj','m3.atnicNo.adj','m3.atnicMV.adj','m3.atnicNoMV.adj','m3.btnic.adj','m3.btnicNo.adj','m3.btnicMV.adj','m3.btnicNoMV.adj',
 									'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj','m3.tnicvNo.clu.adj','m3.tnicMv.clu.adj','m3.tnicMV.clu.adj','m3.tnicNoMV.clu.adj','m3.atnic.clu.adj','m3.atnicNo.clu.adj','m3.atnicMV.clu.adj','m3.atnicNoMV.clu.adj','m3.btnic.clu.adj','m3.btnicNo.clu.adj','m3.btnicMV.clu.adj','m3.btnicNoMV.clu.adj',									
 									'm3.nic.cens','m3.nicv.cens','m3.tnic.cens','m3.tnicv.cens','m3.tnicvNo.cens','m3.tnicvNo.cens','m3.tnicMv.cens','m3.tnicMV.cens','m3.tnicNoMV.cens','m3.atnic.cens','m3.atnicNo.cens','m3.atnicMV.cens','m3.atnicNoMV.cens','m3.btnic.cens','m3.btnicNo.cens','m3.btnicMV.cens','m3.btnicNoMV.cens',
@@ -8970,7 +8966,7 @@ project.athena.Fisheretal.sensitivity<- function()
 									'm4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp',
 									'm4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp',
 									'm5.tA.tp1','m5.tA.tp2','m5.tA.tp3','m5.tA.tp4',
-									'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu',
+									'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu','m5.tA.tp1.clu.wstar','m5.tA.tp2.clu.wstar','m5.tA.tp3.clu.wstar','m5.tA.tp4.clu.wstar',
 									'm5.tAc.tp1.clu','m5.tAc.tp2.clu','m5.tAc.tp3.clu','m5.tAc.tp4.clu','m5.tAc.tp1.clu.wstar','m5.tAc.tp2.clu.wstar','m5.tAc.tp3.clu.wstar','m5.tAc.tp4.clu.wstar'
 									)
 									
@@ -9478,16 +9474,17 @@ project.athena.Fisheretal.sensitivity<- function()
 	#tmp		<- data.table( factor.legend= factor(tmp), factor=c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.vlNA","ART.su.Y","ART.su.N"))
 	
 	ylab		<- "Proportion of transmissions"
-	stat.select	<- c(	'P','P.e0','P.bias.e0','P.raw','P.raw.e0','P.rawbias.e0'	)
-	stat.select	<- c(	'P'	)
+	stat.select	<- c(	'P','P.e0cp','P.bias.e0cp','P.raw','P.raw.e0cp','P.rawbias.e0cp'	)
 	method.clu	<- 'clu'
 	method.deno	<- 'CLU'
 	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BtMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3ga' & method.dating=='sasky' & grepl('m2BtMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
-	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )	
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3ea' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
-	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3fa' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )	
+	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3fa' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
@@ -9519,13 +9516,14 @@ project.athena.Fisheretal.sensitivity<- function()
 	set(run.tp, NULL, 'v', run.tp[, round(v, d=3)])
 	set(run.tp, NULL, 'l95.bs', run.tp[, round(l95.bs, d=3)])
 	set(run.tp, NULL, 'u95.bs', run.tp[, round(u95.bs, d=3)])
-	subset(run.tp, stat=='P.raw.e0cp', c(t.period.min, t.period.max, stat, method.brl, factor, v, l95.bs, u95.bs))
+	subset(run.tp, stat=='P.raw.e0cp', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
+	subset(run.tp, stat=='P.rawbias.e0cp', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
 	#
 	#
 	ylab		<- "Relative transmissibility"
-	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2Bwmx.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )	
-	stat.select	<- c(	'RI','RI.e0','RI.bias.e0','RI.raw','RI.raw.e0','RI.rawbias.e0'	)
-	stat.select	<- c(	'RI'	)
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	stat.select	<- c(	'RI','RI.e0cp','RI.bias.e0cp','RI.raw','RI.raw.e0cp','RI.rawbias.e0cp'	)
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
@@ -9556,8 +9554,13 @@ project.athena.Fisheretal.sensitivity<- function()
 				cat(paste('\nsave to file',file))
 				ggsave(file=file, w=16,h=5.5)				
 			})
-	subset(run.tp, stat=='RI.raw.e0cp', c(t.period.min, t.period.max, stat, method.brl, factor, v, l95.bs, u95.bs))
-	subset( runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl('clu',method.risk) & stat=='RR.term' )	
+	set(run.tp, NULL, 'v', run.tp[, round(v, d=3)])
+	set(run.tp, NULL, 'l95.bs', run.tp[, round(l95.bs, d=3)])
+	set(run.tp, NULL, 'u95.bs', run.tp[, round(u95.bs, d=3)])	
+	subset(run.tp, stat=='RI.rawbias.e0cp', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
+	subset(run.tp, stat=='RI.raw.e0cp', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
+	
+	subset( runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('wstar',method.risk) & grepl('clu',method.risk) & stat=='RR.term', c(factor.ref, factor, v, l95.bs, u95.bs, method.brl, method.risk) )	
 	#
 	#
 	#
@@ -9994,7 +9997,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	#ylab		<- "Relative transmissibility"
 	#stat.select	<- c(	'RI','RI.e0','RI.ptx','RI.ptx.e0','RI.raw','RI.raw.e0')
 	method.clu	<- 'clu'; method.deno	<- 'CLU'	
-	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3ga' & method.dating=='sasky' & grepl('m5.tA.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tA.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
 	setkey(run.tp, factor)
@@ -10029,10 +10033,18 @@ project.athena.Fisheretal.sensitivity<- function()
 			cat(paste('\nsave to file',file))			
 			ggsave(file=file, w=12,h=4)			
 		})
+	set(run.tp, NULL, 'v', run.tp[, round(v, d=3)])
+	set(run.tp, NULL, 'l95.bs', run.tp[, round(l95.bs, d=3)])
+	set(run.tp, NULL, 'u95.bs', run.tp[, round(u95.bs, d=3)])
+	subset(run.tp, stat=='P.rawbias.e0', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
+	subset(run.tp, stat=='P.raw.e0', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
+	#
+	#
 	ylab		<- "Relative transmissibility"
 	stat.select	<- c(	'RI','RI.e0','RI.bias.e0','RI.raw','RI.raw.e0','RI.rawbias.e0'	)
 	method.clu	<- 'clu'; method.deno	<- 'CLU'	
-	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 2, nchar(factor)-2)])
@@ -10068,8 +10080,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	set(run.tp, NULL, 'v', run.tp[, round(v, d=3)])
 	set(run.tp, NULL, 'l95.bs', run.tp[, round(l95.bs, d=3)])
 	set(run.tp, NULL, 'u95.bs', run.tp[, round(u95.bs, d=3)])
-	subset(run.tp, stat=='RI.e0cp', c(t.period.min, t.period.max, stat, method.brl, factor, v, l95.bs, u95.bs))
-	subset(run.tp, stat=='P.raw.e0cp', c(t.period.min, t.period.max, stat, method.brl, factor, v, l95.bs, u95.bs))
+	subset(run.tp, stat=='RI.rawbias.e0', c(t.period.min, t.period.max, stat, method.brl, factor, v, l95.bs, u95.bs))
+	subset(run.tp, stat=='RI.raw.e0', c(t.period.min, t.period.max, stat, method.brl, factor, v, l95.bs, u95.bs))
 	
 	
 }
