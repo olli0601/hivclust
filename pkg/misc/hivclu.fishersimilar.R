@@ -5214,7 +5214,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			return(ans)	
 		}			
 		cat(paste('\ntables by method', method))		
-		if(substr(method,1,2)=='m2' || substr(method,1,2)=='m4' || substr(method,1,2)=='m5' || (substr(method,1,2)=='m3' && grepl('nic',method)))
+		if(substr(method,1,2)=='m2' || substr(method,1,2)=='m4' || substr(method,1,2)=='m5' || (substr(method,1,2)=='m3' && grepl('nic',method)) || grepl('m3.n3No',method) || grepl('m3.indNo',method) || grepl('m3.nnrtpiNo',method))
 		{
 			
 			tp				<- regmatches(method, regexpr('tp[0-9]', method))
