@@ -709,6 +709,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#	m5 runs
 	#method.risk		<- c(	'm5.tA.tp1','m5.tA.tp2','m5.tA.tp3','m5.tA.tp4','m5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu')
 	method.risk		<- c(	'm5.tAc.tp1.clu','m5.tAc.tp2.clu','m5.tAc.tp3.clu','m5.tAc.tp4.clu','m5.tAc.tp1.clu.wstar','m5.tAc.tp2.clu.wstar','m5.tAc.tp3.clu.wstar','m5.tAc.tp4.clu.wstar')
+	method.risk		<- c(	'm5.tAc.tp1.clu.wstar','m5.tAc.tp2.clu.wstar','m5.tAc.tp3.clu.wstar','m5.tAc.tp4.clu.wstar')
 	#	Acute higher than VL, which we can check after diagnosis
 	#method.risk	<- c( 'm4.Bwmxv','m4.Bwmxv.adj','m4.Bwmxv.censp','m4.Bwmxv.clu.censp','m4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp','m4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp' )
 	#	NRTI+NNRTI puzzle
