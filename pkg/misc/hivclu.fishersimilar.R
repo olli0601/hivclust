@@ -5413,20 +5413,6 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				X.msm[, ART.nnrtpi.no.c.tperiod:= X.msm[, paste(ART.nnrtpi.no.c, t.period, sep='.')]]
 				X.msm			<- subset(X.msm, !is.na(ART.nnrtpi.no.c))
 			}
-			if(grepl('m3.nnrtpi05',method))
-			{
-				factor.ref.v	<- paste('ART.3.NRT.PIB',tp,sep='')
-				risktp.col		<- 'ART.nnrtpi.c.tperiod'
-				risk.col		<- 'ART.nnrtpi.c'
-				YX[, ART.nnrtpi.c.tperiod:= YX[, paste(ART.nnrtpi.c, t.period, sep='.')]]
-				YX				<- subset(YX, !is.na(ART.nnrtpi.c))
-				X.den[, ART.nnrtpi.c.tperiod:= X.den[, paste(ART.nnrtpi.c, t.period, sep='.')]]
-				X.den			<- subset(X.den, !is.na(ART.nnrtpi.c))
-				X.clu[, ART.nnrtpi.c.tperiod:= X.clu[, paste(ART.nnrtpi.c, t.period, sep='.')]]
-				X.clu			<- subset(X.clu, !is.na(ART.nnrtpi.c))
-				X.msm[, ART.nnrtpi.c.tperiod:= X.msm[, paste(ART.nnrtpi.c, t.period, sep='.')]]
-				X.msm			<- subset(X.msm, !is.na(ART.nnrtpi.c))
-			}				
 			if(grepl('m4.Bwmx',method))
 			{
 				#	adjust CD4t -- cannot adjust VL or the independent acute categories
@@ -11129,8 +11115,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m3',method.risk) & grepl('btnic',method.risk) & !grepl('No',method.risk) & !grepl('Mv',method.risk))		save.file	<- 'm3.btnic'
 		if(grepl('m3',method.risk) & grepl('btnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.btnicNo'
 		if(grepl('m3.indNo',method.risk))																					save.file	<- 'm3.indNo'
-		if(grepl('m3.n3No',method.risk))																					save.file	<- 'm3.n3No'
-		if(grepl('m3.nnrtpi05',method.risk))																				save.file	<- 'm3.nnrtpi05'
+		if(grepl('m3.n3No',method.risk))																					save.file	<- 'm3.n3No'		
 		if(grepl('m3.nnrtpiNo',method.risk))																				save.file	<- 'm3.nnrtpiNo'
 		if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 		if(grepl('m5.tA',method.risk))		save.file	<- 'm5.tA'
@@ -11453,8 +11438,7 @@ hivc.prog.betareg.estimaterisks<- function()
 			if(grepl('m3',method.risk) & grepl('btnic',method.risk) & !grepl('No',method.risk) & !grepl('Mv',method.risk))		save.file	<- 'm3.btnic'
 			if(grepl('m3',method.risk) & grepl('btnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.btnicNo'
 			if(grepl('m3.indNo',method.risk))																					save.file	<- 'm3.indNo'
-			if(grepl('m3.n3No',method.risk))																					save.file	<- 'm3.n3No'
-			if(grepl('m3.nnrtpi05',method.risk))																				save.file	<- 'm3.nnrtpi05'
+			if(grepl('m3.n3No',method.risk))																					save.file	<- 'm3.n3No'			
 			if(grepl('m3.nnrtpiNo',method.risk))																				save.file	<- 'm3.nnrtpiNo'			
 			if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 			if(grepl('m5.tA',method.risk))		save.file	<- 'm5.tA'
