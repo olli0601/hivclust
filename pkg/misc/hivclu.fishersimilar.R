@@ -4994,7 +4994,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#
 			if(!grepl('MV', method.risk))
 			{
-				formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'
+				#formula			<- 'score.Y ~ bs(t, degree=1)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'
+				formula			<- 'score.Y ~ bs(t, degree=1)+bs(t.Age, degree=1)+stage+t.RegionHospital-1'
 				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
 				predict.df		<- data.table(	stage=factor('ART.3.NRT.PIB', levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),												
 												t=subset(YX, stage=='ART.3.NRT.PIB')[, mean(t, na.rm=TRUE)], t.Age=subset(YX, stage=='ART.3.NRT.PIB')[, mean(t.Age, na.rm=TRUE)], w=1.)				
@@ -5002,7 +5003,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('MV', method.risk))
 			{
 				YX				<- subset(YX, ART.F=='No' & ART.T=='No' )
-				formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'
+				#formula			<- 'score.Y ~ bs(t, knots=c(2007,2010), degree=2)+bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'
+				formula			<- 'score.Y ~ bs(t, degree=1)+bs(t.Age, degree=1)+stage+t.RegionHospital-1'
 				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
 				predict.df		<- data.table(	stage=factor('ART.3.NRT.PIB', levels=YX[, levels(stage)]), t.RegionHospital= factor('Amst', levels=YX[, levels(t.RegionHospital)]),						
 												t=subset(YX, stage=='ART.3.NRT.PIB')[, mean(t, na.rm=TRUE)], t.Age=subset(YX, stage=='ART.3.NRT.PIB')[, mean(t.Age, na.rm=TRUE)], w=1.)
@@ -5397,7 +5399,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				X.msm[, ART.n3.no.c.tperiod:= X.msm[, paste(ART.n3.no.c, t.period, sep='.')]]
 				X.msm			<- subset(X.msm, !is.na(ART.n3.no.c))
 			}	
-			if(grepl('m3.nnrtpi',method))
+			if(grepl('m3.nnrtpiNo',method))
 			{
 				factor.ref.v	<- paste('ART.3.NRT.PIB',tp,sep='')
 				risktp.col		<- 'ART.nnrtpi.no.c.tperiod'
@@ -5410,7 +5412,21 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				X.clu			<- subset(X.clu, !is.na(ART.nnrtpi.no.c))
 				X.msm[, ART.nnrtpi.no.c.tperiod:= X.msm[, paste(ART.nnrtpi.no.c, t.period, sep='.')]]
 				X.msm			<- subset(X.msm, !is.na(ART.nnrtpi.no.c))
-			}	
+			}
+			if(grepl('m3.nnrtpi05',method))
+			{
+				factor.ref.v	<- paste('ART.3.NRT.PIB',tp,sep='')
+				risktp.col		<- 'ART.nnrtpi.c.tperiod'
+				risk.col		<- 'ART.nnrtpi.c'
+				YX[, ART.nnrtpi.c.tperiod:= YX[, paste(ART.nnrtpi.c, t.period, sep='.')]]
+				YX				<- subset(YX, !is.na(ART.nnrtpi.c))
+				X.den[, ART.nnrtpi.c.tperiod:= X.den[, paste(ART.nnrtpi.c, t.period, sep='.')]]
+				X.den			<- subset(X.den, !is.na(ART.nnrtpi.c))
+				X.clu[, ART.nnrtpi.c.tperiod:= X.clu[, paste(ART.nnrtpi.c, t.period, sep='.')]]
+				X.clu			<- subset(X.clu, !is.na(ART.nnrtpi.c))
+				X.msm[, ART.nnrtpi.c.tperiod:= X.msm[, paste(ART.nnrtpi.c, t.period, sep='.')]]
+				X.msm			<- subset(X.msm, !is.na(ART.nnrtpi.c))
+			}				
 			if(grepl('m4.Bwmx',method))
 			{
 				#	adjust CD4t -- cannot adjust VL or the independent acute categories
@@ -5916,7 +5932,9 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nBoost>0 & ART.nNNRT==0)], 'ART.nnrtpi.no.c', 1L)	
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nBoost==0 & ART.nNNRT==0)], 'ART.nnrtpi.no.c', 2L)	
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 & ART.TDF.EFV.FTC==0)], 'ART.nnrtpi.no.c', 3L)
-	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 & ART.TDF.EFV.FTC==1)], 'ART.nnrtpi.no.c', 4L)	
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 & ART.TDF.EFV.FTC==1)], 'ART.nnrtpi.no.c', 4L)
+	tmp			<- subset(YX.m3, ART.nnrtpi.c==4L)[, min(t)]
+	set(YX.m3, YX.m3[, which(stage=='ART.started' & t<tmp)], 'ART.nnrtpi.no.c', NA_integer_)	
 	if(!return.only.ART)
 	{
 		set(YX.m3, YX.m3[, which(stage=='U')], 'ART.nnrtpi.no.c', 5L)
@@ -6145,7 +6163,29 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	if(return.only.ART)
 		set(YX.m3, NULL, 'ART.ntbstage.c', YX.m3[, factor(ART.ntbstage.c, levels=1:15, labels=c('ART.3.NRT.PIB','ART.pulse.Y', 'ART.I', 'ART.P', 'ART.A', 'ART.l3','ART.g3','ART.3.NRT.PINB','ART.3.NRT.PI.NNRT','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE','ART.3.NRT','ART.3.NNRT.PI','ART.3.PI','ART.3.NNRT'))])	
 	if( YX.m3[, any(is.na(ART.ntbstage.c))] ) stop('unexpected ART.ntbstage.c')
-	
+	#
+	#	number and type of drugs with ART.F and ART.T part of treatment, 
+	#	focus only on NRT+NNRTI Atripla, NRT+PIB, NRT+PINB.
+	#	set all times before first Atripla to NA
+	#
+	#YX.m3[, ART.nnrtpi.c:=NA_integer_]
+	#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nBoost>0 & ART.nNNRT==0)], 'ART.nnrtpi.c', 1L)	
+	#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nBoost==0 & ART.nNNRT==0)], 'ART.nnrtpi.c', 2L)	
+	#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 & ART.TDF.EFV.FTC==0)], 'ART.nnrtpi.c', 3L)
+	#set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 & ART.TDF.EFV.FTC==1)], 'ART.nnrtpi.c', 4L)
+	#tmp			<- subset(YX.m3, ART.nnrtpi.c==4L)[, min(t)]
+	#set(YX.m3, YX.m3[, which(stage=='ART.started' & t<tmp)], 'ART.nnrtpi.c', NA_integer_)
+	#if(!return.only.ART)
+	#{
+	#	set(YX.m3, YX.m3[, which(stage=='U')], 'ART.nnrtpi.c', 5L)
+	#	set(YX.m3, YX.m3[, which(stage=='UAy')], 'ART.nnrtpi.c', 6L)
+	#	set(YX.m3, YX.m3[, which(stage=='UAm')], 'ART.nnrtpi.c', 7L)
+	#	set(YX.m3, YX.m3[, which(stage=='Diag')], 'ART.nnrtpi.c', 8L)
+	#	set(YX.m3, NULL, 'ART.nnrtpi.c', YX.m3[, factor(ART.nnrtpi.c, levels=1:8, labels=c('ART.3.NRT.PIB','ART.3.NRT.PINB','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE','U','UAy','UAm','Diag'))])
+	#}
+	#if(return.only.ART)
+	#	set(YX.m3, NULL, 'ART.nnrtpi.c', YX.m3[, factor(ART.nnrtpi.c, levels=1:4, labels=c('ART.3.NRT.PIB','ART.3.NRT.PINB','ART.3.NRT.NNRT','ART.3.ATRIPLALIKE'))])
+	#gc()
 	#
 	#	add mx viral load during infection window
 	#
@@ -9754,19 +9794,61 @@ project.athena.Fisheretal.sensitivity<- function()
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicMV.adj') & method.recentctime=='2011' & stat=='RI', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.censp') & stat=='RR' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	#               factor            v       l95.bs      u95.bs
- 	#1:     ART.3.NNRT.PI  0.004819381  0.001135436  0.01076624
- 	#2:         ART.3.NRT  1.897829052  0.343581554  4.14778475
- 	#3:    ART.3.NRT.NNRT 27.969985894 21.379095396 34.96015325
- 	#4:      ART.3.NRT.PI  4.646057814  3.428365308  6.03008163
- 	#5: ART.3.NRT.PI.NNRT  0.422662093  0.002927376  1.21715586
- 	#6:             ART.A  0.147392876  0.002721671  0.44737826
- 	#7:             ART.F 11.811050551  8.449937305 15.38878826
- 	#8:             ART.I  8.703169288  5.981254664 11.74415353
- 	#9:             ART.P  1.997771041  0.995860143  3.22013188
-	#10:            ART.g3  3.864518285  1.578079745  6.73386603
-	#11:            ART.l3  3.340348648  1.576520873  5.59306898
-	#12:       ART.pulse.Y  1.187112915  0.555822127  1.85604866
+	
+	
+	subset(runs.risk,  method.risk%in%c('m3.indNo.clu') & stat=='RR.term' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#   factor.ref      factor         v    l95.bs    u95.bs  method.risk method.dating method.nodectime method.brl
+	#1:     ART.OK       ART.A 0.9474850 0.5636160 1.9077089 m3.indNo.clu         sasky              any        3da
+	#2:     ART.OK       ART.F 0.7227126 0.5660467 0.9204357 m3.indNo.clu         sasky              any        3da
+	#3:     ART.OK       ART.I 1.0404561 0.8401480 1.2936334 m3.indNo.clu         sasky              any        3da
+	#4:     ART.OK       ART.P 0.9917019 0.5592124 1.3880922 m3.indNo.clu         sasky              any        3da
+	#5:     ART.OK       ART.T 0.7644086 0.6130632 0.9357725 m3.indNo.clu         sasky              any        3da
+	#6:     ART.OK ART.pulse.Y 0.9035933 0.6564686 1.2595267 m3.indNo.clu         sasky              any        3da
+	#TODO	these just don t make sense?
+	subset(runs.risk,  method.risk%in%c('m3.indNo.clu') & stat=='RR.term.ptx' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#   factor.ref      factor          v     l95.bs     u95.bs  method.risk method.dating method.nodectime method.brl
+	#1:     ART.OK       ART.A 0.04780971 0.02843984 0.09626222 m3.indNo.clu         sasky              any        3da
+	#2:     ART.OK       ART.F 0.76651399 0.60035309 0.97622050 m3.indNo.clu         sasky              any        3da
+	#3:     ART.OK       ART.I 1.12368458 0.90735340 1.39711414 m3.indNo.clu         sasky              any        3da
+	#4:     ART.OK       ART.P 0.64609288 0.36432633 0.90434074 m3.indNo.clu         sasky              any        3da
+	#5:     ART.OK       ART.T 0.83158733 0.66694116 1.01801116 m3.indNo.clu         sasky              any        3da
+	#6:     ART.OK ART.pulse.Y 0.64064214 0.46543220 0.89299676 m3.indNo.clu         sasky              any        3da
+	
+	subset(runs.risk,  method.risk%in%c('m3.n3No.clu') & stat=='RR.term' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#    factor.ref    factor        v    l95.bs   u95.bs method.risk method.dating method.nodectime method.brl
+	#1: ART.3.NRT.X ART.3.NRT 1.300581 0.7592148 1.501209 m3.n3No.clu         sasky              any        3da
+	#2: ART.3.NRT.X    ART.g3 1.230400 0.8519996 1.504342 m3.n3No.clu         sasky              any        3da
+	#3: ART.3.NRT.X    ART.l3 1.229027 0.8323937 1.601461 m3.n3No.clu         sasky              any        3da
+	subset(runs.risk,  method.risk%in%c('m3.n3No.clu') & stat=='RI.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#   factor.ref      factor         v    l95.bs   u95.bs method.risk method.dating method.nodectime method.brl
+	#1:       None   ART.3.NRT 1.0560663 0.1821066 2.143434 m3.n3No.clu         sasky              any        3da
+	#2:       None ART.3.NRT.X 0.9382925 0.8398952 1.038734 m3.n3No.clu         sasky              any        3da
+	#3:       None      ART.g3 0.8625070 0.4739457 1.326276 m3.n3No.clu         sasky              any        3da
+	#4:       None      ART.l3 4.4245579 1.9331924 7.435107 m3.n3No.clu         sasky              any        3da
+
+	subset(runs.risk,  method.risk%in%c('m3.nnrtpiNo.clu') & stat=='RI.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime ) )
+	#factor.ref            factor         v     l95.bs   u95.bs     method.risk method.dating method.nodectime
+	#1:       None ART.3.ATRIPLALIKE 1.0028031 0.79285177 1.246346 m3.nnrtpiNo.clu         sasky              any
+	#2:       None    ART.3.NRT.NNRT 1.1240384 0.86198174 1.329190 m3.nnrtpiNo.clu         sasky              any
+	#3:       None     ART.3.NRT.PIB 0.9078287 0.70765470 1.143292 m3.nnrtpiNo.clu         sasky              any
+	#4:       None    ART.3.NRT.PINB 0.4058141 0.06903461 0.871042 m3.nnrtpiNo.clu         sasky              any
+	subset(runs.risk,  method.risk%in%c('m3.nnrtpiNo.clu') & stat=='RI.rawbias.e0' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime ) )
+	#factor.ref            factor         v     l95.bs    u95.bs     method.risk method.dating method.nodectime
+	#1:       None ART.3.ATRIPLALIKE 0.9871550 0.74358730 1.3022838 m3.nnrtpiNo.clu         sasky              any
+	#2:       None    ART.3.NRT.NNRT 1.1064985 0.91678606 1.2437641 m3.nnrtpiNo.clu         sasky              any
+	#3:       None     ART.3.NRT.PIB 0.8936626 0.67621351 1.1873141 m3.nnrtpiNo.clu         sasky              any
+	#4:       None    ART.3.NRT.PINB 0.3994816 0.06810999 0.8608317 m3.nnrtpiNo.clu         sasky              any
+	#TODO	why does PINB not increase ???
+	subset(runs.risk,  method.risk%in%c('m3.nnrtpiNo.clu') & stat=='RR.term' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime ) )
+	#factor.ref            factor         v    l95.bs   u95.bs     method.risk method.dating method.nodectime
+	#1: ART.3.ATRIPLALIKE    ART.3.NRT.NNRT 1.1481775 0.9189914 1.484602 m3.nnrtpiNo.clu         sasky              any
+	#2: ART.3.ATRIPLALIKE     ART.3.NRT.PIB 0.9744618 0.7723264 1.235007 m3.nnrtpiNo.clu         sasky              any
+	#3: ART.3.ATRIPLALIKE    ART.3.NRT.PINB 1.2214958 0.6467501 1.703156 m3.nnrtpiNo.clu         sasky              any
+	subset(runs.risk,  method.risk%in%c('m3.nnrtpiNo.clu') & stat=='RR.term.ptx' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime ) )
+	#factor.ref            factor         v    l95.bs   u95.bs     method.risk method.dating method.nodectime
+	#1: ART.3.ATRIPLALIKE    ART.3.NRT.NNRT 0.8865135 0.7095578 1.146268 m3.nnrtpiNo.clu         sasky              any
+	#2: ART.3.ATRIPLALIKE     ART.3.NRT.PIB 1.1414083 0.9046427 1.446591 m3.nnrtpiNo.clu         sasky              any
+	#3: ART.3.ATRIPLALIKE    ART.3.NRT.PINB 1.3288631 0.7035983 1.852860 m3.nnrtpiNo.clu         sasky              any
 
 	load('/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140603/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3ga_denomCLU_model3_m3.btnicNoMV.clu.R')
 	subset(ans$risk, stat=='P.e0cp')
@@ -11048,6 +11130,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m3',method.risk) & grepl('btnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.btnicNo'
 		if(grepl('m3.indNo',method.risk))																					save.file	<- 'm3.indNo'
 		if(grepl('m3.n3No',method.risk))																					save.file	<- 'm3.n3No'
+		if(grepl('m3.nnrtpi05',method.risk))																				save.file	<- 'm3.nnrtpi05'
 		if(grepl('m3.nnrtpiNo',method.risk))																				save.file	<- 'm3.nnrtpiNo'
 		if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 		if(grepl('m5.tA',method.risk))		save.file	<- 'm5.tA'
@@ -11371,6 +11454,7 @@ hivc.prog.betareg.estimaterisks<- function()
 			if(grepl('m3',method.risk) & grepl('btnic',method.risk) & grepl('No',method.risk))									save.file	<- 'm3.btnicNo'
 			if(grepl('m3.indNo',method.risk))																					save.file	<- 'm3.indNo'
 			if(grepl('m3.n3No',method.risk))																					save.file	<- 'm3.n3No'
+			if(grepl('m3.nnrtpi05',method.risk))																				save.file	<- 'm3.nnrtpi05'
 			if(grepl('m3.nnrtpiNo',method.risk))																				save.file	<- 'm3.nnrtpiNo'			
 			if(grepl('m4.Bwmx',method.risk))	save.file	<- 'm4.Bwmx'
 			if(grepl('m5.tA',method.risk))		save.file	<- 'm5.tA'
