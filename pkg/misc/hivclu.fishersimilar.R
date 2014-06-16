@@ -5919,7 +5919,7 @@ project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups<- function(YX.m3, df.
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI>0 & ART.nBoost==0 & ART.nNNRT==0)], 'ART.nnrtpi.no.c', 2L)	
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 & ART.TDF.EFV.FTC==0)], 'ART.nnrtpi.no.c', 3L)
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & ART.pulse=='No' &  ART.I=='No'  & is.na(ART.nnrtpi.no.c) & ART.nDrug==3 & ART.nNRT>0 & ART.nPI==0 & ART.nNNRT>0 & ART.TDF.EFV.FTC==1)], 'ART.nnrtpi.no.c', 4L)
-	tmp			<- subset(YX.m3, ART.nnrtpi.c==4L)[, min(t)]
+	tmp			<- subset(YX.m3, ART.nnrtpi.no.c==4L)[, min(t)]
 	set(YX.m3, YX.m3[, which(stage=='ART.started' & t<tmp)], 'ART.nnrtpi.no.c', NA_integer_)	
 	if(!return.only.ART)
 	{
