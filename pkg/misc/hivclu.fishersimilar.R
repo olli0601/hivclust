@@ -5255,6 +5255,12 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				risktp.col		<- 'CD4b.tperiod'
 				risk.col		<- 'CD4b'
 			}			
+			if(grepl('m2Cwmx',method))
+			{
+				factor.ref.v	<- paste('ART.suA.Y',tp,sep='')
+				risktp.col		<- 'CD4t.tperiod'
+				risk.col		<- 'CD4t'
+			}						
 			if(grepl('m3',method) & grepl('nic',method) & !grepl('tnic',method))
 			{
 				factor.ref.v	<- paste('ART.3',tp,sep='')
@@ -8123,6 +8129,8 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	#	treat missing acute separately
 	YX.m2[, CD4b:=CD4a]
 	set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4b', 'UAna')	
+	#	set UAna for CD4t
+	set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4t', 'UAna')
 	#
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
@@ -11103,6 +11111,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m2Bt',method.risk))		save.file	<- 'm2Bt'
 		if(grepl('m2wmx',method.risk))		save.file	<- 'm2wmx'
 		if(grepl('m2Bwmx',method.risk))		save.file	<- 'm2Bwmx'
+		if(grepl('m2Cwmx',method.risk))		save.file	<- 'm2Cwmx'
 		if(grepl('m3.i',method.risk) & !grepl('m3.ni',method.risk))															save.file	<- 'm3.i'	
 		if(grepl('m3',method.risk) & grepl('ni',method.risk) & !grepl('nic',method.risk))									save.file	<- 'm3.ni'
 		if(grepl('m3',method.risk) & grepl('tni',method.risk) & !grepl('tnic',method.risk))									save.file	<- 'm3.tni'
@@ -11349,7 +11358,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(!is.null(X.tables))
 	{
 		plot.file.varyvl		<- NA	#paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
-		if(any(sapply(c('m2wmx','m2Bwmx'), grepl, x=method.risk)))
+		if(any(sapply(c('m2wmx','m2Bwmx','m2Cwmx'), grepl, x=method.risk)))
 			YX					<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )			
 		if(any(sapply(c('m21st','m2B1st'), grepl, x=method.risk)))
 			YX					<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl)
@@ -11370,7 +11379,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(substr(method.risk,1,2)=='m2')
 		{
 			plot.file.varyvl	<- NA	#paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
-			if(any(sapply(c('m2wmx','m2Bwmx'), grepl, x=method.risk)))
+			if(any(sapply(c('m2wmx','m2Bwmx','m2Cwmx'), grepl, x=method.risk)))
 			{
 				YX					<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )
 				X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.clu, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
@@ -11426,6 +11435,7 @@ hivc.prog.betareg.estimaterisks<- function()
 			if(grepl('m2Bt',method.risk))		save.file	<- 'm2Bt'
 			if(grepl('m2wmx',method.risk))		save.file	<- 'm2wmx'
 			if(grepl('m2Bwmx',method.risk))		save.file	<- 'm2Bwmx'
+			if(grepl('m2Cwmx',method.risk))		save.file	<- 'm2Cwmx'
 			if(grepl('m3.i',method.risk) & !grepl('m3.ni',method.risk))															save.file	<- 'm3.i'	
 			if(grepl('m3',method.risk) & grepl('ni',method.risk) & !grepl('nic',method.risk))									save.file	<- 'm3.ni'
 			if(grepl('m3',method.risk) & grepl('tni',method.risk) & !grepl('tnic',method.risk))									save.file	<- 'm3.tni'
