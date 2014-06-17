@@ -4574,7 +4574,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				set(X.clu, NULL, risktp.col, paste( X.clu[, risk.col, with=FALSE][[1]], X.clu[, t.period], sep='.'))
 				set(X.msm, NULL, risktp.col, paste( X.msm[, risk.col, with=FALSE][[1]], X.msm[, t.period], sep='.'))								
 			}				
-			if(grepl('m3.n3mx',method) & !grepl('No',method.risk))
+			if(grepl('m3.n3mx',method) & !grepl('No',method))
 			{
 				factor.ref.v	<- paste('ART.3.2NRT.X',tp,sep='')
 				risktp.col		<- 'ART.n3mx.c.tperiod'
