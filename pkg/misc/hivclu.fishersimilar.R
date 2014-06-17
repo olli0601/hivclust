@@ -10719,7 +10719,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(grepl('m2Cwmx',method.risk))		save.file	<- 'm2Cwmx'
 		if(grepl('m3.n3mx',method.risk) & !grepl('No',method.risk))								save.file	<- 'm3.n3mx'
 		if(grepl('m3.ind',method.risk) & !grepl('No',method.risk))								save.file	<- 'm3.ind'
-		if(grepl('m3.indmx',method.risk) & grepl('No',method.risk))								save.file	<- 'm3.indNo'
+		if(grepl('m3.ind',method.risk) & grepl('No',method.risk))								save.file	<- 'm3.indNo'
 		if(grepl('m3.indmx',method.risk) & !grepl('No',method.risk))							save.file	<- 'm3.indmx'
 		if(grepl('m3.indmx',method.risk) & grepl('No',method.risk))								save.file	<- 'm3.indmxNo'
 		if(grepl('m3.nnrtpiNo',method.risk))													save.file	<- 'm3.nnrtpiNo'
