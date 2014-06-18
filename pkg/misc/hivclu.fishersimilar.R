@@ -3033,7 +3033,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 	setnames(tmp, 'v', 'PTx')
 	tmp			<- merge( tmp, subset(unique(risk.df), select=c(risk, factor, PYe0, PYe5, PYe7, PYe3, PYe0cp, PYe5cp, PYe7cp, PYe3cp)), by=c('risk','factor'))
 	adj.bs		<- merge(tmp, adj.bs, by=c('bs','risk','factor'))		
-	adj.bs		<- adj.bs[, list(	bs=bs, risk=risk, factor=factor,
+	adj.bs		<- adj.bs[, list(	risk=risk, factor=factor,
 					cens.e0= 1, cens.e5= 1, cens.e7= 1, cens.e3= 1,
 					cens.e0cp= CPYe0cp/PYs, cens.e5cp= CPYe5cp/PYs, cens.e7cp= CPYe7cp/PYs, cens.e3cp= CPYe3cp/PYs,
 					bias.e0= PYe0/PYs, bias.e5= PYe5/PYs, bias.e7= PYe7/PYs, bias.e3= PYe3/PYs,
@@ -3043,7 +3043,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 					P.raw.e0= PYe0/sum(PYe0), P.raw.e5= PYe5/sum(PYe5), P.raw.e7= PYe7/sum(PYe7), P.raw.e3= PYe3/sum(PYe3), P.raw.e0cp= PYe0cp/sum(PYe0cp), P.raw.e5cp= PYe5cp/sum(PYe5cp), P.raw.e7cp= PYe7cp/sum(PYe7cp), P.raw.e3cp= PYe3cp/sum(PYe3cp),
 					P.bias= PYs/sum(PYs), P.rawbias= PYs/sum(PYs), 
 					P.bias.e0= PYe0/sum(PYe0), P.bias.e5= PYe5/sum(PYe5), P.bias.e7= PYe7/sum(PYe7), P.bias.e3= PYe3/sum(PYe3), P.bias.e0cp= PYe0cp/sum(PYe0cp), P.bias.e5cp= PYe5cp/sum(PYe5cp), P.bias.e7cp= PYe7cp/sum(PYe7cp), P.bias.e3cp= PYe3cp/sum(PYe3cp),
-					P.rawbias.e0= PYe0/sum(PYe0), P.rawbias.e5= PYe5/sum(PYe5), P.rawbias.e7= PYe7/sum(PYe7), P.rawbias.e3= PYe3/sum(PYe3), P.rawbias.e0cp= PYe0cp/sum(PYe0cp), P.rawbias.e5cp= PYe5cp/sum(PYe5cp), P.rawbias.e7cp= PYe7cp/sum(PYe7cp), P.rawbias.e3cp= PYe3cp/sum(PYe3cp))]
+					P.rawbias.e0= PYe0/sum(PYe0), P.rawbias.e5= PYe5/sum(PYe5), P.rawbias.e7= PYe7/sum(PYe7), P.rawbias.e3= PYe3/sum(PYe3), P.rawbias.e0cp= PYe0cp/sum(PYe0cp), P.rawbias.e5cp= PYe5cp/sum(PYe5cp), P.rawbias.e7cp= PYe7cp/sum(PYe7cp), P.rawbias.e3cp= PYe3cp/sum(PYe3cp)), by='bs']
 	#
 	# 	add P and N
 	#
@@ -3085,6 +3085,8 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.seq, for
 							P.rawbias.e0cp=v*bias.e0cp / sum(v*bias.e0cp), P.rawbias.e5cp=v*bias.e5cp / sum(v*bias.e5cp), P.rawbias.e7cp=v*bias.e7cp / sum(v*bias.e7cp), P.rawbias.e3cp=v*bias.e3cp / sum(v*bias.e3cp)), by='bs'],
 			id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref','bs'), variable.name='stat', value.name='v' )
 	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))
+	#	set missing values in N P to zero
+	set(risk.ans.bs, risk.ans.bs[, which(is.na(v) & (grepl('P',stat) | grepl('N',stat)))], 'v', 0.)
 	#	RI and RI.ptx, adjusted by sampling bias and censoring
 	tmp			<- subset( melt(adj.bs, id.vars=c('bs','risk','factor'), variable.name='stat', value.name='p'), !grepl('cens',stat) & !grepl('^bias',stat)	)	
 	tmp			<- merge( subset(risk.ans.bs, grepl('P.',stat) | stat=='P' ), tmp, by=c('bs','risk','factor','stat'))
@@ -4201,9 +4203,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			set(YX, NULL, 'stage', factor(as.character( YX[['ART.n3mx.c']] )))
 			YX				<- subset(YX, !is.na(stage))
 			#
+			sigma.formula	<- '~ 1'
 			if(!grepl('MV', method.risk))
 			{
-				formula			<- 'score.Y ~ stage-1'
+				formula			<- 'score.Y ~ stage-1'				
 				include.colnames<- c('score.Y','w','stage')
 				predict.df		<- data.table( 	stage=factor('ART.3.2NRT.X', levels=YX[, levels(stage)]), w=1.	)				
 			}										
@@ -4217,7 +4220,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- data.table( risk='stage', factor=YX[, levels(stage)], risk.ref='stage', factor.ref='ART.3.2NRT.X' )			
 			risk.df[, coef:=paste(risk.df[,risk],risk.df[,factor],sep='')]
 			risk.df[, coef.ref:=paste(risk.df[,risk.ref],risk.df[,factor.ref],sep='')]
-			if(!grepl('MV', method.risk))
+			if(!grepl('MV', method.risk))	
 			{
 				setkey(risk.df, risk, factor)
 				risk.df		<- merge(risk.df, unique(risk.df)[, {
@@ -4240,6 +4243,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}						
 			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0), sigma.formula=sigma.formula)
+			
 			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
 		}
 		if(grepl('m3.nnrtpiNo',method.risk))
@@ -4442,7 +4447,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				risk.col		<- ifelse(nchar(tp), 'tA.tperiod', 'tA')										
 			if(grepl('Ac',method.risk))
 				risk.col		<- ifelse(nchar(tp), 'tAc.tperiod', 'tAc')				
-			factor.ref		<- paste('t<=45', tp, sep='')	
+			factor.ref		<- paste('t<=25', tp, sep='')	
 			set(YX, NULL, 'stage', factor(as.character(YX[[risk.col]])))
 			#
 			if(!grepl('Mv', method.risk))
@@ -7869,11 +7874,11 @@ project.athena.Fisheretal.sensitivity<- function()
 	require(ape)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_140611",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140616",sep='/')		
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140611",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140616",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
@@ -7898,6 +7903,7 @@ project.athena.Fisheretal.sensitivity<- function()
 									'm4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp',
 									'm5.tA.tp1','m5.tA.tp2','m5.tA.tp3','m5.tA.tp4',
 									'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu','m5.tA.tp1.clu.wstar','m5.tA.tp2.clu.wstar','m5.tA.tp3.clu.wstar','m5.tA.tp4.clu.wstar',
+									'm5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4','m5.tAc.tp1.wstar','m5.tAc.tp2.wstar','m5.tAc.tp3.wstar','m5.tAc.tp4.wstar',
 									'm5.tAc.tp1.clu','m5.tAc.tp2.clu','m5.tAc.tp3.clu','m5.tAc.tp4.clu','m5.tAc.tp1.clu.wstar','m5.tAc.tp2.clu.wstar','m5.tAc.tp3.clu.wstar','m5.tAc.tp4.clu.wstar'
 									)
 									
