@@ -1745,6 +1745,8 @@ gamlss.centiles.get<- function(obj, xvar, cent = c(2.5, 97.5), with.ordering=TRU
 project.athena.Fisheretal.t2inf<- function(indircov, infilecov, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, plot.file=NULL)
 {
 	require(MASS)
+	require(grid)
+	require(ggplot2)
 	
 	load(paste(indircov,'/',infilecov,'.R',sep=''))		
 	#	adjust Acute=='Maybe' by NegT 
