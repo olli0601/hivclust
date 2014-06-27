@@ -1746,7 +1746,9 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, adjust.AcuteByNe
 {
 	require(MASS)
 	require(grid)
+	require(reshape2)
 	require(ggplot2)
+	require(gamlss)	
 	
 	load(paste(indircov,'/',infilecov,'.R',sep=''))		
 	#	adjust Acute=='Maybe' by NegT 
