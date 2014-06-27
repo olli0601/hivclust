@@ -769,14 +769,6 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		legend('topright', fill=rainbow(length(ml.gam.one)), bty='n', border=NA, legend=paste('GA mixture cmpnts',seq_along(ml.gam.one)))
 		dev.off()		
 	}
-	test		<- list(	exp= ad.test(subset(Y.rawbrl.linked, b4T=='both')[,brl], pexp, rate=mle.exp$estimate['rate']),								
-							gamma= ad.test(subset(Y.rawbrl.linked, b4T=='both')[,brl], pgamma, shape=mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'])		)
-	cat(paste('\nAD test for MLE fit in distribution for both before ART'))
-	print( sapply(test, '[[', 'p.value') )	
-	test		<- list(	exp= ad.test(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], pexp, rate=mle.exp.one$estimate['rate']),								
-							gamma= ad.test(subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brl], pgamma, shape=mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'])		)
-	cat(paste('\nAD test for MLE fit in distribution for one before ART'))
-	print( sapply(test, '[[', 'p.value') )	
 	#
 	#	fit Gamma for b4T==both and b4T one in ART
 	#
@@ -1137,9 +1129,49 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	}
 	cat(paste('\nnumber of rows with NA score (will be discarded, undeterminate), n=',nrow(subset(missed, is.na(score.Y)))  ))
 	cat(paste('\nproportion of rows with NA score (will be discarded, undeterminate), p=',nrow(subset(missed, is.na(score.Y)))/nrow(missed)  ))
+	#
 	setkey(missed, FASTASampleCode, t.FASTASampleCode)
 	missed		<- unique(missed)
-	missed		<- subset(missed, !is.na(score.Y))			
+			
+
+	if(!is.na(plot.file))
+	{
+		missed[, c2:= coal.after.t.NegT]
+		set(missed, missed[, which(c2>0.999 | c2<0.001)],'c2', NA_real_)
+		require(betareg)		
+		tmp			<- betareg('c2 ~ brl', data=as.data.frame(subset(missed, select=c(c2, brl))))
+		summary(tmp)
+		#Pseudo R-squared: 0.04968
+		tmp$predict	<- predict(tmp, type='response')
+		set(missed, as.integer(names(tmp$predict)), 'c.b', tmp$predict)
+		tmp$predict	<- predict(tmp, type='quantile', at=0.025)
+		set(missed, as.integer(names(tmp$predict)), 'c.sl', tmp$predict)
+		tmp$predict	<- predict(tmp, type='quantile', at=0.975)
+		set(missed, as.integer(names(tmp$predict)), 'c.su', tmp$predict)
+		
+		ggplot(missed, aes(y=coal.after.t.NegT, x=brl)) + geom_point(size=0.7) + 
+				geom_line(aes(x=brl, y=c.b), data=subset(missed, !is.na(c2)), col='blue') +
+				geom_ribbon(aes(x=brl, ymin= c.sl, ymax= c.su, linetype=NA), alpha=0.2, data=subset(missed, !is.na(c2))) +
+				labs(y="                Posterior probability that\n                coalesence is compatible with\n                direct HIV transmission", x="       Patristic distance\n       between transmitter and recipient sequence") + 				 
+				theme(axis.title.x=element_text(hjust=0), axis.title.y=element_text(hjust=0))
+		ggsave(paste(substr(plot.file,1,nchar(plot.file)-4),'correlation.pdf',sep=''), w=5, h=5)
+	}	
+	if(!is.na(plot.file))
+	{
+		missed[, cutoff:= 'posterior probability\n > 0.5']
+		set(missed, missed[, which(coal.after.t.NegT<=cut.date)], 'cutoff', 'posterior probability\n <= 0.5')
+		#set(missed, missed[, which(score.brl.TN>=cut.brl)], 'cutoff', 'GD > GD(Unlinked-by-Death)')
+		tmp		<- missed[, list( FASTASampleCode=FASTASampleCode[which.min(brl)], t.FASTASampleCode=t.FASTASampleCode[which.min(brl)] ), by=c('Patient','t.Patient')]
+		tmp		<- merge(subset(tmp, select=c(FASTASampleCode, t.FASTASampleCode)), missed, by=c('FASTASampleCode','t.FASTASampleCode'))
+		setkey(tmp, Patient, t.Patient)
+		set(tmp, NULL, 'cutoff', tmp[, factor(cutoff, levels=c('posterior probability\n > 0.5', 'posterior probability\n <= 0.5'))])
+		ggplot(tmp, aes(x= brl, fill=cutoff)) + labs(x="Patristic distance", y='Number putative transmission pairs') +
+				scale_fill_brewer(name='coalesence compatible with\n direct HIV transmission', palette='Paired') + theme(legend.justification=c(1,1), legend.position=c(1,1)) +
+				geom_histogram(binwidth=0.002)	+ theme(legend.key.size=unit(8,'mm'))			
+		cat(paste('\nsave to file',plot.file))
+		ggsave(file=plot.file, w=5,h=5)			
+	}
+	missed		<- subset(missed, !is.na(score.Y))				
 	#	not any longer needed because zero score.brl.TPp is now always NA or ZERO
 	#if(1)
 	#{
@@ -1147,26 +1179,7 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	#	missed	<- subset(missed, score.brl.TPp>0)
 	#}
 	#	effect on distribution of branch lengths
-	if(!is.na(plot.file))
-	{
-		missed[, cutoff:= 'Study pairs']
-		set(missed, missed[, which(coal.after.t.NegT<=cut.date)], 'cutoff', 'P( Coalesence outside transmitter ) > 0.5')
-		set(missed, missed[, which(score.brl.TN>=cut.brl)], 'cutoff', 'GD > GD(Unlinked-by-Death)')
-		tmp		<- missed[, list( FASTASampleCode=FASTASampleCode[which.min(brl)], t.FASTASampleCode=t.FASTASampleCode[which.min(brl)] ), by=c('Patient','t.Patient')]
-		tmp		<- merge(subset(tmp, select=c(FASTASampleCode, t.FASTASampleCode)), missed, by=c('FASTASampleCode','t.FASTASampleCode'))
-		setkey(tmp, Patient, t.Patient)
-		set(tmp, NULL, 'cutoff', tmp[, factor(cutoff, levels=c('Study pairs', 'P( Coalesence outside transmitter ) > 0.5', 'GD > GD(Unlinked-by-Death)'))])
-		ggplot(tmp, aes(x= brl, fill=cutoff)) + labs(x="Genetic distance", y='Clustering patient pairs with at least one recently infected MSM') +
-			scale_fill_brewer(palette='Set1') + theme(legend.justification=c(1,1), legend.position=c(1,1)) +
-			geom_histogram(binwidth=0.002)		
-		cat(paste('\nsave to file',plot.file))
-		ggsave(file=plot.file, w=6,h=6)	
-		#pdf(file=paste( substr(plot.file,1,nchar(plot.file)-4),'ptvspn.pdf',sep='' ), 5, 5)
-		#hist( subset(missed, class=='pt')[, brl], breaks=seq(0,0.5,0.002), col='green')		
-		#hist( subset(missed, class=='pn')[, brl], breaks=seq(0,0.5,0.002), border=NA, col='red', add=TRUE)
-		#legend('topright',bty='n',border=NA,fill=c('green','red'),legend=c('pt','pn'))
-		#dev.off()
-	}
+	
 	#
 	missed		<- subset( missed, select=c(cluster, Patient, FASTASampleCode, t.Patient, t.FASTASampleCode, score.Y, class))
 	cat(paste('\n#intervals with score.Y>0, n=',  nrow(subset(missed, score.Y>0))))
@@ -1696,7 +1709,40 @@ project.athena.Fisheretal.select.transmitters.by.B4WindowAnyPos.MinBrl<- functio
 	subset( ans, select=c(cluster, Patient, FASTASampleCode, t.Patient, t.FASTASampleCode) )	
 }
 ######################################################################################
-project.athena.Fisheretal.t2inf<- function(indircov, infilecov, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2)
+gamlss.centiles.get<- function(obj, xvar, cent = c(2.5, 97.5), with.ordering=TRUE, mu=NULL ) 
+{
+	fname 	<- obj$family[1]
+	qfun 	<- paste("q", fname, sep = "")	
+	if(with.ordering)
+		xvaro	<- order(xvar)
+	if(!with.ordering)
+		xvaro	<- seq_along(xvar)
+	if(is.null(mu))
+		mu		<- fitted(obj, "mu")[xvaro]
+	oxvar 	<- xvar[xvaro]	
+	lpar 	<- length(obj$parameters)
+	ii 		<- 0
+	ans	<- data.table(x=oxvar)
+	for (var in cent) {
+		if (lpar == 1) {
+			newcall <- call(qfun, var/100, mu = mu)
+		}
+		else if (lpar == 2) {
+			newcall <- call(qfun, var/100, mu = mu, sigma = fitted(obj, "sigma")[xvaro])
+		}
+		else if (lpar == 3) {
+			newcall <- call(qfun, var/100, mu = mu, sigma = fitted(obj, "sigma")[xvaro], nu = fitted(obj, "nu")[xvaro])
+		}
+		else {
+			newcall <- call(qfun, var/100, mu = mu, sigma = fitted(obj, "sigma")[xvaro], nu = fitted(obj, "nu")[xvaro], tau = fitted(obj, "tau")[xvaro])
+		}
+		ii <- ii + 1
+		set(ans, NULL, as.character(paste('q',var,sep='')), eval(newcall))						
+	}
+	ans
+}
+######################################################################################
+project.athena.Fisheretal.t2inf<- function(indircov, infilecov, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, plot.file=NULL)
 {
 	require(MASS)
 	
@@ -1719,9 +1765,15 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, adjust.AcuteByNe
 					dt.CD4=as.numeric(difftime(PosCD4_T1, AnyPos_T1, units='days'))/365,
 					AnyPos_a=as.numeric(difftime(AnyPos_T1, DateBorn, units='days'))/365,
 					AnyPos_y=hivc.db.Date2numeric(AnyPos_T1)), by='Patient']
-	
+	#	seroconverters
 	df.sc.negT		<- merge(df.sc.negT, tmp, by='Patient')
+	#	seroconverters with acute infection at diagnosis
+	df.scay.cd4		<- subset( df.sc.negT, isAcute=='Yes' & mp.NegT>0 & AnyPos_y>adjust.AnyPos_y & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+	#	seroconverters with acute infection at diagnosis
+	df.scaym.cd4	<- subset( df.sc.negT, ( isAcute=='Maybe' ) & mp.NegT>0 & AnyPos_y>adjust.AnyPos_y & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)	
+	#	seroconverters with chronic infection at diagnosis
 	df.scchr.negT	<- subset( df.sc.negT, isAcute=='No' & AnyPos_y>adjust.AnyPos_y)
+	#	seroconverters with chronic infection at diagnosis and 1st CD4 count within 1 year after diagnosis and before ART
 	df.scchr.cd4	<- subset( df.scchr.negT, dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
 	
 	
@@ -1729,7 +1781,111 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, adjust.AcuteByNe
 	m4d	<- glm.nb(mp.NegT ~  AnyPos_a, data=subset(df.scchr.negT, AnyPos_a<=45), link=identity, trace= 1, maxit= 50)		
 	m4b	<- glm.nb(mp.NegT ~  AnyPos_a+0+offset(rep(m4d$coefficients["(Intercept)"],length(mp.NegT))), data=subset(df.scchr.cd4, CD4_T1<=850 & CD4_T1>250 & AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
 	m4c	<- glm.nb(mp.NegT ~  AnyPos_a+0+offset(rep(m4d$coefficients["(Intercept)"],length(mp.NegT))), data=subset(df.scchr.cd4, CD4_T1<250 & AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
+	#plots
+	if(!is.na(plot.file))
+	{
+		tmp	<- subset(df.sc.negT, !is.na(isAcute) & AnyPos_y>adjust.AnyPos_y & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+		set(tmp, tmp[, which(isAcute=='No')],'isAcute','Chronic')
+		set(tmp, tmp[, which(isAcute=='Maybe')],'isAcute','Potentially acute')
+		set(tmp, tmp[, which(isAcute=='Yes')],'isAcute','Acute')
+		set(tmp, NULL, 'isAcute', tmp[, factor(isAcute, levels=c('Acute','Potentially acute','Chronic'))] )
+		set(tmp, NULL, 'AnyPos_y', factor(tmp[, round(AnyPos_y, d=0)]))
+		ggplot(tmp, aes(x=AnyPos_y, fill=isAcute)) + geom_bar(binwidth=1.5, position='dodge') +
+				scale_y_continuous(breaks=seq(0,100,20)) +
+				labs(x="Year of diagnosis", y='MSM HIV seroconverters (number)') +
+				scale_fill_brewer(palette='Set2',name='Stage of HIV infection\n at diagnosis')
+		ggsave(paste(plot.file,'sc_numbers.pdf'), w=15, h=5)		
+				
+	}
+	if(!is.na(plot.file))
+	{
+		df.scay.cd4[, mpy.NegT:= mp.NegT/365.25]
+		set(df.scay.cd4, NULL, 'CD4_T1c', df.scay.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
+		setkey(df.scay.cd4, CD4_T1c, AnyPos_a)
+		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(df.scay.cd4, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+		df.scay.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
+		tmp	<- gamlss.centiles.get(tmp, df.scay.cd4$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+		df.scay.cd4	<- cbind(df.scay.cd4, tmp)
+		ggplot(df.scay.cd4, aes(x=AnyPos_a, y=mpy.NegT)) + 
+				geom_point() + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
+				geom_line(aes(y=y.b), colour='blue') +
+				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+				labs(x="Age at diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)') +
+				facet_grid(. ~ CD4_T1c)
+		ggsave(paste(plot.file,'scay_cd4_age.pdf'), w=10, h=6)
+	}
+	if(!is.na(plot.file))
+	{
+		df.scaym.cd4[, mpy.NegT:= mp.NegT/365.25]
+		set(df.scaym.cd4, NULL, 'CD4_T1c', df.scaym.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
+		setkey(df.scaym.cd4, CD4_T1c, AnyPos_a)
+		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(df.scaym.cd4, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+		df.scaym.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
+		tmp	<- gamlss.centiles.get(tmp, df.scaym.cd4$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+		df.scaym.cd4	<- cbind(df.scaym.cd4, tmp)
+		ggplot(df.scaym.cd4, aes(x=AnyPos_a, y=mpy.NegT)) + 
+				geom_point() + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
+				geom_line(aes(y=y.b), colour='blue') +
+				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+				labs(x="Age at diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)') +
+				facet_grid(. ~ CD4_T1c)
+		ggsave(paste(plot.file,'scam_cd4_age.pdf'), w=10, h=6)
+	}
 	
+	if(!is.na(plot.file))
+	{
+		df.scchr.cd4[, mpy.NegT:= mp.NegT/365.25]
+		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(CD4_T1, degree=7)'), sigma.formula=as.formula('~ bs(CD4_T1, degree=3)'), data=as.data.frame(subset(df.scchr.cd4, select=c(mpy.NegT, CD4_T1))), family=GA)		 
+		df.scchr.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
+		tmp	<- gamlss.centiles.get(tmp, df.scchr.cd4$CD4_T1, cent = c(2.5, 97.5) )
+		df.scchr.cd4	<- cbind(df.scchr.cd4, tmp)
+		ggplot(df.scchr.cd4, aes(x=CD4_T1, y=mpy.NegT)) + 
+				geom_point() + scale_y_continuous(limits=c(0,11), breaks=seq(0,10,2)) +			
+				geom_line(aes(y=y.b), colour='blue') +
+				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+				labs(x="1st CD4 count after diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)')		
+		ggsave(paste(plot.file,'scchr_cd4.pdf'), w=5, h=5)
+		df.scchr.cd4[, y.b:=NULL]
+		df.scchr.cd4[, x:=NULL]
+		df.scchr.cd4[, q2.5:=NULL]
+		df.scchr.cd4[, q97.5:=NULL]
+	}
+	if(!is.na(plot.file))
+	{	
+		set(df.scchr.cd4, NULL, 'CD4_T1c', df.scchr.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
+		setkey(df.scchr.cd4, CD4_T1c, AnyPos_a)
+		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=7)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(df.scchr.cd4, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+		df.scchr.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
+		tmp	<- gamlss.centiles.get(tmp, df.scchr.cd4$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+		df.scchr.cd4	<- cbind(df.scchr.cd4, tmp)
+		ggplot(df.scchr.cd4, aes(x=AnyPos_a, y=mpy.NegT)) + 
+				geom_point() + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
+				geom_line(aes(y=y.b), colour='blue') +
+				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+				labs(x="Age at diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)') +
+				facet_grid(. ~ CD4_T1c)
+		ggsave(paste(plot.file,'scchr_cd4_age.pdf'), w=10, h=6)
+		df.scchr.cd4[, y.b:=NULL]
+		df.scchr.cd4[, x:=NULL]
+		df.scchr.cd4[, q2.5:=NULL]
+		df.scchr.cd4[, q97.5:=NULL]
+	}
+	if(!is.na(plot.file))
+	{
+		df.scchr.negT[, mpy.NegT:= mp.NegT/365.25]
+		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=7)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(df.scchr.negT, select=c(mpy.NegT, AnyPos_a))), family=GA)		 
+		df.scchr.negT[, y.b:= predict(tmp, type='response', se.fit=FALSE)]
+		tmp	<- gamlss.centiles.get(tmp, df.scchr.negT$AnyPos_a, cent = c(2.5, 97.5) )
+		df.scchr.negT	<- cbind(df.scchr.negT, tmp)
+		ggplot(df.scchr.negT, aes(x=AnyPos_a, y=mpy.NegT)) + xlim(18, 61) + scale_y_continuous(limits=c(0,11), breaks=seq(0,10,2)) + 
+				geom_point() + geom_line(aes(y=y.b), colour='blue') + geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+				labs(x="Age at diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)')
+		ggsave(paste(plot.file,'scchr_age.pdf'), w=5, h=5)
+		df.scchr.negT[, y.b:=NULL]
+		df.scchr.negT[, x:=NULL]
+		df.scchr.negT[, q2.5:=NULL]
+		df.scchr.negT[, q97.5:=NULL]
+	}
 	#
 	t2inf.args						<- list()
 	t2inf.args$cd4g850.intercept	<- m4a$coefficients["(Intercept)"]
@@ -1776,7 +1932,39 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, adjust.AcuteByNe
 					list(q=q, score=ans)
 				}, by='Patient']			
 	}
-	
+	if(!is.na(plot.file))
+	{		
+		t.period	<- 1/16
+		b4care		<- do.call('rbind', list(	subset(df.scay.cd4, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(df.scaym.cd4, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(df.scchr.cd4, AnyPos_a>35.0 & AnyPos_a<35.99, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,]	))
+		set(b4care, NULL, 'DateBorn', hivc.db.Date2numeric(b4care[,DateBorn]))
+		set(b4care, NULL, 'AnyPos_T1', hivc.db.Date2numeric(b4care[,AnyPos_T1]))
+		set(b4care, NULL, 'NegT', NA_real_)
+		set(b4care, NULL, 'PosCD4_T1', hivc.db.Date2numeric(b4care[,PosCD4_T1]))
+		set(b4care, NULL, 'AnyT_T1', hivc.db.Date2numeric(b4care[,AnyT_T1]))
+		tmp			<- b4care[, list(AnyPos_a=AnyPos_T1-DateBorn, ts=ifelse(is.na(NegT), AnyPos_T1-10, NegT), te=AnyPos_T1), by='Patient']
+		b4care		<- merge(b4care, tmp, by='Patient')
+		set(b4care, NULL, 'ts', b4care[, floor(ts) + round( (ts%%1)*100 %/% (t.period*100) ) * t.period ] )
+		set(b4care, NULL, 'te', b4care[, floor(te) + round( (te%%1)*100 %/% (t.period*100) ) * t.period - t.period] )	#last time undiagnosed is just before first time period diagnosed		
+		tmp			<- predict.t2inf(seq(0,10,t.period)*365, b4care, t2inf.args)	
+		tmp			<- merge( subset( tmp, score>0.01 ), subset(b4care, select=c(Patient,isAcute,ts,te)), by='Patient' )
+		set(tmp, NULL, 'q', tmp[,q/365])
+		labels		<- c(	'Acute HIV infection at diagnosis',
+							'Potentially acute HIV infection at diagnosis',
+							'Chronic HIV infection at diagnosis,\n CD4<250,\n 30 years at diagnosis')
+		set(tmp, tmp[, which(isAcute=='No')],'isAcute',labels[3])
+		set(tmp, tmp[, which(isAcute=='Maybe')],'isAcute',labels[2])
+		set(tmp, tmp[, which(isAcute=='Yes')],'isAcute',labels[1])
+		set(tmp, NULL, 'isAcute', tmp[, factor(isAcute, levels=labels)] )
+		setkey(tmp, isAcute)
+		ggplot(tmp, aes(x=q, y=score, group=isAcute, colour=isAcute)) + geom_line() +
+				scale_x_continuous(breaks=seq(0,10,1)) +
+				labs(x="t (years)", y='Probability that surrogate\ninfection time is < t') + 
+				scale_colour_brewer(palette='Set2',name='Individual with')
+		ggsave(paste(plot.file,'sc_predict.pdf'), w=15, h=5)
+	}
+	#
 	list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args)
 }
 ######################################################################################
@@ -2062,7 +2250,7 @@ project.athena.Fisheretal.get.dated.phylo.for.selection<- function(df.tpairs, cl
 	list(clu=clu, df.tpairs=df.tpairs.reduced)
 }
 ######################################################################################
-project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, file, pdf.height=400)
+project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, file, pdf.height=600)
 {
 	require(RColorBrewer)
 	beastlabel.idx.clu			<- 1
@@ -2074,7 +2262,8 @@ project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu,
 	#
 	#	prepare df.tpairs.select for plotting
 	#	
-	if(!is.null(df.tpairs))
+	df.tpairs.plot	<- NULL
+	if(0 && !is.null(df.tpairs))
 	{
 		df.tpairs.plot		<- subset( df.tpairs, select=c(cluster, FASTASampleCode, t.FASTASampleCode))
 		setkey(df.tpairs.plot, cluster)		
@@ -2088,11 +2277,11 @@ project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu,
 		tmp					<- subset(df.tpairs.plot, select=c(cluster, t.FASTASampleCode, col, t.pch, t.cex))
 		setnames(tmp, c('t.FASTASampleCode', 't.pch', 't.cex'), c('FASTASampleCode', 'pch', 'cex'))
 		df.tpairs.plot		<- rbind( subset(df.tpairs.plot, select=c(cluster, FASTASampleCode, col, pch, cex)), tmp )
-		setkey(df.tpairs.plot, 'cluster','FASTASampleCode')			
+		setkey(df.tpairs.plot, 'cluster','FASTASampleCode')
+		tmp							<- setdiff( df.tpairs.plot[, unique(FASTASampleCode)], cluphy$tip.label )
+		cat(paste('cannot find tip labels for df.tpairs, n=',length(tmp)))
+		df.tpairs.plot				<- merge( df.tpairs.plot, data.table(FASTASampleCode=cluphy$tip.label), by='FASTASampleCode' )		
 	}		
-	tmp							<- setdiff( df.tpairs.plot[, unique(FASTASampleCode)], cluphy$tip.label )
-	cat(paste('cannot find tip labels for df.tpairs, n=',length(tmp)))
-	df.tpairs.plot				<- merge( df.tpairs.plot, data.table(FASTASampleCode=cluphy$tip.label), by='FASTASampleCode' )
 	#	determine pdf.xlim: subset of timeline that contains the MRCA of all clusters
 	cluphy.root.ctime			<- cluphy.info[1,TipT]-node.depth.edgelength(cluphy)[1]
 	cluphy.tip.ctime			<- cluphy.info[, TipT]
@@ -2107,6 +2296,9 @@ project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu,
 	pdf.xlim					<- pdf.xlim+c(0,diff(pdf.xlim)*0.35)
 	#	plot	
 	cat(paste('\nplot to file=',file))
+	#ph=cluphy; ph.root.ctime=cluphy.root.ctime; ph.tip.ctime=cluphy.tip.ctime; ph.prob=NA; df.node.ctime=cluphy.map.nodectime; df.rates=NULL; df.tips=df.tpairs.plot; end.ctime=end.ctime;  cex.nodelabel=0.5;  cex.tiplabel=0.5;  file=NA;  pdf.width=7
+	if(!'cluster'%in%colnames(df.all))
+		df.all			<- merge(df.all, subset(cluphy.info, select=c(FASTASampleCode, cluster)), by='FASTASampleCode')
 	dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.root.ctime, cluphy.tip.ctime, ph.prob=NA, df.node.ctime=cluphy.map.nodectime, df.rates=NULL, df.tips=df.tpairs.plot, end.ctime=end.ctime,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=file,  pdf.width=7, pdf.height=pdf.height, pdf.xlim=pdf.xlim)	
 }
 ######################################################################################
@@ -3485,6 +3677,7 @@ project.athena.Fisheretal.estimate.risk.wrap.add2riskdf<- function(method.risk, 
 {	
 	tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 	tp				<- ifelse(length(tp), paste('.',substr(tp, 3, 3),sep=''), '')
+	#tmp				<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
 	tmp				<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
 	risk.df			<- merge(risk.df, subset(X.tables$risk.table, stat==tmp, c(risk, factor, n)), by=c('risk','factor'), all.x=1)
 	setnames(risk.df, 'n', 'PYs')		
@@ -3496,7 +3689,8 @@ project.athena.Fisheretal.estimate.risk.wrap.add2riskdf<- function(method.risk, 
 	#				z	<- table( YX.wz[, risk, with=FALSE], useNA='ifany')
 	#				list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX.wz')												
 	#			},by='risk'])[, list(PTx= n[stat=='YX']/n[stat=='YX.wz']), by=c('risk','factor')]
-	risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/n[stat=='X.clu']), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)	
+	tmp				<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
+	risk.df			<- merge(risk.df, X.tables$risk.table[, list(PTx= n[stat=='YX']/n[stat==tmp]), by=c('risk','factor')], by=c('risk','factor'), all.x=1)	#	add Prob( i identified as PT to j | risk factor)	
 	#PYe	
 	risk.df	<- merge(risk.df, subset(X.tables$risk.table, stat=='X.msm', c(risk, factor, n)), by=c('risk','factor'), all.x=1)
 	setnames(risk.df, 'n', 'PYe0')
@@ -7852,6 +8046,83 @@ project.athena.Fisheretal.compositionage<- function()
 			facet_grid(. ~ group, scales='free', margins=FALSE)	
 }
 ######################################################################################
+project.athena.Fisheretal.compositionclock<- function()
+{	
+	#
+	#	load ML tree branch lengths
+	#
+	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500_Wed_Dec_18_11:37:00_2013.R'
+	load(file)	#loads ph		
+	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500_Wed_Dec_18_11:37:00_2013_distTips.R'
+	load(file)	#loads brl	
+	brl.n	<- attr(brl,'Size')
+	tmp		<- unique( subset(coal, select=FASTASampleCode) )
+	set(tmp, NULL, 'FASTASampleCode', tmp[, as.character(FASTASampleCode)])
+	tmp		<- tmp[, list(sc.i=match(FASTASampleCode, ph$tip.label)), by='FASTASampleCode']
+	coal	<- merge(coal, tmp, by='FASTASampleCode')	
+	tmp		<- unique( subset(coal, select=t.FASTASampleCode) )
+	set(tmp, NULL, 't.FASTASampleCode', tmp[, as.character(t.FASTASampleCode)])
+	tmp		<- tmp[, list(sc.t=match(t.FASTASampleCode, ph$tip.label)), by='t.FASTASampleCode']
+	coal	<- merge(coal, tmp, by='t.FASTASampleCode')	
+	tmp		<- coal[, which(sc.t<sc.i)]
+	tmp2	<- coal[tmp, sc.t]
+	set(coal, tmp, 'sc.t', coal[tmp,sc.i])
+	set(coal, tmp, 'sc.i', tmp2)	
+	tmp		<- coal[, 	list( brl= brl[ my.lower.tri.index(brl.n, sc.t, sc.i) ]) , by=c('FASTASampleCode','t.FASTASampleCode')]
+	coal	<- merge(coal, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))
+	coal[, sc.i:=NULL]
+	coal[, sc.t:=NULL]
+	
+	coal[, cor(scoal.after.t.NegT, brl)]
+	#	-0.3377944
+	coal[, cor(gcoal.after.t.NegT, brl)]
+	#	-0.3793354		
+}
+######################################################################################
+project.athena.Fisheretal.compositioncoal<- function()
+{	
+	load( '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_gmrf_2011_Wed_Dec_18_11:37:00_2013_YXCLU3da_all.R' )
+	g.coal	<- Y.coal
+	set(g.coal, NULL, 'coal.after.t.NegT', g.coal[,coal.after.t.NegT-coal.after.i.AnyPos_T1])
+	load( '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXCLU3da_all.R' )
+	s.coal	<- Y.coal
+	set(s.coal, NULL, 'coal.after.t.NegT', s.coal[,coal.after.t.NegT-coal.after.i.AnyPos_T1])
+	setnames(s.coal, 'coal.after.t.NegT', 'scoal.after.t.NegT')
+	setnames(g.coal, 'coal.after.t.NegT', 'gcoal.after.t.NegT')
+	coal	<- merge( subset(s.coal, select=c(FASTASampleCode, t.FASTASampleCode, scoal.after.t.NegT)), subset(g.coal, select=c(FASTASampleCode, t.FASTASampleCode, gcoal.after.t.NegT)), by=c('FASTASampleCode','t.FASTASampleCode'))
+	label	<- "                  Posterior probability that\n                  coalesence is compatible with\n                  direct HIV transmission"
+	ggplot(coal, aes(x= scoal.after.t.NegT, y=gcoal.after.t.NegT)) + geom_point() +
+		labs(x=paste(label,'\n                  under Sampled Ancestor tree prior',sep=''), y=paste(label,'\n                  under Coalescent tree prior',sep='')) +
+		theme(axis.title.x=element_text(hjust=0), axis.title.y=element_text(hjust=0))
+	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_2011_Wed_Dec_18_11:37:00_2013_gmrf_sasky_COAL.pdf'
+	ggsave(file=file, w=6, h=6)
+	#
+	#
+	coal[, cor(scoal.after.t.NegT, gcoal.after.t.NegT)]		
+	#	0.9618471
+	coal[, table(scoal.after.t.NegT<0.5 , gcoal.after.t.NegT<0.5) ]
+	
+	coal[, d:= scoal.after.t.NegT-gcoal.after.t.NegT]
+	coal[, d:= abs(scoal.after.t.NegT-gcoal.after.t.NegT)]
+	#	anonmymize
+	setkey(clumsm.info, cluster, AnyPos_T1)
+	tmp						<- unique(subset(clumsm.info, select=Patient))
+	set(tmp, NULL, 'PatientA', paste('P',seq_len(nrow(tmp)),sep=''))
+	clumsm.info				<- merge(clumsm.info, tmp, by='Patient')
+	tmp						<- clumsm.info[, list(FASTASampleCode=FASTASampleCode, FASTASampleCodeA=paste(PatientA, seq_along(FASTASampleCode), sep='-')) , by='PatientA']
+	set(tmp, NULL, 'FASTASampleCodeA', tmp[, gsub('P','S',FASTASampleCodeA)])
+	clumsm.info				<- merge(clumsm.info, subset(tmp, select=c(FASTASampleCode, FASTASampleCodeA)), by='FASTASampleCode')	
+	tmp						<- subset(clumsm.info, select=c(cluster, Patient, FASTASampleCode, PatientA, FASTASampleCodeA))
+	coal					<- merge(coal, tmp, by='FASTASampleCode')
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	coal					<- merge(coal, tmp, by='t.FASTASampleCode')
+	setkey(coal, d, cluster)
+	coal					<- subset(coal, select=c(t.PatientA, t.FASTASampleCodeA, PatientA, FASTASampleCodeA, scoal.after.t.NegT, gcoal.after.t.NegT, d))
+	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_2011_Wed_Dec_18_11:37:00_2013_gmrf_sasky_COAL.csv'
+	write.csv(coal, file=file, eol='\r\n')
+	
+}
+######################################################################################
 project.athena.Fisheretal.compositionacute<- function()
 {
 	tmp<- df.all
@@ -7879,6 +8150,7 @@ project.athena.Fisheretal.sensitivity<- function()
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"
 	outdir					<- paste(DATA,"fisheretal_140616",sep='/')
+	outfile					<- infile
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
@@ -7891,6 +8163,7 @@ project.athena.Fisheretal.sensitivity<- function()
 									'm2B1st.cas.censp','m2B1stMv.cas.censp','m2Bwmx.cas.censp','m2BwmxMv.cas.censp','m2Bt.cas.censp','m2BtMv.cas.censp','m2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp',
 									'm2B1st.cas.clu.censp','m2B1stMv.cas.clu.censp','m2Bwmx.cas.clu.censp','m2BwmxMv.cas.clu.censp','m2Bt.cas.clu.censp','m2BtMv.cas.clu.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp',
 									'm3.i','m3.ni','m3.nic','m3.nicv','m3.tni','m3.tnic','m3.tnicv','m3.tniv','m3.tnicNo','m3.tnicvNo','m3.tnicMv','m3.tnicMV','m3.tnicNoMV','m3.atnic','m3.atnicNo','m3.atnicMV','m3.atnicNoMV','m3.tnicNoMV','m3.btnic','m3.btnicNo','m3.btnicMV','m3.btnicNoMV','m3.indNo','m3.indNoMV','m3.n3No','m3.n3NoMV','m3.nnrtpiNo','m3.nnrtpiNoMV','m3.indNo.wstar','m3.indNoMV.wstar','m3.n3No.wstar','m3.n3NoMV.wstar','m3.nnrtpiNo.wstar','m3.nnrtpiNoMV.wstar',
+									'm3.ind','m3.ind.wstar','m3.indMV','m3.indMV.wstar','m3.indmx','m3.indmx.wstar','m3.indmxMV','m3.indmxMV.wstar','m3.indmxNo','m3.indmxNo.wstar','m3.indmxNoMV','m3.indmxNoMV.wstar','m3.n3mx','m3.n3mx.wstar','m3.n3mxMV','m3.n3mxMV.wstar',
 									'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.nicv.clu','m3.tni.clu','m3.tnic.clu','m3.tnicv.clu','m3.tniv.clu','m3.tnicNo.clu','m3.tnicvNo.clu','m3.tnicMv.clu','m3.tnicMV.clu','m3.tnicNoMV.clu','m3.atnic.clu','m3.atnicNo.clu','m3.atnicMV.clu','m3.atnicNoMV.clu','m3.btnic.clu','m3.btnicNo.clu','m3.btnicMV.clu','m3.btnicNoMV.clu','m3.indNo.clu','m3.indNoMV.clu','m3.n3No.clu','m3.n3NoMV.clu','m3.nnrtpiNo.clu','m3.nnrtpiNoMV.clu','m3.indNo.clu.wstar','m3.indNoMV.clu.wstar','m3.n3No.clu.wstar','m3.n3NoMV.clu.wstar','m3.nnrtpiNo.clu.wstar','m3.nnrtpiNoMV.clu.wstar',
 									'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicNo.adj','m3.tnicvNo.adj','m3.tnicMv.adj','m3.tnicMV.adj','m3.tnicNoMV.adj','m3.atnic.adj','m3.atnicNo.adj','m3.atnicMV.adj','m3.atnicNoMV.adj','m3.btnic.adj','m3.btnicNo.adj','m3.btnicMV.adj','m3.btnicNoMV.adj',
 									'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj','m3.tnicvNo.clu.adj','m3.tnicMv.clu.adj','m3.tnicMV.clu.adj','m3.tnicNoMV.clu.adj','m3.atnic.clu.adj','m3.atnicNo.clu.adj','m3.atnicMV.clu.adj','m3.atnicNoMV.clu.adj','m3.btnic.clu.adj','m3.btnicNo.clu.adj','m3.btnicMV.clu.adj','m3.btnicNoMV.clu.adj',									
@@ -8407,18 +8680,21 @@ project.athena.Fisheretal.sensitivity<- function()
 					'cART initiated,\n viral suppression',
 					'cART initiated,\n Unknown viral load'
 					)
-	tmp		<- data.table( factor.legend= factor(tmp, levels=tmp), factor=c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA"))
-	#tmp		<- data.table( factor.legend= factor(tmp), factor=c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.vlNA","ART.su.Y","ART.su.N"))
+	#tmp2	<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")
+	tmp2	<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.su.N","ART.su.Y","ART.vlNA")
+	tmp		<- data.table( factor.legend= factor(tmp, levels=tmp), factor=factor(tmp2, levels=tmp2))
 	
 	ylab		<- "Proportion of transmissions"
 	stat.select	<- c(	'P','P.e0cp','P.bias.e0cp','P.raw','P.raw.e0cp','P.rawbias.e0cp'	)
 	method.clu	<- 'clu'
 	method.deno	<- 'CLU'
+	outfile		<- paste( infile, 'Ac=MY_D=35_sasky_2011', sep='_' )
 	#run.tp		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BtMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3ga' & method.dating=='sasky' & grepl('m2BtMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
-	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
-	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BtMv.tp',method.risk) & !grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3ea' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3fa' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	
@@ -8430,16 +8706,17 @@ project.athena.Fisheretal.sensitivity<- function()
 	set(run.tp, run.tp[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
 	set(run.tp, run.tp[,which(cascade.stage=='D' & factor%in%c("Dtl500","Dtl350"))], 'cascade.stage', 'Diagnosed\n CD4<=500')
 	set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')	
-	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','Diagnosed\n CD4<=500','cART initiated'))])	
+	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','Diagnosed\n CD4<=500','cART initiated'))])
+	set(run.tp, NULL, 'factor', run.tp[, factor(factor, levels=tmp2)])
 	run.tp	<- merge(run.tp, tmp, by='factor')	
 	run.tp	<- merge(run.tp, tperiod.info, by='t.period')
-	run.tp[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
+	run.tp[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]	
 	color	<- c("#990000","#EF6548","#FDBB84","#0570B0","#74A9CF","#7A0177","#F768A1","#FCC5C0","#005824","#41AB5D","#ADDD8E")
 	dummy	<- lapply(seq_along(stat.select), function(i)
 			{
 				cat(paste('\nprocess', stat.select[i]))
 				ggplot(subset(run.tp, !is.na(v) & stat==stat.select[i]), aes(x=factor, y=v, fill=factor.legend, colour=factor.legend)) + labs(x="", y=ylab) + 
-						scale_y_continuous(breaks=seq(0,0.3,0.1), labels=paste(seq(0,0.3,0.1)*100,'%',sep='')) + scale_x_discrete(breaks=NULL, limits=c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")) +
+						scale_y_continuous(breaks=seq(0,0.3,0.1), labels=paste(seq(0,0.3,0.1)*100,'%',sep='')) + scale_x_discrete(breaks=NULL, limits=tmp2) +
 						scale_fill_manual(name='from cascade stage', values = color) + scale_colour_manual(name='from cascade stage', values = rep('black',11)) +
 						#scale_fill_brewer(palette='PRGn',name='from cascade stage') + scale_colour_manual(name='from cascade stage', values = rep('black',11)) +					
 						guides(colour=FALSE, fill = guide_legend(override.aes = list(size=5))) +
@@ -8458,8 +8735,11 @@ project.athena.Fisheretal.sensitivity<- function()
 	#
 	#
 	ylab		<- "Relative transmissibility"
-	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
-	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BtMv.tp',method.risk) & !grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
 	stat.select	<- c(	'RI','RI.e0cp','RI.bias.e0cp','RI.raw','RI.raw.e0cp','RI.rawbias.e0cp'	)
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
@@ -8496,6 +8776,31 @@ project.athena.Fisheretal.sensitivity<- function()
 	set(run.tp, NULL, 'u95.bs', run.tp[, round(u95.bs, d=3)])	
 	subset(run.tp, stat=='RI.rawbias.e0cp', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
 	subset(run.tp, stat=='RI.raw.e0cp', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
+	#
+	#	risk ratio compared to undiagnosed
+	#	
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RR.',stat,fixed=1) | stat=='RR') )
+	run.tp		<- subset(run.tp, stat%in%c("RR.term","RR.term.ptx","RR.bias.e0cp","RR.rawbias.e0cp"))
+	run.tp		<- subset(run.tp, grepl('U',factor.ref), select=c('stat','risk','factor','risk.ref','factor.ref','v','l95.bs','u95.bs'))
+	setkey(run.tp, factor.ref, factor)
+	set(run.tp, NULL, 'v', run.tp[, round(v, d=3)])
+	set(run.tp, NULL, 'l95.bs', run.tp[, round(l95.bs, d=3)])
+	set(run.tp, NULL, 'u95.bs', run.tp[, round(u95.bs, d=3)])	
+	
+	
+	setkey(run.tp, factor)
+	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
+	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
+	run.tp[, cascade.stage:=run.tp[, substr(factor, 1, 1)]]	
+	set(run.tp, run.tp[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
+	set(run.tp, run.tp[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
+	set(run.tp, run.tp[,which(cascade.stage=='D' & factor%in%c("Dtl500","Dtl350"))], 'cascade.stage', 'Diagnosed\n CD4<=500')
+	set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')	
+	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','Diagnosed\n CD4<=500','cART initiated'))])	
+	run.tp	<- merge(run.tp, tmp, by='factor')	
+	run.tp	<- merge(run.tp, tperiod.info, by='t.period')
+	run.tp[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
+	
 	
 	subset( runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m2BwmxMv.tp',method.risk) & !grepl('wstar',method.risk) & grepl('clu',method.risk) & stat=='RR.term', c(factor.ref, factor, v, l95.bs, u95.bs, method.brl, method.risk) )	
 	#
@@ -8692,37 +8997,86 @@ project.athena.Fisheretal.sensitivity<- function()
 	
 	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.censp') & stat=='RR' & method.recentctime=='2011', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
 	
-	
-	subset(runs.risk,  method.risk%in%c('m3.indNo.clu') & stat=='RR.term' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	#   factor.ref      factor         v    l95.bs    u95.bs  method.risk method.dating method.nodectime method.brl
-	#1:     ART.OK       ART.A 0.9474850 0.5636160 1.9077089 m3.indNo.clu         sasky              any        3da
-	#2:     ART.OK       ART.F 0.7227126 0.5660467 0.9204357 m3.indNo.clu         sasky              any        3da
-	#3:     ART.OK       ART.I 1.0404561 0.8401480 1.2936334 m3.indNo.clu         sasky              any        3da
-	#4:     ART.OK       ART.P 0.9917019 0.5592124 1.3880922 m3.indNo.clu         sasky              any        3da
-	#5:     ART.OK       ART.T 0.7644086 0.6130632 0.9357725 m3.indNo.clu         sasky              any        3da
-	#6:     ART.OK ART.pulse.Y 0.9035933 0.6564686 1.2595267 m3.indNo.clu         sasky              any        3da
-	#TODO	these just don t make sense?
-	subset(runs.risk,  method.risk%in%c('m3.indNo.clu') & stat=='RR.term.ptx' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	#   factor.ref      factor          v     l95.bs     u95.bs  method.risk method.dating method.nodectime method.brl
-	#1:     ART.OK       ART.A 0.04780971 0.02843984 0.09626222 m3.indNo.clu         sasky              any        3da
-	#2:     ART.OK       ART.F 0.76651399 0.60035309 0.97622050 m3.indNo.clu         sasky              any        3da
-	#3:     ART.OK       ART.I 1.12368458 0.90735340 1.39711414 m3.indNo.clu         sasky              any        3da
-	#4:     ART.OK       ART.P 0.64609288 0.36432633 0.90434074 m3.indNo.clu         sasky              any        3da
-	#5:     ART.OK       ART.T 0.83158733 0.66694116 1.01801116 m3.indNo.clu         sasky              any        3da
-	#6:     ART.OK ART.pulse.Y 0.64064214 0.46543220 0.89299676 m3.indNo.clu         sasky              any        3da
-	
-	subset(runs.risk,  method.risk%in%c('m3.n3No.clu') & stat=='RR.term' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	#    factor.ref    factor        v    l95.bs   u95.bs method.risk method.dating method.nodectime method.brl
-	#1: ART.3.NRT.X ART.3.NRT 1.300581 0.7592148 1.501209 m3.n3No.clu         sasky              any        3da
-	#2: ART.3.NRT.X    ART.g3 1.230400 0.8519996 1.504342 m3.n3No.clu         sasky              any        3da
-	#3: ART.3.NRT.X    ART.l3 1.229027 0.8323937 1.601461 m3.n3No.clu         sasky              any        3da
-	subset(runs.risk,  method.risk%in%c('m3.n3No.clu') & stat=='RI.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	#   factor.ref      factor         v    l95.bs   u95.bs method.risk method.dating method.nodectime method.brl
-	#1:       None   ART.3.NRT 1.0560663 0.1821066 2.143434 m3.n3No.clu         sasky              any        3da
-	#2:       None ART.3.NRT.X 0.9382925 0.8398952 1.038734 m3.n3No.clu         sasky              any        3da
-	#3:       None      ART.g3 0.8625070 0.4739457 1.326276 m3.n3No.clu         sasky              any        3da
-	#4:       None      ART.l3 4.4245579 1.9331924 7.435107 m3.n3No.clu         sasky              any        3da
+	subset(runs.risk,  method.risk%in%c('m3.indmx') & stat=='RR.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#factor.ref      factor         v     l95.bs    u95.bs method.risk method.dating method.nodectime method.brl
+	#1:     ART.OK       ART.A 1.5809488 1.28377351 5.9106179    m3.indmx         sasky              any        3da
+	#2:     ART.OK       ART.F 1.5807045 1.02548412 2.4239759    m3.indmx         sasky              any        3da
+	#3:     ART.OK       ART.I 3.1522717 1.91880233 4.7885494    m3.indmx         sasky              any        3da
+	#4:     ART.OK       ART.P 0.3567823 0.01803316 0.9181399    m3.indmx         sasky              any        3da
+	#5:     ART.OK       ART.T 0.9163154 0.54822956 1.4262255    m3.indmx         sasky              any        3da
+	#6:     ART.OK ART.pulse.Y 1.7401583 0.73739314 3.0250908    m3.indmx         sasky              any        3da
+	subset(runs.risk,  method.risk%in%c('m3.indmx') & stat=='RR' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#factor.ref      factor         v    l95.bs   u95.bs method.risk method.dating method.nodectime method.brl
+	#1:     ART.OK       ART.A 1.1416174 0.9259452 4.262792    m3.indmx         sasky              any        3da
+	#2:     ART.OK       ART.F 1.2895961 0.8692488 1.941736    m3.indmx         sasky              any        3da
+	#3:     ART.OK       ART.I 2.7976588 1.7092032 4.248215    m3.indmx         sasky              any        3da
+	#4:     ART.OK       ART.P 0.4625983 0.0692564 1.126041    m3.indmx         sasky              any        3da
+	#5:     ART.OK       ART.T 0.8903901 0.5585588 1.366896    m3.indmx         sasky              any        3da
+	#6:     ART.OK ART.pulse.Y 1.5200023 0.7179900 2.571243    m3.indmx         sasky              any        3da	
+	subset(runs.risk,  method.risk%in%c('m3.indmxNo') & stat=='RR.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#factor.ref      factor         v     l95.bs    u95.bs method.risk method.dating method.nodectime method.brl
+	#1:     ART.OK       ART.A 1.3430146 1.02334495 5.0424648  m3.indmxNo         sasky              any        3da
+	#2:     ART.OK       ART.F 1.3428070 0.83103794 2.1739126  m3.indmxNo         sasky              any        3da
+	#3:     ART.OK       ART.I 2.6778519 1.66006690 4.4094826  m3.indmxNo         sasky              any        3da
+	#4:     ART.OK       ART.P 0.3030862 0.02019137 0.7817204  m3.indmxNo         sasky              any        3da
+	#5:     ART.OK       ART.T 0.7784091 0.45062607 1.2936543  m3.indmxNo         sasky              any        3da
+	#6:     ART.OK ART.pulse.Y 1.4782629 0.63785011 2.8238263  m3.indmxNo         sasky              any        3da
+	subset(runs.risk,  method.risk%in%c('m3.indmxMV') & stat=='RR' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#factor.ref      factor         v    l95.bs   u95.bs method.risk method.dating method.nodectime method.brl
+	#1:     ART.OK       ART.A 1.1554814 0.9359808 4.498911  m3.indmxMV         sasky              any        3da
+	#2:     ART.OK       ART.F 1.3049506 0.8697021 1.934548  m3.indmxMV         sasky              any        3da
+	#3:     ART.OK       ART.I 2.8301160 1.7652080 4.324338  m3.indmxMV         sasky              any        3da
+	#4:     ART.OK       ART.P 0.4453794 0.0922852 1.103289  m3.indmxMV         sasky              any        3da
+	#5:     ART.OK       ART.T 0.9008525 0.5341716 1.416596  m3.indmxMV         sasky              any        3da
+	#6:     ART.OK ART.pulse.Y 1.3855881 0.6196826 2.602033  m3.indmxMV         sasky              any        3da
 
+	subset(runs.risk,  method.risk%in%c('m3.n3mx') & stat=='RR' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#factor.ref      factor         v     l95.bs   u95.bs method.risk method.dating method.nodectime method.brl
+	#1: ART.3.2NRT.X   ART.3.OTH 0.4500962 0.07505392 1.143388     m3.n3mx         sasky              any        3da
+	#2: ART.3.2NRT.X       ART.A 1.1262118 0.91330526 4.243472     m3.n3mx         sasky              any        3da
+	#3: ART.3.2NRT.X       ART.F 1.2687952 0.84479613 1.876250     m3.n3mx         sasky              any        3da
+	#4: ART.3.2NRT.X       ART.I 2.7654109 1.75653222 4.225697     m3.n3mx         sasky              any        3da
+	#5: ART.3.2NRT.X       ART.P 0.4530566 0.08225300 1.080912     m3.n3mx         sasky              any        3da
+	#6: ART.3.2NRT.X       ART.T 0.8765734 0.53770979 1.398853     m3.n3mx         sasky              any        3da
+	#7: ART.3.2NRT.X      ART.g3 0.9308021 0.21832473 1.935641     m3.n3mx         sasky              any        3da
+	#8: ART.3.2NRT.X      ART.l3 2.9636815 1.38470273 5.205899     m3.n3mx         sasky              any        3da
+	#9: ART.3.2NRT.X ART.pulse.Y 1.4981287 0.69358328 2.537469     m3.n3mx         sasky              any        3da
+	subset(runs.risk,  method.risk%in%c('m3.n3mx') & stat=='RR.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#factor.ref      factor         v     l95.bs    u95.bs method.risk method.dating method.nodectime method.brl
+	#1: ART.3.2NRT.X   ART.3.OTH 0.4438304 0.04521115 1.1082716     m3.n3mx         sasky              any        3da
+	#2: ART.3.2NRT.X       ART.A 1.5562210 1.24193228 6.0115599     m3.n3mx         sasky              any        3da
+	#3: ART.3.2NRT.X       ART.F 1.5559805 0.96662769 2.3868770     m3.n3mx         sasky              any        3da
+	#4: ART.3.2NRT.X       ART.I 3.1029667 1.89455034 4.8118123     m3.n3mx         sasky              any        3da
+	#5: ART.3.2NRT.X       ART.P 0.3512018 0.02539939 0.8589455     m3.n3mx         sasky              any        3da
+	#6: ART.3.2NRT.X       ART.T 0.9019832 0.53588384 1.4316282     m3.n3mx         sasky              any        3da
+	#7: ART.3.2NRT.X      ART.g3 0.8665310 0.13560173 1.9205182     m3.n3mx         sasky              any        3da
+	#8: ART.3.2NRT.X      ART.l3 3.3574769 1.57825530 6.0175172     m3.n3mx         sasky              any        3da
+	#9: ART.3.2NRT.X ART.pulse.Y 1.7129403 0.74646530 3.0757344     m3.n3mx         sasky              any        3da	
+	subset(runs.risk,  method.risk%in%c('m3.n3mxMV') & stat=='RR' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#factor.ref      factor         v     l95.bs   u95.bs method.risk method.dating method.nodectime method.brl
+	#1: ART.3.2NRT.X   ART.3.OTH 0.4413032 0.08216935 1.121655   m3.n3mxMV         sasky              any        3da
+	#2: ART.3.2NRT.X       ART.A 1.1454337 0.95690890 4.360743   m3.n3mxMV         sasky              any        3da
+	#3: ART.3.2NRT.X       ART.F 1.2889582 0.85464553 1.943280   m3.n3mxMV         sasky              any        3da
+	#4: ART.3.2NRT.X       ART.I 2.8008671 1.81053747 4.303314   m3.n3mxMV         sasky              any        3da
+	#5: ART.3.2NRT.X       ART.P 0.4381825 0.07523197 1.151721   m3.n3mxMV         sasky              any        3da
+	#6: ART.3.2NRT.X       ART.T 0.8913099 0.54372083 1.394639   m3.n3mxMV         sasky              any        3da
+	#7: ART.3.2NRT.X      ART.g3 0.9663522 0.21397830 2.062098   m3.n3mxMV         sasky              any        3da
+	#8: ART.3.2NRT.X      ART.l3 3.0231784 1.40781727 5.397656   m3.n3mxMV         sasky              any        3da
+	#9: ART.3.2NRT.X ART.pulse.Y 1.3443834 0.66303983 2.496730   m3.n3mxMV         sasky              any        3da
+	subset(runs.risk,  method.risk%in%c('m3.n3mx') & stat=='P.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
+	#factor.ref       factor           v      l95.bs     u95.bs method.risk method.dating method.nodectime method.brl
+	#1:       None ART.3.2NRT.X 0.219331175 0.164275422 0.28617485     m3.n3mx         sasky              any        3da
+	#2:       None    ART.3.OTH 0.010400791 0.001050629 0.02475844     m3.n3mx         sasky              any        3da
+	#3:       None        ART.A 0.008606164 0.000000000 0.02760573     m3.n3mx         sasky              any        3da
+	#4:       None        ART.F 0.232497305 0.169552158 0.30015902     m3.n3mx         sasky              any        3da
+	#5:       None        ART.I 0.315087639 0.235857958 0.39931541     m3.n3mx         sasky              any        3da
+	#6:       None        ART.P 0.007564435 0.000520210 0.01832269     m3.n3mx         sasky              any        3da
+	#7:       None        ART.T 0.110267558 0.073827586 0.15592224     m3.n3mx         sasky              any        3da
+	#8:       None       ART.g3 0.043677031 0.007555697 0.08910432     m3.n3mx         sasky              any        3da
+	#9:       None       ART.l3 0.021469946 0.009946794 0.03747868     m3.n3mx         sasky              any        3da
+	#10:       None  ART.pulse.Y 0.031097956 0.013620326 0.05216038     m3.n3mx         sasky              any        3da
+
+	
 	subset(runs.risk,  method.risk%in%c('m3.nnrtpiNo.clu') & stat=='RI.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime ) )
 	#factor.ref            factor         v     l95.bs   u95.bs     method.risk method.dating method.nodectime
 	#1:       None ART.3.ATRIPLALIKE 1.0028031 0.79285177 1.246346 m3.nnrtpiNo.clu         sasky              any
@@ -9806,10 +10160,10 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(0)
 	{
 		method					<- '3d'
-		method.recentctime		<- '2013-03-01'
+		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
 		method.risk				<- 'm21st.cas'
-		method.PDT				<- ''
+		method.PDT				<- 'CLU'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"					
@@ -10038,7 +10392,8 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
 	#
-	tmp				<- project.athena.Fisheretal.t2inf(indircov, infile.cov.study, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2)
+	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 't2inf',method.PDT,method,sep='')
+	tmp				<- project.athena.Fisheretal.t2inf(indircov, infile.cov.study, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, plot.file=plot.file)
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args
 	#
@@ -10129,6 +10484,16 @@ hivc.prog.betareg.estimaterisks<- function()
 	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
 	cluphy.info				<- tmp$clu$cluphy.info
 	cluphy					<- tmp$clu$cluphy	
+	if(0)
+	{
+		#	anonymize
+		setkey(clumsm.info, cluster, AnyPos_T1)
+		tmp						<- unique(subset(clumsm.info, select=Patient))
+		set(tmp, NULL, 'PatientA', paste('P',seq_len(nrow(tmp)),sep=''))
+		clumsm.info				<- merge(clumsm.info, tmp, by='Patient')
+		outfile					<- paste(indir,'/',infile, '_', clu.infilexml.template, '_', clu.infilexml.opt, '_', gsub('/',':',insignat), '_', 'pt_anypos_3.5_anynodectime', '.pdf',sep='')	
+		project.athena.Fisheretal.plot.selected.transmitters(clumsm.info, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, outfile, pdf.height=900)		
+	}
 	#
 	#	get timelines for the candidate transmitters in ATHENA.clu to the recently infected RI.PT; remove zero scores
 	#
@@ -10140,8 +10505,11 @@ hivc.prog.betareg.estimaterisks<- function()
 	gc()
 	thresh.pcoal	<- 0.5
 	rm.zero.score	<- TRUE	
-	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'.R',sep='')	
-	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method)
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'.R',sep='')
+	save.all		<- FALSE
+	#save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'_all.R',sep='')
+	#save.all		<- TRUE
+	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
 	gc()
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
 	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']
@@ -10168,8 +10536,10 @@ hivc.prog.betareg.estimaterisks<- function()
 		YXS.part1[, class:='pn']
 		YXS.part1		<- do.call('rbind',list(YX.part1, subset(YXS.part1, select=colnames(YX.part1))))		#put potential transmitters and potential non-transmitters together		
 		YXS.part1		<- merge( YXS.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)	
+		rm.zero.score	<- FALSE
+		thresh.pcoal	<- 0.75
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_RICT_tATHENAseq','.R',sep='')
-		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, t.period=t.period, save.file=save.file, resume=resume, method=method)		
+		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method)		
 	}
 	#
 	#	get timelines for all clustering candidate transmitters to the recently infected RI.PT
@@ -10380,6 +10750,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	#	get data for selection
 	#	
+	df.tpairs				<- subset(df.tpairs, cluster%in%c(1512, 1510, 1508))
 	tmp						<- project.athena.Fisheretal.get.dated.phylo.for.selection(df.tpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, method.nodectime=method.nodectime)
 	#df.all2					<- subset(clumsm.info, select=c(Patient, cluster))
 	#setkey(df.all2, Patient)
@@ -10388,7 +10759,12 @@ hivc.prog.betareg.estimaterisks<- function()
 	cluphy					<- tmp$clu$cluphy
 	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
 	cluphy.info				<- tmp$clu$cluphy.info
-	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime	
+	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime
+	#	anonymize
+	setkey(clumsm.info, cluster, AnyPos_T1)
+	tmp						<- unique(subset(clumsm.info, select=Patient))
+	set(tmp, NULL, 'PatientA', paste('P',seq_len(nrow(tmp)),sep=''))
+	clumsm.info				<- merge(clumsm.info, tmp, by='Patient')
 	#			
 	#	plot	
 	#	

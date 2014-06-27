@@ -1190,6 +1190,9 @@ hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early=
 	#tmp2				<- diverge_hcl(length(tmp), h = c(246, 40), c = 96, l = c(85, 90))		
 	tmp					<- data.table(Patient=tmp, Patient.col="transparent", key="Patient")
 	df.info				<- merge(  df.info, tmp, all.x=1, by="Patient" )
+	#set colors PatientA
+	if('PatientA'%in%colnames(df.info))
+		set(df.info, NULL, 'PatientA.col', df.info[, Patient.col])	
 	#set colors Sex
 	df.info[,Sex.col:="transparent"]						
 	set(df.info, which(df.info[,!is.na(Sex) & Sex!="M"]), "Sex.col", col.notmsm)
@@ -1306,7 +1309,8 @@ hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early=
 	#	set isAcute to either Y or M or N
 	set(df.info,NULL,"isAcute", 		as.character( df.info[,isAcute]))
 	set(df.info,which(df.info[,isAcute=="No"]),"isAcute",'N')
-	set(df.info,which(df.info[,isAcute=="Maybe"]),"isAcute",'M')
+	#set(df.info,which(df.info[,isAcute=="Maybe"]),"isAcute",'M')
+	set(df.info,which(df.info[,isAcute=="Maybe"]),"isAcute",'Y')
 	set(df.info,which(df.info[,isAcute=="Yes"]),"isAcute",'Y')
 	#	set lRNA.early to either HVLE or ----
 	set(df.info,NULL,"lRNA.early", 		as.character( df.info[, lRNA.early]))
@@ -1336,6 +1340,12 @@ hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early=
 	tmp					<- which(is.na(df.info[,Patient]))
 	set(df.info, tmp, "Patient", '')
 	set(df.info, tmp, "Patient.col", "transparent")
+	if('PatientA'%in%colnames(df.info))
+	{
+		tmp					<- which(is.na(df.info[,PatientA]))
+		set(df.info, tmp, "PatientA", '')
+		set(df.info, tmp, "PatientA.col", "transparent")		
+	}	
 	if('cluster'%in%colnames(df.info))
 		set(df.info, which(is.na(df.info[,cluster])), "cluster", '')	
 	tmp					<- which(is.na(df.info[,RegionHospital]))
@@ -1376,6 +1386,13 @@ hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early=
 	#
 	#	add suffixes 
 	#	
+	if('cluster'%in%colnames(df.info))
+		set(df.info,NULL,"cluster",		paste("clu:",df.info[,cluster],sep=''))	
+	set(df.info,NULL,"Patient",			paste("Patient:",df.info[,Patient],sep=''))
+	if('PatientA'%in%colnames(df.info))
+		set(df.info,NULL,"PatientA",		paste(" ID:",df.info[,PatientA],sep=''))
+	set(df.info,NULL,"Sex",				paste("Gender:",df.info[,Sex],sep=''))
+	set(df.info,NULL,"Trm",				paste(" ",df.info[,Trm],sep=''))
 	set(df.info,NULL,"AnyPos_T1",		paste("d:",df.info[,AnyPos_T1],sep=''))
 	set(df.info,NULL,"NegT", 			paste("n:",df.info[,NegT],sep=''))
 	set(df.info,NULL,"PosSeqT", 		paste("s:",df.info[,PosSeqT],"   ",sep=''))
@@ -1383,10 +1400,10 @@ hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early=
 	set(df.info,NULL,"AnyT_T1", 		paste("TR+:",df.info[,AnyT_T1],sep=''))
 	set(df.info,NULL,"TrImo_bTS", 		paste("TR-:",df.info[,TrImo_bTS],sep=''))
 	set(df.info,NULL,"TrImo_aTS", 		paste(":",df.info[,TrImo_aTS],"   ",sep=''))			
-	set(df.info,NULL,"isAcute", 		paste("AC:",df.info[,isAcute],sep=''))
+	set(df.info,NULL,"isAcute", 		paste(" Recent:",df.info[,isAcute],sep=''))
 	set(df.info,NULL,"lRNA.early", 		paste(":",df.info[,lRNA.early],"   ",sep=''))
 	set(df.info,NULL,"CountryInfection",paste("inf:",df.info[,CountryInfection],sep=''))
-	set(df.info,NULL,"RegionHospital",	paste("",df.info[,RegionHospital],sep=''))
+	set(df.info,NULL,"RegionHospital",	paste(" Region:",df.info[,RegionHospital],sep=''))
 	set(df.info,NULL,"lRNA_bTS", 		paste("VL:",df.info[,lRNA_bTS],sep=''))
 	set(df.info,NULL,"lRNA_TS", 		paste(":",df.info[,lRNA_TS],sep=''))
 	set(df.info,NULL,"lRNA_aTS", 		paste(":",df.info[,lRNA_aTS],sep=''))

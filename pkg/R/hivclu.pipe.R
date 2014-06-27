@@ -688,10 +688,10 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	##method.risk		<- c(	'm3.tnicMV','m3.tnicMV.clu','m3.tnicNoMV','m3.tnicNoMV.clu' )
 	#method.risk		<- c(	'm3.atnicMV','m3.atnicMV.clu','m3.atnicNoMV','m3.atnicNoMV.clu' )
 	#method.risk			<- c('m3.btnicMV.clu','m3.btnicNoMV.clu','m3.btnicMV.clu.wstar','m3.btnicNoMV.clu.wstar')
-	method.risk				<- c('m3.ind','m3.indNo','m3.indmx','m3.indmxNo','m3.n3mx','m3.indMV','m3.indNoMV','m3.indmxMV','m3.indmxNoMV','m3.n3mxMV',
-								 'm3.ind.wstar','m3.indNo.wstar','m3.indmx.wstar','m3.indmxNo.wstar','m3.n3mx.wstar','m3.indMV.wstar','m3.indNoMV.wstar','m3.indmxMV.wstar','m3.indmxNoMV.wstar','m3.n3mxMV.wstar')	
+	#!##method.risk				<- c('m3.ind','m3.indNo','m3.indmx','m3.indmxNo','m3.n3mx','m3.indMV','m3.indNoMV','m3.indmxMV','m3.indmxNoMV','m3.n3mxMV',
+	#!##							 'm3.ind.wstar','m3.indNo.wstar','m3.indmx.wstar','m3.indmxNo.wstar','m3.n3mx.wstar','m3.indMV.wstar','m3.indNoMV.wstar','m3.indmxMV.wstar','m3.indmxNoMV.wstar','m3.n3mxMV.wstar')	
 	#	basic m2Bwmx runs	mem=1800
-	#!##method.risk		<- c(	'm2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4','m2BwmxMv.tp1.wstar','m2BwmxMv.tp2.wstar','m2BwmxMv.tp3.wstar','m2BwmxMv.tp4.wstar' )		
+	method.risk		<- c(	'm2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4','m2BwmxMv.tp1.wstar','m2BwmxMv.tp2.wstar','m2BwmxMv.tp3.wstar','m2BwmxMv.tp4.wstar' )		
 	#!##method.risk		<- c(	'm2BtMv.tp1','m2BtMv.tp2','m2BtMv.tp3','m2BtMv.tp4','m2BtMv.tp1.wstar','m2BtMv.tp2.wstar','m2BtMv.tp3.wstar','m2BtMv.tp4.wstar')
 	#	basic m2Bwmx runs	mem=3800
 	#method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp')

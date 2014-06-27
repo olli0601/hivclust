@@ -3423,6 +3423,9 @@ project.hivc.clustering.selectparticularclusters<- function()
 
 project.hivc.examlclock<- function()
 {
+	#
+	#	root to tip divergence
+	#	
 	require(ape)
 	require(adephylo)
 	indir				<- paste(DATA,"tmp",sep='/')
@@ -3445,21 +3448,283 @@ project.hivc.examlclock<- function()
 	df			<- subset(df, !is.na(PosSeqT))
 	ggplot(df, aes(x=PosSeqT, y=height)) + geom_point()
 	
-	df.clock	<- lm(height~PosSeqT, data=as.data.frame(subset(df, PosSeqT>1996.6)))
-	summary(df.clock)	
+	df.clock	<- lm(height~PosSeqT, data=as.data.frame(df))
+	summary(df.clock)
+	#Adjusted R-squared: 0.1056
+	#             Estimate Std. Error t value Pr(>|t|)    
+	#(Intercept) -5.690e+00  1.865e-01  -30.51   <2e-16 ***
+	#PosSeqT      2.917e-03  9.297e-05   31.37   <2e-16 ***
 	dfbh		<- df[, {
 						z<- which.min(PosSeqT)
-						list(FASTASampleCode=FASTASampleCode[z], PosSeqT= PosSeqT[z], height=height[z])
+						list(FASTASampleCode=FASTASampleCode[z], PosSeqT= PosSeqT[z], AnyT_T1=AnyT_T1[z], height=height[z])
 					}, by='Patient']
-	dfbh.clock	<- lm(height~PosSeqT, data=as.data.frame(subset(dfbh, PosSeqT>1996.6)))
+	dfbh.clock	<- lm(height~PosSeqT, data=as.data.frame(dfbh))
+	#dfbh.clock	<- lm(height~PosSeqT, data=as.data.frame(subset(dfbh, PosSeqT>1996.6)))
 	summary(dfbh.clock)		
-	dfb4T		<- subset(df, PosSeqT<AnyT_T1)	
-	ggplot(dfb4T, aes(x=PosSeqT, y=height)) + geom_point()
-	dfb4T.clock	<- lm(height~PosSeqT, data=as.data.frame(subset(dfb4T, PosSeqT>1996.6)))
+	#Adjusted R-squared: 0.1271	    
+	#(Intercept) -6.3631412  0.2165435  -29.39   <2e-16 ***
+	#PosSeqT      0.0032520  0.0001079   30.13   <2e-16 ***
+	dfbh[, b4T:= factor(is.na(AnyT_T1) | PosSeqT<AnyT_T1, labels=c('No','Yes'))]
+	dfb4T.clock	<- lm(height~PosSeqT, data=as.data.frame(subset(dfbh, b4T)))
 	summary(dfb4T.clock)
+	#Adjusted R-squared: 0.105
+	#(Intercept) -6.702884   0.303098  -22.11   <2e-16 ***
+	#PosSeqT      0.003422
+	ggplot(dfbh, aes(x=PosSeqT, y=height, colour=b4T)) + geom_point(alpha=0.75) +
+		scale_x_continuous(breaks=seq(1980,2020,2)) +
+		scale_colour_brewer(name='Sampled before ART start', palette='Set1') +
+		stat_smooth(method="lm", colour='black') + stat_smooth(method='lm', data=subset(dfbh, b4T=='Yes'), colour="black", linetype=2) +
+		labs(x='Sequence sampling date', y='root-to-tip divergence') +
+		theme(legend.position=c(0,1), legend.justification=c(0,1))
+	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_clock.pdf'
+	ggsave(file=file, w=15, h=5)
+	#
+	#	within host divergence
+	#
+	file				<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_nbrlraw3da'				
+	tmp					<- project.athena.Fisheretal.Y.rawbrl(NULL, NULL, NULL, NULL, NULL, NULL, df.tpairs.tptn=NULL, save.file=paste(file, '.R', sep=''), resume=1, plot.file=NA, method.restrictTPtoRI=0)
+	Y.rawbrl			<- tmp$tpairs
+	Y.rawbrl.linked		<- tmp$linked
+	Y.rawbrl.unlinked	<- tmp$unlinked
+	#	compute sequence sampling times	to see if time between seq sampling times could be useful
+	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )	
+	tmp					<- merge( data.table(FASTASampleCode=Y.rawbrl.linked[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, tmp, by='t.FASTASampleCode')
+	#	order with respect to PosSeqT
+	tmp					<- subset(Y.rawbrl.linked, t.PosSeqT>PosSeqT)
+	setnames(tmp, c("t.FASTASampleCode","t.PosSeqT","t.AnyT_T1"), c("a.FASTASampleCode","a.PosSeqT","a.AnyT_T1"))
+	setnames(tmp, c("FASTASampleCode","PosSeqT","AnyT_T1"), c("t.FASTASampleCode","t.PosSeqT","t.AnyT_T1"))
+	setnames(tmp, c("a.FASTASampleCode","a.PosSeqT","a.AnyT_T1"), c("FASTASampleCode","PosSeqT","AnyT_T1"))
+	Y.rawbrl.linked		<- rbind( subset(Y.rawbrl.linked, t.PosSeqT<=PosSeqT), tmp, use.names=TRUE )	
+	set(Y.rawbrl.linked, NULL, 'PosSeqT', hivc.db.Date2numeric(Y.rawbrl.linked[,PosSeqT]))
+	set(Y.rawbrl.linked, NULL, 't.PosSeqT', hivc.db.Date2numeric(Y.rawbrl.linked[,t.PosSeqT]))
+	set(Y.rawbrl.linked, NULL, 'AnyT_T1', hivc.db.Date2numeric(Y.rawbrl.linked[,AnyT_T1]))
+	set(Y.rawbrl.linked, NULL, 't.AnyT_T1', hivc.db.Date2numeric(Y.rawbrl.linked[,t.AnyT_T1]))	
+	Y.rawbrl.linked[, b4T:= 'both']
+	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT<=AnyT_T1)], 'b4T', 'only.RI')
+	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT<=t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'only.T')
+	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'none')
+	Y.rawbrl.linked		<- merge( Y.rawbrl.linked, data.table(b4T= Y.rawbrl.linked[, unique(b4T)], col=c('green','red','orange')), by='b4T' )	
+	set(Y.rawbrl.linked, NULL, 'b4T', Y.rawbrl.linked[, factor(b4T)])
+	Y.rawbrl.linked[, dt:= abs(PosSeqT-t.PosSeqT)]		
+	Y.rawbrl.linked[, brlr:= brl/dt]
+	#	add treatment complications: any of ART.P ART.F ART.I ART.A yes before PosSeqT
+	if(0)
+	{
+		tmp				<- subset(df.treatment, select=c(Patient, StopTime, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel))
+		set(tmp, NULL, 'StopTime', hivc.db.Date2numeric(tmp[,StopTime]))
+		tmp				<- merge(tmp, subset( Y.rawbrl.linked, select=c(Patient, PosSeqT) ), by='Patient', allow.cartesian=TRUE)
+		tmp				<- subset(tmp, StopTime<=PosSeqT)	
+		tmp				<- tmp[, list( ART.C=any( sapply(.SD, function(z) any(z=='Yes', na.rm=TRUE)) ) ), by=c('Patient','PosSeqT'), .SDcols=c('TrI','TrCh.failure','TrCh.adherence','TrCh.patrel')]
+		Y.rawbrl.linked	<- merge( Y.rawbrl.linked, tmp, by=c('Patient','PosSeqT'), all.x=TRUE )
+		tmp				<- Y.rawbrl.linked[, which(b4T!='both' & ART.C==FALSE)]
+		set(Y.rawbrl.linked, tmp, 'b4T', Y.rawbrl.linked[tmp, paste(b4T,'NoART.C',sep='')])
+		
+		tmp				<- c('both sampling dates\nbefore cART initiation','sampling dates before and\nafter cART initiation\nNo complication','both sampling dates\nafter cART initiation\nNo complication','sampling dates before and\nafter cART initiation','both sampling dates\nafter cART initiation')
+		Y.rawbrl.linked	<- merge( Y.rawbrl.linked, data.table(b4T= c('both','only.TNoART.C','noneNoART.C','only.T','none'), b4T.long=tmp), by='b4T' )
+		set(Y.rawbrl.linked, NULL, 'b4T.long', Y.rawbrl.linked[, factor(b4T.long, levels=tmp)])		
+	}
+	if(1)
+	{
+		tmp				<- c('both sampling dates\nbefore ART start','sampling dates before and\nafter ART start','both sampling dates\nafter ART start') 
+		Y.rawbrl.linked	<- merge( Y.rawbrl.linked, data.table(b4T= c('both','only.T','none'), b4T.long=factor( tmp, levels=tmp )), by='b4T' )
+		set(Y.rawbrl.linked, NULL, 'b4T.long', Y.rawbrl.linked[, factor(b4T.long)])			
+	}	
 	
-	df[, which.min(height)]
-	df[, min(PosSeqT)]
+	setkey(Y.rawbrl.linked, b4T.long, dt)
+	#
+	#	mean evol rate
+	#
+	tmp		<- subset(Y.rawbrl.linked, b4T=='both' & dt>0 & brlr<0.01, select=c(brl, dt, b4T.long))
+	#tmpg	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), data=as.data.frame(tmp), family=GA, n.cyc = 40)	
+	tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)	
+	tmp[, y.b:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)]
+	tmp[, y.u:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
+	tmp[, y.l:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
+	ans		<- copy(tmp)
+	tmp		<- subset(Y.rawbrl.linked, b4T=='only.T' & dt>0 & brlr<0.01, select=c(brl, dt, b4T.long))
+	tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)	
+	tmp[, y.b:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)]
+	tmp[, y.u:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
+	tmp[, y.l:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
+	ans		<- rbind(ans, tmp)
+	tmp		<- subset(Y.rawbrl.linked, b4T=='none' & dt>0 & brlr<0.01, select=c(brl, dt, b4T.long))
+	tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)	
+	tmp[, y.b:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)]
+	tmp[, y.u:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
+	tmp[, y.l:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
+	ans		<- rbind(ans, tmp)
+	
+	ggplot(Y.rawbrl.linked, aes(x=dt, y=brl, colour=b4T.long)) + 
+			geom_point(size=0.8) + scale_x_continuous(limits=c(0,7.5)) + scale_y_continuous(limits=c(0,0.35)) + scale_colour_brewer(palette='Set1') + facet_grid(. ~ b4T.long) +		
+			geom_line(aes(x=dt, y=y.b), colour='black', data=ans) +		
+			#geom_ribbon(aes(x=dt, ymin=y.l, ymax=y.u), alpha=0.2, data=ans, inherit.aes = FALSE) +
+			labs(x="years between within-host sampling dates", y='within-host divergence') + theme(legend.position='none') 
+	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examl_clockwh.pdf'
+	ggsave(file=file, w=6, h=6)
+	
+	print(tmpg.ZAGA.B)
+	#		0.001215
+	print(tmpg.ZAGA.O)
+	#dt		0.00279
+	print(tmpg.ZAGA.N)	
+	#dt  	0.00407 
+	#
+	#	EXCLUDE
+	#
+	brl.linked.max.dt= 10; brl.linked.min.dt= 1; brl.linked.max.brlr=0.01
+	Y.rawbrl.linked		<- subset( Y.rawbrl.linked, dt!=0 )
+	cat(paste('\nY.rawbrl.linked all, n=',nrow(Y.rawbrl.linked)))
+	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  brlr<=brl.linked.max.brlr)
+	cat(paste('\nY.rawbrl.linked max brlr ',brl.linked.max.brlr,' excluded, n=',nrow(Y.rawbrl.linked)))
+	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  dt<=brl.linked.max.dt)		
+	cat(paste('\nY.rawbrl.linked max dt ',brl.linked.max.dt,' excluded, n=',nrow(Y.rawbrl.linked)))	
+	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  dt>brl.linked.min.dt)		
+	cat(paste('\nY.rawbrl.linked min dt ',brl.linked.min.dt,' excluded, n=',nrow(Y.rawbrl.linked)))
+	Y.rawbrl.linked[, brlz:=brl]
+	set(Y.rawbrl.linked, Y.rawbrl.linked[, which(brlz<1e-4)], 'brlz', 0)	
+	#
+	# wilcox test for same mean
+	#
+	test	<- list( 	both.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),				
+						both.none= 		wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)] ),						
+						none.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] )		)
+	cat(paste('\nwilcox test for same mean'))
+	print( sapply(test, '[[', 'p.value') )
+	#wilcox test for same mean
+	# both.only.T    both.none  none.only.T 
+	#1.965908e-04 2.855682e-24 3.835930e-22 
+	#
+	# AIC between EXP GA ZAGA	-- AIC not comparable between brl and brlz
+	#
+	tmpd.B		<- subset(Y.rawbrl.linked, b4T=='both', select=c(brl, brlz, dt, b4T.long))
+	tmpd.O		<- subset(Y.rawbrl.linked, b4T=='only.T', select=c(brl, brlz, dt, b4T.long))
+	tmpd.N		<- subset(Y.rawbrl.linked, b4T=='none', select=c(brl, brlz, dt, b4T.long))
+	nrow(tmpd.B)
+	nrow(tmpd.O)
+	nrow(tmpd.N)
+	
+	tmpg.E.B	<- gamlss(as.formula('brl ~ 1'), data=as.data.frame(tmpd.B), family=EXP, n.cyc = 40)	
+	tmpg.E.O	<- gamlss(as.formula('brl ~ 1'), data=as.data.frame(tmpd.O), family=EXP, n.cyc = 40)
+	tmpg.E.N	<- gamlss(as.formula('brl ~ 1'), data=as.data.frame(tmpd.N), family=EXP, n.cyc = 40)	
+	tmpg.GA.B	<- gamlss(as.formula('brl ~ 1'), data=as.data.frame(tmpd.B), family=GA, n.cyc = 40)
+	tmpg.GA.O	<- gamlss(as.formula('brl ~ 1'), data=as.data.frame(tmpd.O), family=GA, n.cyc = 40)
+	tmpg.GA.N	<- gamlss(as.formula('brl ~ 1'), data=as.data.frame(tmpd.N), family=GA, n.cyc = 40)
+	tmpg.ZAGA.B	<- gamlss(as.formula('brlz ~ 1'), data=as.data.frame(tmpd.B), family=ZAGA, n.cyc = 40)			
+	tmpg.ZAGA.O	<- gamlss(as.formula('brlz ~ 1'), data=as.data.frame(tmpd.O), family=ZAGA, n.cyc = 40)		
+	tmpg.ZAGA.N	<- gamlss(as.formula('brlz ~ 1'), data=as.data.frame(tmpd.N), family=ZAGA, n.cyc = 40)
+	AIC(tmpg.E.B, tmpg.GA.B, tmpg.ZAGA.B, tmpg.E.O, tmpg.GA.O, tmpg.ZAGA.O, tmpg.E.N, tmpg.GA.N, tmpg.ZAGA.N)
+	#            df         AIC
+	#tmpg.GA.N    2 -13443.5388		tmpg.GA.O    2  -3006.6705		tmpg.GA.B    2  -1322.0507
+	#tmpg.ZAGA.N  3 -13441.5387		tmpg.ZAGA.O  3  -3004.6703		tmpg.ZAGA.B  3  -1320.0505
+	#tmpg.E.N     1 -12494.9765		tmpg.E.O     1  -2351.8905		tmpg.E.B     1   -925.7479		
+	tmpp.ZAGA	<- sapply( list(tmpg.ZAGA.B, tmpg.ZAGA.O, tmpg.ZAGA.N), function(z){	c(mu=as.double(exp(z[['mu.coefficients']])), sigma=as.double(exp(z[['sigma.coefficients']])), nu=as.double(1/(1+exp(-z[['nu.coefficients']]))) ) 	})
+	colnames(tmpp.ZAGA)	<- c('B','O','N')
+	tmpp.GA	<- sapply( list(tmpg.GA.B, tmpg.GA.O, tmpg.GA.N), function(z){	c(mu=as.double(exp(z[['mu.coefficients']])), sigma=as.double(exp(z[['sigma.coefficients']])) ) 	})
+	colnames(tmpp.GA)	<- c('B','O','N')	
+	tmpp.E	<- as.matrix(t(sapply( list(tmpg.E.B, tmpg.E.O, tmpg.E.N), FUN=function(z){	c(mu=as.double(exp(z[['mu.coefficients']])) ) 	}, simplify=FALSE)))
+	colnames(tmpp.E)	<- c('B','O','N')
+	rownames(tmpp.E)	<- c('mu')	
+	#
+	# ks.test between EXP GA ZAGA	
+	#	
+	test		<- list(	E.B= ks.test(tmpd.B[,brl], pEXP, mu=unlist(tmpp.E['mu','B'])),
+							E.O= ks.test(tmpd.O[,brl], pEXP, mu=unlist(tmpp.E['mu','O'])),
+							E.N= ks.test(tmpd.N[,brl], pEXP, mu=unlist(tmpp.E['mu','N'])),
+							GA.B= ks.test(tmpd.B[,brl], pGA, mu=unlist(tmpp.GA['mu','B']), sigma=unlist(tmpp.GA['sigma','B'])),
+							GA.O= ks.test(tmpd.O[,brl], pGA, mu=unlist(tmpp.GA['mu','O']), sigma=unlist(tmpp.GA['sigma','O'])),
+							GA.N= ks.test(tmpd.N[,brl], pGA, mu=unlist(tmpp.GA['mu','N']), sigma=unlist(tmpp.GA['sigma','N'])),
+							ZAGA.B= ks.test(subset(tmpd.B, brlz>0)[,brlz], pZAGA, mu=unlist(tmpp.ZAGA['mu','B']), sigma=unlist(tmpp.ZAGA['sigma','B']), nu=0),
+							ZAGA.O= ks.test(subset(tmpd.B, brlz>0)[,brlz], pZAGA, mu=unlist(tmpp.ZAGA['mu','O']), sigma=unlist(tmpp.ZAGA['sigma','O']), nu=0),
+							ZAGA.N= ks.test(subset(tmpd.B, brlz>0)[,brlz], pZAGA, mu=unlist(tmpp.ZAGA['mu','N']), sigma=unlist(tmpp.ZAGA['sigma','N']), nu=0)
+							)	
+	print( sapply(test, '[[', 'p.value') )
+	#E.B          E.O          E.N         GA.B         GA.O         GA.N       ZAGA.B       ZAGA.O       ZAGA.N 
+	#0.000000e+00 0.000000e+00 0.000000e+00 5.823539e-07 1.064704e-12 0.000000e+00 1.349307e-04 1.290469e-07 3.552714e-15 
+	# 0 is <2.2e-16
+	#
+	#	Parameters
+	#
+	tmpp		<- do.call('rbind',	list( 	data.table(d='ZAGA',b4T=c('B','O','N'),mu=unlist(tmpp.ZAGA['mu',]), sigma=tmpp.ZAGA['sigma',], nu=tmpp.ZAGA['nu',]),
+											data.table(d='GA',b4T=c('B','O','N'),mu=unlist(tmpp.GA['mu',]), sigma=tmpp.GA['sigma',], nu=NA),
+											data.table(d='EXP',b4T=c('B','O','N'),mu=unlist(tmpp.E['mu',]), sigma=NA, nu=NA)	)	)
+	tmp			<- c('both sampling dates\nbefore ART start','sampling dates before and\nafter ART start','both sampling dates\nafter ART start')
+	tmp			<- data.table(b4T= c('B','O','N'), b4T.long=factor( tmp, levels=tmp ))
+	tmpp		<- merge( tmpp, tmp, by='b4T' )													
+	#d b4T                 mu     sigma        nu
+	#1: ZAGA   B 0.0243411879614414 1.1143539 0.3698630
+	#2: ZAGA   O 0.0256556183526584 0.8858962 0.2824427
+	#3: ZAGA   N 0.0331633968299415 0.8077049 0.1252033
+	#4:   GA   B 0.0153411122984566 2.0465359        NA
+	#5:   GA   O 0.0184116511820145 1.8177049        NA
+	#6:   GA   N 0.0290122859838159 1.3913884        NA
+	#7:  EXP   B 0.0153411122984566        NA        NA
+	#8:  EXP   O 0.0184116511820145        NA        NA
+	#9:  EXP   N 0.0290122859838169        NA        NA
+	#
+	#	CDF plot
+	#
+	tmp			<- tmpp[, {
+								if(b4T=='O')
+									brl			<- tmpd.O[,brlz]
+								if(b4T=='B')
+									brl			<- tmpd.B[,brlz]
+								if(b4T=='N')
+									brl			<- tmpd.N[,brlz]	
+								brl.cdf		<- data.table( brl=sort(brl), empirical=seq_along(brl)/length(brl) )[, list(empirical=tail(empirical, 1)), by='brl']
+								if(d=='EXP')
+									brl.cdf[, predicted:= pEXP( brl.cdf[,brl], mu=mu ) ]
+								if(d=='GA')
+									brl.cdf[, predicted:= pGA( brl.cdf[,brl], mu=mu, sigma=sigma ) ]
+								if(d=='ZAGA')
+									brl.cdf[, predicted:= pZAGA( brl.cdf[,brl], mu=mu, sigma=sigma, nu=nu ) ]
+								brl.cdf				
+							}, by=c('b4T.long', 'd')]
+	tmp			<- melt(tmp, id=c('b4T.long','d', 'brl'))	
+	ggplot( data=tmp, aes(x=brl, y=value, colour=variable)) + 
+			labs(x='within-host divergence', y='c.d.f.') + 
+			scale_colour_brewer(name='', palette='Paired') + 
+			geom_point(data=subset(tmp, variable=='empirical'), show_guide=FALSE ) +
+			geom_line() + facet_grid(d ~ b4T.long, scales='free_x', margins=FALSE) +
+			theme(legend.key.size=unit(10,'mm'))
+	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examl_whcdf.pdf'
+	ggsave(file=file, w=10,h=10)		
+	#
+	#	QQ plot -- TODO can call stat_qq, need qZAGA etc and params only, and slope + int
+	#
+	tmp			<- tmpp[, {
+				if(b4T=='O')
+					brl			<- tmpd.O[,brlz]
+				if(b4T=='B')
+					brl			<- tmpd.B[,brlz]
+				if(b4T=='N')
+					brl			<- tmpd.N[,brlz]	
+				brl.cdf		<- data.table( brl=sort(brl), empirical=seq_along(brl)/length(brl) )[, list(empirical=tail(empirical, 1)), by='brl']
+				if(d=='EXP')
+				{
+					brl.cdf[, predicted:= qEXP( brl.cdf[,brl], mu=mu ) ]
+					qt 	<- qEXP(c(.25, .75), mu=mu )
+				}
+				if(d=='GA')
+				{
+					brl.cdf[, predicted:= qGA( brl.cdf[,brl], mu=mu, sigma=sigma ) ]
+					qt 	<- qGA(c(.25, .75), mu=mu, sigma=sigma )
+				}
+				if(d=='ZAGA')
+				{
+					brl.cdf[, predicted:= qZAGA( brl.cdf[,brl], mu=mu, sigma=sigma, nu=nu ) ]										
+					qt 	<- qZAGA(c(.25, .75), mu=mu, sigma=sigma, nu=nu )											
+				}
+				qv 		<- quantile(brl, c(.25, .75))
+				slope 	<- diff(qv)/diff(qt)
+				int 	<- qv[1] - slope * qt[1]
+				brl.cdf				
+			}, by=c('b4T.long', 'd')]
+	#qplot(sample=brl, geom = "point", stat = "qq", pch='both sampling dates\nbefore cART initiation', distribution = qZAGA, dparams = list(mu=exp(ml.zaga.one[['mu.coefficients']]), sigma=exp(ml.zaga.one[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga.one[['nu.coefficients']])))) + 
+	#		geom_abline(slope = slope, intercept = int) + labs(x='Zero-inflated Gamma', y='empirical') +
+	#		theme(legend.justification=c(0,1), legend.position=c(0,1), legend.key.size=unit(13,'mm'), legend.title = element_blank())
+	#ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_zagaqq','.pdf',sep=''), w=4,h=6)		
 }
 
 project.hivc.examl<- function(dir.name= DATA)

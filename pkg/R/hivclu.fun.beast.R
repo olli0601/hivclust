@@ -475,8 +475,8 @@ hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatm
 	youngest.tip.ctime	<- max(ph.tip.ctime)
 	cols				<- brewer.pal(12,"Paired")
 	cols[1]				<- cols[8]			
-	#	get tip labels	
-	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=c("CountryInfection","Trm","Sex","isAcute","lRNA.early","cluster","Patient","RegionHospital") )
+	#	get tip labels		
+	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=c("cluster","PatientA","Trm","isAcute","RegionHospital") )
 	if(is.null(pdf.xlim))
 	{
 		tmp				<- max( apply(ph.tiplabel$text, 2, function(x)  sum(xinch(strwidth(x, units="inches", cex=cex.tiplabel)))  ) )
@@ -492,12 +492,12 @@ hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatm
 	# add lRNA timeline
 	ph.viro.timeline	<- hivc.treeannotator.get.viro.timeline(ph, df.all, df.viro, youngest.tip.ctime, df.treatment=df.treatment)
 	hivc.treeannotator.plot.viro.timeline(ph, ph.viro.timeline, viro.min= log10(300), width.yinch= 0.15, add.yinch= 0.005, col.bg= cols[c(5,10,12)], col.legend= cols[6], cex.txt= 0.2, lines.lwd=0.1)
+	# add CD4 timeline
+	ph.immu.timeline	<- hivc.treeannotator.get.immu.timeline(ph, df.all, df.immu, youngest.tip.ctime, end.ctime=2013.3)
+	hivc.treeannotator.plot.immu.timeline(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2, lines.lwd=0.1)	
 	# add BEAST posterior density of nodes where available
 	if(!is.null(df.node.ctime))
 		hivc.treeannotator.plot.node.ctime(copy(df.node.ctime), ph.root.ctime, width.yinch=0.1, add.yinch=0.005, col.bg=cols[1] )
-	# add CD4 timeline
-	ph.immu.timeline	<- hivc.treeannotator.get.immu.timeline(ph, df.all, df.immu, youngest.tip.ctime, end.ctime=2013.3)
-	hivc.treeannotator.plot.immu.timeline(ph, ph.immu.timeline, immu.min= 150, immu.max= 800, width.yinch= 0.15, add.yinch= -0.005, col.bg= cols[3], col.legend= cols[4], cex.txt= 0.2, lines.lwd=0.1)
 	# re-plot phylogeny
 	if(!is.null(ph$node.label))
 		ph$node.label	<- as.numeric(sapply( strsplit( ph$node.label, '_' ), function(x)	x[1] ))
@@ -1860,14 +1860,8 @@ hivc.treeannotator.get.immu.timeline<- function(ph, df, df.immu, youngest.tip.ct
 	setkey(df, FASTASampleCode)
 	tmp				<- df[J(ph$tip.label)][, list(tip=seq_along(ph$tip.label), FASTASampleCode=FASTASampleCode, Patient=Patient, DateDied=DateDied)]		
 	ans				<- merge(subset(df.immu, select=c(Patient, PosCD4, CD4)), tmp, by="Patient")
-	if(class(ans$PosCD4)=='Date')
-		set(ans,NULL,"PosCD4",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosCD4]))
-	if(class(ans$PosCD4)!='Date')
-		set(ans,NULL,"PosCD4",	youngest.tip.ctime - ans[,PosCD4])
-	if(class(ans$DateDied)=='Date')
-		set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))				
-	if(class(ans$DateDied)!='Date')
-		set(ans,NULL,"DateDied",	youngest.tip.ctime - ans[,DateDied])					
+	set(ans,NULL,"PosCD4",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosCD4]))
+	set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))				
 	set(ans,which(is.na(ans[,DateDied])), "DateDied", youngest.tip.ctime - end.ctime)				
 	ans				<- ans[,list(PosCD4=c(PosCD4,DateDied[1]), CD4=c(CD4,tail(CD4,1))),by="tip"]
 	setkey(ans,tip)
@@ -1881,6 +1875,7 @@ hivc.treeannotator.plot.viro.timeline<- function(ph, ph.viro.timeline, viro.min=
 	set(ph.viro.timeline, NULL, "PosRNA", max(node.depth.edgelength(ph)) - ph.viro.timeline[,PosRNA])
 	ph.viro.timeline[, yylRNA:= lRNA]
 	set(ph.viro.timeline, NULL, "yylRNA", ph.viro.timeline[,yylRNA]-viro.min)
+	set(ph.viro.timeline, ph.viro.timeline[,which(yylRNA<0)], "yylRNA", 0.)
 	scale	<- yinch(width.yinch) / max( ph.viro.timeline[,yylRNA])
 	set(ph.viro.timeline, NULL, "yylRNA", ph.viro.timeline[,yylRNA] * scale )
 	ph.viro.timeline[, yy:= yinch(add.yinch)+lastPP$yy[ph.viro.timeline[,tip]]]
@@ -1924,14 +1919,9 @@ hivc.treeannotator.get.viro.timeline<- function(ph, df, df.viro, youngest.tip.ct
 	{
 		tmp				<- df[J(ph$tip.label)][, list(tip=seq_along(ph$tip.label), FASTASampleCode=FASTASampleCode, Patient=Patient, DateDied=DateDied)]		
 		ans				<- merge(subset(df.viro, select=c(Patient, PosRNA, lRNA)), tmp, by="Patient")	#all.y=1,
-		if(class(ans$PosRNA)=='Date')	
-			set(ans,NULL,"PosRNA",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosRNA]))
-		if(class(ans$PosRNA)!='Date')		
-			set(ans,NULL,"PosRNA",	youngest.tip.ctime - ans[,PosRNA])
-		if(class(ans$DateDied)=='Date')		
-			set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))
-		if(class(ans$DateDied)!='Date')		
-			set(ans,NULL,"DateDied",	youngest.tip.ctime - ans[,DateDied])						
+		set(ans,NULL,"PosRNA",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosRNA]))
+		set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))
+		set(ans,NULL,"DateDied",	youngest.tip.ctime - ans[,DateDied])						
 		set(ans,which(is.na(ans[,DateDied])), "DateDied", youngest.tip.ctime - end.ctime)				
 		ans				<- ans[,list(PosRNA=c(PosRNA,DateDied[1]), lRNA=c(lRNA,tail(lRNA,1), TPeriod=0, NoDrug=0)),by="tip"]
 		setkey(ans,tip)
@@ -1941,14 +1931,8 @@ hivc.treeannotator.get.viro.timeline<- function(ph, df, df.viro, youngest.tip.ct
 		#as above except TPeriod=NA
 		tmp				<- df[J(ph$tip.label)][, list(tip=seq_along(ph$tip.label), FASTASampleCode=FASTASampleCode, Patient=Patient, DateDied=DateDied)]		
 		ans				<- merge(subset(df.viro, select=c(Patient, PosRNA, lRNA)), tmp, by="Patient")	#all.y=1, 
-		if(class(ans$PosRNA)=='Date')		
-			set(ans,NULL,"PosRNA",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosRNA]))
-		if(class(ans$PosRNA)!='Date')		
-			set(ans,NULL,"PosRNA",	youngest.tip.ctime - ans[,PosRNA])
-		if(class(ans$DateDied)=='Date')		
-			set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))
-		if(class(ans$DateDied)!='Date')		
-			set(ans,NULL,"DateDied",	youngest.tip.ctime - ans[,DateDied])						
+		set(ans,NULL,"PosRNA",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,PosRNA]))
+		set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))
 		set(ans,which(is.na(ans[,DateDied])), "DateDied", youngest.tip.ctime - end.ctime)				
 		ans				<- ans[,list(Patient= rep(Patient[1], length(Patient)+1), PosRNA=c(PosRNA,DateDied[1]), lRNA=c(lRNA,tail(lRNA,1))),by="tip"]
 		#prepare subset of df.treatment
@@ -1956,19 +1940,13 @@ hivc.treeannotator.get.viro.timeline<- function(ph, df, df.viro, youngest.tip.ct
 		#modify ans if there is at least one patient with a treatment period
 		if( tmp[,any(!is.na(StopTime))] )
 		{
-			if(class(tmp$StartTime)=='Date')	
-				set(tmp,NULL,"StartTime",	youngest.tip.ctime - hivc.db.Date2numeric(tmp[,StartTime]))
-			if(class(tmp$StartTime)!='Date')	
-				set(tmp,NULL,"StartTime",	youngest.tip.ctime - tmp[,StartTime])
-			if(class(tmp$StopTime)=='Date')	
-				set(tmp,NULL,"StopTime",	youngest.tip.ctime - hivc.db.Date2numeric(tmp[,StopTime]))
-			if(class(tmp$StopTime)!='Date')
-				set(tmp,NULL,"StopTime",	youngest.tip.ctime - tmp[,StopTime])
+			set(tmp,NULL,"StartTime",	youngest.tip.ctime - hivc.db.Date2numeric(tmp[,StartTime]))
+			set(tmp,NULL,"StopTime",	youngest.tip.ctime - hivc.db.Date2numeric(tmp[,StopTime]))
 			set(tmp, which( tmp[,StopTime==min(StopTime, na.rm=1)] ), "StopTime", youngest.tip.ctime - 2013.3)
 			ans				<- merge(tmp, ans, by="Patient", allow.cartesian=1)
 			tmp				<- which(ans[,is.na(StartTime)])
-			set(ans,tmp,"StartTime",youngest.tip.ctime - 2013.3)
-			set(ans,tmp,"StopTime",youngest.tip.ctime - 2013.3)
+			set(ans,tmp,"StartTime",youngest.tip.ctime - end.ctime)
+			set(ans,tmp,"StopTime",youngest.tip.ctime - end.ctime)
 			set(ans,tmp,"NoDrug",0L)
 			#now have all treatments and viral loads measures together
 			ans					<- ans[,	{
@@ -2015,18 +1993,9 @@ hivc.treeannotator.sero.getnodeheight.range<- function(ph, df, youngest.tip.ctim
 {
 	setkey(df, FASTASampleCode)
 	ans					<- cbind( data.table(tip=seq_along(ph$tip.label)), subset(df[J(ph$tip.label)], select=c(NegT, AnyPos_T1, DateDied)) )
-	if(class(ans$NegT)=='Date')
-		set(ans,NULL,"NegT",		youngest.tip.ctime - hivc.db.Date2numeric(ans[,NegT]))
-	if(class(ans$NegT)!='Date')
-		set(ans,NULL,"NegT",		youngest.tip.ctime - ans[,NegT])
-	if(class(ans$AnyPos_T1)=='Date')
-		set(ans,NULL,"AnyPos_T1",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,AnyPos_T1]))
-	if(class(ans$AnyPos_T1)!='Date')
-		set(ans,NULL,"AnyPos_T1",	youngest.tip.ctime - ans[,AnyPos_T1])
-	if(class(ans$DateDied)=='Date')
-		set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))
-	if(class(ans$DateDied)!='Date')
-		set(ans,NULL,"DateDied",	youngest.tip.ctime - ans[,DateDied])
+	set(ans,NULL,"NegT",		youngest.tip.ctime - hivc.db.Date2numeric(ans[,NegT]))
+	set(ans,NULL,"AnyPos_T1",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,AnyPos_T1]))
+	set(ans,NULL,"DateDied",	youngest.tip.ctime - hivc.db.Date2numeric(ans[,DateDied]))
 	set(ans,which(is.na(ans[,DateDied])), "DateDied", 0.)
 	ans
 }
