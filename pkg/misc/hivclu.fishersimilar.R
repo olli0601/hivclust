@@ -8083,6 +8083,165 @@ project.athena.Fisheretal.compositionclock<- function()
 	#	-0.3793354		
 }
 ######################################################################################
+project.athena.Fisheretal.compositioncoalvsbrl<- function()
+{	
+	require(reshape2)
+	require(data.table)
+	require(ape)
+	require(adephylo)
+	require(caTools)
+	#stop()
+	indir					<- paste(DATA,"fisheretal_data",sep='/')		
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	outdir					<- paste(DATA,"fisheretal",sep='/')
+	infile.cov.study		<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infile.viro.study		<- paste(indircov,"ATHENA_2013_03_Viro.R",sep='/')
+	infile.immu.study		<- paste(indircov,"ATHENA_2013_03_Immu.R",sep='/')
+	infile.treatment.study	<- paste(indircov,"ATHENA_2013_03_Regimens.R",sep='/')
+	infile.cov.all			<- "ATHENA_2013_03_AllSeqPatientCovariates_AllMSM"
+	infile.viro.all			<- paste(indircov,"ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+	infile.immu.all			<- paste(indircov,"ATHENA_2013_03_Immu_AllMSM.R",sep='/')
+	infile.treatment.all	<- paste(indircov,"ATHENA_2013_03_Regimens_AllMSM.R",sep='/')		
+	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	infiletree				<- paste(infile,"examlbs500",sep="_")
+	insignat				<- "Wed_Dec_18_11:37:00_2013"							
+	clu.infilexml.opt		<- "clrh80"
+	clu.infilexml.template	<- "sasky_sdr06fr"	
+	method.nodectime		<- 'any'
+	
+	t.period				<- 1/8
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+	resume					<- 1
+	verbose					<- 1
+	#
+	#	process SASKY
+	#
+	#	collect files containing dated cluster phylogenies
+	files		<- list.files(indir)
+	if(!length(files))	stop('no input files matching criteria')
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(clu.infilexml.opt, x, fixed=1) & grepl(clu.infilexml.template,x, fixed=1) & grepl('_cluposterior_[0-9]+',x) & grepl('R$',x) ) ]		
+	if(!length(files))	stop('no input files matching criteria')
+	tmp			<- regmatches( files, regexpr('_cluposterior_[0-9]+',files)) 
+	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+	file.info	<- data.table(file=files, cluster=cluster)
+	setkey(file.info, cluster)
+	#	get dated cluster MAP phylogenies
+	tmp			<- lapply(seq_len(nrow(file.info)), function(i)
+			{				
+				#	load dated cluster phylogenies
+				file					<- paste(indir, file.info[i,file], sep='/')
+				if(verbose) cat(paste('\nload file=',file,'i=',i))
+				tmp						<- load(file)
+				topo.map				<- mph.clu.dtopo[which.max(freq),]					
+				tmp						<- which( grepl( paste('mph.i=',topo.map[,mph.i],'_',sep=''), names(ph.consensus) ) )
+				if(length(tmp)!=1)	stop('unexpected ph.consensus index')
+				topo.map.ph				<- ph.consensus[[ tmp ]]
+				topo.map.ph$tip.label	<- sapply(strsplit(topo.map.ph$tip.label, '_'), function(x) x[[length(x)]] )
+				list(ph=topo.map.ph)			
+			})
+	#	extract calendar time brl between all tips in clusters
+	tmp			<- lapply(seq_along(tmp), function(i)
+			{
+				z	<- as.matrix(distTips(tmp[[i]]$ph))
+				df	<- combs( sort(tmp[[i]]$ph$tip.label), 2 )
+				df	<- data.table( FASTASampleCode.1=df[,1], FASTASampleCode.2=df[,2] )	
+				df[, list(tl=z[FASTASampleCode.1,FASTASampleCode.2]), by=c('FASTASampleCode.1','FASTASampleCode.2')]		
+			})
+	df			<- do.call('rbind', tmp) 
+	setnames(df, 'tl','tl.sasky')
+	#
+	#	process GMRF
+	#					
+	clu.infilexml.opt		<- "mph4clutx4tip"
+	clu.infilexml.template	<- "um192rhU2080"	
+	#	collect files containing dated cluster phylogenies
+	files		<- list.files(indir)
+	if(!length(files))	stop('no input files matching criteria')
+	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(clu.infilexml.opt, x, fixed=1) & grepl(clu.infilexml.template,x, fixed=1) & grepl('_cluposterior_[0-9]+',x) & grepl('R$',x) ) ]		
+	if(!length(files))	stop('no input files matching criteria')
+	tmp			<- regmatches( files, regexpr('_cluposterior_[0-9]+',files)) 
+	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
+	file.info	<- data.table(file=files, cluster=cluster)
+	setkey(file.info, cluster)
+	#	get dated cluster MAP phylogenies
+	tmp			<- lapply(seq_len(nrow(file.info)), function(i)
+			{				
+				#	load dated cluster phylogenies
+				file					<- paste(indir, file.info[i,file], sep='/')
+				if(verbose) cat(paste('\nload file=',file,'i=',i))
+				tmp						<- load(file)
+				topo.map				<- mph.clu.dtopo[which.max(freq),]					
+				tmp						<- which( grepl( paste('mph.i=',topo.map[,mph.i],'_',sep=''), names(ph.consensus) ) )
+				if(length(tmp)!=1)	stop('unexpected ph.consensus index')
+				topo.map.ph				<- ph.consensus[[ tmp ]]
+				topo.map.ph$tip.label	<- sapply(strsplit(topo.map.ph$tip.label, '_'), function(x) x[[length(x)]] )
+				list(ph=topo.map.ph)			
+			})
+	#	extract calendar time brl between all tips in clusters
+	tmp			<- lapply(seq_along(tmp), function(i)
+			{
+				z	<- as.matrix(distTips(tmp[[i]]$ph))
+				df	<- combs( sort(tmp[[i]]$ph$tip.label), 2 )
+				df	<- data.table( FASTASampleCode.1=df[,1], FASTASampleCode.2=df[,2] )	
+				df[, list(tl=z[FASTASampleCode.1,FASTASampleCode.2]), by=c('FASTASampleCode.1','FASTASampleCode.2')]		
+			})
+	tmp			<- do.call('rbind', tmp)
+	setnames(tmp, 'tl','tl.gmrf')
+	df			<- merge(df, tmp, by=c('FASTASampleCode.1','FASTASampleCode.2'))
+	#
+	#	get ML branch lengths
+	#
+	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500_Wed_Dec_18_11:37:00_2013.R'
+	load(file)	#loads ph		
+	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500_Wed_Dec_18_11:37:00_2013_distTips.R'
+	load(file)	#loads brl	
+	brl.n	<- attr(brl,'Size')
+	tmp		<- unique( subset(df, select=FASTASampleCode.1) )
+	tmp		<- tmp[, list(sc.i=match(FASTASampleCode.1, ph$tip.label)), by='FASTASampleCode.1']
+	df		<- merge(df, tmp, by='FASTASampleCode.1')	
+	tmp		<- unique( subset(df, select=FASTASampleCode.2) )
+	tmp		<- tmp[, list(sc.t=match(FASTASampleCode.2, ph$tip.label)), by='FASTASampleCode.2']
+	df		<- merge(df, tmp, by='FASTASampleCode.2')
+	tmp		<- df[, which(sc.t<sc.i)]
+	tmp2	<- df[tmp, sc.t]
+	set(df, tmp, 'sc.t', df[tmp,sc.i])
+	set(df, tmp, 'sc.i', tmp2)	
+	tmp		<- df[, 	list( brl= brl[ my.lower.tri.index(brl.n, sc.t, sc.i) ]) , by=c('FASTASampleCode.1','FASTASampleCode.2')]
+	df		<- merge(df, tmp, by=c('FASTASampleCode.1','FASTASampleCode.2'))
+	df[, sc.i:=NULL]
+	df[, sc.t:=NULL]
+	#
+	#	compare and plot
+	#
+	setnames(df, c('tl.sasky','tl.gmrf'),c('SA','GMRF'))
+	df		<- melt(df, id.vars=c('FASTASampleCode.1','FASTASampleCode.2','brl'), value.name='ctl', variable.name='treeprior')
+	set(df, df[, which(treeprior=='SA')], 'treeprior', 'serial SA birth-death model')
+	set(df, df[, which(treeprior=='GMRF')], 'treeprior', 'GMRF coalescent model')
+	#	compare to ML brl
+	#	SAsky does not explain brl better ..
+	ggplot(df, aes(x=ctl, y=brl)) + geom_point() + facet_grid(treeprior ~ ., margins=FALSE) + stat_smooth()
+	g.sa	<- gamlss(brl~ctl-1, sigma.formula=~ctl, data=subset(df, treeprior=='SA'), family=GA(mu.link='identity'))	
+	g.g		<- gamlss(brl~ctl-1, sigma.formula=~ctl, data=subset(df, treeprior=='GMRF'), family=GA(mu.link='identity'))
+	Rsq(g.sa)
+	#	0.6035012
+	Rsq(g.g)
+	#	0.623532
+	GAIC(g.sa)
+	#	-82574.98
+	GAIC(g.g)
+	#	-83385.81
+	
+	#
+	#
+	ggplot(df, aes(x=ctl, colour=treeprior)) + stat_ecdf() + coord_cartesian(xlim = c(0, 20)) +
+			labs(x='calendar time between clustering tip pairs\n(years)', y='cumulative distribution function') +
+			scale_colour_brewer(palette='Set1', name='Tree prior') +
+			theme(legend.position=c(0,1), legend.justification=c(0,1) )
+	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_2011_Wed_Dec_18_11:37:00_2013_gmrf_sasky_CLEN.pdf'
+	ggsave(file=file, w=4, h=6)
+}
+######################################################################################
 project.athena.Fisheretal.compositioncoal<- function()
 {	
 	load( '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_gmrf_2011_Wed_Dec_18_11:37:00_2013_YXCLU3da_all.R' )
@@ -8143,6 +8302,165 @@ project.athena.Fisheretal.compositionacute<- function()
 	tmp<- unique(tmp)
 }
 ######################################################################################
+project.athena.Fisheretal.sensitivity.tables.m2<- function(df, levels, file)
+{
+	setkey(df, factor)
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	
+	tmp		<- subset(df, stat=='P.rawbias.e0cp')
+	set(tmp, NULL, 'v', tmp[, round(v, d=3)]*100)
+	set(tmp, NULL, 'l95.bs', tmp[, round(l95.bs, d=3)]*100)
+	set(tmp, NULL, 'u95.bs', tmp[, round(u95.bs, d=3)]*100)
+	set(tmp, NULL, 'P.rawbias.e0cp', tmp[, paste('=\"',v,'\"&CHAR(13)&\"(',l95.bs,'COMMA ',u95.bs,')\"',sep='')])
+	ans		<- subset(tmp, select=c(factor, t.period,P.rawbias.e0cp))
+	tmp		<- subset(df, stat=='N.raw')
+	set(tmp, NULL, 'v', tmp[, round(v, d=1)])
+	set(tmp, NULL, 'l95.bs', tmp[, round(l95.bs, d=1)])
+	set(tmp, NULL, 'u95.bs', tmp[, round(u95.bs, d=1)])
+	set(tmp, NULL, 'N.raw', tmp[, paste('=\"',v,'\"&CHAR(13)&\"(',l95.bs,'COMMA ',u95.bs,')\"',sep='')])
+	print(tmp[, list(v=sum(v), l95.bs=sum(l95.bs), u95.bs=sum(u95.bs)), by='t.period'])
+	ans		<- merge(subset(tmp, select=c(factor, t.period,N.raw)), ans, by=c('factor','t.period'))
+	tmp		<- subset(df, stat=='RI.rawbias.e0cp')
+	set(tmp, NULL, 'v', tmp[, round(v, d=2)])
+	set(tmp, NULL, 'l95.bs', tmp[, round(l95.bs, d=2)])
+	set(tmp, NULL, 'u95.bs', tmp[, round(u95.bs, d=2)])
+	set(tmp, NULL, 'RI.rawbias.e0cp', tmp[, paste('=\"',v,'\"&CHAR(13)&\"(',l95.bs,'COMMA ',u95.bs,')\"',sep='')])
+	ans		<- merge(ans, subset(tmp, select=c(factor, t.period, RI.rawbias.e0cp)), by=c('factor','t.period'))
+	tmp		<- subset(df, grepl('U',factor.ref) & stat=='RR.raw')
+	set(tmp, NULL, 'v', tmp[, round(v, d=2)])
+	set(tmp, NULL, 'l95.bs', tmp[, round(l95.bs, d=2)])
+	set(tmp, NULL, 'u95.bs', tmp[, round(u95.bs, d=2)])
+	set(tmp, NULL, 'RR.raw', tmp[, paste('=\"',v,'\"&CHAR(13)&\"(',l95.bs,'COMMA ',u95.bs,')\"',sep='')])
+	ans		<- merge(ans, subset(tmp, select=c(factor, t.period, RR.raw)), by=c('factor','t.period'), all.x=TRUE)
+	
+	set(ans, NULL, 'factor', ans[, factor(factor, levels=levels)])
+	setkey(ans, factor, t.period)
+	write.csv(ans, file=file, eol="\r\n", row.names=FALSE)
+	#in Excel replace COMMA with ,
+	#right click on table or Apple-1 and set wrap text
+}
+######################################################################################
+project.athena.Fisheretal.sensitivity.tables.m5<- function(df, levels, file)
+{
+	setkey(df, factor)
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	
+	tmp		<- subset(df, stat=='P.rawbias.e0')
+	set(tmp, NULL, 'v', tmp[, round(v, d=3)]*100)
+	set(tmp, NULL, 'l95.bs', tmp[, round(l95.bs, d=3)]*100)
+	set(tmp, NULL, 'u95.bs', tmp[, round(u95.bs, d=3)]*100)
+	set(tmp, NULL, 'P.rawbias.e0', tmp[, paste('=\"',v,'\"&CHAR(13)&\"(',l95.bs,'COMMA ',u95.bs,')\"',sep='')])
+	ans		<- subset(tmp, select=c(factor, t.period,P.rawbias.e0))
+	tmp		<- subset(df, stat=='N.raw')
+	set(tmp, NULL, 'v', tmp[, round(v, d=1)])
+	set(tmp, NULL, 'l95.bs', tmp[, round(l95.bs, d=1)])
+	set(tmp, NULL, 'u95.bs', tmp[, round(u95.bs, d=1)])
+	set(tmp, NULL, 'N.raw', tmp[, paste('=\"',v,'\"&CHAR(13)&\"(',l95.bs,'COMMA ',u95.bs,')\"',sep='')])
+	print(tmp[, list(v=sum(v), l95.bs=sum(l95.bs), u95.bs=sum(u95.bs)), by='t.period'])
+	ans		<- merge(subset(tmp, select=c(factor, t.period,N.raw)), ans, by=c('factor','t.period'))
+	tmp		<- subset(df, stat=='RI.rawbias.e0')
+	set(tmp, NULL, 'v', tmp[, round(v, d=2)])
+	set(tmp, NULL, 'l95.bs', tmp[, round(l95.bs, d=2)])
+	set(tmp, NULL, 'u95.bs', tmp[, round(u95.bs, d=2)])
+	set(tmp, NULL, 'RI.rawbias.e0', tmp[, paste('=\"',v,'\"&CHAR(13)&\"(',l95.bs,'COMMA ',u95.bs,')\"',sep='')])
+	ans		<- merge(ans, subset(tmp, select=c(factor, t.period, RI.rawbias.e0)), by=c('factor','t.period'))
+	tmp		<- subset(df, stat=='RR.raw')
+	set(tmp, NULL, 'v', tmp[, round(v, d=2)])
+	set(tmp, NULL, 'l95.bs', tmp[, round(l95.bs, d=2)])
+	set(tmp, NULL, 'u95.bs', tmp[, round(u95.bs, d=2)])
+	set(tmp, NULL, 'RR.raw', tmp[, paste('=\"',v,'\"&CHAR(13)&\"(',l95.bs,'COMMA ',u95.bs,')\"',sep='')])
+	ans		<- merge(ans, subset(tmp, select=c(factor, t.period, RR.raw)), by=c('factor','t.period'), all.x=TRUE)
+	
+	set(ans, NULL, 'factor', ans[, factor(factor, levels=levels)])
+	setkey(ans, factor, t.period)
+	write.csv(ans, file=file, eol="\r\n", row.names=FALSE)
+}
+######################################################################################
+project.athena.Fisheretal.sensitivity.gettables<- function()
+{
+	require(data.table)
+	require(ape)
+	#stop()
+	resume					<- 1 
+	indir					<- paste(DATA,"fisheretal_140616",sep='/')		
+	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	insignat				<- "Wed_Dec_18_11:37:00_2013"
+	outdir					<- paste(DATA,"fisheretal_140616",sep='/')
+	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
+	t.period				<- 1/8
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+		
+	file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.risks.R", sep='')		
+	readAttempt			<- try(suppressWarnings(load(file)))	
+	
+	file	<- paste(outdir,'/','table_m2BwmxMv.tp','.csv',sep='')
+	levels	<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")
+	df		<- subset(runs.risk, grepl('m2BwmxMv.tp',method.risk) & !grepl('wstar',method.risk) , c(stat, method.risk, factor.ref, factor, v, l95.bs, u95.bs))	
+	project.athena.Fisheretal.sensitivity.tables.m2(df, levels, file)
+	
+	
+	
+	df		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & !grepl('wstar',method.risk)  )
+	levels	<- c('t<=20','t<=25','t<=30','t<=35','t<=40','t<=45','t<=100')
+	file	<- paste(outdir,'/','table_m5tAc.tp','.csv',sep='')
+	project.athena.Fisheretal.sensitivity.tables.m5(df, levels, file)	
+	
+	file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.table.R", sep='')		
+	readAttempt			<- try(suppressWarnings(load(file)))	
+	
+	file	<- paste(outdir,'/','table_ptt','.csv',sep='')
+	levels	<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")
+	df		<- subset(runs.table, grepl('m2BwmxMv.tp',method.risk) & !grepl('wstar',method.risk), c(stat, method.risk, factor, n, p))	
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'factor', df[, factor(factor, levels=levels)])
+	tmp		<- df[, list( n.coh=sum(n[stat=='X.msm'])/8, p.seq= sum(n[stat=='X.seq']) / sum(n[stat=='X.msm']), p.clu= sum(n[stat=='X.clu']) / sum(n[stat=='X.seq']), p.pos= sum(n[stat=='YX']) / sum(n[stat=='X.clu']), n.pos=sum(n[stat=='YX'])/8 ), by=c('factor')]
+	set(tmp, NULL, 'pp.coh', tmp[, n.coh/sum(n.coh)])
+	set(tmp, NULL, 'pp.pos', tmp[, n.pos/sum(n.pos)])	
+	setkey(tmp, factor)
+	ans		<- tmp
+	print(ans[, sum(n.coh)])	
+	levels	<- c('t<=20','t<=25','t<=30','t<=35','t<=40','t<=45','t<=100')
+	df		<- subset(runs.table, grepl('m5.tAc.tp',method.risk) & !grepl('wstar',method.risk), c(stat, method.risk, factor, n, p))	
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'factor', df[, factor(factor, levels=levels)])	
+	tmp		<- df[, list( n.coh=sum(n[stat=='X.msm'])/8, p.seq= sum(n[stat=='X.seq']) / sum(n[stat=='X.msm']), p.clu= sum(n[stat=='X.clu']) / sum(n[stat=='X.seq']), p.pos= sum(n[stat=='YX']) / sum(n[stat=='X.clu']), n.pos=sum(n[stat=='YX'])/8 ), by=c('factor')]
+	set(tmp, NULL, 'pp.coh', tmp[, n.coh/sum(n.coh)])
+	set(tmp, NULL, 'pp.pos', tmp[, n.pos/sum(n.pos)])	
+	setkey(tmp, factor)
+	ans		<- rbind(ans, tmp)	
+	levels	<- c("ART.I", "ART.F","ART.T","ART.P","ART.pulse.Y","ART.l3","ART.g3","ART.3.2NRT.X","ART.3.OTH")                                          	              
+	df		<- subset(runs.table, 'm3.n3mx'==method.risk & !grepl('wstar',method.risk), c(stat, method.risk, factor, n, p))
+	df		<- subset(df, factor%in%levels)
+	set(df, NULL, 'factor', df[, factor(factor, levels=levels)])
+	tmp		<- df[, list( n.coh=sum(n[stat=='X.msm'])/8, p.seq= sum(n[stat=='X.seq']) / sum(n[stat=='X.msm']), p.clu= sum(n[stat=='X.clu']) / sum(n[stat=='X.seq']), p.pos= sum(n[stat=='YX']) / sum(n[stat=='X.clu']), n.pos=sum(n[stat=='YX'])/8 ), by=c('factor')]
+	set(tmp, NULL, 'pp.coh', tmp[, n.coh/sum(n.coh)])
+	set(tmp, NULL, 'pp.pos', tmp[, n.pos/sum(n.pos)])
+	setkey(tmp, factor)
+	ans		<- rbind(ans, tmp)
+	
+	set(ans, NULL, 'p.seq', ans[, round(p.seq, d=3)]*100)
+	set(ans, NULL, 'p.clu', ans[, round(p.clu, d=3)]*100)
+	set(ans, NULL, 'p.pos', ans[, round(p.pos, d=4)]*100)
+	set(ans, NULL, 'n.pos', ans[, round(n.pos, d=1)])
+	set(ans, NULL, 'n.coh', ans[, round(n.coh, d=1)])	
+	set(ans, NULL, 'pp.pos', ans[, round(pp.pos, d=3)]*100)
+	set(ans, NULL, 'pp.coh', ans[, round(pp.coh, d=3)]*100)
+	
+	set(ans, NULL, 'pp.coh', ans[, paste('=\"(',pp.coh,')\"',sep='')])
+	set(ans, NULL, 'pp.pos', ans[, paste('=\"(',pp.pos,')\"',sep='')])
+	write.csv(subset(ans, select=c(factor, n.coh, pp.coh, p.seq, p.clu, p.pos, n.pos, pp.pos)), file=file, eol="\r\n", row.names=FALSE)
+	
+	tmp		<- df[, list( n.coh=n[stat=='X.msm']/8, p.seq= n[stat=='X.seq'] / n[stat=='X.msm'], p.clu= n[stat=='X.clu'] / n[stat=='X.seq'], p.pos= n[stat=='YX'] / n[stat=='X.clu'], n.pos=n[stat=='YX']/8 ), by=c('factor','t.period')]
+	setkey(tmp, factor, t.period)
+	
+}
+######################################################################################
 project.athena.Fisheretal.sensitivity<- function()
 {
 	require(data.table)
@@ -8193,6 +8511,9 @@ project.athena.Fisheretal.sensitivity<- function()
 		file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.fit.R", sep='')
 		readAttempt			<- try(suppressWarnings(load(file)))
 		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))		
+		file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.table.R", sep='')
+		readAttempt			<- try(suppressWarnings(load(file)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))				
 		options(show.error.messages = TRUE)		
 	}
 	if(!resume)
@@ -8567,82 +8888,7 @@ project.athena.Fisheretal.sensitivity<- function()
 	#	check P cascade m2Bwmx.cas across 3ca 3da gmrf sasky
 	#	3ca vs 3da 	more sensitive than gmrf vs sasky
 	tmp	<- subset(runs.risk, method.nodectime=='any'  & method.risk=='m2Bwmx.cas' & stat=='P')
-	#
-	#	Table 2
-	#
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='RR')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='P')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='RI')	
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='PY')	
-	tmp	<- subset(runs.table, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & stat=='YX')
-	
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & stat=='RR' & method.recentctime=='2013-03-01')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & stat=='P' & method.recentctime=='2013-03-01')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & stat=='RI' & method.recentctime=='2013-03-01')
-	#
-	#	Table 2	2011
-	#
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & method.recentctime=='2011' & stat=='RR')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & method.recentctime=='2011' & stat=='P')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & method.recentctime=='2011' & stat=='RI')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas' & method.recentctime=='2011' & stat=='N', select=c(factor, v, l95.bs, u95.bs))
-	#       factor           v      l95.bs     u95.bs
-	#1: ART.suA.N  39.3280879  31.7283943  48.158276
- 	#2: ART.suA.Y  26.8745897  21.5960033  33.150988
- 	#3:  ART.vlNA   0.8863757   0.1566583   1.993588
- 	#4:       DAm   6.6973179   4.7757259   8.725888
- 	#5:       DAy   4.3948389   3.0286924   5.764274
- 	#6:     Dt.NA   2.3365290   0.9532286   4.116344
- 	#7:    Dtg500  30.8748402  24.8789295  37.135637
- 	#8:    Dtl350  27.9646557  22.8360627  34.224145
- 	#9:    Dtl500  37.2999261  31.2151073  44.694368
-	#10:         U 170.0228570 154.3001462 185.586316
-	#11:       UAm  41.9668588  34.6463256  49.499336
-	#12:       UAy  33.1781551  26.2978862  40.137505
-
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & method.recentctime=='2011' & stat=='RR')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & method.recentctime=='2011' & stat=='P')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & method.recentctime=='2011' & stat=='RI')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.censp' & method.recentctime=='2011' & stat=='PY')
-	
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term.ptx')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.censp' & method.recentctime=='2011' & stat=='P')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.censp' & method.recentctime=='2011' & stat=='RI')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.censp' & method.recentctime=='2011' & stat=='N', select=c(factor, v, l95.bs, u95.bs))
-	#1: ART.suA.N 12.179974  7.7685538  17.706778
- 	#2: ART.suA.Y 20.584616 13.0701827  28.739519
- 	#3:  ART.vlNA  1.179730  0.2385344   2.940009
- 	#4:       DAm  2.547969  1.5776242   5.214901
- 	#5:       DAy  3.309029  2.3914425   4.380504
- 	#6:     Dt.NA  1.090609  0.3273179   2.087544
- 	#7:    Dtg500  9.021742  5.4249899  26.691790
- 	#8:    Dtl350 11.145840  5.8403723  16.096132
- 	#9:    Dtl500 10.089003  6.3749067  26.825936
-	#10:         U 57.094592 33.0558279 128.300661
-	#11:       UAm 18.819861 12.1434968  38.123854
-	#12:       UAy 27.043893 21.7362238  34.421396
-	
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.clu.censp' & method.recentctime=='2011' & stat=='RR.term')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.clu.censp' & method.recentctime=='2011' & stat=='RR.term.ptx')
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BwmxMv.cas.clu.censp' & method.recentctime=='2011' & stat=='P')
-	#
-	#	Discussion Table 2	2011
-	#
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2B1stMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term')
-	#	stageART1.su.Y RR.term 		stage ART1.su.N    stage  ART1.su.Y 0.9220069 0.7417764 1.1670814
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2B1stMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term.ptx')
-	#	stageART1.su.Y RR.term.ptx  stage ART1.su.N    stage  ART1.su.Y 1.5168634 1.2203526 1.9200541
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BtMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term')
-	#	stageART.su.Y RR.term 		stage ART.su.N    stage   ART.su.Y 1.2250153 1.0512000 1.4260882
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2BtMv.cas.censp' & method.recentctime=='2011' & stat=='RR.term.ptx')
-	#	stageART.su.Y RR.term.ptx 	stage ART.su.N    stage   ART.su.Y 1.16682507 1.00126628 1.35834670
-
-	tmp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m2Bwmx.cas.clu' & method.recentctime=='2011' & stat=='P')
-	#10:         stageU     None    P stage         U     None       None 0.403064883 0.3724971136 0.433277166
-	#11:       stageUAm     None    P stage       UAm     None       None 0.099488782 0.0820996822 0.119894347
-	#12:       stageUAy     None    P stage       UAy     None       None 0.078653832 0.0616273946 0.095428790
-
+		
 	#
 	#	MODEL 2B time trends RR
 	#
@@ -8735,7 +8981,7 @@ project.athena.Fisheretal.sensitivity<- function()
 	set(run.tp, NULL, 'l95.bs', run.tp[, round(l95.bs, d=3)])
 	set(run.tp, NULL, 'u95.bs', run.tp[, round(u95.bs, d=3)])
 	subset(run.tp, stat=='P.raw.e0cp', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
-	subset(run.tp, stat=='P.rawbias.e0cp', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
+	subset(run.tp, stat=='P.rawbias.e0cp', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))	
 	#
 	#
 	ylab		<- "Relative transmissibility"
@@ -9067,43 +9313,42 @@ project.athena.Fisheretal.sensitivity<- function()
 	#7: ART.3.2NRT.X      ART.g3 0.9663522 0.21397830 2.062098   m3.n3mxMV         sasky              any        3da
 	#8: ART.3.2NRT.X      ART.l3 3.0231784 1.40781727 5.397656   m3.n3mxMV         sasky              any        3da
 	#9: ART.3.2NRT.X ART.pulse.Y 1.3443834 0.66303983 2.496730   m3.n3mxMV         sasky              any        3da
-	subset(runs.risk,  method.risk%in%c('m3.n3mx') & stat=='P.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	#factor.ref       factor           v      l95.bs     u95.bs method.risk method.dating method.nodectime method.brl
-	#1:       None ART.3.2NRT.X 0.219331175 0.164275422 0.28617485     m3.n3mx         sasky              any        3da
-	#2:       None    ART.3.OTH 0.010400791 0.001050629 0.02475844     m3.n3mx         sasky              any        3da
-	#3:       None        ART.A 0.008606164 0.000000000 0.02760573     m3.n3mx         sasky              any        3da
-	#4:       None        ART.F 0.232497305 0.169552158 0.30015902     m3.n3mx         sasky              any        3da
-	#5:       None        ART.I 0.315087639 0.235857958 0.39931541     m3.n3mx         sasky              any        3da
-	#6:       None        ART.P 0.007564435 0.000520210 0.01832269     m3.n3mx         sasky              any        3da
-	#7:       None        ART.T 0.110267558 0.073827586 0.15592224     m3.n3mx         sasky              any        3da
-	#8:       None       ART.g3 0.043677031 0.007555697 0.08910432     m3.n3mx         sasky              any        3da
-	#9:       None       ART.l3 0.021469946 0.009946794 0.03747868     m3.n3mx         sasky              any        3da
-	#10:       None  ART.pulse.Y 0.031097956 0.013620326 0.05216038     m3.n3mx         sasky              any        3da
-
-	
-	subset(runs.risk,  method.risk%in%c('m3.nnrtpiNo.clu') & stat=='RI.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime ) )
-	#factor.ref            factor         v     l95.bs   u95.bs     method.risk method.dating method.nodectime
-	#1:       None ART.3.ATRIPLALIKE 1.0028031 0.79285177 1.246346 m3.nnrtpiNo.clu         sasky              any
-	#2:       None    ART.3.NRT.NNRT 1.1240384 0.86198174 1.329190 m3.nnrtpiNo.clu         sasky              any
-	#3:       None     ART.3.NRT.PIB 0.9078287 0.70765470 1.143292 m3.nnrtpiNo.clu         sasky              any
-	#4:       None    ART.3.NRT.PINB 0.4058141 0.06903461 0.871042 m3.nnrtpiNo.clu         sasky              any
-	subset(runs.risk,  method.risk%in%c('m3.nnrtpiNo.clu') & stat=='RI.rawbias.e0' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime ) )
-	#factor.ref            factor         v     l95.bs    u95.bs     method.risk method.dating method.nodectime
-	#1:       None ART.3.ATRIPLALIKE 0.9871550 0.74358730 1.3022838 m3.nnrtpiNo.clu         sasky              any
-	#2:       None    ART.3.NRT.NNRT 1.1064985 0.91678606 1.2437641 m3.nnrtpiNo.clu         sasky              any
-	#3:       None     ART.3.NRT.PIB 0.8936626 0.67621351 1.1873141 m3.nnrtpiNo.clu         sasky              any
-	#4:       None    ART.3.NRT.PINB 0.3994816 0.06810999 0.8608317 m3.nnrtpiNo.clu         sasky              any
-	#TODO	why does PINB not increase ???
-	subset(runs.risk,  method.risk%in%c('m3.nnrtpiNo.clu') & stat=='RR.term' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime ) )
-	#factor.ref            factor         v    l95.bs   u95.bs     method.risk method.dating method.nodectime
-	#1: ART.3.ATRIPLALIKE    ART.3.NRT.NNRT 1.1481775 0.9189914 1.484602 m3.nnrtpiNo.clu         sasky              any
-	#2: ART.3.ATRIPLALIKE     ART.3.NRT.PIB 0.9744618 0.7723264 1.235007 m3.nnrtpiNo.clu         sasky              any
-	#3: ART.3.ATRIPLALIKE    ART.3.NRT.PINB 1.2214958 0.6467501 1.703156 m3.nnrtpiNo.clu         sasky              any
-	subset(runs.risk,  method.risk%in%c('m3.nnrtpiNo.clu') & stat=='RR.term.ptx' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime ) )
-	#factor.ref            factor         v    l95.bs   u95.bs     method.risk method.dating method.nodectime
-	#1: ART.3.ATRIPLALIKE    ART.3.NRT.NNRT 0.8865135 0.7095578 1.146268 m3.nnrtpiNo.clu         sasky              any
-	#2: ART.3.ATRIPLALIKE     ART.3.NRT.PIB 1.1414083 0.9046427 1.446591 m3.nnrtpiNo.clu         sasky              any
-	#3: ART.3.ATRIPLALIKE    ART.3.NRT.PINB 1.3288631 0.7035983 1.852860 m3.nnrtpiNo.clu         sasky              any
+	subset(runs.risk,  method.risk%in%c('m3.n3mx') & stat=='P.rawbias.e0' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk ) )
+	#factor.ref       factor           v       l95.bs     u95.bs method.risk
+	#1:       None ART.3.2NRT.X 0.358805848 0.2831631504 0.44485251     m3.n3mx
+	#2:       None    ART.3.OTH 0.017591054 0.0017525908 0.04156421     m3.n3mx
+	#3:       None        ART.A 0.004515470 0.0000000000 0.01462649     m3.n3mx
+	#4:       None        ART.F 0.157042362 0.1118320361 0.20844342     m3.n3mx
+	#5:       None        ART.I 0.219970392 0.1576249623 0.29026857     m3.n3mx
+	#6:       None        ART.P 0.006861843 0.0004894542 0.01616562     m3.n3mx
+	#7:       None        ART.T 0.145749218 0.0977239042 0.20333479     m3.n3mx
+	#8:       None       ART.g3 0.038668205 0.0066903371 0.07920521     m3.n3mx
+	#9:       None       ART.l3 0.029665692 0.0140151459 0.05086179     m3.n3mx
+	#10:       None  ART.pulse.Y 0.021129916 0.0092062212 0.03526553     m3.n3mx
+	subset(runs.risk,  method.risk%in%c('m3.n3mx') & stat=='RI.rawbias.e0' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk ) )
+	#factor.ref       factor         v     l95.bs    u95.bs method.risk
+	#1:       None ART.3.2NRT.X 0.8200816 0.64719374 1.0167487     m3.n3mx
+	#2:       None    ART.3.OTH 0.3639772 0.03626292 0.8600066     m3.n3mx
+	#3:       None        ART.A 1.2762283 1.15268180 4.5701982     m3.n3mx
+	#4:       None        ART.F 1.2760310 0.90867933 1.6936848     m3.n3mx
+	#5:       None        ART.I 2.5446860 1.82345463 3.3579172     m3.n3mx
+	#6:       None        ART.P 0.2880141 0.02054400 0.6785242     m3.n3mx
+	#7:       None        ART.T 0.7396998 0.49596394 1.0319555     m3.n3mx
+	#8:       None       ART.g3 0.7106262 0.12295188 1.4555963     m3.n3mx
+	#9:       None       ART.l3 2.7534051 1.30080815 4.7207090     m3.n3mx
+	#10:       None  ART.pulse.Y 1.4047509 0.61204444 2.3445091     m3.n3mx
+	subset(runs.risk,  method.risk%in%c('m3.n3mx') & stat=='N.raw' & method.brl=='3da' & !grepl('wstar',method.risk) & method.recentctime=='2011', c(factor.ref, factor, v, l95.bs, u95.bs,method.risk ) )
+	#factor.ref       factor          v      l95.bs    u95.bs method.risk
+	#1:       None ART.3.2NRT.X 12.2191253  9.24489421 15.611420     m3.n3mx
+	#2:       None    ART.3.OTH  0.5794369  0.06367325  1.440342     m3.n3mx
+	#3:       None        ART.A  0.4794567  0.00000000  1.438370     m3.n3mx
+	#4:       None        ART.F 12.9526215  8.91916901 17.448664     m3.n3mx
+	#5:       None        ART.I 17.5537989 11.96303877 23.153660     m3.n3mx
+	#6:       None        ART.P  0.4214211  0.02915683  1.001240     m3.n3mx
+	#7:       None        ART.T  6.1430989  4.00832333  8.688211     m3.n3mx
+	#8:       None       ART.g3  2.4332843  0.41869599  5.234366     m3.n3mx
+	#9:       None       ART.l3  1.1961089  0.58104452  2.034773     m3.n3mx
+	#10:       None  ART.pulse.Y  1.7324934  0.77997668  2.900998     m3.n3mx	
 
 	load('/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140603/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3ga_denomCLU_model3_m3.btnicNoMV.clu.R')
 	subset(ans$risk, stat=='P.e0cp')
@@ -9120,76 +9365,6 @@ project.athena.Fisheretal.sensitivity<- function()
 	
 	risk.table	<- subset(runs.table,  method.risk%in%c('m3.tnicNoMV') & method.recentctime=='2011' )
 	subset( risk.table, grepl('ART',factor) )[, sum(p), by='stat']
-	#
-	#	Table 3		2013
-	#
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.censp') & method.recentctime=='2013-03-01' & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.adj') & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicNo.censp')  & method.recentctime=='2013-03-01' & stat=='RR', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicMV.censp') & method.recentctime=='2013-03-01' & stat=='RR.term', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicMVNo.censp') & method.recentctime=='2013-03-01' & stat=='RR.term', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicMV.censp') & method.recentctime=='2013-03-01' & stat=='P', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicMV.censp') & method.recentctime=='2013-03-01' & stat=='RI', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicNo.censp')  & method.recentctime=='2013-03-01' & stat=='RI', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	#
-	#	Discussion Table 3 2013
-	#
-	#load('~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140423/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_Wed_Dec_18_11:37:00_2013_Yscore3da_model3_m3.tnicMv.censp.R')
-	#subset(ans$risk, stat=='RI')[1:15,]
-	#6:    stageART.3.NRT.NNRT.1     None   RI stage    ART.3.NRT.NNRT.1     None       None  1.808131352 0.756608272  2.94686081
-	#7:    stageART.3.NRT.NNRT.2     None   RI stage    ART.3.NRT.NNRT.2     None       None  1.088841518 0.512451518  2.06105674
-	#8:    stageART.3.NRT.NNRT.3     None   RI stage    ART.3.NRT.NNRT.3     None       None  3.510524184 2.223360693  4.69201930
-	#9:    stageART.3.NRT.NNRT.4     None   RI stage    ART.3.NRT.NNRT.4     None       None  8.577500887 5.990828733 11.51541840
-	
-	load('~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140502/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3da_model3_m3.tnicMv.censp.R')
-	subset(ans$risk, stat=='RR.term' & grepl('ART.3.NRT.NNRT',factor), c(stat,  risk, factor, risk.ref, factor.ref, v, l95.bs, u95.bs))
-	#1: RR.term stage ART.3.NRT.NNRT.1    stage ART.3.NRT.PI.1 0.9781159 0.9273252 1.022842
-	#2: RR.term stage ART.3.NRT.NNRT.2    stage ART.3.NRT.PI.2 1.0123271 0.9784862 1.060893
-	#3: RR.term stage ART.3.NRT.NNRT.3    stage ART.3.NRT.PI.3 0.8285269 0.6074497 1.009864
-	#4: RR.term stage ART.3.NRT.NNRT.4    stage ART.3.NRT.PI.4 1.0570842 0.9914231 1.181377
-	subset(ans$risk, stat=='RI' & grepl('ART.3.NRT.NNRT',factor), c(stat,  risk, factor, risk.ref, factor.ref, v, l95.bs, u95.bs))
-	#stat  risk           factor risk.ref factor.ref          v    l95.bs    u95.bs
-	#1:   RI stage ART.3.NRT.NNRT.1     None       None  2.5427069 1.2375280  3.948260
-	#2:   RI stage ART.3.NRT.NNRT.2     None       None  0.9158267 0.4055032  1.579756
-	#3:   RI stage ART.3.NRT.NNRT.3     None       None  1.9853509 1.1650754  2.969651
-	#4:   RI stage ART.3.NRT.NNRT.4     None       None 11.3235305 8.7699394 14.071799
-	load('~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140502/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3da_model3_m3.tnicMv.R')
-	subset(ans$risk, stat=='RR.term' & grepl('ART.3.NRT.NNRT',factor), c(stat,  risk, factor, risk.ref, factor.ref, v, l95.bs, u95.bs))
-	#1: RR.term stage ART.3.NRT.NNRT.1    stage ART.3.NRT.PI.1 0.9942548 0.9596633 1.031161
-	#2: RR.term stage ART.3.NRT.NNRT.2    stage ART.3.NRT.PI.2 1.0030236 0.9748414 1.030545
-	#3: RR.term stage ART.3.NRT.NNRT.3    stage ART.3.NRT.PI.3 0.8220470 0.5911150 1.015663
-	#4: RR.term stage ART.3.NRT.NNRT.4    stage ART.3.NRT.PI.4 1.0573672 0.9947761 1.182816
-	load('~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140502/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3da_model3_m3.tnicMV.clu.censp.R')
-	#	RR.term stage ART.3.NRT.NNRT    stage ART.3.NRT.PI 0.9854419 0.9207526 1.05917
-	load('~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140502/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_Wed_Dec_18_11:37:00_2013_Yscore3da_model3_m3.tnicMV.clu.censp.R')
-	#	RR.term stage ART.3.NRT.NNRT    stage ART.3.NRT.PI 1.297844 1.038884 1.681846
-
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnicNo.clu.censp') & stat=='RR' & method.recentctime=='2013-03-01', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	
-	tmp	<- subset(runs.table,  method.risk%in%c('m3.tnic') & stat=='RR' & method.recentctime=='2011' )
-	
-	file	<- subset(runs.opt, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & method.risk=='m3.tnic.adj')[,file]
-	tmp		<- load( paste(indir, file, sep='/') )
-	tmp		<- ans$YX
-	tmp[, table(stage)]
-	
-	
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.adj') & stat=='PY', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	tmp	<- subset(runs.risk,  method.risk%in%c('m3.tnic.adj') & stat=='P', c(factor, v, l95.bs, u95.bs,method.risk, method.dating, method.nodectime, method.brl ) )
-	
-	tmp	<- subset(runs.risk, method.risk%in%c("m3.i","m3.ni","m3.nic","m3.tnic","m3.tni") & stat=='RR' & (factor=='ART.pulse' | risk=='ART.pulse') & l95.bs<1)	
-	setkey(tmp, method.brl, method.dating, method.risk)
-	tmp
-	
-	
-	subset(runs.risk,  method.risk=='m3.i' & stat=='RR' & factor=='ART.I')
-	
-	
-	subset(runs.risk, method.risk%in%c("m3.tni") & stat=='RR'	)
-	
-	subset(runs.risk, method.risk%in%c("m3.tnic","m3.tniv","m3.ni","m3.tni","m3.tnicvNo") & stat=='RR'	)
-	subset(runs.risk, method.risk%in%c("m3.i","m3.nic","m3.tnic","m3.tniv","m3.ni","m3.tni","m3.tnicvNo") )
 	#
 	#	completeness of ATHENA data
 	#
@@ -9320,8 +9495,13 @@ project.athena.Fisheretal.sensitivity<- function()
 			geom_ribbon(aes(ymin=l95, ymax=u95, linetype=NA), alpha=0.3) + geom_point() + geom_line() 
 	file	<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat), '_', "RIPDT_RIMSM_CD4.pdf", sep='')
 	ggsave(file=file, w=5,h=8)
-
-	
+	#
+	#
+	#
+	subset(runs.risk, method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) &  !grepl('wstar',method.risk) & stat=='P.rawbias.e0' , select=c(stat, factor.ref, factor, v, l95.bs, u95.bs))
+	subset(runs.risk, method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) &  !grepl('wstar',method.risk) & stat=='N.raw' , select=c(stat, factor.ref, factor, v, l95.bs, u95.bs))
+	subset(runs.risk, method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) &  !grepl('wstar',method.risk) & stat=='RI.rawbias.e0' , select=c(stat, factor.ref, factor, v, l95.bs, u95.bs))
+	subset(runs.risk, method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) &  !grepl('wstar',method.risk) & stat=='RR.raw' , select=c(stat, factor.ref, factor, v, l95.bs, u95.bs))	
 	#
 	#	MODEL 5 time trends
 	#
@@ -9334,7 +9514,7 @@ project.athena.Fisheretal.sensitivity<- function()
 	#ylab		<- "Relative transmissibility"
 	#stat.select	<- c(	'RI','RI.e0','RI.ptx','RI.ptx.e0','RI.raw','RI.raw.e0')
 	method.clu	<- 'clu'; method.deno	<- 'CLU'	
-	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & !grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3ga' & method.dating=='sasky' & grepl('m5.tA.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('P.',stat,fixed=1) | stat=='P') )
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tA.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
@@ -9370,17 +9550,12 @@ project.athena.Fisheretal.sensitivity<- function()
 			cat(paste('\nsave to file',file))			
 			ggsave(file=file, w=12,h=4)			
 		})
-	set(run.tp, NULL, 'v', run.tp[, round(v, d=3)])
-	set(run.tp, NULL, 'l95.bs', run.tp[, round(l95.bs, d=3)])
-	set(run.tp, NULL, 'u95.bs', run.tp[, round(u95.bs, d=3)])
-	subset(run.tp, stat=='P.rawbias.e0', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
-	subset(run.tp, stat=='P.raw.e0', c(t.period.min, t.period.max, stat, method.brl, method.risk, factor, v, l95.bs, u95.bs))
 	#
 	#
 	ylab		<- "Relative transmissibility"
 	stat.select	<- c(	'RI','RI.e0','RI.bias.e0','RI.raw','RI.raw.e0','RI.rawbias.e0'	)
 	method.clu	<- 'clu'; method.deno	<- 'CLU'	
-	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & !grepl(method.clu,method.risk) & !grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )	
 	#run.tp		<- subset(runs.risk, method.denom==method.deno & method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & grepl(method.clu,method.risk) & grepl('wstar',method.risk) & !grepl('now',method.risk) & (grepl('RI.',stat,fixed=1) | stat=='RI') )
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]

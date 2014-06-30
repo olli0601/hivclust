@@ -2183,6 +2183,7 @@ project.hivc.clustering.compare.NoDR.to.NoRecombNoDR.to.NoShort<- function()
 	argv			<<- unlist(strsplit(argv,' '))
 	nsh.clu.pre		<- hivc.prog.get.clustering.precompute()
 	#
+	resume			<- 0
 	argv			<<- hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=resume)
 	argv			<<- unlist(strsplit(argv,' '))
 	nsh.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=nsh.clu.pre)
@@ -3536,21 +3537,23 @@ project.hivc.examlclock<- function()
 	#
 	#	mean evol rate
 	#
-	tmp		<- subset(Y.rawbrl.linked, b4T=='both' & dt>0 & brlr<0.01, select=c(brl, dt, b4T.long))
-	#tmpg	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), data=as.data.frame(tmp), family=GA, n.cyc = 40)	
-	tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)	
+	tmp		<- subset(Y.rawbrl.linked, b4T=='both' & dt>0 & brlr<0.01, select=c(brl, dt, b4T.long))	
+	#tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+	tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmp[, y.b:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)]
 	tmp[, y.u:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
 	tmp[, y.l:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
 	ans		<- copy(tmp)
 	tmp		<- subset(Y.rawbrl.linked, b4T=='only.T' & dt>0 & brlr<0.01, select=c(brl, dt, b4T.long))
-	tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)	
+	#tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+	tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmp[, y.b:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)]
 	tmp[, y.u:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
 	tmp[, y.l:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
 	ans		<- rbind(ans, tmp)
 	tmp		<- subset(Y.rawbrl.linked, b4T=='none' & dt>0 & brlr<0.01, select=c(brl, dt, b4T.long))
-	tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)	
+	#tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+	tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmp[, y.b:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)]
 	tmp[, y.u:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
 	tmp[, y.l:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
@@ -3564,12 +3567,14 @@ project.hivc.examlclock<- function()
 	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examl_clockwh.pdf'
 	ggsave(file=file, w=6, h=6)
 	
+	sapply( list(tmpg.ZAGA.B, tmpg.ZAGA.O, tmpg.ZAGA.N), Rsq )
+	#0.4411087 0.2959325 0.4299490
 	print(tmpg.ZAGA.B)
-	#		0.001215
+	#		0.001567
 	print(tmpg.ZAGA.O)
-	#dt		0.00279
+	#dt		0.002675
 	print(tmpg.ZAGA.N)	
-	#dt  	0.00407 
+	#dt  	0.003985 
 	#
 	#	EXCLUDE
 	#

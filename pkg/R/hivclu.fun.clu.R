@@ -591,6 +591,7 @@ hivc.clu.exp.typeIerror.randomclu<- function(ph, dist.brl, nodesupport, ph.unlin
 ######################################################################################
 hivc.clu.truepos<- function(clustering, ph.linked, ph.tips.n, verbose=0)
 {
+	#clustering<-x; ph.linked<- clu.pre$ph.linked; ph.tips.n<- Ntip(clu.pre$ph); verbose=0
 	clusters	<- unique(clustering[["clu.mem"]][!is.na(clustering[["clu.mem"]])])
 	tmp			<- which(!is.na(clustering[["clu.mem"]][seq_len(ph.tips.n)]))
 	clu.linked	<- merge( data.table(Node=tmp), ph.linked, by="Node" )	
@@ -599,6 +600,8 @@ hivc.clu.truepos<- function(clustering, ph.linked, ph.tips.n, verbose=0)
 	set(clu.linked, which(is.na(clu.linked[,nTP.clu])) ,"nTP.clu", 1L )
 	setkey(clu.linked, Node)
 	
+	#clu.tp
+	#Patient TP.clu  (all wh seq in this cluster) TP.n (all wh seq) TP.n.clu (all wh seq that cluster) clu (ID of this cluster) clu.tips (number of tips in this cluster)
 	if(!length(clusters))
 	{
 		clu.tp		<- cbind( subset(clu.linked,select=c(Patient,nTP,nTP.clu)), TP.clu=0)
@@ -624,14 +627,14 @@ hivc.clu.truepos<- function(clustering, ph.linked, ph.tips.n, verbose=0)
 				ans
 			})
 		#rbind and remove bugfix first row
-		clu.tp		<- rbindlist(clu.tp)[-1,]	
-		
+		clu.tp		<- rbindlist(clu.tp)[-1,]			
 	}	
 	# account for different seq numbers per patient with a combinatorial argument 
 	# -- only important when the number of correctly clustered within-patient sequences is evaluated
 	clu.tp[, pairs.TP.n:= choose(TP.n,2)]
 	clu.tp[, pairs.TP.n.clu:= choose(TP.n.clu,2)]
 	clu.tp[, pairs.TP.clu:= choose(TP.clu,2)]
+	
 	# patients in wrong cluster
 	clu.diffclu								<- subset( clu.tp[,list(nclu=length(na.omit(unique(clu)))),by="Patient"], nclu>1, Patient )
 	clu.diffclu								<- merge( clu.diffclu, clu.tp, all.x=1, by="Patient" )
@@ -661,33 +664,37 @@ hivc.clu.truepos<- function(clustering, ph.linked, ph.tips.n, verbose=0)
 			tp.by.sum			= pairs.freqinsameclu,
 			tpclu.by.all		= patients.clustering.allseqinsameclu / patients.clustering.total,			
 			tpclu.by.diffclu	= (patients.clustering.total - patients.clustering.allseqindiffclu) / patients.clustering.total,
-			tpclu.by.sum		= pairs.clustering.freqinsameclu			
+			tpclu.by.sum		= pairs.clustering.freqinsameclu,
+			fpclu.by.all		= patients.clustering.allseqindiffclu / patients.clustering.total
 			)	
 }
 ######################################################################################
 hivc.clu.trueneg<- function(clustering, ph.unlinked.info, ph.unlinked, ph.tips.n, verbose=0)
 {
+	#clustering<-x;  ph.unlinked.info<- clu.pre$ph.unlinked.info; ph.unlinked<- clu.pre$ph.unlinked; ph.tips.n<- Ntip(clu.pre$ph); verbose=0
 	clusters			<- unique(clustering[["clu.mem"]][!is.na(clustering[["clu.mem"]])])
 	clu.fp				<- sapply(clusters, function(clu)		
 							{		
 								tmp							<- which(clustering[["clu.mem"]]==clu)
 								clu.tips					<- tmp[ tmp<=ph.tips.n ]
 								clu.tips					<- merge( data.table(Node=clu.tips, key="Node"), subset(ph.unlinked.info,select=c(Node,NodeIdx,NegT)) )						
-								if(all( is.na(clu.tips[,NodeIdx]) ))	return(rep(NA,2))
-								if(!nrow(clu.tips))	return(rep(NA,2))				
+								if(all( is.na(clu.tips[,NodeIdx]) ))	return(rep(0,2))
+								if(!nrow(clu.tips))	return(rep(0,2))				
 								tmp							<- clu.tips[,NegT]
 								tmp							<- ifelse(all(is.na(tmp)),1,which.max(tmp))	
 								clu.tips.unlinked			<- ph.unlinked[[ clu.tips[tmp,NodeIdx] ]]			
 								#print(clu.tips)
-								c(nrow( merge(clu.tips, clu.tips.unlinked, by="Node") ), nrow(clu.tips.unlinked))																					
+								c(nrow( merge(clu.tips, clu.tips.unlinked, by="Node") ), nrow(clu.tips.unlinked))	#first entry is any sequence that should not co-cluster with a seroconverter sequence																					
 							})
 	colnames(clu.fp)	<- clusters		
-	clu.fp				<-	clu.fp[, apply(!is.na(clu.fp),2,all),drop=0]
+
 	list( 	clu.n		= length(clusters), 
 			clu.fp		= clu.fp, 
-			fpn.by.all	= length(which(clu.fp[1,]>0)), 
-			fpn.by.sum	= sum(clu.fp[1,]), 
-			fp.by.all	= length(which(clu.fp[1,]>0))/length(clusters)
+			fpn.by.all	= length(which(clu.fp[1,]>0)), 			#typo: these are fn (false negative)
+			fpn.by.sum	= sum(clu.fp[1,]),
+			tnn.by.sum	= sum(clu.fp[2,])-sum(clu.fp[1,]),
+			fp.by.all	= length(which(clu.fp[1,]>0))/length(clusters),
+			tn.by.sum	= ( sum(clu.fp[2,])-sum(clu.fp[1,]) ) / sum(clu.fp[2,])
 			)
 }
 ######################################################################################

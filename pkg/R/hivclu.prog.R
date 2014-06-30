@@ -1268,7 +1268,7 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 	list(df.cluinfo=df.cluinfo, cluphy=cluphy, cluphy.subtrees=cluphy.subtrees, clustering=clustering)
 }
 ######################################################################################
-hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
+hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL, with.plot=TRUE)
 {
 	require(RColorBrewer)
 	require(colorspace)
@@ -1281,7 +1281,7 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 	patient.n	<- 15700
 	opt.brl		<- "dist.brl.casc"
 	thresh.brl	<- c(seq(0.02,0.05,0.01),seq(0.06,0.12,0.02),seq(0.16,0.24,0.04))
-	thresh.bs	<- c(0.7,0.75,0.8,0.85,0.9,0.95)
+	thresh.bs	<- c(0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95)
 	resume		<- 1
 	verbose		<- 1
 	
@@ -1450,129 +1450,148 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 	clusters.cov.epidemic	<- clusters.nbwpat / patient.n
 	clusters.cov.patindb	<- clusters.nbwpat / length(unique(subset(df.cluinfo,!is.na(Patient))[,Patient]))	
 	clusters.cov.seqindb	<- clusters.nseq / nrow( subset( df.cluinfo, 	substr(FASTASampleCode, 1, 2)!="TN" & substr(FASTASampleCode, 1, 8)!="PROT+P51" ) )
-	#
-	# plot cluster size distributions per bootstrap
-	#
-	with.singleton			<- 0
-	thresh.brl.select		<- which(thresh.brl %in% c(0.02, 0.04, 0.06, 0.1, 0.16) )
-	thresh.bs.select		<- which(thresh.bs %in% c(0.7, 0.8, 0.95) )
-	pch						<- 15 + seq_along(thresh.bs.select)
-	lapply(thresh.bs.select,function(i)
-							{				
-								file				<- paste(outdir, paste(infile,"_clustpdf_",opt.brl,"_bs",thresh.bs[i],'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')				
-								pdf(file=file, width=5,height=5)				
-								if( with.singleton )
-								{
-									x					<- lapply(thresh.brl.select, function(j){	as.numeric(names(clusters.dbwpat[[i]][[j]]))	})
-									y					<- lapply(thresh.brl.select, function(j){	clusters.dbwpat[[i]][[j]]	})					
-								}
-								else
-								{
-									x					<- lapply(thresh.brl.select, function(j){	as.numeric(names(clusters.dbwpat[[i]][[j]]))[-1]	})
-									y					<- lapply(thresh.brl.select, function(j){	clusters.dbwpat[[i]][[j]][-1]	})
-								}
-								xlim				<- range( c(70, unlist(x) ) )
-								cols				<- brewer.pal( length(x), "Accent")
-								plot(1,1,bty='n',type='n',xlim=xlim, ylim=range(unlist(y)), xlab="patients", ylab="frequency", log='y')
-								dummy<- lapply(seq_along(x),function(j)
-										{
-											points(x[[j]],y[[j]],type='l',col=cols[j],pch=pch[i])
-											points(x[[j]],y[[j]],col=cols[j],pch=pch[i], cex=0.5)
-										})				
-								legend("topright", 		fill=cols, 	legend= paste("BRL", thresh.brl[ thresh.brl.select ]), bty='n', border=NA)
-								legend("bottomright", 	pch=pch[i], legend= paste("BS", thresh.bs[i] ), bty='n', border=NA)
-								dev.off()				
-							})
-	#
-	# plot cluster size distributions per brl
-	#
-	clusters.dbwpat			<- lapply(seq_along(clusters.dbwpat[[1]]), function(i)
+	
+	if(with.plot)
+	{	
+		#
+		# plot cluster size distributions per bootstrap
+		#
+		with.singleton			<- 0
+		thresh.brl.select		<- which(thresh.brl %in% c(0.02, 0.04, 0.06, 0.1, 0.16) )
+		thresh.bs.select		<- which(thresh.bs %in% c(0.7, 0.8, 0.95) )
+		pch						<- 15 + seq_along(thresh.bs.select)
+		lapply(thresh.bs.select,function(i)
+								{				
+									file				<- paste(outdir, paste(infile,"_clustpdf_",opt.brl,"_bs",thresh.bs[i],'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')				
+									pdf(file=file, width=5,height=5)				
+									if( with.singleton )
 									{
-										tmp			<- lapply(seq_along(clusters.dbwpat), function(j) 		clusters.dbwpat[[j]][[i]]		)
-										names(tmp)	<- thresh.bs
-										tmp
-									})
-	names(clusters.dbwpat)	<- thresh.brl
-	thresh.brl.select	<- which(thresh.brl %in% c(0.06, 0.08, 0.1) )
-	thresh.bs.select	<- which(thresh.bs %in% c(0.7, 0.75, 0.8, 0.85, 0.9, 0.95) )
-	pch					<- 15 + seq_along(thresh.brl.select)
-	lapply(thresh.brl.select,function(i)
-							{												
-								file				<- paste(outdir, paste(infile,"_clustpdf_",opt.brl,"_brl",thresh.brl[i],'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')				
-								pdf(file=file, width=5,height=5)				
-								if( with.singleton )
-								{
-									x					<- lapply(thresh.bs.select, function(j){	as.numeric(names(clusters.dbwpat[[i]][[j]]))	})
-									y					<- lapply(thresh.bs.select, function(j){	clusters.dbwpat[[i]][[j]]	})					
-								}
-								else
-								{
-									x					<- lapply(thresh.bs.select, function(j){	as.numeric(names(clusters.dbwpat[[i]][[j]]))[-1]	})
-									y					<- lapply(thresh.bs.select, function(j){	clusters.dbwpat[[i]][[j]][-1]	})
-								}
-								xlim				<- range( c(70, unlist(x) ) )
-								cols				<- brewer.pal( length(x), "Accent")
-								plot(1,1,bty='n',type='n',xlim=xlim, ylim=range(unlist(y)), xlab="patients", ylab="frequency", log='y')
-								dummy<- lapply(seq_along(x),function(j)
+										x					<- lapply(thresh.brl.select, function(j){	as.numeric(names(clusters.dbwpat[[i]][[j]]))	})
+										y					<- lapply(thresh.brl.select, function(j){	clusters.dbwpat[[i]][[j]]	})					
+									}
+									else
+									{
+										x					<- lapply(thresh.brl.select, function(j){	as.numeric(names(clusters.dbwpat[[i]][[j]]))[-1]	})
+										y					<- lapply(thresh.brl.select, function(j){	clusters.dbwpat[[i]][[j]][-1]	})
+									}
+									xlim				<- range( c(70, unlist(x) ) )
+									cols				<- brewer.pal( length(x), "Accent")
+									plot(1,1,bty='n',type='n',xlim=xlim, ylim=range(unlist(y)), xlab="patients", ylab="frequency", log='y')
+									dummy<- lapply(seq_along(x),function(j)
+											{
+												points(x[[j]],y[[j]],type='l',col=cols[j],pch=pch[i])
+												points(x[[j]],y[[j]],col=cols[j],pch=pch[i], cex=0.5)
+											})				
+									legend("topright", 		fill=cols, 	legend= paste("BRL", thresh.brl[ thresh.brl.select ]), bty='n', border=NA)
+									legend("bottomright", 	pch=pch[i], legend= paste("BS", thresh.bs[i] ), bty='n', border=NA)
+									dev.off()				
+								})
+		#
+		# plot cluster size distributions per brl
+		#
+		clusters.dbwpat			<- lapply(seq_along(clusters.dbwpat[[1]]), function(i)
 										{
-											points(x[[j]],y[[j]],type='l',col=cols[j],pch=pch[i])
-											points(x[[j]],y[[j]],col=cols[j], pch=pch[i], cex=0.5)
-										})				
-								legend("topright", 		pch=pch[i],	legend= paste("BRL", thresh.brl[ i ]), bty='n', border=NA)
-								legend("bottomright", 	fill=cols,	legend= paste("BS", thresh.bs[ thresh.bs.select ] ), bty='n', border=NA)
-								dev.off()				
-							})					
+											tmp			<- lapply(seq_along(clusters.dbwpat), function(j) 		clusters.dbwpat[[j]][[i]]		)
+											names(tmp)	<- thresh.bs
+											tmp
+										})
+		names(clusters.dbwpat)	<- thresh.brl
+		thresh.brl.select	<- which(thresh.brl %in% c(0.06, 0.08, 0.1) )
+		thresh.bs.select	<- which(thresh.bs %in% c(0.7, 0.75, 0.8, 0.85, 0.9, 0.95) )
+		pch					<- 15 + seq_along(thresh.brl.select)
+		lapply(thresh.brl.select,function(i)
+								{												
+									file				<- paste(outdir, paste(infile,"_clustpdf_",opt.brl,"_brl",thresh.brl[i],'_',gsub('/',':',outsignat),".pdf",sep=''),sep='/')				
+									pdf(file=file, width=5,height=5)				
+									if( with.singleton )
+									{
+										x					<- lapply(thresh.bs.select, function(j){	as.numeric(names(clusters.dbwpat[[i]][[j]]))	})
+										y					<- lapply(thresh.bs.select, function(j){	clusters.dbwpat[[i]][[j]]	})					
+									}
+									else
+									{
+										x					<- lapply(thresh.bs.select, function(j){	as.numeric(names(clusters.dbwpat[[i]][[j]]))[-1]	})
+										y					<- lapply(thresh.bs.select, function(j){	clusters.dbwpat[[i]][[j]][-1]	})
+									}
+									xlim				<- range( c(70, unlist(x) ) )
+									cols				<- brewer.pal( length(x), "Accent")
+									plot(1,1,bty='n',type='n',xlim=xlim, ylim=range(unlist(y)), xlab="patients", ylab="frequency", log='y')
+									dummy<- lapply(seq_along(x),function(j)
+											{
+												points(x[[j]],y[[j]],type='l',col=cols[j],pch=pch[i])
+												points(x[[j]],y[[j]],col=cols[j], pch=pch[i], cex=0.5)
+											})				
+									legend("topright", 		pch=pch[i],	legend= paste("BRL", thresh.brl[ i ]), bty='n', border=NA)
+									legend("bottomright", 	fill=cols,	legend= paste("BS", thresh.bs[ thresh.bs.select ] ), bty='n', border=NA)
+									dev.off()				
+								})	
+	}
 	#
-	# get TP and TN for several clustering thresholds
+	# get FP, TP and FN, TN for several clustering thresholds
 	#
+	#	false positives
+	fpclu.by.all			<- t( sapply(seq_along(clusters),function(i){				sapply(clusters[[i]][["tp"]], function(x) x["fpclu.by.all"] )		}))
+	rownames(fpclu.by.all)	<- thresh.bs
+	colnames(fpclu.by.all)	<- thresh.brl	
+	#	true positives
 	tp.by.all				<- t( sapply(seq_along(clusters),function(i){				sapply(clusters[[i]][["tp"]], function(x) x["tp.by.all"] )		}))
 	rownames(tp.by.all)		<- thresh.bs
 	colnames(tp.by.all)		<- thresh.brl	
 	tpclu.by.all			<- t( sapply(seq_along(clusters),function(i){				sapply(clusters[[i]][["tp"]], function(x) x["tpclu.by.all"] )		}))
 	rownames(tpclu.by.all)	<- thresh.bs
 	colnames(tpclu.by.all)	<- thresh.brl
+	#	true negatives
+	tnn.by.sum				<- t( sapply(seq_along(clusters),function(i){				sapply(clusters[[i]][["fp"]], function(x) x["tnn.by.sum"] )	}) )
+	rownames(tnn.by.sum)	<- thresh.bs
+	colnames(tnn.by.sum)	<- thresh.brl
+	tn.by.sum				<- t( sapply(seq_along(clusters),function(i){				sapply(clusters[[i]][["fp"]], function(x) x["tn.by.sum"] )	}) )
+	rownames(tn.by.sum)		<- thresh.bs
+	colnames(tn.by.sum)		<- thresh.brl	
+	#	false negatives
 	fpn.by.sum				<- t( sapply(seq_along(clusters),function(i){		sapply(clusters[[i]][["fp"]], function(x) x["fpn.by.sum"] )	}) )
 	rownames(fpn.by.sum)	<- thresh.bs
 	colnames(fpn.by.sum)	<- thresh.brl
 	fp.by.all				<- t( sapply(seq_along(clusters),function(i){		sapply(clusters[[i]][["fp"]], function(x) x["fp.by.all"] )	}) )
 	rownames(fp.by.all)		<- thresh.bs
-	#
-	# plot TP and TN for several clustering thresholds
-	#	
-	colnames(fp.by.all)		<- thresh.brl	
-	cols					<- diverge_hcl(nrow(fpn.by.sum), h = c(246, 40), c = 96, l = c(65, 90))
-	names(cols)				<- thresh.bs
-	#	 
-	hivc.clu.plot.tptn(	fpn.by.sum, tp.by.all, paste(outdir, paste(outfile,"_tpbyall_fpnbysum_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
-						cols, xlab= "#FP (among all)", ylab= "%TP (among all)", xlim= range(c(0,16,fpn.by.sum)))
-	#
-	hivc.clu.plot.tptn(	fp.by.all, tp.by.all, paste(outdir, paste(outfile,"_tpbyall_fpbyall_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
-						cols, xlab= "%FP (among all)", ylab= "%TP (among all)", xlim= range(c(0,0.01,fp.by.all)))
-	#
-	hivc.clu.plot.tptn(	fpn.by.sum, tpclu.by.all, paste(outdir, paste(outfile,"_tpclubyall_fpnbysum_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
-						cols, xlab= "#FP (among all)", ylab= "%TP (among clu)", xlim= range(c(0,16,fpn.by.sum)))
-	#
-	hivc.clu.plot.tptn(	fp.by.all, tpclu.by.all, paste(outdir, paste(outfile,"_tpclubyall_fpbyall_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
-						cols, xlab= "%FP (among all)", ylab= "%TP (among clu)", xlim= range(c(0,0.01,fp.by.all)))
-	#
-	hivc.clu.plot.tptn(	fpn.by.sum, clusters.cov.epidemic, paste(outdir, paste(outfile,"_covepi_fpnbysum_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
-						cols, xlab= "#FP (among all)", ylab= "%coverage (of epi)", xlim= range(c(0,16,fpn.by.sum)))
-	#
-	hivc.clu.plot.tptn(	fp.by.all, clusters.cov.epidemic, paste(outdir, paste(outfile,"_covepi_fpbyall_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
-						cols, xlab= "%FP (among all)", ylab= "%coverage (of epi)", xlim= range(c(0,0.01,fp.by.all)))
-	#
-	hivc.clu.plot.tptn(	fpn.by.sum, clusters.cov.patindb, paste(outdir, paste(outfile,"_covpat_fpnbysum_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
-						cols, xlab= "#FP (among all)", ylab= "%coverage (of db)", xlim= range(c(0,16,fpn.by.sum)))
-	#
-	hivc.clu.plot.tptn(	fp.by.all, clusters.cov.patindb, paste(outdir, paste(outfile,"_covpat_fpbyall_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
-						cols, xlab= "%FP (among all)", ylab= "%coverage (of db)", xlim= range(c(0,0.01,fp.by.all)))
-	#
-	hivc.clu.plot.tptn(	fpn.by.sum, clusters.cov.seqindb, paste(outdir, paste(outfile,"_covseq_fpnbysum_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
-						cols, xlab= "#FP (among all)", ylab= "%seq coverage (of db)", xlim= range(c(0,16,fpn.by.sum)))
-	#
-	hivc.clu.plot.tptn(	fp.by.all, clusters.cov.seqindb, paste(outdir, paste(outfile,"_covseq_fpbyall_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
-						cols, xlab= "%FP (among all)", ylab= "%seq coverage (of db)", xlim= range(c(0,0.01,fp.by.all)))
-
+	if(with.plot)
+	{			
+		#
+		# plot TP and TN for several clustering thresholds
+		#	
+		colnames(fp.by.all)		<- thresh.brl	
+		cols					<- diverge_hcl(nrow(fpn.by.sum), h = c(246, 40), c = 96, l = c(65, 90))
+		names(cols)				<- thresh.bs
+		#	 
+		hivc.clu.plot.tptn(	fpn.by.sum, tp.by.all, paste(outdir, paste(outfile,"_tpbyall_fpnbysum_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
+							cols, xlab= "#FP (among all)", ylab= "%TP (among all)", xlim= range(c(0,16,fpn.by.sum)))
+		#
+		hivc.clu.plot.tptn(	fp.by.all, tp.by.all, paste(outdir, paste(outfile,"_tpbyall_fpbyall_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
+							cols, xlab= "%FP (among all)", ylab= "%TP (among all)", xlim= range(c(0,0.01,fp.by.all)))
+		#
+		hivc.clu.plot.tptn(	fpn.by.sum, tpclu.by.all, paste(outdir, paste(outfile,"_tpclubyall_fpnbysum_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
+							cols, xlab= "#FP (among all)", ylab= "%TP (among clu)", xlim= range(c(0,16,fpn.by.sum)))
+		#
+		hivc.clu.plot.tptn(	fp.by.all, tpclu.by.all, paste(outdir, paste(outfile,"_tpclubyall_fpbyall_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
+							cols, xlab= "%FP (among all)", ylab= "%TP (among clu)", xlim= range(c(0,0.01,fp.by.all)))
+		#
+		hivc.clu.plot.tptn(	fpn.by.sum, clusters.cov.epidemic, paste(outdir, paste(outfile,"_covepi_fpnbysum_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
+							cols, xlab= "#FP (among all)", ylab= "%coverage (of epi)", xlim= range(c(0,16,fpn.by.sum)))
+		#
+		hivc.clu.plot.tptn(	fp.by.all, clusters.cov.epidemic, paste(outdir, paste(outfile,"_covepi_fpbyall_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
+							cols, xlab= "%FP (among all)", ylab= "%coverage (of epi)", xlim= range(c(0,0.01,fp.by.all)))
+		#
+		hivc.clu.plot.tptn(	fpn.by.sum, clusters.cov.patindb, paste(outdir, paste(outfile,"_covpat_fpnbysum_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
+							cols, xlab= "#FP (among all)", ylab= "%coverage (of db)", xlim= range(c(0,16,fpn.by.sum)))
+		#
+		hivc.clu.plot.tptn(	fp.by.all, clusters.cov.patindb, paste(outdir, paste(outfile,"_covpat_fpbyall_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
+							cols, xlab= "%FP (among all)", ylab= "%coverage (of db)", xlim= range(c(0,0.01,fp.by.all)))
+		#
+		hivc.clu.plot.tptn(	fpn.by.sum, clusters.cov.seqindb, paste(outdir, paste(outfile,"_covseq_fpnbysum_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
+							cols, xlab= "#FP (among all)", ylab= "%seq coverage (of db)", xlim= range(c(0,16,fpn.by.sum)))
+		#
+		hivc.clu.plot.tptn(	fp.by.all, clusters.cov.seqindb, paste(outdir, paste(outfile,"_covseq_fpbyall_",gsub('/',':',outsignat),".pdf",sep=''),sep='/'), 
+							cols, xlab= "%FP (among all)", ylab= "%seq coverage (of db)", xlim= range(c(0,0.01,fp.by.all)))
+	}
 	
 	list(	clusters				= clusters,
 			clusters.cov.epidemic	= clusters.cov.epidemic, 
@@ -1582,7 +1601,10 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL)
 			fpn.by.sum				= fpn.by.sum,
 			fp.by.all				= fp.by.all,
 			tp.by.all				= tp.by.all, 
-			tpclu.by.all			= tpclu.by.all		
+			tpclu.by.all			= tpclu.by.all,
+			tnn.by.sum				= tnn.by.sum,
+			tn.by.sum				= tn.by.sum,
+			fpclu.by.all			= fpclu.by.all
 			)
 }
 ######################################################################################
