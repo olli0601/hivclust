@@ -599,6 +599,8 @@ hivc.clu.truepos<- function(clustering, ph.linked, ph.tips.n, verbose=0)
 	clu.linked	<- merge(ph.linked, clu.linked, all.x=1, by="Patient")
 	set(clu.linked, which(is.na(clu.linked[,nTP.clu])) ,"nTP.clu", 1L )
 	setkey(clu.linked, Node)
+	clu.linked[, pairs.TP.n:= choose(nTP,2)]
+	clu.linked[, pairs.TP.n.clu:= choose(nTP.clu,2)]
 	
 	#clu.tp
 	#Patient TP.clu  (all wh seq in this cluster) TP.n (all wh seq) TP.n.clu (all wh seq that cluster) clu (ID of this cluster) clu.tips (number of tips in this cluster)
@@ -642,10 +644,17 @@ hivc.clu.truepos<- function(clustering, ph.linked, ph.tips.n, verbose=0)
 	# evaluate among all sequences in tree
 	patients.allseqinsameclu				<- nrow( subset(clu.tp, TP.clu==TP.n) )							#if TP.clu==TP.n then Patient can occur only once in subset
 	patients.total							<- length(unique(clu.linked[,Patient]))
-	tmp										<- clu.tp[, list(TP.clu= max(TP.clu), pairs.TP.clu= max(pairs.TP.clu), TP.n=TP.n[1], pairs.TP.n=pairs.TP.n[1]),by=Patient]	#if TP.clu!=TP.n then Patient occurs multiple times
-	patients.freqinsameclu					<- sum(tmp[, TP.clu]) / sum(tmp[, TP.n])
+	patients.allseqindiffclu				<- subset(clu.tp, TP.clu<TP.n)[, length(unique(Patient))]	+
+												length(unique(setdiff(clu.linked[, Patient], clu.tp[, Patient])))
+	clu.tp.mx								<- clu.tp[, list(TP.clu= max(TP.clu), pairs.TP.clu= max(pairs.TP.clu), TP.n=TP.n[1], pairs.TP.n=pairs.TP.n[1]),by=Patient]	#if TP.clu!=TP.n then Patient occurs multiple times
+	tmp										<- merge(clu.linked, data.table(Patient= unique(setdiff(clu.linked[, Patient], clu.tp[, Patient]))), by='Patient')
+	setkey(tmp, Patient)
+	setkey(clu.linked, Patient)
+	patients.freqinsameclu					<- clu.tp.mx[, sum(TP.clu)] / clu.tp.mx[, sum(TP.n)]
 	# preferred way to quantify  the number of correctly clustered within-patient sequences
-	pairs.freqinsameclu						<- sum(tmp[, pairs.TP.clu]) / sum(tmp[, pairs.TP.n])
+	pairs.freqinsameclu						<- clu.tp.mx[, sum(pairs.TP.clu)] / clu.tp.mx[, sum(pairs.TP.n)]	
+	pairs.freqnotinsameclu					<- (	clu.tp.mx[, sum(pairs.TP.n-pairs.TP.clu)] + unique(tmp)[, sum(pairs.TP.n)]	)/ unique(clu.linked)[, sum(pairs.TP.n)]
+	pairs.freqnotinsameclu2					<- clu.tp.mx[, sum(pairs.TP.n-pairs.TP.clu)] / unique(clu.linked)[, sum(pairs.TP.n)]
 	
 	# evaluate among all sequences that cluster
 	patients.clustering.allseqindiffclu		<- length(unique(clu.diffclu[,Patient]))
@@ -662,9 +671,13 @@ hivc.clu.truepos<- function(clustering, ph.linked, ph.tips.n, verbose=0)
 			clu.diffclu 		= clu.diffclu,
 			tp.by.all			= patients.allseqinsameclu / patients.total,
 			tp.by.sum			= pairs.freqinsameclu,
+			fp.by.sum			= pairs.freqnotinsameclu,
+			fp.by.sum2			= pairs.freqnotinsameclu2,
 			tpclu.by.all		= patients.clustering.allseqinsameclu / patients.clustering.total,			
 			tpclu.by.diffclu	= (patients.clustering.total - patients.clustering.allseqindiffclu) / patients.clustering.total,
 			tpclu.by.sum		= pairs.clustering.freqinsameclu,
+			fp.by.all			= patients.allseqindiffclu / patients.total,
+			fp.by.all2			= (patients.allseqindiffclu-length(unique(setdiff(clu.linked[, Patient], clu.tp[, Patient])))) / patients.total,
 			fpclu.by.all		= patients.clustering.allseqindiffclu / patients.clustering.total
 			)	
 }

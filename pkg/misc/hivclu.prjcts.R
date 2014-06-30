@@ -2186,7 +2186,7 @@ project.hivc.clustering.compare.NoDR.to.NoRecombNoDR.to.NoShort<- function()
 	resume			<- 0
 	argv			<<- hivc.cmd.clustering.tptn(indir, infile, insignat, indircov, infilecov, opt.brl="dist.brl.casc", patient.n=patient.n, resume=resume)
 	argv			<<- unlist(strsplit(argv,' '))
-	nsh.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=nsh.clu.pre)
+	nsh.clu.tptn	<- hivc.prog.get.clustering.TPTN(clu.pre=nsh.clu.pre, with.plot=0)
 	#			
 	argv			<<- hivc.cmd.clustering(indir, infile, insignat, opt.brl="dist.brl.casc", thresh.brl, thresh.bs, resume=resume)				 
 	argv			<<- unlist(strsplit(argv,' '))
@@ -3537,48 +3537,63 @@ project.hivc.examlclock<- function()
 	#
 	#	mean evol rate
 	#
-	tmp		<- subset(Y.rawbrl.linked, b4T=='both' & dt>0 & brlr<0.01, select=c(brl, dt, b4T.long))	
+	brl.linked.max.dt= 10; brl.linked.min.dt= 1; brl.linked.max.brlr=0.025
+	
+	tmp		<- subset(Y.rawbrl.linked, b4T=='both' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T.long))	
 	#tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmp[, y.b:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)]
 	tmp[, y.u:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
 	tmp[, y.l:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
 	ans		<- copy(tmp)
-	tmp		<- subset(Y.rawbrl.linked, b4T=='only.T' & dt>0 & brlr<0.01, select=c(brl, dt, b4T.long))
+	tmp		<- subset(Y.rawbrl.linked, b4T=='only.T' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T.long))
 	#tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmp[, y.b:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)]
 	tmp[, y.u:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
 	tmp[, y.l:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
 	ans		<- rbind(ans, tmp)
-	tmp		<- subset(Y.rawbrl.linked, b4T=='none' & dt>0 & brlr<0.01, select=c(brl, dt, b4T.long))
+	tmp		<- subset(Y.rawbrl.linked, b4T=='none' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T.long))
 	#tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmp[, y.b:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)]
 	tmp[, y.u:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
 	tmp[, y.l:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
 	ans		<- rbind(ans, tmp)
+	#
 	
+	Y.rawbrl.linked[, excluded:= factor( dt>brl.linked.max.dt | dt<brl.linked.min.dt | brlr>brl.linked.max.brlr, levels=c(FALSE,TRUE), labels=c('No','Yes'))]
 	ggplot(Y.rawbrl.linked, aes(x=dt, y=brl, colour=b4T.long)) + 
-			geom_point(size=0.8) + scale_x_continuous(limits=c(0,7.5)) + scale_y_continuous(limits=c(0,0.35)) + scale_colour_brewer(palette='Set1') + facet_grid(. ~ b4T.long) +		
+			geom_point(size=1, aes(shape=excluded)) + scale_x_continuous(limits=c(0,7.5)) + scale_y_continuous(limits=c(0,0.35)) + scale_colour_brewer(palette='Set1', guide=FALSE) + facet_grid(. ~ b4T.long) +		
 			geom_line(aes(x=dt, y=y.b), colour='black', data=ans) +		
 			#geom_ribbon(aes(x=dt, ymin=y.l, ymax=y.u), alpha=0.2, data=ans, inherit.aes = FALSE) +
-			labs(x="years between within-host sampling dates", y='within-host divergence') + theme(legend.position='none') 
+			labs(x="years between within-host sampling dates", y='within-host divergence')  
 	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examl_clockwh.pdf'
-	ggsave(file=file, w=6, h=6)
+	ggsave(file=file, w=8, h=8)
 	
 	sapply( list(tmpg.ZAGA.B, tmpg.ZAGA.O, tmpg.ZAGA.N), Rsq )
 	#0.4411087 0.2959325 0.4299490
-	print(tmpg.ZAGA.B)
-	#		0.001567
-	print(tmpg.ZAGA.O)
-	#dt		0.002675
-	print(tmpg.ZAGA.N)	
-	#dt  	0.003985 
+	#	excluded	only outside 1<dt<10
+	print(tmpg.ZAGA.B)	#		0.001567
+	print(tmpg.ZAGA.O)	#dt		0.002675
+	print(tmpg.ZAGA.N)	#dt  	0.003985
+	#	excluded	outside 1<dt<10 & brlr>0.01
+	print(tmpg.ZAGA.B)	#		0.002177
+	print(tmpg.ZAGA.O)	#dt		0.002849
+	print(tmpg.ZAGA.N)	#dt  	0.004247 
+	#	excluded	outside 1<dt<10 & brlr>0.02
+	print(tmpg.ZAGA.B)	#		0.002663
+	print(tmpg.ZAGA.O)	#dt		0.004007
+	print(tmpg.ZAGA.N)	#dt  	0.006346 
+	#	excluded	outside 1<dt<10 & brlr>0.025
+	print(tmpg.ZAGA.B)	#		0.00275
+	print(tmpg.ZAGA.O)	#dt		0.004131  
+	print(tmpg.ZAGA.N)	#dt  	0.006926 
+	
 	#
 	#	EXCLUDE
 	#
-	brl.linked.max.dt= 10; brl.linked.min.dt= 1; brl.linked.max.brlr=0.01
+	brl.linked.max.dt= 10; brl.linked.min.dt= 1; brl.linked.max.brlr=0.025
 	Y.rawbrl.linked		<- subset( Y.rawbrl.linked, dt!=0 )
 	cat(paste('\nY.rawbrl.linked all, n=',nrow(Y.rawbrl.linked)))
 	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  brlr<=brl.linked.max.brlr)
@@ -3597,19 +3612,21 @@ project.hivc.examlclock<- function()
 						none.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] )		)
 	cat(paste('\nwilcox test for same mean'))
 	print( sapply(test, '[[', 'p.value') )
-	#wilcox test for same mean
+	#wilcox test for same mean		excluded brl>0.02
+	# 	 both.only.T    both.none  none.only.T 
+	#2.071745e-04 1.279865e-22 1.322711e-17
+	#								excluded brl>0.025
 	# both.only.T    both.none  none.only.T 
-	#1.965908e-04 2.855682e-24 3.835930e-22 
+	#2.238328e-04 6.624977e-24 4.412482e-20
 	#
 	# AIC between EXP GA ZAGA	-- AIC not comparable between brl and brlz
 	#
 	tmpd.B		<- subset(Y.rawbrl.linked, b4T=='both', select=c(brl, brlz, dt, b4T.long))
 	tmpd.O		<- subset(Y.rawbrl.linked, b4T=='only.T', select=c(brl, brlz, dt, b4T.long))
 	tmpd.N		<- subset(Y.rawbrl.linked, b4T=='none', select=c(brl, brlz, dt, b4T.long))
-	nrow(tmpd.B)
-	nrow(tmpd.O)
-	nrow(tmpd.N)
-	
+	nrow(tmpd.B)		#[1] 134	excluded <0.01			141		excluded <0.02		142		excluded <0.025
+	nrow(tmpd.O)		#[1] 328							373							376
+	nrow(tmpd.N)		#[1] 1576							2154						2257
 	tmpg.E.B	<- gamlss(as.formula('brl ~ 1'), data=as.data.frame(tmpd.B), family=EXP, n.cyc = 40)	
 	tmpg.E.O	<- gamlss(as.formula('brl ~ 1'), data=as.data.frame(tmpd.O), family=EXP, n.cyc = 40)
 	tmpg.E.N	<- gamlss(as.formula('brl ~ 1'), data=as.data.frame(tmpd.N), family=EXP, n.cyc = 40)	
@@ -3645,9 +3662,14 @@ project.hivc.examlclock<- function()
 							ZAGA.N= ks.test(subset(tmpd.B, brlz>0)[,brlz], pZAGA, mu=unlist(tmpp.ZAGA['mu','N']), sigma=unlist(tmpp.ZAGA['sigma','N']), nu=0)
 							)	
 	print( sapply(test, '[[', 'p.value') )
-	#E.B          E.O          E.N         GA.B         GA.O         GA.N       ZAGA.B       ZAGA.O       ZAGA.N 
-	#0.000000e+00 0.000000e+00 0.000000e+00 5.823539e-07 1.064704e-12 0.000000e+00 1.349307e-04 1.290469e-07 3.552714e-15 
-	# 0 is <2.2e-16
+	#	excluded > 0.02
+	#         E.B          E.O          E.N         GA.B         GA.O         GA.N       ZAGA.B       ZAGA.O       ZAGA.N 
+	#0.000000e+00 0.000000e+00 0.000000e+00 5.000988e-08 1.911804e-13 0.000000e+00 4.456872e-01 1.358416e-06 4.620748e-13
+	#	excluded > 0.025
+	#         E.B          E.O          E.N         GA.B         GA.O         GA.N       ZAGA.B       ZAGA.O       ZAGA.N 
+	#0.000000e+00 0.000000e+00 0.000000e+00 5.514628e-08 2.016165e-13 0.000000e+00 4.273192e-01 2.096416e-06 7.571721e-14 
+
+	#0 is <2.2e-16
 	#
 	#	Parameters
 	#
@@ -3656,18 +3678,29 @@ project.hivc.examlclock<- function()
 											data.table(d='EXP',b4T=c('B','O','N'),mu=unlist(tmpp.E['mu',]), sigma=NA, nu=NA)	)	)
 	tmp			<- c('both sampling dates\nbefore ART start','sampling dates before and\nafter ART start','both sampling dates\nafter ART start')
 	tmp			<- data.table(b4T= c('B','O','N'), b4T.long=factor( tmp, levels=tmp ))
-	tmpp		<- merge( tmpp, tmp, by='b4T' )													
-	#d b4T                 mu     sigma        nu
-	#1: ZAGA   B 0.0243411879614414 1.1143539 0.3698630
-	#2: ZAGA   O 0.0256556183526584 0.8858962 0.2824427
-	#3: ZAGA   N 0.0331633968299415 0.8077049 0.1252033
-	#4:   GA   B 0.0153411122984566 2.0465359        NA
-	#5:   GA   O 0.0184116511820145 1.8177049        NA
-	#6:   GA   N 0.0290122859838159 1.3913884        NA
-	#7:  EXP   B 0.0153411122984566        NA        NA
-	#8:  EXP   O 0.0184116511820145        NA        NA
-	#9:  EXP   N 0.0290122859838169        NA        NA
-	#
+	tmpp		<- merge( tmpp, tmp, by='b4T' )
+	#	excluded > 0.02	
+	#   b4T    d          mu     sigma        nu                                   b4T.long
+	#1:   B ZAGA 0.013857413 0.7738736 0.3829787      both sampling dates\nbefore ART start
+	#2:   B   GA 0.008553248 1.9267489        NA      both sampling dates\nbefore ART start
+	#3:   B  EXP 0.008553248        NA        NA      both sampling dates\nbefore ART start
+	#4:   N ZAGA 0.027019369 0.7546553 0.1429898       both sampling dates\nafter ART start
+	#5:   N   GA 0.023157079 1.4154861        NA       both sampling dates\nafter ART start
+	#6:   N  EXP 0.023157079        NA        NA       both sampling dates\nafter ART start
+	#7:   O ZAGA 0.021351489 0.8010297 0.2975871 sampling dates before and\nafter ART start
+	#8:   O   GA 0.014999959 1.8104345        NA sampling dates before and\nafter ART start
+	#9:   O  EXP 0.014999959        NA        NA sampling dates before and\nafter ART start
+	#	excluded > 0.025
+	#b4T    d          mu     sigma        nu                                   b4T.long
+	#1:   B ZAGA 0.014198191 0.7819489 0.3802817      both sampling dates\nbefore ART start
+	#2:   B   GA 0.008801788 1.9263632        NA      both sampling dates\nbefore ART start
+	#3:   B  EXP 0.008801788        NA        NA      both sampling dates\nbefore ART start
+	#4:   N ZAGA 0.028178663 0.7533713 0.1364643       both sampling dates\nafter ART start
+	#5:   N   GA 0.024334430 1.3967320        NA       both sampling dates\nafter ART start
+	#6:   N  EXP 0.024334430        NA        NA       both sampling dates\nafter ART start
+	#7:   O ZAGA 0.021496155 0.7984599 0.2952128 sampling dates before and\nafter ART start
+	#8:   O   GA 0.015152594 1.8054715        NA sampling dates before and\nafter ART start
+	#9:   O  EXP 0.015152594        NA        NA sampling dates before and\nafter ART start
 	#	CDF plot
 	#
 	tmp			<- tmpp[, {

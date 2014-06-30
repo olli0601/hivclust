@@ -353,6 +353,8 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.04, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
 		if(substr(method,1,2)=='3d')	#expect central brl	
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)		
+		if(substr(method,1,2)=='3j')	#expect central brl	
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)				
 		if(substr(method,1,2)=='3e')	#expect large brl				
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.0175, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
 		if(substr(method,1,2)=='3f')	#expect small brl				
@@ -364,7 +366,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t
 			save.file.3ha		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_convolution','.R',sep='')
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= -1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one, save.file.3ha=save.file.3ha)		
 		}
-		if(all(substr(method,1,2)!=c('3c','3d','3e','3f','3g')))	stop('brlweight: method not supported')		
+		if(all(substr(method,1,2)!=c('3c','3d','3e','3f','3g','3j')))	stop('brlweight: method not supported')		
 		#	U [0,1]: prob that pot transmitter is still infected at time t. Needed to determine time of infection for transmitter (as quantile of the surival distribution)
 		Y.U						<- project.athena.Fisheretal.Y.infectiontime(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.min=0.01, score.set.value=NA, method='for.transmitter')
 		#	COAL [0,1]: prob that coalescence is within the transmitter
@@ -507,28 +509,33 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  brlr>brl.linked.min.brl)
 	cat(paste('\nY.rawbrl.linked min brl ',brl.linked.min.brl,' excluded, n=',nrow(Y.rawbrl.linked)))
 	Y.rawbrl.linked		<- subset(Y.rawbrl.linked,  dt>brl.linked.min.dt)		
-	cat(paste('\nY.rawbrl.linked min dt ',brl.linked.min.dt,' excluded, n=',nrow(Y.rawbrl.linked)))	
-	#
-	# wilcox test for same mean
-	#
-	test	<- list( 	both.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),				
-						both.none= 		wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)] ),						
-						none.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] )		)
-	cat(paste('\nwilcox test for same mean'))
-	print( sapply(test, '[[', 'p.value') )
-	# KS test for same distribution
-	test	<- list( 	both.only.T= 	ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)]),						
-						both.none= 		ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)] ),
-						none.only.T= 	ks.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] )		)
-	cat(paste('\nKS test for same distribution'))
-	print( sapply(test, '[[', 'p.value') )
-	
-	#ggplot(Y.rawbrl.linked, aes(x=dt, y=brl)) + labs(x="years between sampling dates", y='substitutions / site') +
-	#		geom_point(size=0.7) + stat_smooth(method = "loess") + facet_grid(. ~ b4T.long, scales='free_x', margins=FALSE)	
-	ggplot(subset(Y.rawbrl.linked, b4T!='none'), aes(x=dt, y=brl)) + labs(x="years between sampling dates", y='substitutions / site') +
-			geom_point(size=0.7) + stat_smooth(method = "loess") + facet_grid(. ~ b4T.long, scales='free_x', margins=FALSE)
-	plot.file		<- paste(substr(plot.file.both,1,nchar(plot.file.both)-8),'excluded_dt_gd.pdf',sep='')
-	ggsave(file=plot.file, w=6, h=6)	
+	cat(paste('\nY.rawbrl.linked min dt ',brl.linked.min.dt,' excluded, n=',nrow(Y.rawbrl.linked)))
+	if(0)
+	{
+		#
+		# wilcox test for same mean
+		#
+		test	<- list( 	both.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] ),				
+				both.none= 		wilcox.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)] ),						
+				none.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] )		)
+		cat(paste('\nwilcox test for same mean'))
+		print( sapply(test, '[[', 'p.value') )
+		# KS test for same distribution
+		test	<- list( 	both.only.T= 	ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)]),						
+				both.none= 		ks.test( subset(Y.rawbrl.linked, b4T=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)] ),
+				none.only.T= 	ks.test( subset(Y.rawbrl.linked, b4T=='none')[, log10(brl)], subset(Y.rawbrl.linked, b4T=='only.T')[, log10(brl)] )		)
+		cat(paste('\nKS test for same distribution'))
+		print( sapply(test, '[[', 'p.value') )		
+	}
+	if(0)
+	{
+		#ggplot(Y.rawbrl.linked, aes(x=dt, y=brl)) + labs(x="years between sampling dates", y='substitutions / site') +
+		#		geom_point(size=0.7) + stat_smooth(method = "loess") + facet_grid(. ~ b4T.long, scales='free_x', margins=FALSE)	
+		ggplot(subset(Y.rawbrl.linked, b4T!='none'), aes(x=dt, y=brl)) + labs(x="years between sampling dates", y='substitutions / site') +
+				geom_point(size=0.7) + stat_smooth(method = "loess") + facet_grid(. ~ b4T.long, scales='free_x', margins=FALSE)
+		plot.file		<- paste(substr(plot.file.both,1,nchar(plot.file.both)-8),'excluded_dt_gd.pdf',sep='')
+		ggsave(file=plot.file, w=6, h=6)			
+	}
 	#
 	#	fit distributions to data 
 	#
@@ -583,7 +590,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		ml.zaga			<- gamlss(brl~1, family=ZAGA)
 		ml.zaga.p		<- ad.test(brl, pZAGA, mu=exp(ml.zaga[['mu.coefficients']]), sigma=exp(ml.zaga[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga[['nu.coefficients']])) )$p.value
 		cat(paste('\nbest ZAGA pvalue for both b4T=', ml.zaga.p))
-		brl				<- subset(Y.rawbrl.linked, b4T!='both' & b4T!='none'  & brlr<=0.01)[,brlz]
+		brl				<- subset(Y.rawbrl.linked, b4T!='both' & b4T!='none')[,brlz]
 		ml.zaga.one		<- gamlss(brl~1, family=ZAGA)
 		ml.zaga.one.p	<- ad.test(brl, pZAGA, mu=exp(ml.zaga.one[['mu.coefficients']]), sigma=exp(ml.zaga.one[['sigma.coefficients']]), nu=1/(1+exp(-ml.zaga.one[['nu.coefficients']])) )$p.value
 		cat(paste('\nbest ZAGA pvalue for one b4T=', ml.zaga.one.p))	
@@ -796,7 +803,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		set(Y.brl, tmp, 'score.brl.TPp', pgamma(Y.brl[tmp,brl], shape=2*mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'], lower.tail=FALSE) )
 		Y.brl[, score.brl.TPd:= score.brl.TPp]		
 	}	
-	if(substr(method,1,2)%in%c('3d','3f'))	#dont ignore zeros - use zero adjusted Gamma
+	if(substr(method,1,2)%in%c('3d','3f','3j'))	#dont ignore zeros - use zero adjusted Gamma
 	{
 		tmp			<- c( exp(ml.zaga[['mu.coefficients']]), exp(ml.zaga[['sigma.coefficients']]), 1/(1+exp(-ml.zaga[['nu.coefficients']])) )
 		cat(paste('\nZAGA Both b4T: MLE param:',paste( tmp, collapse=' ')))
@@ -981,7 +988,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 				geom_histogram(aes(y= ..density..), binwidth=0.003, show_guide=FALSE) + geom_line(aes(x=brl, y=dummy)) + facet_grid(. ~ b4T.long, scales='free_y', margins=FALSE)
 		ggsave(file=plot.file.score, w=8, h=6)			
 	}		
-	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3d','3f'))
+	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3d','3f','3j'))
 	{
 		plot.df			<- subset(Y.rawbrl.linked, b4T!='none' )
 		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( plot.df[,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( plot.df[,brlz],  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
@@ -10406,7 +10413,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}	
-	if(1)
+	if(0)
 	{		
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
@@ -10420,7 +10427,20 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}
-	
+	if(1)
+	{		
+		method					<- '3j'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm2Bt.cas'# 'm2Bt.cas'# 'm2Bt.tp3'# 'm2B1st.cas'# 'm5.tA' #
+		method.PDT				<- 'CLU'	# 'PDT'		
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+	}
 	if(exists("argv"))
 	{
 		tmp<- na.omit(sapply(argv,function(arg)

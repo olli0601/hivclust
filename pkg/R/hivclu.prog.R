@@ -1281,7 +1281,8 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL, with.plot=TRUE)
 	patient.n	<- 15700
 	opt.brl		<- "dist.brl.casc"
 	thresh.brl	<- c(seq(0.02,0.05,0.01),seq(0.06,0.12,0.02),seq(0.16,0.24,0.04))
-	thresh.bs	<- c(0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95)
+	#thresh.bs	<- c(0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95)
+	thresh.bs	<- c(0.7, 0.75, 0.8, 0.85, 0.9, 0.95)
 	resume		<- 1
 	verbose		<- 1
 	
@@ -1533,6 +1534,12 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL, with.plot=TRUE)
 	fpclu.by.all			<- t( sapply(seq_along(clusters),function(i){				sapply(clusters[[i]][["tp"]], function(x) x["fpclu.by.all"] )		}))
 	rownames(fpclu.by.all)	<- thresh.bs
 	colnames(fpclu.by.all)	<- thresh.brl	
+	fp.by.sum				<- t( sapply(seq_along(clusters),function(i){				sapply(clusters[[i]][["tp"]], function(x) x["fp.by.sum"] )		}))
+	rownames(fp.by.sum)		<- thresh.bs
+	colnames(fp.by.sum)		<- thresh.brl		
+	fp.by.sum2				<- t( sapply(seq_along(clusters),function(i){				sapply(clusters[[i]][["tp"]], function(x) x["fp.by.sum2"] )		}))
+	rownames(fp.by.sum2)	<- thresh.bs
+	colnames(fp.by.sum2)	<- thresh.brl		
 	#	true positives
 	tp.by.all				<- t( sapply(seq_along(clusters),function(i){				sapply(clusters[[i]][["tp"]], function(x) x["tp.by.all"] )		}))
 	rownames(tp.by.all)		<- thresh.bs
@@ -1604,6 +1611,8 @@ hivc.prog.get.clustering.TPTN<- function(clu.pre= NULL, with.plot=TRUE)
 			tpclu.by.all			= tpclu.by.all,
 			tnn.by.sum				= tnn.by.sum,
 			tn.by.sum				= tn.by.sum,
+			fp.by.sum				= fp.by.sum,
+			fp.by.sum2				= fp.by.sum2,
 			fpclu.by.all			= fpclu.by.all
 			)
 }

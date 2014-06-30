@@ -592,7 +592,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	outdir					<- paste(DATA,"fisheretal",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
 	
-	if(1)
+	if(0)
 	{
 		method					<- '3d'
 		method.recentctime		<- '2011-01-01'
@@ -629,6 +629,18 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
+	if(1)
+	{
+		method					<- '3j'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		infilexml.opt			<- "clrh80"
+		infilexml.template		<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+	}	
 	if(0)
 	{
 		method					<- '3e'
@@ -723,7 +735,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tAb.clu.adj','m5.tAc.clu.adj','m5.tiA.clu.adj','m5.tiAb.clu.adj','m5.tiAc.clu.adj')
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tA.tp1.clu.adj','m5.tiA.tp1.clu.adj','m5.tA.tp2.clu.adj','m5.tiA.tp2.clu.adj','m5.tA.tp3.clu.adj','m5.tiA.tp3.clu.adj','m5.tA.tp4.clu.adj','m5.tiA.tp4.clu.adj')
 	#method.risk				<- c( 	'm5.tAc.clu.adj','m5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj')
-	#method.risk			<- c( 	'm2Bt.cas.clu.adj' )
+	method.risk			<- c( 	'm2Bwmx.tp1.clu.adj' )
 	dummy	<- sapply(method.risk, function(x)
 			{
 				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, outdir=outdir, outfile=outfile, resume=1, verbose=1)
