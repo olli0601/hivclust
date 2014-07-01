@@ -868,7 +868,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		#	sense check -- should evaluate to 0, ~1
 		tmp				<- c(0, 0.1)
 		tmp				<- 2*ml.zaga.all.pa['nu']*(1-ml.zaga.all.pa['nu'])*pGA( tmp,  mu=ml.zaga.all.pa['mu'], sigma=ml.zaga.all.pa['sigma'] ) + (1-ml.zaga.all.pa['nu'])*(1-ml.zaga.all.pa['nu'])*pgamma( tmp,  shape=2*ml.zaga.all.pa['shape'], scale=ml.zaga.all.pa['scale'] ) 
-		tmp				<- tmp / (1-ml.zaga.all.pa['nu']*ml.zaga.pa['nu'])				
+		tmp				<- tmp / (1-ml.zaga.all.pa['nu']*ml.zaga.all.pa['nu'])				
 		cat(paste('\nZAGA Both b4T convolution sense check: should be ~0 ~1',paste( tmp, collapse=' ')))		
 		#	set score for cases 'both' and 'one'
 		tmp				<- 2*ml.zaga.all.pa['nu']*(1-ml.zaga.all.pa['nu'])*pGA( Y.brl[,brlz],  mu=ml.zaga.all.pa['mu'], sigma=ml.zaga.all.pa['sigma'] ) + (1-ml.zaga.all.pa['nu'])*(1-ml.zaga.all.pa['nu'])*pgamma( Y.brl[,brlz],  shape=2*ml.zaga.all.pa['shape'], scale=ml.zaga.all.pa['scale'] ) 
