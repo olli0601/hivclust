@@ -3535,37 +3535,64 @@ project.hivc.examlclock<- function()
 	
 	setkey(Y.rawbrl.linked, b4T.long, dt)
 	#
-	#	mean evol rate
+	#	explore clock
 	#
 	brl.linked.max.dt= 10; brl.linked.min.dt= 1; brl.linked.max.brlr=0.025
 	
 	tmp		<- subset(Y.rawbrl.linked, b4T=='both' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T.long))	
-	#tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
-	tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+	tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ bs(dt, degree=4)'), sigma.formula=as.formula('~ bs(dt, degree=4)'), nu.formula=as.formula('~ bs(dt, degree=4)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmp[, y.b:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)]
 	tmp[, y.u:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
 	tmp[, y.l:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
 	ans		<- copy(tmp)
 	tmp		<- subset(Y.rawbrl.linked, b4T=='only.T' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T.long))
-	#tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
-	tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+	tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ bs(dt, degree=4)'), sigma.formula=as.formula('~ bs(dt, degree=4)'), nu.formula=as.formula('~ bs(dt, degree=4)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmp[, y.b:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)]
 	tmp[, y.u:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
 	tmp[, y.l:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
 	ans		<- rbind(ans, tmp)
 	tmp		<- subset(Y.rawbrl.linked, b4T=='none' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T.long))
-	#tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ bs(dt, degree=5)+b4T.long'), nu.formula=as.formula('~ bs(dt, degree=5)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
-	tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+	tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ bs(dt, degree=4)'), sigma.formula=as.formula('~ bs(dt, degree=4)'), nu.formula=as.formula('~ bs(dt, degree=4)'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 	tmp[, y.b:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)]
 	tmp[, y.u:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
 	tmp[, y.l:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
 	ans		<- rbind(ans, tmp)
-	#
-	
 	Y.rawbrl.linked[, excluded:= factor( dt>brl.linked.max.dt | dt<brl.linked.min.dt | brlr>brl.linked.max.brlr, levels=c(FALSE,TRUE), labels=c('No','Yes'))]
 	ggplot(Y.rawbrl.linked, aes(x=dt, y=brl, colour=b4T.long)) + 
-			geom_point(size=1, aes(shape=excluded)) + scale_x_continuous(limits=c(0,7.5)) + scale_y_continuous(limits=c(0,0.35)) + scale_colour_brewer(palette='Set1', guide=FALSE) + facet_grid(. ~ b4T.long) +		
-			geom_line(aes(x=dt, y=y.b), colour='black', data=ans) +		
+			geom_point(size=1, aes(shape=excluded)) + scale_x_continuous(limits=c(0,10)) + scale_y_continuous(limits=c(0,0.35)) + scale_colour_brewer(palette='Set1', guide=FALSE) + facet_grid(. ~ b4T.long) +		
+			#geom_line(aes(x=dt, y=y.b), colour='black', data=ans) +
+			stat_smooth(aes(colour=NULL), colour='black', data=subset(Y.rawbrl.linked, excluded=='No')) +
+			#geom_ribbon(aes(x=dt, ymin=y.l, ymax=y.u), alpha=0.2, data=ans, inherit.aes = FALSE) +
+			labs(x="years between within-host sampling dates", y='within-host divergence')
+	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examl_clockwhexplore.pdf'
+	ggsave(file=file, w=8, h=8)	
+	#
+	#	mean evol rate
+	#
+	tmp			<- subset(Y.rawbrl.linked, b4T=='both' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T.long))		
+	tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+	tmp[, y.b:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)]
+	tmp[, y.u:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
+	tmp[, y.l:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
+	ans			<- copy(tmp)
+	tmp			<- subset(Y.rawbrl.linked, b4T=='only.T' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T.long))
+	tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+	tmp[, y.b:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)]
+	tmp[, y.u:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
+	tmp[, y.l:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
+	ans			<- rbind(ans, tmp)
+	tmp			<- subset(Y.rawbrl.linked, b4T=='none' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T.long))
+	tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+	tmp[, y.b:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)]
+	tmp[, y.u:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
+	tmp[, y.l:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
+	ans			<- rbind(ans, tmp)
+	#	
+	Y.rawbrl.linked[, excluded:= factor( dt>brl.linked.max.dt | dt<brl.linked.min.dt | brlr>brl.linked.max.brlr, levels=c(FALSE,TRUE), labels=c('No','Yes'))]
+	ggplot(Y.rawbrl.linked, aes(x=dt, y=brl, colour=b4T.long)) + 
+			geom_point(size=1, aes(shape=excluded)) + scale_x_continuous(limits=c(0,10)) + scale_y_continuous(limits=c(0,0.35)) + scale_colour_brewer(palette='Set1', guide=FALSE) + facet_grid(. ~ b4T.long) +					
+			stat_smooth(aes(colour=NULL), colour='black', data=subset(Y.rawbrl.linked, excluded=='No')) +
+			geom_line(aes(x=dt, y=y.b), colour='black', linetype='dotdash', data=ans) +	
 			#geom_ribbon(aes(x=dt, ymin=y.l, ymax=y.u), alpha=0.2, data=ans, inherit.aes = FALSE) +
 			labs(x="years between within-host sampling dates", y='within-host divergence')  
 	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examl_clockwh.pdf'

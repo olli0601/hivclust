@@ -802,7 +802,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		tmp<- Y.brl[, which(b4T=='one')]
 		set(Y.brl, tmp, 'score.brl.TPp', pgamma(Y.brl[tmp,brl], shape=2*mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'], lower.tail=FALSE) )
 		Y.brl[, score.brl.TPd:= score.brl.TPp]		
-	}	
+	}
 	if(substr(method,1,2)%in%c('3d','3f','3j'))	#dont ignore zeros - use zero adjusted Gamma
 	{
 		tmp			<- c( exp(ml.zaga[['mu.coefficients']]), exp(ml.zaga[['sigma.coefficients']]), 1/(1+exp(-ml.zaga[['nu.coefficients']])) )
@@ -843,6 +843,65 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 			tmp				<- tmp / (1-ml.zaga.one.pa['nu']*ml.zaga.one.pa['nu'])				
 			set(Y.brl, Y.brl[, which(b4T=='one')], 'score.brl.TPp', 1-tmp )			
 		}		
+		Y.brl[, score.brl.TPd:= score.brl.TPp]		
+		Y.brl[, dt:= abs(PosSeqT-t.PosSeqT)]		
+	}	
+	if(substr(method,1,2)%in%c('3j'))	#dont ignore zeros - use zero adjusted Gamma
+	{
+		tmp			<- c( exp(ml.zaga[['mu.coefficients']]), exp(ml.zaga[['sigma.coefficients']]), 1/(1+exp(-ml.zaga[['nu.coefficients']])) )
+		cat(paste('\nZAGA Both b4T: MLE param:',paste( tmp, collapse=' ')))
+		tmp			<- c( exp(ml.zaga.one[['mu.coefficients']]), exp(ml.zaga.one[['sigma.coefficients']]), 1/(1+exp(-ml.zaga.one[['nu.coefficients']])) )
+		cat(paste('\nZAGA One b4T: MLE param:',paste( tmp, collapse=' ')))
+		
+		Y.brl[, brlz:=brl]		 
+		set(Y.brl, Y.brl[, which(brlz<1e-4)], 'brlz', 0)
+		Y.brl			<- merge( Y.brl, unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )	
+		tmp				<- merge( data.table(FASTASampleCode=Y.brl[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
+		setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+		Y.brl			<- merge( Y.brl, tmp, by='t.FASTASampleCode')
+		Y.brl[, b4T:= 'both']
+		set(Y.brl, Y.brl[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT<=AnyT_T1)], 'b4T', 'mix')
+		set(Y.brl, Y.brl[, which(t.PosSeqT<=t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'mix')
+		set(Y.brl, Y.brl[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'one')		
+		print(Y.brl[,table(b4T)])
+		#
+		#	cases 'both' and 'one'
+		#
+		#	convolution of zero adjusted Gamma	
+		ml.zaga.pa		<- c(mu=as.double(exp(ml.zaga[['mu.coefficients']])), sigma=as.double(exp(ml.zaga[['sigma.coefficients']])), nu=as.double(1/(1+exp(-ml.zaga[['nu.coefficients']]))) )
+		ml.zaga.pa		<- c(ml.zaga.pa, shape= as.double(1/(ml.zaga.pa['sigma']*ml.zaga.pa['sigma'])), scale= as.double(ml.zaga.pa['mu']*ml.zaga.pa['sigma']*ml.zaga.pa['sigma']) )
+		ml.zaga.one.pa	<- c(mu=as.double(exp(ml.zaga.one[['mu.coefficients']])), sigma=as.double(exp(ml.zaga.one[['sigma.coefficients']])), nu=as.double(1/(1+exp(-ml.zaga.one[['nu.coefficients']]))) )
+		ml.zaga.one.pa	<- c(ml.zaga.one.pa, shape= as.double(1/(ml.zaga.one.pa['sigma']*ml.zaga.one.pa['sigma'])), scale= as.double(ml.zaga.one.pa['mu']*ml.zaga.one.pa['sigma']*ml.zaga.one.pa['sigma']) )
+		#	sense check -- should evaluate to 0, ~1
+		tmp				<- c(0, 0.1)
+		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( tmp,  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( tmp,  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
+		tmp				<- tmp / (1-ml.zaga.pa['nu']*ml.zaga.pa['nu'])				
+		cat(paste('\nZAGA Both b4T convolution sense check: should be ~0 ~1',paste( tmp, collapse=' ')))
+		Y.brl[, score.brl.TPp:= NA_real_]
+		#	set score for cases 'both' and 'one'
+		tmp				<- Y.brl[, which(b4T=='both')]
+		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( Y.brl[tmp,brlz],  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
+		tmp				<- tmp / (1-ml.zaga.pa['nu']*ml.zaga.pa['nu'])
+		set(Y.brl, Y.brl[, which(b4T=='both')], 'score.brl.TPp', 1-tmp )
+		tmp				<- Y.brl[, which(b4T=='one')]
+		tmp				<- 2*ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) + (1-ml.zaga.one.pa['nu'])*(1-ml.zaga.one.pa['nu'])*pgamma( Y.brl[tmp,brlz],  shape=2*ml.zaga.one.pa['shape'], scale=ml.zaga.one.pa['scale'] ) 
+		tmp				<- tmp / (1-ml.zaga.one.pa['nu']*ml.zaga.one.pa['nu'])				
+		set(Y.brl, Y.brl[, which(b4T=='one')], 'score.brl.TPp', 1-tmp )			
+		#
+		#	case 'mix'
+		#
+		library(distr)
+		#	get cdf of convolution GA_noART with GA_ART
+		ml.zaga.pmix	<- p(convpow( Gammad(scale=ml.zaga.pa['scale'], shape=ml.zaga.pa['shape']) + Gammad(scale=ml.zaga.one.pa['scale'], shape=ml.zaga.one.pa['shape']), 1))
+		tmp				<- Y.brl[, which(b4T=='mix')]
+		#	get cdf of convolution ZAGA_mix (not normalized)
+		tmp				<- ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) +
+							ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) +
+							(1-ml.zaga.pa['nu'])*(1-ml.zaga.one.pa['nu'])*ml.zaga.pmix( Y.brl[tmp,brlz] )
+		#	divide by normalizing constant
+		tmp				<- tmp / ( ml.zaga.pa['nu']*(1-ml.zaga.pa['nu']) + ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu']) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.one.pa['nu']) )
+		set(Y.brl, Y.brl[, which(b4T=='mix')], 'score.brl.TPp', 1-tmp )
+		#
 		Y.brl[, score.brl.TPd:= score.brl.TPp]		
 		Y.brl[, dt:= abs(PosSeqT-t.PosSeqT)]		
 	}
@@ -988,6 +1047,21 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 				geom_histogram(aes(y= ..density..), binwidth=0.003, show_guide=FALSE) + geom_line(aes(x=brl, y=dummy)) + facet_grid(. ~ b4T.long, scales='free_y', margins=FALSE)
 		ggsave(file=plot.file.score, w=8, h=6)			
 	}		
+	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3j'))
+	{
+		Y.brl[, b4T.long:=b4T]
+		tmp	<- c('both sampling times\nbefore ART start','one sampling time\nafter ART start','both sampling times\nafter ART start')
+		set(Y.brl, Y.brl[, which(b4T.long=='both')], 'b4T.long', tmp[1])		
+		set(Y.brl, Y.brl[, which(b4T.long=='mix')], 'b4T.long', tmp[2])
+		set(Y.brl, Y.brl[, which(b4T.long=='one')], 'b4T.long', tmp[3])
+		set(Y.brl, NULL, 'b4T.long', Y.brl[, factor(b4T.long, levels=tmp, labels=tmp)])
+		ggplot(Y.brl, aes(x=brl, y=score.brl.TPp, group=b4T.long, colour=b4T.long)) + geom_line() +
+				coord_cartesian(xlim=c(0, 0.16)) + scale_x_continuous(breaks=seq(0,0.2,0.02), minor_breaks=seq(0, 0.2, 0.005)) + scale_y_continuous(breaks=seq(0,1,0.2), minor_breaks=seq(0, 1, 0.05)) +
+				theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(11,'mm')) +
+				scale_colour_brewer(palette='Set1', name='treatment status at\nsequence sampling time') +
+				labs(x="between-host divergence", y=expression('Conditional probability score ('*y[ijt]^{C}*')'))
+		ggsave(file=plot.file.score, w=10, h=6)		
+	}
 	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3d','3f','3j'))
 	{
 		plot.df			<- subset(Y.rawbrl.linked, b4T!='none' )

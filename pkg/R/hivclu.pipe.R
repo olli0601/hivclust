@@ -729,7 +729,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk		<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj', 'm4.Bwmxv.clu.adj')	
 	#method.risk				<- c('m3.ind.clu.adj','m3.indNo.clu.adj','m3.indmx.clu.adj','m3.indmxNo.clu.adj','m3.n3mx.clu.adj')
 	#method.risk			<- c( 	'm2Bt.tp1.clu.adj', 'm2Bt.tp2.clu.adj', 'm2Bt.tp3.clu.adj', 'm2Bt.tp4.clu.adj')
-	method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'mBCwmx.tp3.clu.adj', 'm2BCwmx.tp4.clu.adj',
+	method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj',
 								'm3.n3mx.clu.adj','m3.indmx.clu.adj','m3.indmxNo.clu.adj',
 								'm5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj'	)
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tAb.clu.adj','m5.tAc.clu.adj','m5.tiA.clu.adj','m5.tiAb.clu.adj','m5.tiAc.clu.adj')
