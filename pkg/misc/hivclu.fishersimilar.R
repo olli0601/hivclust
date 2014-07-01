@@ -784,7 +784,6 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	Y.brl			<- copy(Y.rawbrl)	
 	Y.brl[, score.brl.TN:= p.rawbrl.unlinked(brl)]
 	Y.brl[, score.brl.TP:= p.rawbrl.linked(brl)]
-	
 	if(substr(method,1,2)%in%c('3c','3e'))	#ignore zeros use Gamma
 	{
 		cat(paste('\nBoth b4T: MLE param:',paste( mle.ga$estimate, collapse=' ')))
@@ -805,7 +804,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		set(Y.brl, tmp, 'score.brl.TPp', pgamma(Y.brl[tmp,brl], shape=2*mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'], lower.tail=FALSE) )
 		Y.brl[, score.brl.TPd:= score.brl.TPp]		
 	}
-	if(substr(method,1,2)%in%c('3d','3f','3j'))	#dont ignore zeros - use zero adjusted Gamma
+	if(substr(method,1,2)%in%c('3d','3f'))	#dont ignore zeros - use zero adjusted Gamma
 	{
 		tmp			<- c( exp(ml.zaga[['mu.coefficients']]), exp(ml.zaga[['sigma.coefficients']]), 1/(1+exp(-ml.zaga[['nu.coefficients']])) )
 		cat(paste('\nZAGA Both b4T: MLE param:',paste( tmp, collapse=' ')))
@@ -911,7 +910,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		Y.brl[, dt:= abs(PosSeqT-t.PosSeqT)]		
 	}
 	if(substr(method,1,2)=='3g')	#dont ignore zeros - use zero adjusted Gamma. Ignore after cART initiation. Ignore convolution.
-	{
+	{		
 		Y.brl[, brlz:=brl]		 
 		set(Y.brl, Y.brl[, which(brlz<1e-4)], 'brlz', 0)
 		Y.brl			<- merge( Y.brl, unique(subset(df.all, select=c(FASTASampleCode, PosSeqT, AnyT_T1))), by='FASTASampleCode' )	
