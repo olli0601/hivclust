@@ -432,11 +432,16 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 {
 	#brl.linked.max.brlr= 0.01; brl.linked.min.brl= 1e-12; brl.linked.max.dt= 10; brl.linked.min.dt= 1; plot.file.score=NA; method='3aa'; plot.file.both=NA; plot.file.one=NA
 	#	check if Exp model would be reasonable
+	print('ok')
 	require(MASS)	
 	require(reshape2)
 	require(ggplot2)
-	require(gamlss)
-		
+	require(gamlss)	
+	require(fitdistrplus)
+	require(ADGofTest)
+	require(gamlss.mx)
+	library(distr)
+	print('ok2')
 	#	compute cdf for pairs given they are unlinked
 	setkey(Y.rawbrl.unlinked, brl)
 	p.rawbrl.unlinked	<- Y.rawbrl.unlinked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]
@@ -539,9 +544,6 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	#
 	#	fit distributions to data 
 	#
-	require(fitdistrplus)
-	require(ADGofTest)
-	require(gamlss.mx)
 	#
 	#	Gamma shape mixture 
 	#
@@ -889,15 +891,18 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		set(Y.brl, Y.brl[, which(b4T=='one')], 'score.brl.TPp', 1-tmp )			
 		#
 		#	case 'mix'
-		#
-		library(distr)
+		#		
 		#	get cdf of convolution GA_noART with GA_ART
+		print('h')
 		ml.zaga.pmix	<- p(convpow( Gammad(scale=ml.zaga.pa['scale'], shape=ml.zaga.pa['shape']) + Gammad(scale=ml.zaga.one.pa['scale'], shape=ml.zaga.one.pa['shape']), 1))
+		print('h2')
 		tmp				<- Y.brl[, which(b4T=='mix')]
+		print('h3')
 		#	get cdf of convolution ZAGA_mix (not normalized)
 		tmp				<- ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) +
 							ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) +
 							(1-ml.zaga.pa['nu'])*(1-ml.zaga.one.pa['nu'])*ml.zaga.pmix( Y.brl[tmp,brlz] )
+		print('h4')			
 		#	divide by normalizing constant
 		tmp				<- tmp / ( ml.zaga.pa['nu']*(1-ml.zaga.pa['nu']) + ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu']) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.one.pa['nu']) )
 		set(Y.brl, Y.brl[, which(b4T=='mix')], 'score.brl.TPp', 1-tmp )
@@ -1062,7 +1067,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 				labs(x="between-host divergence", y=expression('Conditional probability score ('*y[ijt]^{C}*')'))
 		ggsave(file=plot.file.score, w=10, h=6)		
 	}
-	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3d','3f','3j'))
+	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3d','3f'))
 	{
 		plot.df			<- subset(Y.rawbrl.linked, b4T!='none' )
 		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( plot.df[,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( plot.df[,brlz],  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
