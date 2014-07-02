@@ -317,7 +317,7 @@ project.athena.Fisheretal.tripletweights<- function(Y.score, save.file=NA)
 	triplet.weight
 }
 ######################################################################################
-project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, thresh.pcoal=0.5, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
+project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, thresh.pcoal=0.5, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
 {
 	if(resume && !is.na(save.file))
 	{
@@ -953,15 +953,34 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	}
 	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3k'))
 	{
-		Y.brl[, ART.C.long:=NA_character_]		
+		plot.df<- data.table(brlz=rep( seq(0,0.15,0.005), each=3), ART.C=c('Yes','Yes','No'), t.ART.C=c('Yes','No','No'), score.brl.TPp=NA_real_)
+		#	set score for cases F/F
+		tmp				<- plot.df[, which(t.ART.C=='No' & ART.C=='No')]
+		tmp				<- 2*ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( plot.df[tmp,brlz],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CN.pa['nu'])*pgamma( plot.df[tmp,brlz],  shape=2*ml.zaga.CN.pa['shape'], scale=ml.zaga.CN.pa['scale'] ) 
+		tmp				<- tmp / (1-ml.zaga.CN.pa['nu']*ml.zaga.CN.pa['nu'])
+		set(plot.df, plot.df[, which(t.ART.C=='No' & ART.C=='No')], 'score.brl.TPp', 1-tmp )
+		#	set score for cases T/T
+		tmp				<- plot.df[, which(t.ART.C=='Yes' & ART.C=='Yes')]
+		tmp				<- 2*ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*pGA( plot.df[tmp,brlz],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) + (1-ml.zaga.CY.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*pgamma( plot.df[tmp,brlz],  shape=2*ml.zaga.CY.pa['shape'], scale=ml.zaga.CY.pa['scale'] ) 
+		tmp				<- tmp / (1-ml.zaga.CY.pa['nu']*ml.zaga.CY.pa['nu'])				
+		set(plot.df, plot.df[, which(t.ART.C=='Yes' & ART.C=='Yes')], 'score.brl.TPp', 1-tmp )			
+		tmp				<- plot.df[, which(t.ART.C!=ART.C)]
+		#	set score for cases T/F
+		tmp				<- ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( plot.df[tmp,brlz],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) +
+				ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*pGA( plot.df[tmp,brlz],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) +
+				(1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*ml.zaga.pmix( plot.df[tmp,brlz] )	
+		tmp				<- tmp / ( ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu']) + ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu']) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu']) )
+		set(plot.df, plot.df[, which(t.ART.C!=ART.C)], 'score.brl.TPp', 1-tmp )
+		
+		
+		plot.df[, ART.C.long:=NA_character_]		
 		tmp	<- c('both sampling times\nbefore treatment interruption or failure','one sampling time\nafter treatment interruption or failure','both sampling times\nafter treatment interruption or failure')
-		set(Y.brl, Y.brl[, which(ART.C=='No' & t.ART.C=='No')], 'ART.C.long', tmp[1])		
-		set(Y.brl, Y.brl[, which(ART.C=='No' & t.ART.C=='Yes')], 'ART.C.long', tmp[2])
-		set(Y.brl, Y.brl[, which(ART.C=='Yes' & t.ART.C=='No')], 'ART.C.long', tmp[2])
-		set(Y.brl, Y.brl[, which(ART.C=='Yes' & t.ART.C=='Yes')], 'ART.C.long', tmp[3])
-		set(Y.brl, NULL, 'ART.C.long', Y.brl[, factor(ART.C.long, levels=tmp, labels=tmp)])
-		ggplot(Y.brl, aes(x=brl, y=score.brl.TPp, group=ART.C.long, colour=ART.C.long)) + #geom_line() + 
-				geom_point() +
+		set(plot.df, plot.df[, which(ART.C=='No' & t.ART.C=='No')], 'ART.C.long', tmp[1])				
+		set(plot.df, plot.df[, which(ART.C=='Yes' & t.ART.C=='No')], 'ART.C.long', tmp[2])
+		set(plot.df, plot.df[, which(ART.C=='Yes' & t.ART.C=='Yes')], 'ART.C.long', tmp[3])
+		set(plot.df, NULL, 'ART.C.long', plot.df[, factor(ART.C.long, levels=tmp, labels=tmp)])
+		ggplot(plot.df, aes(x=brlz, y=score.brl.TPp, group=ART.C.long, colour=ART.C.long)) + geom_line() + 
+				#geom_point() +
 				coord_cartesian(xlim=c(0, 0.16)) + scale_x_continuous(breaks=seq(0,0.2,0.02), minor_breaks=seq(0, 0.2, 0.005)) + scale_y_continuous(breaks=seq(0,1,0.2), minor_breaks=seq(0, 1, 0.05)) +
 				theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(11,'mm')) +
 				scale_colour_brewer(palette='Set1', name='treatment status at\nsequence sampling time') +
@@ -10689,7 +10708,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	save.all		<- FALSE
 	#save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'_all.R',sep='')
 	#save.all		<- TRUE
-	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
+	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
 	gc()
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
 	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']
@@ -10719,7 +10738,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		rm.zero.score	<- FALSE
 		thresh.pcoal	<- 0.75
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_RICT_tATHENAseq','.R',sep='')
-		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method)		
+		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method)		
 	}
 	#
 	#	get timelines for all clustering candidate transmitters to the recently infected RI.PT

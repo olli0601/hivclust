@@ -2450,6 +2450,90 @@ project.hivc.beast<- function(dir.name= DATA)
 	}
 }
 ######################################################################################
+project.ukca.demographics<- function()
+{
+	f		<- '~/duke/2013_HIV_Hue/UKCA_1309/data/original_Cascade_1307/tblBASIC.csv'
+	df.b	<- read.csv(f, stringsAsFactors=FALSE)
+	df.b	<- as.data.table(df.b)
+	set(df.b, NULL, 'NUCSEQ_D', hivc.db.Date2numeric(df.b[, as.Date(NUCSEQ_D, "%d/%m/%Y")]))
+	set(df.b, NULL, 'HIVPOS_D', hivc.db.Date2numeric(df.b[, as.Date(HIVPOS_D, "%d/%m/%Y")]))
+	set(df.b, NULL, 'BIRTH_D', hivc.db.Date2numeric(df.b[, as.Date(BIRTH_D, "%d/%m/%Y")]))
+	set(df.b, NULL, 'DEATH_D', hivc.db.Date2numeric(df.b[, as.Date(DEATH_D, "%d/%m/%Y")]))
+	set(df.b, NULL, 'LTALIV_D', hivc.db.Date2numeric(df.b[, as.Date(LTALIV_D, "%d/%m/%Y")]))	
+	set(df.b, NULL, 'SEROCO_D', hivc.db.Date2numeric(df.b[, as.Date(SEROCO_D, "%d/%m/%Y")]))
+	set(df.b, NULL, 'MODE', df.b[, factor(MODE, levels=c(1,2,3,4,5,6,7,8,90,99), labels=c('MSM','IDU','MSM+IDU','HAEM','5','HET','HET+IDU','8','OTH','NA'))])
+	
+	f		<- '~/duke/2013_HIV_Hue/UKCA_1309/data/original_Cascade_1307/tblLAB_RES.csv'
+	df.s	<- read.csv(f, stringsAsFactors=FALSE)
+	df.s	<- as.data.table(df.s)
+	set(df.s, NULL, 'NUCSEQ_D', hivc.db.Date2numeric(df.s[, as.Date(NUCSEQ_D, "%Y-%m-%d")]))
+	set(df.s, NULL, 'SEQ_DT', hivc.db.Date2numeric(df.s[, as.Date(SEQ_DT, "%Y-%m-%d")]))
+	
+	f		<- '~/duke/2013_HIV_Hue/UKCA_1309/data/original_Cascade_1307/tblLAB_CD4.csv'
+	df.c	<- read.csv(f, stringsAsFactors=FALSE)
+	df.c	<- as.data.table(df.c)
+	set(df.c, NULL, 'CD4_D', hivc.db.Date2numeric(df.c[, as.Date(CD4_D, "%Y-%m-%d")]))
+	
+	f		<- '~/duke/2013_HIV_Hue/UKCA_1309/data/original_Cascade_1307/tblLAB_RNA.csv'
+	df.v	<- read.csv(f, stringsAsFactors=FALSE)
+	df.v	<- as.data.table(df.v)
+	set(df.v, NULL, 'RNA_D', hivc.db.Date2numeric(df.v[, as.Date(RNA_D, "%Y-%m-%d")]))
+	set(df.v, NULL, 'RNA_Vl10', df.v[, log10(RNA_V)])
+	
+	#individuals with sequence
+	ggplot(df.s, aes(x=NUCSEQ_D)) + geom_histogram(binwidth=1) +
+			scale_x_continuous(breaks=seq(1985,2020,1)) + scale_y_continuous(breaks=seq(0,1600,200))
+	f		<- '~/duke/2013_HIV_Hue/UKCA_1309/data/original_Cascade_1307/expl_seqtotal.pdf'
+	ggsave(f, w=14,h=6)	
+	
+	#seroconverters with sequence
+	df.a	<- merge(df.b, subset(df.s, select=c(PATIENT, NUCSEQ_ID)), by='PATIENT')
+	setkey(df.a, PATIENT)
+	df.a<- unique(df.a)	
+	df.a[, table(MODE)]
+	#MODE
+    #	MSM     IDU 	MSM+IDU    HAEM       5     HET HET+IDU       8     OTH      NA 
+   	#	6638    1313      90      46      75    3222     227       6     173     387 
+	ggplot(subset(df.a, !is.na(SEROCO_D)), aes(x=SEROCO_D)) + geom_histogram(binwidth=1) +
+			scale_x_continuous(breaks=seq(1980,2020,1)) + scale_y_continuous(breaks=seq(0,500,50))
+	f		<- '~/duke/2013_HIV_Hue/UKCA_1309/data/original_Cascade_1307/expl_seroconvtotal.pdf'
+	ggsave(f, w=14,h=6)
+	#	last alive if not dead
+	tmp		<- subset(df.a, DEATH_Y==0)	
+	tmp[, NOTSEEN:=max(LTALIV_D, na.rm=1)-LTALIV_D]
+	ggplot(tmp, aes(x=NOTSEEN)) + geom_histogram(binwidth=0.5)
+	f		<- '~/duke/2013_HIV_Hue/UKCA_1309/data/original_Cascade_1307/expl_ltalive.pdf'
+	ggsave(f, w=8,h=6)
+	
+	#seroconverters with CD4 within 1 year of HIV+
+	tmp		<- merge(df.a, df.c,by='PATIENT')
+	setkey(tmp, PATIENT, CD4_D)
+	tmp		<- unique(tmp)
+	tmp		<- subset(tmp, abs(CD4_D-HIVPOS_D)<1 )
+	setkey(tmp, PATIENT)
+	tmp		<- unique(tmp)
+	#	3505
+	#ggplot(tmp, aes(x=CD4_V)) + geom_histogram(binwidth=200) + scale_x_continuous(breaks=seq(0,4000,200)) 
+	
+	#seroconverters with VL
+	tmp		<- merge(df.a, df.v,by='PATIENT')
+	setkey(tmp, PATIENT, RNA_D)
+	tmp		<- unique(tmp)
+	tmp[, list(n=length(RNA_Vl10)), by='PATIENT'][, median(n)]
+	subset(tmp, !is.na(SEROCO_D))[, length(unique(PATIENT))]
+	#	3870		
+	subset(tmp, !is.na(SEROCO_D) & !is.nan(RNA_Vl10) & RNA_D-HIVPOS_D>0.5 & RNA_D-HIVPOS_D<2)[, length(unique(PATIENT))]
+	#	609
+	ggplot(subset(tmp, !is.na(SEROCO_D) & !is.nan(RNA_Vl10) & RNA_D-HIVPOS_D>0.5 & RNA_D-HIVPOS_D<2), aes(x=RNA_Vl10)) + 
+			scale_x_continuous(breaks=seq(0,8,1)) +
+			geom_histogram(binwidth=0.25)
+	f		<- '~/duke/2013_HIV_Hue/UKCA_1309/data/original_Cascade_1307/expl_seroconvSPVL.pdf'
+	ggsave(f, w=8,h=8)
+	
+	
+
+}
+######################################################################################
 project.ukca.TPTN.bootstrapvalues<- function(dir.name= DATA)
 {
 	require(ape)
