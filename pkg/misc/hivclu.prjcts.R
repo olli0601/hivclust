@@ -3787,13 +3787,15 @@ project.hivc.examlclock<- function()
 	print( sapply(test, '[[', 'p.value') )
 	if(1)
 	{
-		test	<- list( 	both.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T2=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T2=='only.T.ART.C.No')[, log10(brl)] ),				
+		test	<- list( 	both.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T2=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T2=='only.T.ART.C.No')[, log10(brl)] ),
+							both.none.CNo= 	wilcox.test( subset(Y.rawbrl.linked, b4T2=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T2=='none.ART.C.No')[, log10(brl)] ),
+							both.CYes= 	wilcox.test( subset(Y.rawbrl.linked, b4T2=='both')[, log10(brl)], subset(Y.rawbrl.linked, b4T2=='ART.C.yes')[, log10(brl)] ),							
 							both.none= 		wilcox.test( subset(Y.rawbrl.linked, b4T2=='only.T.ART.C.No')[, log10(brl)], subset(Y.rawbrl.linked, b4T2=='none.ART.C.No')[, log10(brl)] ),						
 							none.only.T= 	wilcox.test( subset(Y.rawbrl.linked, b4T2=='none.ART.C.No')[, log10(brl)], subset(Y.rawbrl.linked, b4T2=='ART.C.yes')[, log10(brl)] )		)
 		cat(paste('\nwilcox test for same mean'))
 		print( sapply(test, '[[', 'p.value') )
-		#	both.only.T    both.none  		none.only.T 
-		#	3.529053e-02 	3.479906e-01 	2.830199e-05 		
+		#	  both.only.T both.none.CNo     both.CYes     both.none   none.only.T 
+ 		#3.529053e-02  7.964509e-01  1.651674e-21  3.479906e-01  2.830199e-05 		
 	}
 	#wilcox test for same mean		excluded brl>0.02
 	# 	 both.only.T    both.none  none.only.T 
@@ -3961,6 +3963,27 @@ project.hivc.examlclock<- function()
 	#10:    O ZAGA 0.017742656 0.7320898 0.3333333
 	#11:    O   GA 0.011831054 1.8523769        NA
 	#12:    O  EXP 0.011831054        NA        NA
+	#
+	# ks.test between EXP GA ZAGA	
+	#	
+	test		<- list(	E.B= ks.test(tmpd.B[,brl], pEXP, mu=unlist(tmpp.E['mu','B'])),
+							E.O= ks.test(tmpd.O[,brl], pEXP, mu=unlist(tmpp.E['mu','O'])),
+							E.N= ks.test(tmpd.N[,brl], pEXP, mu=unlist(tmpp.E['mu','N'])),
+							E.C= ks.test(tmpd.C[,brl], pEXP, mu=unlist(tmpp.E['mu','C'])),
+							GA.B= ks.test(tmpd.B[,brl], pGA, mu=unlist(tmpp.GA['mu','B']), sigma=unlist(tmpp.GA['sigma','B'])),
+							GA.O= ks.test(tmpd.O[,brl], pGA, mu=unlist(tmpp.GA['mu','O']), sigma=unlist(tmpp.GA['sigma','O'])),
+							GA.N= ks.test(tmpd.N[,brl], pGA, mu=unlist(tmpp.GA['mu','N']), sigma=unlist(tmpp.GA['sigma','N'])),
+							GA.C= ks.test(tmpd.C[,brl], pGA, mu=unlist(tmpp.GA['mu','C']), sigma=unlist(tmpp.GA['sigma','C'])),
+							ZAGA.B= ks.test(subset(tmpd.B, brlz>0)[,brlz], pZAGA, mu=unlist(tmpp.ZAGA['mu','B']), sigma=unlist(tmpp.ZAGA['sigma','B']), nu=0),
+							ZAGA.O= ks.test(subset(tmpd.O, brlz>0)[,brlz], pZAGA, mu=unlist(tmpp.ZAGA['mu','O']), sigma=unlist(tmpp.ZAGA['sigma','O']), nu=0),
+							ZAGA.N= ks.test(subset(tmpd.N, brlz>0)[,brlz], pZAGA, mu=unlist(tmpp.ZAGA['mu','N']), sigma=unlist(tmpp.ZAGA['sigma','N']), nu=0),
+							ZAGA.C= ks.test(subset(tmpd.C, brlz>0)[,brlz], pZAGA, mu=unlist(tmpp.ZAGA['mu','C']), sigma=unlist(tmpp.ZAGA['sigma','C']), nu=0)		)	
+	print( sapply(test, '[[', 'p.value') )
+	#          E.B          E.O          E.N          E.C         GA.B         GA.O         GA.N         GA.C       ZAGA.B 
+	#0.000000e+00 3.330669e-16 1.651107e-03 0.000000e+00 5.000988e-08 1.990942e-07 2.632056e-02 0.000000e+00 4.456872e-01 
+    #  ZAGA.O       ZAGA.N       ZAGA.C 
+	#6.337170e-01 3.623706e-01 8.584151e-03
+	
 	#	CDF plot
 	#
 	tmp			<- tmpp[, {

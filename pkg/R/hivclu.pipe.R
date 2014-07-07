@@ -760,12 +760,13 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk				<- c('m3.ind.clu.adj','m3.indNo.clu.adj','m3.indmx.clu.adj','m3.indmxNo.clu.adj','m3.n3mx.clu.adj')
 	#method.risk			<- c( 	'm2Bt.tp1.clu.adj', 'm2Bt.tp2.clu.adj', 'm2Bt.tp3.clu.adj', 'm2Bt.tp4.clu.adj')
 	method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj',
+								'm2Bt.tp1.clu.adj', 'm2Bt.tp2.clu.adj', 'm2Bt.tp3.clu.adj', 'm2Bt.tp4.clu.adj',
 								'm3.n3mx.clu.adj','m3.indmx.clu.adj','m3.indmxNo.clu.adj',
 								'm5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj'	)
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tAb.clu.adj','m5.tAc.clu.adj','m5.tiA.clu.adj','m5.tiAb.clu.adj','m5.tiAc.clu.adj')
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tA.tp1.clu.adj','m5.tiA.tp1.clu.adj','m5.tA.tp2.clu.adj','m5.tiA.tp2.clu.adj','m5.tA.tp3.clu.adj','m5.tiA.tp3.clu.adj','m5.tA.tp4.clu.adj','m5.tiA.tp4.clu.adj')
 	#method.risk			<- c( 	'm5.tAc.clu.adj','m5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj')
-	method.risk			<- c( 	'm2Bwmx.tp1.clu.adj' )
+	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj' )
 	dummy	<- sapply(method.risk, function(x)
 			{
 				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, outdir=outdir, outfile=outfile, resume=1, verbose=1)
