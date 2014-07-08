@@ -9864,7 +9864,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		X.pt					<- merge( X.pt, tmp, by='t.Patient', all.x=1 )
 		if(!is.null(tperiod.info))
 		{
-			X.pt[, t.period:= cut(X.pt[,AnyPos_T1], breaks=c(-Inf,tperiod.info[,t.period.min],tperiod.info[nrow(tperiod.info),t.period.max],Inf), labels=seq.int(0,nrow(tperiod.info)+1), right=FALSE)]
+			X.pt[, t.period:= cut(X.pt[,AnyPos_T1], breaks=c(-Inf,tperiod.info[,t.period.min],tperiod.info[nrow(tperiod.info),t.period.max]), labels=seq.int(0,nrow(tperiod.info)), right=FALSE)]
 			X.pt				<- merge(X.pt, tperiod.info, by='t.period') 			
 		}
 		X.pt[, AnyPos_T1:=NULL]
@@ -10755,7 +10755,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	gc()
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
 	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']
-	tperiod.info[, t.period.max:=c(tperiod.info[-1, t.period.min], t.endctime)]
+	tperiod.info[, t.period.max:=c(tperiod.info[-1, t.period.min], 2015.)]
 	ri.PT			<- subset(YX, score.Y>0, select=c(Patient, t))[, list(n.t.infw= length(unique(t))), by='Patient']
 	ri.CLU			<- unique(subset(df.tpairs, select=Patient))
 	#
