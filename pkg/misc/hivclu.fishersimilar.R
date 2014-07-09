@@ -1415,7 +1415,9 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 	list(tpairs=df.tpairs.brl, linked=msm.linked, unlinked=msm.unlinked.bytime)	
 }
 ######################################################################################
-project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infile.viro, infile.immu, infile.treatment, infiletree=NULL, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'), t.recent.startctime=1996., t.recent.endctime=2013.)
+project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infile.viro, infile.immu, infile.treatment, 
+															infiletree=NULL, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'), t.recent.startctime=1996., t.recent.endctime=2013.,
+															df.viro.part=NULL, df.immu.part=NULL, df.treatment.part=NULL, df.all.part=NULL)
 {
 	#	adjust.AcuteByNegT<- 0.75
 	#	fixed input args in !is.na(infiletree)
@@ -1428,23 +1430,47 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	load(infile.viro)
 	set(df, NULL, 'Patient', df[, as.character(Patient)])
 	df.viro				<- df
+	if(!is.null(df.viro.part))
+	{
+		df.viro				<- rbind(df.viro, df.viro.part, use.names=TRUE)
+		setkey(df.viro, Patient, PosRNA)
+		df.viro				<- unique(df.viro)	
+	}	
 	#
 	#	load patient CD4
 	#
 	load(infile.immu)
 	set(df, NULL, 'Patient', df[, as.character(Patient)])
 	df.immu				<- df
+	if(!is.null(df.immu.part))
+	{
+		df.immu				<- rbind(df.immu, df.immu.part, use.names=TRUE)
+		setkey(df.immu, Patient, PosCD4)
+		df.immu				<- unique(df.immu)
+	}
 	#
 	#	load patient regimen
 	#
 	load(infile.treatment)
 	set(df, NULL, 'Patient', df[, as.character(Patient)])
-	df.treatment		<- df			
+	df.treatment		<- df
+	if(!is.null(df.treatment.part))
+	{
+		df.treatment		<- rbind(df.treatment, df.treatment.part, use.names=TRUE)
+		setkey(df.treatment, Patient, StartTime)
+		df.treatment		<- unique(df.treatment)
+	}
 	#
 	# 	recent msm 
 	#
 	load(paste(indircov,'/',infilecov,'.R',sep=''))
 	#	adjust Acute=='Maybe' by NegT 
+	if(!is.null(df.all.part))
+	{
+		df.all				<- rbind(df.all, df.all.part, use.names=TRUE, fill=TRUE)
+		setkey(df.all, Patient, FASTASampleCode)
+		df.all				<- unique(df.all)
+	}
 	if(!is.na(adjust.AcuteByNegT))
 	{
 		tmp		<- which( df.all[, (is.na(isAcute) | isAcute=='No') & !is.na(NegT) & AnyPos_T1<=NegT+adjust.AcuteByNegT*365])
@@ -10638,24 +10664,10 @@ hivc.prog.betareg.estimaterisks<- function()
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args
 	#
-	#	get data relating to full population (MSM including those without seq)
-	#
-	if(1)
-	{
-		tmp					<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
-		df.all.allmsm		<- tmp$df.all	
-		df.viro.allmsm		<- tmp$df.viro
-		df.immu.allmsm		<- tmp$df.immu
-		df.treatment.allmsm	<- tmp$df.treatment
-		tmp					<- tmp$df.select.SEQ
-		setkey(tmp, Patient)
-		ri.ALLMSM			<- unique(tmp)	
-	}
-	#
 	#	get data relating to study population (subtype B sequ)
 	#
 	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
-	df.all			<- tmp$df.all
+	df.all			<- tmp$df.all	
 	df.denom.CLU	<- tmp$df.select
 	df.denom.SEQ	<- tmp$df.select.SEQ
 	ri.CLU			<- unique(subset(df.denom.CLU, select=Patient))
@@ -10667,6 +10679,21 @@ hivc.prog.betareg.estimaterisks<- function()
 	clumsm.info		<- tmp$clumsm.info
 	clumsm.ph		<- tmp$clumsm.ph
 	setkey(clumsm.info, cluster)
+	#
+	#	get data relating to full population (MSM including those without seq)
+	#	this merges the patients with HIV 1 B sequences and the MSM patients without a sequence 
+	tmp					<- project.athena.Fisheretal.select.denominator(	indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, 
+																			infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), 
+																			t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime,
+																			df.viro.part=df.viro, df.immu.part=df.immu, df.treatment.part=df.treatment, df.all.part=df.all)	
+	df.all.allmsm		<- tmp$df.all	#13181
+	df.viro.allmsm		<- tmp$df.viro
+	df.immu.allmsm		<- tmp$df.immu
+	df.treatment.allmsm	<- tmp$df.treatment
+	tmp					<- tmp$df.select.SEQ
+	setkey(tmp, Patient)
+	ri.ALLMSM			<- unique(tmp)	
+	#
 	if(0)
 	{
 		files		<- list.files(clu.indir)
