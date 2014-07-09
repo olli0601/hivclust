@@ -9878,6 +9878,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		X.pt					<- merge(X.incare, X.b4care, by=c('t.Patient','t'), all.x=1, all.y=1)
 		set(X.pt, X.pt[,which(is.na(stage))], 'stage', 'U')							
 		X.pt[, AnyT_T1:=NULL]
+		X.pt[, AnyPos_T1:=NULL]
 		X.pt[, AnyPos_a:=NULL]
 		X.pt[, isAcute:=NULL]
 		tmp						<- unique(subset( df.all, select=c(Patient, DateBorn, AnyPos_T1, AnyT_T1, isAcute) ))
@@ -9890,13 +9891,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		tmp						<- project.athena.Fisheretal.X.time.diag2suppressed(df.tpairs, df.all, df.viro, lRNA.suppressed= log10(1e3), t2.vl.supp.p=c(0.1, 0.25))
 		X.pt					<- merge( X.pt, tmp, by='t.Patient', all.x=1 )
 		tmp						<- project.athena.Fisheretal.X.time.diag2firstVLandCD4(df.tpairs, df.all, df.viro, df.immu, t2.care.t1.q=c(0.25,0.5))	
-		X.pt					<- merge( X.pt, tmp, by='t.Patient', all.x=1 )
-		if(!is.null(tperiod.info))
-		{
-			X.pt[, t.period:= cut(X.pt[,AnyPos_T1], breaks=c(tperiod.info[,t.period.min],tperiod.info[nrow(tperiod.info),t.period.max]), labels=seq.int(1,nrow(tperiod.info)), right=FALSE)]
-			X.pt				<- merge(X.pt, tperiod.info, by='t.period') 			
-		}
-		X.pt[, AnyPos_T1:=NULL]
+		X.pt					<- merge( X.pt, tmp, by='t.Patient', all.x=1 )		
 		#	compute infection window of recipient for direct potential transmitters ri	
 		Y.infwindow				<- project.athena.Fisheretal.Y.infectiontime( ri, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.min=0.1, score.set.value=1, method='for.infected')
 		Y.infwindow[, AnyPos_a:=NULL]
@@ -9961,6 +9956,12 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			YX.part1		<- project.athena.Fisheretal.YX.Trm.Region(YX.part1, df.all)					
 			setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
 		}	
+		if(!is.null(tperiod.info))
+		{
+			#set t.period based on *recipient*
+			YX.part1[, t.period:= cut(YX.part1[,AnyPos_T1], breaks=c(tperiod.info[,t.period.min],tperiod.info[nrow(tperiod.info),t.period.max]), labels=seq.int(1,nrow(tperiod.info)), right=FALSE)]
+			YX.part1		<- merge(YX.part1, tperiod.info, by='t.period') 			
+		}		
 		if(!is.na(save.file))
 		{			
 			YX.part1	<- unique(YX.part1)
