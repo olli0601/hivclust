@@ -9906,7 +9906,6 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])
 			YX.part1				<- project.athena.Fisheretal.YX.age(YX.part1, df.all, t.period=t.period)			
 			YX.part1				<- project.athena.Fisheretal.YX.Trm.Region(YX.part1, df.all)					
-			setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
 		}			
 		else if(is.na(sample.n))							#mode 2
 		{			
@@ -9919,7 +9918,6 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			cat(paste('\ncompleted big merge of patient pairs, nrows=',nrow(YX.part1)))
 			YX.part1				<- project.athena.Fisheretal.YX.age(YX.part1, df.all, t.period=t.period)			
 			YX.part1				<- project.athena.Fisheretal.YX.Trm.Region(YX.part1, df.all)					
-			setkey(YX.part1, Patient, t.Patient, t)
 		}	
 		else if(!is.na(sample.n))							#mode 3
 		{
@@ -9953,15 +9951,15 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			set(YX.part1,NULL,'FASTASampleCode', YX.part1[, as.character(FASTASampleCode)])
 			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])
 			YX.part1		<- project.athena.Fisheretal.YX.age(YX.part1, df.all, t.period=t.period)			
-			YX.part1		<- project.athena.Fisheretal.YX.Trm.Region(YX.part1, df.all)					
-			setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
-		}	
+			YX.part1		<- project.athena.Fisheretal.YX.Trm.Region(YX.part1, df.all)								
+		}			
 		if(!is.null(tperiod.info))
 		{
 			#set t.period based on *recipient*
 			YX.part1[, t.period:= cut(YX.part1[,AnyPos_T1], breaks=c(tperiod.info[,t.period.min],tperiod.info[nrow(tperiod.info),t.period.max]), labels=seq.int(1,nrow(tperiod.info)), right=FALSE)]
 			YX.part1		<- merge(YX.part1, tperiod.info, by='t.period') 			
-		}		
+		}	
+		setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
 		if(!is.na(save.file))
 		{			
 			YX.part1	<- unique(YX.part1)
