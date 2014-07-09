@@ -9864,7 +9864,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		X.pt					<- merge( X.pt, tmp, by='t.Patient', all.x=1 )
 		if(!is.null(tperiod.info))
 		{
-			X.pt[, t.period:= cut(X.pt[,AnyPos_T1], breaks=c(-Inf,tperiod.info[,t.period.min],tperiod.info[nrow(tperiod.info),t.period.max]), labels=seq.int(0,nrow(tperiod.info)), right=FALSE)]
+			X.pt[, t.period:= cut(X.pt[,AnyPos_T1], breaks=c(tperiod.info[,t.period.min],tperiod.info[nrow(tperiod.info),t.period.max]), labels=seq.int(1,nrow(tperiod.info)), right=FALSE)]
 			X.pt				<- merge(X.pt, tperiod.info, by='t.period') 			
 		}
 		X.pt[, AnyPos_T1:=NULL]
