@@ -1465,12 +1465,6 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	#
 	load(paste(indircov,'/',infilecov,'.R',sep=''))
 	#	adjust Acute=='Maybe' by NegT 
-	if(!is.null(df.all.part))
-	{
-		df.all				<- rbind(df.all, df.all.part, use.names=TRUE, fill=TRUE)
-		setkey(df.all, Patient, FASTASampleCode)
-		df.all				<- unique(df.all)
-	}
 	if(!is.na(adjust.AcuteByNegT))
 	{
 		tmp		<- which( df.all[, (is.na(isAcute) | isAcute=='No') & !is.na(NegT) & AnyPos_T1<=NegT+adjust.AcuteByNegT*365])
@@ -1521,6 +1515,12 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 		cat(paste('\nensure seroconversion interval is at least adjust.NegTByDetectability years, dating back NegT values for n=',length(tmp)))
 		set(df.all, tmp, 'NegT', df.all[tmp, AnyPos_T1-adjust.minSCwindow])
 	}
+	#	merge with previous data entries if any
+	if(!is.null(df.all.part))
+	{
+		df.all		<- merge(data.table(Patient=setdiff( df.all[, Patient], df.all.part[, unique(Patient)])), df.all, by='Patient')
+		df.all		<- rbind(df.all.part, df.all, use.names=TRUE, fill=TRUE)		
+	}	
 	#
 	#
 	msm.recent		<- subset( df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') )	
@@ -2399,10 +2399,10 @@ project.athena.Fisheretal.X.ART.pulsed<- function(df.tpairs, clumsm.info, df.tre
 	pulse	
 }
 ######################################################################################
-project.athena.Fisheretal.X.incare<- function(df.tpairs, clumsm.info, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013.)
+project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013.)
 {
 	#	prepare incare timeline for potential transmitters
-	incare		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique( subset(clumsm.info, select=c(Patient, AnyPos_T1, DateDied)) ), by='Patient' )
+	incare		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique( subset(df.all, select=c(Patient, AnyPos_T1, DateDied)) ), by='Patient' )
 	cat(paste('\nPot transmitters, n=',incare[, length(unique(Patient))]))
 	set(incare, NULL, 'AnyPos_T1', incare[, floor(AnyPos_T1) + round( (AnyPos_T1%%1)*100 %/% (t.period*100) ) * t.period] )
 	set(incare, incare[,which(is.na(DateDied))], 'DateDied', t.endctime)
@@ -5010,6 +5010,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')
 									},by='risk']))
 			cens.table[, t.period:=cens.table[, substr(factor, nchar(factor), nchar(factor))]]
+print(cens.table, n=800)			
 print(subset(cens.table, is.na(t.period)))			
 			cens.table[, factor2:=cens.table[, substr(factor, 1, nchar(factor)-2)]]
 			cens.table		<- merge(cens.table, cens.table[, list(factor=factor, sum=sum(n, na.rm=TRUE), p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
@@ -9844,6 +9845,7 @@ project.athena.Fisheretal.CT.resolution<- function(info, df.viro, df.immu, t.sta
 #	mode3	if ri is not null and nsample is not NA, return a **sample** of the triplets for all **sequence pairs** of the sequences belonging to ri and to any transmitter in df.all
 project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=NULL, tperiod.info=NULL, t.period=0.25, t.endctime=2013., sample.n=NA, sample.exclude=NULL, save.file=NA, resume=FALSE)
 {
+	#df.all<- df.all.allmsm; df.immu<-df.immu.allmsm; df.viro<-df.viro.allmsm; df.treatment<-df.treatment.allmsm; ri<-ri.SEQ; df.tpairs<- NULL	
 	if(resume && !is.na(save.file))
 	{
 		options(show.error.messages = FALSE)		
@@ -10686,7 +10688,7 @@ hivc.prog.betareg.estimaterisks<- function()
 																			infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), 
 																			t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime,
 																			df.viro.part=df.viro, df.immu.part=df.immu, df.treatment.part=df.treatment, df.all.part=df.all)	
-	df.all.allmsm		<- tmp$df.all	#13181
+	df.all.allmsm		<- tmp$df.all
 	df.viro.allmsm		<- tmp$df.viro
 	df.immu.allmsm		<- tmp$df.immu
 	df.treatment.allmsm	<- tmp$df.treatment
