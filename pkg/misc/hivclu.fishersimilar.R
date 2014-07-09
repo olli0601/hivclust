@@ -4984,6 +4984,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')
 									},by='risk']))
 			cens.table[, t.period:=cens.table[, substr(factor, nchar(factor), nchar(factor))]]
+print(subset(cens.table, is.na(t.period)))			
 			cens.table[, factor2:=cens.table[, substr(factor, 1, nchar(factor)-2)]]
 			cens.table		<- merge(cens.table, cens.table[, list(factor=factor, sum=sum(n, na.rm=TRUE), p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
 			gc()
