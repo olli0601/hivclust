@@ -3053,12 +3053,15 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	##	sense check X.seq
 	tmp			<- nt.table[, which(X.seq>X.msm)]
 	if(length(tmp))	cat(paste('\nWARNING: X.seq>X.msm for entries n=',length(tmp)))
+	stopifnot(length(tmp)==0)
 	set(nt.table, tmp, 'X.seq', nt.table[tmp, X.msm])	
 	tmp			<- nt.table[, which(X.clu>X.seq)]
 	if(length(tmp))	cat(paste('\nWARNING: X.clu>X.seq for entries n=',length(tmp)))
+	stopifnot(length(tmp)==0)
 	set(nt.table, tmp, 'X.clu', nt.table[tmp, X.seq])
 	tmp			<- nt.table[, which(YX>X.clu)]
 	if(length(tmp))	cat(paste('\nWARNING: YX>X.clu for entries n=',length(tmp)))
+	stopifnot(length(tmp)==0)
 	set(nt.table, tmp, 'YX', nt.table[tmp, X.clu])
 	#	remove Patient, risk, factor that are not observed in cohort (same Patient is observed for other risk factor). 
 	nt.table	<- subset(nt.table, X.msm>0)
@@ -3287,8 +3290,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 				missing		<- YX.m3.bs[, list(yYX.sum= sum(score.Y), YX.bs=length(score.Y)), by=c('stage','Patient')]				
 				setnames(missing, 'stage','factor')
 				missing[, risk:='stage']	
-				missing		<- merge(subset(nt.table, select=which( colnames(nt.table)!='YX' )), missing, by=c('Patient','risk','factor'), all.x=TRUE, all.y=TRUE)				
-				missing		<- subset(missing, !is.na(X.clu))	#temporary bugfix			
+				missing		<- merge(subset(nt.table, select=which( colnames(nt.table)!='YX' )), missing, by=c('Patient','risk','factor'), all.x=TRUE, all.y=TRUE)							
 				set(missing, missing[, which(is.na(YX.bs))], c('yYX.sum','YX.bs'), 0.)
 				#draw number missing from neg binomial
 				tmp			<- melt( subset(missing, YX.bs>0, select=c(Patient, risk, factor, YX.bs, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )				
@@ -3894,7 +3896,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('now',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])
 			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])			
+				set(YX, NULL, 'w', YX[, w/w.i])	
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
@@ -3957,11 +3961,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}	
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			if(!grepl('adj', method.risk) & !grepl('censp', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
-			if(grepl('adj', method.risk) | grepl('censp', method.risk))				
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )						
+			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )	
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}	
 		if(grepl('m2t.cas',method.risk) | grepl('m2Bt.cas',method.risk) | grepl('m2tMv.cas',method.risk) | grepl('m2BtMv.cas',method.risk) )
 		{  
@@ -3969,7 +3971,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('now',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])
 			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])						
+				set(YX, NULL, 'w', YX[, w/w.i])	
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
@@ -4033,11 +4037,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}		
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			if(!grepl('adj', method.risk) & !grepl('censp', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
-			if(grepl('adj', method.risk) | grepl('censp', method.risk))				
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )							
+			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)			
+			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}		
 		if(grepl('m2Bwmx.cas', method.risk) | grepl('m2BwmxMv.cas', method.risk) | grepl('m2wmx.cas', method.risk) | grepl('m2wmxMv.cas', method.risk))
 		{  
@@ -4045,7 +4047,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('now',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])
 			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])									
+				set(YX, NULL, 'w', YX[, w/w.i])	
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{
@@ -4116,11 +4120,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}			
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			if(!grepl('adj', method.risk) & !grepl('censp', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
-			if(grepl('adj', method.risk) | grepl('censp', method.risk))				
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
+			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
 		}	
 		if(grepl('m2Bt.tp', method.risk) | grepl('m2BtMv.tp', method.risk))
 		{
@@ -4136,7 +4137,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('now',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])	
 			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])												
+				set(YX, NULL, 'w', YX[, w/w.i])		
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)	
 			#	sequence adjustment
 			if(grepl('adj', method.risk))
 			{
@@ -4193,9 +4196,10 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 									list(t.Age=t.Age, t.RegionHospital='Amst')
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}			
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0) )
-			#ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )						
+			#risk.df		<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0) )
+			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
 		}
 		if(grepl('m2wmx.tp', method.risk) | grepl('m2wmxMv.tp', method.risk) | grepl('m2Bwmx.tp', method.risk) | grepl('m2BwmxMv.tp', method.risk))
 		{			
@@ -4253,7 +4257,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('now',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])	
 			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])															
+				set(YX, NULL, 'w', YX[, w/w.i])	
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -4314,15 +4320,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}			
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)				
-			if(grepl('MV', method.risk) & !grepl('adj', method.risk) & !grepl('censp', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
-			if(grepl('MV', method.risk) & (grepl('adj', method.risk) | grepl('censp', method.risk)))
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )				
-			if(!grepl('MV', method.risk) & !grepl('adj', method.risk) && !grepl('censp', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0, 0) )			
-			if(!grepl('MV', method.risk) & (grepl('adj', method.risk) | grepl('censp', method.risk)))
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0, 0) )			 						
+			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)				
+			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
 		}
 		if(grepl('m3.tnicv',method.risk) & !grepl('m3.tnicvNo',method.risk))
 		{
@@ -4331,7 +4331,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('now',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])	
 			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])															
+				set(YX, NULL, 'w', YX[, w/w.i])	
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -4377,12 +4379,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 														}, by='coef'], by='coef')			
 			tmp				<- data.table(risk.ref= rep('stage',nrow(risk.df)), factor.ref= rep('ART.3.NRT.PI',nrow(risk.df)))
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			#
-			if(!grepl('adj', method.risk) & !grepl('censp', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)
-			if(grepl('adj', method.risk) | grepl('censp', method.risk))				
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)			
+			#risk.df		<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}		
 		if(grepl('m3.btnicNo',method.risk))
 		{
@@ -4391,7 +4390,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('now',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])	
 			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])															
+				set(YX, NULL, 'w', YX[, w/w.i])	
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -4468,9 +4469,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 									list(lRNA.mx=ifelse(is.nan(tmp), YX[, mean( lRNA.mx, na.rm=TRUE )], tmp))
 								}, by='coef'], by='coef')
 			}			
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
-			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
+			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
 		}
 		if(grepl('m3.ind',method.risk))
 		{
@@ -4480,6 +4481,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])	
 			if(grepl('wstar',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i])
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			if(grepl('m3.ind',method.risk))
 				tmp			<- 'ART.ind.c'
 			if(grepl('m3.indNo',method.risk))
@@ -4518,9 +4521,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 																	list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
 																}, by=c('risk','factor')], by=c('risk','factor'))						
 			}						
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			#ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
+			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
 		}
 		if(grepl('m3.n3mx',method.risk))
 		{
@@ -4530,6 +4533,8 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])	
 			if(grepl('wstar',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i])
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			set(YX, NULL, 'stage', factor(as.character( YX[['ART.n3mx.c']] )))
 			YX				<- subset(YX, !is.na(stage))
 			#
@@ -4572,10 +4577,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}						
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0), sigma.formula=sigma.formula)
-			
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
+			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
 		}
 		if(grepl('m3.nnrtpiNo',method.risk))
 		{
@@ -4584,7 +4588,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('now',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])	
 			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])															
+				set(YX, NULL, 'w', YX[, w/w.i])	
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			#	censoring adjustment
 			if(grepl('cens', method.risk))
 			{				
@@ -4662,8 +4668,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}						
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.25, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))		
+			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.25, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.25, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
 		}
 		if(grepl('m4',method.risk))				
 		{  
@@ -4671,7 +4678,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('now',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])
 			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])															
+				set(YX, NULL, 'w', YX[, w/w.i])
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			if(!grepl('No', method.risk))
 				YX			<- subset(YX, !is.na(lRNA.mx) & !is.na(Acute) & CD4t!='ART.started' & substr(CD4t,1,1)!='U')
 			if(grepl('No', method.risk))
@@ -4750,12 +4759,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 								t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
 								list(lRNA.mx=lRNA.mx, t.Age=t.Age, t=t)
 							}, by='coef'], by='coef')		
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			#
-			if(!grepl('adj', method.risk) & !grepl('censp', method.risk))
-				ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)
-			if(grepl('adj', method.risk) | grepl('censp', method.risk))				
-				ans			<- project.athena.Fisheretal.estimate.risk.core(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)
+			#risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}
 		if(grepl('m5',method.risk))				
 		{  
@@ -4772,7 +4778,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			if(grepl('now',method.risk))
 				set(YX, NULL, 'w', YX[, w/w.i*w.in])	
 			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])															
+				set(YX, NULL, 'w', YX[, w/w.i])	
+			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
+				set(YX, NULL, 'w', 1.)
 			if(!grepl('Ab',method.risk) & !grepl('Ac',method.risk))
 				risk.col		<- ifelse(nchar(tp), 'tA.tperiod', 'tA')										
 			if(grepl('Ac',method.risk))
@@ -4801,9 +4809,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 				setkey(risk.df, risk, factor)
 				risk.df		<- merge(risk.df, unique(risk.df)[, {	list( 	t.RegionHospital='Amst')		}, by=c('risk','factor')], by=c('risk','factor'))						
 			}						
-			risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))			
+			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
+			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
 		}
 		if(!is.na(save.file))
 		{
