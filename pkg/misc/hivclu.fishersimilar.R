@@ -9959,9 +9959,11 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
 			YX.part1		<- unique(YX.part1)
 		}	
+		Y.infwindow<- X.b4care<- X.incare<- X.pt<- X.ARTpulsed<- X.t2.vlsupp<- X.t2.care<- tmp<- NULL
+		gc()
 		if(!is.null(tperiod.info))
 		{
-			#set t.period based on *recipient*
+			#set t.period based on *recipient*			
 			YX.part1[, t.period:= cut(YX.part1[,AnyPos_T1], breaks=c(tperiod.info[,t.period.min],tperiod.info[nrow(tperiod.info),t.period.max]), labels=seq.int(1,nrow(tperiod.info)), right=FALSE)]
 			YX.part1		<- merge(YX.part1, tperiod.info, by='t.period') 			
 		}		
@@ -9970,9 +9972,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			#
 			cat(paste('\nsave YX.part1 to file=',save.file))
 			save(YX.part1, file=save.file)
-		}
-		Y.infwindow<- X.b4care<- X.incare<- X.pt<- X.ARTpulsed<- X.t2.vlsupp<- X.t2.care<- tmp<- NULL
-		gc()	
+		}			
 	}
 	YX.part1
 }
