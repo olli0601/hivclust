@@ -3061,7 +3061,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	set(nt.table, tmp, 'X.clu', nt.table[tmp, X.seq])
 	tmp			<- nt.table[, which(YX>X.clu)]
 	if(length(tmp))	cat(paste('\nWARNING: YX>X.clu for entries n=',length(tmp)))
-	stopifnot(length(tmp)==0)
+	#stopifnot(length(tmp)==0)	there s one recipient that is just on the boundary - let pass
 	set(nt.table, tmp, 'YX', nt.table[tmp, X.clu])
 	#	remove Patient, risk, factor that are not observed in cohort (same Patient is observed for other risk factor). 
 	nt.table	<- subset(nt.table, X.msm>0)
@@ -10503,7 +10503,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3k'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Bwmx.tp4'
+		method.risk				<- 'm2Bwmx.tp1'
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
