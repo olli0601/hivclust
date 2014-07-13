@@ -2614,7 +2614,7 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 	gc()
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m5))
-		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, contact, fw.up.med, t.period, w, w.i, w.in, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, tAc, tiAc, tAc.tperiod, tiAc.tperiod, t.Age, t.RegionHospital  ))	
+		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, contact, fw.up.med, t.period, w, w.i, w.in, w.t, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, tAc, tiAc, tAc.tperiod, tiAc.tperiod, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m5))
 		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, contact, fw.up.med, t.period, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, tAc, tiAc, tAc.tperiod, tiAc.tperiod  ))	
 	gc()
@@ -2922,14 +2922,12 @@ project.athena.Fisheretal.betareg<- function(YX.m3, formula, include.colnames, g
 	list(betafit.or=betafit.or, betafit.rr=betafit.rr, gamlss.BE.limit.u=gamlss.init$BE.limit.u)
 }
 ######################################################################################
+#draws a random number of failures, when the success prob is s and there were no observed successes
 rzbinom<- function(r=1, s=0.5, n.max=30)
-{
-	#draws a random number of failures, when the success prob is s and there were no observed successes  
-	df<- data.table(n= seq.int(0,n.max), d=(1-s)^seq.int(0,n.max))
-	set(df, NULL, 'd',df[, d/sum(d)])
-	set(df, NULL, 'p',df[, cumsum(d)])
-	tmp	<- runif(r)
-	sapply(tmp, function(x) df[which(p>x)[1],n] )		
+{	  
+	d	<- (1-s)^seq.int(0,n.max)
+	d	<- cumsum( d/sum(d) )
+	sapply(runif(r), function(x) which(d>x)[1]-1 )			
 }
 ######################################################################################
 mzbinom<- function(s=0.5, n.max=30)
@@ -3164,11 +3162,12 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	#compute the mean yijt by stage
 	missing		<- YX.m3[, list(yYX.mean= mean(score.Y)), by='stage']	
 	#compute the sum of sampled yijt's by stage
-	missing		<- merge(YX.m3[, list(yYX.sum= sum(score.Y), YX.n=length(score.Y)), by=c('stage','Patient')], missing, by='stage')	
+	missing		<- merge(YX.m3[, list(yYX.sum= sum(score.Y), YX.n=length(score.Y), YX.w=w.t[1]), by=c('stage','Patient')], missing, by='stage')	
 	setnames(missing, 'stage','factor')
 	missing[, risk:='stage']	
 	missing		<- merge(nt.table, missing, by=c('Patient','risk','factor'), all.x=TRUE)
-	set(missing, missing[, which(is.na(YX.n))], c('yYX.sum','yYX.mean','YX.n'), 0.) 
+	set(missing, missing[, which(is.na(YX.n))], 'YX.w', 1.) 
+	set(missing, missing[, which(is.na(YX.n))], c('yYX.sum','yYX.mean','YX.n'), 0.) 	
 	#expected missing
 	tmp			<- melt( subset(missing, YX>0, select=c(Patient, risk, factor, YX, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )
 	tmp[, YXm.e:= tmp[, as.integer(round( YX*(1-Sx)/Sx )) ]]
@@ -3177,10 +3176,11 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	tmp			<- rbind(subset(tmp, select=c(Patient, risk, factor, Sx.method, YXm.e)), tmp2)
 	set(tmp, NULL, 'Sx.method', tmp[, gsub('Sx','YXm.e',Sx.method)])
 	missing		<- merge(missing, dcast.data.table(tmp, Patient + risk + factor ~ Sx.method, value.var="YXm.e"), by=c('Patient','risk','factor'))
-	#sum yijt of observed and expected missing across Patients (various N.raw)
-	tmp			<- missing[, list( 	N.raw=sum(yYX.sum), 
-									N.raw.e0=sum(yYX.sum)+sum(YXm.e.e0*yYX.mean),
-									N.raw.e0cp=sum(yYX.sum)+sum(YXm.e.e0cp*yYX.mean), risk.ref='None', factor.ref='None', coef.ref='None' ), by=c('risk','factor')]
+	# sum yijt of observed and expected missing across Patients (various N.raw)
+	# YX.w is either 0.5 or 1. It is 0.5 if for the pair (i, j), i is also a recipient and j a potential transmitter to i. So this term avoids double counting of recipients.
+	tmp			<- missing[, list( 	N.raw=sum(yYX.sum*YX.w), 
+									N.raw.e0=sum(yYX.sum*YX.w)+sum(YXm.e.e0*yYX.mean*YX.w),
+									N.raw.e0cp=sum(yYX.sum*YX.w)+sum(YXm.e.e0cp*yYX.mean*YX.w), risk.ref='None', factor.ref='None', coef.ref='None' ), by=c('risk','factor')]
 	tmp[, coef:=paste(risk,as.character(factor),sep='')]	
 	tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
@@ -3219,9 +3219,9 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	##	use expbeta instead of yijt in calculations of N and P
 	missing		<- merge( missing, subset(tmp, select=c(risk, factor, expbeta)), by=c('risk','factor'))
 	#	sum yijt of observed and expected missing across Patients (various N.raw)
-	tmp			<- missing[, list( 	N=sum(YX*expbeta), 
-									N.e0=sum(YX*expbeta)+sum(YXm.e.e0*expbeta),
-									N.e0cp=sum(YX*expbeta)+sum(YXm.e.e0cp*expbeta), risk.ref='None', factor.ref='None', coef.ref='None' ), by=c('risk','factor')]
+	tmp			<- missing[, list( 	N=sum(YX*expbeta*YX.w), 
+									N.e0=sum(YX*expbeta*YX.w)+sum(YXm.e.e0*expbeta*YX.w),
+									N.e0cp=sum(YX*expbeta*YX.w)+sum(YXm.e.e0cp*expbeta*YX.w), risk.ref='None', factor.ref='None', coef.ref='None' ), by=c('risk','factor')]
 	tmp[, coef:=paste(risk,as.character(factor),sep='')]	
 	tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
@@ -3287,10 +3287,12 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 				#	raw number of transmissions
 				#
 				##	calculate the sum of sampled yijt's by stage
-				missing		<- YX.m3.bs[, list(yYX.sum= sum(score.Y), YX.bs=length(score.Y)), by=c('stage','Patient')]				
+				missing		<- YX.m3.bs[, list(yYX.sum= sum(score.Y), YX.bs=length(score.Y), YX.w=w.t[1]), by=c('stage','Patient')]				
 				setnames(missing, 'stage','factor')
 				missing[, risk:='stage']	
 				missing		<- merge(subset(nt.table, select=which( colnames(nt.table)!='YX' )), missing, by=c('Patient','risk','factor'), all.x=TRUE, all.y=TRUE)							
+				missing		<- subset(missing, !(is.na(X.clu) & YX.bs>0))	#adjust for pass earlier ie YX>X.clu
+				set(missing, missing[, which(is.na(YX.bs))], 'YX.w', 1.)
 				set(missing, missing[, which(is.na(YX.bs))], c('yYX.sum','YX.bs'), 0.)
 				#draw number missing from neg binomial
 				tmp			<- melt( subset(missing, YX.bs>0, select=c(Patient, risk, factor, YX.bs, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )				
@@ -3319,9 +3321,9 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 				set(missing, missing[, which(is.na(yYXm.sum.e0))], 'yYXm.sum.e0', 0.)
 				set(missing, missing[, which(is.na(yYXm.sum.e0cp))], 'yYXm.sum.e0cp', 0.)
 				#sum yijt of observed and expected missing across Patients (various N.raw)
-				tmp			<- missing[, list( 	N.raw=sum(yYX.sum), 
-												N.raw.e0=sum(yYX.sum)+sum(yYXm.sum.e0),
-												N.raw.e0cp=sum(yYX.sum)+sum(yYXm.sum.e0cp), risk.ref='None', factor.ref='None', coef.ref='None' ), by=c('risk','factor')]
+				tmp			<- missing[, list( 	N.raw=sum(yYX.sum*YX.w), 
+												N.raw.e0=sum(yYX.sum*YX.w)+sum(yYXm.sum.e0*YX.w),
+												N.raw.e0cp=sum(yYX.sum*YX.w)+sum(yYXm.sum.e0cp*YX.w), risk.ref='None', factor.ref='None', coef.ref='None' ), by=c('risk','factor')]
 				tmp[, coef:=paste(risk,as.character(factor),sep='')]	
 				tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")
 				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
@@ -3353,9 +3355,9 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 						},by= 'coef']
 				missing		<- merge( missing, subset(tmp, select=c(risk, factor, expbeta)), by=c('risk','factor'))
 				#	sum yijt of observed and expected missing across Patients (various N.raw)
-				tmp			<- missing[, list( 	N=sum(YX.bs*expbeta), 
-												N.e0=sum(YX.bs*expbeta)+sum(YXm.r.e0*expbeta),
-												N.e0cp=sum(YX.bs*expbeta)+sum(YXm.r.e0cp*expbeta), risk.ref='None', factor.ref='None', coef.ref='None' ), by=c('risk','factor')]
+				tmp			<- missing[, list( 	N=sum(YX.bs*expbeta*YX.w), 
+												N.e0=sum(YX.bs*expbeta*YX.w)+sum(YXm.r.e0*expbeta*YX.w),
+												N.e0cp=sum(YX.bs*expbeta*YX.w)+sum(YXm.r.e0cp*expbeta*YX.w), risk.ref='None', factor.ref='None', coef.ref='None' ), by=c('risk','factor')]
 				tmp[, coef:=paste(risk,as.character(factor),sep='')]	
 				tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")
 				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
@@ -6740,7 +6742,7 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	YX.m2		<- merge(YX.m2, tmp, by= 't.Patient', all.x=TRUE)	
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))	
 	gc()
@@ -6940,7 +6942,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	#
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, lRNA_TL, PoslRNA_TL, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, lRNA_TL, PoslRNA_TL, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.PoslRNA_T1, t.AnyT_T1, contact, fw.up.med, t.period, lRNA_TL, PoslRNA_TL, CD41st, CD4t, CD4a, CD4b  ))	
 	#
@@ -7140,7 +7142,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))		
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, CD41st, CD4t, CD4a, CD4b, lRNA.gm, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, CD41st, CD4t, CD4a, CD4b, lRNA.gm, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b, lRNA.gm  ))		
 	gc()
@@ -7300,7 +7302,7 @@ project.athena.Fisheretal.YX.model4.stratify.Diagnosed<- function(YX.m2, df.immu
 	#	subset
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, CD4t, CD4t.tperiod, Acute, AcuteNo, t.Age, t.RegionHospital, t2.care.t1  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, CD4t, CD4t.tperiod, Acute, AcuteNo, t.Age, t.RegionHospital, t2.care.t1  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, lRNA.mx, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD4t, CD4t.tperiod, Acute, AcuteNo, t2.care.t1  ))
 	if(return.only.Diag)
@@ -7391,7 +7393,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	#
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))	
 	gc()
