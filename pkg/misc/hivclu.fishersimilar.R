@@ -3171,11 +3171,9 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	#expected missing
 	tmp			<- melt( subset(missing, YX>0, select=c(Patient, risk, factor, YX, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )
 	tmp[, YXm.e:= tmp[, as.integer(round( YX*(1-Sx)/Sx )) ]]
-	tmp2		<- melt( subset(missing, YX==0, select=c(Patient, risk, factor, YX, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )
-	tmp2		<- tmp2[,  list( YXm.e= as.integer(round(  mzbinom(s=Sx, n.max=30)) )) , by=c('Patient','risk','factor','Sx.method')]
-	tmp			<- rbind(subset(tmp, select=c(Patient, risk, factor, Sx.method, YXm.e)), tmp2)
 	set(tmp, NULL, 'Sx.method', tmp[, gsub('Sx','YXm.e',Sx.method)])
-	missing		<- merge(missing, dcast.data.table(tmp, Patient + risk + factor ~ Sx.method, value.var="YXm.e"), by=c('Patient','risk','factor'))
+	missing		<- merge(missing, dcast.data.table(tmp, Patient + risk + factor ~ Sx.method, value.var="YXm.e"), by=c('Patient','risk','factor'), all.x=TRUE)
+	set(missing, missing[, which(is.na(YXm.e.e0))], c('YXm.e.e0cp','YXm.e.e0'), 0.)
 	# sum yijt of observed and expected missing across Patients (various N.raw)
 	# YX.w is either 0.5 or 1. It is 0.5 if for the pair (i, j), i is also a recipient and j a potential transmitter to i. So this term avoids double counting of recipients.
 	tmp			<- missing[, list( 	N.raw=sum(yYX.sum*YX.w), 
@@ -3297,21 +3295,18 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 				#draw number missing from neg binomial
 				tmp			<- melt( subset(missing, YX.bs>0, select=c(Patient, risk, factor, YX.bs, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )				
 				tmp[, YXm.r:= rnbinom(nrow(tmp), tmp[, YX.bs], tmp[, Sx])]
-				tmp2		<- melt( subset(missing, YX.bs==0, select=c(Patient, risk, factor, YX.bs, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )
-				tmp2		<- tmp2[,  list( YXm.r= as.integer(round(  rzbinom(s=Sx, n.max=30)) )) , by=c('Patient','risk','factor','Sx.method')]
-				tmp			<- rbind(subset(tmp, select=c(Patient, risk, factor, Sx.method, YXm.r)), tmp2)
 				set(tmp, NULL, 'Sx.method', tmp[, gsub('Sx','YXm.r',Sx.method)])
-				missing		<- merge(missing, dcast.data.table(tmp, Patient + risk + factor ~ Sx.method, value.var="YXm.r"), by=c('Patient','risk','factor'))
+				missing		<- merge(missing, dcast.data.table(tmp, Patient + risk + factor ~ Sx.method, value.var="YXm.r"), by=c('Patient','risk','factor'), all.x=1)
+				set(missing, missing[, which(is.na(YXm.r.e0))], c('YXm.r.e0cp','YXm.r.e0'), 0.)
 				#draw missing scores from all yijt in that stage	for number missing YXm.r.e0
 				set(missing, NULL, 'factor', missing[, as.character(factor)])
-				cat(paste('\nYXm.r.e0'))
 				tmp			<- missing[, 	{
 												z<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]	#this is on purpose YX.m3 instead of YX.m3.bs to make sure that we have scores for every factor
+												print(z[1:5])
 												list(Patient=rep(Patient, YXm.r.e0), yYXm.r.e0=sample(z, sum(YXm.r.e0), replace=TRUE)  )
 											}, by=c('risk','factor')]
 				missing		<- merge(missing, tmp[, list(yYXm.sum.e0=sum(yYXm.r.e0)), by=c('Patient','risk','factor')], by=c('Patient','risk','factor'), all.x=TRUE)
 				#draw missing scores from all yijt in that stage	for number missing YXm.r.e0cp
-				cat(paste('\nYXm.r.e0cp'))
 				tmp			<- missing[, 	{
 							z<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]						#this is on purpose YX.m3 instead of YX.m3.bs to make sure that we have scores for every factor
 							list(Patient=rep(Patient, YXm.r.e0cp), yYXm.r.e0cp=sample(z, sum(YXm.r.e0cp), replace=TRUE)  )
@@ -8544,11 +8539,11 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	require(ape)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_140616",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140714",sep='/')		
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140616",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
@@ -8585,6 +8580,10 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 							'cART initiated,\n Unknown viral load'				)	
 	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.su.N","ART.su.Y","ART.vlNA")
 	factors			<- rbind(factors, data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Bt'))
+	#
+	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.412, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
+	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
+	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )	
 	#	m2Bwmx
 	#	3da
 	method.DENOM	<- 'CLU'
@@ -8617,12 +8616,12 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)
 	#	m2Bwmx
 	#	3ka			(ART.C)
-	method.DENOM	<- 'CLU'
+	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3ka'
 	method.RISK		<- 'm2BwmxMv.tp'
 	method.WEIGHT	<- ''	
 	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P','P.e0cp','P.bias.e0cp','P.raw','P.raw.e0cp','P.rawbias.e0cp'	)
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)
 	#	m2Bwmx.wstar
@@ -8831,11 +8830,11 @@ project.athena.Fisheretal.sensitivity<- function()
 	require(ape)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_140616",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140714",sep='/')		
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140616",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
 	outfile					<- infile
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
@@ -8890,7 +8889,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'gmrf'
-			run.opt$method.denom			<- 'CLU'
+			run.opt$method.denom			<- 'SEQ'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")							
 			run.opt$clu.infilexml.opt		<- "mph4clutx4tip"
 			run.opt$clu.infilexml.template	<- "um192rhU2080"	
@@ -8904,7 +8903,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'CLU'
+			run.opt$method.denom			<- 'SEQ'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8918,7 +8917,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'CLU'
+			run.opt$method.denom			<- 'SEQ'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8932,7 +8931,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'CLU'
+			run.opt$method.denom			<- 'SEQ'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8946,7 +8945,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$method.recentctime		<- '2011'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'CLU'
+			run.opt$method.denom			<- 'SEQ'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
