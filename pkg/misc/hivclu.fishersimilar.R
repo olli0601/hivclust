@@ -1775,7 +1775,7 @@ gamlss.centiles.get<- function(obj, xvar, cent = c(2.5, 97.5), with.ordering=TRU
 	ans
 }
 ######################################################################################
-project.athena.Fisheretal.t2inf<- function(indircov, infilecov, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, plot.file=NULL)
+project.athena.Fisheretal.t2inf<- function(indircov, infilecov, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes= 365/2, dur.AcuteMaybe=320, plot.file=NULL)
 {
 	require(MASS)
 	require(grid)
@@ -1935,20 +1935,22 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, adjust.AcuteByNe
 	t2inf.args$cd4l250.theta		<- m4c$theta
 	t2inf.args$cd4other.intercept	<- m4d$coefficients["(Intercept)"]
 	t2inf.args$cd4other.coef		<- m4d$coefficients["AnyPos_a"]
-	t2inf.args$cd4other.theta		<- m4d$theta
-	
+	t2inf.args$cd4other.theta		<- m4d$theta	
 	#		
+	cat(paste('\navg time of acute.Yes phase=',dur.AcuteYes))
+	cat(paste('\navg time of acute.Maybe phase=',dur.AcuteMaybe))
+	#
 	predict.t2inf	<- function(q, df, t2inf.args, t2inf.method='glm.nb1')
 	{		
 		if(t2inf.method!='glm.nb1')	stop('unknown method to predict t2inf')
 		df[, {
-					if(!is.na(isAcute) & isAcute=='Yes')
+					if(!is.na(isAcute) & isAcute=='Yes') 
 					{
-						ans	<- pexp(q, 2/365, lower.tail=FALSE)
+						ans	<- pexp(q, 1/dur.AcuteYes, lower.tail=FALSE)
 					}
 					else if(!is.na(isAcute) & isAcute=='Maybe')
 					{
-						ans	<- pexp(q, 1/320, lower.tail=FALSE)
+						ans	<- pexp(q, 1/dur.AcuteMaybe, lower.tail=FALSE)
 					}
 					else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1-AnyPos_T1<1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
 					{
@@ -10504,7 +10506,8 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3k'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Bwmx.tp1'
+		method.risk				<- 'm2Bwmx.tp4'
+		method.Acute			<- 'empirical'
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
@@ -10588,6 +10591,10 @@ hivc.prog.betareg.estimaterisks<- function()
 									method.risk= return(substr(arg,14,nchar(arg))),NA)	}))
 		if(length(tmp)>0) method.risk<- tmp[1]
 		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,13),
+									method.Acute= return(substr(arg,15,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method.Acute<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,17),
 									method.nodectime= return(substr(arg,19,nchar(arg))),NA)	}))
 		if(length(tmp)>0) method.nodectime<- tmp[1]			
@@ -10623,11 +10630,26 @@ hivc.prog.betareg.estimaterisks<- function()
 		print(method.risk)
 		print(method.nodectime)
 		print(method.PDT)
+		print(method.Acute)
 	}
 	if(method.nodectime=='any')
 		method				<- paste(method,'a',sep='')
 	if(method.nodectime=='map')
 		method				<- paste(method,'m',sep='')	
+	if(method.Acute=='empirical')
+	{
+		dur.Acute			<- c(Yes= 365/2, Maybe=320)	
+	}	
+	if(method.Acute=='central')
+	{
+		dur.Acute			<- c(Yes= 2.9*30, Maybe=2.9*30)
+		method				<- paste(method,'C',sep='')
+	}
+	if(method.Acute=='lower')
+	{
+		dur.Acute			<- c(Yes= 1.23*30, Maybe=1.23*30)
+		method				<- paste(method,'L',sep='')
+	}
 	adjust.AcuteByNegT		<- 0.75
 	any.pos.grace.yr		<- Inf	
 	if(resume)
@@ -10674,7 +10696,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
 	#
 	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 't2inf',method.PDT,method,sep='')
-	tmp				<- project.athena.Fisheretal.t2inf(indircov, infile.cov.study, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, plot.file=plot.file)
+	tmp				<- project.athena.Fisheretal.t2inf(indircov, infile.cov.study, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], plot.file=plot.file)
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args
 	#
