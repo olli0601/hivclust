@@ -3382,7 +3382,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	tmp			<- merge( tmp, subset(unique(risk.df), select=c(risk, factor, X.msm.e0, X.msm.e0cp)), by=c('risk','factor'))
 	tmp2		<- tmp[, list(  	factor=factor, 
 									X.msm.e0=rbinom(length(X.msm.e0), sum(X.msm.e0), X.msm.e0/sum(X.msm.e0)),
-									X.msm.e0cp=rbinom(length(X.msm.e0cp), sum(X.msm.e0cp), X.msm.e0/sum(X.msm.e0cp))	), by=c('bs','risk')]
+									X.msm.e0cp=rbinom(length(X.msm.e0cp), sum(X.msm.e0cp), X.msm.e0cp/sum(X.msm.e0cp))	), by=c('bs','risk')]
 	tmp			<- merge( subset(tmp, select=c(risk, factor, bs, PYs, PTx)), tmp2, by=c('bs','risk','factor') )	
 	adj.bs		<- tmp[, list(	factor=factor,
 								P= PYs/sum(PYs), P.raw= PYs/sum(PYs), 
