@@ -10506,7 +10506,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Bwmx.tp4'
-		method.Acute			<- 'empirical'
+		method.Acute			<- 'central'#'empirical'
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
@@ -10649,6 +10649,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		dur.Acute			<- c(Yes= 1.23*30, Maybe=1.23*30)
 		method				<- paste(method,'L',sep='')
 	}
+	if(method.Acute=='higher')
+	{
+		dur.Acute			<- c(Yes= 5.28*30, Maybe=5.28*30)
+		method				<- paste(method,'H',sep='')
+	}	
 	adjust.AcuteByNegT		<- 0.75
 	any.pos.grace.yr		<- Inf	
 	if(resume)
