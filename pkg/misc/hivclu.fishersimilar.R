@@ -3304,7 +3304,6 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 				set(missing, NULL, 'factor', missing[, as.character(factor)])
 				tmp			<- missing[, 	{
 												z<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]	#this is on purpose YX.m3 instead of YX.m3.bs to make sure that we have scores for every factor
-												print(z[1:5])
 												list(Patient=rep(Patient, YXm.r.e0), yYXm.r.e0=sample(z, sum(YXm.r.e0), replace=TRUE)  )
 											}, by=c('risk','factor')]
 				missing		<- merge(missing, tmp[, list(yYXm.sum.e0=sum(yYXm.r.e0)), by=c('Patient','risk','factor')], by=c('Patient','risk','factor'), all.x=TRUE)
@@ -8665,7 +8664,7 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	#
 }
 ######################################################################################
-project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, stat.select, outfile)
+project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, stat.select, outfile, tperiod.info=NULL)
 {
 	run.tp			<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating=='sasky' & grepl(method.RISK,method.risk)  & (grepl('P.',stat,fixed=1) | stat=='P') )
 	if(method.WEIGHT=='')
