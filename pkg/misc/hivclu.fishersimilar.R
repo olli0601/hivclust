@@ -10901,7 +10901,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(length(tmp)>0) method.Acute<- tmp[1]		
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,18),
-									method.minQLowerU= return(substr(arg,20,nchar(arg))),NA)	}))
+									method.minQLowerU= return(as.numeric(substr(arg,20,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) method.minQLowerU<- tmp[1]
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,17),
