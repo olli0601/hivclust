@@ -10965,14 +10965,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		dur.Acute			<- c(Yes= 5.28*30, Maybe=5.28*30)
 		method				<- paste(method,'H',sep='')
 	}	
-	if(method.minQLowerU==0.01)
-		method				<- paste(method,'1',sep='')
 	if(method.minQLowerU==0.05)
-		method				<- paste(method,'2',sep='')	
+		method				<- paste(method,'5',sep='')	
 	if(method.minQLowerU==0.1)
-		method				<- paste(method,'3',sep='')
+		method				<- paste(method,'1',sep='')
 	if(method.minQLowerU==0.2)
-		method				<- paste(method,'4',sep='')
+		method				<- paste(method,'2',sep='')
 	
 	adjust.AcuteByNegT		<- 0.75
 	any.pos.grace.yr		<- Inf	
