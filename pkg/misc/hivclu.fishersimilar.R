@@ -2341,9 +2341,9 @@ project.athena.Fisheretal.plot.selected.transmitters<- function(df.all, df.immu,
 	dummy				<- hivc.beast2out.plot.cluster.trees(df.all, df.immu, df.viro, df.treatment, cluphy, cluphy.root.ctime, cluphy.tip.ctime, ph.prob=NA, df.node.ctime=cluphy.map.nodectime, df.rates=NULL, df.tips=df.tpairs.plot, end.ctime=end.ctime,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=file,  pdf.width=7, pdf.height=pdf.height, pdf.xlim=pdf.xlim)	
 }
 ######################################################################################
-project.athena.Fisheretal.X.b4care<- function(df.tpairs, clumsm.info, predict.t2inf, t2inf.args, t.period=0.25, ts.min=1980)
+project.athena.Fisheretal.X.b4care<- function(df.tpairs, df.all, predict.t2inf, t2inf.args, t.period=0.25, ts.min=1980, minQLowerU=0.01)
 {
-	b4care	<- merge(data.table(Patient=df.tpairs[, unique(t.Patient)]), unique(subset(clumsm.info, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1, AnyT_T1))), by='Patient')
+	b4care	<- merge(data.table(Patient=df.tpairs[, unique(t.Patient)]), unique(subset(df.all, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1, AnyT_T1))), by='Patient')
 	tmp		<- b4care[, list(AnyPos_a=AnyPos_T1-DateBorn, ts=ifelse(is.na(NegT), AnyPos_T1-10, NegT), te=AnyPos_T1), by='Patient']
 	b4care	<- merge(b4care, tmp, by='Patient')
 	#check if ts before 1980 and if so clip
@@ -2358,8 +2358,9 @@ project.athena.Fisheretal.X.b4care<- function(df.tpairs, clumsm.info, predict.t2
 	b4care	<- merge(t2inf, subset(b4care, select=c(Patient, AnyPos_T1, AnyPos_a, isAcute)), by='Patient')	
 	set(b4care, NULL, 'score', b4care[, round(score, d=3)])
 	setnames(b4care, c('Patient','q','score'), c('t.Patient','t','U.score'))	
-	cat(paste('\nReturn X for #t.Patients=',b4care[, length(unique(t.Patient))]))	
-	b4care
+	cat(paste('\nReturn X for #t.Patients=',b4care[, length(unique(t.Patient))]))
+	cat(paste('\nReturn Undiagnosed for minQLowerU=',minQLowerU))
+	subset(b4care, U.score>=minQLowerU)
 }
 ######################################################################################
 project.athena.Fisheretal.YX.age<- function(YX, clumsm.info, t.period=0.25)
@@ -8538,6 +8539,9 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 {	
 	require(data.table)
 	require(ape)
+	require(grid)
+	require(reshape2)
+	require(ggplot2)
 	#stop()
 	resume					<- 1 
 	indir					<- paste(DATA,"fisheretal_140714",sep='/')		
@@ -8625,6 +8629,26 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)
+	#	m2Bwmx
+	#	3kaH			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3kaH'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)	
+	#	m2Bwmx
+	#	3kaC			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3kaC'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)		
 	#	m2Bwmx.wstar
 	#	3ka			(ART.C)
 	method.DENOM	<- 'CLU'
@@ -8662,6 +8686,189 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	#
 	#	MODEL 2B time trends
 	#
+}
+######################################################################################
+project.athena.Fisheretal.sensitivity.getfigures.counts.m5<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info)
+{		
+	df		<- subset(runs.table, method.denom==method.DENOM & method.BRL==method.brl & grepl(method.RISK,method.risk), c(stat, method.risk, factor, n, p))
+	if(method.WEIGHT=='')
+		df		<- subset(df, !grepl('wstar',method.risk) & !grepl('now',method.risk))
+	if(method.WEIGHT!='')
+		df		<- subset(df, grepl(method.WEIGHT,method.risk) )
+	
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'factor', df[, factor(factor, levels=factors[, levels(factor)])])
+	tmp		<- df[, 	list( 	n.coh=sum(n[stat=='X.msm'])/8, 
+					p.seq= sum(n[stat=='X.seq']) / sum(n[stat=='X.msm']), 
+					p.clu= sum(n[stat=='X.clu']) / sum(n[stat=='X.seq']), 
+					p.pos= sum(n[stat=='YX']) / sum(n[stat=='X.clu']),
+					p.pos.seq= sum(n[stat=='YX']) / sum(n[stat=='X.seq']),
+					n.pos=sum(n[stat=='YX'])/8 ), by=c('factor','t.period')]	
+	tmp		<- merge(tmp, df[, list( factor=factor[stat=='X.msm'], pp.coh=n[stat=='X.msm']/sum(n[stat=='X.msm']), pp.pos=n[stat=='YX']/sum(n[stat=='YX']) ), by='t.period'], by=c('factor','t.period'))
+	ans		<- tmp
+	set(ans, NULL, 'p.seq', ans[, round(p.seq, d=3)]*100)
+	set(ans, NULL, 'p.clu', ans[, round(p.clu, d=3)]*100)
+	set(ans, NULL, 'p.pos', ans[, round(p.pos, d=4)]*100)
+	set(ans, NULL, 'p.pos.seq', ans[, round(p.pos.seq, d=5)]*100)
+	set(ans, NULL, 'n.pos', ans[, round(n.pos, d=1)])
+	set(ans, NULL, 'n.coh', ans[, round(n.coh, d=1)])	
+	set(ans, NULL, 'pp.pos', ans[, round(pp.pos, d=3)]*100)
+	set(ans, NULL, 'pp.coh', ans[, round(pp.coh, d=3)]*100)	
+	#tperiod.long
+	ans	<- merge(ans, tperiod.info, by='t.period')
+	ans[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]		
+	#factor.long	
+	ans	<- merge(ans, factors, by='factor')		
+	#group
+	ans[, group:=NA_character_ ]
+	set(ans, ans[,which(factor%in%c('t<=20','t<=25'))], 'group', '<30')
+	set(ans, ans[,which(factor%in%c('t<=30','t<=35'))], 'group', '30-39')
+	set(ans, ans[,which(factor%in%c('t<=40','t<=45','t<=100'))], 'group', '40-')
+	set(ans, NULL, 'group', ans[, factor(group, levels=c('<30','30-39','40-'))])	
+	#	plot numbers in cohort to illustrate censoring
+	ggplot(ans, aes(x=t.period.long, y=n.coh, group=factor.legend, colour=factor.legend))  + labs(x='', y='potential transmission intervals in cohort\n(person-years)') +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			scale_colour_manual(name='from age group', values=ans[, unique(factor.color)]) +
+			geom_line() + geom_point() + 
+			facet_grid(. ~ group, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','censoring',".pdf", sep='')	
+	ggsave(file=file, w=10, h=6)
+	#	plot proportion in cohort to illustrate censoring
+	ggplot(ans, aes(x=factor.legend, y=pp.coh, fill=factor.legend))  + labs(x='', y='potential transmission intervals in cohort\n(%)') +
+			scale_y_continuous(breaks=seq(0,100,2)) +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			scale_fill_manual(name='from age group', values=ans[, unique(factor.color)]) +
+			geom_bar(stat='identity',binwidth=1, position='dodge') + 
+			facet_grid(. ~ t.period.long, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','censoringp',".pdf", sep='')	
+	ggsave(file=file, w=18, h=5)		
+	#	plot p.seq	
+	ggplot(ans, aes(x=t.period.long, y=p.seq, fill=factor.legend)) +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			labs(x='', y=expression(frac('potential transmission intervals with a sequence','potential transmission intervals in cohort')*' * 100')) +
+			scale_fill_manual(name='from age group', values=df[, unique(factor.color)]) + 
+			geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
+			theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
+			facet_grid(. ~ factor.legend, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqsampling',".pdf", sep='')	
+	ggsave(file=file, w=18, h=5)
+	#	plot p.clu	
+	ggplot(ans, aes(x=t.period.long, y=p.clu, fill=factor.legend)) +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			labs(x='', y=expression(frac('potential transmission intervals in cluster','potential transmission intervals with a sequence' )*' * 100')) +
+			scale_fill_manual(name='from age group', values=df[, unique(factor.color)]) + 
+			geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
+			theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
+			facet_grid(. ~ factor.legend, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqclustering',".pdf", sep='')	
+	ggsave(file=file, w=18, h=5)
+	#	plot p.pos.seq	
+	ggplot(ans, aes(x=t.period.long, y=p.pos.seq, fill=factor.legend)) +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			labs(x='', y=expression(frac('potential transmission intervals with '*y[ijt]>0,'potential transmission intervals with a sequence')*' * 100')) +
+			scale_fill_manual(name='from age group', values=df[, unique(factor.color)]) + 
+			geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
+			theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
+			facet_grid(. ~ factor.legend, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqYgreaterZero',".pdf", sep='')	
+	ggsave(file=file, w=18, h=5)
+	#	plot p.pos	
+	ggplot(ans, aes(x=t.period.long, y=p.pos, fill=factor.legend)) +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			labs(x='', y=expression(frac('potential transmission intervals with '*y[ijt]>0,'potential transmission intervals in a cluster')*' * 100')) +
+			scale_fill_manual(name='from age group', values=df[, unique(factor.color)]) + 
+			geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
+			theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
+			facet_grid(. ~ factor.legend, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqcluYgreaterZero',".pdf", sep='')	
+	ggsave(file=file, w=18, h=5)
+}	
+######################################################################################
+project.athena.Fisheretal.sensitivity.getfigures.counts.m2<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info)
+{
+	df		<- subset(runs.table, method.denom==method.DENOM & method.BRL==method.brl & grepl(method.RISK,method.risk), c(stat, method.risk, factor, n, p))
+	if(method.WEIGHT=='')
+		df		<- subset(df, !grepl('wstar',method.risk) & !grepl('now',method.risk))
+	if(method.WEIGHT!='')
+		df		<- subset(df, grepl(method.WEIGHT,method.risk) )
+	
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'factor', df[, factor(factor, levels=factors[, levels(factor)])])
+	tmp		<- df[, 	list( 	n.coh=sum(n[stat=='X.msm'])/8, 
+					p.seq= sum(n[stat=='X.seq']) / sum(n[stat=='X.msm']), 
+					p.clu= sum(n[stat=='X.clu']) / sum(n[stat=='X.seq']), 
+					p.pos= sum(n[stat=='YX']) / sum(n[stat=='X.clu']), 
+					n.pos=sum(n[stat=='YX'])/8 ), by=c('factor','t.period')]	
+	tmp		<- merge(tmp, df[, list( factor=factor[stat=='X.msm'], pp.coh=n[stat=='X.msm']/sum(n[stat=='X.msm']), pp.pos=n[stat=='YX']/sum(n[stat=='YX']) ), by='t.period'], by=c('factor','t.period'))
+	ans		<- tmp
+	set(ans, NULL, 'p.seq', ans[, round(p.seq, d=3)]*100)
+	set(ans, NULL, 'p.clu', ans[, round(p.clu, d=3)]*100)
+	set(ans, NULL, 'p.pos', ans[, round(p.pos, d=4)]*100)
+	set(ans, NULL, 'n.pos', ans[, round(n.pos, d=1)])
+	set(ans, NULL, 'n.coh', ans[, round(n.coh, d=1)])	
+	set(ans, NULL, 'pp.pos', ans[, round(pp.pos, d=3)]*100)
+	set(ans, NULL, 'pp.coh', ans[, round(pp.coh, d=3)]*100)	
+	#cascade.stage
+	ans[, cascade.stage:=ans[, substr(factor, 1, 1)]]
+	set(ans, ans[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
+	set(ans, ans[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
+	set(ans, ans[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')
+	set(ans, NULL, 'cascade.stage', ans[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
+	#tperiod.long
+	ans	<- merge(ans, tperiod.info, by='t.period')
+	ans[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]		
+	#factor.long	
+	ans	<- merge(ans, factors, by='factor')	
+	#	plot numbers in cohort to illustrate censoring
+	ggplot(ans, aes(x=t.period.long, y=n.coh, group=factor.legend, colour=factor.legend))  + labs(x='', y='potential transmission intervals in cohort\n(person-years)') +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			scale_colour_manual(name='from cascade stage', values=ans[, unique(factor.color)]) +
+			geom_line() + geom_point() + 
+			facet_grid(. ~ cascade.stage, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','censoring',".pdf", sep='')	
+	ggsave(file=file, w=10, h=6)
+	#	plot p.seq	
+	ggplot(ans, aes(x=t.period.long, y=p.seq, fill=factor.legend)) +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			labs(x='', y=expression(frac('potential transmission intervals with a sequence','potential transmission intervals in cohort')*' * 100')) +
+			scale_fill_manual(name='from cascade stage', values=df[, unique(factor.color)]) + 
+			geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
+			theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
+			facet_grid(. ~ factor.legend, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqsampling',".pdf", sep='')	
+	ggsave(file=file, w=18, h=5)
+	#	plot p.clu	
+	ggplot(ans, aes(x=t.period.long, y=p.clu, fill=factor.legend)) +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			labs(x='', y=expression(frac('potential transmission intervals in cluster','potential transmission intervals with a sequence' )*' * 100')) +
+			scale_fill_manual(name='from cascade stage', values=df[, unique(factor.color)]) + 
+			geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
+			theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
+			facet_grid(. ~ factor.legend, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqclustering',".pdf", sep='')	
+	ggsave(file=file, w=18, h=5)
+	#	plot p.pos.seq	
+	ggplot(ans, aes(x=t.period.long, y=p.pos.seq, fill=factor.legend)) +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			labs(x='', y=expression(frac('potential transmission intervals with '*y[ijt]>0,'potential transmission intervals with a sequence')*' * 100')) +
+			scale_fill_manual(name='from cascade stage', values=df[, unique(factor.color)]) + 
+			geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
+			theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
+			facet_grid(. ~ factor.legend, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqYgreaterZero',".pdf", sep='')	
+	ggsave(file=file, w=18, h=5)
+	#	plot p.pos	
+	ggplot(ans, aes(x=t.period.long, y=p.pos, fill=factor.legend)) +
+			theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			labs(x='', y=expression(frac('potential transmission intervals with '*y[ijt]>0,'potential transmission intervals in a cluster')*' * 100')) +
+			scale_fill_manual(name='from cascade stage', values=df[, unique(factor.color)]) + 
+			geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
+			theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
+			facet_grid(. ~ factor.legend, scales='free', margins=FALSE)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqcluYgreaterZero',".pdf", sep='')	
+	ggsave(file=file, w=18, h=5)
 }
 ######################################################################################
 project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, stat.select, outfile, tperiod.info=NULL)
@@ -8746,13 +8953,16 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 {
 	require(data.table)
 	require(ape)
+	require(RColorBrewer)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_140616",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140714",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
+	indir					<- paste(DATA,"fisheretal_140616",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_140616",sep='/')	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
-	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140616",sep='/')
+	insignat				<- "Wed_Dec_18_11:37:00_2013"	
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
@@ -8761,13 +8971,48 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.risks.R", sep='')		
 	readAttempt			<- try(suppressWarnings(load(file)))	
 	
+	#	set up factor legends
+	factor.color	<- c("#990000","#EF6548","#FDBB84","#0570B0","#74A9CF","#7A0177","#F768A1","#FCC5C0","#005824","#41AB5D","#ADDD8E")
+	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
+			'Undiagnosed,\n Chronic infection\n at diagnosis',
+			'Undiagnosed,\n Unknown if recent',
+			'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+			'Diagnosed,\n CD4 progression to\n >500',
+			'Diagnosed,\n CD4 progression to\n [351-500]',
+			'Diagnosed,\n CD4 progression to\n <=350',			
+			'Diagnosed,\n Unknown CD4',
+			'cART initiated,\n no viral suppression',
+			'cART initiated,\n viral suppression',
+			'cART initiated,\n Unknown viral load'				)
+	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")
+	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Bwmx')
+	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
+			'Undiagnosed,\n Chronic infection\n at diagnosis',
+			'Undiagnosed,\n Unknown if recent',
+			'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+			'Diagnosed,\n CD4 progression to\n >500',
+			'Diagnosed,\n CD4 progression to\n [351-500]',
+			'Diagnosed,\n CD4 progression to\n <=350',			
+			'Diagnosed,\n Unknown CD4',
+			'cART initiated,\n no viral suppression',
+			'cART initiated,\n viral suppression',
+			'cART initiated,\n Unknown viral load'				)	
+	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.su.N","ART.su.Y","ART.vlNA")
+	factors			<- rbind(factors, data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Bt'))	
+	factor.long	<- c("<20","20-24","25-29","30-34","35-39","40-44","45-")
+	factor.color<- brewer.pal(length(factor.long), 'RdBu')	
+	tmp			<- c("t<=20","t<=25","t<=30","t<=35","t<=40","t<=45","t<=100")
+	factors		<- rbind(factors, data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m5.tAc'))
+	#
+	#
+	#
 	file	<- paste(outdir,'/','table_m2BwmxMv.tp','.csv',sep='')
 	levels	<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")
 	df		<- subset(runs.risk, grepl('m2BwmxMv.tp',method.risk) & !grepl('wstar',method.risk) , c(stat, method.risk, factor.ref, factor, v, l95.bs, u95.bs))	
 	project.athena.Fisheretal.sensitivity.tables.m2(df, levels, file)
-	
-	
-	
+	#
+	#
+	#
 	df		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & !grepl('wstar',method.risk)  )
 	levels	<- c('t<=20','t<=25','t<=30','t<=35','t<=40','t<=45','t<=100')
 	file	<- paste(outdir,'/','table_m5tAc.tp','.csv',sep='')
@@ -8775,8 +9020,29 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	
 	file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.table.R", sep='')		
 	readAttempt			<- try(suppressWarnings(load(file)))	
+	#
+	#	get n.coh p.seq etc by time period
+	#
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3kaH'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	factors			<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	project.athena.Fisheretal.sensitivity.getfigures.counts.m2(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info)
+	#
+	#	get n.coh p.seq etc by time period
+	#
+	method.DENOM	<- 'CLU'
+	method.BRL		<- '3da'
+	method.RISK		<- 'm5.tAc.tp'
+	method.WEIGHT	<- ''	
+	factors			<- subset(factors, grepl('m5.tAc',method.risk), select=c(factor, factor.legend, factor.color))
+	project.athena.Fisheretal.sensitivity.getfigures.counts.m5(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info)
 	
-	file	<- paste(outdir,'/','table_ptt','.csv',sep='')
+
+	#
+	#	get table summing over time
+	#
 	levels	<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")
 	df		<- subset(runs.table, grepl('m2BwmxMv.tp',method.risk) & !grepl('wstar',method.risk), c(stat, method.risk, factor, n, p))	
 	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
@@ -8831,11 +9097,13 @@ project.athena.Fisheretal.sensitivity<- function()
 	require(ape)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_140714",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140714",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
+	indir					<- paste(DATA,"fisheretal_140616",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140616",sep='/')	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
-	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
+	insignat				<- "Wed_Dec_18_11:37:00_2013"	
 	outfile					<- infile
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
@@ -8888,6 +9156,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt							<- list()
 			run.opt$method					<- '3d'
 			run.opt$method.recentctime		<- '2011'
+			run.opt$method.Acute			<- ''
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'gmrf'
 			run.opt$method.denom			<- 'SEQ'
@@ -8902,9 +9171,10 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt							<- list()
 			run.opt$method					<- '3d'
 			run.opt$method.recentctime		<- '2011'
+			run.opt$method.Acute			<- ''
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'SEQ'
+			run.opt$method.denom			<- 'CLU'
 			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
 			run.opt$clu.infilexml.opt		<- "clrh80"
 			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
@@ -8916,6 +9186,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt							<- list()
 			run.opt$method					<- '3i'
 			run.opt$method.recentctime		<- '2011'
+			run.opt$method.Acute			<- ''
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
 			run.opt$method.denom			<- 'SEQ'
@@ -8930,6 +9201,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt							<- list()
 			run.opt$method					<- '3j'
 			run.opt$method.recentctime		<- '2011'
+			run.opt$method.Acute			<- ''
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
 			run.opt$method.denom			<- 'SEQ'
@@ -8944,6 +9216,7 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt							<- list()
 			run.opt$method					<- '3k'
 			run.opt$method.recentctime		<- '2011'
+			run.opt$method.Acute			<- 'H'
 			run.opt$method.nodectime		<- 'any'
 			run.opt$method.dating			<- 'sasky'
 			run.opt$method.denom			<- 'SEQ'
@@ -8953,9 +9226,41 @@ project.athena.Fisheretal.sensitivity<- function()
 			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 			runs.opt[[length(runs.opt)+1]]	<- run.opt
 		}
+		if(1)
+		{
+			run.opt							<- list()
+			run.opt$method					<- '3k'
+			run.opt$method.recentctime		<- '2011'
+			run.opt$method.Acute			<- 'C'
+			run.opt$method.nodectime		<- 'any'
+			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'SEQ'
+			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
+			run.opt$clu.infilexml.opt		<- "clrh80"
+			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+			runs.opt[[length(runs.opt)+1]]	<- run.opt
+		}		
+		if(1)
+		{
+			run.opt							<- list()
+			run.opt$method					<- '3k'
+			run.opt$method.recentctime		<- '2011'
+			run.opt$method.Acute			<- ''
+			run.opt$method.nodectime		<- 'any'
+			run.opt$method.dating			<- 'sasky'
+			run.opt$method.denom			<- 'SEQ'
+			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
+			run.opt$clu.infilexml.opt		<- "clrh80"
+			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
+			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+			runs.opt[[length(runs.opt)+1]]	<- run.opt
+		}
+		
 		runs.opt	<- lapply( runs.opt, function(run.opt)
 				{
 					method			<- paste(run.opt$method, ifelse(run.opt$method.nodectime=='any','a','m'), sep='')
+					method			<- paste(method, ifelse(run.opt$method.Acute=='H','H',ifelse(run.opt$method.Acute=='C','C','')), sep='')
 					files			<- list.files(indir)	
 					files			<- files[ sapply(files, function(x) 	grepl(paste(run.opt$outfile,run.opt$method.recentctime,sep='_'), x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) &
 																			ifelse(run.opt$method.recentctime=='', !grepl('2011',x), TRUE) &
@@ -9853,7 +10158,7 @@ project.athena.Fisheretal.CT.resolution<- function(info, df.viro, df.immu, t.sta
 #	mode1	if df.tpairs is not null, return the transmitter-infected-time period triplets for all **sequence** pairs in df.tpairs
 #	mode2	if ri is not null and nsample is NA, return the triplets for all **patient** pairs of infected in ri and any transmitter in df.all
 #	mode3	if ri is not null and nsample is not NA, return a **sample** of the triplets for all **sequence pairs** of the sequences belonging to ri and to any transmitter in df.all
-project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=NULL, tperiod.info=NULL, t.period=0.25, t.endctime=2013., sample.n=NA, sample.exclude=NULL, save.file=NA, resume=FALSE)
+project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=NULL, tperiod.info=NULL, t.period=0.25, t.endctime=2013., minQLowerU=0.01, sample.n=NA, sample.exclude=NULL, save.file=NA, resume=FALSE)
 {
 	#df.all<- df.all.allmsm; df.immu<-df.immu.allmsm; df.viro<-df.viro.allmsm; df.treatment<-df.treatment.allmsm; ri<-ri.SEQ; df.tpairs<- NULL	
 	if(resume && !is.na(save.file))
@@ -9882,7 +10187,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		X.incare				<- project.athena.Fisheretal.X.nocontact(X.incare, df.viro, df.immu, df.tpairs, df.all, contact.grace=0.5, t.period=t.period, t.endctime= t.endctime)		
 		X.incare				<- project.athena.Fisheretal.X.CDCC(X.incare, df.tpairs, df.all, t.period=t.period, t.endctime=t.endctime)
 		X.incare				<- project.athena.Fisheretal.X.followup(X.incare, df.all, df.immu, t.period=t.period, t.endctime=t.endctime)
-		X.b4care				<- project.athena.Fisheretal.X.b4care(df.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period)
+		X.b4care				<- project.athena.Fisheretal.X.b4care(df.tpairs, df.all, predict.t2inf, t2inf.args, minQLowerU=minQLowerU, t.period=t.period)
 		tmp						<- merge(X.incare, X.b4care, by=c('t.Patient','t'))
 		cat(paste('\nnumber entries (Patient,t) that overlap in and before care [should be zero], n=',nrow(tmp)))
 		X.pt					<- merge(X.incare, X.b4care, by=c('t.Patient','t'), all.x=1, all.y=1)
@@ -10506,7 +10811,8 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Bwmx.tp4'
-		method.Acute			<- 'central'#'empirical'
+		method.Acute			<- 'higher'	#'central'#'empirical'
+		method.minQLowerU		<- 0.01
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
@@ -10592,7 +10898,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,13),
 									method.Acute= return(substr(arg,15,nchar(arg))),NA)	}))
-		if(length(tmp)>0) method.Acute<- tmp[1]
+		if(length(tmp)>0) method.Acute<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,18),
+									method.minQLowerU= return(substr(arg,20,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method.minQLowerU<- tmp[1]
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,17),
 									method.nodectime= return(substr(arg,19,nchar(arg))),NA)	}))
@@ -10630,6 +10940,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		print(method.nodectime)
 		print(method.PDT)
 		print(method.Acute)
+		print(method.minQLowerU)
 	}
 	if(method.nodectime=='any')
 		method				<- paste(method,'a',sep='')
@@ -10654,6 +10965,15 @@ hivc.prog.betareg.estimaterisks<- function()
 		dur.Acute			<- c(Yes= 5.28*30, Maybe=5.28*30)
 		method				<- paste(method,'H',sep='')
 	}	
+	if(method.minQLowerU==0.01)
+		method				<- paste(method,'1',sep='')
+	if(method.minQLowerU==0.05)
+		method				<- paste(method,'2',sep='')	
+	if(method.minQLowerU==0.1)
+		method				<- paste(method,'3',sep='')
+	if(method.minQLowerU==0.2)
+		method				<- paste(method,'4',sep='')
+	
 	adjust.AcuteByNegT		<- 0.75
 	any.pos.grace.yr		<- Inf	
 	if(resume)
@@ -10810,7 +11130,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	resume			<- 1	
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT',method.PDT,'_',method,'_tATHENAclu','.R',sep='')	
-	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, minQLowerU=method.minQLowerU, save.file=save.file, resume=resume)
 	YX.part1		<- merge( YX.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)
 	YX.part1[, class:='pt']
 	gc()
@@ -10841,7 +11161,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		sample.n		<- nrow( unique(sample.n) )
 		sample.exclude	<- unique(subset(YX, select=t.Patient))
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT_',method,'_tATHENAseq','.R',sep='')
-		YXS.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=tmp, df.tpairs=NULL, tperiod.info=NULL, sample.n=sample.n, sample.exclude=sample.exclude, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+		YXS.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=tmp, df.tpairs=NULL, tperiod.info=NULL, sample.n=sample.n, sample.exclude=sample.exclude, t.period=t.period, t.endctime=t.endctime, minQLowerU=method.minQLowerU, save.file=save.file, resume=resume)
 		if( !all(YX.part1[,FASTASampleCode]%in%df.all[,FASTASampleCode]) | !all(YX.part1[,t.FASTASampleCode]%in%df.all[,FASTASampleCode]) | !all(YXS.part1[,FASTASampleCode]%in%df.all[,FASTASampleCode]) | !all(YXS.part1[,t.FASTASampleCode]%in%df.all[,FASTASampleCode]) ) stop('unexpected FASTASampleCode')		
 		YX.part1[, class:='pt']
 		YXS.part1[, class:='pn']
@@ -10864,7 +11184,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp[, FASTASampleCode:=NULL]
 		tmp[, cluster:=NULL]
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICLU_',method,'_tATHENAclu','.R',sep='')
-		X.clu			<- project.athena.Fisheretal.YX.part1(tmp, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)			
+		X.clu			<- project.athena.Fisheretal.YX.part1(tmp, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, minQLowerU=method.minQLowerU, save.file=save.file, resume=resume)			
 		gc()		
 	}
 	#
@@ -10876,12 +11196,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(method.PDT=='CLU')
 		{			
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICLU_',method,'_tATHENAseq','.R',sep='')
-			X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+			X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, minQLowerU=method.minQLowerU, save.file=save.file, resume=resume)
 		}
 		if(method.PDT=='SEQ')
 		{						
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RISEQ_',method,'_tATHENAseq','.R',sep='')
-			X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.SEQ, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+			X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.SEQ, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, minQLowerU=method.minQLowerU, save.file=save.file, resume=resume)
 		}
 		gc()				
 	}
@@ -10894,12 +11214,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(method.PDT=='CLU')
 		{						
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICLU_',method,'_tATHENAmsm','.R',sep='')
-			X.msm			<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+			X.msm			<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, minQLowerU=method.minQLowerU, save.file=save.file, resume=resume)
 		}
 		if(method.PDT=='SEQ')
 		{												
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RISEQ_',method,'_tATHENAmsm','.R',sep='')
-			X.msm			<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.SEQ, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+			X.msm			<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.SEQ, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, minQLowerU=method.minQLowerU, save.file=save.file, resume=resume)
 		}
 		gc()		
 	}
