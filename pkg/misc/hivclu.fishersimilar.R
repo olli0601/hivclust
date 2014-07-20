@@ -3113,14 +3113,19 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	nt.table	<- subset(nt.table, X.msm>0)
 	#	X.msm not adjusted for censoring
 	setnames(nt.table, 'X.msm', 'X.msm.e0')
-	#	X.msm adjusted for censoring
-	if(grepl('tp[0-9]', method.risk) || grepl('TP', method.risk) )
-		tmp		<- subset(X.tables$cens.table, stat=='X.msm')[, list(risk=risk, factor=factor, PYe0cpr=n.adjbyPU-n)]
-	if(!grepl('tp[0-9]', method.risk) & !grepl('TP', method.risk) )
-	{
-		tmp		<- subset(X.tables$cens.table, stat=='X.msm')[, list(risk=risk[1], PYe0cpr=sum(n.adjbyPU)-sum(n)) , by='factor2']
-		setnames(tmp, 'factor2', 'factor')
-	}
+	#	X.msm adjusted for censoring	
+	tmp			<- copy(X.tables$cens.table.all)
+	tmp			<- project.athena.Fisheretal.censoring.model(tmp, plot.file=NA)
+	tmp			<- merge( nt.table[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], subset(tmp, select=c(risk, factor, p.cens)), by=c('risk','factor'))
+	tmp			<- tmp[, list( PYe0cpr=round(X.msm.e0/p.cens-X.msm.e0)), by=c('risk','factor')]		#censored number of potential transmission intervals
+	#	previous ad-hoc model
+	#if(grepl('tp[0-9]', method.risk) || grepl('TP', method.risk) )
+	#	tmp		<- subset(X.tables$cens.table, stat=='X.msm')[, list(risk=risk, factor=factor, PYe0cpr=n.adjbyPU-n)]
+	#if(!grepl('tp[0-9]', method.risk) & !grepl('TP', method.risk) )
+	#{
+	#	tmp		<- subset(X.tables$cens.table, stat=='X.msm')[, list(risk=risk[1], PYe0cpr=sum(n.adjbyPU)-sum(n)) , by='factor2']
+	#	setnames(tmp, 'factor2', 'factor')
+	#}
 	##	need to allocate the PYe0cpr potential transmission intervals among all Patients with given risk factor for whom yijt>0
 	##	simply take mean
 	tmp			<- merge(tmp, nt.table[, list(X.msm.e0cp= length(unique(Patient))), by=c('risk','factor') ], by=c('risk','factor')) 
@@ -9129,6 +9134,83 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 			})
 }
 ######################################################################################
+project.athena.Fisheretal.censoring.model<- function(ct, plot.file=NA)
+{
+	set(ct, ct[, which(grepl('c3',stat) & t.period>3)], c('n','sum','p'), NA_real_)
+	set(ct, ct[, which(grepl('c2',stat) & t.period>2)], c('n','sum','p'), NA_real_)
+	set(ct, ct[, which(grepl('c1',stat) & t.period>1)], c('n','sum','p'), NA_real_)
+	ct[, cgroup:='c0']
+	set(ct, ct[, which(grepl('c3',stat))], 'cgroup', 'c3')
+	set(ct, ct[, which(grepl('c2',stat))], 'cgroup', 'c2')
+	set(ct, ct[, which(grepl('c1',stat))], 'cgroup', 'c1')
+	tmp		<- ct[, which(grepl('c[0-9]',stat))]
+	set(ct, tmp, 'stat', ct[tmp, substr(stat, 1, nchar(stat)-3)])
+	ct		<- subset( ct, stat=='X.msm' & cgroup!='c1', c(stat, t.period, cgroup, risk, factor, factor2, n))
+	#
+	#
+	if(!is.na(plot.file))
+	{
+		ct.plot	<- copy(ct)
+		ct.plot[, group:=ct.plot[, substr(factor, 1, 1)]]
+		set(ct.plot, ct.plot[,which(group=='A')], 'group', 'cART initiated')
+		set(ct.plot, ct.plot[,which(group=='U')], 'group', 'Undiagnosed')
+		set(ct.plot, ct.plot[,which(group=='D')], 'group', 'Diagnosed')
+		set(ct.plot, NULL, 'group', ct.plot[, factor(group, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
+		ggplot(ct.plot, aes(x=t.period, y=n, group=interaction(factor2,cgroup), colour=factor2, shape=cgroup)) + geom_point(size=1.5) +			
+				facet_grid(. ~ factor2, margins=FALSE)
+	}
+	#	get data into format to build a censoring model per risk group
+	ct		<- dcast.data.table(ct, stat + t.period + risk + factor + factor2 ~ cgroup, value.var="n")
+	ctm		<- copy(ct)
+	ctm[, d03:= c3/c0]
+	ctm[, d32:= c2/c3]
+	ctm		<- melt(subset(ctm, select=c(stat, t.period, risk, factor, factor2, d03, d32)), measure.vars=c('d03','d32'), value.name='p.cens')
+	set(ctm, NULL, 't.period', ctm[, as.numeric(t.period)])
+	ctm		<- subset(ctm, !is.na(p.cens))
+	if(!is.na(plot.file))
+	{
+		ggplot(ctm, aes(x=t.period, y=p.cens, colour=factor2, shape=variable)) + geom_point(size=1.5) +			
+				facet_grid(. ~ factor2, margins=FALSE)
+	}
+	#	censoring model per risk group
+	#	TODO extend to age groups
+	setkey(ct, factor2, t.period)
+	ct[, p.cens:=1.]	
+	#	Beta model on censoring for U and UAna combined
+	tmp		<- subset(ctm, factor2%in%c('U','UAna'))
+	set(tmp, tmp[, which(p.cens==1.)], 'p.cens', 0.999999 )
+	tmp2	<- gamlss(p.cens~t.period, data=as.data.frame(tmp), family=BE)
+	tmp		<- predict(tmp2, newdata=data.frame(t.period=0:3), data=as.data.frame(tmp), type='response')
+	set(ct, ct[, which(factor2=='U')], 'p.cens', tmp)
+	set(ct, ct[, which(factor2=='UAna')], 'p.cens', tmp)
+	#	Beta model on censoring for UA
+	tmp		<- subset(ctm, factor2%in%c('UA'))
+	set(tmp, tmp[, which(p.cens==1.)], 'p.cens', 0.999999 )	
+	tmp2	<- gamlss(p.cens~t.period, data=as.data.frame(tmp), family=BE)
+	tmp		<- predict(tmp2, newdata=data.frame(t.period=0:3), data=as.data.frame(tmp), type='response')
+	set(ct, ct[, which(factor2=='UA')], 'p.cens', tmp)
+	#
+	#
+	ct		<- subset(ct, select=c(stat, t.period, risk, factor, factor2, p.cens))
+	ct
+}	
+######################################################################################
+project.athena.Fisheretal.censoring.explore<- function()
+{
+	require(data.table)	
+	require(reshape2)
+	require(grid)
+	require(ggplot2)
+	require(gamlss)
+	
+	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3kaH_tablesSEQ_m2Bwmx.tp4.R'
+	load(file)
+	ct		<- ans$cens.table.all
+	ct.p	<- project.athena.Fisheretal.censoring.model(ct, plot.file=NA)
+	ct.p
+	
+}
+######################################################################################
 project.athena.Fisheretal.sensitivity.gettables<- function()
 {
 	require(data.table)
@@ -11046,7 +11128,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Bwmx.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.2
+		method.minQLowerU		<- 0.01
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
