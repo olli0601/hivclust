@@ -4867,6 +4867,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			ans$YX			<- YX
 			ans$risk.table	<- X.tables$risk.table
 			ans$cens.table	<- X.tables$cens.table
+			ans$cens.table.all	<- X.tables$cens.table.all
 			ans$adj.seq		<- X.tables$adj.seq
 			ans$adj.clu		<- X.tables$adj.clu
 			ans$adj.cens.seq<- X.tables$adj.cens.seq
@@ -8697,7 +8698,7 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.su.N","ART.su.Y","ART.vlNA")
 	factors			<- rbind(factors, data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Bt'))
 	#
-	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.412, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
+	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )	
 	#	m2Bwmx
@@ -8749,7 +8750,7 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
 	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)	
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)	
 	#	m2Bwmx
 	#	3kaH5			(ART.C)
 	method.DENOM	<- 'SEQ'
@@ -8759,7 +8760,7 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
 	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)	
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)	
 	#	m2Bwmx
 	#	3kaH2			(ART.C)
 	method.DENOM	<- 'SEQ'
@@ -8769,7 +8770,7 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
 	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)	
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)	
 	#	m2Bwmx
 	#	3kaH1			(ART.C)
 	method.DENOM	<- 'SEQ'
@@ -8779,7 +8780,7 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
 	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)		
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)		
 	#	m2Bwmx
 	#	3kaC			(ART.C)
 	method.DENOM	<- 'SEQ'
@@ -9065,7 +9066,7 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 		run.tp		<- subset(run.tp, grepl(method.WEIGHT,method.risk) )
 	if(is.null(tperiod.info))
 	{
-		tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.412, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
+		tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
 		set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
 		set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )		
 	}		
@@ -9134,8 +9135,20 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 			})
 }
 ######################################################################################
-project.athena.Fisheretal.censoring.model<- function(ct, plot.file=NA)
+project.athena.Fisheretal.censoring.model<- function(ct, plot.file=NA, factors=NULL, tperiod.info=NULL)
 {
+	if(!is.null(factors))
+		setnames(factors, 'factor', 'factor2')
+	if(!is.na(plot.file))
+	{		
+		theme.cascade <- function (base_size = 12, base_family = "") 
+		{
+			theme_grey(base_size = base_size, base_family = base_family) %+replace% 
+					theme(	legend.key.size=unit(11,'mm'), 
+							axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5))
+		}		
+		theme_set(theme.cascade())	
+	}
 	set(ct, ct[, which(grepl('c3',stat) & t.period>3)], c('n','sum','p'), NA_real_)
 	set(ct, ct[, which(grepl('c2',stat) & t.period>2)], c('n','sum','p'), NA_real_)
 	set(ct, ct[, which(grepl('c1',stat) & t.period>1)], c('n','sum','p'), NA_real_)
@@ -9145,36 +9158,40 @@ project.athena.Fisheretal.censoring.model<- function(ct, plot.file=NA)
 	set(ct, ct[, which(grepl('c1',stat))], 'cgroup', 'c1')
 	tmp		<- ct[, which(grepl('c[0-9]',stat))]
 	set(ct, tmp, 'stat', ct[tmp, substr(stat, 1, nchar(stat)-3)])
-	ct		<- subset( ct, stat=='X.msm' & cgroup!='c1', c(stat, t.period, cgroup, risk, factor, factor2, n))
-	#
-	#
-	if(!is.na(plot.file))
-	{
-		ct.plot	<- copy(ct)
-		ct.plot[, group:=ct.plot[, substr(factor, 1, 1)]]
-		set(ct.plot, ct.plot[,which(group=='A')], 'group', 'cART initiated')
-		set(ct.plot, ct.plot[,which(group=='U')], 'group', 'Undiagnosed')
-		set(ct.plot, ct.plot[,which(group=='D')], 'group', 'Diagnosed')
-		set(ct.plot, NULL, 'group', ct.plot[, factor(group, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
-		ggplot(ct.plot, aes(x=t.period, y=n, group=interaction(factor2,cgroup), colour=factor2, shape=cgroup)) + geom_point(size=1.5) +			
-				facet_grid(. ~ factor2, margins=FALSE)
-	}
+	ct		<- subset( ct, stat=='X.msm', c(stat, t.period, cgroup, risk, factor, factor2, n))
 	#	get data into format to build a censoring model per risk group
 	ct		<- dcast.data.table(ct, stat + t.period + risk + factor + factor2 ~ cgroup, value.var="n")
 	ctm		<- copy(ct)
 	ctm[, d03:= c3/c0]
 	ctm[, d32:= c2/c3]
-	ctm		<- melt(subset(ctm, select=c(stat, t.period, risk, factor, factor2, d03, d32)), measure.vars=c('d03','d32'), value.name='p.cens')
-	set(ctm, NULL, 't.period', ctm[, as.numeric(t.period)])
+	ctm[, d21:= c1/c2]
+	ctm		<- melt(subset(ctm, select=c(stat, t.period, risk, factor, factor2, d03, d32, d21)), measure.vars=c('d03','d32','d21'), value.name='p.cens')	
 	ctm		<- subset(ctm, !is.na(p.cens))
+	set(ctm, NULL, 't.period', ctm[, as.numeric(t.period)])
+	tmp		<- ctm[, which(variable=='d32')]
+	set(ctm, tmp, 't.period', ctm[tmp, t.period+1])
+	tmp		<- ctm[, which(variable=='d21')]
+	set(ctm, tmp, 't.period', ctm[tmp, t.period+2])
+	#
 	if(!is.na(plot.file))
 	{
-		ggplot(ctm, aes(x=t.period, y=p.cens, colour=factor2, shape=variable)) + geom_point(size=1.5) +			
-				facet_grid(. ~ factor2, margins=FALSE)
+		ct.plot		<- copy(ctm)		
+		ct.plot		<- merge( ct.plot, factors, by='factor2')
+		set(ct.plot, ct.plot[,which(variable=='d03')], 'variable', 'censored\ntime period 4')
+		set(ct.plot, ct.plot[,which(variable=='d32')], 'variable', 'censored\ntime period 3, 4')
+		set(ct.plot, ct.plot[,which(variable=='d21')], 'variable', 'censored\ntime period 2, 3, 4')
+		set(ct.plot, NULL, 'variable', ct.plot[, factor(variable, levels=c('censored\ntime period 4','censored\ntime period 3, 4','censored\ntime period 2, 3, 4'))])		
+		ggplot(ct.plot, aes(x=t.period, y=p.cens, colour=factor.legend, shape=variable)) + geom_point(size=3) +
+				labs(x='', y='fraction of potential transmission intervals in cohort\nthat are not censored',shape='pseudo\ncensoring') +
+				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +
+				facet_grid(. ~ factor.legend, margins=FALSE)
+		file		<- paste(plot.file,'_censoringfraction.pdf',sep='')
+		ggsave(file=file, w=25, h=8)		
 	}
-	#	censoring model per risk group
+	#	censoring model per risk group	
 	#	TODO extend to age groups
 	setkey(ct, factor2, t.period)
+	ctm		<- subset(ctm, variable%in%c('d32','d03'))
 	ct[, p.cens:=1.]	
 	#	Beta model on censoring for U and UAna combined
 	tmp		<- subset(ctm, factor2%in%c('U','UAna'))
@@ -9185,11 +9202,32 @@ project.athena.Fisheretal.censoring.model<- function(ct, plot.file=NA)
 	set(ct, ct[, which(factor2=='UAna')], 'p.cens', tmp)
 	#	Beta model on censoring for UA
 	tmp		<- subset(ctm, factor2%in%c('UA'))
-	set(tmp, tmp[, which(p.cens==1.)], 'p.cens', 0.999999 )	
+	set(tmp, tmp[, which(p.cens==1.)], 'p.cens', 0.9999 )	
 	tmp2	<- gamlss(p.cens~t.period, data=as.data.frame(tmp), family=BE)
 	tmp		<- predict(tmp2, newdata=data.frame(t.period=0:3), data=as.data.frame(tmp), type='response')
 	set(ct, ct[, which(factor2=='UA')], 'p.cens', tmp)
+	ct[, c:= ct[, c0/p.cens]]
+	ct		<- merge(ct, ct[, list(risk=risk, factor2=factor2, p=round(c/sum(c),d=4)), by='t.period'], by=c('t.period','risk','factor2'))
 	#
+	if(!is.na(plot.file))
+	{
+		ct.plot		<- copy(ct)				
+		ct.plot		<- melt(ct.plot, measure.vars=c('c0','c3','c2','c'), variable.name='cgroup', value.name='n')
+		ct.plot		<- merge( ct.plot, factors, by='factor2')
+		ct.plot		<- merge( ct.plot, tperiod.info, by='t.period')
+		ct.plot[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
+		set(ct.plot, ct.plot[,which(cgroup=='c0')], 'cgroup', 'data')
+		set(ct.plot, ct.plot[,which(cgroup=='c3')], 'cgroup', 'censored\ntime period 4')
+		set(ct.plot, ct.plot[,which(cgroup=='c2')], 'cgroup', 'censored\ntime period 3, 4')
+		set(ct.plot, ct.plot[,which(cgroup=='c')], 'cgroup', 'data adjusted\nfor censoring')
+		set(ct.plot, NULL, 'cgroup', ct.plot[, factor(cgroup, levels=c('data','censored\ntime period 4','censored\ntime period 3, 4','data adjusted\nfor censoring'))])
+		ggplot(ct.plot, aes(x=t.period.long, y=n, colour=factor.legend, shape=cgroup)) + geom_point(size=3) +
+				labs(x='', y='potential transmission intervals in cohort\n(person-years)',shape='pseudo\ncensoring and\ndata adjusted\nfor censoring') +
+				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +	
+				facet_grid(. ~ factor.legend, margins=FALSE)
+		file		<- paste(plot.file,'_censoringmodel.pdf',sep='')
+		ggsave(file=file, w=25, h=8)		
+	}
 	#
 	ct		<- subset(ct, select=c(stat, t.period, risk, factor, factor2, p.cens))
 	ct
@@ -9202,12 +9240,92 @@ project.athena.Fisheretal.censoring.explore<- function()
 	require(grid)
 	require(ggplot2)
 	require(gamlss)
+	require(RColorBrewer)
 	
-	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3kaH_tablesSEQ_m2Bwmx.tp4.R'
-	load(file)
-	ct		<- ans$cens.table.all
-	ct.p	<- project.athena.Fisheretal.censoring.model(ct, plot.file=NA)
-	ct.p
+	resume					<- 1 
+	t.period				<- 1/8
+	indir					<- paste(DATA,"fisheretal",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
+	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013"
+	outfile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_2011"
+	runs.opt				<- expand.grid(method.brl=c('3kaH','3kaH1','3kaH2','3kaH5'), method.denom='SEQ', method.risk=paste('m2Bwmx.tp',1:4,sep=''))
+	runs.opt				<- as.data.table(runs.opt)
+	runs.opt[, file:= paste(indir,'/',infile,'_Yscore',method.brl,'_tables',method.denom,'_',method.risk,'.R',sep='')]
+	#
+	#	set up cens.table
+	#
+	cens.tables	<- runs.opt[,	{
+									cat(paste('\nprocess file=',file))
+									tmp	<- load(file)
+									ans	<- ans$cens.table.all
+									ans[, method.risk:=method.risk]
+									ans[, method.brl:=method.brl ]
+									ans[, method.denom:=method.denom]									
+									ans
+								},by='file']
+	cens.tables[, file:=NULL]
+	set(cens.tables, NULL, 'n', cens.tables[, n/8])
+	#
+	#	set up factor legends
+	#
+	factor.color	<- c("#990000","#EF6548","#FDBB84","#0570B0","#74A9CF","#7A0177","#F768A1","#FCC5C0","#005824","#41AB5D","#ADDD8E")
+	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
+			'Undiagnosed,\n Chronic infection\n at diagnosis',
+			'Undiagnosed,\n Unknown if recent',
+			'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+			'Diagnosed,\n CD4 progression to\n >500',
+			'Diagnosed,\n CD4 progression to\n [351-500]',
+			'Diagnosed,\n CD4 progression to\n <=350',			
+			'Diagnosed,\n Unknown CD4',
+			'cART initiated,\n no viral suppression',
+			'cART initiated,\n viral suppression',
+			'cART initiated,\n Unknown viral load'				)
+	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")
+	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Bwmx')
+	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
+			'Undiagnosed,\n Chronic infection\n at diagnosis',
+			'Undiagnosed,\n Unknown if recent',
+			'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+			'Diagnosed,\n CD4 progression to\n >500',
+			'Diagnosed,\n CD4 progression to\n [351-500]',
+			'Diagnosed,\n CD4 progression to\n <=350',			
+			'Diagnosed,\n Unknown CD4',
+			'cART initiated,\n no viral suppression',
+			'cART initiated,\n viral suppression',
+			'cART initiated,\n Unknown viral load'				)	
+	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.su.N","ART.su.Y","ART.vlNA")
+	factors			<- rbind(factors, data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Bt'))	
+	factor.long	<- c("<20","20-24","25-29","30-34","35-39","40-44","45-")
+	factor.color<- brewer.pal(length(factor.long), 'RdBu')	
+	tmp			<- c("t<=20","t<=25","t<=30","t<=35","t<=40","t<=45","t<=100")
+	factors		<- rbind(factors, data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m5.tAc'))
+	#
+	#	set up t.period
+	#
+	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
+	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
+	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )
+	
+	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3kaH')	
+	setkey(ct, stat, t.period, risk, factor)
+	ct			<- unique(ct)
+	tmp			<- subset(factors, method.risk=='m2Bwmx')
+	plot.file	<- paste(outdir, '/', outfile, '_', ct[1,method.denom], '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
+	ct.p.H		<- project.athena.Fisheretal.censoring.model(ct, plot.file=plot.file, factors=tmp, tperiod.info=tperiod.info)
+	
+	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3kaH1')	
+	setkey(ct, stat, t.period, risk, factor)
+	ct			<- unique(ct)
+	tmp			<- subset(factors, method.risk=='m2Bwmx')
+	plot.file	<- paste(outdir, '/', outfile, '_', ct[1,method.denom], '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
+	ct.p.H1		<- project.athena.Fisheretal.censoring.model(ct, plot.file=plot.file, factors=tmp, tperiod.info=tperiod.info)
+	
+	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3kaH2')	
+	setkey(ct, stat, t.period, risk, factor)
+	ct			<- unique(ct)
+	tmp			<- subset(factors, method.risk=='m2Bwmx')
+	plot.file	<- paste(outdir, '/', outfile, '_', ct[1,method.denom], '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
+	ct.p.H2		<- project.athena.Fisheretal.censoring.model(ct, plot.file=plot.file, factors=tmp, tperiod.info=tperiod.info)
 	
 }
 ######################################################################################
@@ -9644,7 +9762,8 @@ project.athena.Fisheretal.sensitivity<- function()
 		runs.table[, file:=NULL]
 		set(runs.table, NULL, 'n', runs.table[, n*t.period])		
 		file			<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.table.R", sep='')
-		save(runs.table, file=file)			
+		save(runs.table, file=file)		
+		
 	}
 	
 	file<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_Wed_Dec_18_11:37:00_2013_Yscore3da_model2_m2Bwmx.tp1.cens.R"
