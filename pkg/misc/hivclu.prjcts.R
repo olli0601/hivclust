@@ -303,7 +303,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 	#input files generated with "project.hivc.Excel2dataframe"
 	resume			<- 0
 	verbose			<- 1
-	if(0)
+	if(1)
 	{
 		file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
 		file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patient.R",sep='/')
@@ -312,7 +312,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		file.treatment	<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
 		file.out		<- paste(dir.name,"derived/ATHENA_2013_03_AllSeqPatientCovariates.R",sep='/')
 	}
-	if(1)
+	if(0)
 	{
 		file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences_AllMSM.R",sep='/')
 		file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patient_AllMSM.R",sep='/')
@@ -1184,7 +1184,7 @@ project.hivc.Excel2dataframe.Regimen.CheckARTStartDate<- function(dir.name= DATA
 project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 {
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu.csv",sep='/')
-	file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.csv",sep='/')
+	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.csv",sep='/')
 	NA.time			<- c("","01/01/1911","11/11/1911","24/06/1923")		
 	verbose			<- 1
 	#read CD4 csv data file and preprocess
@@ -1325,7 +1325,10 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	df		<- unique(df)
 	setkey(df, Patient, PosCD4)
 	tmp		<- which(duplicated(df))	
-	tmp		<- sapply(tmp, function(i) c(i-1,i)[ which.min(df[c(i-1,i),Source]) ] )
+	if('Source'%in%colnames(df))
+		tmp		<- sapply(tmp, function(i) c(i-1,i)[ which.min(df[c(i-1,i), Source]) ] )
+	if(!'Source'%in%colnames(df))
+		tmp		<- sapply(tmp, function(i) c(i-1,i)[ which.max(df[c(i-1,i), CD4A]) ] )
 	if(verbose) cat(paste("\nnumber of duplicated entries by Patient, PosCD4, DELETE WITH LOWER SOURCE n=",length(tmp)))
 	df		<- df[-tmp,]
 	#

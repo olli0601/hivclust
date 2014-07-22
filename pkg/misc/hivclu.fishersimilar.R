@@ -372,7 +372,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 		}
 		if(all(substr(method,1,2)!=c('3c','3d','3e','3f','3g','3i','3j','3k')))	stop('brlweight: method not supported')		
 		#	U [0,1]: prob that pot transmitter is still infected at time t. Needed to determine time of infection for transmitter (as quantile of the surival distribution)
-		Y.U						<- project.athena.Fisheretal.Y.infectiontime(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.min=0.01, score.set.value=NA, method='for.transmitter')
+		Y.U						<- project.athena.Fisheretal.Y.infectiontime(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter')
 		#	COAL [0,1]: prob that coalescence is within the transmitter
 		Y.coal					<- NULL
 		if(!is.null(cluphy) & !is.null(cluphy.info) & !is.null(cluphy.map.nodectime)  )
@@ -1810,12 +1810,14 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	df.scaym.cd4	<- subset( df.sc.negT, ( isAcute=='Maybe' ) & mp.NegT>0 & AnyPos_y>adjust.AnyPos_y & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)	
 	#	seroconverters with chronic infection at diagnosis
 	df.scchr.negT	<- subset( df.sc.negT, isAcute=='No' & AnyPos_y>adjust.AnyPos_y)
+	df.scana.negT	<- subset( df.sc.negT, is.na(isAcute) & AnyPos_y>adjust.AnyPos_y)
 	#	seroconverters with chronic infection at diagnosis and 1st CD4 count within 1 year after diagnosis and before ART
 	df.scchr.cd4	<- subset( df.scchr.negT, dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
-	
+	df.scana.cd4	<- subset( df.scana.negT, dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
 	
 	m4a	<- glm.nb(mp.NegT ~  1, data=subset(df.scchr.cd4, CD4_T1>850 & dt.NegT<4), link=identity, trace= 1, maxit= 50)	
-	m4d	<- glm.nb(mp.NegT ~  AnyPos_a, data=subset(df.scchr.negT, AnyPos_a<=45), link=identity, trace= 1, maxit= 50)		
+	m4d	<- glm.nb(mp.NegT ~  AnyPos_a, data=subset(df.scchr.negT, AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
+	m4e	<- glm.nb(mp.NegT ~  AnyPos_a, data=subset(df.scana.negT, AnyPos_a<=45), link=identity, trace= 1, maxit= 50)	
 	m4b	<- glm.nb(mp.NegT ~  AnyPos_a+0+offset(rep(m4d$coefficients["(Intercept)"],length(mp.NegT))), data=subset(df.scchr.cd4, CD4_T1<=850 & CD4_T1>250 & AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
 	m4c	<- glm.nb(mp.NegT ~  AnyPos_a+0+offset(rep(m4d$coefficients["(Intercept)"],length(mp.NegT))), data=subset(df.scchr.cd4, CD4_T1<250 & AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
 	#plots
@@ -1887,6 +1889,23 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		df.scchr.cd4[, q2.5:=NULL]
 		df.scchr.cd4[, q97.5:=NULL]
 	}
+	if(0)
+	{
+		df.scana.cd4[, mpy.NegT:= mp.NegT/365.25]
+		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(CD4_T1, degree=7)'), sigma.formula=as.formula('~ bs(CD4_T1, degree=3)'), data=as.data.frame(subset(df.scana.cd4, select=c(mpy.NegT, CD4_T1))), family=GA)		 
+		df.scana.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
+		tmp	<- gamlss.centiles.get(tmp, df.scana.cd4$CD4_T1, cent = c(2.5, 97.5) )
+		df.scana.cd4	<- cbind(df.scana.cd4, tmp)
+		ggplot(df.scana.cd4, aes(x=CD4_T1, y=mpy.NegT)) + 
+				geom_point() + scale_y_continuous(limits=c(0,11), breaks=seq(0,10,2)) +			
+				geom_line(aes(y=y.b), colour='blue') +
+				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+				labs(x="1st CD4 count after diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)')		
+		df.scana.cd4[, y.b:=NULL]
+		df.scana.cd4[, x:=NULL]
+		df.scana.cd4[, q2.5:=NULL]
+		df.scana.cd4[, q97.5:=NULL]		
+	}
 	if(!is.na(plot.file))
 	{	
 		set(df.scchr.cd4, NULL, 'CD4_T1c', df.scchr.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
@@ -1905,7 +1924,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		df.scchr.cd4[, y.b:=NULL]
 		df.scchr.cd4[, x:=NULL]
 		df.scchr.cd4[, q2.5:=NULL]
-		df.scchr.cd4[, q97.5:=NULL]
+		df.scchr.cd4[, q97.5:=NULL]	
 	}
 	if(!is.na(plot.file))
 	{
@@ -2022,7 +2041,9 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		t.period	<- 1/64
 		b4care		<- do.call('rbind', list(	subset(df.scay.cd4, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
 												subset(df.scaym.cd4, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
-												subset(df.scchr.cd4, AnyPos_a>35.0 & AnyPos_a<35.99, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,]	))
+												subset(df.scchr.cd4, AnyPos_a>35.0 & AnyPos_a<35.99, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(df.scana.cd4, AnyPos_a>35.0 & AnyPos_a<35.99, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,]
+												))
 		set(b4care, NULL, 'DateBorn', hivc.db.Date2numeric(b4care[,DateBorn]))
 		set(b4care, NULL, 'AnyPos_T1', hivc.db.Date2numeric(b4care[,AnyPos_T1]))
 		set(b4care, NULL, 'NegT', NA_real_)
@@ -2033,7 +2054,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		set(b4care, NULL, 'ts', b4care[, floor(ts) + round( (ts%%1)*100 %/% (t.period*100) ) * t.period ] )
 		set(b4care, NULL, 'te', b4care[, floor(te) + round( (te%%1)*100 %/% (t.period*100) ) * t.period - t.period] )	#last time undiagnosed is just before first time period diagnosed		
 		tmp			<- predict.t2inf(seq(0,10,t.period)*365, b4care, t2inf.args)	
-		tmp			<- merge( subset( tmp, score>0.01 ), subset(b4care, select=c(Patient,isAcute,ts,te)), by='Patient' )
+		tmp			<- merge( subset( tmp, !is.na(score) ), subset(b4care, select=c(Patient,isAcute,ts,te)), by='Patient' )
 		set(tmp, NULL, 'q', tmp[,q/365])
 		labels		<- c(	'Acute HIV infection at diagnosis',
 							'Potentially acute HIV infection at diagnosis',
@@ -5050,6 +5071,20 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])	
+			#	get number of recipients per time period			
+			ans$cens.Patient.n	<- do.call('rbind',list( 	
+											YX[, list(stat='YX', Patient.n=length(unique(Patient))), by='t.period'],
+											X.clu[, list(stat='X.clu', Patient.n=length(unique(Patient))), by='t.period'],
+											X.den[, list(stat='X.seq', Patient.n=length(unique(Patient))), by='t.period'],
+											X.msm[, list(stat='X.msm', Patient.n=length(unique(Patient))), by='t.period']	))
+			#	get diagnosis times of transmitters for each stage
+			ans$cens.AnyPos_T1	<- risk.df[,	{
+												tmp	<- subset( X.msm[ which(X.msm[[risk]]==factor), ], select=c(t.Patient, t.AnyPos_T1))
+												setkey(tmp, t.Patient)			
+												tmp	<- unique(tmp)
+												tmp[[risk]]	<- factor
+												tmp
+											}, by='risk']
 			#	cens.table for all potential transmitters
 			cens.table		<- do.call('rbind',list(
 							risk.df[,	{
@@ -5072,19 +5107,19 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			cens.tmax		<- tperiod.info[, rev(t.period.max)[2]]
 			tmp				<- do.call('rbind',list(
 							risk.df[,	{
-										z	<- table( subset(YX, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(YX, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX.c3')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( subset(X.clu, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(X.clu, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu.c3')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( subset(X.den, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(X.den, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq.c3')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( subset(X.msm, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(X.msm, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm.c3')
 									},by='risk']))
 			cens.table		<- rbind(cens.table, tmp)
@@ -5092,19 +5127,19 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			cens.tmax		<- tperiod.info[, rev(t.period.max)[3]]
 			tmp				<- do.call('rbind',list(
 							risk.df[,	{
-										z	<- table( subset(YX, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(YX, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX.c2')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( subset(X.clu, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(X.clu, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu.c2')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( subset(X.den, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(X.den, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq.c2')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( subset(X.msm, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(X.msm, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm.c2')
 									},by='risk']))
 			cens.table		<- rbind(cens.table, tmp)
@@ -5112,19 +5147,19 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			cens.tmax		<- tperiod.info[, rev(t.period.max)[4]]
 			tmp				<- do.call('rbind',list(
 							risk.df[,	{
-										z	<- table( subset(YX, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(YX, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX.c1')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( subset(X.clu, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(X.clu, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu.c1')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( subset(X.den, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(X.den, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq.c1')												
 									},by='risk'],
 							risk.df[,	{
-										z	<- table( subset(X.msm, t.AnyPos_T1<=cens.tmax & AnyPos_T1<=cens.tmax)[, risk, with=FALSE], useNA='ifany')
+										z	<- table( subset(X.msm, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm.c1')
 									},by='risk']))
 			cens.table	<- rbind(cens.table, tmp)			
@@ -7893,7 +7928,7 @@ project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, l
 	viro
 }
 ######################################################################################
-project.athena.Fisheretal.Y.infectiontime<- function(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=0.25, ts.min=1980, score.min=0.2, score.set.value=1, method.infectiontime='for.infected')
+project.athena.Fisheretal.Y.infectiontime<- function(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=0.25, ts.min=1980, score.set.value=1, method.infectiontime='for.infected')
 {
 	#ts.min=1980; score.min=0.01; score.set.value=1
 	stopifnot(method.infectiontime%in%c('for.infected','for.transmitter'))
@@ -7902,7 +7937,7 @@ project.athena.Fisheretal.Y.infectiontime<- function(YX.tpairs, df.all, predict.
 	if(method.infectiontime=='for.transmitter')
 		b4care	<- merge(data.table(Patient=YX.tpairs[, unique(t.Patient)]), unique(subset(df.all, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1, AnyT_T1))), by='Patient')
 	#
-	tmp		<- b4care[, list(AnyPos_a=AnyPos_T1-DateBorn, ts=ifelse(is.na(NegT), AnyPos_T1-10, NegT), te=AnyPos_T1), by='Patient']
+	tmp		<- b4care[, list(AnyPos_a=AnyPos_T1-DateBorn, ts=ifelse(is.na(NegT), AnyPos_T1-10, NegT), te=AnyPos_T1), by='Patient']	#the cut off below is for NA below the minQLowerU quantile, which is calibrated to 1 year. So it is either NegT or the quantile, whichever is shorter
 	b4care	<- merge(b4care, tmp, by='Patient')
 	#check if ts before 1980 and if so clip
 	set(b4care, b4care[,which(ts<ts.min)], 'ts', ts.min )	
@@ -7910,7 +7945,7 @@ project.athena.Fisheretal.Y.infectiontime<- function(YX.tpairs, df.all, predict.
 	set(b4care, NULL, 'te', b4care[, floor(te) + round( (te%%1)*100 %/% (t.period*100) ) * t.period - t.period] )	#last time undiagnosed is just before first time period diagnosed
 	#apply predict.t2inf	
 	t2inf	<- predict.t2inf(seq(0,10,t.period)*365, b4care, t2inf.args)
-	t2inf	<- merge( subset( t2inf, score>score.min ), subset(b4care, select=c(Patient,ts,te)), by='Patient' )
+	t2inf	<- merge( subset( t2inf, !is.na(score)), subset(b4care, select=c(Patient,ts,te)), by='Patient' )
 	set(t2inf, NULL, 'q', t2inf[,te-q/365])
 	t2inf	<- subset(t2inf, ts<=q, c(Patient, q, score))
 	b4care	<- merge(t2inf, subset(b4care, select=c(Patient, AnyPos_T1, AnyPos_a, isAcute)), by='Patient')
@@ -8557,9 +8592,10 @@ project.athena.Fisheretal.compositioncoal<- function()
 project.athena.Fisheretal.compositionacute<- function()
 {
 	tmp<- df.all
+	tmp<- df.all.allmsm
 	setkey(tmp, Patient)
 	tmp<- unique(tmp)
-	tmp<- subset(tmp, AnyPos_T1>1996.6 & AnyPos_T1<2013.025, select=c(Patient, isAcute, AnyPos_T1))
+	tmp<- subset(tmp, AnyPos_T1>1996.6 & AnyPos_T1<2011, select=c(Patient, isAcute, AnyPos_T1))
 	set(tmp, tmp[, which(is.na(isAcute))],'isAcute', 'Missing')
 	
 	ggplot(tmp, aes(x=AnyPos_T1, fill=isAcute, colour=isAcute)) + geom_bar(aes(y=..count../sum(..count..)), binwidth=1, position='dodge')
@@ -8656,11 +8692,13 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	require(ggplot2)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_140714",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140714",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
+	indir					<- paste(DATA,"fisheretal_140722",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140722",sep='/')	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
-	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
+	insignat				<- "Wed_Dec_18_11:37:00_2013"	
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
@@ -9163,24 +9201,39 @@ project.athena.Fisheretal.censoring.model<- function(ct, plot.file=NA, factors=N
 	ct		<- dcast.data.table(ct, stat + t.period + risk + factor + factor2 ~ cgroup, value.var="n")
 	ctm		<- copy(ct)
 	ctm[, d03:= c3/c0]
+	ctm[, d02:= c2/c0]
+	ctm[, d01:= c1/c0]
 	ctm[, d32:= c2/c3]
+	ctm[, d31:= c1/c3]
 	ctm[, d21:= c1/c2]
-	ctm		<- melt(subset(ctm, select=c(stat, t.period, risk, factor, factor2, d03, d32, d21)), measure.vars=c('d03','d32','d21'), value.name='p.cens')	
+	ctm		<- melt(subset(ctm, select=c(stat, t.period, risk, factor, factor2, d03, d32, d31, d02, d21, d01)), measure.vars=c('d03','d32','d31','d02','d21','d01'), value.name='p.cens')	
 	ctm		<- subset(ctm, !is.na(p.cens))
 	set(ctm, NULL, 't.period', ctm[, as.numeric(t.period)])
 	tmp		<- ctm[, which(variable=='d32')]
 	set(ctm, tmp, 't.period', ctm[tmp, t.period+1])
 	tmp		<- ctm[, which(variable=='d21')]
 	set(ctm, tmp, 't.period', ctm[tmp, t.period+2])
-	#
+	tmp		<- ctm[, which(variable=='d02')]
+	set(ctm, tmp, 't.period', ctm[tmp, t.period+1])
+	tmp		<- ctm[, which(variable=='d01')]
+	set(ctm, tmp, 't.period', ctm[tmp, t.period+2])
+	
+	if(1)
+	{
+		subset(ctm, variable=='d02')
+	}
+	#	hist(subset(X.clu, AnyPos_T1<2008.265 & CD4b.tperiod=='U.2')[, t.AnyPos_T1])
+	#	hist(subset(X.clu, AnyPos_T1<2008.265 & CD4b.tperiod=='UA.2')[, t.AnyPos_T1])
 	if(!is.na(plot.file))
 	{
-		ct.plot		<- copy(ctm)		
+		ct.plot		<- copy(ctm)	
+		ct.plot		<- subset(ct.plot, variable%in%c('d03','d02'))
 		ct.plot		<- merge( ct.plot, factors, by='factor2')
 		set(ct.plot, ct.plot[,which(variable=='d03')], 'variable', 'censored\ntime period 4')
-		set(ct.plot, ct.plot[,which(variable=='d32')], 'variable', 'censored\ntime period 3, 4')
-		set(ct.plot, ct.plot[,which(variable=='d21')], 'variable', 'censored\ntime period 2, 3, 4')
-		set(ct.plot, NULL, 'variable', ct.plot[, factor(variable, levels=c('censored\ntime period 4','censored\ntime period 3, 4','censored\ntime period 2, 3, 4'))])		
+		set(ct.plot, ct.plot[,which(variable=='d02')], 'variable', 'censored\ntime period 3, 4')
+		#set(ct.plot, ct.plot[,which(variable=='d01')], 'variable', 'censored\ntime period 2, 3, 4')
+		#set(ct.plot, NULL, 'variable', ct.plot[, factor(variable, levels=c('censored\ntime period 4','censored\ntime period 3, 4','censored\ntime period 2, 3, 4'))])
+		set(ct.plot, NULL, 'variable', ct.plot[, factor(variable, levels=c('censored\ntime period 4','censored\ntime period 3, 4'))])
 		ggplot(ct.plot, aes(x=t.period, y=p.cens, colour=factor.legend, shape=variable)) + geom_point(size=3) +
 				labs(x='', y='fraction of potential transmission intervals in cohort\nthat are not censored',shape='pseudo\ncensoring') +
 				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +
@@ -9191,21 +9244,24 @@ project.athena.Fisheretal.censoring.model<- function(ct, plot.file=NA, factors=N
 	#	censoring model per risk group	
 	#	TODO extend to age groups
 	setkey(ct, factor2, t.period)
-	ctm		<- subset(ctm, variable%in%c('d32','d03'))
+	#ctm		<- subset(ctm, variable%in%c('d32','d03'))
 	ct[, p.cens:=1.]	
 	#	Beta model on censoring for U and UAna combined
-	tmp		<- subset(ctm, factor2%in%c('U','UAna'))
+	#	use d02 because there is backlog. can use d03 for the first tperiod because not affected by backlog
+	tmp		<- subset(ctm, (variable=='d02' & factor2%in%c('U','UAna')) | (variable=='d03' & t.period==1 & factor2%in%c('U','UAna')))
+	#tmp		<- subset(ctm, variable%in%c('d32','d03') & factor2%in%c('U','UAna'))
 	set(tmp, tmp[, which(p.cens==1.)], 'p.cens', 0.999999 )
 	tmp2	<- gamlss(p.cens~t.period, data=as.data.frame(tmp), family=BE)
 	tmp		<- predict(tmp2, newdata=data.frame(t.period=0:3), data=as.data.frame(tmp), type='response')
 	set(ct, ct[, which(factor2=='U')], 'p.cens', tmp)
 	set(ct, ct[, which(factor2=='UAna')], 'p.cens', tmp)
 	#	Beta model on censoring for UA
-	tmp		<- subset(ctm, factor2%in%c('UA'))
-	set(tmp, tmp[, which(p.cens==1.)], 'p.cens', 0.9999 )	
-	tmp2	<- gamlss(p.cens~t.period, data=as.data.frame(tmp), family=BE)
-	tmp		<- predict(tmp2, newdata=data.frame(t.period=0:3), data=as.data.frame(tmp), type='response')
-	set(ct, ct[, which(factor2=='UA')], 'p.cens', tmp)
+	#	use d02 because there is backlog. can use d03 for the first tperiod because not affected by backlog
+	tmp		<- subset(ctm, (variable=='d02' & factor2%in%c('UA')) | (variable=='d03' & t.period==1 & factor2%in%c('UA')))
+	#	censoring does not go past one time period. gamlss cannot be fitted well. simply use the 0.85 as is
+	tmp		<- subset(ctm, variable=='d02' & factor%in%c('UA.2'))[, p.cens]
+	set(ct, ct[, which(factor=='UA.4')], 'p.cens', tmp)
+	#
 	ct[, c:= ct[, c0/p.cens]]
 	ct		<- merge(ct, ct[, list(risk=risk, factor2=factor2, p=round(c/sum(c),d=4)), by='t.period'], by=c('t.period','risk','factor2'))
 	#
@@ -9327,6 +9383,64 @@ project.athena.Fisheretal.censoring.explore<- function()
 	plot.file	<- paste(outdir, '/', outfile, '_', ct[1,method.denom], '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
 	ct.p.H2		<- project.athena.Fisheretal.censoring.model(ct, plot.file=plot.file, factors=tmp, tperiod.info=tperiod.info)
 	
+	#
+	# illustrate extent of censoring
+	#
+	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_RISEQ_3kaH2_tATHENAmsm.R'
+	tmp		<- load(file)
+	print(tmp)
+	X.msm	<- YX.part1
+	#check tperiod.info
+	X.msm	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
+	
+	subset(X.msm, AnyPos_T1<2008.265)[, table(CD4b.tperiod)/8]
+	subset(X.msm, AnyPos_T1<2009.655)[, table(CD4b.tperiod)/8]
+	hist(subset(X.msm, AnyPos_T1<2008.265 & CD4b.tperiod=='U.2')[, t.AnyPos_T1])
+	hist(subset(X.msm, AnyPos_T1<2009.655 & CD4b.tperiod=='U.3')[, t.AnyPos_T1])
+	#
+	#
+	#
+	ct	<- subset(cens.tables, factor2=='ART.suA.Y')
+	setkey(ct, t.period, risk, factor, method.brl, stat)
+	ct	<- unique(ct)
+	setkey(ct, method.brl, t.period)
+	subset(ct, stat=='X.clu')
+	subset(ct, stat=='X.seq')	
+	#
+	#	debug
+	#
+	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_RISEQ_3kaH_tATHENAseq.R'
+	tmp		<- load(file)
+	X.seq.H	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX.part1, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
+	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_RISEQ_3kaH1_tATHENAseq.R'
+	tmp		<- load(file)
+	X.seq.H1<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX.part1, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
+	
+	
+	X.seq.H[, table(CD4b.tperiod)]
+	X.seq.H1[, table(CD4b.tperiod)]	
+	X.seq.suy.H		<- subset(X.seq.H, CD4b.tperiod=='ART.suA.Y.1')
+	X.seq.suy.H1	<- subset(X.seq.H1, CD4b.tperiod=='ART.suA.Y.1')	
+	tmp	<- setdiff(X.seq.suy.H1[, unique(Patient)], X.seq.suy.H[, unique(Patient)])
+	# [1] "M32793" "M32820" "M32838" "M32871" "M32876" "M32894" "M32901" "M32912" "M32921" "M32925" "M32926" "M32957" "M32958" "M32986" "M33001"
+	#[16] "M33021" "M33028" "M33043" "M33046" "M33058" "M33066" "M33073" "M33080" "M33081" "M33083" "M33093" "M33095" "M33106" "M33113" "M33115"
+	#[31] "M33123" "M33142" "M33147" "M33158" "M33183" "M33187" "M33227" "M33288" "M33298" "M33390" "M33425" "M33447" "M33458" "M33649" "M33736"
+	#[46] "M33967" "M35966"
+	nrow(subset(X.seq.suy.H1, !Patient%in%tmp))
+	
+	subset(X.seq.H, Patient=="M35966")[, length(unique(t.Patient))]
+	subset(X.seq.H1, Patient=="M35966")[, length(unique(t.Patient))]
+	
+	subset(X.seq.H1, Patient=="M35966")[, table(CD4b.tperiod)]
+	subset(X.seq.H, Patient=="M35966")[, table(CD4b.tperiod)]
+	
+	subset(X.seq.H, t.period==1)[, range(AnyPos_T1)]
+	subset(X.seq.H1, t.period==1)[, range(AnyPos_T1)]
+	
+	X.seq.H[, length(unique(Patient))]
+	X.seq.H1[, length(unique(Patient))]
+	X.seq.H[, length(unique(t.Patient))]
+	X.seq.H1[, length(unique(t.Patient))]
 }
 ######################################################################################
 project.athena.Fisheretal.sensitivity.gettables<- function()
@@ -9477,6 +9591,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	resume					<- 1 
 	indir					<- paste(DATA,"fisheretal_140714",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
+	indir					<- paste(DATA,"fisheretal_140722",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140722",sep='/')	
 	#indir					<- paste(DATA,"fisheretal_140616",sep='/')
 	#outdir					<- paste(DATA,"fisheretal_140616",sep='/')	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -10643,7 +10759,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		tmp						<- project.athena.Fisheretal.X.time.diag2firstVLandCD4(df.tpairs, df.all, df.viro, df.immu, t2.care.t1.q=c(0.25,0.5))	
 		X.pt					<- merge( X.pt, tmp, by='t.Patient', all.x=1 )		
 		#	compute infection window of recipient for direct potential transmitters ri	
-		Y.infwindow				<- project.athena.Fisheretal.Y.infectiontime( ri, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.min=0.1, score.set.value=1, method='for.infected')
+		Y.infwindow				<- project.athena.Fisheretal.Y.infectiontime( ri, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=1, method='for.infected')
 		Y.infwindow[, AnyPos_a:=NULL]
 		if('FASTASampleCode'%in%colnames(df.tpairs))		#mode 1
 		{			
@@ -11245,7 +11361,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3k'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Bwmx.tp4'
+		method.risk				<- 'm2Bwmx.tp3'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.01
 		method.PDT				<- 'SEQ'	# 'PDT'		
