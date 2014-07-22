@@ -5082,7 +5082,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 												tmp	<- subset( X.msm[ which(X.msm[[risk]]==factor), ], select=c(t.Patient, t.AnyPos_T1))
 												setkey(tmp, t.Patient)			
 												tmp	<- unique(tmp)
-												tmp[[risk]]	<- factor
+												tmp[[risk]]	<- factor[1]
 												tmp
 											}, by='risk']
 			#	cens.table for all potential transmitters
