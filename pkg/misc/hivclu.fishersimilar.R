@@ -5084,7 +5084,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 												tmp	<- unique(tmp)
 												tmp[[risk]]	<- factor[1]
 												tmp
-											}, by='risk']
+											}, by=c('risk','factor')]
 			#	cens.table for all potential transmitters
 			cens.table		<- do.call('rbind',list(
 							risk.df[,	{
@@ -9301,10 +9301,10 @@ project.athena.Fisheretal.censoring.explore<- function()
 	resume					<- 1 
 	t.period				<- 1/8
 	indir					<- paste(DATA,"fisheretal",sep='/')	
-	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140722",sep='/')
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013"
 	outfile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_2011"
-	runs.opt				<- expand.grid(method.brl=c('3kaH','3kaH1','3kaH2','3kaH5'), method.denom='SEQ', method.risk=paste('m2Bwmx.tp',1:4,sep=''))
+	runs.opt				<- expand.grid(method.brl=c('3kaH','3kaH1','3kaH2'), method.denom='SEQ', method.risk=paste('m2Bwmx.tp',1:4,sep=''))
 	runs.opt				<- as.data.table(runs.opt)
 	runs.opt[, file:= paste(indir,'/',infile,'_Yscore',method.brl,'_tables',method.denom,'_',method.risk,'.R',sep='')]
 	#
@@ -9321,6 +9321,29 @@ project.athena.Fisheretal.censoring.explore<- function()
 								},by='file']
 	cens.tables[, file:=NULL]
 	set(cens.tables, NULL, 'n', cens.tables[, n/8])
+	
+	cens.AnyPos_T1	<- runs.opt[,	{
+										cat(paste('\nprocess file=',file))
+										tmp	<- load(file)
+										ans	<- ans$cens.AnyPos_T1
+										ans[, method.risk:=method.risk]
+										ans[, method.brl:=method.brl ]
+										ans[, method.denom:=method.denom]									
+										ans
+									},by='file']
+	cens.AnyPos_T1[, file:=NULL]				
+	
+	cens.Patient.n	<- runs.opt[,	{
+										cat(paste('\nprocess file=',file))
+										tmp	<- load(file)
+										ans	<- ans$cens.Patient.n
+										ans[, method.risk:=method.risk]
+										ans[, method.brl:=method.brl ]
+										ans[, method.denom:=method.denom]									
+										ans
+									},by='file']
+	cens.Patient.n[, file:=NULL]
+	
 	#
 	#	set up factor legends
 	#
