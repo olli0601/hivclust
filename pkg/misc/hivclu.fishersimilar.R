@@ -2683,9 +2683,9 @@ project.athena.Fisheretal.YX.model5.stratify<- function(YX)
 	gc()
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m5))
-		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, contact, fw.up.med, t.period, w, w.i, w.in, w.t, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, tAc, tiAc, tAc.tperiod, tiAc.tperiod, t.Age, t.RegionHospital  ))	
+		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, contact, fw.up.med, t.period, w, w.i, w.in, w.t, AnyPos_T1, t.AnyPos_T1, t.AnyT_T1, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, tAc, tiAc, tAc.tperiod, tiAc.tperiod, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m5))
-		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, contact, fw.up.med, t.period, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, tAc, tiAc, tAc.tperiod, tiAc.tperiod  ))	
+		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, contact, fw.up.med, t.period, AnyPos_T1, t.AnyPos_T1, t.AnyT_T1, tA, tiA, tA.tperiod, tiA.tperiod, tAb, tiAb, tAb.tperiod, tiAb.tperiod, tAc, tiAc, tAc.tperiod, tiAc.tperiod  ))	
 	gc()
 	YX.m5
 }
