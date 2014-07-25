@@ -317,7 +317,7 @@ project.athena.Fisheretal.tripletweights<- function(Y.score, save.file=NA)
 	triplet.weight
 }
 ######################################################################################
-project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, thresh.pcoal=0.5, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
+project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, thresh.pcoal=0.5, brl.bwhost.multiplier=1, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
 {
 	if(resume && !is.na(save.file))
 	{
@@ -356,9 +356,9 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 		if(substr(method,1,2)=='3j')	#expect central brl	
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)				
 		if(substr(method,1,2)=='3i')	#expect central brl	
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, brl.bwhost.multiplier=brl.bwhost.multiplier, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
 		if(substr(method,1,2)=='3k')	#expect central brl	
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, brl.bwhost.multiplier=brl.bwhost.multiplier, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
 		if(substr(method,1,2)=='3e')	#expect large brl				
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.0175, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
 		if(substr(method,1,2)=='3f')	#expect small brl				
@@ -432,7 +432,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 		return( list(YX=YX, YX.tpairs=YX.tpairs, df.all=df.all, Y.brl=Y.brl, Y.U=Y.U, Y.coal=Y.coal) )
 }
 ######################################################################################
-project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.04, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1.5, plot.file.score=NA, method='3c', plot.file.both=NA, plot.file.one=NA, save.file.3ha=NA)
+project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.04, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1.5, brl.bwhost.multiplier=1, plot.file.score=NA, method='3c', plot.file.both=NA, plot.file.one=NA, save.file.3ha=NA)
 {
 	#brl.linked.max.brlr= 0.01; brl.linked.min.brl= 1e-12; brl.linked.max.dt= 10; brl.linked.min.dt= 1; plot.file.score=NA; method='3aa'; plot.file.both=NA; plot.file.one=NA
 	#	check if Exp model would be reasonable	
@@ -568,9 +568,9 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		set(Y.brl, Y.brl[, which(t.PosSeqT>t.AnyT_T1 & PosSeqT>AnyT_T1)], 'b4T', 'one')		
 		print(Y.brl[,table(b4T)])
 		
-		Y.brl[, score.brl.TPp:= pgamma(Y.brl[,brl], shape=2*mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'], lower.tail=FALSE)]
+		Y.brl[, score.brl.TPp:= pgamma(Y.brl[,brl*brl.bwhost.multiplier], shape=2*mle.ga$estimate['shape'], rate=mle.ga$estimate['rate'], lower.tail=FALSE)]
 		tmp<- Y.brl[, which(b4T=='one')]
-		set(Y.brl, tmp, 'score.brl.TPp', pgamma(Y.brl[tmp,brl], shape=2*mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'], lower.tail=FALSE) )
+		set(Y.brl, tmp, 'score.brl.TPp', pgamma(Y.brl[tmp,brl*brl.bwhost.multiplier], shape=2*mle.ga.one$estimate['shape'], rate=mle.ga.one$estimate['rate'], lower.tail=FALSE) )
 		Y.brl[, score.brl.TPd:= score.brl.TPp]		
 	}
 	if(substr(method,1,2)%in%c('3d','3f'))	#dont ignore zeros - use zero adjusted Gamma
@@ -603,13 +603,13 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		tmp				<- tmp / (1-ml.zaga.pa['nu']*ml.zaga.pa['nu'])				
 		cat(paste('\nZAGA Both b4T convolution sense check: should be ~0 ~1',paste( tmp, collapse=' ')))
 		#
-		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( Y.brl[,brlz],  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
+		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[,brlz*brl.bwhost.multiplier],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( Y.brl[,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
 		tmp				<- tmp / (1-ml.zaga.pa['nu']*ml.zaga.pa['nu'])				
 		Y.brl[, score.brl.TPp:= 1-tmp]
 		if(substr(method,1,2)=='3d')
 		{
 			tmp				<- Y.brl[, which(b4T=='one')]
-			tmp				<- 2*ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) + (1-ml.zaga.one.pa['nu'])*(1-ml.zaga.one.pa['nu'])*pgamma( Y.brl[tmp,brlz],  shape=2*ml.zaga.one.pa['shape'], scale=ml.zaga.one.pa['scale'] ) 
+			tmp				<- 2*ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) + (1-ml.zaga.one.pa['nu'])*(1-ml.zaga.one.pa['nu'])*pgamma( Y.brl[tmp,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.one.pa['shape'], scale=ml.zaga.one.pa['scale'] ) 
 			tmp				<- tmp / (1-ml.zaga.one.pa['nu']*ml.zaga.one.pa['nu'])				
 			set(Y.brl, Y.brl[, which(b4T=='one')], 'score.brl.TPp', 1-tmp )			
 		}		
@@ -638,7 +638,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		tmp				<- tmp / (1-ml.zaga.all.pa['nu']*ml.zaga.all.pa['nu'])				
 		cat(paste('\nZAGA Both b4T convolution sense check: should be ~0 ~1',paste( tmp, collapse=' ')))		
 		#	set score for cases 'both' and 'one'
-		tmp				<- 2*ml.zaga.all.pa['nu']*(1-ml.zaga.all.pa['nu'])*pGA( Y.brl[,brlz],  mu=ml.zaga.all.pa['mu'], sigma=ml.zaga.all.pa['sigma'] ) + (1-ml.zaga.all.pa['nu'])*(1-ml.zaga.all.pa['nu'])*pgamma( Y.brl[,brlz],  shape=2*ml.zaga.all.pa['shape'], scale=ml.zaga.all.pa['scale'] ) 
+		tmp				<- 2*ml.zaga.all.pa['nu']*(1-ml.zaga.all.pa['nu'])*pGA( Y.brl[,brlz*brl.bwhost.multiplier],  mu=ml.zaga.all.pa['mu'], sigma=ml.zaga.all.pa['sigma'] ) + (1-ml.zaga.all.pa['nu'])*(1-ml.zaga.all.pa['nu'])*pgamma( Y.brl[,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.all.pa['shape'], scale=ml.zaga.all.pa['scale'] ) 
 		tmp				<- tmp / (1-ml.zaga.all.pa['nu']*ml.zaga.all.pa['nu'])
 		set(Y.brl, NULL, 'score.brl.TPp', 1-tmp )		
 		#
@@ -679,11 +679,11 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		Y.brl[, score.brl.TPp:= NA_real_]
 		#	set score for cases 'both' and 'one'
 		tmp				<- Y.brl[, which(b4T=='both')]
-		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( Y.brl[tmp,brlz],  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
+		tmp				<- 2*ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.pa['nu'])*pgamma( Y.brl[tmp,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.pa['shape'], scale=ml.zaga.pa['scale'] ) 
 		tmp				<- tmp / (1-ml.zaga.pa['nu']*ml.zaga.pa['nu'])
 		set(Y.brl, Y.brl[, which(b4T=='both')], 'score.brl.TPp', 1-tmp )
 		tmp				<- Y.brl[, which(b4T=='one')]
-		tmp				<- 2*ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) + (1-ml.zaga.one.pa['nu'])*(1-ml.zaga.one.pa['nu'])*pgamma( Y.brl[tmp,brlz],  shape=2*ml.zaga.one.pa['shape'], scale=ml.zaga.one.pa['scale'] ) 
+		tmp				<- 2*ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) + (1-ml.zaga.one.pa['nu'])*(1-ml.zaga.one.pa['nu'])*pgamma( Y.brl[tmp,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.one.pa['shape'], scale=ml.zaga.one.pa['scale'] ) 
 		tmp				<- tmp / (1-ml.zaga.one.pa['nu']*ml.zaga.one.pa['nu'])				
 		set(Y.brl, Y.brl[, which(b4T=='one')], 'score.brl.TPp', 1-tmp )			
 		#
@@ -696,9 +696,9 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		tmp				<- Y.brl[, which(b4T=='mix')]
 		print('h3')
 		#	get cdf of convolution ZAGA_mix (not normalized)
-		tmp				<- ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) +
-							ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) +
-							(1-ml.zaga.pa['nu'])*(1-ml.zaga.one.pa['nu'])*ml.zaga.pmix( Y.brl[tmp,brlz] )
+		tmp				<- ml.zaga.pa['nu']*(1-ml.zaga.pa['nu'])*pGA( Y.brl[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.pa['mu'], sigma=ml.zaga.pa['sigma'] ) +
+							ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu'])*pGA( Y.brl[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.one.pa['mu'], sigma=ml.zaga.one.pa['sigma'] ) +
+							(1-ml.zaga.pa['nu'])*(1-ml.zaga.one.pa['nu'])*ml.zaga.pmix( Y.brl[tmp,brlz*brl.bwhost.multiplier] )
 		print('h4')			
 		#	divide by normalizing constant
 		tmp				<- tmp / ( ml.zaga.pa['nu']*(1-ml.zaga.pa['nu']) + ml.zaga.one.pa['nu']*(1-ml.zaga.one.pa['nu']) + (1-ml.zaga.pa['nu'])*(1-ml.zaga.one.pa['nu']) )
@@ -759,12 +759,12 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		Y.brl[, score.brl.TPp:= NA_real_]
 		#	set score for cases F/F
 		tmp				<- Y.brl[, which(t.ART.C=='No' & ART.C=='No')]
-		tmp				<- 2*ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CN.pa['nu'])*pgamma( Y.brl[tmp,brlz],  shape=2*ml.zaga.CN.pa['shape'], scale=ml.zaga.CN.pa['scale'] ) 
+		tmp				<- 2*ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( Y.brl[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CN.pa['nu'])*pgamma( Y.brl[tmp,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.CN.pa['shape'], scale=ml.zaga.CN.pa['scale'] ) 
 		tmp				<- tmp / (1-ml.zaga.CN.pa['nu']*ml.zaga.CN.pa['nu'])
 		set(Y.brl, Y.brl[, which(t.ART.C=='No' & ART.C=='No')], 'score.brl.TPp', 1-tmp )
 		#	set score for cases T/T
 		tmp				<- Y.brl[, which(t.ART.C=='Yes' & ART.C=='Yes')]
-		tmp				<- 2*ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) + (1-ml.zaga.CY.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*pgamma( Y.brl[tmp,brlz],  shape=2*ml.zaga.CY.pa['shape'], scale=ml.zaga.CY.pa['scale'] ) 
+		tmp				<- 2*ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*pGA( Y.brl[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) + (1-ml.zaga.CY.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*pgamma( Y.brl[tmp,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.CY.pa['shape'], scale=ml.zaga.CY.pa['scale'] ) 
 		tmp				<- tmp / (1-ml.zaga.CY.pa['nu']*ml.zaga.CY.pa['nu'])				
 		set(Y.brl, Y.brl[, which(t.ART.C=='Yes' & ART.C=='Yes')], 'score.brl.TPp', 1-tmp )			
 		#
@@ -774,9 +774,9 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		ml.zaga.pmix	<- p(convpow( Gammad(scale=ml.zaga.CN.pa['scale'], shape=ml.zaga.CN.pa['shape']) + Gammad(scale=ml.zaga.CY.pa['scale'], shape=ml.zaga.CY.pa['shape']), 1))
 		tmp				<- Y.brl[, which(t.ART.C!=ART.C)]
 		#	get cdf of convolution ZAGA_mix (not normalized)
-		tmp				<- ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) +
-							ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*pGA( Y.brl[tmp,brlz],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) +
-							(1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*ml.zaga.pmix( Y.brl[tmp,brlz] )	
+		tmp				<- ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( Y.brl[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) +
+							ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*pGA( Y.brl[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) +
+							(1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*ml.zaga.pmix( Y.brl[tmp,brlz*brl.bwhost.multiplier] )	
 		#	divide by normalizing constant
 		tmp				<- tmp / ( ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu']) + ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu']) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu']) )
 		set(Y.brl, Y.brl[, which(t.ART.C!=ART.C)], 'score.brl.TPp', 1-tmp )
@@ -956,19 +956,19 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		plot.df<- data.table(brlz=rep( seq(0,0.15,0.005), each=3), ART.C=c('Yes','Yes','No'), t.ART.C=c('Yes','No','No'), score.brl.TPp=NA_real_)
 		#	set score for cases F/F
 		tmp				<- plot.df[, which(t.ART.C=='No' & ART.C=='No')]
-		tmp				<- 2*ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( plot.df[tmp,brlz],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CN.pa['nu'])*pgamma( plot.df[tmp,brlz],  shape=2*ml.zaga.CN.pa['shape'], scale=ml.zaga.CN.pa['scale'] ) 
+		tmp				<- 2*ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( plot.df[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CN.pa['nu'])*pgamma( plot.df[tmp,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.CN.pa['shape'], scale=ml.zaga.CN.pa['scale'] ) 
 		tmp				<- tmp / (1-ml.zaga.CN.pa['nu']*ml.zaga.CN.pa['nu'])
 		set(plot.df, plot.df[, which(t.ART.C=='No' & ART.C=='No')], 'score.brl.TPp', 1-tmp )
 		#	set score for cases T/T
 		tmp				<- plot.df[, which(t.ART.C=='Yes' & ART.C=='Yes')]
-		tmp				<- 2*ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*pGA( plot.df[tmp,brlz],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) + (1-ml.zaga.CY.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*pgamma( plot.df[tmp,brlz],  shape=2*ml.zaga.CY.pa['shape'], scale=ml.zaga.CY.pa['scale'] ) 
+		tmp				<- 2*ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*pGA( plot.df[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) + (1-ml.zaga.CY.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*pgamma( plot.df[tmp,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.CY.pa['shape'], scale=ml.zaga.CY.pa['scale'] ) 
 		tmp				<- tmp / (1-ml.zaga.CY.pa['nu']*ml.zaga.CY.pa['nu'])				
 		set(plot.df, plot.df[, which(t.ART.C=='Yes' & ART.C=='Yes')], 'score.brl.TPp', 1-tmp )			
 		tmp				<- plot.df[, which(t.ART.C!=ART.C)]
 		#	set score for cases T/F
-		tmp				<- ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( plot.df[tmp,brlz],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) +
-				ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*pGA( plot.df[tmp,brlz],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) +
-				(1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*ml.zaga.pmix( plot.df[tmp,brlz] )	
+		tmp				<- ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( plot.df[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) +
+				ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*pGA( plot.df[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) +
+				(1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*ml.zaga.pmix( plot.df[tmp,brlz*brl.bwhost.multiplier] )	
 		tmp				<- tmp / ( ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu']) + ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu']) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu']) )
 		set(plot.df, plot.df[, which(t.ART.C!=ART.C)], 'score.brl.TPp', 1-tmp )
 		
@@ -1960,7 +1960,56 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	cat(paste('\navg time of acute.Yes phase=',dur.AcuteYes))
 	cat(paste('\navg time of acute.Maybe phase=',dur.AcuteMaybe))
 	#
-	if(method.Acute%in%c('lower','central','higher'))
+	if(method.Acute%in%c('lower','central','higher') && t2inf.args$method.minQLowerU==0.)
+	{
+		#recent stages are calibrated to 90% quantile, so assign NA afterwards
+		#assign NA based on quantile 'method.minQLowerU' only to non-recent
+		#if method.minQLowerU is set to 0, cut undiagnosed window at MEAN
+		predict.t2inf	<- function(q, df, t2inf.args)
+		{				
+			df[, {
+						print(Patient)
+						print(CD4_T1)
+						print(AnyPos_a)
+						print(isAcute)
+						if(!is.na(isAcute) & isAcute=='Yes') 
+						{
+							ans				<- pexp(q, 1/dur.AcuteYes, lower.tail=FALSE)
+							ans[ans<0.1]	<- NA_real_		
+						}
+						else if(!is.na(isAcute) & isAcute=='Maybe')
+						{
+							ans				<- pexp(q, 1/dur.AcuteMaybe, lower.tail=FALSE)
+							ans[ans<0.1]	<- NA_real_	
+						}
+						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1>AnyPos_T1+1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
+						{
+							ans				<- pnbinom(q, mu= t2inf.args$cd4other.intercept+t2inf.args$cd4other.coef*min(AnyPos_a,45), size=t2inf.args$cd4other.theta, lower.tail=FALSE)
+							ans[ q>t2inf.args$cd4other.intercept+t2inf.args$cd4other.coef*min(AnyPos_a,45) ]<- NA_real_
+						}
+						else if(CD4_T1<250)		#chronic or missing isAcute, first CD4 before ART start
+						{
+							ans				<- pnbinom(q, mu= t2inf.args$cd4l250.intercept+t2inf.args$cd4l250.coef*min(AnyPos_a,45), size=t2inf.args$cd4l250.theta, lower.tail=FALSE)
+							print(CD4_T1)
+							print(AnyPos_a)
+							print( t2inf.args$cd4l250.intercept+t2inf.args$cd4l250.coef*min(AnyPos_a,45) )
+							ans[ q>t2inf.args$cd4l250.intercept+t2inf.args$cd4l250.coef*min(AnyPos_a,45) ]<- NA_real_
+						}
+						else if(CD4_T1<850)		#chronic or missing isAcute, first CD4 before ART start
+						{
+							ans				<- pnbinom(q, mu= t2inf.args$cd4l850.intercept+t2inf.args$cd4l850.coef*min(AnyPos_a,45), size=t2inf.args$cd4l850.theta, lower.tail=FALSE)
+							ans[ q>t2inf.args$cd4l850.intercept+t2inf.args$cd4l850.coef*min(AnyPos_a,45) ]<- NA_real_
+						}
+						else					#chronic or missing isAcute, first CD4 before ART start
+						{
+							ans				<- pnbinom(q, mu= t2inf.args$cd4g850.intercept, size=t2inf.args$cd4g850.theta, lower.tail=FALSE)
+							ans[ q>t2inf.args$cd4g850.intercept ]<- NA_real_							
+						}		
+						list(q=q, score=ans)
+					}, by='Patient']			
+		}
+	}
+	if(method.Acute%in%c('lower','central','higher') && t2inf.args$method.minQLowerU>0.)
 	{
 		#recent stages are calibrated to 90% quantile, so assign NA afterwards
 		#assign NA based on quantile 'method.minQLowerU' only to non-recent
@@ -1977,7 +2026,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 							ans				<- pexp(q, 1/dur.AcuteMaybe, lower.tail=FALSE)
 							ans[ans<0.1]	<- NA_real_	
 						}
-						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1-AnyPos_T1<1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
+						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1>AnyPos_T1+1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
 						{
 							ans				<- pnbinom(q, mu= t2inf.args$cd4other.intercept+t2inf.args$cd4other.coef*min(AnyPos_a,45), size=t2inf.args$cd4other.theta, lower.tail=FALSE)
 							ans[ans<t2inf.args$method.minQLowerU]	<- NA_real_
@@ -2015,7 +2064,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 						{
 							ans	<- pexp(q, 1/dur.AcuteMaybe, lower.tail=FALSE)
 						}
-						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1-AnyPos_T1<1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
+						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1>AnyPos_T1+1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
 						{
 							ans	<- pnbinom(q, mu= t2inf.args$cd4other.intercept+t2inf.args$cd4other.coef*min(AnyPos_a,45), size=t2inf.args$cd4other.theta, lower.tail=FALSE)
 						}
@@ -2058,7 +2107,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		set(tmp, NULL, 'q', tmp[,q/365])
 		labels		<- c(	'Acute HIV infection at diagnosis',
 							'Potentially acute HIV infection at diagnosis',
-							'Chronic HIV infection at diagnosis,\n CD4<250,\n 30 years at diagnosis')
+							'Chronic HIV infection at diagnosis,\n CD4<250,\n 35 years at diagnosis')
 		set(tmp, tmp[, which(isAcute=='No')],'isAcute',labels[3])
 		set(tmp, tmp[, which(isAcute=='Maybe')],'isAcute',labels[2])
 		set(tmp, tmp[, which(isAcute=='Yes')],'isAcute',labels[1])
@@ -9216,40 +9265,31 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 	ct		<- merge(ct, subset(ctn, select=c(stat, t.period, Patient.n)), by=c('stat','t.period'))
 	#	get data into format to build a censoring model per risk group
 	ct		<- dcast.data.table(ct, stat + t.period + risk + factor + factor2 + Patient.n ~ cgroup, value.var="n")
-	ctm		<- copy(ct)
+	ctm		<- copy(ct)	
 	ctm[, d03:= c3/c0]
 	ctm[, d02:= c2/c0]
-	ctm[, d01:= c1/c0]
-	ctm[, d32:= c2/c3]
-	ctm[, d31:= c1/c3]
-	ctm[, d21:= c1/c2]
-	ctm		<- melt(subset(ctm, select=c(stat, t.period, risk, factor, factor2, Patient.n, d03, d32, d31, d02, d21, d01)), measure.vars=c('d03','d32','d31','d02','d21','d01'), value.name='p.cens')	
+	ctm		<- melt(subset(ctm, select=c(stat, t.period, risk, factor, factor2, Patient.n, d03, d02)), measure.vars=c('d03','d02'), value.name='p.cens')
 	ctm		<- subset(ctm, !is.na(p.cens))
-	set(ctm, NULL, 't.period', ctm[, as.numeric(t.period)])
-	tmp		<- ctm[, which(variable=='d32')]
-	set(ctm, tmp, 't.period', ctm[tmp, t.period+1])
-	tmp		<- ctm[, which(variable=='d21')]
-	set(ctm, tmp, 't.period', ctm[tmp, t.period+2])
+	ctm[, t:=NA_real_]
+	setkey(tperiod.info, t.period)	
+	tmp		<- ctm[, which(variable=='d03')]
+	set(ctm, tmp, 't', tperiod.info['3',][, t.period.max] - tperiod.info[ctm[tmp, as.character(t.period)],][, t.period.max]  )	
 	tmp		<- ctm[, which(variable=='d02')]
-	set(ctm, tmp, 't.period', ctm[tmp, t.period+1])
-	tmp		<- ctm[, which(variable=='d01')]
-	#	hist(subset(X.clu, AnyPos_T1<2008.265 & CD4b.tperiod=='U.2')[, t.AnyPos_T1])
-	#	hist(subset(X.clu, AnyPos_T1<2008.265 & CD4b.tperiod=='UA.2')[, t.AnyPos_T1])
+	set(ctm, tmp, 't', tperiod.info['2',][, t.period.max] - tperiod.info[ctm[tmp, as.character(t.period)],][, t.period.max]  )
 	if(!is.na(plot.file))
 	{
 		ct.plot		<- copy(ctm)	
 		ct.plot		<- subset(ct.plot, variable%in%c('d03','d02'))
 		ct.plot		<- merge( ct.plot, factors, by='factor2')
 		set(ct.plot, ct.plot[,which(variable=='d03')], 'variable', 'censored\ntime period 4')
-		set(ct.plot, ct.plot[,which(variable=='d02')], 'variable', 'censored\ntime period 3, 4')
-		#set(ct.plot, ct.plot[,which(variable=='d01')], 'variable', 'censored\ntime period 2, 3, 4')
-		#set(ct.plot, NULL, 'variable', ct.plot[, factor(variable, levels=c('censored\ntime period 4','censored\ntime period 3, 4','censored\ntime period 2, 3, 4'))])
-		set(ct.plot, NULL, 'variable', ct.plot[, factor(variable, levels=c('censored\ntime period 4','censored\ntime period 3, 4'))])
-		ggplot(ct.plot, aes(x=t.period, y=p.cens, colour=factor.legend, shape=variable)) + geom_point(size=3) +
-				labs(x='time period before pseudo censoring', y='fraction of potential transmission intervals in cohort\nthat are not censored',shape='pseudo\ncensoring') +
+		set(ct.plot, ct.plot[,which(variable=='d02')], 'variable', 'censored\ntime period 3, 4')		
+		set(ct.plot, NULL, 'variable', ct.plot[, factor(variable, levels=c('censored\ntime period 3, 4','censored\ntime period 4'))])
+		ggplot(ct.plot, aes(x=t, y=p.cens, colour=factor.legend, shape=variable)) + geom_point(size=3) +
+				labs(x=expression(t[C]^textstyle("*")-t[2]), y='fraction of potential transmission intervals in cohort\nthat are not censored',shape='artificial\ncensoring\ntimes') +
 				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +
-				theme(panel.grid.minor.x = element_blank()) +
-				scale_x_continuous(lim=c(0.5, 3.5), breaks=1:3, labels=c('3rd','2nd','1st')) +
+				scale_shape_discrete(labels=c(expression(t[C]^textstyle("*")==2008), expression(t[C]^textstyle("*")==2009.5))) +
+				theme(panel.grid.minor.x = element_blank(), legend.position = "bottom") +
+				scale_x_continuous(lim=c(-0.5, 3.5)) +
 				facet_grid(. ~ factor.legend, margins=FALSE)
 		file		<- paste(plot.file,'_censoringfraction.pdf',sep='')
 		ggsave(file=file, w=25, h=8)		
@@ -9264,10 +9304,9 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 		#	Beta model on censoring for U and UAna combined
 		#	use d02 because there is backlog. can use d03 for the first tperiod because not affected by backlog
 		tmp		<- subset(ctm, (variable=='d02' & factor2%in%c('U','UAna')) | (variable=='d03' & t.period==1 & factor2%in%c('U','UAna')))
-		#tmp		<- subset(ctm, variable%in%c('d32','d03') & factor2%in%c('U','UAna'))
-		set(tmp, tmp[, which(p.cens==1.)], 'p.cens', 0.999999 )
-		tmp2	<- gamlss(p.cens~t.period, data=as.data.frame(tmp), family=BE)
-		tmp		<- predict(tmp2, newdata=data.frame(t.period=0:3), data=as.data.frame(tmp), type='response')
+		#tmp		<- subset(ctm, variable%in%c('d32','d03') & factor2%in%c('U','UAna'))		
+		tmp2	<- gamlss(p.cens~t, data=as.data.frame(tmp), family=BE)
+		tmp		<- predict(tmp2, newdata=data.frame(t=tperiod.info['4',][,t.period.max]-tperiod.info[, t.period.max]), data=as.data.frame(tmp), type='response')
 		set(ct, ct[, which(factor2=='U')], 'p.cens', tmp)
 		set(ct, ct[, which(factor2=='UAna')], 'p.cens', tmp)
 		#	Beta model on censoring for UA
@@ -9285,9 +9324,9 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 		tmp		<- lapply( tmp[, unique(factor2)], function(f)
 				{
 					tmp		<- subset(ctm, (variable=='d02' & factor2==f) | (variable=='d03' & t.period!=3 & factor2==f))
-					set(tmp, tmp[, which(p.cens==1.)], 'p.cens', 0.999999 )
-					tmp2	<- gamlss(p.cens~t.period, data=as.data.frame(tmp), family=BE, trace=FALSE)
-					tmp		<- predict(tmp2, newdata=data.frame(t.period=0:3), data=as.data.frame(tmp), type='response')
+					#set(tmp, tmp[, which(p.cens==1.)], 'p.cens', 0.999999 )
+					tmp2	<- gamlss(p.cens~t, data=as.data.frame(tmp), family=BE, trace=FALSE)
+					tmp		<- predict(tmp2, newdata=data.frame(t=tperiod.info['4',][,t.period.max]-tperiod.info[, t.period.max]), data=as.data.frame(tmp), type='response')
 					data.table(risk='stage', factor2=f, t.period=1:4, p.cens=tmp)
 				})
 		tmp		<- do.call('rbind',tmp)
@@ -9304,18 +9343,24 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 	if(!is.na(plot.file))
 	{
 		ct.plot		<- copy(ct)				
-		ct.plot		<- melt(ct.plot, measure.vars=c('c0','c3','c2','c'), variable.name='cgroup', value.name='n')
+		#ct.plot		<- melt(ct.plot, measure.vars=c('c0','c3','c2','c'), variable.name='cgroup', value.name='n')
+		ct.plot		<- melt(ct.plot, measure.vars=c('c0','c'), variable.name='cgroup', value.name='n')
 		set(ct.plot, NULL, 'n', ct.plot[, n/Patient.n])
 		ct.plot		<- merge( ct.plot, factors, by='factor2')
-		ct.plot		<- merge( ct.plot, tperiod.info, by='t.period')
+		tmp			<- copy(tperiod.info)
+		set(tmp, NULL, 't.period.min', tmp[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
+		set(tmp, NULL, 't.period.max', tmp[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )
+		
+		ct.plot		<- merge( ct.plot, tmp, by='t.period')
 		ct.plot[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
 		set(ct.plot, ct.plot[,which(cgroup=='c0')], 'cgroup', 'data')
-		set(ct.plot, ct.plot[,which(cgroup=='c3')], 'cgroup', 'censored\ntime period 4')
-		set(ct.plot, ct.plot[,which(cgroup=='c2')], 'cgroup', 'censored\ntime period 3, 4')
+		#set(ct.plot, ct.plot[,which(cgroup=='c3')], 'cgroup', 'censored\ntime period 4')
+		#set(ct.plot, ct.plot[,which(cgroup=='c2')], 'cgroup', 'censored\ntime period 3, 4')
 		set(ct.plot, ct.plot[,which(cgroup=='c')], 'cgroup', 'data adjusted\nfor censoring')
-		set(ct.plot, NULL, 'cgroup', ct.plot[, factor(cgroup, levels=c('data','censored\ntime period 4','censored\ntime period 3, 4','data adjusted\nfor censoring'))])
+		#set(ct.plot, NULL, 'cgroup', ct.plot[, factor(cgroup, levels=c('data','censored\ntime period 4','censored\ntime period 3, 4','data adjusted\nfor censoring'))])
+		set(ct.plot, NULL, 'cgroup', ct.plot[, factor(cgroup, levels=c('data','data adjusted\nfor censoring'))])
 		ggplot(ct.plot, aes(x=t.period.long, y=n, colour=factor.legend, shape=cgroup)) + geom_point(size=3) +
-				labs(x='', y='potential transmission intervals in cohort\n(person-years per recipient MSM)',shape='pseudo\ncensoring and\ndata adjusted\nfor censoring') +
+				labs(x='', y='potential transmission intervals in cohort\n(person-years per recipient MSM)',shape='data adjusted\nfor censoring') +
 				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +	
 				facet_grid(. ~ factor.legend, margins=FALSE)
 		file		<- paste(plot.file,'_censoringmodel.pdf',sep='')
@@ -9324,7 +9369,7 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 		ct.plot		<- copy(ct)				
 		ct.plot		<- melt(ct.plot, measure.vars=c('prop.c0','prop.c'), id.vars=c('t.period','risk','factor2','stat','factor'), variable.name='cgroup', value.name='prop')
 		ct.plot		<- merge( ct.plot, factors, by='factor2')
-		ct.plot		<- merge( ct.plot, tperiod.info, by='t.period')
+		ct.plot		<- merge( ct.plot, tmp, by='t.period')
 		ct.plot[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
 		set(ct.plot, ct.plot[,which(cgroup=='prop.c0')], 'cgroup', 'data')
 		set(ct.plot, ct.plot[,which(cgroup=='prop.c')], 'cgroup', 'data adjusted\nfor censoring')
@@ -9434,8 +9479,6 @@ project.athena.Fisheretal.censoring.explore<- function()
 	#	set up t.period
 	#
 	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
-	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
-	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )
 	#
 	#	CASCADE
 	#	
@@ -11473,6 +11516,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.risk				<- 'm2Bwmx.tp3'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.01
+		method.brl.bwhost		<- 1
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
@@ -11558,7 +11602,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,13),
 									method.Acute= return(substr(arg,15,nchar(arg))),NA)	}))
-		if(length(tmp)>0) method.Acute<- tmp[1]		
+		if(length(tmp)>0) method.Acute<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,18),
+									method.brl.bwhost= return(as.numeric(substr(arg,20,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) method.brl.bwhost<- tmp[1]		
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,18),
 									method.minQLowerU= return(as.numeric(substr(arg,20,nchar(arg)))),NA)	}))
@@ -11601,11 +11649,14 @@ hivc.prog.betareg.estimaterisks<- function()
 		print(method.PDT)
 		print(method.Acute)
 		print(method.minQLowerU)
+		print(method.brl.bwhost)
 	}
 	if(method.nodectime=='any')
 		method				<- paste(method,'a',sep='')
 	if(method.nodectime=='map')
 		method				<- paste(method,'m',sep='')	
+	if(method.brl.bwhost>1)
+		method				<- paste(method, method.brl.bwhost, sep='')
 	if(method.Acute=='empirical')
 	{
 		dur.Acute			<- c(Yes= 365/2, Maybe=320)	
@@ -11624,9 +11675,9 @@ hivc.prog.betareg.estimaterisks<- function()
 	{
 		dur.Acute			<- c(Yes= 5.28*30, Maybe=5.28*30)
 		method				<- paste(method,'H',sep='')
-	}	
-	if(method.minQLowerU==0.05)
-		method				<- paste(method,'5',sep='')	
+	}		
+	if(method.minQLowerU==0)
+		method				<- paste(method,'0',sep='')	
 	if(method.minQLowerU==0.1)
 		method				<- paste(method,'1',sep='')
 	if(method.minQLowerU==0.2)
@@ -11801,7 +11852,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	save.all		<- FALSE
 	#save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'_all.R',sep='')
 	#save.all		<- TRUE
-	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
+	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, brl.bwhost.multiplier=method.brl.bwhost, t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
 	gc()
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
 	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']

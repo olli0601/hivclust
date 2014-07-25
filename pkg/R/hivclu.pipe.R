@@ -701,7 +701,8 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	method.minQLowerU	<- 0.01
+	method.brl.bwhost	<- 2
+	method.minQLowerU	<- 0.1
 	method.PDT			<- 'SEQ'
 	#method.Acute		<- 'empirical'
 	method.Acute		<- 'higher'
@@ -757,7 +758,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk	<- c( 	'm3.tnicMv', 'm3.tnicMv.adj','m3.tnicMv.clu.adj', 'm3.tnicMv.censp','m3.tnicMv.clu.censp'	)
 	#	all runs combined
 	#method.risk		<- c(	'm2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4','m2BtMv.tp1','m2BtMv.tp2','m2BtMv.tp3','m2BtMv.tp4','m3.n3mx','m3.n3mxMV','m5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4')
-	method.risk			<- c('m5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4')
+	#method.risk			<- c('m5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4')
 	# use to pre-compute tables
 	#method.risk		<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj', 'm4.Bwmxv.clu.adj')	
 	#method.risk				<- c('m3.ind.clu.adj','m3.indNo.clu.adj','m3.indmx.clu.adj','m3.indmxNo.clu.adj','m3.n3mx.clu.adj')
@@ -767,18 +768,18 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tAb.clu.adj','m5.tAc.clu.adj','m5.tiA.clu.adj','m5.tiAb.clu.adj','m5.tiAc.clu.adj')
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tA.tp1.clu.adj','m5.tiA.tp1.clu.adj','m5.tA.tp2.clu.adj','m5.tiA.tp2.clu.adj','m5.tA.tp3.clu.adj','m5.tiA.tp3.clu.adj','m5.tA.tp4.clu.adj','m5.tiA.tp4.clu.adj')
 	#method.risk			<- c( 	'm5.tAc.clu.adj','m5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj')
-	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj' )
+	method.risk			<- c( 	'm2Bwmx.tp1.clu.adj' )
 	dummy	<- sapply(method.risk, function(x)
 			{
-				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.minQLowerU, outdir=outdir, outfile=outfile, resume=1, verbose=1)
+				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.brl.bwhost, method.minQLowerU, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 				cat(cmd)
 				#stop()
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="1800mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=22, hpc.mem="1900mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
+				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
 				#cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
-				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="140000mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="140000mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 				hivc.cmd.hpccaller(outdir, outfile, cmd)			

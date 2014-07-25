@@ -3569,7 +3569,7 @@ project.hivc.examlclock<- function()
 	#
 	#	within host divergence
 	#
-	file				<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_nbrlraw3da'				
+	file				<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_nbrlraw3kaH'				
 	tmp					<- project.athena.Fisheretal.Y.rawbrl(NULL, NULL, NULL, NULL, NULL, NULL, df.tpairs.tptn=NULL, save.file=paste(file, '.R', sep=''), resume=1, plot.file=NA, method.restrictTPtoRI=0)
 	Y.rawbrl			<- tmp$tpairs
 	Y.rawbrl.linked		<- tmp$linked
@@ -3704,25 +3704,25 @@ project.hivc.examlclock<- function()
 		#	mean evol rate
 		#
 		tmp			<- subset(Y.rawbrl.linked, b4T2=='both' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T2.long))		
-		tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+		tmpg.ZAGA.B	<- gamlss(as.formula('brl ~ dt'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 		tmp[, y.b:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)]
 		tmp[, y.u:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
 		tmp[, y.l:=predict(tmpg.ZAGA.B, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.B, type='response', se.fit=TRUE)$se.fit]
 		ans			<- copy(tmp)
 		tmp			<- subset(Y.rawbrl.linked, b4T2=='only.T.ART.C.No' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T2.long))
-		tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+		tmpg.ZAGA.O	<- gamlss(as.formula('brl ~ dt'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 		tmp[, y.b:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)]
 		tmp[, y.u:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
 		tmp[, y.l:=predict(tmpg.ZAGA.O, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.O, type='response', se.fit=TRUE)$se.fit]
 		ans			<- rbind(ans, tmp)		
 		tmp			<- subset(Y.rawbrl.linked, b4T2=='none.ART.C.No' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T2.long))
-		tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+		tmpg.ZAGA.N	<- gamlss(as.formula('brl ~ dt'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 		tmp[, y.b:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)]
 		tmp[, y.u:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
 		tmp[, y.l:=predict(tmpg.ZAGA.N, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.N, type='response', se.fit=TRUE)$se.fit]
 		ans			<- rbind(ans, tmp)		
 		tmp			<- subset(Y.rawbrl.linked, b4T2=='ART.C.yes' & dt>0 & dt>brl.linked.min.dt & dt<=brl.linked.max.dt & brlr<brl.linked.max.brlr, select=c(brl, dt, b4T2.long))
-		tmpg.ZAGA.C	<- gamlss(as.formula('brl ~ dt-1'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
+		tmpg.ZAGA.C	<- gamlss(as.formula('brl ~ dt'), sigma.formula=as.formula('~ dt'), nu.formula=as.formula('~ dt'), data=as.data.frame(tmp), family=ZAGA(mu.link='identity'), n.cyc = 40)
 		tmp[, y.b:=predict(tmpg.ZAGA.C, type='response', se.fit=FALSE)]
 		tmp[, y.u:=predict(tmpg.ZAGA.C, type='response', se.fit=FALSE)+2*predict(tmpg.ZAGA.C, type='response', se.fit=TRUE)$se.fit]
 		tmp[, y.l:=predict(tmpg.ZAGA.C, type='response', se.fit=FALSE)-2*predict(tmpg.ZAGA.C, type='response', se.fit=TRUE)$se.fit]
