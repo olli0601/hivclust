@@ -772,6 +772,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		#		
 		#	get cdf of convolution GA_noART with GA_ART
 		ml.zaga.pmix	<- p(convpow( Gammad(scale=ml.zaga.CN.pa['scale'], shape=ml.zaga.CN.pa['shape']) + Gammad(scale=ml.zaga.CY.pa['scale'], shape=ml.zaga.CY.pa['shape']), 1))
+		ml.zaga.dmix	<- d(convpow( Gammad(scale=ml.zaga.CN.pa['scale'], shape=ml.zaga.CN.pa['shape']) + Gammad(scale=ml.zaga.CY.pa['scale'], shape=ml.zaga.CY.pa['shape']), 1))
 		tmp				<- Y.brl[, which(t.ART.C!=ART.C)]
 		#	get cdf of convolution ZAGA_mix (not normalized)
 		tmp				<- ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( Y.brl[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) +
@@ -971,8 +972,7 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 				(1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*ml.zaga.pmix( plot.df[tmp,brlz*brl.bwhost.multiplier] )	
 		tmp				<- tmp / ( ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu']) + ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu']) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu']) )
 		set(plot.df, plot.df[, which(t.ART.C!=ART.C)], 'score.brl.TPp', 1-tmp )
-		
-		
+		#		
 		plot.df[, ART.C.long:=NA_character_]		
 		tmp	<- c('both sampling times\nbefore treatment interruption or failure','one sampling time\nafter treatment interruption or failure','both sampling times\nafter treatment interruption or failure')
 		set(plot.df, plot.df[, which(ART.C=='No' & t.ART.C=='No')], 'ART.C.long', tmp[1])				
@@ -984,8 +984,43 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 				coord_cartesian(xlim=c(0, 0.16)) + scale_x_continuous(breaks=seq(0,0.2,0.02), minor_breaks=seq(0, 0.2, 0.005)) + scale_y_continuous(breaks=seq(0,1,0.2), minor_breaks=seq(0, 1, 0.05)) +
 				theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(11,'mm')) +
 				scale_colour_brewer(palette='Set1', name='treatment status at\nsequence sampling time') +
-				labs(x="between-host divergence", y=expression('Conditional probability score ('*y[ijt]^{C}*')'))
-		ggsave(file=plot.file.score, w=10, h=6)		
+				labs(x="between-host divergence", y='generation divergence distribution\n (survival density)')				
+		ggsave(file=plot.file.score, w=10, h=6)	
+		#
+		#	PDF
+		#
+		plot.df<- data.table(brlz=rep( seq(0,0.15,0.001), each=3), ART.C=c('Yes','Yes','No'), t.ART.C=c('Yes','No','No'), score.brl.TPp=NA_real_)
+		#	set score for cases F/F
+		tmp				<- plot.df[, which(t.ART.C=='No' & ART.C=='No')]
+		tmp				<- 2*ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*dGA( plot.df[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CN.pa['nu'])*dgamma( plot.df[tmp,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.CN.pa['shape'], scale=ml.zaga.CN.pa['scale'] ) 
+		tmp				<- tmp / (1-ml.zaga.CN.pa['nu']*ml.zaga.CN.pa['nu'])
+		set(plot.df, plot.df[, which(t.ART.C=='No' & ART.C=='No')], 'score.brl.TPp', tmp )
+		#	set score for cases T/T
+		tmp				<- plot.df[, which(t.ART.C=='Yes' & ART.C=='Yes')]
+		tmp				<- 2*ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*dGA( plot.df[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) + (1-ml.zaga.CY.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*dgamma( plot.df[tmp,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.CY.pa['shape'], scale=ml.zaga.CY.pa['scale'] ) 
+		tmp				<- tmp / (1-ml.zaga.CY.pa['nu']*ml.zaga.CY.pa['nu'])				
+		set(plot.df, plot.df[, which(t.ART.C=='Yes' & ART.C=='Yes')], 'score.brl.TPp', tmp )			
+		tmp				<- plot.df[, which(t.ART.C!=ART.C)]
+		#	set score for cases T/F
+		tmp				<- ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*dGA( plot.df[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) +
+								ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu'])*dGA( plot.df[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CY.pa['mu'], sigma=ml.zaga.CY.pa['sigma'] ) +
+								(1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu'])*ml.zaga.dmix( plot.df[tmp,brlz*brl.bwhost.multiplier] )	
+		tmp				<- tmp / ( ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu']) + ml.zaga.CY.pa['nu']*(1-ml.zaga.CY.pa['nu']) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CY.pa['nu']) )
+		set(plot.df, plot.df[, which(t.ART.C!=ART.C)], 'score.brl.TPp', tmp )
+		#
+		plot.df[, ART.C.long:=NA_character_]		
+		tmp	<- c('both sampling times\nbefore treatment interruption or failure','one sampling time\nafter treatment interruption or failure','both sampling times\nafter treatment interruption or failure')
+		set(plot.df, plot.df[, which(ART.C=='No' & t.ART.C=='No')], 'ART.C.long', tmp[1])				
+		set(plot.df, plot.df[, which(ART.C=='Yes' & t.ART.C=='No')], 'ART.C.long', tmp[2])
+		set(plot.df, plot.df[, which(ART.C=='Yes' & t.ART.C=='Yes')], 'ART.C.long', tmp[3])
+		set(plot.df, NULL, 'ART.C.long', plot.df[, factor(ART.C.long, levels=tmp, labels=tmp)])
+		ggplot(plot.df, aes(x=brlz, y=score.brl.TPp, group=ART.C.long, colour=ART.C.long)) + geom_line() + 
+				#geom_point() +
+				coord_cartesian(xlim=c(0, 0.16)) + scale_x_continuous(breaks=seq(0,0.2,0.02), minor_breaks=seq(0, 0.2, 0.005)) + #scale_y_continuous(breaks=seq(0,1,0.2), minor_breaks=seq(0, 1, 0.05)) +
+				theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(11,'mm')) +
+				scale_colour_brewer(palette='Set1', name='treatment status at\nsequence sampling time') +
+				labs(x="between-host divergence", y='generation divergence distribution\n (p.d.f.)')
+		ggsave(file=paste(substr(plot.file.score,1,nchar(plot.file.score)-4),'_p','.pdf',sep=''), w=4, h=6)
 	}
 	
 	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3d','3f'))
@@ -3149,7 +3184,7 @@ project.athena.Fisheretal.betareg.exp<- function(YX.m3, formula, include.colname
 	list(betafit.or=betafit.or, betafit.rr=betafit.rr, gamlss.BE.limit.u=gamlss.init$BE.limit.u)
 }
 ######################################################################################
-project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=1e3, gamlss.BE.required.limit=0.99, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0), sigma.formula='~1' )
+project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=1e3, gamlss.BE.required.limit=0.99, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0), sigma.formula='~1' )
 {
 	require(gamlss)
 	options(warn=0)
@@ -3187,7 +3222,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	tmp			<- copy(X.tables$cens.table.all)
 	tmp2		<- X.tables$cens.Patient.n
 	setkey(tmp2, stat, t.period)
-	tmp			<- project.athena.Fisheretal.censoring.model(tmp, unique(tmp2), plot.file=NA)
+	tmp			<- project.athena.Fisheretal.censoring.model(tmp, unique(tmp2), plot.file=NA, tperiod.info=tperiod.info)
 	tmp			<- merge( nt.table[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], subset(tmp, select=c(risk, factor, p.cens)), by=c('risk','factor'))
 	tmp			<- tmp[, list( PYe0cpr=round(X.msm.e0/p.cens-X.msm.e0)), by=c('risk','factor')]		#censored number of potential transmission intervals
 	#	previous ad-hoc model
@@ -3999,7 +4034,7 @@ project.athena.Fisheretal.estimate.risk.wrap.add2riskdf<- function(method.risk, 
 	risk.df
 }
 ######################################################################################
-project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.or=NA, bs.n=1e3, resume=TRUE, save.file=NA, method.risk=NA)
+project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.info, plot.file.or=NA, bs.n=1e3, resume=TRUE, save.file=NA, method.risk=NA)
 {	
 	if(resume & !is.na(save.file))
 	{
@@ -4084,7 +4119,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}	
 			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )	
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}	
 		if(grepl('m2t.cas',method.risk) | grepl('m2Bt.cas',method.risk) | grepl('m2tMv.cas',method.risk) | grepl('m2BtMv.cas',method.risk) )
 		{  
@@ -4160,7 +4195,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}		
 			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)			
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}		
 		if(grepl('m2Bwmx.cas', method.risk) | grepl('m2BwmxMv.cas', method.risk) | grepl('m2wmx.cas', method.risk) | grepl('m2wmxMv.cas', method.risk))
 		{  
@@ -4242,7 +4277,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}			
 			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
 		}	
 		if(grepl('m2Bt.tp', method.risk) | grepl('m2BtMv.tp', method.risk))
 		{
@@ -4320,7 +4355,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			#risk.df		<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0) )
 			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
 		}
 		if(grepl('m2wmx.tp', method.risk) | grepl('m2wmxMv.tp', method.risk) | grepl('m2Bwmx.tp', method.risk) | grepl('m2BwmxMv.tp', method.risk))
 		{			
@@ -4369,7 +4404,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}			
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
 		}
 		if(grepl('m3.tnic',method.risk) & !grepl('m3.tnicNo',method.risk) & !grepl('m3.tnicv',method.risk))
 		{
@@ -4443,7 +4478,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}			
 			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)				
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
 		}
 		if(grepl('m3.tnicv',method.risk) & !grepl('m3.tnicvNo',method.risk))
 		{
@@ -4502,7 +4537,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			risk.df			<- cbind(risk.df, tmp[, list(coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk.ref','factor.ref')])
 			#risk.df		<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}		
 		if(grepl('m3.btnicNo',method.risk))
 		{
@@ -4592,7 +4627,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}			
 			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
 		}
 		if(grepl('m3.ind',method.risk))
 		{
@@ -4644,7 +4679,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}						
 			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0))
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
 		}
 		if(grepl('m3.n3mx',method.risk))
 		{
@@ -4700,7 +4735,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}						
 			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
 		}
 		if(grepl('m3.nnrtpiNo',method.risk))
 		{
@@ -4791,7 +4826,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}						
 			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.25, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.25, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.25, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
 		}
 		if(grepl('m4',method.risk))				
 		{  
@@ -4882,7 +4917,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 							}, by='coef'], by='coef')		
 			#risk.df			<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n)
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}
 		if(grepl('m5',method.risk))				
 		{  
@@ -4932,7 +4967,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, plot.file.
 			}						
 			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.3, 0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0))
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
+			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0)  )
 		}
 		if(!is.na(save.file))
 		{
@@ -12076,7 +12111,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model4_',method.risk,'.R',sep='')		
 	if(grepl('m5',method.risk))
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model5_',method.risk,'.R',sep='')			
-	tmp					<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, plot.file.or=NA, bs.n=1e3, resume=resume, save.file=save.file, method.risk=method.risk)					
+	tmp					<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, tperiod.info, plot.file.or=NA, bs.n=1e3, resume=resume, save.file=save.file, method.risk=method.risk)					
 	
 	stop()
 		
