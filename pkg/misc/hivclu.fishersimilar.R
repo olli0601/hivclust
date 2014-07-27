@@ -4373,12 +4373,12 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
 				set(YX, NULL, 'w', 1.)				
 			if(grepl('Mv', method.risk))	
-			{
-				include.colnames<- c('score.Y','w','stage','t.Age','t.RegionHospital')
-				formula			<- 'score.Y ~ bs(t.Age, knots=c(30,45), degree=1)+stage+t.RegionHospital-1'				
+			{				
+				include.colnames<- c('score.Y','w','stage','t.Age')				
+				formula			<- 'score.Y ~ bs(t.Age, knots=c(30,45), degree=1)+stage-1'
 				predict.df		<- data.table(	stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=YX[, levels(stage)]), 												
 												t.Age=subset(YX, stage==paste('ART.suA.Y',tp,sep='.'))[, mean(t.Age, na.rm=TRUE)],
-												t.RegionHospital=factor('Amst', levels=YX[, levels(t.RegionHospital)]),	w=1.)										
+												w=1.)										
 			}
 			if(!grepl('Mv', method.risk))
 			{				
@@ -4400,7 +4400,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 				risk.df		<- merge(risk.df, unique(risk.df)[, {
 									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
 									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
-									list(t.Age=t.Age, t.RegionHospital='Amst')
+									list(t.Age=t.Age)
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}			
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
@@ -11548,10 +11548,10 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3k'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Bwmx.tp3'
+		method.risk				<- 'm2Bwmx.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.01
-		method.brl.bwhost		<- 1
+		method.minQLowerU		<- 0.1
+		method.brl.bwhost		<- 2
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
