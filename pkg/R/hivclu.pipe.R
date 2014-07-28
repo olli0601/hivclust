@@ -586,7 +586,7 @@ hivc.pipeline.BEASTout<- function()
 ######################################################################################
 hivc.pipeline.betareg.estimate.risks<- function()
 {
-	#stop()
+	stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
@@ -834,11 +834,16 @@ hivc.pipeline.various<- function()
 		cmd			<- ''
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
-	if(1)
+	if(0)
 	{
 		outdir		<- dir.name		
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
+	}
+	if(1)
+	{
+		project.Gates.RootSeqSim()
+		quit("no")
 	}
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 	outdir	<- paste(dir.name,"tmp",sep='/')

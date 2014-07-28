@@ -218,6 +218,21 @@ project.hivc.check.DateRes.after.T0<- function(dir.name= DATA, verbose=1)
 			})
 }
 ######################################################################################
+project.Gates.RootSeqSim<- function()
+{
+	DATA		<<- "/work/or105/Gates_2014"
+	indir		<- paste(DATA,'methods_comparison_rootseqsim/140727',sep='/')
+	infile		<- 'ALLv02.n100.rlx.gmrf' 
+	insignat	<- 'Sun_Jul_27_09-00-00_2014'
+	cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
+	cat(cmd)
+	
+	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=91, hpc.mem="1800mb")
+	outdir		<- indir
+	outfile		<- paste("b2m.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
+	hivc.cmd.hpccaller(outdir, outfile, cmd)
+}
+######################################################################################
 project.hivc.check<- function()
 {
 	if(1) project.hivc.check.DateRes.after.HIVPosTest()
