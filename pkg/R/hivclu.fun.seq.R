@@ -136,6 +136,14 @@ seq.unique<- function(seq.DNAbin.matrix)
 }
 ######################################################################################
 #' @export
+seq.dist.pairwise<- function(x, y)
+{
+	stopifnot(class(x)=='DNAbin', class(y)=='DNAbin', length(dim(x))==2, length(dim(y))==2, nrow(x)==1, nrow(y)==1)
+	dummy		<- 0
+	1-.C("hivc_dist_ambiguous_dna", x, y, ncol(x), dummy )[[4]]
+}
+######################################################################################
+#' @export
 seq.dist<- function(seq.DNAbin.matrix, verbose=1)
 {
 	if(0)

@@ -4097,6 +4097,24 @@ project.hivc.examl<- function(dir.name= DATA)
 	
 }
 
+hivc.project.remove.resistancemut.save<- function()
+{
+	dr		<- as.data.table( read.csv( paste( CODE.HOME,"/data/IAS_primarydrugresistance_201303.csv",sep='' ), stringsAsFactors=F ) )	
+	dr[,Alignment.nuc.pos:= (Gene.codon.number-1)*3+Gene.HXB2pos ]		
+	dr		<- dr[,	{	tmp<- unique(Mutant); list(Mutant=tmp, Gene.codon.number=Gene.codon.number[1], Wild.type=Wild.type[1], DR.name=DR.name[1])	}, by=Alignment.nuc.pos]
+	#select nucleotide codes that are consistent with drug resistance mutants
+	nt2aa	<- as.data.table( read.csv( paste( CODE.HOME,"/data/standard_nt_code.csv",sep='' ), stringsAsFactors=F ) )
+	setnames(nt2aa,c("AA","NTs"),c("Mutant","Mutant.NTs"))
+	nt2aa	<- subset(nt2aa, select=c(Mutant,Mutant.NTs))
+	dr		<- merge(dr, nt2aa, all.x=1, by="Mutant", allow.cartesian=TRUE)
+	setkey(dr, "Alignment.nuc.pos")
+	#print(dr, nrows=250)
+	dr		<- subset(dr, select=c(Alignment.nuc.pos, Mutant.NTs, DR.name))
+	set(dr, NULL, "Mutant.NTs", tolower(dr[,Mutant.NTs]))
+	IAS_primarydrugresistance_201303	<- data.frame(dr)
+	save(IAS_primarydrugresistance_201303, file=paste( CODE.HOME,"/data/IAS_primarydrugresistance_201303.rda",sep='' ))	
+}
+
 project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 {			
 	if(0)

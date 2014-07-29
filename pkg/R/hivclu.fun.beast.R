@@ -55,28 +55,35 @@ hivc.beast.poolclusters<- function(cluphy.df, pool.ntip= 130, pool.includealways
 ######################################################################################
 #	add taxa and alignment in bxml from BEASTlabels in df and alignment in seq.PROT.RT
 #	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; beast.alignment.dataType= "nucleotide"; xml.resetTipDate2LastDiag=1
-hivc.beast.add.seq<- function(bxml, df, seq.PROT.RT, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", beast.alignment.dataType= "nucleotide", verbose=1)
+hivc.beast.add.seq<- function(bxml, seq.PROT.RT, df=NULL, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", beast.alignment.id="alignment", beast.alignment.dataType= "nucleotide", verbose=1)
 {			
 	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
-	
-	#	add sequence taxa
-	tmp.label	<- df[,BEASTlabel]	
-	if(verbose)	cat(paste("\nsetting tip date to time at pos x in label, x=", beast.label.datepos))
-	tmp.date	<- sapply( strsplit(tmp.label, beast.label.sep, fixed=1), function(x) x[beast.label.datepos] )
-	dummy		<- newXMLCommentNode(text="The list of taxa to be analysed (can also include dates/ages).", parent=bxml.beast, doc=bxml, addFinalizer=T)
-	dummy		<- newXMLCommentNode(text=paste("ntax=",nrow(df),sep=''), parent=bxml.beast, doc=bxml, addFinalizer=T)	
-	seqtaxa		<- newXMLNode("taxa", attrs= list(id="taxa"), parent=bxml.beast, doc=bxml, addFinalizer=T)
-	dummy		<- lapply(seq_along(tmp.label), function(i)
-			{
-				taxon	<- newXMLNode("taxon", attrs= list(id=tmp.label[i]), parent=seqtaxa, doc=bxml, addFinalizer=T )
-				dummy	<- newXMLNode("date", attrs= list(value=tmp.date[i], direction=beast.date.direction, units=beast.date.units), parent=taxon, doc=bxml, addFinalizer=T )
-				taxon
-			})	
-	if(verbose)	cat(paste("\nadded new seq taxa, n=", xmlSize(seqtaxa)))
+	if(is.null(df))
+			df	<- data.table(FASTASampleCode=rownames(seq.PROT.RT), BEASTlabel=rownames(seq.PROT.RT))
+	#	check if any taxa to be added
+	bxml.beast.existing.taxa.id		<- unlist( xpathApply(bxml.beast, "taxa/taxon", xmlGetAttr, "id" ) )
+	tmp								<- subset( df, !BEASTlabel%in%bxml.beast.existing.taxa.id )
+	#	add taxa if needed
+	if(nrow(tmp))
+	{		
+		tmp.label	<- tmp[,BEASTlabel]	
+		if(verbose)	cat(paste("\nsetting tip date to time at pos x in label, x=", beast.label.datepos))
+		tmp.date	<- sapply( strsplit(tmp.label, beast.label.sep, fixed=1), function(x) x[beast.label.datepos] )		
+		dummy		<- newXMLCommentNode(text="The list of taxa to be analysed (can also include dates/ages).", parent=bxml.beast, doc=bxml, addFinalizer=T)
+		dummy		<- newXMLCommentNode(text=paste("ntax=",nrow(tmp),sep=''), parent=bxml.beast, doc=bxml, addFinalizer=T)	
+		seqtaxa		<- newXMLNode("taxa", attrs= list(id="taxa"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+		dummy		<- lapply(seq_along(tmp.label), function(i)
+				{
+					taxon	<- newXMLNode("taxon", attrs= list(id=tmp.label[i]), parent=seqtaxa, doc=bxml, addFinalizer=T )
+					dummy	<- newXMLNode("date", attrs= list(value=tmp.date[i], direction=beast.date.direction, units=beast.date.units), parent=taxon, doc=bxml, addFinalizer=T )
+					taxon
+				})	
+		if(verbose)	cat(paste("\nadded new seq taxa, n=", xmlSize(seqtaxa)))		
+	}
 	#	add alignment	
 	dummy		<- newXMLCommentNode(text="The sequence alignment (each sequence refers to a taxon above).", parent=bxml.beast, doc=bxml, addFinalizer=T)
 	dummy		<- newXMLCommentNode(text=paste("ntax=",nrow(df)," nchar=",ncol(seq.PROT.RT),sep=''), parent=bxml.beast, doc=bxml, addFinalizer=T)	
-	seqalign	<- newXMLNode("alignment", attrs= list(id="alignment", dataType=beast.alignment.dataType), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	seqalign	<- newXMLNode("alignment", attrs= list(id=beast.alignment.id, dataType=beast.alignment.dataType), parent=bxml.beast, doc=bxml, addFinalizer=T)
 	dummy		<- lapply( seq_len(nrow(df)), function(i)
 			{
 				seq		<- newXMLNode("sequence", parent=seqalign, doc=bxml, addFinalizer=T)
@@ -980,6 +987,22 @@ hivc.beast.get.tmrcaStatistic<- function(bxml, btaxonsets, treeModel.id, include
 	ans
 }	
 ######################################################################################
+hivc.beast.get.sequences<- function(bxml, verbose=1)
+{			
+	bxml.ali		<- getNodeSet(bxml, "//alignment[@id]")
+	if(verbose)	cat(paste('\nFound alignments, n=',length(bxml.ali)))	
+	ans				<- lapply(bxml.ali, function(ali)
+			{
+				bxml.seq		<- xpathApply(ali, "sequence", function(z){ 	xmlValue(z[['text']])		})
+				bxml.seq		<- sapply(bxml.seq, function(z) gsub('\\s', '',z))	
+				tmp				<- unlist( xpathApply(ali, "sequence/taxon", xmlGetAttr, "idref" ) )
+				data.table(SEQ=bxml.seq, TAXON_ID=tmp, ALIGNMENT_ID=xmlGetAttr(ali,'id'))				
+			})
+	ans				<- do.call('rbind',ans)	
+	if(verbose)	cat(paste('\nFound sequences, n=',nrow(ans)))
+	ans
+}
+######################################################################################
 #	For each tip: construct a prior for the corresponding tmrcaStatistics
 hivc.beast.get.tipPrior<- function(bxml, df, btmrcaStatistics.tips, xml.prior4stem="uniform", beast.label.negpos=2, beast.label.diagpos=3, beast.label.datepos=4, verbose=1)
 {
@@ -1366,7 +1389,7 @@ hivc.beast.get.xml<- function(	btemplate, seq.PROT.RT, df, file, ph=NULL, xml.mo
 	bxml.beast	<- newXMLNode("beast", doc=bxml, addFinalizer=T)
 	newXMLCommentNode(text=paste("Generated by HIVCLUST from template",file), parent=bxml.beast, doc=bxml, addFinalizer=T)
 	#	add new set of sequences
-	dummy		<- hivc.beast.add.seq(bxml, df, seq.PROT.RT, beast.label.datepos=beast.label.datepos, beast.label.sep=beast.label.sep, beast.date.direction=beast.date.direction, beast.date.units=beast.date.units, verbose=verbose)
+	dummy		<- hivc.beast.add.seq(bxml, seq.PROT.RT, df, beast.label.datepos=beast.label.datepos, beast.label.sep=beast.label.sep, beast.date.direction=beast.date.direction, beast.date.units=beast.date.units, verbose=verbose)
 	#	copy everything after alignment up to but not including constantSize from template
 	bt.beast	<- getNodeSet(btemplate, "//beast")[[1]]
 	dummy		<- sapply(seq.int( which( xmlSApply(bt.beast, xmlName)=="alignment" )+1, which( xmlSApply(bt.beast, xmlName)=="patterns" ) ), function(i)

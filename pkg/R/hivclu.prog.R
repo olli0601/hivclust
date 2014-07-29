@@ -2807,25 +2807,17 @@ hivc.prog.get.clustering.precompute<- function()
 	ans				
 }
 
+
+
 hivc.prog.remove.resistancemut<- function()
 {
 	library(ape)
 	library(data.table)
 	
 	#load drug resistance mutations and select unique mutants by codon
-	dr		<- as.data.table( read.csv( paste( CODE.HOME,"/data/IAS_primarydrugresistance_201303.csv",sep='' ), stringsAsFactors=F ) )	
-	dr[,Alignment.nuc.pos:= (Gene.codon.number-1)*3+Gene.HXB2pos ]		
-	dr		<- dr[,	{	tmp<- unique(Mutant); list(Mutant=tmp, Gene.codon.number=Gene.codon.number[1], Wild.type=Wild.type[1], DR.name=DR.name[1])	}, by=Alignment.nuc.pos]
-	#select nucleotide codes that are consistent with drug resistance mutants
-	nt2aa	<- as.data.table( read.csv( paste( CODE.HOME,"/data/standard_nt_code.csv",sep='' ), stringsAsFactors=F ) )
-	setnames(nt2aa,c("AA","NTs"),c("Mutant","Mutant.NTs"))
-	nt2aa	<- subset(nt2aa, select=c(Mutant,Mutant.NTs))
-	dr		<- merge(dr, nt2aa, all.x=1, by="Mutant", allow.cartesian=TRUE)
-	setkey(dr, "Alignment.nuc.pos")
-	#print(dr, nrows=250)
-	dr		<- subset(dr, select=c(Alignment.nuc.pos, Mutant.NTs, DR.name))
-	set(dr, NULL, "Mutant.NTs", tolower(dr[,Mutant.NTs]))
-
+	load( paste( CODE.HOME,"/data/IAS_primarydrugresistance_201303.rda",sep='' ) )
+	dr				<- as.data.table(IAS_primarydrugresistance_201303)
+	
 	indir			<- paste(DATA,"tmp",sep='/')
 	infile			<- "ATHENA_2013_03_CurAll+LANL_Sequences"
 	insignat		<- "Sat_Jun_16_17/23/46_2013"

@@ -8781,7 +8781,9 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	indir					<- paste(DATA,"fisheretal_140714",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
 	indir					<- paste(DATA,"fisheretal_140722",sep='/')
-	outdir					<- paste(DATA,"fisheretal_140722",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_140722",sep='/')
+	indir					<- paste(DATA,"fisheretal_140729",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140729",sep='/')		
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"	
@@ -8905,6 +8907,47 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)		
+	#	m2Bwmx
+	#	3ka1.5H1			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka1.5H1'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka1.5H2			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka1.5H2'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka2H1			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H1'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka2H2			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H2'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	
 	#	m2Bwmx
 	#	3kaC			(ART.C)
 	method.DENOM	<- 'SEQ'
@@ -9778,8 +9821,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	resume					<- 1 
 	indir					<- paste(DATA,"fisheretal_140714",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140714",sep='/')
-	indir					<- paste(DATA,"fisheretal_140722",sep='/')
-	outdir					<- paste(DATA,"fisheretal_140722",sep='/')	
+	indir					<- paste(DATA,"fisheretal_140729",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140729",sep='/')	
 	#indir					<- paste(DATA,"fisheretal_140616",sep='/')
 	#outdir					<- paste(DATA,"fisheretal_140616",sep='/')	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -9790,30 +9833,6 @@ project.athena.Fisheretal.sensitivity<- function()
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	method.risk				<- c(	'm2B1st.cas','m2B1stMv.cas','m2Bwmx.cas','m2BwmxMv.cas','m2Bt.cas','m2BtMv.cas','m2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4','m2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4','m2BwmxMv.tp1.now','m2BwmxMv.tp2.now','m2BwmxMv.tp3.now','m2BwmxMv.tp4.now','m2BtMv.tp1','m2BtMv.tp2','m2BtMv.tp3','m2BtMv.tp4','m2BtMv.tp1.wstar','m2BtMv.tp2.wstar','m2BtMv.tp3.wstar','m2BtMv.tp4.wstar','m2BwmxMv.tp1.wstar','m2BwmxMv.tp2.wstar','m2BwmxMv.tp3.wstar','m2BwmxMv.tp4.wstar',									
-									'm2B1st.cas.clu','m2B1stMv.cas.clu','m2Bwmx.cas.clu','m2BwmxMv.cas.clu','m2Bt.cas.clu','m2BtMv.cas.clu','m2Bwmx.tp1.clu','m2Bwmx.tp2.clu','m2Bwmx.tp3.clu','m2Bwmx.tp4.clu','m2BwmxMv.tp1.clu','m2BwmxMv.tp2.clu','m2BwmxMv.tp3.clu','m2BwmxMv.tp4.clu','m2BwmxMv.tp1.clu.now','m2BwmxMv.tp2.clu.now','m2BwmxMv.tp3.clu.now','m2BwmxMv.tp4.clu.now','m2BtMv.tp1.clu','m2BtMv.tp2.clu','m2BtMv.tp3.clu','m2BtMv.tp4.clu','m2BtMv.tp1.clu.wstar','m2BtMv.tp2.clu.wstar','m2BtMv.tp3.clu.wstar','m2BtMv.tp4.clu.wstar','m2BwmxMv.tp1.clu.wstar','m2BwmxMv.tp2.clu.wstar','m2BwmxMv.tp3.clu.wstar','m2BwmxMv.tp4.clu.wstar',
-									'm2B1st.cas.adj','m2B1stMv.cas.adj','m2Bwmx.cas.adj','m2BwmxMv.cas.adj','m2Bt.cas.adj','m2BtMv.cas.adj','m2Bwmx.tp1.adj','m2Bwmx.tp2.adj','m2Bwmx.tp3.adj','m2Bwmx.tp4.adj',
-									'm2B1st.cas.cens','m2B1stMv.cas.cens','m2Bwmx.cas.cens','m2BwmxMv.cas.cens','m2Bt.cas.cens','m2BtMv.cas.cens','m2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens',
-									'm2B1st.cas.clu.cens','m2B1stMv.cas.clu.cens','m2Bwmx.cas.clu.cens','m2BwmxMv.cas.clu.cens','m2Bt.cas.clu.cens','m2BtMv.cas.clu.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens',
-									'm2B1st.cas.censp','m2B1stMv.cas.censp','m2Bwmx.cas.censp','m2BwmxMv.cas.censp','m2Bt.cas.censp','m2BtMv.cas.censp','m2Bwmx.tp1.censp','m2Bwmx.tp2.censp','m2Bwmx.tp3.censp','m2Bwmx.tp4.censp',
-									'm2B1st.cas.clu.censp','m2B1stMv.cas.clu.censp','m2Bwmx.cas.clu.censp','m2BwmxMv.cas.clu.censp','m2Bt.cas.clu.censp','m2BtMv.cas.clu.censp','m2Bwmx.tp1.clu.censp','m2Bwmx.tp2.clu.censp','m2Bwmx.tp3.clu.censp','m2Bwmx.tp4.clu.censp',
-									'm3.i','m3.ni','m3.nic','m3.nicv','m3.tni','m3.tnic','m3.tnicv','m3.tniv','m3.tnicNo','m3.tnicvNo','m3.tnicMv','m3.tnicMV','m3.tnicNoMV','m3.atnic','m3.atnicNo','m3.atnicMV','m3.atnicNoMV','m3.tnicNoMV','m3.btnic','m3.btnicNo','m3.btnicMV','m3.btnicNoMV','m3.indNo','m3.indNoMV','m3.n3No','m3.n3NoMV','m3.nnrtpiNo','m3.nnrtpiNoMV','m3.indNo.wstar','m3.indNoMV.wstar','m3.n3No.wstar','m3.n3NoMV.wstar','m3.nnrtpiNo.wstar','m3.nnrtpiNoMV.wstar',
-									'm3.ind','m3.ind.wstar','m3.indMV','m3.indMV.wstar','m3.indmx','m3.indmx.wstar','m3.indmxMV','m3.indmxMV.wstar','m3.indmxNo','m3.indmxNo.wstar','m3.indmxNoMV','m3.indmxNoMV.wstar','m3.n3mx','m3.n3mx.wstar','m3.n3mxMV','m3.n3mxMV.wstar',
-									'm3.i.clu','m3.ni.clu','m3.nic.clu','m3.nicv.clu','m3.tni.clu','m3.tnic.clu','m3.tnicv.clu','m3.tniv.clu','m3.tnicNo.clu','m3.tnicvNo.clu','m3.tnicMv.clu','m3.tnicMV.clu','m3.tnicNoMV.clu','m3.atnic.clu','m3.atnicNo.clu','m3.atnicMV.clu','m3.atnicNoMV.clu','m3.btnic.clu','m3.btnicNo.clu','m3.btnicMV.clu','m3.btnicNoMV.clu','m3.indNo.clu','m3.indNoMV.clu','m3.n3No.clu','m3.n3NoMV.clu','m3.nnrtpiNo.clu','m3.nnrtpiNoMV.clu','m3.indNo.clu.wstar','m3.indNoMV.clu.wstar','m3.n3No.clu.wstar','m3.n3NoMV.clu.wstar','m3.nnrtpiNo.clu.wstar','m3.nnrtpiNoMV.clu.wstar',
-									'm3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicNo.adj','m3.tnicvNo.adj','m3.tnicMv.adj','m3.tnicMV.adj','m3.tnicNoMV.adj','m3.atnic.adj','m3.atnicNo.adj','m3.atnicMV.adj','m3.atnicNoMV.adj','m3.btnic.adj','m3.btnicNo.adj','m3.btnicMV.adj','m3.btnicNoMV.adj',
-									'm3.nic.clu.adj','m3.nicv.clu.adj','m3.tnic.clu.adj','m3.tnicv.clu.adj','m3.tnicvNo.clu.adj','m3.tnicvNo.clu.adj','m3.tnicMv.clu.adj','m3.tnicMV.clu.adj','m3.tnicNoMV.clu.adj','m3.atnic.clu.adj','m3.atnicNo.clu.adj','m3.atnicMV.clu.adj','m3.atnicNoMV.clu.adj','m3.btnic.clu.adj','m3.btnicNo.clu.adj','m3.btnicMV.clu.adj','m3.btnicNoMV.clu.adj',									
-									'm3.nic.cens','m3.nicv.cens','m3.tnic.cens','m3.tnicv.cens','m3.tnicvNo.cens','m3.tnicvNo.cens','m3.tnicMv.cens','m3.tnicMV.cens','m3.tnicNoMV.cens','m3.atnic.cens','m3.atnicNo.cens','m3.atnicMV.cens','m3.atnicNoMV.cens','m3.btnic.cens','m3.btnicNo.cens','m3.btnicMV.cens','m3.btnicNoMV.cens',
-									'm3.nic.clu.cens','m3.nicv.clu.cens','m3.tnic.clu.cens','m3.tnicv.clu.cens','m3.tnicNo.clu.cens','m3.tnicvNo.clu.cens','m3.tnicMv.clu.cens','m3.tnicMV.clu.cens','m3.tnicNoMV.clu.cens','m3.atnic.clu.cens','m3.atnicNo.clu.cens','m3.atnicMV.clu.cens','m3.atnicNoMV.clu.cens','m3.btnic.clu.cens','m3.btnicNo.clu.cens','m3.btnicMV.clu.cens','m3.btnicNoMV.clu.cens',									
-									'm3.nic.censp','m3.nicv.censp','m3.tnic.censp','m3.tnicv.censp','m3.tnicNo.censp','m3.tnicvNo.censp','m3.tnicMv.censp','m3.tnicMV.censp','m3.tnicNoMV.censp','m3.atnic.censp','m3.atnicNo.censp','m3.atnicMV.censp','m3.atnicNoMV.censp','m3.btnic.censp','m3.btnicNo.censp','m3.btnicMV.censp','m3.btnicNoMV.censp',
-									'm3.nic.clu.censp','m3.nicv.clu.censp','m3.tnic.clu.censp','m3.tnicv.clu.censp','m3.tnicNo.clu.censp','m3.tnicvNo.clu.censp','m3.tnicMv.clu.censp','m3.tnicMV.clu.censp','m3.tnicNoMV.clu.censp','m3.atnic.clu.censp','m3.atnicNo.clu.censp','m3.atnicMV.clu.censp','m3.atnicNoMV.clu.censp','m3.btnic.clu.censp','m3.btnicNo.clu.censp','m3.btnicMV.clu.censp','m3.btnicNoMV.clu.censp',
-									'm4.Bwmxv','m4.Bwmxv.adj','m4.Bwmxv.censp','m4.Bwmxv.clu.censp',
-									'm4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp',
-									'm4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp',
-									'm5.tA.tp1','m5.tA.tp2','m5.tA.tp3','m5.tA.tp4',
-									'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu','m5.tA.tp1.clu.wstar','m5.tA.tp2.clu.wstar','m5.tA.tp3.clu.wstar','m5.tA.tp4.clu.wstar',
-									'm5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4','m5.tAc.tp1.wstar','m5.tAc.tp2.wstar','m5.tAc.tp3.wstar','m5.tAc.tp4.wstar',
-									'm5.tAc.tp1.clu','m5.tAc.tp2.clu','m5.tAc.tp3.clu','m5.tAc.tp4.clu','m5.tAc.tp1.clu.wstar','m5.tAc.tp2.clu.wstar','m5.tAc.tp3.clu.wstar','m5.tAc.tp4.clu.wstar'
-									)
 									
 	if(resume)
 	{
@@ -9831,183 +9850,21 @@ project.athena.Fisheretal.sensitivity<- function()
 	}
 	if(!resume)
 	{
-		runs.opt				<- list()
-		if(1)
-		{
-			run.opt							<- list()
-			run.opt$method					<- '3d'
-			run.opt$method.recentctime		<- '2011'
-			run.opt$method.Acute			<- ''
-			run.opt$method.minQLowerU		<- 0.01
-			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'gmrf'
-			run.opt$method.denom			<- 'SEQ'
-			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")							
-			run.opt$clu.infilexml.opt		<- "mph4clutx4tip"
-			run.opt$clu.infilexml.template	<- "um192rhU2080"	
-			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
-			runs.opt[[length(runs.opt)+1]]	<- run.opt
-		}
-		if(1)
-		{
-			run.opt							<- list()
-			run.opt$method					<- '3d'
-			run.opt$method.recentctime		<- '2011'
-			run.opt$method.Acute			<- ''
-			run.opt$method.minQLowerU		<- 0.01
-			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'CLU'
-			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
-			run.opt$clu.infilexml.opt		<- "clrh80"
-			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
-			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-			runs.opt[[length(runs.opt)+1]]	<- run.opt
-		}		
-		if(1)
-		{
-			run.opt							<- list()
-			run.opt$method					<- '3i'
-			run.opt$method.recentctime		<- '2011'
-			run.opt$method.Acute			<- ''
-			run.opt$method.minQLowerU		<- 0.01
-			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'SEQ'
-			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
-			run.opt$clu.infilexml.opt		<- "clrh80"
-			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
-			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-			runs.opt[[length(runs.opt)+1]]	<- run.opt
-		}
-		if(1)
-		{
-			run.opt							<- list()
-			run.opt$method					<- '3j'
-			run.opt$method.recentctime		<- '2011'
-			run.opt$method.Acute			<- ''
-			run.opt$method.minQLowerU		<- 0.01
-			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'SEQ'
-			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
-			run.opt$clu.infilexml.opt		<- "clrh80"
-			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
-			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-			runs.opt[[length(runs.opt)+1]]	<- run.opt
-		}
-		if(1)
-		{
-			run.opt							<- list()
-			run.opt$method					<- '3k'
-			run.opt$method.recentctime		<- '2011'
-			run.opt$method.Acute			<- 'H'
-			run.opt$method.minQLowerU		<- 0.01
-			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'SEQ'
-			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
-			run.opt$clu.infilexml.opt		<- "clrh80"
-			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
-			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-			runs.opt[[length(runs.opt)+1]]	<- run.opt
-		}
-		if(1)
-		{
-			run.opt							<- list()
-			run.opt$method					<- '3k'
-			run.opt$method.recentctime		<- '2011'
-			run.opt$method.Acute			<- 'H'
-			run.opt$method.minQLowerU		<- 0.05
-			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'SEQ'
-			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
-			run.opt$clu.infilexml.opt		<- "clrh80"
-			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
-			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-			runs.opt[[length(runs.opt)+1]]	<- run.opt
-		}
-		if(1)
-		{
-			run.opt							<- list()
-			run.opt$method					<- '3k'
-			run.opt$method.recentctime		<- '2011'
-			run.opt$method.Acute			<- 'H'
-			run.opt$method.minQLowerU		<- 0.1
-			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'SEQ'
-			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
-			run.opt$clu.infilexml.opt		<- "clrh80"
-			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
-			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-			runs.opt[[length(runs.opt)+1]]	<- run.opt
-		}
-		if(1)
-		{
-			run.opt							<- list()
-			run.opt$method					<- '3k'
-			run.opt$method.recentctime		<- '2011'
-			run.opt$method.Acute			<- 'H'
-			run.opt$method.minQLowerU		<- 0.2
-			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'SEQ'
-			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
-			run.opt$clu.infilexml.opt		<- "clrh80"
-			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
-			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-			runs.opt[[length(runs.opt)+1]]	<- run.opt
-		}
-		if(1)
-		{
-			run.opt							<- list()
-			run.opt$method					<- '3k'
-			run.opt$method.recentctime		<- '2011'
-			run.opt$method.Acute			<- 'C'
-			run.opt$method.minQLowerU		<- 0.01
-			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'SEQ'
-			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
-			run.opt$clu.infilexml.opt		<- "clrh80"
-			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
-			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-			runs.opt[[length(runs.opt)+1]]	<- run.opt
-		}		
-		if(1)
-		{
-			run.opt							<- list()
-			run.opt$method					<- '3k'
-			run.opt$method.recentctime		<- '2011'
-			run.opt$method.Acute			<- ''
-			run.opt$method.minQLowerU		<- 0.01
-			run.opt$method.nodectime		<- 'any'
-			run.opt$method.dating			<- 'sasky'
-			run.opt$method.denom			<- 'SEQ'
-			run.opt$infiletree				<- paste(infile,"examlbs500",sep="_")									
-			run.opt$clu.infilexml.opt		<- "clrh80"
-			run.opt$clu.infilexml.template	<- "sasky_sdr06fr"	
-			run.opt$outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-			runs.opt[[length(runs.opt)+1]]	<- run.opt
-		}
-		
-		runs.opt	<- lapply( runs.opt, function(run.opt)
+		files					<- list.files(indir)
+		files					<- files[ sapply(files, function(x) grepl('.R$',x) ) ]	
+		if(!length(files))	stop('cannot find files matching criteria')
+		runs.opt	<- lapply( files, function(z)
 				{
-					method			<- paste(run.opt$method, ifelse(run.opt$method.nodectime=='any','a','m'), sep='')
-					method			<- paste(method, ifelse(run.opt$method.Acute=='H','H',ifelse(run.opt$method.Acute=='C','C','')), sep='')
-					method			<- paste(method, ifelse(run.opt$method.minQLowerU==0.2,'2',ifelse(run.opt$method.minQLowerU==0.1,'1',ifelse(run.opt$method.minQLowerU==0.05,'5',''))), sep='')
-					files			<- list.files(indir)	
-					files			<- files[ sapply(files, function(x) 	grepl(paste(run.opt$outfile,run.opt$method.recentctime,sep='_'), x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) &
-																			ifelse(run.opt$method.recentctime=='', !grepl('2011',x), TRUE) &
-																			grepl(paste('_denom',run.opt$method.denom,'_',sep=''), x, fixed=1) &
-																			grepl(paste('_Yscore',method,'_',sep=''), x, fixed=1) &	grepl('R$',x) ) ]
-					tmp				<- sapply(method.risk, function(x){
-																			tmp	<- which(grepl(paste('_',x,'.R',sep=''), files, fixed=1))
-																			ifelse(length(tmp)==0, NA_character_, files[tmp])
-																		})				
-					ans				<- data.table(file=tmp, method.brl=method, method.nodectime=run.opt$method.nodectime, method.dating=run.opt$method.dating, method.risk=method.risk, method.denom=run.opt$method.denom, method.recentctime=ifelse(run.opt$method.recentctime=='','2013-03-01',run.opt$method.recentctime))				
+					method.brl			<- regmatches(z, regexpr('Yscore[^_]*',z))
+					method.brl			<- substr(method.brl, 7, nchar(method.brl))
+					method.denom		<- regmatches(z, regexpr('denom[[:alnum:]]*',z))
+					method.denom		<- substr(method.denom, 6, nchar(method.denom))
+					method.risk			<- regmatches(z, regexpr('[^_]*.R$',z))
+					method.risk			<- substr(method.risk,1,nchar(method.risk)-2)
+					method.dating		<- ifelse(grepl('sasky',z),'sasky','gmrf')
+					method.recentctime	<- ifelse(grepl('2011',z),'2011','2013-03-01')
+					method.nodectime	<- ifelse(grepl('a',method.brl),'any','map')
+					data.table(file=z, method.brl=method.brl, method.nodectime=method.nodectime, method.dating=method.dating, method.risk=method.risk, method.denom=method.denom, method.recentctime=method.recentctime)				
 				})
 		runs.opt	<- do.call('rbind', runs.opt)
 		setkey(runs.opt, method.dating, method.brl)	
@@ -11550,7 +11407,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Bwmx.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.1
+		method.minQLowerU		<- 0.2
 		method.brl.bwhost		<- 2
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
