@@ -223,6 +223,8 @@ project.Gates.RootSeqSim<- function()
 	DATA		<<- "/work/or105/Gates_2014"
 	indir		<- paste(DATA,'methods_comparison_rootseqsim/140727',sep='/')
 	infile		<- 'ALLv02.n100.rlx.gmrf' 
+	indir		<- paste(DATA,'methods_comparison_rootseqsim/140729',sep='/')
+	infile		<- 'ALLv04.n97.rlx.gmrf' 	
 	insignat	<- 'Sun_Jul_27_09-00-00_2014'
 	cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
 	cat(cmd)
