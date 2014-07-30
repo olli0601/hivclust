@@ -110,7 +110,7 @@ HPC.CX1.IMPERIAL<- "cx1.hpc.ic.ac.uk"		#this is set to system('domainname',inter
 HPC.MEM			<- "1750mb"
 
 #' @export
-HPC.LOAD		<- "module load intel-suite mpi R/2.15 raxml examl/2013-05-09 beast/1.7.4"
+HPC.LOAD		<- "module load intel-suite mpi R/2.15 raxml examl/2013-05-09 beast/1.8.0 beagle-lib/2014-07-30"
 
 
 ######################################################################################

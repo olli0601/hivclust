@@ -2552,7 +2552,7 @@ project.athena.Fisheretal.X.ART.pulsed<- function(df.tpairs, clumsm.info, df.tre
 	pulse	
 }
 ######################################################################################
-project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013.)
+project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013., lRNA.supp=3)
 {
 	#	prepare incare timeline for potential transmitters
 	incare		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique( subset(df.all, select=c(Patient, AnyPos_T1, DateDied)) ), by='Patient' )
@@ -2566,12 +2566,23 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.imm
 	incare		<- subset( incare, AnyPos_T1<DateDied )
 	incare.t	<- incare[, list(t= seq(AnyPos_T1, DateDied-t.period, by=t.period)),by='Patient']	
 	incare.t[, stage:='Diag']
-	cat(paste('\nincare.t entries, n=',nrow(incare.t)))
+	setnames(incare.t, 'Patient','t.Patient')
+	cat(paste('\nincare.t entries, n=',nrow(incare.t)))		
+	#	compute X: viral load of potential transmitter  	
+	X.viro		<- project.athena.Fisheretal.X.viro(df.tpairs, df.viro, t.period=t.period, lRNA.cutoff=NA)
+	cat(paste('\nVL info available for pot transmitters, n=',X.viro[, length(unique(t.Patient))]))
+	#	compute X: CD4 of potential transmitter
+	X.cd4		<- project.athena.Fisheretal.X.cd4(df.tpairs, df.immu, t.period=t.period)
+	cat(paste('\nCD4 info available for pot transmitters, n=',X.cd4[, length(unique(t.Patient))]))
+	#	add viro and cd4 time periods to incare.t		
+	incare.t	<- merge(incare.t, X.viro, by=c('t.Patient','t'), all.x=1)
+	incare.t	<- merge(incare.t, X.cd4, by=c('t.Patient','t'), all.x=1)
+	#	TODO
 	#	prepare treatment variables for potential transmitters
 	treat		<- subset(df.treatment, select=c(Patient, AnyT_T1, StartTime, StopTime, TrI, TrCh.failure, TrVL.failure, TrCh.toxicity, TrCh.adherence, TrCh.patrel, NoDrug, NoNRT, NoNNRT, NoPI, NoBoost, TDF, EFV, FTC))
 	treat[, TDF.EFV.FTC:= as.numeric(TDF & EFV & FTC)]	#Atripla ingredients	
-	set(treat, treat[, which(is.na(TrVL.failure) & TrCh.failure=='No')], 'TrVL.failure', 'No')
-	set(treat, treat[, which(is.na(TrVL.failure) & TrCh.failure=='Yes')], 'TrVL.failure', 'Yes')	
+	#set(treat, treat[, which(is.na(TrVL.failure) & TrCh.failure=='No')], 'TrVL.failure', 'No')
+	#set(treat, treat[, which(is.na(TrVL.failure) & TrCh.failure=='Yes')], 'TrVL.failure', 'Yes')	
 	treat		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), treat, by='Patient' )
 	set(treat, NULL, 'AnyT_T1', hivc.db.Date2numeric(treat[,AnyT_T1]))
 	set(treat, NULL, 'StopTime', hivc.db.Date2numeric(treat[,StopTime]))
@@ -2580,34 +2591,30 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.imm
 	set(treat, NULL, 'StopTime', treat[, floor(StopTime) + round( (StopTime%%1)*100 %/% (t.period*100) ) * t.period] )
 	treat		<- subset(treat, StartTime!=StopTime)	#delete too small Start to Stop time intervals	-- we can have interrupted at start
 	cat(paste('\nTreatment info available for pot transmitters, n=',treat[, length(unique(Patient))]))
+	setnames(treat, 'Patient', 't.Patient')
+	#	if there are treatment interruptions at start, then this is because treatment periods have been rounded away.
+	#	keep as is.
 	#	remove first ART periods that begin with an interruption
-	treat		<- merge( treat, subset( treat[, list(select=!all(TrI=='Yes')), by='Patient'], select, Patient), by='Patient' )
-	cat(paste('\nTreatment info for pot transmitters for which not all periods are ART interrupted, n=',treat[, length(unique(Patient))]))
-	treat		<- treat[, {
-								tmp<- seq.int(which(TrI!='Yes')[1], length(TrI))
-								lapply(.SD,'[',tmp)
-							},by='Patient']	
+	#treat		<- merge( treat, subset( treat[, list(select=!all(TrI=='Yes')), by='Patient'], select, Patient), by='Patient' )
+	#cat(paste('\nTreatment info for pot transmitters for which not all periods are ART interrupted, n=',treat[, length(unique(Patient))]))
+	#treat		<- treat[, {
+	#							tmp<- seq.int(which(TrI!='Yes')[1], length(TrI))
+	#							lapply(.SD,'[',tmp)
+	#						},by='Patient']	
 	#	get treatment timeline
-	treat.t		<- merge(subset(incare.t, select=c(Patient, t)), treat, by='Patient', allow.cartesian=TRUE )	
+	treat.t		<- merge(subset(incare.t, select=c(t.Patient, t)), treat, by='t.Patient', allow.cartesian=TRUE )	
 	treat.t		<- subset( treat.t, StartTime<=t+t.period/2 & t+t.period/2<StopTime )
 	cat(paste('\ntreat.t entries, n=',nrow(treat.t)))
 	setnames(treat.t, c('TrI','TrVL.failure','TrCh.toxicity','TrCh.adherence','TrCh.patrel','NoDrug','NoNRT','NoNNRT','NoPI','NoBoost','TDF.EFV.FTC'), c('ART.I','ART.F','ART.T','ART.A','ART.P','ART.nDrug','ART.nNRT','ART.nNNRT','ART.nPI','ART.nBoost','ART.TDF.EFV.FTC'))
-	treat.t		<- subset(treat.t, select=c(Patient,t,AnyT_T1,StartTime,StopTime,ART.I,ART.F,ART.T,ART.A,ART.P,ART.nDrug,ART.nNRT,ART.nNNRT,ART.nPI,ART.nBoost,ART.TDF.EFV.FTC))
+	treat.t		<- subset(treat.t, select=c(t.Patient,t,AnyT_T1,StartTime,StopTime,ART.I,ART.F,ART.T,ART.A,ART.P,ART.nDrug,ART.nNRT,ART.nNNRT,ART.nPI,ART.nBoost,ART.TDF.EFV.FTC))
 	#	merge incare and treatment timelines
-	incare.t	<- merge(incare.t, treat.t, all.x=1, by=c('Patient','t'))	
+	incare.t	<- merge(incare.t, treat.t, all.x=1, by=c('t.Patient','t'))	
 	#	set ever on ART per period t		(avoid AnyT_T1 as it may give periods that would start with treatment interruption)
 	set(incare.t, incare.t[, which(!is.na(StartTime))], 'stage', 'ART.started')
+	#	set virological failure by smoothed VL
+	set(incare.t, incare.t[, which(stage=='ART.started' & !is.na(lRNA) & lRNA>lRNA.supp)], 'ART.F', 'Yes')
+	set(incare.t, incare.t[, which(stage=='ART.started' & !is.na(lRNA) & lRNA<=lRNA.supp)], 'ART.F', 'No')
 	cat(paste("\nNumber entries with ART.I=='Yes' & stage=='Diag', n=",nrow(subset(incare.t, ART.I=='Yes' & stage=='Diag'))))
-	#	compute X: viral load of potential transmitter  	
-	X.viro		<- project.athena.Fisheretal.X.viro(df.tpairs, df.viro, t.period=t.period, lRNA.cutoff=NA)
-	cat(paste('\nVL info available for pot transmitters, n=',X.viro[, length(unique(t.Patient))]))
-	#	compute X: CD4 of potential transmitter
-	X.cd4		<- project.athena.Fisheretal.X.cd4(df.tpairs, df.immu, t.period=t.period)
-	cat(paste('\nCD4 info available for pot transmitters, n=',X.cd4[, length(unique(t.Patient))]))
-	#	add viro and cd4 time periods to incare.t
-	setnames(incare.t, 'Patient','t.Patient')		
-	incare.t	<- merge(incare.t, X.viro, by=c('t.Patient','t'), all.x=1)
-	incare.t	<- merge(incare.t, X.cd4, by=c('t.Patient','t'), all.x=1)
 	cat(paste('\nReturn X for #t.Patients=',incare.t[, length(unique(t.Patient))]))	
 	incare.t
 }

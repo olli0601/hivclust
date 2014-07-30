@@ -313,7 +313,27 @@ project.seq.dataset.mDR.mRC.mSH.pLANL<- function()
 	file		<- paste(indir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')
 	if(verbose)	cat(paste("\nsave new file to",file))
 	save(seq.PROT.RT, file=file)
-}				
+}
+######################################################################################
+project.hivc.Excel2dataframe.AllPatientCovariates.checkPosSeqT<- function()
+{
+	dir.name	<- DATA
+	file		<- paste(dir.name,"derived/ATHENA_2013_03_AllSeqPatientCovariates.R",sep='/')
+	load(file)
+	
+	file		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
+	load(file)
+	df.treatment<- df
+	file		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
+	load(file)
+	df.viro		<- df
+	
+	tmp			<- subset(df.all, PosSeqT>AnyT_T1, select=c(Patient, FASTASampleCode, PosSeqT))
+	tmp			<- merge(tmp, subset(df.treatment, TrVL.failure=='No', select=c(Patient, StartTime, StopTime, lRNA.mx)), by='Patient')
+	tmp			<- subset(tmp, PosSeqT>StartTime & PosSeqT<=StopTime)
+	tmp2		<- subset(tmp, lRNA.mx<2)
+	tmp2		<- merge(tmp2, df.viro,by='Patient')
+}
 ######################################################################################
 project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, verbose=1, resume=0)
 {	
@@ -670,8 +690,8 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 {
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
 	file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
-	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')	
-	file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')	
+	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
 	
 	load(file.viro)
 	df.viro		<- subset(df, select=c(Patient, PosRNA, lRNA))
@@ -959,8 +979,8 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	tmp					<- subset(df, select=c(Patient, AnyT_T1)) 
 	setkey(tmp, Patient)
 	tmp					<- merge(unique(tmp), df.viro, by='Patient')	
-	tmp					<- merge(subset(df, select=c(Patient, AnyT_T1, StartTime, StopTime)), subset(tmp, difftime(PosRNA, AnyT_T1, units='days')>90,select=c(Patient, PosRNA, lRNA)), by='Patient', allow.cartesian=TRUE, all.x=TRUE)
-	tmp					<- subset(tmp, is.na(PosRNA) | (StartTime<=PosRNA & PosRNA<StopTime))
+	tmp					<- merge(subset(df, select=c(Patient, AnyT_T1, StartTime, StopTime)), subset(tmp, difftime(PosRNA, AnyT_T1, units='days')>90,select=c(Patient, PosRNA, lRNA)), by='Patient', allow.cartesian=TRUE)
+	tmp					<- subset(tmp, (StartTime<=PosRNA & PosRNA<=StopTime))
 	tmp					<- tmp[, {
 										z<- which.max(lRNA)
 										list(AnyT_T1=AnyT_T1[z], PosRNA.mx= PosRNA[z], lRNA.mx=lRNA[z])
@@ -1540,18 +1560,24 @@ project.hivc.Excel2dataframe.Viro<- function()
 	set(df, tmp, 'RNA', NA_real_)
 	df	<- subset(df, !is.na(RNA))
 	#
-	#	set undetectable & 1e3<RNA<1e4 after treatment start to RNA
+	#	remove undetectable & 1e3<RNA<1e4 after treatment start to RNA
 	#	
 	tmp		<- which( df[, Undetectable=="Yes" & RNA>RNA.stdvl.udetect.aTS & RNA<1e4 & difftime(PosRNA, AnyT_T1, units='days')>=0] )
-	if(verbose)		cat(paste("\nsetting Undetectable=='Yes' and RNA<1e4 and PosRNA>AnyT_T1 to Undetectable=='No', n=",length(tmp)))
-	set(df,tmp,"Undetectable","No")
+	if(verbose)		cat(paste("\nremove Undetectable=='Yes' and 1e3<RNA<1e4 and PosRNA>AnyT_T1', n=",length(tmp)))
+	set(df, tmp, 'RNA', NA_real_)
+	df	<- subset(df, !is.na(RNA))	
 	#
-	#	set undetectable & RNA<1e4 after treatment start to 1e3
+	#	set undetectable & RNA<1e3 after treatment start to RNA
 	#	
 	tmp		<- which( df[, Undetectable=="Yes" & RNA<=RNA.stdvl.udetect.aTS & difftime(PosRNA, AnyT_T1, units='days')>=0] )
-	if(verbose)		cat(paste("\nsetting Undetectable=='Yes' and RNA<1e4 and PosRNA>AnyT_T1 to Undetectable=='No' and RNA.min, n=",length(tmp)))
+	if(verbose)		cat(paste("\nsetting Undetectable=='Yes' and RNA<1e3 and PosRNA>AnyT_T1 to Undetectable=='No' and RNA, n=",length(tmp)))
 	set(df,tmp,"Undetectable","No")
-	set(df,tmp,"RNA",RNA.stdvl.udetect.aTS)
+	#
+	#	set undetectable & RNA>1e4 after treatment start to RNA
+	#	
+	tmp		<- which( df[, Undetectable=="Yes" & RNA>=1e4 & difftime(PosRNA, AnyT_T1, units='days')>=0] )
+	if(verbose)		cat(paste("\nsetting Undetectable=='Yes' and RNA>1e4 and PosRNA>AnyT_T1 to Undetectable=='No' and RNA, n=",length(tmp)))
+	set(df,tmp,"Undetectable","No")	
 	#
 	#	remove undetectable RNA (before treatment start) that are before the first detectable RNA
 	#
@@ -1581,9 +1607,13 @@ project.hivc.Excel2dataframe.Viro<- function()
 	set(df, tmp, 'RNA', NA_real_)
 	df		<- subset(df, !is.na(RNA))
 	if(verbose)		cat(paste("\nnumber of remaining undetectable RNA, n=",df[,length(which(Undetectable=='Yes'))]))
+	#
+	#	check remaining undetectable manually
+	#	
+	if(verbose)		cat(paste("\nCheck these measurements manually -- keeping all"))
 	print(subset(df, Undetectable=='Yes'))
-	if(verbose)		cat(paste("\nremove these unclear RNA too"))
-	df		<- subset(df, Undetectable=='No')
+	tmp		<- df[, which(Undetectable=='Yes')]
+	set(df,tmp,"Undetectable","No")	
 	#
 	#	set RNA<RNA.min to RNA.min
 	#		
@@ -1639,15 +1669,17 @@ project.hivc.Excel2dataframe.Viro<- function()
 	df		<- unique(df)
 	setkey(df, Patient, PosRNA)
 	tmp		<- which(duplicated(df))
-	tmp		<- sapply(tmp, function(i)		c(i-1,i)[which.min(df[c(i-1,i),Source])]	)
+	if('Source'%in%colnames(df))
+		tmp	<- sapply(tmp, function(i)		c(i-1,i)[which.min(df[c(i-1,i),Source])]	)
+	if('Source'%in%colnames(df))
+		tmp	<- sapply(tmp, function(i)		c(i-1,i)[which.min(df[c(i-1,i),RNA])]	)
+	cat(paste('\nremove duplicate entries, n=', length(tmp)))
 	df		<- df[-tmp,]			
-	#			
-	#
+	# double check entries manually in range >5e6		
 	tmp		<- merge(unique(subset(df, RNA>5e6 & PosRNA>AnyT_T1, Patient)), df, by="Patient")
 	tmp		<- which(df[, Patient%in%c("M12736","M27885","M14799","M12612") & RNA>5e6])
 	set(df, tmp, "RNA", NA_real_)	
-	# double check entries manually in range >5e6
-	#		
+	# double check entries manually in range >5e6		
 	tmp		<- merge(subset(df, RNA>5e6, c(Patient,PosRNA)), df.treat, by="Patient")
 	tmp		<- tmp[, 	{
 				z<- which( difftime(StopTime,PosRNA,units="days")>0 )
@@ -1679,34 +1711,34 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#
 	# check entries manually with Undetectable=="Yes" & RNA>1e4
 	#		
-	tmp		<- merge(subset(df, Undetectable=="Yes" & RNA>1e4, c(Patient,PosRNA)), df.treat, by="Patient")
-	tmp		<- tmp[, 	{
-				z<- which( difftime(StopTime,PosRNA,units="days")>0 )
-				z<- z[1]
-				list(PosRNA=PosRNA[z], StartTime=StartTime[z], StopTime=StopTime[z], TrI=TrI[z], TrCh.failure=TrCh.failure[z], TrCh.adherence=TrCh.adherence[z], TrCh.patrel=TrCh.patrel[z])				
-			}, by="Patient"]
-	setnames(tmp, "PosRNA","PosRNAh")
-	tmp		<- merge(tmp, df,by="Patient")		
+	#tmp		<- merge(subset(df, Undetectable=="Yes" & RNA>1e4, c(Patient,PosRNA)), df.treat, by="Patient")
+	#tmp		<- tmp[, 	{
+	#			z<- which( difftime(StopTime,PosRNA,units="days")>0 )
+	#			z<- z[1]
+	#			list(PosRNA=PosRNA[z], StartTime=StartTime[z], StopTime=StopTime[z], TrI=TrI[z], TrCh.failure=TrCh.failure[z], TrCh.adherence=TrCh.adherence[z], TrCh.patrel=TrCh.patrel[z])				
+	#		}, by="Patient"]
+	#setnames(tmp, "PosRNA","PosRNAh")
+	#tmp		<- merge(tmp, df,by="Patient")		
 	#tmp[, print(data.table(Patient,RNA,PosRNA,Undetectable,StartTime,StopTime,TrI,TrCh.failure,TrCh.adherence,TrCh.patrel)), by="Patient"]
 	#
-	tmp		<- which(df[, Patient=="M30584" & PosRNA=="2004-10-14"])
-	if(verbose) cat(paste("\nset  M30584 2004-10-14 to NA, n=",length(tmp)))
-	set(df, tmp, "RNA", NA)
-	tmp		<- which(df[, Patient=="M26369" & PosRNA=="2003-10-13"])[1]
-	if(verbose) cat(paste("\nset  M26369 2003-10-13 to NA, n=",length(tmp)))
-	set(df, tmp, "RNA", NA)
-	tmp		<- which(df[, Patient=="M16566" & PosRNA=="2000-11-16"])
-	if(verbose) cat(paste("\nset  M16566 2000-11-16 to NA, n=",length(tmp)))
-	set(df, tmp, "RNA", NA)
-	tmp		<- which(df[, Patient=="M12818" & PosRNA=="1996-09-18" & RNA>=1e4])
-	if(verbose) cat(paste("\nset  M12818 1996-09-18 to NA, n=",length(tmp)))
-	set(df, tmp, "RNA", NA)		
+	#tmp		<- which(df[, Patient=="M30584" & PosRNA=="2004-10-14"])
+	#if(verbose) cat(paste("\nset  M30584 2004-10-14 to NA, n=",length(tmp)))
+	#set(df, tmp, "RNA", NA)
+	#tmp		<- which(df[, Patient=="M26369" & PosRNA=="2003-10-13"])[1]
+	#if(verbose) cat(paste("\nset  M26369 2003-10-13 to NA, n=",length(tmp)))
+	#set(df, tmp, "RNA", NA)
+	#tmp		<- which(df[, Patient=="M16566" & PosRNA=="2000-11-16"])
+	#if(verbose) cat(paste("\nset  M16566 2000-11-16 to NA, n=",length(tmp)))
+	#set(df, tmp, "RNA", NA)
+	#tmp		<- which(df[, Patient=="M12818" & PosRNA=="1996-09-18" & RNA>=1e4])
+	#if(verbose) cat(paste("\nset  M12818 1996-09-18 to NA, n=",length(tmp)))
+	#set(df, tmp, "RNA", NA)		
 	#
 	#	set Undetectable=='Yes' & RNA>1e4
 	#
-	tmp		<- which(df[, Undetectable=="Yes" & RNA>=1e4])
-	if(verbose) cat(paste("\nsetting Undetectable=='Yes' & RNA>1e4 to Undetectable=='No', n=",length(tmp)))
-	set(df, tmp, "Undetectable", "No")		
+	#tmp		<- which(df[, Undetectable=="Yes" & RNA>=1e4])
+	#if(verbose) cat(paste("\nsetting Undetectable=='Yes' & RNA>1e4 to Undetectable=='No', n=",length(tmp)))
+	#set(df, tmp, "Undetectable", "No")		
 	#
 	#	set RNA>RNA.max to RNA.max
 	#		
