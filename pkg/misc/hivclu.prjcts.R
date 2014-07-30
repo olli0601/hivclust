@@ -221,12 +221,14 @@ project.hivc.check.DateRes.after.T0<- function(dir.name= DATA, verbose=1)
 project.Gates.RootSeqSim<- function()
 {
 	DATA		<<- "/work/or105/Gates_2014"
-	indir		<- paste(DATA,'methods_comparison_rootseqsim/140727',sep='/')
-	infile		<- 'ALLv02.n100.rlx.gmrf' 
-	indir		<- paste(DATA,'methods_comparison_rootseqsim/140729',sep='/')
-	infile		<- 'ALLv04.n97.rlx.gmrf' 	
-	insignat	<- 'Sun_Jul_27_09-00-00_2014'
-	cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
+	#indir		<- paste(DATA,'methods_comparison_rootseqsim/140727',sep='/')
+	#infile		<- 'ALLv02.n100.rlx.gmrf' 
+	#indir		<- paste(DATA,'methods_comparison_rootseqsim/140729',sep='/')
+	#infile		<- 'ALLv04.n97.rlx.gmrf' 	
+	indir		<- paste(DATA,'methods_comparison_rootseqsim/140730',sep='/')
+	infile		<- 'ALLv05.n97.rlx.gmrf' 		
+	insignat	<- 'Sun_Jul_27_09-00-00_2014'	
+	cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
 	cat(cmd)
 	
 	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=91, hpc.mem="1800mb")
@@ -2602,6 +2604,47 @@ project.ukca.TPTN.bootstrapvalues<- function(dir.name= DATA)
 	hivc.phy.get.TP.and.TN.bootstrapvalues(ph, bs.linked.bypatient, ph.mrca=ph.mrca ,df.seqinfo=NULL, bs.unlinkedpairs=bs.unlinkedpairs, bs.unlinked.byspace=NULL, dist.brl=NULL, thresh.brl=0.096, plot.file=plot.file, verbose= 1)	
 }
 ######################################################################################
+project.athena.subtypeBnumbers<- function()
+{
+	df.seqinfo	<- subset(df.all, !is.na(FASTASampleCode) & !is.na(PosSeqT))
+	df.seqinfo[, length(unique(Patient))]
+	
+	tmp			<- subset(df.seqinfo, Trm%in%c('MSM','BI'))
+	tmp[, length(unique(Patient))]
+	#4794
+	4794/6260
+	subset(df.seqinfo, !is.na(PosSeqT))
+	
+
+	tmp			<- data.table(RegionHospital=c('Amst','W','N','S','E'), RegionHospital.long=c('Amsterdam','West','North','South','East'))	
+	df.seqinfo	<- merge(df.seqinfo, tmp, by='RegionHospital', all.x=1)
+	set(df.seqinfo, NULL, 'RegionHospital.long', df.seqinfo[, factor(RegionHospital.long, levels=c('Amsterdam','West','North','South','East'))])
+	ggplot( df.seqinfo, aes(x= PosSeqT, fill=RegionHospital.long) ) + geom_bar(binwidth=1) +
+			labs(x='sampling time of HIV sequence', y='number / year', fill='Region in care') +
+			scale_fill_grey() +
+			scale_x_continuous(breaks=seq(1980, 2020, 2), lim=c(1990,2013)) +
+			theme_bw() + theme(legend.position = "bottom") 
+	file	<- '/Users/Oliver/duke/2014_HIVNL_monitoringreport/seqnumbers.pdf'
+	ggsave(file=file, w=10, h=4)
+	
+	set(df.treatment, NULL, 'StopTime', df.treatment[, hivc.db.Date2numeric(StopTime)])
+	setkey(df.seqinfo, Patient, PosSeqT)
+	setkey(df.seqinfo, Patient)
+	tmp		<- df.seqinfo
+	#tmp		<- df.seqinfo[, {
+	#							z<- which.min(PosSeqT)
+	#							list(PosSeqT=PosSeqT[z], FASTASampleCode=FASTASampleCode[z], AnyPos_T1=AnyPos_T1[1], AnyT_T1=AnyT_T1[1])
+	#						}, by='Patient']
+	tmp		<- merge( tmp, subset(df.treatment, select=c(Patient, StopTime, TrVL.failure, TrI)), by='Patient', allow.cartesian=TRUE, all.x=TRUE)
+	tmp		<- tmp[, {
+				z<- which(StopTime<PosSeqT)
+				list(	Patient= Patient[1],
+						PosSeqT=PosSeqT[1],
+						b4T= is.na(AnyT_T1[1]) | PosSeqT[1]<AnyT_T1[1], 
+						b4VLf= is.na(AnyT_T1[1]) | !length(z) | !any(TrVL.failure[z]=='Yes', na.rm=TRUE)	)
+			}, by='FASTASampleCode']
+}
+######################################################################################
 project.athena.Niaetal.similar<- function()
 {
 	require(data.table)
@@ -3582,6 +3625,15 @@ project.hivc.examlclock<- function()
 		labs(x='Sequence sampling date', y='root-to-tip divergence') +
 		theme(legend.position=c(0,1), legend.justification=c(0,1))
 	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_clock.pdf'
+	
+	ggplot(dfbh, aes(x=PosSeqT, y=height, colour=b4T, pch=b4T)) + geom_point(alpha=0.75) +
+			scale_x_continuous(breaks=seq(1980,2020,2)) +
+			scale_colour_manual(values=c('red','grey50')) +
+			stat_smooth(method="lm", colour='black', aes(pch='Yes')) + 
+			labs(x='Sequence sampling date', y='root-to-tip divergence', colour='Sampled before ART start', pch='Sampled before ART start') +
+			theme_bw() +
+			theme(legend.position=c(0,1), legend.justification=c(0,1))	
+	file	<- '/Users/Oliver/duke/2014_HIVNL_monitoringreport/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_clock.pdf'
 	ggsave(file=file, w=15, h=5)
 	#
 	#	within host divergence
