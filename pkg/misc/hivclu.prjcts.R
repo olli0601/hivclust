@@ -1808,6 +1808,7 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 {
 	file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient.csv",sep='/')
 	file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient_AllMSM.csv",sep='/')
+	file.update			<- paste(dir.name,"derived/ATHENA_2014_06_Patient_All.csv",sep='/')
 	
 	NA.Acute			<- c(NA,9)
 	NA.CountryInfection	<- c(NA,"")
@@ -1816,14 +1817,29 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	NA.Subtype			<- c(NA,"")
 	NA.time				<- c("","01/01/1911","11/11/1911")		
 	NA.transmission		<- 900
-	#read PATIENT csv data file and preprocess	
-	df					<- read.csv(file, stringsAsFactors=FALSE)									
+	#	read PATIENT csv data file	
+	df					<- read.csv(file, stringsAsFactors=FALSE)	
+	#
+	#	UPDATE
+	#
+	df.update			<- read.csv(file.update, stringsAsFactors=FALSE)
+	cat(paste('\ndifferent variables that are new in update=',paste(setdiff(colnames(df.update), colnames(df)), collapse=' ')))
+	#	no update for same patients in df
+	tmp					<- merge( data.frame(Patient=setdiff( df[, 'Patient'], df.update[, 'Patient'])), df, by='Patient' )
+	tmp$DateAIDS		<- ''
+	tmp$Acute			<- tmp$AcuteInfection
+	cat(paste('\nFound patients with no update, n=',nrow(tmp)))
+	#	update for all other patients in df
+	df					<- merge( subset(df, select=c(Patient, DateFirstEverCDCC)), df.update, by='Patient' )
+	df					<- rbind( df, subset(tmp, select=colnames(df)) )
+	#	
+	#
 	df$isDead			<- as.numeric( df[,"DateDied"]!="")
 	tmp					<- which(df[,"Transmission"]==NA.transmission)
 	if(length(tmp))
 		df[tmp,"Transmission"]<- NA
 	
-	date.var			<- c("DateBorn","MyDateNeg1","MyDatePos1","DateDied","DateLastContact","DateFirstEverCDCC")		
+	date.var			<- c("DateBorn","MyDateNeg1","MyDatePos1","DateDied","DateLastContact","DateFirstEverCDCC","DateAIDS")		
 	for(x in date.var)
 	{
 		cat(paste("\nprocess Time", x))
@@ -1845,7 +1861,7 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	}
 	
 	df<- data.table(df)
-	setnames(df, c("MyDateNeg1_Acc","MyDatePos1_Acc","AcuteInfection","Transmission","HospitalRegion"), c("NegT_Acc","PosT_Acc","isAcute","Trm","RegionHospital"))
+	setnames(df, c("MyDateNeg1_Acc","MyDatePos1_Acc","Acute","Transmission","HospitalRegion"), c("NegT_Acc","PosT_Acc","isAcute","Trm","RegionHospital"))
 	#set(df, NULL, "Patient", factor(df[,Patient]))
 	set(df, which( df[,isAcute%in%NA.Acute] ), "isAcute", NA )		
 	set(df, NULL, "isAcute", factor(df[,isAcute], levels=c(0,1,2), labels=c("No","Yes","Maybe")) )
