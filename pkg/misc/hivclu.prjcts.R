@@ -1449,8 +1449,8 @@ project.hivc.Excel2dataframe.Viro<- function()
 {
 	file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
 	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro.csv",sep='/')
-	file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
-	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.csv",sep='/')
+	#file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
+	#file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.csv",sep='/')
 	
 	verbose				<- 1
 	dir.name			<- DATA
@@ -1600,10 +1600,17 @@ project.hivc.Excel2dataframe.Viro<- function()
 	set(df, tmp, 'RNA', NA_real_)
 	df	<- subset(df, !is.na(RNA))
 	#
-	#	remove undetectable if RNA<1e4 before ART
+	#	remove undetectable if RNA<1e3 before ART
 	#
+	tmp		<- df[, which(Undetectable=='Yes' & RNA<=1e3 & (is.na(AnyT_T1) | difftime(AnyT_T1,PosRNA,units='days')>0 ) ) ]
+	if(verbose)		cat(paste("\nremove undetectable RNA with RNA<1e3 before ART start, n=",length(tmp)))
+	set(df, tmp, 'RNA', NA_real_)
+	df		<- subset(df, !is.na(RNA))
+	#
+	#	remove undetectable if RNA<1e3 before ART
+	#	
 	tmp		<- df[, which(Undetectable=='Yes' & RNA<=1e4 & (is.na(AnyT_T1) | difftime(AnyT_T1,PosRNA,units='days')>0 ) ) ]
-	if(verbose)		cat(paste("\nremove undetectable RNA with RNA<1e4 before ART start, n=",length(tmp)))
+	if(verbose)		cat(paste("\nremove undetectable RNA with 1e3<RNA<1e4 before ART start, n=",length(tmp)))
 	set(df, tmp, 'RNA', NA_real_)
 	df		<- subset(df, !is.na(RNA))
 	if(verbose)		cat(paste("\nnumber of remaining undetectable RNA, n=",df[,length(which(Undetectable=='Yes'))]))

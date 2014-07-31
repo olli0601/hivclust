@@ -744,7 +744,7 @@ hivc.cmd.examl.cleanup<- function(outdir, prog= PR.EXAML.EXAML)
 }
 ######################################################################################
 #' @export
-hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -strict -working -threads", prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
+hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -strict -working", prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
 {
 	cmd		<- "#######################################################
 # start: run BEAST
@@ -755,7 +755,7 @@ hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, p
 	if(hpcsys=="debug")						#my MAC - don t use scratch
 	{		
 		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,prog.beast[hpcsys],prog.beast.opt,' ',ifelse(hpc.ncpu>1,hpc.ncpu,''),' ',tmp,'\n',sep='')
+		cmd		<- paste(cmd,prog.beast[hpcsys], prog.beast.opt,' -threads ', hpc.ncpu,' ',tmp,'\n',sep='')
 	}
 	else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
 	{
@@ -766,7 +766,7 @@ hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, p
 		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
 		cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
 		tmp		<- paste(tmpdir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,prog.beast[hpcsys],prog.beast.opt,' ',ifelse(hpc.ncpu>1,hpc.ncpu,'')," ",tmp,'\n',sep='')	
+		cmd		<- paste(cmd,prog.beast[hpcsys], prog.beast.opt,' -threads ',hpc.ncpu," ",tmp,'\n',sep='')	
 		cmd		<- paste(cmd,"cp -f ",tmpdir,"/* ", indir,'\n',sep='')		
 	}
 	cmd		<- paste(cmd,"echo \'end ",prog.beast[hpcsys],"\'\n",sep='')
