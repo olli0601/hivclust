@@ -1499,13 +1499,6 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	# 	recent msm 
 	#
 	load(paste(indircov,'/',infilecov,'.R',sep=''))
-	#	adjust Acute=='Maybe' by NegT 
-	if(!is.na(adjust.AcuteByNegT))
-	{
-		tmp		<- which( df.all[, (is.na(isAcute) | isAcute=='No') & !is.na(NegT) & AnyPos_T1<=NegT+adjust.AcuteByNegT*365])
-		cat(paste('\nmsm.recent: set Acute==Maybe when NegT is close to AnyPos_T1, n=',length(tmp)))
-		set(df.all, tmp, 'isAcute', 'Maybe')
-	}		
 	set(df.all, NULL, 'Patient', df.all[, as.character(Patient)])
 	set(df.all, NULL, 'PosSeqT', hivc.db.Date2numeric(df.all[,PosSeqT]))
 	set(df.all, NULL, 'DateBorn', hivc.db.Date2numeric(df.all[,DateBorn]))	
@@ -1977,6 +1970,9 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		df.scchr.negT[, q2.5:=NULL]
 		df.scchr.negT[, q97.5:=NULL]
 	}
+	#		
+	cat(paste('\navg time of acute.Yes phase=',dur.AcuteYes))
+	cat(paste('\navg time of acute.Maybe phase=',dur.AcuteMaybe))	
 	#
 	t2inf.args						<- list()
 	t2inf.args$cd4g850.intercept	<- m4a$coefficients["(Intercept)"]
@@ -1991,9 +1987,8 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	t2inf.args$cd4other.coef		<- m4d$coefficients["AnyPos_a"]
 	t2inf.args$cd4other.theta		<- m4d$theta	
 	t2inf.args$method.minQLowerU	<- method.minQLowerU
-	#		
-	cat(paste('\navg time of acute.Yes phase=',dur.AcuteYes))
-	cat(paste('\navg time of acute.Maybe phase=',dur.AcuteMaybe))
+	t2inf.args$dur.AcuteYes			<- dur.AcuteYes
+	t2inf.args$dur.AcuteMaybe		<- dur.AcuteMaybe
 	#
 	if(method.Acute%in%c('lower','central','higher') && t2inf.args$method.minQLowerU==0.)
 	{
@@ -2009,12 +2004,12 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 						print(isAcute)
 						if(!is.na(isAcute) & isAcute=='Yes') 
 						{
-							ans				<- pexp(q, 1/dur.AcuteYes, lower.tail=FALSE)
+							ans				<- pexp(q, 1/t2inf.args$dur.AcuteYes, lower.tail=FALSE)
 							ans[ans<0.1]	<- NA_real_		
 						}
 						else if(!is.na(isAcute) & isAcute=='Maybe')
 						{
-							ans				<- pexp(q, 1/dur.AcuteMaybe, lower.tail=FALSE)
+							ans				<- pexp(q, 1/t2inf.args$dur.AcuteMaybe, lower.tail=FALSE)
 							ans[ans<0.1]	<- NA_real_	
 						}
 						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1>AnyPos_T1+1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
@@ -2053,12 +2048,12 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 			df[, {
 						if(!is.na(isAcute) & isAcute=='Yes') 
 						{
-							ans				<- pexp(q, 1/dur.AcuteYes, lower.tail=FALSE)
+							ans				<- pexp(q, 1/t2inf.args$dur.AcuteYes, lower.tail=FALSE)
 							ans[ans<0.1]	<- NA_real_		
 						}
 						else if(!is.na(isAcute) & isAcute=='Maybe')
 						{
-							ans				<- pexp(q, 1/dur.AcuteMaybe, lower.tail=FALSE)
+							ans				<- pexp(q, 1/t2inf.args$dur.AcuteMaybe, lower.tail=FALSE)
 							ans[ans<0.1]	<- NA_real_	
 						}
 						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1>AnyPos_T1+1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
@@ -2093,11 +2088,11 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 			df[, {
 						if(!is.na(isAcute) & isAcute=='Yes') 
 						{
-							ans	<- pexp(q, 1/dur.AcuteYes, lower.tail=FALSE)
+							ans	<- pexp(q, 1/t2inf.args$dur.AcuteYes, lower.tail=FALSE)
 						}
 						else if(!is.na(isAcute) & isAcute=='Maybe')
 						{
-							ans	<- pexp(q, 1/dur.AcuteMaybe, lower.tail=FALSE)
+							ans	<- pexp(q, 1/t2inf.args$dur.AcuteMaybe, lower.tail=FALSE)
 						}
 						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1>AnyPos_T1+1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
 						{
@@ -2552,7 +2547,7 @@ project.athena.Fisheretal.X.ART.pulsed<- function(df.tpairs, clumsm.info, df.tre
 	pulse	
 }
 ######################################################################################
-project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013., lRNA.supp=3)
+project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.immu, df.treatment, t.period=0.25, t.endctime= 2013., lRNA.supp=3, ART.start.period.tmax=0.5)
 {
 	#	prepare incare timeline for potential transmitters
 	incare		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique( subset(df.all, select=c(Patient, AnyPos_T1, DateDied)) ), by='Patient' )
@@ -2577,7 +2572,6 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.imm
 	#	add viro and cd4 time periods to incare.t		
 	incare.t	<- merge(incare.t, X.viro, by=c('t.Patient','t'), all.x=1)
 	incare.t	<- merge(incare.t, X.cd4, by=c('t.Patient','t'), all.x=1)
-	#	TODO
 	#	prepare treatment variables for potential transmitters
 	treat		<- subset(df.treatment, select=c(Patient, AnyT_T1, StartTime, StopTime, TrI, TrCh.failure, TrVL.failure, TrCh.toxicity, TrCh.adherence, TrCh.patrel, NoDrug, NoNRT, NoNNRT, NoPI, NoBoost, TDF, EFV, FTC))
 	treat[, TDF.EFV.FTC:= as.numeric(TDF & EFV & FTC)]	#Atripla ingredients	
@@ -2611,9 +2605,13 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.imm
 	incare.t	<- merge(incare.t, treat.t, all.x=1, by=c('t.Patient','t'))	
 	#	set ever on ART per period t		(avoid AnyT_T1 as it may give periods that would start with treatment interruption)
 	set(incare.t, incare.t[, which(!is.na(StartTime))], 'stage', 'ART.started')
-	#	set virological failure by smoothed VL
+	#	set virological failure by smoothed VL, keep NA ART.F
 	set(incare.t, incare.t[, which(stage=='ART.started' & !is.na(lRNA) & lRNA>lRNA.supp)], 'ART.F', 'Yes')
 	set(incare.t, incare.t[, which(stage=='ART.started' & !is.na(lRNA) & lRNA<=lRNA.supp)], 'ART.F', 'No')
+	#	set ART start period
+	incare.t[, ART.startperiod:= NA_character_]
+	set(incare.t, incare.t[, which(stage=='ART.started' & t-AnyT_T1<=ART.start.period.tmax)], 'ART.startperiod', 'Yes')
+	set(incare.t, incare.t[, which(stage=='ART.started' & t-AnyT_T1>ART.start.period.tmax)], 'ART.startperiod', 'No')
 	cat(paste("\nNumber entries with ART.I=='Yes' & stage=='Diag', n=",nrow(subset(incare.t, ART.I=='Yes' & stage=='Diag'))))
 	cat(paste('\nReturn X for #t.Patients=',incare.t[, length(unique(t.Patient))]))	
 	incare.t
@@ -11414,7 +11412,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Bwmx.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.2
+		method.minQLowerU		<- 0.1
 		method.brl.bwhost		<- 2
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -11582,7 +11580,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method.minQLowerU==0.2)
 		method				<- paste(method,'2',sep='')
 	
-	adjust.AcuteByNegT		<- 0.75
+	adjust.AcuteByNegT		<- 1
 	any.pos.grace.yr		<- Inf	
 	if(resume)
 	{		
