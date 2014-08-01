@@ -218,23 +218,98 @@ project.hivc.check.DateRes.after.T0<- function(dir.name= DATA, verbose=1)
 			})
 }
 ######################################################################################
-project.Gates.RootSeqSim<- function()
+hivc.beast2out.read.tree <- function(bstr) 
+{
+	# 	store meta info for inner nodes that is given in [], and not in :[] which is meta info for edges	
+	tmp	<- unlist(regmatches(bstr,gregexpr('[^:]\\[[^]]+',bstr)))
+	tmp	<- sapply( tmp, function(x) substr(x, 4, nchar(x)) ) 
+	#	for each inner node, extract stats
+	tmp	<- strsplit(tmp, ',')
+	tmp	<- lapply(seq_along(tmp), function(i)
+			{
+				z<- strsplit(tmp[[i]],'=')				
+				data.table(inner.node=i, stat=sapply(z,'[',1), value=sapply(z,'[',2))
+			})
+	inode.stat	<- do.call('rbind', tmp)
+	tmp			<- inode.stat[, unique(stat)]
+	cat(paste('\nFound inner node statistics=',paste(tmp,collapse=' ')))
+	tmp			<- inode.stat[, list(has.all.stats= !length(setdiff(tmp, stat))  ) , by='inner.node']
+	tmp			<- subset(tmp, !has.all.stats)[, inner.node]
+	cat(paste('\nSome statistics missing for inner nodes=',paste(tmp,collapse=' ')))
+	inode.stat 
+}
+######################################################################################
+hivc.beast2out.read.trees <- function(file, tree.id=NA) 
+{	
+	X	<- scan(file = file, what = "", sep = "\n", quiet = TRUE)	
+	# 	isolate tree strings that are to be processed	
+	if(!is.na(tree.id))
+	{
+		bstr		<- X[grep(paste(tree.id,"[[:space:]]+",sep=''), X)]
+		inode.stat	<- hivc.beast2out.read.tree(bstr)
+		set(inode.stat, NULL, 'tree.id', tree.id[i] )
+		X			<- NULL
+		gc()
+	}
+	if(is.na(tree.id))
+	{
+		tmp			<- regexpr('^tree\\s\\S+',X)
+		tree.id		<- sapply( regmatches(X,tmp), function(x) substr(x, 5, nchar(x)))
+		tree.id		<- gsub('\\s','',tree.id)
+		X			<- X[ which(tmp>0) ]
+		cat(paste('\nFound trees, n=',length(tree.id)))
+		inode.stat	<- lapply(seq_along(tree.id), function(i)
+				{
+					
+					bstr	<- X[grep(paste(tree.id[i],"[[:space:]]+",sep=''), X)]
+					tmp		<- hivc.beast2out.read.tree(bstr)
+					set(tmp, NULL, 'tree.id', tree.id[i] )
+					tmp
+				})
+		inode.stat	<- do.call('rbind',inode.stat)		
+	}
+	inode.stat 
+}
+######################################################################################
+project.Gates.RootSeqSim.getrootseq<- function()
+{
+	#dir.name	<- "/work/or105/Gates_2014"
+	dir.name	<- '/Users/Oliver/duke/2014_Gates'  
+	indir		<- paste(dir.name,'methods_comparison_rootseqsim/140730',sep='/')
+	infile		<- 'ALLv05.n97.rlx.gmrf' 		
+	insignat	<- 'Sun_Jul_27_09-00-00_2014'	
+	
+	file		<- paste(indir, '/', infile, '_', insignat, '.timetrees', sep='')
+	stats		<- c(paste('ENV.CP',1:3,sep=''),paste('GAG.CP',1:3,sep=''),paste('POL.CP',1:3,sep=''))
+	tree.id		<- 'tree STATE_0'
+}
+######################################################################################
+project.Gates.RootSeqSim.runxml<- function()
 {
 	DATA		<<- "/work/or105/Gates_2014"
 	#indir		<- paste(DATA,'methods_comparison_rootseqsim/140727',sep='/')
 	#infile		<- 'ALLv02.n100.rlx.gmrf' 
 	#indir		<- paste(DATA,'methods_comparison_rootseqsim/140729',sep='/')
 	#infile		<- 'ALLv04.n97.rlx.gmrf' 	
-	indir		<- paste(DATA,'methods_comparison_rootseqsim/140730',sep='/')
-	infile		<- 'ALLv05.n97.rlx.gmrf' 		
+	#indir		<- paste(DATA,'methods_comparison_rootseqsim/140730',sep='/')
+	#infile		<- 'ALLv05.n97.rlx.gmrf' 		
+	indir		<- paste(DATA,'methods_comparison_rootseqsim/140801',sep='/')
+	infile		<- 'ALLv06.n97.rlx.gmrf' 		
+	
 	insignat	<- 'Sun_Jul_27_09-00-00_2014'	
 	cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
 	cat(cmd)
 	
-	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=91, hpc.mem="1800mb")
+	#	production
+	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=8, hpc.walltime=291, hpc.mem="3700mb")
 	outdir		<- indir
 	outfile		<- paste("b2m.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
 	hivc.cmd.hpccaller(outdir, outfile, cmd)
+}
+######################################################################################
+project.Gates.RootSeqSim<- function()
+{
+	project.Gates.RootSeqSim.runxml()
 }
 ######################################################################################
 project.hivc.check<- function()
