@@ -294,14 +294,15 @@ project.Gates.RootSeqSim.runxml<- function()
 	#indir		<- paste(DATA,'methods_comparison_rootseqsim/140730',sep='/')
 	#infile		<- 'ALLv05.n97.rlx.gmrf' 		
 	indir		<- paste(DATA,'methods_comparison_rootseqsim/140801',sep='/')
-	infile		<- 'ALLv06.n97.rlx.gmrf' 		
-	
+	infile		<- 'ALLv06.n97.rlx.gmrf' 			
 	insignat	<- 'Sun_Jul_27_09-00-00_2014'	
-	cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
+	
+	hpc.ncpu	<- 8
+	cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
 	cat(cmd)
 	
 	#	production
-	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=8, hpc.walltime=291, hpc.mem="3700mb")
+	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=291, hpc.mem="3700mb")
 	outdir		<- indir
 	outfile		<- paste("b2m.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
 	hivc.cmd.hpccaller(outdir, outfile, cmd)
