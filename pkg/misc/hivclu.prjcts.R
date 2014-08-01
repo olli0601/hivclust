@@ -1,4 +1,171 @@
 ######################################################################################
+project.hivc.check.CD4interpolation<- function(dir.name= DATA, verbose=1)
+{
+	
+	df.tpairs	<- subset(YX, !is.na(CD4), select=unique(t.Patient))
+	X.incare	<- project.athena.Fisheretal.X.incare(df.tpairs, df.all, df.viro, df.immu, df.treatment, t.period=1/8, t.endctime=2013.)
+	X.incare	<- subset(X.incare, !is.na(CD4), select=c(t.Patient, t, CD4))
+	
+	df.cd4		<- copy(df.immu)
+	setnames(df.cd4, 'Patient','t.Patient')
+	
+	df.cd4	<- merge( data.table( t.Patient=X.incare[, unique(t.Patient)] ), df.cd4, by='t.Patient' )
+	set(df.cd4, NULL, 'PosCD4', hivc.db.Date2numeric(df.cd4[,PosCD4]))
+	tmp		<- subset(df.cd4[, list(n=length(CD4), cg500= all(CD4>500), cg350=all(CD4>350), csd=sd(CD4)), by='t.Patient'], n>=1, select=c(t.Patient, cg500, cg350, csd))
+	tmp[, cgroup:='l350']
+	set(tmp, tmp[, which(cg350)], 'cgroup', 'l500')
+	set(tmp, tmp[, which(cg500)], 'cgroup', 'g500')
+	setkey(tmp, cgroup, csd)
+	tmp		<- tmp[,  list(t.Patient=t.Patient, csd= ceiling(seq_along(csd)/length(csd)*3)), by='cgroup']
+	
+	df.cd4		<- merge( tmp, df.cd4, by='t.Patient' )
+	X.incare	<- merge( X.incare, tmp, by='t.Patient')
+	
+	set(X.incare, NULL, 't.Patient', X.incare[,factor(t.Patient)])
+	set(X.incare, NULL, 'CD4', X.incare[,as.double(CD4)])
+	set(df.cd4, NULL, 't.Patient', df.cd4[,factor(t.Patient)])
+	#
+	#	
+	tmp			<- subset( X.incare, cgroup=='g500' )
+	setnames(tmp, 't', 'PosCD4')
+	tmp2		<- merge( df.cd4, unique(subset(tmp, select=t.Patient)), by='t.Patient' )	
+	tmp3		<- lapply( tmp2[, unique(t.Patient)], function(x)
+			{
+				z		<- subset(tmp, t.Patient==x, PosCD4)
+				z2		<- subset(tmp2, t.Patient==x)
+				if(nrow(z2)>1)
+				{
+					cd4.d	<- ifelse(z2[, diff(range(PosCD4))<2], 1, min(15,ceiling(nrow(z2)/8))  )
+					cd4.ml	<- gamlss(CD4 ~ PosCD4, data=z2, family='NO', trace = FALSE)
+					cd4.m	<- gamlss(CD4 ~ bs(PosCD4, degree=cd4.d), data=z2, family='NO', trace = FALSE)
+					suppressWarnings( cd4.sl	<- predict(cd4.ml, type='response', newdata=z, data=z2) )
+					suppressWarnings( cd4.s	<- predict(cd4.m, type='response', newdata=z, data=z2) )											
+					dev		<- deviance(cd4.ml)-deviance(cd4.m)
+				}
+				if(nrow(z2)==1)
+				{
+					cd4.s	<- cd4.sl	<- rep(z2[1,][,CD4],nrow(z))
+					dev		<- NA_real_
+				}
+				data.table(t.Patient=x, t=z[,PosCD4], CD4sl=cd4.sl, CD4s=cd4.s, dev=dev)
+			})
+	setnames(tmp, 'PosCD4', 't')
+	tmp			<- merge(tmp, do.call('rbind',tmp3), by=c('t.Patient','t'))	
+	df.cd4.g500	<- melt(tmp, measure.var=c('CD4', 'CD4s', 'CD4sl'), variable.name='method', value.name='CD4')
+	ggplot(df.cd4.g500, aes(x=t, y=CD4, group=interaction(t.Patient, method))) + geom_line(aes(colour=method)) + 
+			geom_point(data=tmp2, aes(x=PosCD4)) +
+			facet_grid(t.Patient ~ csd)
+	file		<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_checkCD4interpolation_g500.pdf'
+	ggsave(file=file, w=6, h=50, limitsize=FALSE)
+	#
+	#
+	tmp			<- subset( X.incare, cgroup=='l500' )
+	setnames(tmp, 't', 'PosCD4')
+	tmp2		<- merge( df.cd4, unique(subset(tmp, select=t.Patient)), by='t.Patient' )	
+	tmp3		<- lapply( tmp2[, unique(t.Patient)], function(x)
+			{
+				z		<- subset(tmp, t.Patient==x, PosCD4)
+				z2		<- subset(tmp2, t.Patient==x)
+				if(nrow(z2)>1)
+				{
+					cd4.d	<- ifelse(z2[, diff(range(PosCD4))<2], 1, min(15,ceiling(nrow(z2)/8))  )
+					cd4.ml	<- gamlss(CD4 ~ PosCD4, data=z2, family='NO', trace = FALSE)
+					cd4.m	<- gamlss(CD4 ~ bs(PosCD4, degree=cd4.d), data=z2, family='NO', trace = FALSE)
+					suppressWarnings( cd4.sl	<- predict(cd4.ml, type='response', newdata=z, data=z2) )
+					suppressWarnings( cd4.s	<- predict(cd4.m, type='response', newdata=z, data=z2) )											
+					dev		<- deviance(cd4.ml)-deviance(cd4.m)
+				}
+				if(nrow(z2)==1)
+				{
+					cd4.s	<- cd4.sl	<- rep(z2[1,][,CD4],nrow(z))
+					dev		<- NA_real_
+				}
+				data.table(t.Patient=x, t=z[,PosCD4], CD4sl=cd4.sl, CD4s=cd4.s, dev=dev)
+			})
+	setnames(tmp, 'PosCD4', 't')
+	tmp			<- merge(tmp, do.call('rbind',tmp3), by=c('t.Patient','t'))	
+	df.cd4.l500	<- melt(tmp, measure.var=c('CD4', 'CD4s', 'CD4sl'), variable.name='method', value.name='CD4')
+	ggplot(df.cd4.l500, aes(x=t, y=CD4, group=interaction(t.Patient, method))) + geom_line(aes(colour=method)) + 
+			geom_point(data=tmp2, aes(x=PosCD4)) +
+			facet_grid(t.Patient ~ csd)
+	file		<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_checkCD4interpolation_l500.pdf'
+	ggsave(file=file, w=6, h=170, limitsize=FALSE)
+	#
+	#
+	tmp			<- subset( X.incare, cgroup=='l350' )
+	setnames(tmp, 't', 'PosCD4')
+	tmp2		<- merge( df.cd4, unique(subset(tmp, select=t.Patient)), by='t.Patient' )	
+	tmp3		<- lapply( tmp2[, unique(t.Patient)], function(x)
+			{
+				z		<- subset(tmp, t.Patient==x, PosCD4)
+				z2		<- subset(tmp2, t.Patient==x)
+				if(nrow(z2)>1)
+				{
+					cd4.d	<- ifelse(z2[, diff(range(PosCD4))<2], 1, min(15,ceiling(nrow(z2)/8))  )
+					cd4.ml	<- gamlss(CD4 ~ PosCD4, data=z2, family='NO', trace = FALSE)
+					cd4.m	<- gamlss(CD4 ~ bs(PosCD4, degree=cd4.d), data=z2, family='NO', trace = FALSE)
+					suppressWarnings( cd4.sl	<- predict(cd4.ml, type='response', newdata=z, data=z2) )
+					suppressWarnings( cd4.s	<- predict(cd4.m, type='response', newdata=z, data=z2) )											
+					dev		<- deviance(cd4.ml)-deviance(cd4.m)
+				}
+				if(nrow(z2)==1)
+				{
+					cd4.s	<- cd4.sl	<- rep(z2[1,][,CD4],nrow(z))
+					dev		<- NA_real_
+				}
+				data.table(t.Patient=x, t=z[,PosCD4], CD4sl=cd4.sl, CD4s=cd4.s, dev=dev)
+			})
+	setnames(tmp, 'PosCD4', 't')
+	tmp			<- merge(tmp, do.call('rbind',tmp3), by=c('t.Patient','t'))	
+	df.cd4.l350	<- melt(tmp, measure.var=c('CD4', 'CD4s', 'CD4sl'), variable.name='method', value.name='CD4')
+	ggplot(df.cd4.l350, aes(x=t, y=CD4, group=interaction(t.Patient, method))) + geom_line(aes(colour=method)) + 
+			geom_point(data=tmp2, aes(x=PosCD4)) +
+			facet_grid(t.Patient ~ csd)
+	file		<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_checkCD4interpolation_l350.pdf'
+	ggsave(file=file, w=6, h=1100, limitsize=FALSE)
+		
+	#min deviance to select nonlinear prediction
+	subset(df.cd4.l500, t.Patient%in%c('M11902','M19233','M25370','M27565','M3728'))[, min(dev)]
+	#max deviance to select linear prediction
+	subset(df.cd4.l500, t.Patient%in%c('M34587','M37014'))[, max(dev)]
+	
+	#
+	#
+	#
+	tmp			<- subset( X.incare, cgroup=='l350' )		
+	setnames(tmp, 't', 'PosCD4')
+	tmp2		<- merge( df.cd4, unique(subset(tmp, select=t.Patient)), by='t.Patient' )	
+	tmp3		<- lapply( tmp2[, unique(t.Patient)], function(x)
+			{
+				z		<- subset(tmp, t.Patient==x, PosCD4)
+				z2		<- subset(tmp2, t.Patient==x)
+				if(nrow(z2)>1)
+				{
+					cd4.d	<- ifelse(z2[, diff(range(PosCD4))<2], 1, min(15,ceiling(nrow(z2)/8))  )
+					cd4.ml	<- gamlss(CD4 ~ PosCD4, data=z2, family='NO', trace = FALSE)
+					cd4.m	<- gamlss(CD4 ~ bs(PosCD4, degree=cd4.d), data=z2, family='NO', trace = FALSE)
+					if(deviance(cd4.ml)-deviance(cd4.m)>10)
+						suppressWarnings( cd4.s	<- predict(cd4.m, type='response', newdata=z, data=z2) )
+					if(deviance(cd4.ml)-deviance(cd4.m)<=10)
+						suppressWarnings( cd4.s	<- predict(cd4.ml, type='response', newdata=z, data=z2) )					
+				}
+				if(nrow(z2)==1)
+				{
+					cd4.s	<- rep(z2[1,][,CD4],nrow(z))
+				}
+				data.table(t.Patient=x, t=z[,PosCD4], CD4s=cd4.s)
+			})
+	setnames(tmp, 'PosCD4', 't')
+	tmp			<- merge(tmp, do.call('rbind',tmp3), by=c('t.Patient','t'))	
+	tmp			<- melt(tmp, measure.var=c('CD4', 'CD4s'), variable.name='method', value.name='CD4')
+	ggplot(tmp, aes(x=t, y=CD4, group=interaction(t.Patient, method))) + geom_line(aes(colour=method)) + 
+			geom_point(data=tmp2, aes(x=PosCD4)) +
+			facet_grid(t.Patient ~ csd)
+	file		<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_checkCD4interpolation_l350used.pdf'
+	ggsave(file=file, w=6, h=1100, limitsize=FALSE)
+	
+}
+######################################################################################
 project.hivc.check.DateRes.after.HIVPosTest<- function(dir.name= DATA, verbose=1)
 {
 	require(data.table)
@@ -220,12 +387,14 @@ project.hivc.check.DateRes.after.T0<- function(dir.name= DATA, verbose=1)
 ######################################################################################
 hivc.beast2out.read.tree <- function(bstr) 
 {
+	#	remove anything before first '('
+	bstr	<- regmatches(bstr, regexpr('\\(.*',bstr))
 	# 	store meta info for inner nodes that is given in [], and not in :[] which is meta info for edges	
-	tmp	<- unlist(regmatches(bstr,gregexpr('[^:]\\[[^]]+',bstr)))
-	tmp	<- sapply( tmp, function(x) substr(x, 4, nchar(x)) ) 
+	tmp		<- unlist(regmatches(bstr,gregexpr('[^:]\\[[^]]+',bstr)))
+	tmp		<- sapply( tmp, function(x) substr(x, 4, nchar(x)) ) 
 	#	for each inner node, extract stats
-	tmp	<- strsplit(tmp, ',')
-	tmp	<- lapply(seq_along(tmp), function(i)
+	tmp		<- strsplit(tmp, ',')
+	tmp		<- lapply(seq_along(tmp), function(i)
 			{
 				z<- strsplit(tmp[[i]],'=')				
 				data.table(inner.node=i, stat=sapply(z,'[',1), value=sapply(z,'[',2))
@@ -248,8 +417,6 @@ hivc.beast2out.read.trees <- function(file, tree.id=NA)
 		bstr		<- X[grep(paste(tree.id,"[[:space:]]+",sep=''), X)]
 		inode.stat	<- hivc.beast2out.read.tree(bstr)
 		set(inode.stat, NULL, 'tree.id', tree.id[i] )
-		X			<- NULL
-		gc()
 	}
 	if(is.na(tree.id))
 	{
@@ -262,6 +429,7 @@ hivc.beast2out.read.trees <- function(file, tree.id=NA)
 				{
 					
 					bstr	<- X[grep(paste(tree.id[i],"[[:space:]]+",sep=''), X)]
+					cat(paste('\nProcess inner node statistics for tree id=',tree.id[i]))
 					tmp		<- hivc.beast2out.read.tree(bstr)
 					set(tmp, NULL, 'tree.id', tree.id[i] )
 					tmp
@@ -280,6 +448,7 @@ project.Gates.RootSeqSim.getrootseq<- function()
 	insignat	<- 'Sun_Jul_27_09-00-00_2014'	
 	
 	file		<- paste(indir, '/', infile, '_', insignat, '.timetrees', sep='')
+	file		<- paste(indir, '/working.timetrees', sep='')
 	stats		<- c(paste('ENV.CP',1:3,sep=''),paste('GAG.CP',1:3,sep=''),paste('POL.CP',1:3,sep=''))
 	tree.id		<- 'tree STATE_0'
 }
@@ -1578,6 +1747,14 @@ project.hivc.Excel2dataframe.Viro<- function()
 	setnames(df, "DateRNA","PosRNA")
 	#set(df, NULL, "Patient", factor(df[,Patient]))
 	#
+	#	QC corrections
+	#
+	tmp		<- which( df[, Patient=="M32210" & as.character(PosRNA)=="2010-05-10"] )
+	set(df,tmp,"PosRNA", 50.)
+	set(df,tmp,"Undetectable", 'No')
+	tmp		<- which( df[, Patient=="M36914" & as.character(PosRNA)=="2010-04-12"] )
+	set(df,tmp,"PosRNA", NA_real_)	
+	#
 	#	checking manually NegT>PosRNA
 	#
 	if(verbose)		cat(paste("\nset entry Patient=='M38400' & as.character(PosRNA)=='2005-11-24' to NA -- seems unlikely"))
@@ -1590,8 +1767,10 @@ project.hivc.Excel2dataframe.Viro<- function()
 	tmp		<- which( df[, Patient=="M36146" & as.character(PosRNA)=="2005-11-19"] )
 	if(verbose)		cat(paste("\nsetting number of entries to NA, n=",length(tmp)))
 	set(df,tmp,"PosRNA",NA)
+	if(verbose)		print( subset(df, Patient=="M12735") )
 	tmp		<- which( df[, Patient=="M12735" & as.character(PosRNA)=="1986-04-29"] )
 	set(df,tmp,"PosRNA",NA)		
+	if(verbose)		print( subset(df, Patient=="M29967") )
 	tmp		<- which( df[, Patient=="M29967" & as.character(PosRNA)=="1998-07-09"] )
 	set(df,tmp,"PosRNA",NA)		
 	# remove is.na(PosRNA) and !is.na(RNA)
@@ -1618,7 +1797,8 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#
 	df	<- merge( df, unique(subset(df.treat, select=c(Patient, AnyT_T1))), by='Patient', all.x=1 )
 	tmp	<- df[, which((is.na(AnyT_T1) | difftime(AnyT_T1, PosRNA, units='days')>=0) & ((RNA%%1)!=0) ) ]
-	if(verbose)		cat(paste("\nremove RNA values with .XXX before ART start, n=",length(tmp)))	
+	if(verbose)		cat(paste("\nremove RNA values with .XXX before ART start, n=",length(tmp)))
+	if(verbose)		print(df[tmp,])
 	set(df, tmp, 'RNA', NA_real_)
 	df	<- subset(df, !is.na(RNA))
 	#
@@ -1626,6 +1806,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#	
 	tmp	<- df[, which(Undetectable=='Yes' & RNA<RNA.min.b4T & (is.na(AnyT_T1) | difftime(AnyT_T1, PosRNA, units='days')>0) )]
 	if(verbose)		cat(paste("\nremove RNA values < ",RNA.min.b4T," if undetectable and before ART start, n=",length(tmp)))
+	if(verbose)		print(df[tmp,][, Patient])
 	set(df, tmp, 'RNA', NA_real_)
 	df	<- subset(df, !is.na(RNA))
 	#
@@ -1633,6 +1814,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#	
 	tmp	<- df[, which(Undetectable=='No' & RNA<RNA.min.b4T & (is.na(AnyT_T1) | difftime(AnyT_T1, PosRNA, units='days')>0) )]
 	if(verbose)		cat(paste("\nremove RNA values < 400 if detectable and before ART start, n=",length(tmp)))
+	if(verbose)		print(df[tmp,][, Patient])
 	set(df, tmp, 'RNA', NA_real_)
 	df	<- subset(df, !is.na(RNA))
 	#
@@ -1640,6 +1822,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#	
 	tmp		<- which( df[, Undetectable=="Yes" & RNA>RNA.stdvl.udetect.aTS & RNA<1e4 & difftime(PosRNA, AnyT_T1, units='days')>=0] )
 	if(verbose)		cat(paste("\nremove Undetectable=='Yes' and 1e3<RNA<1e4 and PosRNA>AnyT_T1', n=",length(tmp)))
+	if(verbose)		print(df[tmp,])
 	set(df, tmp, 'RNA', NA_real_)
 	df	<- subset(df, !is.na(RNA))	
 	#
@@ -1653,6 +1836,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#	
 	tmp		<- which( df[, Undetectable=="Yes" & RNA>=1e4 & difftime(PosRNA, AnyT_T1, units='days')>=0] )
 	if(verbose)		cat(paste("\nsetting Undetectable=='Yes' and RNA>1e4 and PosRNA>AnyT_T1 to Undetectable=='No' and RNA, n=",length(tmp)))
+	if(verbose)		print(df[tmp,])
 	set(df,tmp,"Undetectable","No")	
 	#
 	#	remove undetectable RNA (before treatment start) that are before the first detectable RNA
@@ -1680,6 +1864,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#
 	tmp		<- df[, which(Undetectable=='Yes' & RNA<=1e3 & (is.na(AnyT_T1) | difftime(AnyT_T1,PosRNA,units='days')>0 ) ) ]
 	if(verbose)		cat(paste("\nremove undetectable RNA with RNA<1e3 before ART start, n=",length(tmp)))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, 'RNA', NA_real_)
 	df		<- subset(df, !is.na(RNA))
 	#
@@ -1687,6 +1872,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#	
 	tmp		<- df[, which(Undetectable=='Yes' & RNA<=1e4 & (is.na(AnyT_T1) | difftime(AnyT_T1,PosRNA,units='days')>0 ) ) ]
 	if(verbose)		cat(paste("\nremove undetectable RNA with 1e3<RNA<1e4 before ART start, n=",length(tmp)))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, 'RNA', NA_real_)
 	df		<- subset(df, !is.na(RNA))
 	if(verbose)		cat(paste("\nnumber of remaining undetectable RNA, n=",df[,length(which(Undetectable=='Yes'))]))
@@ -1708,42 +1894,52 @@ project.hivc.Excel2dataframe.Viro<- function()
 	#				
 	tmp		<- which(df[, Patient%in%c("M11314","M11331","M40782","M14759") & RNA>5e6])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units > 5e6  -- M11314  M11331  M40782  M14759, n=",length(tmp),"SET to 5e6"))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", 5e6)
 	#
 	tmp		<- which(df[, Patient=="M27377" & PosRNA>"2007-08-11"])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units -- patient M27377 after 2007-08-11, n=",length(tmp),"DIV by 1e3"))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", df[tmp,RNA]*1e-3)
 	#
 	tmp		<- which(df[, Patient%in%c("M13134","M18385","M18767","M20308","M35814","M35852","M36515","M41877") & RNA>1e6])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units > 1e6  -- M13134  M18385  M18767  M20308  M35814  M35852  M36515  M41877, n=",length(tmp),"DIV by 10"))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)
 	#
 	tmp		<- which(df[, Patient%in%c("M38031") & RNA>1e5])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units > 1e5  -- M38031, n=",length(tmp),"DIV by 10"))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)
 	#
 	tmp		<- which(df[, Patient%in%c("M38036","M33131","M33668","M34200","M34302","M20350") & RNA>1e6])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units > 1e6  -- M38036  M33131  M33668  M34200  M34302 M20350, n=",length(tmp),"DIV by 100"))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", df[tmp,RNA]*1e-2)
 	#
 	tmp		<- which(df[, Patient%in%c("M11995","M13266","M14486","M15621","M16588") & RNA>5e6])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units > 5e6  -- M11995 M13266 M14486 M15621 M16588, n=",length(tmp),"DIV by 10"))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)		
 	#
 	tmp		<- which(df[, Patient%in%c("M16570") & RNA>2e6])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units > 2e6  -- M16570, n=",length(tmp),"DIV by 10"))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)
 	#
 	tmp		<- which(df[, Patient%in%c("M17655","M37746","M30733","M27377") & RNA>2e6])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units > 2e6  -- M17655 M37746 M30733 M27377, n=",length(tmp),"NA"))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", NA)
 	#
 	tmp		<- which(df[, Patient%in%c("M17554") & RNA>1e6])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units > 1e6  -- M17554, n=",length(tmp),"DIV by 100"))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", df[tmp,RNA]*1e-2)
 	#
 	tmp		<- which(df[, Patient%in%c("M10607","M10969","M11428","M28707","M31388","M31455","M32401","M32877","M33406","M33839","M33918","M34062","M35280","M30788") & RNA>=1e6])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong RNA units > 1e6  -- M10607 M10969 M11428 M28707 M31388 M31455 M32401 M32877 M33406 M33839 M33918 M34062 M35280  M30788, n=",length(tmp),"DIV by 10"))
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)
 	#
 	#	remove duplicate entries
@@ -1761,6 +1957,7 @@ project.hivc.Excel2dataframe.Viro<- function()
 	# double check entries manually in range >5e6		
 	tmp		<- merge(unique(subset(df, RNA>5e6 & PosRNA>AnyT_T1, Patient)), df, by="Patient")
 	tmp		<- which(df[, Patient%in%c("M12736","M27885","M14799","M12612") & RNA>5e6])
+	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", NA_real_)	
 	# double check entries manually in range >5e6		
 	tmp		<- merge(subset(df, RNA>5e6, c(Patient,PosRNA)), df.treat, by="Patient")

@@ -2606,6 +2606,7 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.imm
 	#	set ever on ART per period t		(avoid AnyT_T1 as it may give periods that would start with treatment interruption)
 	set(incare.t, incare.t[, which(!is.na(StartTime))], 'stage', 'ART.started')
 	#	set virological failure by smoothed VL, keep NA ART.F
+	set(incare.t, incare.t[, which(stage!='ART.started')], 'ART.F', NA_character_)
 	set(incare.t, incare.t[, which(stage=='ART.started' & !is.na(lRNA) & lRNA>lRNA.supp)], 'ART.F', 'Yes')
 	set(incare.t, incare.t[, which(stage=='ART.started' & !is.na(lRNA) & lRNA<=lRNA.supp)], 'ART.F', 'No')
 	#	set ART start period
@@ -6892,7 +6893,7 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, df.viro, vl.supp
 	}	
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
+project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, df.viro, df.immu, lRNA.supp=log10(1e3), plot.file.varyvl=NA)
 {
 	#YX.m2	<- copy(YX)
 	gc()
@@ -7036,7 +7037,7 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	cat(paste('\nsettting t.ARTSu_T1\n'))
 	tmp			<- merge( unique(subset(YX.m2, select=c(t.Patient, t.AnyT_T1))), tmp, by='t.Patient' )
 	tmp			<- subset(tmp, t.AnyT_T1<=t.PosRNA)[, 	{
-				z<- which(t.lRNA<vl.suppressed)
+				z<- which(t.lRNA<lRNA.supp)
 				list(t.ARTSu_T1= ifelse(length(z), t.PosRNA[z[1]], NA_real_) )	
 			}, by='t.Patient']
 	YX.m2		<- merge(YX.m2, tmp, by= 't.Patient', all.x=TRUE)
@@ -7083,7 +7084,7 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	YX.m2
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
+project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.viro, df.immu, lRNA.supp=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
 {
 	#YX.m2	<- copy(YX)
 	gc()
@@ -7228,11 +7229,11 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	#	using given VL threshold 
 	#		
 	set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
-	set(YX.m2, YX.m2[,which(stage=='ART.started' & !is.na(lRNA) & lRNA<=vl.suppressed)],'stage', 'ART.su.Y' )
-	set(YX.m2, YX.m2[,which(stage=='ART.started' & !is.na(lRNA) & lRNA>vl.suppressed)],'stage', 'ART.su.N' )		
-	set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & !is.na(lRNA_TL) & lRNA_TL<=vl.suppressed)],'stage', 'ART.su.Y' )	
-	set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & !is.na(lRNA_TL) & lRNA_TL>vl.suppressed)],'stage', 'ART.su.N' )
-	set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & lRNA>vl.suppressed)],'stage', 'ART.su.N' )		
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & !is.na(lRNA) & lRNA<=lRNA.supp)],'stage', 'ART.su.Y' )
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & !is.na(lRNA) & lRNA>lRNA.supp)],'stage', 'ART.su.N' )		
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & !is.na(lRNA_TL) & lRNA_TL<=lRNA.supp)],'stage', 'ART.su.Y' )	
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & !is.na(lRNA_TL) & lRNA_TL>lRNA.supp)],'stage', 'ART.su.N' )
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & is.na(lRNA) & t>t.PoslRNA_T1 & contact=='Yes' & lRNA>lRNA.supp)],'stage', 'ART.su.N' )		
 	set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
 	#	set CD41st and CD4t
 	tmp			<- YX.m2[, which(stage.orig=='ART.started')] 
@@ -7277,7 +7278,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	YX.m2
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
+project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.viro, df.immu, lRNA.supp=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
 {
 	#YX.m2	<- copy(YX)
 	gc()
@@ -7420,8 +7421,8 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 	#	using given VL threshold 
 	#	
 	gc()
-	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.gm<=vl.suppressed)],'stage', 'ART.suA.Y' )
-	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.gm>vl.suppressed)],'stage', 'ART.suA.N' )
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.gm<=lRNA.supp)],'stage', 'ART.suA.Y' )
+	set(YX.m2, YX.m2[,which(stage=='ART.started' & lRNA.gm>lRNA.supp)],'stage', 'ART.suA.N' )
 	set(YX.m2, YX.m2[,which(stage=='ART.started')],'stage', 'ART.vlNA' )
 	#	set CD41st and CD4t
 	tmp			<- YX.m2[, which(stage.orig=='ART.started')] 
@@ -7545,7 +7546,7 @@ project.athena.Fisheretal.YX.model4.stratify.Diagnosed<- function(YX.m2, df.immu
 	YX.m2
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
+project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all, df.viro, df.immu, lRNA.supp=3, plot.file.varyvl=NA, plot.file.or=NA )
 {
 	#YX.m2	<- copy(YX)
 	gc()
@@ -7683,7 +7684,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	YX.m2[,lRNA.c:=NULL]
 	YX.m2	<- merge(YX.m2, YX.m2[, {
 						tmp<- which(!is.na(lRNA))
-						list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>vl.suppressed, 'ART.suA.N', 'ART.suA.Y'), 'ART.vlNA') )
+						list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>lRNA.supp, 'ART.suA.N', 'ART.suA.Y'), 'ART.vlNA') )
 					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)
 	gc()
 	YX.m2	<- merge(YX.m2, YX.m2[, {
@@ -7950,6 +7951,7 @@ project.athena.Fisheretal.X.CDCC<- function(X.incare, df.tpairs, clumsm.info, t.
 ######################################################################################
 project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.immu, t.period=0.25)
 {
+	require(gamlss)
 	stopifnot(class(df.immu$Patient)=='character',class(df.tpairs$t.Patient)=='character')
 	immu	<- subset( df.immu, select=c(Patient, PosCD4, CD4) )
 	setnames(immu, 'Patient','t.Patient')
@@ -7958,21 +7960,52 @@ project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.immu, t.period=0.25)
 	tmp		<- subset(immu, select=c(t.Patient, PosCD4))[, list(ts=min(PosCD4), te=max(PosCD4)), by='t.Patient']
 	set(tmp, NULL, 'ts', tmp[, floor(ts) + round( (ts%%1)*100 %/% (t.period*100) ) * t.period] )
 	set(tmp, NULL, 'te', tmp[, floor(te) + round( (te%%1)*100 %/% (t.period*100) ) * t.period] )
-	tmp		<- tmp[, list(t= seq(ts, te, by=t.period)),by='t.Patient']
-	setnames(tmp, 't.Patient', 'tt.Patient')
-	setkey(tmp, tt.Patient)
-	immu	<- immu[, {
-				z		<- subset(tmp, tt.Patient==t.Patient[1])	
-				if(length(PosCD4)<2)
+	tmp		<- tmp[, list(PosCD4= seq(ts, te, by=t.period)),by='t.Patient']	
+	setkey(tmp, t.Patient)
+	immu	<- lapply( immu[, unique(t.Patient)], function(x)
+			{
+				#print(x)
+				z		<- subset(tmp, t.Patient==x, PosCD4)
+				z2		<- subset(immu, t.Patient==x)
+				if(nrow(z2)==1)
+					cd4.s	<- rep(z2[1,][,CD4],nrow(z))
+				if(nrow(z2)>1 && z2[, all(CD4==CD4[1])])
+					cd4.s	<- rep(z2[1,][,CD4],nrow(z))
+				if(nrow(z2)>1 && z2[, any(CD4!=CD4[1])])
 				{
-					y	<- rep(NA, nrow(z))
-					y[z[,which( PosCD4<=t+t.period )[1]]]<- CD4
+					cd4.d	<- ifelse(z2[, diff(range(PosCD4))<2], 1, min(15,ceiling(nrow(z2)/8))  )
+					cd4.ml	<- gamlss(CD4 ~ PosCD4, data=z2, family='NO', trace = FALSE)
+					cd4.m	<- gamlss(CD4 ~ bs(PosCD4, degree=cd4.d), data=z2, family='NO', trace = FALSE)
+					tryCatch({
+						#	gamlss fit may go wild occasionally, in this case fall back to linear interpolation		
+						if(deviance(cd4.ml)-deviance(cd4.m)>10)
+							cd4.s	<- predict(cd4.m, type='response', newdata=z, data=z2) 
+						if(deviance(cd4.ml)-deviance(cd4.m)<=10)
+							cd4.s	<- predict(cd4.ml, type='response', newdata=z, data=z2) 	
+						}, 
+						warning=function(w)
+						{ 
+							cd4.s	<<- approx(z2[,PosCD4], z2[,CD4], xout=z[,PosCD4]+t.period/2, rule=2)$y	
+						})						
 				}
-				else
-					y	<- approx(PosCD4 , CD4, xout=z[,t]+t.period/2, yleft=NA_real_, yright=NA_real_, rule=2)$y
-				list(t=z[,t], CD4=y)
-			},by='t.Patient']
+				data.table(t.Patient=x, t=z[,PosCD4], CD4=cd4.s)
+			})
+	immu	<- do.call('rbind',immu)
+	#immu	<- immu[, {
+	#			z		<- subset(tmp, tt.Patient==t.Patient[1])	
+	#			if(length(PosCD4)<2)
+	#			{
+	#				y	<- rep(NA, nrow(z))
+	#				y[z[,which( PosCD4<=t+t.period )[1]]]<- CD4
+	#			}
+	#			else
+	#				y	<- approx(PosCD4 , CD4, xout=z[,t]+t.period/2, yleft=NA_real_, yright=NA_real_, rule=2)$y
+	#			list(t=z[,t], CD4=y)
+	#		},by='t.Patient']
 	set(immu, NULL, 'CD4', immu[, as.integer(round(CD4))])
+	tmp		<- setdiff(subset(immu, CD4>1500)[,t.Patient], subset(df.immu, CD4>1500)[, Patient])
+	if(length(tmp))
+		cat(paste('\nWARNING: Found patients with CD4>1500 in smoothed CD4 that do not have a CD4>1500 measurement=',paste(tmp,collapse=' ')))
 	immu		
 }
 ######################################################################################
@@ -8953,26 +8986,6 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outfile			<- infile
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
 	
-	#	m2Bwmx
-	#	3kaC			(ART.C)
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3kaC'
-	method.RISK		<- 'm2BwmxMv.tp'
-	method.WEIGHT	<- ''	
-	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)		
-	#	m2Bwmx.wstar
-	#	3ka			(ART.C)
-	method.DENOM	<- 'CLU'
-	method.BRL		<- '3ka'
-	method.RISK		<- 'm2BwmxMv.tp'
-	method.WEIGHT	<- 'wstar'	
-	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P','P.e0cp','P.bias.e0cp','P.raw','P.raw.e0cp','P.rawbias.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile)
 	
 	
 	#RRterm
@@ -9863,6 +9876,9 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_140729",sep='/')	
 	#indir					<- paste(DATA,"fisheretal_140616",sep='/')
 	#outdir					<- paste(DATA,"fisheretal_140616",sep='/')	
+	indir					<- paste(DATA,"fisheretal_140801",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140801",sep='/')	
+	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"	
@@ -10791,7 +10807,7 @@ project.athena.Fisheretal.CT.resolution<- function(info, df.viro, df.immu, t.sta
 #	mode1	if df.tpairs is not null, return the transmitter-infected-time period triplets for all **sequence** pairs in df.tpairs
 #	mode2	if ri is not null and nsample is NA, return the triplets for all **patient** pairs of infected in ri and any transmitter in df.all
 #	mode3	if ri is not null and nsample is not NA, return a **sample** of the triplets for all **sequence pairs** of the sequences belonging to ri and to any transmitter in df.all
-project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=NULL, tperiod.info=NULL, t.period=0.25, t.endctime=2013., sample.n=NA, sample.exclude=NULL, save.file=NA, resume=FALSE)
+project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=NULL, tperiod.info=NULL, lRNA.supp=3, t.period=0.25, t.endctime=2013., sample.n=NA, sample.exclude=NULL, save.file=NA, resume=FALSE)
 {
 	#df.all<- df.all.allmsm; df.immu<-df.immu.allmsm; df.viro<-df.viro.allmsm; df.treatment<-df.treatment.allmsm; ri<-ri.SEQ; df.tpairs<- NULL	
 	if(resume && !is.na(save.file))
@@ -10816,7 +10832,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		}		
 		if(is.null(ri))
 			ri			<- unique(subset(df.tpairs, select=Patient))
-		X.incare				<- project.athena.Fisheretal.X.incare(df.tpairs, df.all, df.viro, df.immu, df.treatment, t.period=t.period, t.endctime=t.endctime)
+		X.incare				<- project.athena.Fisheretal.X.incare(df.tpairs, df.all, df.viro, df.immu, df.treatment, lRNA.supp=lRNA.supp, t.period=t.period, t.endctime=t.endctime)
 		X.incare				<- project.athena.Fisheretal.X.nocontact(X.incare, df.viro, df.immu, df.tpairs, df.all, contact.grace=0.5, t.period=t.period, t.endctime= t.endctime)		
 		X.incare				<- project.athena.Fisheretal.X.CDCC(X.incare, df.tpairs, df.all, t.period=t.period, t.endctime=t.endctime)
 		X.incare				<- project.athena.Fisheretal.X.followup(X.incare, df.all, df.immu, t.period=t.period, t.endctime=t.endctime)
@@ -11445,8 +11461,9 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Bwmx.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.1
+		method.minQLowerU		<- 0.2
 		method.brl.bwhost		<- 2
+		method.lRNA.supp		<- 200
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
@@ -11552,7 +11569,13 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,11),
 									method.PDT= return(substr(arg,13,nchar(arg))),NA)	}))
-		if(length(tmp)>0) method.PDT<- tmp[1]	
+		if(length(tmp)>0) method.PDT<- tmp[1]			
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,17),
+									method.lRNA.supp= return(as.numeric(substr(arg,19,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) method.lRNA.supp<- tmp[1]	
+		
+		
 	}	
 	clu.infile			<- infile
 	clu.indir			<- indir
@@ -11580,7 +11603,8 @@ hivc.prog.betareg.estimaterisks<- function()
 		print(method.Acute)
 		print(method.minQLowerU)
 		print(method.brl.bwhost)
-	}
+		print(method.lRNA.supp)
+	}	
 	if(method.nodectime=='any')
 		method				<- paste(method,'a',sep='')
 	if(method.nodectime=='map')
@@ -11612,9 +11636,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		method				<- paste(method,'1',sep='')
 	if(method.minQLowerU==0.2)
 		method				<- paste(method,'2',sep='')
-	
+	if(method.lRNA.supp<1e3)
+		method				<- paste(method,'V',method.lRNA.supp,sep='')
 	adjust.AcuteByNegT		<- 1
 	any.pos.grace.yr		<- Inf	
+	method.lRNA.supp		<- log10(method.lRNA.supp)	
 	if(resume)
 	{		
 		files		<- list.files(outdir)			
@@ -11773,7 +11799,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	#
 	resume			<- 1	
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT',method.PDT,'_',method,'_tATHENAclu','.R',sep='')	
-	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, lRNA.supp=method.lRNA.supp, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
 	YX.part1		<- merge( YX.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)
 	YX.part1[, class:='pt']
 	gc()
@@ -11804,7 +11830,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		sample.n		<- nrow( unique(sample.n) )
 		sample.exclude	<- unique(subset(YX, select=t.Patient))
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICT_',method,'_tATHENAseq','.R',sep='')
-		YXS.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=tmp, df.tpairs=NULL, tperiod.info=NULL, sample.n=sample.n, sample.exclude=sample.exclude, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+		YXS.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=tmp, df.tpairs=NULL, tperiod.info=NULL, lRNA.supp=method.lRNA.supp, sample.n=sample.n, sample.exclude=sample.exclude, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
 		if( !all(YX.part1[,FASTASampleCode]%in%df.all[,FASTASampleCode]) | !all(YX.part1[,t.FASTASampleCode]%in%df.all[,FASTASampleCode]) | !all(YXS.part1[,FASTASampleCode]%in%df.all[,FASTASampleCode]) | !all(YXS.part1[,t.FASTASampleCode]%in%df.all[,FASTASampleCode]) ) stop('unexpected FASTASampleCode')		
 		YX.part1[, class:='pt']
 		YXS.part1[, class:='pn']
@@ -11827,7 +11853,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp[, FASTASampleCode:=NULL]
 		tmp[, cluster:=NULL]
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICLU_',method,'_tATHENAclu','.R',sep='')
-		X.clu			<- project.athena.Fisheretal.YX.part1(tmp, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)			
+		X.clu			<- project.athena.Fisheretal.YX.part1(tmp, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, lRNA.supp=method.lRNA.supp, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)			
 		gc()		
 	}
 	#
@@ -11839,12 +11865,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(method.PDT=='CLU')
 		{			
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICLU_',method,'_tATHENAseq','.R',sep='')
-			X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+			X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, lRNA.supp=method.lRNA.supp, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
 		}
 		if(method.PDT=='SEQ')
 		{						
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RISEQ_',method,'_tATHENAseq','.R',sep='')
-			X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.SEQ, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+			X.seq			<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=ri.SEQ, df.tpairs=NULL, tperiod.info=tperiod.info, lRNA.supp=method.lRNA.supp, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
 		}
 		gc()				
 	}
@@ -11857,12 +11883,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		if(method.PDT=='CLU')
 		{						
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RICLU_',method,'_tATHENAmsm','.R',sep='')
-			X.msm			<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+			X.msm			<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.CLU, df.tpairs=NULL, tperiod.info=tperiod.info, lRNA.supp=method.lRNA.supp, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
 		}
 		if(method.PDT=='SEQ')
 		{												
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'RISEQ_',method,'_tATHENAmsm','.R',sep='')
-			X.msm			<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.SEQ, df.tpairs=NULL, tperiod.info=tperiod.info, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
+			X.msm			<- project.athena.Fisheretal.YX.part1(df.all.allmsm, df.immu.allmsm, df.viro.allmsm, df.treatment.allmsm, predict.t2inf, t2inf.args, ri=ri.SEQ, df.tpairs=NULL, tperiod.info=tperiod.info, lRNA.supp=method.lRNA.supp, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
 		}
 		gc()		
 	}
@@ -11890,13 +11916,13 @@ hivc.prog.betareg.estimaterisks<- function()
 	{
 		plot.file.varyvl		<- NA	#paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
 		if(any(sapply(c('m2wmx','m2Bwmx','m2Cwmx'), grepl, x=method.risk)))
-			YX					<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )			
+			YX					<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )			
 		if(any(sapply(c('m21st','m2B1st'), grepl, x=method.risk)))
-			YX					<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl)
+			YX					<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=plot.file.varyvl)
 		if(any(sapply(c('m2t','m2Bt'), grepl, x=method.risk)))
-			YX					<- project.athena.Fisheretal.YX.model2.stratify.VLt(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl)
+			YX					<- project.athena.Fisheretal.YX.model2.stratify.VLt(YX, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=plot.file.varyvl)
 		if(any(sapply(c('m2gm','m2Bgm'), grepl, x=method.risk)))
-			YX					<- project.athena.Fisheretal.YX.model2.stratify.VLgm(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl )
+			YX					<- project.athena.Fisheretal.YX.model2.stratify.VLgm(YX, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=plot.file.varyvl )
 		if(substr(method.risk,1,2)=='m3')			
 			YX					<- project.athena.Fisheretal.YX.model3.stratify.ARTriskgroups(YX, df.all, return.only.ART=TRUE)
 		if(substr(method.risk,1,2)=='m4')			
@@ -11912,24 +11938,24 @@ hivc.prog.betareg.estimaterisks<- function()
 			plot.file.varyvl	<- NA	#paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_model2_',method.risk,'_VL_adjAym_dt025','.pdf',sep='')
 			if(any(sapply(c('m2wmx','m2Bwmx','m2Cwmx'), grepl, x=method.risk)))
 			{
-				YX					<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )
-				X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.clu, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
-				X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
-				X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, vl.suppressed=log10(1e3), plot.file.varyvl=NA, plot.file.or=NA )
+				YX					<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=plot.file.varyvl, plot.file.or=NA )
+				X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.clu, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )
+				X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )
+				X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )
 			}
 			if(any(sapply(c('m21st','m2B1st'), grepl, x=method.risk)))
 			{
-				YX					<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl)
-				X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.clu, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
-				X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.seq, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
-				X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
+				YX					<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(YX, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=plot.file.varyvl)
+				X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.clu, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA)
+				X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.seq, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA)
+				X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VL1stsu(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA)
 			}
 			if(any(sapply(c('m2t','m2Bt'), grepl, x=method.risk)))
 			{
-				YX					<- project.athena.Fisheretal.YX.model2.stratify.VLt(YX, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=plot.file.varyvl)
-				X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.clu, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
-				X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.seq, df.all, df.viro, df.immu, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
-				X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, vl.suppressed=log10(1e3), plot.file.varyvl=NA)
+				YX					<- project.athena.Fisheretal.YX.model2.stratify.VLt(YX, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=plot.file.varyvl)
+				X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.clu, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA)
+				X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.seq, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA)
+				X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VLt(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA)
 			}
 		}				
 		if(substr(method.risk,1,2)=='m3')
