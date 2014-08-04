@@ -5325,11 +5325,11 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 														X.den[, list(nt= length(t), stat='X.seq'), by=c('stage','t.Patient')],
 														X.msm[, list(nt= length(t), stat='X.msm'), by=c('stage','t.Patient')] 	)	)
 			setnames(nt.table, 'stage', 'factor')
-			tmp				<- data.table( expand.grid(Patient=nt.table[, unique(Patient)], factor=nt.table[, unique(as.character(factor))], stat=nt.table[, unique(as.character(stat))], stringsAsFactors=FALSE) )			
-			nt.table		<- merge(tmp, nt.table, by=c('Patient','factor','stat'), all.x=1)
+			tmp				<- data.table( expand.grid(t.Patient=nt.table[, unique(t.Patient)], factor=nt.table[, unique(as.character(factor))], stat=nt.table[, unique(as.character(stat))], stringsAsFactors=FALSE) )			
+			nt.table		<- merge(tmp, nt.table, by=c('t.Patient','factor','stat'), all.x=1)
 			set(nt.table, nt.table[, which(is.na(nt))], 'nt', 0L)
 			nt.table[, risk:='stage']					
-			nt.table		<- subset( nt.table, select=c(risk, factor, Patient, nt, stat) )
+			nt.table		<- subset( nt.table, select=c(risk, factor, t.Patient, nt, stat) )
 			ans$nt.table	<- nt.table
 			#	risk tables
 			risk.table		<- do.call('rbind',list(

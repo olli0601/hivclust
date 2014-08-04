@@ -414,7 +414,7 @@ project.hivc.check.DateRes.after.T0<- function(dir.name= DATA, verbose=1)
 			})
 }
 ######################################################################################
-hivc.beast2out.read.tree <- function(bstr) 
+hivc.beast2out.read.nodestats <- function(bstr) 
 {
 	#	remove anything before first '('
 	bstr	<- regmatches(bstr, regexpr('\\(.*',bstr))
@@ -426,28 +426,122 @@ hivc.beast2out.read.tree <- function(bstr)
 	tmp		<- lapply(seq_along(tmp), function(i)
 			{
 				z<- strsplit(tmp[[i]],'=')				
-				data.table(inner.node=i, stat=sapply(z,'[',1), value=sapply(z,'[',2))
+				data.table(NODE=i, STAT=sapply(z,'[',1), VALUE=sapply(z,'[',2))
 			})
-	inode.stat	<- do.call('rbind', tmp)
-	tmp			<- inode.stat[, unique(stat)]
-	cat(paste('\nFound inner node statistics=',paste(tmp,collapse=' ')))
-	tmp			<- inode.stat[, list(has.all.stats= !length(setdiff(tmp, stat))  ) , by='inner.node']
-	tmp			<- subset(tmp, !has.all.stats)[, inner.node]
-	cat(paste('\nSome statistics missing for inner nodes=',paste(tmp,collapse=' ')))
-	inode.stat 
+	node.stat	<- do.call('rbind', tmp)
+	tmp			<- node.stat[, unique(STAT)]
+	cat(paste('\nFound node statistics=',paste(tmp,collapse=' ')))
+	tmp			<- node.stat[, list(has.all.stats= !length(setdiff(tmp, STAT))  ) , by='node']
+	tmp			<- subset(tmp, !has.all.stats)[, NODE]
+	cat(paste('\nSome statistics missing for nodes=',paste(tmp,collapse=' ')))
+	node.stat 
 }
 ######################################################################################
-hivc.beast2out.read.trees <- function(file, tree.id=NA) 
+#	private: read tree such that tip.label and nodel.label include information on the index on when a tip/node occurs in bstr
+hivc.beast2out.read.nodeidtree <- function(bstr, method.node.stat='any.node') 
+{
+	# strip all meta variables and ; at end
+	bstr		<- gsub("\\[[^]]*\\]", "", bstr)
+	bstr		<- gsub(';','',bstr)
+	# for each node, add a dummy node label NODExx	
+	dummy.tree	<- unlist(strsplit(bstr, ":"))
+	if(method.node.stat=='inner.node')
+	{
+		#	interior branch length: 	previous index ends in ). so tmp is the index of the dummy.tree chunks that gives the start of a branch length of an inner node
+		tmp			<- which( c(FALSE, grepl(')$',dummy.tree)[-length(dummy.tree)]) )
+		#	prepend NODExx before the branch length of an inner node
+		tmp			<- tmp-1			
+	}
+	if(method.node.stat=='any.node')
+		tmp			<- seq_along(dummy.tree)
+	dummy.tree	<- sapply(seq_along(dummy.tree), function(i)
+			{
+				z<- which(i==tmp)
+				ifelse(length(z),	paste(dummy.tree[i],'NODE',z,sep=''),	dummy.tree[i] )
+			}) 			
+	dummy.tree	<- paste(dummy.tree, collapse=':',sep='')
+	dummy.tree	<- regmatches(dummy.tree, regexpr('\\(.*',dummy.tree))
+	dummy.tree	<- paste(dummy.tree, ';', sep='')
+	read.tree(text=dummy.tree)	
+}
+######################################################################################
+hivc.beast2out.read.trees <- function(file, tree.id=NA, method.node.stat='any.node') 
 {	
-	X	<- scan(file = file, what = "", sep = "\n", quiet = TRUE)	
+	stopifnot(!method.node.stat%in%c('any.node','inner.node'))
+	
+	X				<- scan(file = file, what = "", sep = "\n", quiet = TRUE)	
+	#	read TRANSLATE chunk
+	X.endblock		<- grep("END;|ENDBLOCK;", X, ignore.case = TRUE)
+	X.semico 		<- grep(";", X)
+	X.i1 			<- grep("BEGIN TREES;", X, ignore.case = TRUE)
+	X.i2 			<- grep("TRANSLATE", X, ignore.case = TRUE)	
+	tmp 			<- X.semico[X.semico > X.i2][1]
+	tmp 			<- X[(X.i2 + 1):tmp]
+	tmp				<- gsub('[,;]$','',gsub('^\\s+','',tmp))
+	tmp				<- tmp[nzchar(tmp)]
+	tmp				<- strsplit(tmp, ' ')
+	df.translate	<- data.table(NEXUS_TIP_ID= sapply(tmp, '[[', 1), NEXUS_TIP_NAME=sapply(tmp, '[[', 2) )
+	set(df.translate, NULL, 'NEXUS_TIP_NAME', df.translate[, gsub("\'","",NEXUS_TIP_NAME)])
+	
 	# 	isolate tree strings that are to be processed	
 	if(!is.na(tree.id))
 	{
 		bstr		<- X[grep(paste(tree.id,"[[:space:]]+",sep=''), X)]
-		inode.stat	<- hivc.beast2out.read.tree(bstr)
-		set(inode.stat, NULL, 'tree.id', tree.id[i] )
-		# read tree
+		node.stat	<- hivc.beast2out.read.nodestats(bstr)
+		set(node.stat, NULL, 'tree.id', tree.id[i] )		
+		btree		<- hivc.beast2out.read.nodeidtree(bstr, method.node.stat=method.node.stat) 
 		
+		# link node.stats with tip names
+		tmp			<- strsplit( btree$tip.label, 'NODE' )
+		df.link		<- data.table(NEXUS_TIP_ID=sapply(tmp,'[[',1), )
+		#set(node.stat, NULL, 'inner.node.long', node.stat[, paste('INNERNODE',inner.node,sep='')])
+		
+		#	- read this newick string and determine the node index in 'df.beast'
+		tmp					<- read.tree(text=tmp)
+		ph[["node.label"]]	<- cbind(data.table(node=Ntip(ph) + seq_len(Nnode(ph))), df.beast[as.numeric( tmp$node.label ),])
+		setkey(ph[["node.label"]], node)
+		
+		
+		
+		
+		
+		
+		
+		# read branch lengths
+		brl <- unlist(strsplit(newick, ":"))[-1]
+		brl <- gsub("[( | ) | ;]", "", brl)
+		brl <- strsplit(brl, ",")
+		foo <- function(x) x <- head(x, 1)
+		brl <- sapply(brl, '[[', 1)
+		brl <- paste("", brl, sep = ":")
+		brl <- c(brl, ";")
+		
+		
+		start <- X.semico[X.semico > X.i2][1] + 1			
+		end <- X.endblock[X.endblock > X.i1][1] - 1
+		tree <- X[start:end]
+		tree <- gsub("^.*= *", "", tree)
+		
+		
+		
+		LEFT <- grep("\\[", bstr)
+		RIGHT <- grep("\\]", bstr)
+		if (length(LEFT)) {
+			w <- LEFT == RIGHT
+			if (any(w)) {
+				s <- LEFT[w]
+				bstr[s] <- gsub("\\[[^]]*\\]", "", bstr[s])
+			}
+			w <- !w
+			if (any(w)) {
+				s <- LEFT[w]
+				bstr[s] <- gsub("\\[.*", "", bstr[s])
+				sb <- RIGHT[w]
+				bstr[sb] <- gsub(".*\\]", "", bstr[sb])
+				if (any(s < sb - 1)) 
+					bstr <- bstr[-unlist(mapply(":", (s + 1), (sb - 1)))]
+			}
+		}
 	}
 	if(is.na(tree.id))
 	{
@@ -456,19 +550,19 @@ hivc.beast2out.read.trees <- function(file, tree.id=NA)
 		tree.id		<- gsub('\\s','',tree.id)
 		X			<- X[ which(tmp>0) ]
 		cat(paste('\nFound trees, n=',length(tree.id)))
-		inode.stat	<- lapply(seq_along(tree.id), function(i)
+		node.stat	<- lapply(seq_along(tree.id), function(i)
 				{
 					
 					bstr	<- X[grep(paste(tree.id[i],"[[:space:]]+",sep=''), X)]
 					cat(paste('\nProcess inner node statistics for tree id=',tree.id[i]))
-					tmp		<- hivc.beast2out.read.tree(bstr)
+					tmp		<- hivc.beast2out.innernodestats(bstr)
 					set(tmp, NULL, 'tree.id', tree.id[i] )
 					tmp
 				})
-		inode.stat	<- do.call('rbind',inode.stat)		
+		node.stat	<- do.call('rbind',node.stat)		
 	}
 	
-	inode.stat 
+	node.stat 
 }
 ######################################################################################
 project.Gates.RootSeqSim.getrootseq<- function()
