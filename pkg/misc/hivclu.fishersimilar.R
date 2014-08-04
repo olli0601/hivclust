@@ -5320,10 +5320,10 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			}
 			gc()
 			#	potential transmission intervals by stage and recipient
-			nt.table		<- do.call('rbind', list( 	YX[, list(nt= length(t), stat='YX'), by=c('stage','Patient')],
-														X.clu[, list(nt= length(t), stat='X.clu'), by=c('stage','Patient')],
-														X.den[, list(nt= length(t), stat='X.seq'), by=c('stage','Patient')],
-														X.msm[, list(nt= length(t), stat='X.msm'), by=c('stage','Patient')] 	)	)
+			nt.table		<- do.call('rbind', list( 	YX[, list(nt= length(t), stat='YX'), by=c('stage','t.Patient')],
+														X.clu[, list(nt= length(t), stat='X.clu'), by=c('stage','t.Patient')],
+														X.den[, list(nt= length(t), stat='X.seq'), by=c('stage','t.Patient')],
+														X.msm[, list(nt= length(t), stat='X.msm'), by=c('stage','t.Patient')] 	)	)
 			setnames(nt.table, 'stage', 'factor')
 			tmp				<- data.table( expand.grid(Patient=nt.table[, unique(Patient)], factor=nt.table[, unique(as.character(factor))], stat=nt.table[, unique(as.character(stat))], stringsAsFactors=FALSE) )			
 			nt.table		<- merge(tmp, nt.table, by=c('Patient','factor','stat'), all.x=1)
@@ -7963,31 +7963,38 @@ project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.immu, t.period=0.25)
 	tmp		<- tmp[, list(PosCD4= seq(ts, te, by=t.period)),by='t.Patient']	
 	setkey(tmp, t.Patient)
 	immu	<- lapply( immu[, unique(t.Patient)], function(x)
-			{
-				#print(x)
+			{								
 				z		<- subset(tmp, t.Patient==x, PosCD4)
 				z2		<- subset(immu, t.Patient==x)
-				if(nrow(z2)==1)
-					cd4.s	<- rep(z2[1,][,CD4],nrow(z))
-				if(nrow(z2)>1 && z2[, all(CD4==CD4[1])])
-					cd4.s	<- rep(z2[1,][,CD4],nrow(z))
-				if(nrow(z2)>1 && z2[, any(CD4!=CD4[1])])
+				z3		<- subset(z, PosCD4>= z2[,min(PosCD4)] & PosCD4<= z2[,max(PosCD4)])
+				if(!nrow(z3))
+					cd4.s	<- rep(z2[1,][,mean(CD4)],nrow(z))
+				else
 				{
-					cd4.d	<- ifelse(z2[, diff(range(PosCD4))<2], 1, min(15,ceiling(nrow(z2)/8))  )
-					cd4.ml	<- gamlss(CD4 ~ PosCD4, data=z2, family='NO', trace = FALSE)
-					cd4.m	<- gamlss(CD4 ~ bs(PosCD4, degree=cd4.d), data=z2, family='NO', trace = FALSE)
-					tryCatch({
-						#	gamlss fit may go wild occasionally, in this case fall back to linear interpolation		
-						if(deviance(cd4.ml)-deviance(cd4.m)>10)
-							cd4.s	<- predict(cd4.m, type='response', newdata=z, data=z2) 
-						if(deviance(cd4.ml)-deviance(cd4.m)<=10)
-							cd4.s	<- predict(cd4.ml, type='response', newdata=z, data=z2) 	
-						}, 
-						warning=function(w)
-						{ 
-							cd4.s	<<- approx(z2[,PosCD4], z2[,CD4], xout=z[,PosCD4]+t.period/2, rule=2)$y	
-						})						
-				}
+					z		<- z3 
+					if(nrow(z2)==1)
+						cd4.s	<- rep(z2[1,][,CD4],nrow(z))
+					if(nrow(z2)>1 && z2[, all(CD4==CD4[1])])
+						cd4.s	<- rep(z2[1,][,CD4],nrow(z))
+					if(nrow(z2)>1 && z2[, any(CD4!=CD4[1])])
+					{
+						cd4.d	<- ifelse(z2[, diff(range(PosCD4))<2], 1, min(15,ceiling(nrow(z2)/8))  )
+						cd4.ml	<- gamlss(CD4 ~ PosCD4, data=z2, family='NO', trace = FALSE)
+						cd4.m	<- gamlss(CD4 ~ bs(PosCD4, degree=cd4.d), data=z2, family='NO', trace = FALSE)
+						tryCatch({
+									#	gamlss fit may go wild occasionally, in this case fall back to linear interpolation		
+									if(deviance(cd4.ml)-deviance(cd4.m)>10)
+										cd4.s	<- predict(cd4.m, type='response', newdata=z, data=z2) 
+									if(deviance(cd4.ml)-deviance(cd4.m)<=10)
+										cd4.s	<- predict(cd4.ml, type='response', newdata=z, data=z2) 	
+								}, 
+								warning=function(w)
+								{ 
+									cat(paste('\nfall back to approx for patient',x))
+									cd4.s	<<- approx(z2[,PosCD4], z2[,CD4], xout=z[,PosCD4]+t.period/2, rule=2)$y	
+								})						
+					}
+				}				
 				data.table(t.Patient=x, t=z[,PosCD4], CD4=cd4.s)
 			})
 	immu	<- do.call('rbind',immu)
@@ -8985,6 +8992,26 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka2H2V400			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H2V400'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka2H2V200			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H2V200'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
 	
 	
 	
@@ -9878,6 +9905,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	#outdir					<- paste(DATA,"fisheretal_140616",sep='/')	
 	indir					<- paste(DATA,"fisheretal_140801",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140801",sep='/')	
+	indir					<- paste(DATA,"fisheretal_140804",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140804",sep='/')	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -11459,11 +11488,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3k'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Bwmx.tp4'
+		method.risk				<- 'm2Bwmx.tp1'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.2
 		method.brl.bwhost		<- 2
-		method.lRNA.supp		<- 200
+		method.lRNA.supp		<- 51
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")

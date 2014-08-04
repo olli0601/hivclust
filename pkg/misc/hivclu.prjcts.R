@@ -1,4 +1,33 @@
 ######################################################################################
+project.hivc.check.nt.table<- function(dir.name= DATA, verbose=1)
+{
+	#> subset(nt.table, Patient=='M14909')
+    #Patient  risk      factor X.clu     X.msm  X.seq YX
+ 	#1:  M14909 stage ART.suA.N.1     0  8242  3855  0
+ 	#2:  M14909 stage ART.suA.Y.1     0     8    12  0
+	lRNA.supp	<- log10(51)
+	X.seq.p		<- subset(X.seq, t.Patient=='M14909')
+	X.msm.p		<- subset(X.msm, t.Patient=='M14909')
+	#	--> t.Patient is identical in X.msm and X.seq
+	#	why is there a difference in the nt.table????
+	setdiff( X.msm.p[, unique(Patient)], X.seq.p[, unique(Patient)] )
+	setdiff( X.seq.p[, unique(Patient)], X.msm.p[, unique(Patient)] )
+	
+	subset(X.seq.p, stage=='ART.started' & lRNA<=lRNA.supp)
+	
+	subset(X.seq.p, stage=='ART.started')[,table(ART.F)]
+	#ART.F
+	#No  	Yes 
+	#8627   46 
+	subset(X.msm.p, stage=='ART.started')[,table(ART.F)]
+	#ART.F
+	#No  	Yes 
+	#8627   46 
+	X.seq.p2	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq.p, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )
+	X.msm.p2	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm.p, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )
+	#	stratify seems OK
+}
+######################################################################################
 project.hivc.check.CD4interpolation<- function(dir.name= DATA, verbose=1)
 {
 	
@@ -417,6 +446,8 @@ hivc.beast2out.read.trees <- function(file, tree.id=NA)
 		bstr		<- X[grep(paste(tree.id,"[[:space:]]+",sep=''), X)]
 		inode.stat	<- hivc.beast2out.read.tree(bstr)
 		set(inode.stat, NULL, 'tree.id', tree.id[i] )
+		# read tree
+		
 	}
 	if(is.na(tree.id))
 	{
@@ -436,6 +467,7 @@ hivc.beast2out.read.trees <- function(file, tree.id=NA)
 				})
 		inode.stat	<- do.call('rbind',inode.stat)		
 	}
+	
 	inode.stat 
 }
 ######################################################################################
@@ -449,6 +481,9 @@ project.Gates.RootSeqSim.getrootseq<- function()
 	
 	file		<- paste(indir, '/', infile, '_', insignat, '.timetrees', sep='')
 	file		<- paste(indir, '/working.timetrees', sep='')
+	
+	
+	
 	stats		<- c(paste('ENV.CP',1:3,sep=''),paste('GAG.CP',1:3,sep=''),paste('POL.CP',1:3,sep=''))
 	tree.id		<- 'tree STATE_0'
 }
