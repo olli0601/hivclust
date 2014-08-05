@@ -399,6 +399,169 @@ hivc.beast2.extract.distinct.topologies<- function(mph.clu)
 	list(dtopo= mph.clu.dtopo, itopo=mph.clu.itopo)
 }
 ######################################################################################
+hivc.beast2out.read.nodestats <- function(bstr) 
+{
+	#	remove anything before first '('
+	bstr	<- regmatches(bstr, regexpr('\\(.*',bstr))
+	# 	store meta info for inner nodes that is given in [], and not in :[] which is meta info for edges	
+	tmp		<- unlist(regmatches(bstr,gregexpr('[^:]\\[[^]]+',bstr)))
+	tmp		<- sapply( tmp, function(x) substr(x, 4, nchar(x)) ) 
+	#	for each inner node, extract stats
+	tmp		<- strsplit(tmp, ',')
+	tmp		<- lapply(seq_along(tmp), function(i)
+			{
+				z<- strsplit(tmp[[i]],'=')				
+				data.table(NODE_PARSE_ID=i, STAT=sapply(z,'[',1), VALUE=sapply(z,'[',2))
+			})
+	node.stat	<- do.call('rbind', tmp)
+	tmp			<- node.stat[, unique(STAT)]
+	cat(paste('\nFound node statistics=',paste(tmp,collapse=' ')))
+	tmp			<- node.stat[, list(has.all.stats= !length(setdiff(tmp, STAT))  ) , by='NODE_PARSE_ID']
+	tmp			<- subset(tmp, !has.all.stats)[, NODE_PARSE_ID]
+	cat(paste('\nSome statistics missing for nodes=',paste(tmp,collapse=' ')))
+	node.stat 
+}
+######################################################################################
+#	private: read tree such that tip.label and nodel.label include information on the index on when a tip/node occurs in bstr
+hivc.beast2out.read.nodeidtree <- function(bstr, method.node.stat='any.node') 
+{
+	# strip all meta variables and ; at end
+	bstr		<- gsub("\\[[^]]*\\]", "", bstr)
+	bstr		<- gsub(';','',bstr)
+	# for each node, add a dummy node label NODE_PARSE_IDxx	
+	dummy.tree	<- unlist(strsplit(bstr, ":"))
+	if(method.node.stat=='inner.node')
+	{
+		#	interior branch length: 	previous index ends in ). so tmp is the index of the dummy.tree chunks that gives the start of a branch length of an inner node
+		tmp			<- which( c(FALSE, grepl(')$',dummy.tree)[-length(dummy.tree)]) )
+		#	prepend NODE_PARSE_IDxx before the branch length of an inner node
+		tmp			<- tmp-1			
+	}
+	if(method.node.stat=='any.node')
+		tmp			<- seq_along(dummy.tree)
+	dummy.tree	<- sapply(seq_along(dummy.tree), function(i)
+			{
+				z<- which(i==tmp)
+				ifelse(length(z),	paste(dummy.tree[i],'NODE_PARSE_ID',z,sep=''),	dummy.tree[i] )
+			}) 			
+	dummy.tree	<- paste(dummy.tree, collapse=':',sep='')
+	dummy.tree	<- regmatches(dummy.tree, regexpr('\\(.*',dummy.tree))
+	dummy.tree	<- paste(dummy.tree, ';', sep='')
+	read.tree(text=dummy.tree)	
+}
+######################################################################################
+hivc.beast2out.read.nexus.and.stats <- function(file, tree.id=NA, method.node.stat='any.node') 
+{	
+	stopifnot(method.node.stat%in%c('any.node','inner.node'))
+	
+	X				<- scan(file = file, what = "", sep = "\n", quiet = TRUE)	
+	#	read TRANSLATE chunk
+	X.endblock		<- grep("END;|ENDBLOCK;", X, ignore.case = TRUE)
+	X.semico 		<- grep(";", X)
+	X.i1 			<- grep("BEGIN TREES;", X, ignore.case = TRUE)
+	X.i2 			<- grep("TRANSLATE", X, ignore.case = TRUE)	
+	tmp 			<- X.semico[X.semico > X.i2][1]
+	tmp 			<- X[(X.i2 + 1):tmp]
+	tmp				<- gsub('[,;]$','',gsub('^\\s+','',tmp))
+	tmp				<- tmp[nzchar(tmp)]
+	tmp				<- strsplit(tmp, ' ')
+	df.translate	<- data.table(NEXUS_ID= sapply(tmp, '[[', 1), NEXUS_LABEL=sapply(tmp, '[[', 2) )
+	set(df.translate, NULL, 'NEXUS_LABEL', df.translate[, gsub("\'","",NEXUS_LABEL)])
+	cat(paste('\nFound taxa, n=', nrow(df.translate)))
+	
+	if(!is.na(tree.id))
+	{
+		#	read one newick tree with id 'tree.id'
+		bstr		<- X[grep(paste(tree.id,"[[:space:]]+",sep=''), X)]
+		node.stat	<- hivc.beast2out.read.nodestats(bstr)
+		cat(paste('\nFound node statistics, n=', nrow(node.stat)))
+		set(node.stat, NULL, 'tree.id', tree.id[i] )		
+		btree		<- hivc.beast2out.read.nodeidtree(bstr, method.node.stat=method.node.stat) 
+		#
+		# link node.stats with tree nodes (tip + inner node)
+		# NODE_ID is index of node in 'btree' phylo object
+		#
+		tmp			<- strsplit( btree$tip.label, 'NODE_PARSE_ID' )
+		df.link		<- data.table(NODE_ID=seq_along(btree$tip.label), NEXUS_ID=sapply(tmp,'[[',1), NODE_PARSE_ID=sapply(tmp,'[[',2))
+		df.link		<- merge(df.link, df.translate, by='NEXUS_ID')
+		cat(paste('\nFound tree tips with taxon name, n=', nrow(df.link)))
+		tmp			<- strsplit( btree$node.label, 'NODE_PARSE_ID' )
+		tmp			<- data.table(NODE_ID=Ntip(btree)+seq_along(btree$node.label), NODE_PARSE_ID=sapply(tmp,'[[',2), NEXUS_LABEL=NA_character_)
+		df.link		<- rbind(subset(df.link,select=c(NODE_ID, NODE_PARSE_ID, NEXUS_LABEL)), tmp)
+		set(df.link,NULL,'NODE_PARSE_ID',df.link[, as.integer(NODE_PARSE_ID)])
+		set(df.link,NULL,'NODE_ID',df.link[, as.integer(NODE_ID)])
+		set(df.link,NULL,'TREE_ID',tree.id)
+		node.stat	<- merge( node.stat, subset(df.link, select=c(NODE_PARSE_ID, NODE_ID, TREE_ID)), by='NODE_PARSE_ID' )
+		set(node.stat,NULL,'NODE_PARSE_ID',NULL)
+		cat(paste('\nLinked node statistics to tree nodes, n=', nrow(node.stat)))
+		#
+		# set tip.labels and rm node.labels
+		#
+		setkey(df.link, NODE_ID)
+		btree$tip.label		<- df.link[seq_len(Ntip(btree)),][,NEXUS_LABEL]
+		btree$node.label	<- NULL		
+	}
+	if(is.na(tree.id))
+	{
+		#	read all newick trees in nexus file
+		tmp			<- regexpr('^tree\\s\\S+',X)
+		tree.id		<- sapply( regmatches(X,tmp), function(x) substr(x, 5, nchar(x)))
+		tree.id		<- gsub('\\s','',tree.id)		
+		cat(paste('\nFound tree id=', paste(tree.id, collapse=' ')))
+		X			<- X[ which(tmp>0) ]
+		cat(paste('\nFound trees, n=',length(tree.id)))
+		node.stat	<- lapply(seq_along(tree.id), function(i)
+				{
+					
+					bstr	<- X[grep(paste(tree.id[i],"[[:space:]]+",sep=''), X)]
+					cat(paste('\nGet node statistics for tree id=',tree.id[i]))
+					tmp		<- hivc.beast2out.read.nodestats(bstr)
+					set(tmp, NULL, 'TREE_ID', tree.id[i] )
+					tmp
+				})
+		node.stat	<- do.call('rbind',node.stat)
+		set(node.stat, NULL, 'NODE_ID', NA_integer_)
+		setkey(node.stat, TREE_ID, NODE_PARSE_ID)
+		btree		<- vector('list',length(tree.id))
+		for(i in seq_along(tree.id))
+		{
+			bstr		<- X[grep(paste(tree.id[i],"[[:space:]]+",sep=''), X)]
+			cat(paste('\nRead tree for tree id=',tree.id[i]))
+			btree.i		<- hivc.beast2out.read.nodeidtree(bstr, method.node.stat=method.node.stat)
+			#
+			# link node.stats with tree nodes (tip + inner node)
+			# NODE_ID is index of node in 'btree.i' phylo object
+			#
+			tmp			<- strsplit( btree.i$tip.label, 'NODE_PARSE_ID' )
+			df.link		<- data.table(NODE_ID=seq_along(btree.i$tip.label), NEXUS_ID=sapply(tmp,'[[',1), NODE_PARSE_ID=sapply(tmp,'[[',2))
+			df.link		<- merge(df.link, df.translate, by='NEXUS_ID')
+			cat(paste('\nFound tree tips with taxon name, n=', nrow(df.link)))
+			tmp			<- strsplit( btree.i$node.label, 'NODE_PARSE_ID' )
+			tmp			<- data.table(NODE_ID=Ntip(btree.i)+seq_along(btree.i$node.label), NODE_PARSE_ID=sapply(tmp,'[[',2), NEXUS_LABEL=NA_character_)
+			df.link		<- rbind(subset(df.link,select=c(NODE_ID, NODE_PARSE_ID, NEXUS_LABEL)), tmp)
+			set(df.link,NULL,'NODE_PARSE_ID',df.link[, as.integer(NODE_PARSE_ID)])
+			set(df.link,NULL,'NODE_ID',df.link[, as.integer(NODE_ID)])		
+			for(j in seq_len(nrow(df.link)))
+				set(node.stat, node.stat[, which(TREE_ID==tree.id[i] & NODE_PARSE_ID==df.link[j,NODE_PARSE_ID])], 'NODE_ID', df.link[j,NODE_ID])		
+			tmp			<- node.stat[, length(which(!is.na(NODE_ID)))]
+			cat(paste('\nTotal linked node statistics to tree nodes, n=', tmp  ))
+			#
+			# set tip.labels and rm node.labels
+			#
+			setkey(df.link, NODE_ID)
+			btree.i$tip.label	<- df.link[seq_len(Ntip(btree.i)),][,NEXUS_LABEL]
+			btree.i$node.label	<- NULL	
+			btree[[i]]			<- btree.i
+		}
+		tmp				<- node.stat[, length(which(is.na(NODE_ID)))]
+		cat(paste('\nTotal unlinked node statistics [should be zero], n=', tmp  ))
+		names(btree)	<- tree.id
+		class(btree)	<- "multiPhylo"
+		set(node.stat,NULL,'NODE_PARSE_ID',NULL)
+	}
+	list(tree=btree, node.stat=node.stat)	 
+}
+######################################################################################
 hivc.beast2out.combine.clu.trees<- function(indir, file.info, beastlabel.idx.clu=1, beastlabel.idx.hivn=2, beastlabel.idx.hivd=3, beastlabel.idx.hivs=4, beastlabel.idx.samplecode= 6, beastlabel.idx.rate= NA, method.nodectime='any', verbose=FALSE)
 {
 	#	collect consensus tree and further info for plotting

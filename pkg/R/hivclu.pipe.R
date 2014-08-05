@@ -586,7 +586,7 @@ hivc.pipeline.BEASTout<- function()
 ######################################################################################
 hivc.pipeline.betareg.estimate.risks<- function()
 {
-	#stop()
+	stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')

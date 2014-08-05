@@ -83,7 +83,7 @@ default.fun		<- "hivc.pipeline.betareg.estimate.risks"
 #default.fun		<- "project.athena.Fisheretal.numbers"
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
-#default.fun		<- "hivc.pipeline.various"
+default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -372,10 +372,11 @@ if(length(args))
 					CLUSTMSM				= "hivc.prog.get.clustering.MSM",
 					BEASTPOOLRUN			= "hivc.prog.BEAST.generate.xml",
 					BEASTEVALRUN			= "hivc.prog.BEAST.evalpoolrun",
+					BEAST.READNEXUS			= "hivc.prog.BEAST.read.nexus.and.stats",
 					BEAST2.PIPE.CLUTREES	= "hivc.pipeline.BEASTout.get.cluster.trees",
 					BEAST2.CLUTREES			= "hivc.prog.BEAST2.get.cluster.trees",
 					BEAST2.CLUPOSTERIOR		= "hivc.prog.BEAST2.process.cluster.trees",					
-					BEAST2.PLOTCLUTREES		= "hivc.prog.BEAST2.plot.cluster.trees",
+					BEAST2.PLOTCLUTREES		= "hivc.prog.BEAST2.plot.cluster.trees",					
 					RECOMB.PROCESS3SEQOUT	= "hivc.prog.recombination.process.3SEQ.output",
 					RECOMB.CHECKCANDIDATES	= "hivc.prog.recombination.check.candidates",
 					RECOMB.PLOTINCONGRUENCE	= "hivc.prog.recombination.plot.incongruence",

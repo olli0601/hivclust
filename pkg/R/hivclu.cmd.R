@@ -89,6 +89,9 @@ PR.BEAST2.CLUTREES.PIPE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=
 PR.BEAST2CLUTREES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.CLUTREES",sep='/')
 
 #' @export
+PR.BEASTPARSER	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST.READNEXUS",sep='/')
+
+#' @export
 PR.BEAST2CLUPOSTERIOR	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.CLUPOSTERIOR",sep='/')
 
 #' @export
@@ -745,7 +748,25 @@ hivc.cmd.examl.cleanup<- function(outdir, prog= PR.EXAML.EXAML)
 }
 ######################################################################################
 #' @export
-hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -strict -working", prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
+hivc.cmd.beast.read.nexus<- function(indir, infile, outdir, tree.id=NA, method.node.stat='any.node', prog.BEASTPARSER=PR.BEASTPARSER)
+{
+	cmd		<- "#######################################################
+# start: run BEASTPARSER
+#######################################################"	
+	cmd		<- paste(cmd,paste("\necho \'run ",prog.BEASTPARSER,"\'\n",sep=''))
+	tmp		<- paste(indir,'/',infile,sep='')
+	cmd		<- paste(cmd, prog.BEASTPARSER, " -indir=",indir," -infile=",infile," -outdir=",outdir," -method.node.stat=",method.node.stat, sep='')
+	if(!is.na(tree.id))
+		cmd		<- paste(cmd, " -tree.id=",tree.id,sep='')
+	cmd		<- paste(cmd,"\necho \'end ",prog.BEASTPARSER,"\'\n",sep='')
+	cmd		<- paste(cmd,"#######################################################
+# end: run BEASTPARSER
+#######################################################\n",sep='')
+	cmd
+}
+######################################################################################
+#' @export
+hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -strict -working", hpc.tmpdir.prefix="beast", hpc.ncpu=1)
 {
 	cmd		<- "#######################################################
 # start: run BEAST
@@ -774,25 +795,23 @@ hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, p
 	cmd		<- paste(cmd,"#######################################################
 # end: run BEAST
 #######################################################\n",sep='')
-	cmd<- paste(cmd,"#######################################################
+	cmd
+}
+######################################################################################
+#' @export
+hivc.cmd.beast.run.treeannotator<- function(indir, infile, insignat, prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median")
+{
+	cmd<- paste("#######################################################
 # start: run TREEANNOTATOR
 #######################################################\n",sep='')
+	hpcsys	<- hivc.cmd.hpcsys()
 	cmd		<- paste(cmd,"echo \'run ",prog.beastmcc[hpcsys],"\'\n",sep='')
-	if(hpcsys=="debug")						#my MAC - don t use scratch
-	{	
-		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".timetrees",sep='')
-		cmd		<- paste(cmd,prog.beastmcc[hpcsys]," -burnin ",beastmcc.burnin," -heights ",beastmcc.heights," ",tmp,sep='')
-		tmp		<- paste(indir,'/',infile,"_mcc_",gsub('/',':',insignat),".nex",sep='')
-		cmd		<- paste(cmd," ",tmp,"\n",sep='')
-	}
-	else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
-	{
-		tmp		<- paste(tmpdir,'/',infile,'_',gsub('/',':',insignat),".timetrees",sep='')
-		cmd		<- paste(cmd,prog.beastmcc[hpcsys]," -burnin ",beastmcc.burnin," -heights ",beastmcc.heights," ",tmp,sep='')
-		tmp		<- paste(tmpdir,'/',infile,"_mcc_",gsub('/',':',insignat),".nex",sep='')
-		cmd		<- paste(cmd," ",tmp,"\n",sep='')
-		cmd		<- paste(cmd,"cp -f ",tmp," ", indir,'\n',sep='')
-	}
+	
+	tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".timetrees",sep='')
+	cmd		<- paste(cmd,prog.beastmcc[hpcsys]," -burnin ",beastmcc.burnin," -heights ",beastmcc.heights," ",tmp,sep='')
+	tmp		<- paste(indir,'/',infile,"_mcc_",gsub('/',':',insignat),".nex",sep='')
+	cmd		<- paste(cmd," ",tmp,"\n",sep='')
+	
 	cmd		<- paste(cmd,"echo \'end ",prog.beastmcc[hpcsys],"\'\n",sep='')
 	cmd<- paste(cmd,"#######################################################
 # end: run TREEANNOTATOR

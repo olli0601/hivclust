@@ -414,170 +414,80 @@ project.hivc.check.DateRes.after.T0<- function(dir.name= DATA, verbose=1)
 			})
 }
 ######################################################################################
-hivc.beast2out.read.nodestats <- function(bstr) 
-{
-	#	remove anything before first '('
-	bstr	<- regmatches(bstr, regexpr('\\(.*',bstr))
-	# 	store meta info for inner nodes that is given in [], and not in :[] which is meta info for edges	
-	tmp		<- unlist(regmatches(bstr,gregexpr('[^:]\\[[^]]+',bstr)))
-	tmp		<- sapply( tmp, function(x) substr(x, 4, nchar(x)) ) 
-	#	for each inner node, extract stats
-	tmp		<- strsplit(tmp, ',')
-	tmp		<- lapply(seq_along(tmp), function(i)
-			{
-				z<- strsplit(tmp[[i]],'=')				
-				data.table(NODE=i, STAT=sapply(z,'[',1), VALUE=sapply(z,'[',2))
-			})
-	node.stat	<- do.call('rbind', tmp)
-	tmp			<- node.stat[, unique(STAT)]
-	cat(paste('\nFound node statistics=',paste(tmp,collapse=' ')))
-	tmp			<- node.stat[, list(has.all.stats= !length(setdiff(tmp, STAT))  ) , by='node']
-	tmp			<- subset(tmp, !has.all.stats)[, NODE]
-	cat(paste('\nSome statistics missing for nodes=',paste(tmp,collapse=' ')))
-	node.stat 
-}
-######################################################################################
-#	private: read tree such that tip.label and nodel.label include information on the index on when a tip/node occurs in bstr
-hivc.beast2out.read.nodeidtree <- function(bstr, method.node.stat='any.node') 
-{
-	# strip all meta variables and ; at end
-	bstr		<- gsub("\\[[^]]*\\]", "", bstr)
-	bstr		<- gsub(';','',bstr)
-	# for each node, add a dummy node label NODExx	
-	dummy.tree	<- unlist(strsplit(bstr, ":"))
-	if(method.node.stat=='inner.node')
-	{
-		#	interior branch length: 	previous index ends in ). so tmp is the index of the dummy.tree chunks that gives the start of a branch length of an inner node
-		tmp			<- which( c(FALSE, grepl(')$',dummy.tree)[-length(dummy.tree)]) )
-		#	prepend NODExx before the branch length of an inner node
-		tmp			<- tmp-1			
-	}
-	if(method.node.stat=='any.node')
-		tmp			<- seq_along(dummy.tree)
-	dummy.tree	<- sapply(seq_along(dummy.tree), function(i)
-			{
-				z<- which(i==tmp)
-				ifelse(length(z),	paste(dummy.tree[i],'NODE',z,sep=''),	dummy.tree[i] )
-			}) 			
-	dummy.tree	<- paste(dummy.tree, collapse=':',sep='')
-	dummy.tree	<- regmatches(dummy.tree, regexpr('\\(.*',dummy.tree))
-	dummy.tree	<- paste(dummy.tree, ';', sep='')
-	read.tree(text=dummy.tree)	
-}
-######################################################################################
-hivc.beast2out.read.trees <- function(file, tree.id=NA, method.node.stat='any.node') 
-{	
-	stopifnot(!method.node.stat%in%c('any.node','inner.node'))
-	
-	X				<- scan(file = file, what = "", sep = "\n", quiet = TRUE)	
-	#	read TRANSLATE chunk
-	X.endblock		<- grep("END;|ENDBLOCK;", X, ignore.case = TRUE)
-	X.semico 		<- grep(";", X)
-	X.i1 			<- grep("BEGIN TREES;", X, ignore.case = TRUE)
-	X.i2 			<- grep("TRANSLATE", X, ignore.case = TRUE)	
-	tmp 			<- X.semico[X.semico > X.i2][1]
-	tmp 			<- X[(X.i2 + 1):tmp]
-	tmp				<- gsub('[,;]$','',gsub('^\\s+','',tmp))
-	tmp				<- tmp[nzchar(tmp)]
-	tmp				<- strsplit(tmp, ' ')
-	df.translate	<- data.table(NEXUS_TIP_ID= sapply(tmp, '[[', 1), NEXUS_TIP_NAME=sapply(tmp, '[[', 2) )
-	set(df.translate, NULL, 'NEXUS_TIP_NAME', df.translate[, gsub("\'","",NEXUS_TIP_NAME)])
-	
-	# 	isolate tree strings that are to be processed	
-	if(!is.na(tree.id))
-	{
-		bstr		<- X[grep(paste(tree.id,"[[:space:]]+",sep=''), X)]
-		node.stat	<- hivc.beast2out.read.nodestats(bstr)
-		set(node.stat, NULL, 'tree.id', tree.id[i] )		
-		btree		<- hivc.beast2out.read.nodeidtree(bstr, method.node.stat=method.node.stat) 
-		
-		# link node.stats with tip names
-		tmp			<- strsplit( btree$tip.label, 'NODE' )
-		df.link		<- data.table(NEXUS_TIP_ID=sapply(tmp,'[[',1), )
-		#set(node.stat, NULL, 'inner.node.long', node.stat[, paste('INNERNODE',inner.node,sep='')])
-		
-		#	- read this newick string and determine the node index in 'df.beast'
-		tmp					<- read.tree(text=tmp)
-		ph[["node.label"]]	<- cbind(data.table(node=Ntip(ph) + seq_len(Nnode(ph))), df.beast[as.numeric( tmp$node.label ),])
-		setkey(ph[["node.label"]], node)
-		
-		
-		
-		
-		
-		
-		
-		# read branch lengths
-		brl <- unlist(strsplit(newick, ":"))[-1]
-		brl <- gsub("[( | ) | ;]", "", brl)
-		brl <- strsplit(brl, ",")
-		foo <- function(x) x <- head(x, 1)
-		brl <- sapply(brl, '[[', 1)
-		brl <- paste("", brl, sep = ":")
-		brl <- c(brl, ";")
-		
-		
-		start <- X.semico[X.semico > X.i2][1] + 1			
-		end <- X.endblock[X.endblock > X.i1][1] - 1
-		tree <- X[start:end]
-		tree <- gsub("^.*= *", "", tree)
-		
-		
-		
-		LEFT <- grep("\\[", bstr)
-		RIGHT <- grep("\\]", bstr)
-		if (length(LEFT)) {
-			w <- LEFT == RIGHT
-			if (any(w)) {
-				s <- LEFT[w]
-				bstr[s] <- gsub("\\[[^]]*\\]", "", bstr[s])
-			}
-			w <- !w
-			if (any(w)) {
-				s <- LEFT[w]
-				bstr[s] <- gsub("\\[.*", "", bstr[s])
-				sb <- RIGHT[w]
-				bstr[sb] <- gsub(".*\\]", "", bstr[sb])
-				if (any(s < sb - 1)) 
-					bstr <- bstr[-unlist(mapply(":", (s + 1), (sb - 1)))]
-			}
-		}
-	}
-	if(is.na(tree.id))
-	{
-		tmp			<- regexpr('^tree\\s\\S+',X)
-		tree.id		<- sapply( regmatches(X,tmp), function(x) substr(x, 5, nchar(x)))
-		tree.id		<- gsub('\\s','',tree.id)
-		X			<- X[ which(tmp>0) ]
-		cat(paste('\nFound trees, n=',length(tree.id)))
-		node.stat	<- lapply(seq_along(tree.id), function(i)
-				{
-					
-					bstr	<- X[grep(paste(tree.id[i],"[[:space:]]+",sep=''), X)]
-					cat(paste('\nProcess inner node statistics for tree id=',tree.id[i]))
-					tmp		<- hivc.beast2out.innernodestats(bstr)
-					set(tmp, NULL, 'tree.id', tree.id[i] )
-					tmp
-				})
-		node.stat	<- do.call('rbind',node.stat)		
-	}
-	
-	node.stat 
-}
-######################################################################################
 project.Gates.RootSeqSim.getrootseq<- function()
 {
 	#dir.name	<- "/work/or105/Gates_2014"
 	dir.name	<- '/Users/Oliver/duke/2014_Gates'  
-	indir		<- paste(dir.name,'methods_comparison_rootseqsim/140730',sep='/')
-	infile		<- 'ALLv05.n97.rlx.gmrf' 		
-	insignat	<- 'Sun_Jul_27_09-00-00_2014'	
 	
-	file		<- paste(indir, '/', infile, '_', insignat, '.timetrees', sep='')
-	file		<- paste(indir, '/working.timetrees', sep='')
-	
-	
-	
+	if(1)	#	devel
+	{		
+		indir		<- paste(dir.name,'methods_comparison_rootseqsim/140730',sep='/')
+		file		<- paste(indir, '/', infile, '_', insignat, '.timetrees', sep='')
+		file		<- paste(indir, '/working.timetrees', sep='')
+		
+		tmp			<- hivc.beast2out.read.nexus.and.stats(file, tree.id=NA, method.node.stat='any.node')
+		node.stat	<- tmp$node.stat
+		tree		<- tmp$tree
+		
+		
+		#	add calendar time for inner node at NODE_ID to node.stat
+		tree.id				<- names(tree)
+		label.sep			<- '|'
+		label.idx.ctime		<- 2
+		node.stat[, CALENDAR_TIME:=NA_real_]		
+		setkey(node.stat, TREE_ID, NODE_ID)
+		for(i in seq_along(tree.id))
+		{
+			label.ctime			<- sapply( strsplit(tree[[i]]$tip.label, label.sep, fixed=TRUE), '[[', label.idx.ctime ) 
+			label.ctime			<- as.numeric(label.ctime)
+			
+			depth				<- node.depth.edgelength( tree[[ i ]] )
+			tmp					<- which.max(depth)
+			depth				<- depth-depth[tmp]+label.ctime[tmp]
+			for(j in seq_along(depth))
+				set(node.stat, node.stat[, which(TREE_ID==tree.id[i] & NODE_ID==j)], 'CALENDAR_TIME', depth[j])					
+		}
+		tmp			<- node.stat[, length(which(is.na(CALENDAR_TIME)))]
+		cat(paste('\nTotal node statistics with no CALENDAR_TIME [should be zero], n=', tmp  ))
+		#	keep only inner nodes
+		tmp			<- lapply(seq_along(tree.id), function(i)
+				{
+					subset(node.stat, TREE_ID==tree.id[i] & NODE_ID>Ntip(tree[[i]]))
+				})
+		node.stat	<- do.call('rbind',tmp)
+		#	reconstruct ancestral genes sequences
+		
+		tmp	<- subset(node.stat, select=c(TREE_ID, NODE_ID, CALENDAR_TIME))
+		setkey(tmp, TREE_ID, NODE_ID)
+		hist(tmp[, CALENDAR_TIME], breaks=seq(1930,2011,1))
+		#	reconstruct gene sequences and store in ape format
+		#	get calendar time for gene sequence
+		set(node.stat, NULL, 'VALUE', node.stat[, gsub('\"','',VALUE)])
+		#	check seq lengths
+		tmp		<- node.stat[, list(NCHAR=nchar(VALUE)), by=c('STAT','NODE_ID','TREE_ID')]
+		stopifnot( tmp[, list(CHECK=all(NCHAR[1]==NCHAR)), by='STAT'][, all(CHECK)] )
+		
+		tmp[, list(CHECK=unique(NCHAR)), by='STAT']
+		
+		ENV.CP1<- "AGA"
+		ENV.CP2<- "XYZ"
+		ENV.CP3<- "KLM"
+		tmp		<- do.call('rbind',sapply(list(ENV.CP1,ENV.CP2,ENV.CP3), strsplit, ''))
+		tmp		<- paste(as.vector(tmp), collapse='')
+		
+		subset(node.stat, TREE_ID=='STATE_0' & NODE_ID==which(btree[[1]]$tip.label=='C.BW.AF443074|1996'))
+
+	}
+	if(0)
+	{
+		dir.name	<- '/Users/Oliver/duke/2014_Gates'  
+		indir		<- paste(dir.name,'methods_comparison_rootseqsim/140801',sep='/')
+		infile		<- 'ALLv06.n97.rlx.gmrf' 		
+		insignat	<- 'Sun_Jul_27_09-00-00_2014'	
+		file		<- paste(indir, '/', infile, '_', insignat, '.timetrees', sep='')
+		tmp			<- hivc.beast2out.read.nexus.and.stats(file, tree.id=NA, method.node.stat='any.node')
+		
+	}
 	stats		<- c(paste('ENV.CP',1:3,sep=''),paste('GAG.CP',1:3,sep=''),paste('POL.CP',1:3,sep=''))
 	tree.id		<- 'tree STATE_0'
 }
@@ -595,12 +505,26 @@ project.Gates.RootSeqSim.runxml<- function()
 	infile		<- 'ALLv06.n97.rlx.gmrf' 			
 	insignat	<- 'Sun_Jul_27_09-00-00_2014'	
 	
-	hpc.ncpu	<- 8
-	cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median", hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
-	cat(cmd)
 	
-	#	production
-	cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=291, hpc.mem="3700mb")
+	if(0)	#all tasks combined
+	{
+		hpc.ncpu	<- 8
+		cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
+		tmp			<- paste(infile,'_',insignat,'.timetrees',sep='')
+		#tmp			<- paste('working.timetrees', sep='')
+		cmd			<- paste(cmd, hivc.cmd.beast.read.nexus(indir, tmp, indir, tree.id=NA, method.node.stat='any.node'), sep='\n')
+		cmd			<- paste(cmd, hivc.cmd.beast.run.treeannotator(indir, infile, insignat, prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median"), sep='\n')
+		cat(cmd)	
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=291, hpc.mem="3700mb")
+	}
+	if(1)	#only parse existing output
+	{
+		tmp			<- paste(infile,'_',insignat,'.timetrees',sep='')
+		cmd			<- hivc.cmd.beast.read.nexus(indir, tmp, indir, tree.id=NA, method.node.stat='any.node')
+		cat(cmd)
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=48, hpc.mem="3700mb")
+	}
+	
 	outdir		<- indir
 	outfile		<- paste("b2m.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
 	hivc.cmd.hpccaller(outdir, outfile, cmd)

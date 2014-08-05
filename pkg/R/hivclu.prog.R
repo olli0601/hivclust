@@ -4384,6 +4384,71 @@ hivc.prog.BEAST2.generate.xml<- function()
 			})	
 }
 ######################################################################################
+hivc.prog.BEAST.read.nexus.and.stats<- function()
+{	
+	require(ape)
+	indir				<- paste(DATA,"tmp",sep='/')		
+	infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"			
+	outdir				<- indir	
+	
+	resume				<- 1
+	verbose				<- 1
+	tree.id				<- NA 
+	method.node.stat	<- 'any.node'
+	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,6),
+									indir= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) indir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) outdir<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,7),
+									resume= return(as.numeric(substr(arg,9,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) resume<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,2),
+									v= return(as.numeric(substr(arg,4,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) verbose<- tmp[1]	
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,8),
+									tree.id= return(as.numeric(substr(arg,10,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) tree.id<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,17),
+									method.node.stat= return(substr(arg,19,nchar(arg))),NA)	}))
+		if(length(tmp)>0) method.node.stat<- tmp[1]
+	}	
+	outfile		<- unlist(strsplit(infile, '\\.'))
+	outfile		<- paste( outfile[-length(outfile)],'R',sep='.')
+	if(verbose)
+	{
+		print(indir)
+		print(infile)
+		print(outdir)
+		print(outfile)
+		print(resume)
+		print(method.node.stat)
+		print(tree.id)
+	}
+	
+	file		<- paste(indir,'/',infile, sep='')
+	tmp			<- hivc.beast2out.read.nexus.and.stats(file, tree.id=tree.id, method.node.stat=method.node.stat)
+	node.stat	<- tmp$node.stat
+	tree		<- tmp$tree
+	file		<- paste(outdir, '/', outfile, sep='')
+	cat(paste('\nsave to file=', file))
+	save(file=file, node.stat, tree)	
+}
+######################################################################################
 hivc.prog.BEAST.generate.xml<- function()
 {	
 	require(XML)
