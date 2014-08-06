@@ -4428,7 +4428,7 @@ hivc.prog.BEAST.read.nexus.and.stats<- function()
 		if(length(tmp)>0) method.node.stat<- tmp[1]
 	}	
 	outfile		<- unlist(strsplit(infile, '\\.'))
-	outfile		<- paste( outfile[-length(outfile)],'R',sep='.')
+	outfile		<- paste( c(outfile[-length(outfile)],'R'),sep='',collapse='.')
 	if(verbose)
 	{
 		print(indir)

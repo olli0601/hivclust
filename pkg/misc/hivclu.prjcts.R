@@ -439,8 +439,7 @@ project.Gates.RootSeqSim.getrootseq<- function()
 		for(i in seq_along(tree.id))
 		{
 			label.ctime			<- sapply( strsplit(tree[[i]]$tip.label, label.sep, fixed=TRUE), '[[', label.idx.ctime ) 
-			label.ctime			<- as.numeric(label.ctime)
-			
+			label.ctime			<- as.numeric(label.ctime)			
 			depth				<- node.depth.edgelength( tree[[ i ]] )
 			tmp					<- which.max(depth)
 			depth				<- depth-depth[tmp]+label.ctime[tmp]
@@ -455,8 +454,67 @@ project.Gates.RootSeqSim.getrootseq<- function()
 					subset(node.stat, TREE_ID==tree.id[i] & NODE_ID>Ntip(tree[[i]]))
 				})
 		node.stat	<- do.call('rbind',tmp)
-		#	reconstruct ancestral genes sequences
-		
+		set(node.stat, NULL, 'VALUE', node.stat[, gsub('\"','',VALUE)])
+		#
+		#	reconstruct ancestral sequences, need to decompress patterns that were compressed with BEAST
+		#	TODO ** this results in duplicate columns and should be removed at a later point **
+		#
+		#	load original sequences
+		file			<- '/Users/Oliver/duke/2014_Gates/methods_comparison_rootseqsim/140801/ALLv06.n97.rlx.gmrf_Sun_Jul_27_09-00-00_2014.xml'
+		bxml			<- xmlTreeParse(file, useInternalNodes=TRUE, addFinalizer = TRUE)
+		bseq			<- hivc.beast.get.sequences(bxml, verbose=1)	
+		bseq			<- merge(bseq, data.table(ALIGNMENT_ID=paste('alignment',1:3,sep=''), GENE=c('env','gag','pol')), by='ALIGNMENT_ID')		
+		bseq			<- merge(bseq, bseq[, list(SEQ_N=nchar(SEQ)), by=c('GENE','TAXON_ID')], by=c('GENE','TAXON_ID'))
+		bseq			<- bseq[, {
+										tmp<- unlist(strsplit(SEQ,''))
+										list(	CP1= paste(tmp[seq.int(1,length(tmp),by=3)], collapse='',sep=''), 
+												CP2= paste(tmp[seq.int(2,length(tmp),by=3)], collapse='',sep=''), 
+												CP3= paste(tmp[seq.int(3,length(tmp),by=3)], collapse='',sep='') 	)
+									}, by=c('TAXON_ID','GENE')]		
+		bseq			<- melt(bseq, measure.var=c('CP1','CP2','CP3'), variable.name='CODON_POS', value.name='SEQ')
+		#	get index of orginal patterns and duplicate patterns
+		bseq.decompress	<- bseq[, {
+										#print(GENE)
+										#print(CODON_POS)
+										tmp		<- do.call('rbind',strsplit(SEQ,''))
+										tmp2	<- apply( tmp, 2, function(x) paste(x,sep='',collapse=''))	#identical patterns?
+										tmp2	<- which(duplicated(tmp2))
+										#for each duplicate, work out index of original
+										tmp3	<- sapply(tmp2, function(j1) which(apply( tmp[,seq.int(1,j1-1,1), drop=FALSE] == tmp[,j1], 2, all))[1]	 )
+										list(NSEQ=ncol(tmp), DUPLICATE_PATTERN=tmp2, MOTHER_PATTERN=tmp3)
+									}, by=c('GENE','CODON_POS')]		
+		set(bseq.decompress, bseq.decompress[, which(GENE=='env')], 'GENE', 'ENV')
+		set(bseq.decompress, bseq.decompress[, which(GENE=='gag')], 'GENE', 'GAG')
+		set(bseq.decompress, bseq.decompress[, which(GENE=='pol')], 'GENE', 'POL')
+		set(bseq.decompress, NULL, 'xSTAT', bseq.decompress[, paste(GENE,CODON_POS,sep='.')])		
+		#	reconstruct ancestral genes sequences - decompress patterns		
+		ancseq	<- node.stat[,  {													
+										#print(STAT)
+										#TREE_ID<- 'STATE_0'
+										#STAT<- 'GAG.CP3'
+										tmp								<- subset(bseq.decompress, xSTAT==STAT)											
+										seq								<- matrix(data=NA_character_, nrow=length(VALUE), ncol=tmp[,NSEQ])
+										seq.compressed					<- setdiff( seq_len(ncol(seq)), tmp[, DUPLICATE_PATTERN])	
+										#print(dim(seq))										
+										tmp2							<- do.call('rbind',strsplit(VALUE,''))
+										#print(dim(tmp2))
+										stopifnot(length(seq.compressed)==ncol(tmp2))
+										seq[, seq.compressed]			<- tmp2
+										#print(seq[1,])
+										seq[, tmp[, DUPLICATE_PATTERN]] <- seq[, tmp[, MOTHER_PATTERN]]
+										#print(seq[1,])
+										#stop()
+										seq								<- apply(seq, 1, function(x) paste(x, sep='',collapse=''))
+										list(TREE_ID=TREE_ID, NODE_ID=NODE_ID, CALENDAR_TIME=CALENDAR_TIME, SEQ=seq) 
+									}, by=c('STAT')]
+		#	get genes
+		#	to check, get full genome too
+								
+	
+	}
+	if(0)
+	{
+	
 		tmp	<- subset(node.stat, select=c(TREE_ID, NODE_ID, CALENDAR_TIME))
 		setkey(tmp, TREE_ID, NODE_ID)
 		hist(tmp[, CALENDAR_TIME], breaks=seq(1930,2011,1))
@@ -501,12 +559,15 @@ project.Gates.RootSeqSim.runxml<- function()
 	#infile		<- 'ALLv04.n97.rlx.gmrf' 	
 	#indir		<- paste(DATA,'methods_comparison_rootseqsim/140730',sep='/')
 	#infile		<- 'ALLv05.n97.rlx.gmrf' 		
-	indir		<- paste(DATA,'methods_comparison_rootseqsim/140801',sep='/')
-	infile		<- 'ALLv06.n97.rlx.gmrf' 			
+	#indir		<- paste(DATA,'methods_comparison_rootseqsim/140801',sep='/')
+	#infile		<- 'ALLv06.n97.rlx.gmrf' 			
+	indir		<- paste(DATA,'methods_comparison_rootseqsim/140806',sep='/')
+	infile		<- 'ALLv07.n97.rlx.gmrf' 			
+	
 	insignat	<- 'Sun_Jul_27_09-00-00_2014'	
 	
 	
-	if(0)	#all tasks combined
+	if(1)	#all tasks combined
 	{
 		hpc.ncpu	<- 8
 		cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
@@ -517,7 +578,7 @@ project.Gates.RootSeqSim.runxml<- function()
 		cat(cmd)	
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=291, hpc.mem="3700mb")
 	}
-	if(1)	#only parse existing output
+	if(0)	#only parse existing output
 	{
 		tmp			<- paste(infile,'_',insignat,'.timetrees',sep='')
 		cmd			<- hivc.cmd.beast.read.nexus(indir, tmp, indir, tree.id=NA, method.node.stat='any.node')
