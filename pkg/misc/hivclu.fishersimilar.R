@@ -3203,14 +3203,14 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	#	pre-processing
 	#
 	nt.table	<- copy(X.tables$nt.table)
-	set(nt.table, NULL, 'Patient', nt.table[, factor(Patient)])
+	set(nt.table, NULL, 't.Patient', nt.table[, factor(t.Patient)])
 	set(nt.table, NULL, 'risk', nt.table[, factor(risk)])
 	set(nt.table, NULL, 'stat', nt.table[, factor(stat)])	
-	nt.table	<- dcast.data.table(nt.table, Patient + risk + factor ~ stat, value.var="nt")
+	nt.table	<- dcast.data.table(nt.table, t.Patient + risk + factor ~ stat, value.var="nt")
 	##	sense check X.seq
 	tmp			<- nt.table[, which(X.seq>X.msm)]
 	if(length(tmp))	cat(paste('\nWARNING: X.seq>X.msm for entries n=',length(tmp)))
-	stopifnot(length(tmp)==0)
+	#stopifnot(length(tmp)==0)
 	set(nt.table, tmp, 'X.seq', nt.table[tmp, X.msm])	
 	tmp			<- nt.table[, which(X.clu>X.seq)]
 	if(length(tmp))	cat(paste('\nWARNING: X.clu>X.seq for entries n=',length(tmp)))
@@ -3241,7 +3241,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	#}
 	##	need to allocate the PYe0cpr potential transmission intervals among all Patients with given risk factor for whom yijt>0
 	##	simply take mean
-	tmp			<- merge(tmp, nt.table[, list(X.msm.e0cp= length(unique(Patient))), by=c('risk','factor') ], by=c('risk','factor')) 
+	tmp			<- merge(tmp, nt.table[, list(X.msm.e0cp= length(unique(t.Patient))), by=c('risk','factor') ], by=c('risk','factor')) 
 	set(tmp, NULL, 'X.msm.e0cp', round( tmp[, PYe0cpr/X.msm.e0cp] ))
 	nt.table	<- merge(nt.table, subset(tmp, select=c(risk, factor, X.msm.e0cp)), by=c('risk','factor'))
 	set(nt.table, NULL, 'X.msm.e0cp', nt.table[, X.msm.e0+X.msm.e0cp])
@@ -3253,7 +3253,9 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	set(nt.table, nt.table[, which(X.msm.e0==0)], 'Sx.e0', 1.)
 	set(nt.table, NULL, 'Sx.e0cp', nt.table[, Sx.e0cp/X.msm.e0cp])	
 	set(nt.table, nt.table[, which(X.msm.e0cp==0)], 'Sx.e0cp', 1.)	
-	##	sense check, this should be close to cens.table:	nt.table[, sum(X.msm.e0cp), by=c('risk','factor')]
+	##	sense check, this should be close to cens.table:	
+	#		subset(X.tables$cens.table, stat=='X.msm')
+	#		nt.table[, sum(X.msm.e0), by=c('risk','factor')]
 	#
 	#	compute extra risk.df columns from nt.table. 
 	#	PYs: potential transmission intervals including zero yijt
@@ -5319,18 +5321,30 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				risk.df		<- rbind(risk.df, data.table( risk='AcuteNo', factor=c('No','Maybe','Yes'), risk.ref='AcuteNo', factor.ref='No'))
 			}
 			gc()
-			#	potential transmission intervals by stage and recipient
-			nt.table		<- do.call('rbind', list( 	YX[, list(nt= length(t), stat='YX'), by=c('stage','t.Patient')],
+			#	potential transmission intervals by stage and transmitter
+			nt.table.pt		<- do.call('rbind', list( 	YX[, list(nt= length(t), stat='YX'), by=c('stage','t.Patient')],
 														X.clu[, list(nt= length(t), stat='X.clu'), by=c('stage','t.Patient')],
 														X.den[, list(nt= length(t), stat='X.seq'), by=c('stage','t.Patient')],
 														X.msm[, list(nt= length(t), stat='X.msm'), by=c('stage','t.Patient')] 	)	)
+			setnames(nt.table.pt, 'stage', 'factor')
+			tmp				<- data.table( expand.grid(t.Patient=nt.table.pt[, unique(t.Patient)], factor=nt.table.pt[, unique(as.character(factor))], stat=nt.table.pt[, unique(as.character(stat))], stringsAsFactors=FALSE) )			
+			nt.table.pt		<- merge(tmp, nt.table.pt, by=c('t.Patient','factor','stat'), all.x=1)
+			set(nt.table.pt, nt.table.pt[, which(is.na(nt))], 'nt', 0L)
+			nt.table.pt[, risk:='stage']					
+			nt.table.pt		<- subset( nt.table.pt, select=c(risk, factor, t.Patient, nt, stat) )
+			ans$nt.table.pt	<- nt.table.pt			
+			#	potential transmission intervals by stage and recipient
+			nt.table		<- do.call('rbind', list( 	YX[, list(nt= length(t), stat='YX'), by=c('stage','Patient')],
+							X.clu[, list(nt= length(t), stat='X.clu'), by=c('stage','Patient')],
+							X.den[, list(nt= length(t), stat='X.seq'), by=c('stage','Patient')],
+							X.msm[, list(nt= length(t), stat='X.msm'), by=c('stage','Patient')] 	)	)
 			setnames(nt.table, 'stage', 'factor')
-			tmp				<- data.table( expand.grid(t.Patient=nt.table[, unique(t.Patient)], factor=nt.table[, unique(as.character(factor))], stat=nt.table[, unique(as.character(stat))], stringsAsFactors=FALSE) )			
-			nt.table		<- merge(tmp, nt.table, by=c('t.Patient','factor','stat'), all.x=1)
+			tmp				<- data.table( expand.grid(Patient=nt.table[, unique(Patient)], factor=nt.table[, unique(as.character(factor))], stat=nt.table[, unique(as.character(stat))], stringsAsFactors=FALSE) )			
+			nt.table		<- merge(tmp, nt.table, by=c('Patient','factor','stat'), all.x=1)
 			set(nt.table, nt.table[, which(is.na(nt))], 'nt', 0L)
 			nt.table[, risk:='stage']					
-			nt.table		<- subset( nt.table, select=c(risk, factor, t.Patient, nt, stat) )
-			ans$nt.table	<- nt.table
+			nt.table		<- subset( nt.table, select=c(risk, factor, Patient, nt, stat) )
+			ans$nt.table	<- nt.table			
 			#	risk tables
 			risk.table		<- do.call('rbind',list(
 							risk.df[,	{
@@ -11488,7 +11502,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3k'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Bwmx.tp1'
+		method.risk				<- 'm2Bwmx.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.2
 		method.brl.bwhost		<- 2

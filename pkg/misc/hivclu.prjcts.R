@@ -26,6 +26,36 @@ project.hivc.check.nt.table<- function(dir.name= DATA, verbose=1)
 	X.seq.p2	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq.p, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )
 	X.msm.p2	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm.p, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )
 	#	stratify seems OK
+	X.msm.p1	<- subset(X.msm, t.Patient=='M32608')
+	X.seq.p1	<- subset(X.seq, t.Patient=='M32608')
+	X.seq.p1	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq.p1, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )
+	X.msm.p1	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm.p1, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )	
+	X.seq.p1[, length(unique(Patient))]
+	X.msm.p1[, length(unique(Patient))]
+	X.seq.p1[, table(t.period)]
+	X.msm.p1[, table(t.period)]	
+	setdiff( subset(X.seq.p1, CD4b.tperiod=='ART.suA.Y.3')[, Patient], subset(X.msm.p1, CD4b.tperiod=='ART.suA.Y.3')[, Patient] )
+	#	"M37323" "M37456" "M37459" "M37576" "M37609" "M38159" "M38870"
+	subset(X.seq.p1, CD4b.tperiod=='ART.suA.Y.3' & Patient=="M37323")		#--> lRNA	
+	subset(X.seq.p1, CD4b.tperiod=='ART.suA.Y.3' & Patient=="M37456")		#--> same lRNA
+	X.seq.p1[, table(CD4b.tperiod)]
+	X.msm.p1[, table(CD4b.tperiod)]
+	#
+	#
+	X.msm.p1	<- subset(X.msm, t.Patient=='M36262')
+	X.seq.p1	<- subset(X.seq, t.Patient=='M36262')
+	X.seq.p1	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq.p1, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )
+	X.msm.p1	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm.p1, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )	
+	
+	X.msm.p1	<- subset(X.msm, t.Patient=='M36567')
+	X.seq.p1	<- subset(X.seq, t.Patient=='M36567')
+	X.seq.p1	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq.p1, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )
+	X.msm.p1	<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm.p1, df.all, df.viro, df.immu, lRNA.supp=method.lRNA.supp, plot.file.varyvl=NA, plot.file.or=NA )	
+	setdiff( subset(X.seq.p1, CD4b.tperiod=='ART.suA.Y.4')[, Patient], subset(X.msm.p1, CD4b.tperiod=='ART.suA.Y.4')[, Patient] )
+	# [1] "M38061" "M38146" "M38401" "M39012" "M39073" "M39096" "M39134" "M39143" "M39200" "M39228" "M39281" "M39309" "M39447"
+	#[14] "M39707"
+	subset(X.seq.p1, CD4b.tperiod=='ART.suA.Y.4' & Patient=="M38061")
+	subset(X.msm.p1, CD4b.tperiod=='ART.suA.N.4' & Patient=="M38061")
 }
 ######################################################################################
 project.hivc.check.CD4interpolation<- function(dir.name= DATA, verbose=1)
@@ -421,133 +451,44 @@ project.Gates.RootSeqSim.getrootseq<- function()
 	
 	if(1)	#	devel
 	{		
-		indir		<- paste(dir.name,'methods_comparison_rootseqsim/140730',sep='/')
-		file		<- paste(indir, '/', infile, '_', insignat, '.timetrees', sep='')
-		file		<- paste(indir, '/working.timetrees', sep='')
+		indir				<- paste(dir.name,'methods_comparison_rootseqsim/140730',sep='/')
+		outdir				<- indir
+		infile.xml			<- 'working.xml'
+		infile.beastparsed	<- 'working.R'
+		outfile				<- 'working_ancseq.R'
 		
-		tmp			<- hivc.beast2out.read.nexus.and.stats(file, tree.id=NA, method.node.stat='any.node')
-		node.stat	<- tmp$node.stat
-		tree		<- tmp$tree
-		
-		
-		#	add calendar time for inner node at NODE_ID to node.stat
-		tree.id				<- names(tree)
+		#	load BEAST PARSER output
+		file		<- paste(indir, '/',infile.beastparsed, sep='')
+		load(file)	#	expect tree, node.stat		
+		#	get original sequences
+		file		<- paste(indir, '/',infile.xml, sep='')
+		bxml		<- xmlTreeParse(file, useInternalNodes=TRUE, addFinalizer = TRUE)
+		bseq		<- hivc.beast.get.sequences(bxml, verbose=1)	
+		bseq		<- merge(bseq, data.table(ALIGNMENT_ID=paste('alignment',1:3,sep=''), GENE=c('env','gag','pol')), by='ALIGNMENT_ID')				
+		#	compute gag pol env		
+		tmp			<- PANGEA.RootSeqSim.get.ancestral.seq(tree, node.stat, bseq, tree.id.sep='_', tree.id.idx.mcmcit=2, tree.id.burnin=1, label.sep='|', label.idx.ctime=2)
+		ancseq.gag	<- tmp$GAG
+		ancseq.env	<- tmp$ENV
+		ancseq.pol	<- tmp$POL
+		#	save as R
+		file		<- paste(outdir, outfile, sep='/')
+		save(ancseq.gag, ancseq.env, ancseq.pol, file=file)			
+		#	save as FASTA
+		file		<- paste(outdir, paste(substr(outfile,1,nchar(outfile)-1),'fasta',sep=''), sep='/')		
+		write.dna(cbind(ancseq.gag, ancseq.env, ancseq.pol), file, format = "fasta")		
+		#
+		#	sample ancestral sequences between 1980-2000 and reconstruct tree with RAxML
+		#
+		ancseq				<- cbind(ancseq.gag, ancseq.env, ancseq.pol)
 		label.sep			<- '|'
-		label.idx.ctime		<- 2
-		node.stat[, CALENDAR_TIME:=NA_real_]		
-		setkey(node.stat, TREE_ID, NODE_ID)
-		for(i in seq_along(tree.id))
-		{
-			label.ctime			<- sapply( strsplit(tree[[i]]$tip.label, label.sep, fixed=TRUE), '[[', label.idx.ctime ) 
-			label.ctime			<- as.numeric(label.ctime)			
-			depth				<- node.depth.edgelength( tree[[ i ]] )
-			tmp					<- which.max(depth)
-			depth				<- depth-depth[tmp]+label.ctime[tmp]
-			for(j in seq_along(depth))
-				set(node.stat, node.stat[, which(TREE_ID==tree.id[i] & NODE_ID==j)], 'CALENDAR_TIME', depth[j])					
-		}
-		tmp			<- node.stat[, length(which(is.na(CALENDAR_TIME)))]
-		cat(paste('\nTotal node statistics with no CALENDAR_TIME [should be zero], n=', tmp  ))
-		#	keep only inner nodes
-		tmp			<- lapply(seq_along(tree.id), function(i)
-				{
-					subset(node.stat, TREE_ID==tree.id[i] & NODE_ID>Ntip(tree[[i]]))
-				})
-		node.stat	<- do.call('rbind',tmp)
-		set(node.stat, NULL, 'VALUE', node.stat[, gsub('\"','',VALUE)])
-		#
-		#	reconstruct ancestral sequences, need to decompress patterns that were compressed with BEAST
-		#	TODO ** this results in duplicate columns and should be removed at a later point **
-		#
-		#	load original sequences
-		file			<- '/Users/Oliver/duke/2014_Gates/methods_comparison_rootseqsim/140801/ALLv06.n97.rlx.gmrf_Sun_Jul_27_09-00-00_2014.xml'
-		bxml			<- xmlTreeParse(file, useInternalNodes=TRUE, addFinalizer = TRUE)
-		bseq			<- hivc.beast.get.sequences(bxml, verbose=1)	
-		bseq			<- merge(bseq, data.table(ALIGNMENT_ID=paste('alignment',1:3,sep=''), GENE=c('env','gag','pol')), by='ALIGNMENT_ID')		
-		bseq			<- merge(bseq, bseq[, list(SEQ_N=nchar(SEQ)), by=c('GENE','TAXON_ID')], by=c('GENE','TAXON_ID'))
-		bseq			<- bseq[, {
-										tmp<- unlist(strsplit(SEQ,''))
-										list(	CP1= paste(tmp[seq.int(1,length(tmp),by=3)], collapse='',sep=''), 
-												CP2= paste(tmp[seq.int(2,length(tmp),by=3)], collapse='',sep=''), 
-												CP3= paste(tmp[seq.int(3,length(tmp),by=3)], collapse='',sep='') 	)
-									}, by=c('TAXON_ID','GENE')]		
-		bseq			<- melt(bseq, measure.var=c('CP1','CP2','CP3'), variable.name='CODON_POS', value.name='SEQ')
-		#	get index of orginal patterns and duplicate patterns
-		bseq.decompress	<- bseq[, {
-										#print(GENE)
-										#print(CODON_POS)
-										tmp		<- do.call('rbind',strsplit(SEQ,''))
-										tmp2	<- apply( tmp, 2, function(x) paste(x,sep='',collapse=''))	#identical patterns?
-										tmp2	<- which(duplicated(tmp2))
-										#for each duplicate, work out index of original
-										tmp3	<- sapply(tmp2, function(j1) which(apply( tmp[,seq.int(1,j1-1,1), drop=FALSE] == tmp[,j1], 2, all))[1]	 )
-										list(NSEQ=ncol(tmp), DUPLICATE_PATTERN=tmp2, MOTHER_PATTERN=tmp3)
-									}, by=c('GENE','CODON_POS')]		
-		set(bseq.decompress, bseq.decompress[, which(GENE=='env')], 'GENE', 'ENV')
-		set(bseq.decompress, bseq.decompress[, which(GENE=='gag')], 'GENE', 'GAG')
-		set(bseq.decompress, bseq.decompress[, which(GENE=='pol')], 'GENE', 'POL')
-		set(bseq.decompress, NULL, 'xSTAT', bseq.decompress[, paste(GENE,CODON_POS,sep='.')])		
-		#	reconstruct ancestral genes sequences - decompress patterns		
-		ancseq	<- node.stat[,  {													
-										#print(STAT)
-										#TREE_ID<- 'STATE_0'
-										#STAT<- 'GAG.CP3'
-										tmp								<- subset(bseq.decompress, xSTAT==STAT)											
-										seq								<- matrix(data=NA_character_, nrow=length(VALUE), ncol=tmp[,NSEQ])
-										seq.compressed					<- setdiff( seq_len(ncol(seq)), tmp[, DUPLICATE_PATTERN])	
-										#print(dim(seq))										
-										tmp2							<- do.call('rbind',strsplit(VALUE,''))
-										#print(dim(tmp2))
-										stopifnot(length(seq.compressed)==ncol(tmp2))
-										seq[, seq.compressed]			<- tmp2
-										#print(seq[1,])
-										seq[, tmp[, DUPLICATE_PATTERN]] <- seq[, tmp[, MOTHER_PATTERN]]
-										#print(seq[1,])
-										#stop()
-										seq								<- apply(seq, 1, function(x) paste(x, sep='',collapse=''))
-										list(TREE_ID=TREE_ID, NODE_ID=NODE_ID, CALENDAR_TIME=CALENDAR_TIME, SEQ=seq) 
-									}, by=c('STAT')]
-		#	get genes
-		#	to check, get full genome too
-								
-	
-	}
-	if(0)
-	{
-	
-		tmp	<- subset(node.stat, select=c(TREE_ID, NODE_ID, CALENDAR_TIME))
-		setkey(tmp, TREE_ID, NODE_ID)
-		hist(tmp[, CALENDAR_TIME], breaks=seq(1930,2011,1))
-		#	reconstruct gene sequences and store in ape format
-		#	get calendar time for gene sequence
-		set(node.stat, NULL, 'VALUE', node.stat[, gsub('\"','',VALUE)])
-		#	check seq lengths
-		tmp		<- node.stat[, list(NCHAR=nchar(VALUE)), by=c('STAT','NODE_ID','TREE_ID')]
-		stopifnot( tmp[, list(CHECK=all(NCHAR[1]==NCHAR)), by='STAT'][, all(CHECK)] )
-		
-		tmp[, list(CHECK=unique(NCHAR)), by='STAT']
-		
-		ENV.CP1<- "AGA"
-		ENV.CP2<- "XYZ"
-		ENV.CP3<- "KLM"
-		tmp		<- do.call('rbind',sapply(list(ENV.CP1,ENV.CP2,ENV.CP3), strsplit, ''))
-		tmp		<- paste(as.vector(tmp), collapse='')
-		
-		subset(node.stat, TREE_ID=='STATE_0' & NODE_ID==which(btree[[1]]$tip.label=='C.BW.AF443074|1996'))
-
-	}
-	if(0)
-	{
-		dir.name	<- '/Users/Oliver/duke/2014_Gates'  
-		indir		<- paste(dir.name,'methods_comparison_rootseqsim/140801',sep='/')
-		infile		<- 'ALLv06.n97.rlx.gmrf' 		
-		insignat	<- 'Sun_Jul_27_09-00-00_2014'	
-		file		<- paste(indir, '/', infile, '_', insignat, '.timetrees', sep='')
-		tmp			<- hivc.beast2out.read.nexus.and.stats(file, tree.id=NA, method.node.stat='any.node')
-		
-	}
-	stats		<- c(paste('ENV.CP',1:3,sep=''),paste('GAG.CP',1:3,sep=''),paste('POL.CP',1:3,sep=''))
-	tree.id		<- 'tree STATE_0'
+		label.idx.tree.id	<- 1
+		label.idx.node.id	<- 2
+		label.idx.ctime		<- 3
+		ancseq.label		<- data.table(	TREE_ID= sapply(strsplit(rownames(ancseq), label.sep, fixed=1),'[[',label.idx.tree.id),
+											NODE_ID= as.numeric(sapply(strsplit(rownames(ancseq), label.sep, fixed=1),'[[',label.idx.node.id)),
+											CALENDAR_TIME= as.numeric(sapply(strsplit(rownames(ancseq), label.sep, fixed=1),'[[',label.idx.ctime)))
+		hist( ancseq.label[, CALENDAR_TIME], breaks=100 )
+	}	
 }
 ######################################################################################
 project.Gates.RootSeqSim.runxml<- function()
@@ -1579,46 +1520,8 @@ project.hivc.Excel2dataframe.Regimen.CheckARTStartDate<- function(dir.name= DATA
 	save(df, file=file)
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
+project.hivc.Excel2dataframe.CD4.process.QC<- function( df )
 {
-	file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu.csv",sep='/')
-	file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.csv",sep='/')
-	NA.time			<- c("","01/01/1911","11/11/1911","24/06/1923")		
-	verbose			<- 1
-	#read CD4 csv data file and preprocess
-	df				<- read.csv(file, stringsAsFactors=FALSE)											
-	date.var		<- c("DateImm")		
-	for(x in date.var)
-	{
-		cat(paste("\nprocess Time", x))
-		nok.idx			<- which( df[,x]==NA.time[1] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[1],", n=", length(nok.idx)))
-		#if(verbose && length(nok.idx))	cat(paste("\nentries with format ",NA.time[1],", Patient", paste(df[nok.idx,"Patient"],collapse=', ')))			
-		if(length(nok.idx))	
-			df[nok.idx,x]	<- NA
-		nok.idx			<- which( df[,x]==NA.time[2] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[2],", n=", length(nok.idx)))
-		if(length(nok.idx))
-			df[nok.idx,x]	<- NA
-		nok.idx			<- which( df[,x]==NA.time[3] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[3],", n=", length(nok.idx)))
-		if(length(nok.idx))
-			df[nok.idx,x]	<- NA
-		nok.idx			<- which( df[,x]==NA.time[4] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[4],", n=", length(nok.idx)))
-		if(length(nok.idx))
-			df[nok.idx,x]	<- NA
-		df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
-	}		
-	df		<- data.table(df, key="Patient")
-	setnames(df, "DateImm","PosCD4")
-	#set(df, NULL, "Patient", factor(df[,Patient]))
-	if(verbose) cat(paste("\nnumber of entries read, n=",nrow(df)))
-	tmp		<- which(df[,is.na(CD4A)])
-	if(verbose) cat(paste("\nnumber of entries with is.na(CD4A), n=",length(tmp),"SETTING PosCD4 to NA"))
-	set(df, tmp, "PosCD4", NA)
-	df		<- subset(df,!is.na(PosCD4))
-	if(verbose) cat(paste("\nnumber of entries with !is.na(PosCD4), n=",nrow(df)))
 	#
 	#	data corrections from Ard
 	#
@@ -1686,9 +1589,85 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 							Patient=="M37294" & PosCD4=="2011-07-18" & CD4A==820	|
 							Patient=="M39055" & PosCD4=="2012-02-06" & CD4A==6850	|
 							Patient=="M36408" & PosCD4=="2011-12-09" & CD4A==3701		#unclear
-							])
+			])
 	if(verbose) cat(paste("\nnumber of entries with incorrect CD4  should be 45, n=",length(tmp),"set to NA"))	
-	set(df, tmp, "CD4A", NA)	
+	set(df, tmp, "CD4A", NA)
+	subset(df, !is.na(CD4A))
+}
+######################################################################################
+project.hivc.Excel2dataframe.CD4.process.NA<- function( df, NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.var=c("DateImm") )
+{
+	for(x in date.var)
+	{
+		cat(paste("\nprocess Time", x))
+		nok.idx			<- which( df[,x]==NA.time[1] )
+		if(verbose)	cat(paste("\nentries with format ",NA.time[1],", n=", length(nok.idx)))
+		#if(verbose && length(nok.idx))	cat(paste("\nentries with format ",NA.time[1],", Patient", paste(df[nok.idx,"Patient"],collapse=', ')))			
+		if(length(nok.idx))	
+			df[nok.idx,x]	<- NA
+		nok.idx			<- which( df[,x]==NA.time[2] )
+		if(verbose)	cat(paste("\nentries with format ",NA.time[2],", n=", length(nok.idx)))
+		if(length(nok.idx))
+			df[nok.idx,x]	<- NA
+		nok.idx			<- which( df[,x]==NA.time[3] )
+		if(verbose)	cat(paste("\nentries with format ",NA.time[3],", n=", length(nok.idx)))
+		if(length(nok.idx))
+			df[nok.idx,x]	<- NA
+		nok.idx			<- which( df[,x]==NA.time[4] )
+		if(verbose)	cat(paste("\nentries with format ",NA.time[4],", n=", length(nok.idx)))
+		if(length(nok.idx))
+			df[nok.idx,x]	<- NA
+		df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
+	}		
+	df
+}
+######################################################################################
+project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
+{
+	file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu.csv",sep='/')
+	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.csv",sep='/')
+			
+	verbose			<- 1
+	#read CD4 csv data file and preprocess
+	df				<- read.csv(file, stringsAsFactors=FALSE)											
+	df				<- project.hivc.Excel2dataframe.CD4.process.NA( df, NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.var=c("DateImm") )
+	df		<- data.table(df, key="Patient")
+	if(!grepl('AllMSM',file))
+		set(df, NULL, 'Source', NA_integer_)	
+	setnames(df, "DateImm","PosCD4")
+	df		<- project.hivc.Excel2dataframe.CD4.process.QC( df )
+	df		<- subset(df,!is.na(PosCD4) & !is.na(CD4A))
+	if(verbose) cat(paste("\nnumber of entries read, n=",nrow(df)))	
+	#
+	#	update CD4 measurements	
+	#
+	tmp				<- ifelse(	!grepl('AllMSM',file),	
+								paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.csv",sep='/'),
+								paste(dir.name,"derived/ATHENA_2013_03_Immu.csv",sep='/')
+								)
+	df.up		<- read.csv(tmp, stringsAsFactors=FALSE)
+	df.up		<- project.hivc.Excel2dataframe.CD4.process.NA( df.up, NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.var=c("DateImm") )
+	df.up		<- data.table(df.up, key="Patient")
+	setnames(df.up, "DateImm","PosCD4")	
+	df.up		<- project.hivc.Excel2dataframe.CD4.process.QC(df.up)
+	df.up		<- subset(df.up, !is.na(PosCD4) & !is.na(CD4A) )	
+	#	all distinct viro measurements combined		
+	df.up		<- merge(df, df.up, by=c('Patient','PosCD4','CD4A'), all.x=1, all.y=1, allow.cartesian=1)		
+	tmp			<- nrow(merge( unique(subset(df, select=Patient)), df.up, by='Patient' ))
+	if(verbose) cat(paste("\nnumber of entries updated [should be larger or equal than read], n=",tmp))		
+	#
+	#	if duplicate per day, keep those with higher Source variable
+	#	
+	if(grepl('AllMSM',file))	#just to make sure we can use same code in both cases
+		setnames(df.up, c('Source'), c('Source.y'))	
+	df.up		<- df.up[, {
+								tmp	<- which(Source.y==max(Source.y))
+								list(CD4A=CD4A[tmp], Source=Source.y[tmp])	
+							}, by=c('Patient','PosCD4')]
+	df			<- merge( unique(subset(df, select=Patient)), df.up, by='Patient' )			
+	#	remove identical entries
+	setkey(df, Patient, PosCD4, CD4A)
+	df		<- unique(df)
 	#	adjust likely wrong units > 20000
 	tmp		<- which(df[, CD4A>20000])
 	if(verbose) cat(paste("\nnumber of entries with likely wrong CD4 units > 20000, n=",length(tmp),"DIVIDE BY 1e3"))
@@ -1717,18 +1696,8 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	#
 	#	remove duplicate entries 
 	#
-	setkey(df, Patient, PosCD4, CD4A)
-	tmp		<- which(duplicated(df))
-	if(verbose) cat(paste("\nnumber of duplicated entries by Patient, PosCD4, CD4A, DELETE n=",length(tmp)))
-	df		<- unique(df)
 	setkey(df, Patient, PosCD4)
-	tmp		<- which(duplicated(df))	
-	if('Source'%in%colnames(df))
-		tmp		<- sapply(tmp, function(i) c(i-1,i)[ which.min(df[c(i-1,i), Source]) ] )
-	if(!'Source'%in%colnames(df))
-		tmp		<- sapply(tmp, function(i) c(i-1,i)[ which.max(df[c(i-1,i), CD4A]) ] )
-	if(verbose) cat(paste("\nnumber of duplicated entries by Patient, PosCD4, DELETE WITH LOWER SOURCE n=",length(tmp)))
-	df		<- df[-tmp,]
+	df		<- df[, list(CD4A=round(mean(CD4A)), Source=Source[1] ), by=c('Patient','PosCD4')]	
 	#
 	#	remove consecutive jumps >1e3 
 	#
@@ -1804,35 +1773,33 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	save(df, file=file)		
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Viro<- function()		
+project.hivc.Excel2dataframe.Viro.checkVersions<- function()		
 {
-	file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
-	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro.csv",sep='/')
-	#file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
-	#file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.csv",sep='/')
-	
-	verbose				<- 1
-	dir.name			<- DATA
-	DB.locktime			<- HIVC.db.locktime
-	
-	#need for checking of VL data
-	
-	load(file.treatment)
-	df.treat			<- subset(df, select=c(Patient, StartTime, StopTime, AnyT_T1, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel))
-	
-	NA.time					<- c("","01/01/1911","11/11/1911","24/06/1923")		
-	RNA.min					<- 50	#400	#seems to be standard value
-	RNA.min.b4T				<- 400
-	RNA.stdvl.udetect.aTS	<- 1e3
-	RNA.max					<- 5e6
-	lRNA.min.infectious		<- log10(1e4)
-	lRNA.min.early			<- log10(1e5)
-	lRNA.max.b4early		<- log10(2e4)
-	
-	#read VIROLOGY csv data file and preprocess	
-	df				<- read.csv(file, stringsAsFactors=FALSE)									
-	df$Undetectable	<- factor(df$Undetectable, levels=c(0,1,2),labels=c("No","Yes","LargerThan"))
-	date.var		<- c("DateRNA")		
+	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+	load(file)
+	df2					<- df
+	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
+	load(file)
+	tmp					<- merge(subset(df, select=c(Patient, PosRNA, RNA)), subset(df2, select=c(Patient, PosRNA, RNA)), by=c('Patient','PosRNA'), all.x=1, all.y=1)
+	tmp					<- subset( tmp, RNA.x!=RNA.y )
+	tmp[, d:=abs(log(RNA.x/RNA.y))]
+	setkey(tmp, d)
+	subset( tmp, abs(log(RNA.x/RNA.y))>log(2) )	
+}
+######################################################################################
+project.hivc.Excel2dataframe.CD4.checkVersions<- function()		
+{
+	file				<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.R",sep='/')
+	load(file)
+	df2					<- df
+	file				<- paste(dir.name,"derived/ATHENA_2013_03_Immu.R",sep='/')
+	load(file)
+	tmp					<- merge(subset(df, select=c(Patient, PosCD4, CD4)), subset(df2, select=c(Patient, PosCD4, CD4)), by=c('Patient','PosCD4'), all.x=1, all.y=1)
+	tmp					<- subset( tmp, CD4.x!=CD4.y )	
+}
+######################################################################################
+project.hivc.Excel2dataframe.Viro.process.NA<- function(df, NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.var=c("DateRNA")	)
+{
 	for(x in date.var)
 	{
 		cat(paste("\nprocess Time", x))
@@ -1855,19 +1822,106 @@ project.hivc.Excel2dataframe.Viro<- function()
 			df[nok.idx,x]	<- NA
 		df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
 	}		
-	
-	df		<- data.table(df, key="Patient")
-	if(verbose) cat(paste("\nnumber of entries read, n=",nrow(df)))
-	setnames(df, "DateRNA","PosRNA")
-	#set(df, NULL, "Patient", factor(df[,Patient]))
-	#
-	#	QC corrections
-	#
+	df
+}
+######################################################################################
+#	QC corrections from Ard
+project.hivc.Excel2dataframe.Viro.process.QC.Corrections<- function(df)
+{
 	tmp		<- which( df[, Patient=="M32210" & as.character(PosRNA)=="2010-05-10"] )
 	set(df,tmp,"PosRNA", 50.)
 	set(df,tmp,"Undetectable", 'No')
 	tmp		<- which( df[, Patient=="M36914" & as.character(PosRNA)=="2010-04-12"] )
 	set(df,tmp,"PosRNA", NA_real_)	
+	df
+}
+######################################################################################
+project.hivc.Excel2dataframe.Viro<- function()		
+{
+	file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
+	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro.csv",sep='/')	
+	file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
+	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.csv",sep='/')
+	
+	verbose				<- 1
+	dir.name			<- DATA
+	DB.locktime			<- HIVC.db.locktime
+	
+	#need for checking of VL data
+	
+	load(file.treatment)
+	df.treat			<- subset(df, select=c(Patient, StartTime, StopTime, AnyT_T1, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel))
+	
+			
+	RNA.min					<- 50	#400	#seems to be standard value
+	RNA.min.b4T				<- 400
+	RNA.stdvl.udetect.aTS	<- 1e3
+	RNA.max					<- 5e6
+	lRNA.min.infectious		<- log10(1e4)
+	lRNA.min.early			<- log10(1e5)
+	lRNA.max.b4early		<- log10(2e4)
+	
+	#	read VIROLOGY csv data file and preprocess	
+	df				<- read.csv(file, stringsAsFactors=FALSE)										
+	df				<- project.hivc.Excel2dataframe.Viro.process.NA(df, NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.var=c("DateRNA")	)	
+	df				<- data.table(df, key="Patient")
+	set(df, NULL, 'Undetectable', df[, factor(Undetectable, levels=c(0,1,2),labels=c("No","Yes","LargerThan"))])
+	if(!grepl('AllMSM',file))
+		set(df, NULL, 'Source', NA_integer_)
+	setnames(df, "DateRNA","PosRNA")	
+	df				<- project.hivc.Excel2dataframe.Viro.process.QC.Corrections(df)
+	df				<- subset(df, !is.na(RNA) & !is.na(PosRNA) & !is.na(RNA))
+	if(verbose) cat(paste("\nnumber of entries read, n=",nrow(df)))
+	#
+	#	update Viro measurements	
+	#
+	tmp				<- ifelse(	!grepl('AllMSM',file),	
+								paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.csv",sep='/'),
+								paste(dir.name,"derived/ATHENA_2013_03_Viro.csv",sep='/')
+								)
+	df.up		<- read.csv(tmp, stringsAsFactors=FALSE)
+	df.up		<- project.hivc.Excel2dataframe.Viro.process.NA(df.up, NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.var=c("DateRNA")	)
+	df.up		<- data.table(df.up, key="Patient")
+	set(df.up, NULL, 'Undetectable', df.up[, factor(Undetectable, levels=c(0,1,2),labels=c("No","Yes","LargerThan"))])			
+	setnames(df.up, "DateRNA","PosRNA")		
+	df.up		<- project.hivc.Excel2dataframe.Viro.process.QC.Corrections(df.up)
+	df.up		<- subset(df.up, !is.na(RNA) & !is.na(PosRNA) & !is.na(RNA))
+	#	all distinct viro measurements combined		
+	df.up		<- merge(df, df.up, by=c('Patient','PosRNA','RNA'), all.x=1, all.y=1, allow.cartesian=1)		
+	tmp			<- nrow(merge( unique(subset(df, select=Patient)), df.up, by='Patient' ))
+	if(verbose) cat(paste("\nnumber of entries updated [should be larger or equal than read], n=",tmp))		
+	#
+	#	if duplicate per day, keep those with higher Source variable
+	#	
+	if(grepl('AllMSM',file))	#just to make sure we can use same code in both cases
+		setnames(df.up, c('Source','Undetectable.x','Undetectable.y'), c('Source.y','Undetectable.y','Undetectable.x'))
+	
+	df.up		<- df.up[, {
+									tmp	<- which(Source.y==max(Source.y))
+									list(RNA=RNA[tmp], Source=Source.y[tmp],  Undetectable.x=Undetectable.x[tmp], Undetectable.y=Undetectable.y[tmp])	
+								}, by=c('Patient','PosRNA')]
+	#	inconsistent Undetectable --> set to Yes				
+	tmp			<- df.up[, which( !is.na(Undetectable.x) & !is.na(Undetectable.y) & Undetectable.x!=Undetectable.y) ]
+	cat(paste('\ndf.up: Inconsistent Undetectable for data versions. Set to Undetectable==Yes, n=', length(tmp)))
+	set(df.up, tmp, c('Undetectable.x','Undetectable.y'), 'Yes')
+	
+	tmp			<- df.up[, which( !is.na(Undetectable.x) & is.na(Undetectable.y)) ]
+	cat(paste('\ndf.up: !is.na(Undetectable.x) & is.na(Undetectable.y), [should be zero] n=', length(tmp)))
+	setnames(df.up, 'Undetectable.y', 'Undetectable')
+	df.up[, Undetectable.x:=NULL]
+	df			<- merge( unique(subset(df, select=Patient)), df.up, by='Patient' )			
+	#
+	#	Handle duplicates with Undetectable Yes/No: rm undetectables='yes'
+	#
+	tmp		<- subset( df[, list(n=length(RNA), nD=length(unique(Undetectable)) ), by=c('Patient','PosRNA')], n>1 & nD>1)	
+	if(verbose) cat(paste("\nFound duplicate entries, one of which is undetectable. Remove Undetectable one, n=",nrow(tmp)))
+	setnames(tmp, c('Patient','PosRNA'), c('xPatient','xPosRNA'))
+	for(i in seq_len(nrow(tmp)))
+		set(df, df[, which(Patient==tmp[i,xPatient] & PosRNA==tmp[i,xPosRNA] & Undetectable=='Yes')], 'RNA', NA_real_ )
+	df		<- subset(df, !is.na(RNA))
+	#	remove identical entries
+	setkey(df, Patient, PosRNA, RNA)
+	df		<- unique(df)
 	#
 	#	checking manually NegT>PosRNA
 	#
@@ -1890,14 +1944,6 @@ project.hivc.Excel2dataframe.Viro<- function()
 	# remove is.na(PosRNA) and !is.na(RNA)
 	df		<- subset(df, !is.na(PosRNA) & !is.na(RNA))
 	if(verbose)		cat(paste("\nnumber of entries with !is.na(PosRNA) & !is.na(RNA), n=",nrow(df)))	
-	#
-	#
-	#	#checking for duplicates -- do not matter that much - leave if any
-	#
-	#subset(df[,	{
-	#				z<- diff(RNA); tmp<- (RNA>1e4 & !is.na(Undetectable))[-1]; length(which(z[tmp]==0))
-	#			}				
-	#			,by="Patient"], V1>0 )
 	#
 	#	combine Undetectable=="LargerThan" with Undetectable=="No"
 	#
@@ -2056,18 +2102,10 @@ project.hivc.Excel2dataframe.Viro<- function()
 	if(verbose)		print(df[tmp,], n=300)
 	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)
 	#
-	#	remove duplicate entries
+	#	take geom mean on remaining duplicate entries
 	#
-	setkey(df, Patient, PosRNA, RNA)
-	df		<- unique(df)
 	setkey(df, Patient, PosRNA)
-	tmp		<- which(duplicated(df))
-	if('Source'%in%colnames(df))
-		tmp	<- sapply(tmp, function(i)		c(i-1,i)[which.min(df[c(i-1,i),Source])]	)
-	if('Source'%in%colnames(df))
-		tmp	<- sapply(tmp, function(i)		c(i-1,i)[which.min(df[c(i-1,i),RNA])]	)
-	cat(paste('\nremove duplicate entries, n=', length(tmp)))
-	df		<- df[-tmp,]			
+	df		<- df[, list(RNA=as.integer(round(exp(mean(log(RNA))))), Source=Source[1], Undetectable=Undetectable[1], AnyT_T1=AnyT_T1[1] ), by=c('Patient','PosRNA')]	
 	# double check entries manually in range >5e6		
 	tmp		<- merge(unique(subset(df, RNA>5e6 & PosRNA>AnyT_T1, Patient)), df, by="Patient")
 	tmp		<- which(df[, Patient%in%c("M12736","M27885","M14799","M12612") & RNA>5e6])

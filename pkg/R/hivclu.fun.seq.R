@@ -27,12 +27,15 @@ seq.write.dna.phylip<- function(seq.DNAbin.mat, file)
 	cat(tmp, file=file)
 }
 ######################################################################################
-seq.find<- function(char.matrix, pos0= NA, from= c(), verbose=1)
+seq.find<- function(seq, pos0= NA, from= c(), verbose=1)
 {
 	if(is.na(pos0)) 	stop("start position of token to be replaced is missing")
 	if(!length(from))	stop("token to be replaced is missing")
 	query.colidx	<- seq.int(pos0,pos0+length(from)-1)
-	query.yes		<- which( apply(char.matrix, 1, function(x)	all(x[query.colidx]==from) ) )
+	if(class(seq)=='matrix')	
+		query.yes		<- which( apply(seq, 1, function(x)	all(x[query.colidx]==from) ) )
+	else if(class(seq)=='list')
+		query.yes		<- which( sapply(seq, function(x)	all(x[query.colidx]==from) ) )
 	query.yes	
 }
 ######################################################################################
@@ -345,28 +348,39 @@ seq.replace<- function(seq.DNAbin.matrix, code.from='?', code.to='n', verbose=0)
 }
 ######################################################################################
 #' @export
-seq.rmgaps<- function(seq.DNAbin.matrix, rm.only.col.gaps=1, verbose=0)
+seq.rmgaps<- function(seq.DNAbin.matrix, rm.only.col.gaps=1, rm.char='-', verbose=0)
 {
-	seq.DNAbin.matrix		<- as.character(seq.DNAbin.matrix)		
+	if(class(seq.DNAbin.matrix)=='DNAbin')
+		seq.DNAbin.matrix		<- as.character(seq.DNAbin.matrix)		
 	if(!rm.only.col.gaps)
 	{	
 		if(is.matrix(seq.DNAbin.matrix))
 		{
-			tmp					<- lapply(seq_len(nrow(seq.DNAbin.matrix)), function(i){	seq.DNAbin.matrix[i, seq.DNAbin.matrix[i,]!="-" & seq.DNAbin.matrix[i,]!="?"]	})
+			tmp					<- lapply(seq_len(nrow(seq.DNAbin.matrix)), function(i){	seq.DNAbin.matrix[i, seq.DNAbin.matrix[i,]!=rm.char]	})
 			names(tmp)			<- rownames(seq.DNAbin.matrix)
 		}
 		else
 		{
-			tmp					<- lapply(seq_along(seq.DNAbin.matrix), function(i){	seq.DNAbin.matrix[[i]][ seq.DNAbin.matrix[[i]]!="-" & seq.DNAbin.matrix[[i]]!="?"]	})
+			tmp					<- lapply(seq_along(seq.DNAbin.matrix), function(i){	seq.DNAbin.matrix[[i]][ seq.DNAbin.matrix[[i]]!=rm.char]	})
 			names(tmp)			<- names(seq.DNAbin.matrix)
 		}		
 		seq.DNAbin.matrix	<- tmp
 	}
 	else
 	{		
-		nogap				<- which( !apply(seq.DNAbin.matrix,2,function(x) all(x=="-" || x=="?")) )
-		if(verbose)	cat(paste("\nremove gaps, n=",ncol(seq.DNAbin.matrix)-length(nogap)))
-		seq.DNAbin.matrix	<- seq.DNAbin.matrix[,nogap]	
+		gap					<- apply(seq.DNAbin.matrix,2,function(x) all(x==rm.char)) 
+		if(verbose)	cat(paste("\nremove gaps, n=",length(which(gap))))
+		seq.DNAbin.matrix	<- seq.DNAbin.matrix[,!gap]	
 	}
 	as.DNAbin( seq.DNAbin.matrix )
+}
+######################################################################################
+#' @export
+seq.rmallchar<- function(seq, rm.char='-', verbose=0)
+{
+	if(class(seq)=='DNAbin')
+		seq		<- as.character(seq)	
+	tmp			<- apply(seq, 2, function(x) all(x==rm.char)) 	
+	if(verbose)	cat(paste("\nremove gaps, n=",length(which(tmp))))
+	as.DNAbin( seq[, !tmp] )	
 }

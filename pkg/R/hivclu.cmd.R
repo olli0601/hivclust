@@ -260,7 +260,7 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 				if(verbose) cat(paste("\nprocess",x,"\n"))				
 				#verbose stuff
 				cmd<- "#######################################################
-# run clustalo
+# start: CLUSTALO
 #######################################################"
 				cmd<- paste(cmd,paste("\necho \'run ",PR.CLUSTALO,"\'\n",sep=''))
 				
@@ -277,7 +277,10 @@ hivc.cmd.clustalo<- function(indir, infiles, signat=paste(strsplit(date(),split=
 				cmd<- paste(cmd, paste("--out",tmp,sep=' ') )
 				
 				#verbose stuff
-				cmd<- paste(cmd,paste("\necho \'end ",PR.CLUSTALO,"\'\n\n",sep=''))
+				cmd<- paste(cmd,paste("\necho \'end ",PR.CLUSTALO,"\'",sep=''))
+				cmd<- paste(cmd,"\n#######################################################
+# end: CLUSTALO
+#######################################################\n",sep='')				
 				cmd
 			})
 	if(length(ans)==1)
