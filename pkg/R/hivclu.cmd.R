@@ -779,7 +779,8 @@ hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, p
 	cmd		<- paste(cmd,paste("\necho \'run ",prog.beast[hpcsys],"\'\n",sep=''))
 	if(hpcsys=="debug")						#my MAC - don t use scratch
 	{		
-		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
+		tmp		<- ifelse(nchar(insignat), paste('_',gsub('/',':',insignat),sep=''), '' )
+		tmp		<- paste(indir,'/',infile, tmp,".xml",sep='')
 		cmd		<- paste(cmd,prog.beast[hpcsys], prog.beast.opt,' -threads ', hpc.ncpu,' ',tmp,'\n',sep='')
 	}
 	else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
@@ -788,9 +789,11 @@ hivc.cmd.beast.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST, p
 		cmd		<- paste(cmd,"echo $CWD\n",sep='')		
 		tmpdir	<- paste("$CWD/",hpc.tmpdir.prefix,'_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
 		cmd		<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
-		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
+		tmp		<- ifelse(nchar(insignat), paste('_',gsub('/',':',insignat),sep=''), '' )
+		tmp		<- paste(indir,'/',infile, tmp,".xml",sep='')
 		cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
-		tmp		<- paste(tmpdir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
+		tmp		<- ifelse(nchar(insignat), paste('_',gsub('/',':',insignat),sep=''), '' )
+		tmp		<- paste(tmpdir,'/',infile, tmp,".xml",sep='')
 		cmd		<- paste(cmd,prog.beast[hpcsys], prog.beast.opt,' -threads ',hpc.ncpu," ",tmp,'\n',sep='')	
 		cmd		<- paste(cmd,"cp -f ",tmpdir,"/* ", indir,'\n',sep='')		
 	}
@@ -810,9 +813,11 @@ hivc.cmd.beast.run.treeannotator<- function(indir, infile, insignat, prog.beastm
 	hpcsys	<- hivc.cmd.hpcsys()
 	cmd		<- paste(cmd,"echo \'run ",prog.beastmcc[hpcsys],"\'\n",sep='')
 	
-	tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".timetrees",sep='')
-	cmd		<- paste(cmd,prog.beastmcc[hpcsys]," -burnin ",beastmcc.burnin," -heights ",beastmcc.heights," ",tmp,sep='')
-	tmp		<- paste(indir,'/',infile,"_mcc_",gsub('/',':',insignat),".nex",sep='')
+	tmp		<- ifelse(nchar(insignat), paste('_',gsub('/',':',insignat),sep=''), '' )
+	tmp		<- paste(indir,'/',infile, tmp,".timetrees",sep='')
+	cmd		<- paste(cmd,prog.beastmcc[hpcsys]," -burnin ",beastmcc.burnin," -heights ", beastmcc.heights, " ", tmp, sep='')
+	tmp		<- ifelse(nchar(insignat), paste('_',gsub('/',':',insignat),sep=''), '' )
+	tmp		<- paste(indir,'/',infile,"_mcc", tmp,".nex",sep='')
 	cmd		<- paste(cmd," ",tmp,"\n",sep='')
 	
 	cmd		<- paste(cmd,"echo \'end ",prog.beastmcc[hpcsys],"\'\n",sep='')
