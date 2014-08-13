@@ -3517,6 +3517,8 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 													Pjx.e0= (yYX.sum+yYXm.sum.e0)*YX.w/sum((yYX.sum+yYXm.sum.e0)*YX.w),
 													Pjx.e0cp= (yYX.sum+yYXm.sum.e0cp)*YX.w/sum((yYX.sum+yYXm.sum.e0cp)*YX.w),
 													coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient.bs')]
+				#	exclude recipients with no evidence for direct transmission
+				tmp			<- subset(tmp, !is.nan(Pjx))					
 				#various N.raw									
 				tmp			<- tmp[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
 								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
@@ -3555,6 +3557,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 													Pjx.e0= (YX.bs+YXm.r.e0)*expbeta*YX.w/sum((YX.bs+YXm.r.e0)*expbeta*YX.w),
 													Pjx.e0cp= (YX.bs+YXm.r.e0cp)*expbeta*YX.w/sum((YX.bs+YXm.r.e0cp)*expbeta*YX.w),
 													coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient.bs')]
+				tmp			<- subset(tmp, !is.nan(Pjx))						
 				#various N									
 				tmp			<- tmp[, list(	N= sum(Pjx), N.e0= sum(Pjx.e0), N.e0cp=sum(Pjx.e0cp), 
 								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
