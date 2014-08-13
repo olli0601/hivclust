@@ -1295,6 +1295,7 @@ hivc.clu.get.tiplabels<- function(ph, 	df.info, col.notmsm="#4EB3D3", col.Early=
 	#
 	if(class(df.info$NegT)=='Date')
 	{
+		print(class(df.info$NegT))
 		tmp		<- which(df.info[, as.POSIXlt(NegT)$mday==1 & as.POSIXlt(NegT)$mon==0])				#since NegT were reset, these are the ones with inaccurate month
 		set(df.info,NULL,	"NegT", 		as.character( df.info[,NegT], "%y.%m" ))
 		set(df.info, tmp,	"NegT", 		paste(df.info[tmp,substr(NegT,1,3)],'??',sep='') )		
