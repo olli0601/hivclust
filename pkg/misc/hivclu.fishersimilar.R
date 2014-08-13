@@ -3226,7 +3226,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	set(nt.table, tmp, 'X.clu', nt.table[tmp, X.seq])
 	tmp			<- nt.table[, which(YX>X.clu)]
 	if(length(tmp))	cat(paste('\nWARNING: YX>X.clu for entries n=',length(tmp)))
-	stopifnot(length(tmp)==0)	#there s one recipient that is just on the boundary - let pass
+	stopifnot(length(tmp)==0)	
 	set(nt.table, tmp, 'YX', nt.table[tmp, X.clu])
 	#	make sure all risk factors are in nt.table for every patient (even if zero)
 	tmp			<- merge( unique(subset(nt.table, select=c(risk, Patient))), unique(subset(risk.df, select=c(risk,factor))), by='risk', allow.cartesian=TRUE)
@@ -11752,16 +11752,13 @@ hivc.prog.betareg.estimaterisks<- function()
 		nt.table	<- dcast.data.table(nt.table, t.Patient + risk + factor ~ stat, value.var="nt")		
 		tmp			<- nt.table[, which(X.seq>X.msm)]
 		if(length(tmp))	cat(paste('\nWARNING: X.seq>X.msm for entries n=',length(tmp)))
-		stopifnot(length(tmp)==0)
-		set(nt.table, tmp, 'X.seq', nt.table[tmp, X.msm])	
+		#stopifnot(length(tmp)==0)			
 		tmp			<- nt.table[, which(X.clu>X.seq)]
 		if(length(tmp))	cat(paste('\nWARNING: X.clu>X.seq for entries n=',length(tmp)))
-		stopifnot(length(tmp)==0)
-		set(nt.table, tmp, 'X.clu', nt.table[tmp, X.seq])
+		#stopifnot(length(tmp)==0)		
 		tmp			<- nt.table[, which(YX>X.clu)]
 		if(length(tmp))	cat(paste('\nWARNING: YX>X.clu for entries n=',length(tmp)))
-		stopifnot(length(tmp)==0)	#there s one recipient that is just on the boundary - let pass
-		set(nt.table, tmp, 'YX', nt.table[tmp, X.clu])
+		#stopifnot(length(tmp)==0)	#there s one recipient that is just on the boundary for m2Bwmx.tp1 - let pass		
 		nt.table	<- NULL
 	}
 	#

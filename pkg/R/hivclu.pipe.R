@@ -701,7 +701,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	method.lRNA.supp	<- 400
+	method.lRNA.supp	<- 200
 	method.brl.bwhost	<- 2
 	method.minQLowerU	<- 0.2
 	method.PDT			<- 'SEQ'
