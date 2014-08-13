@@ -495,7 +495,7 @@ project.Gates.RootSeqSim.runxml<- function()
 {
 	DATA		<<- "/work/or105/Gates_2014"
 	#DATA		<<- '/Users/Oliver/duke/2014_Gates'	
-	indir		<- paste(DATA,'methods_comparison_rootseqsim/140811',sep='/')
+	indir		<- paste(DATA,'methods_comparison_rootseqsim/140813',sep='/')
 	#search for XML files in indir
 	infiles		<- list.files(indir, pattern=paste(".xml$",sep=''))
 	insignat	<- ''	
@@ -511,7 +511,7 @@ project.Gates.RootSeqSim.runxml<- function()
 			cmd			<- paste(cmd, hivc.cmd.beast.read.nexus(indir, tmp, indir, tree.id=NA, method.node.stat='any.node'), sep='\n')
 			cmd			<- paste(cmd, hivc.cmd.beast.run.treeannotator(indir, infile, insignat, prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median"), sep='\n')
 			cat(cmd)	
-			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=91, hpc.mem="3700mb")		
+			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=391, hpc.mem="3700mb")		
 			outdir		<- indir
 			outfile		<- paste("b2m.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
 			hivc.cmd.hpccaller(outdir, outfile, cmd)		

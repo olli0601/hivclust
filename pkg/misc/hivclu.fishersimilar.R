@@ -7668,7 +7668,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	#
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))	
 	gc()
@@ -12140,7 +12140,8 @@ hivc.prog.betareg.estimaterisks<- function()
 	#	anonymize
 	setkey(clumsm.info, cluster, AnyPos_T1)
 	tmp						<- unique(subset(clumsm.info, select=Patient))
-	set(tmp, NULL, 'PatientA', paste('P',seq_len(nrow(tmp)),sep=''))
+	#set(tmp, NULL, 'PatientA', paste('P',seq_len(nrow(tmp)),sep=''))
+	set(tmp, NULL, 'PatientA', tmp[, Patient])
 	clumsm.info				<- merge(clumsm.info, tmp, by='Patient')
 	#			
 	#	plot	
