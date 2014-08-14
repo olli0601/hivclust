@@ -3356,14 +3356,10 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	tmp			<- missing[, 	list(	factor=factor, 	
 										Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
 										Pjx.e0= (yYX.sum+YXm.e.e0*yYX.mean)*YX.w/sum((yYX.sum+YXm.e.e0*yYX.mean)*YX.w),
+										#Pjx.e0= (yYX.sum+YXm.e.e0*yYX.med)*YX.w/sum((yYX.sum+YXm.e.e0*yYX.med)*YX.w),
 										Pjx.e0cp= (yYX.sum+YXm.e.e0cp*yYX.mean)*YX.w/sum((yYX.sum+YXm.e.e0cp*yYX.mean)*YX.w),
+										#Pjx.e0cp= (yYX.sum+YXm.e.e0cp*yYX.med)*YX.w/sum((yYX.sum+YXm.e.e0cp*yYX.med)*YX.w),
 										coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient')]
-	tmp			<- missing[, 	list(	factor=factor, 	
-										Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
-										Pjx.e0= (yYX.sum+YXm.e.e0*yYX.med)*YX.w/sum((yYX.sum+YXm.e.e0*yYX.med)*YX.w),
-										Pjx.e0cp= (yYX.sum+YXm.e.e0cp*yYX.med)*YX.w/sum((yYX.sum+YXm.e.e0cp*yYX.med)*YX.w),
-										coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient')]
-						
 	#	exclude recipients with no evidence for direct transmission
 	tmp			<- subset(tmp, !is.nan(Pjx))					
 	#	compute N.raw etc	
@@ -3503,6 +3499,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 				#draw number missing potential transmission intervals from neg binomial
 				tmp			<- melt( subset(missing, select=c(Patient.bs, risk, factor, X.seq, PTx, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )				
 				tmp[, YXm.r:= rznbinom(nrow(tmp), tmp[, X.seq], tmp[, Sx])]
+				#tmp[, YXm.r:= tmp[, round((1-Sx)*X.seq/Sx)]]
 				set(tmp, NULL, 'Sx.method', tmp[, gsub('Sx','YXm.r',Sx.method)])
 				#draw number of missing non-zero potential transmission intervals under PTx
 				set(tmp, NULL, 'YXm.r', rbinom(nrow(tmp), tmp[,YXm.r], tmp[,PTx]))
@@ -3513,12 +3510,16 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 				set(missing, NULL, 'factor', missing[, as.character(factor)])
 				tmp			<- missing[, 	{
 												z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]	#this is on purpose YX.m3 instead of YX.m3.bs to make sure that we have scores for every factor
+												#z	<- c(z, rep(0, length(z)/PTx[1]-length(z) ))
+												#list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(c(0, z), sum(YXm.r.e0), prob=c(length(z)/PTx[1]-length(z), rep(1, length(z))), replace=TRUE)  )
 												list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(z, sum(YXm.r.e0), replace=TRUE)  )
 											}, by=c('risk','factor')]
 				missing		<- merge(missing, tmp[, list(yYXm.sum.e0=sum(yYXm.r.e0)), by=c('Patient.bs','risk','factor')], by=c('Patient.bs','risk','factor'), all.x=TRUE)
 				#draw missing scores from all yijt in that stage	for number missing YXm.r.e0cp
 				tmp			<- missing[, 	{
-												z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]	
+												z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]
+												#z	<- c(z, rep(0, length(z)/PTx[1]-length(z) ))
+												#list(Patient.bs=rep(Patient.bs, YXm.r.e0cp), yYXm.r.e0cp=sample(c(0,z), sum(YXm.r.e0cp), prob=c(length(z)/PTx[1]-length(z), rep(1, length(z))), replace=TRUE)  )
 												list(Patient.bs=rep(Patient.bs, YXm.r.e0cp), yYXm.r.e0cp=sample(z, sum(YXm.r.e0cp), replace=TRUE)  )
 											}, by=c('risk','factor')]
 				missing		<- merge(missing, tmp[, list(yYXm.sum.e0cp=sum(yYXm.r.e0cp)), by=c('Patient.bs','risk','factor')], by=c('Patient.bs','risk','factor'), all.x=TRUE)
@@ -10967,8 +10968,10 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			YX.part1				<- merge(Y.infwindow, X.pt, by=c('FASTASampleCode','t.FASTASampleCode','t'), allow.cartesian=TRUE)
 			set(YX.part1,NULL,'FASTASampleCode', YX.part1[, as.character(FASTASampleCode)])
 			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])
-			YX.part1				<- project.athena.Fisheretal.YX.age(YX.part1, df.all, t.period=t.period)			
-			YX.part1				<- project.athena.Fisheretal.YX.Trm.Region(YX.part1, df.all)					
+			YX.part1				<- project.athena.Fisheretal.YX.age(YX.part1, df.all, t.period=t.period)
+			gc()
+			YX.part1				<- project.athena.Fisheretal.YX.Trm.Region(YX.part1, df.all)
+			gc()
 			setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
 			YX.part1				<- unique(YX.part1)
 		}			
@@ -10980,8 +10983,10 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			gc()
 			X.pt					<- merge(X.pt, unique(subset( Y.infwindow, select=t )), by='t')		
 			YX.part1				<- merge(Y.infwindow, X.pt, by='t', allow.cartesian=TRUE)
+			gc()
 			cat(paste('\ncompleted big merge of patient pairs, nrows=',nrow(YX.part1)))
-			YX.part1				<- project.athena.Fisheretal.YX.age(YX.part1, df.all, t.period=t.period)			
+			YX.part1				<- project.athena.Fisheretal.YX.age(YX.part1, df.all, t.period=t.period)
+			gc()
 			YX.part1				<- project.athena.Fisheretal.YX.Trm.Region(YX.part1, df.all)					
 			setkey(YX.part1, Patient, t.Patient, t)
 			YX.part1				<- unique(YX.part1)
@@ -11013,12 +11018,15 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 			tmp						<- subset(df.tpairs, select=c(t.Patient, t.FASTASampleCode))
 			setkey(tmp, t.Patient, t.FASTASampleCode)
 			YX.part1		<- merge(YX.part1, unique(tmp), by='t.Patient', allow.cartesian=TRUE)
-			YX.part1.batch	<- NULL			
+			YX.part1.batch	<- NULL
+			gc()
 			cat(paste('\ncompleted sampled merge of sequence pairs, nrows=',nrow(YX.part1)))
 			set(YX.part1,NULL,'FASTASampleCode', YX.part1[, as.character(FASTASampleCode)])
 			set(YX.part1,NULL,'t.FASTASampleCode', YX.part1[, as.character(t.FASTASampleCode)])
-			YX.part1		<- project.athena.Fisheretal.YX.age(YX.part1, df.all, t.period=t.period)			
-			YX.part1		<- project.athena.Fisheretal.YX.Trm.Region(YX.part1, df.all)					
+			YX.part1		<- project.athena.Fisheretal.YX.age(YX.part1, df.all, t.period=t.period)		
+			gc()
+			YX.part1		<- project.athena.Fisheretal.YX.Trm.Region(YX.part1, df.all)
+			gc()
 			setkey(YX.part1, FASTASampleCode, t.FASTASampleCode, t)
 			YX.part1		<- unique(YX.part1)
 		}	
@@ -11783,20 +11791,23 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables',method.PDT,'_',save.file,'.R',sep='')
 		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=save.file, method=method.risk)
-		if(!is.null(X.tables))	cat('\nloaded X.tables')
-		##	sense check that risk factors have been correctly computed
-		nt.table	<- copy(X.tables$nt.table.pt)
-		nt.table	<- dcast.data.table(nt.table, t.Patient + risk + factor ~ stat, value.var="nt")		
-		tmp			<- nt.table[, which(X.seq>X.msm)]
-		if(length(tmp))	cat(paste('\nWARNING: X.seq>X.msm for entries n=',length(tmp)))
-		#stopifnot(length(tmp)==0)			
-		tmp			<- nt.table[, which(X.clu>X.seq)]
-		if(length(tmp))	cat(paste('\nWARNING: X.clu>X.seq for entries n=',length(tmp)))
-		#stopifnot(length(tmp)==0)		
-		tmp			<- nt.table[, which(YX>X.clu)]
-		if(length(tmp))	cat(paste('\nWARNING: YX>X.clu for entries n=',length(tmp)))
-		#stopifnot(length(tmp)==0)	#there s one recipient that is just on the boundary for m2Bwmx.tp1 - let pass		
-		nt.table	<- NULL
+		if(!is.null(X.tables))
+		{
+			cat('\nloaded X.tables')
+			##	sense check that risk factors have been correctly computed
+			nt.table	<- copy(X.tables$nt.table.pt)
+			nt.table	<- dcast.data.table(nt.table, t.Patient + risk + factor ~ stat, value.var="nt")		
+			tmp			<- nt.table[, which(X.seq>X.msm)]
+			if(length(tmp))	cat(paste('\nWARNING: X.seq>X.msm for entries n=',length(tmp)))
+			#stopifnot(length(tmp)==0)			
+			tmp			<- nt.table[, which(X.clu>X.seq)]
+			if(length(tmp))	cat(paste('\nWARNING: X.clu>X.seq for entries n=',length(tmp)))
+			#stopifnot(length(tmp)==0)		
+			tmp			<- nt.table[, which(YX>X.clu)]
+			if(length(tmp))	cat(paste('\nWARNING: YX>X.clu for entries n=',length(tmp)))
+			#stopifnot(length(tmp)==0)	#there s one recipient that is just on the boundary for m2Bwmx.tp1 - let pass		
+			nt.table	<- NULL
+		}
 	}
 	#
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
