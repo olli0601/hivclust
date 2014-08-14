@@ -333,7 +333,13 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 		YX.tpairs	<- unique(YX.tpairs)
 		#
 		if(is.null(df.tpairs.4.rawbrl))
-			df.tpairs.4.rawbrl	<- YX.tpairs				
+			df.tpairs.4.rawbrl	<- YX.tpairs	
+		
+		
+		tmp		<- do.call( 'rbind', list( subset(YX.tpairs, Patient=='M41876' & t.Patient=='M39157'), subset(YX.tpairs, Patient=='M39614' & t.Patient=='M36755')) )
+		Y.U		<- project.athena.Fisheretal.Y.infectiontime(tmp, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter')
+		
+		
 		#
 		#	compute Y scores for potential transmitters in ATHENA.clu for which dated phylogenies are available
 		#
@@ -371,12 +377,12 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= -1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one, save.file.3ha=save.file.3ha)		
 		}
 		if(all(substr(method,1,2)!=c('3c','3d','3e','3f','3g','3i','3j','3k')))	stop('brlweight: method not supported')		
-		#	U [0,1]: prob that pot transmitter is still infected at time t. Needed to determine time of infection for transmitter (as quantile of the surival distribution)
-		Y.U						<- project.athena.Fisheretal.Y.infectiontime(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter')
 		#	COAL [0,1]: prob that coalescence is within the transmitter
 		Y.coal					<- NULL
 		if(!is.null(cluphy) & !is.null(cluphy.info) & !is.null(cluphy.map.nodectime)  )
 		{
+			#	U [0,1]: prob that pot transmitter is still infected at time t. Needed to determine time of infection for transmitter (as quantile of the surival distribution)
+			Y.U					<- project.athena.Fisheretal.Y.infectiontime(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter')			
 			file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw',method,'.R',sep='')		
 			Y.coal				<- project.athena.Fisheretal.Y.coal(YX.tpairs, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=file, resume=resume )			
 		}
@@ -3325,12 +3331,13 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	cat(paste('\nnumber and proportion of transmissions using raw evidence for transmission (y_ijt*w_ijt)'))
 	missing		<- merge(nt.table, unique( subset( risk.df, select=c(risk, factor, PTx) ) ), by=c('risk','factor'))	
 	# compute the mean Y by stage for non-zero Y
-	tmp			<- YX.m3[, list(yYX.mean= mean(score.Y)), by='stage']
+	tmp			<- YX.m3[, list(yYX.mean= mean(score.Y), yYX.med= median(score.Y)), by='stage']
 	setnames(tmp, 'stage','factor')
 	tmp[, risk:='stage']	
 	missing		<- merge(missing, tmp, by=c('risk','factor'))
 	#compute the mean Y by stage including zero Y
 	set(missing, NULL, 'yYX.mean', missing[, yYX.mean*PTx])
+	set(missing, NULL, 'yYX.med', missing[, yYX.med*PTx])
 	#	compute the sum of observed Y's by stage for each recipient
 	tmp			<- YX.m3[, list(yYX.sum= sum(score.Y), YX.n=length(score.Y), YX.w=w.t[1]), by=c('stage','Patient')]
 	setnames(tmp, 'stage','factor')
@@ -3351,6 +3358,12 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 										Pjx.e0= (yYX.sum+YXm.e.e0*yYX.mean)*YX.w/sum((yYX.sum+YXm.e.e0*yYX.mean)*YX.w),
 										Pjx.e0cp= (yYX.sum+YXm.e.e0cp*yYX.mean)*YX.w/sum((yYX.sum+YXm.e.e0cp*yYX.mean)*YX.w),
 										coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient')]
+	tmp			<- missing[, 	list(	factor=factor, 	
+										Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
+										Pjx.e0= (yYX.sum+YXm.e.e0*yYX.med)*YX.w/sum((yYX.sum+YXm.e.e0*yYX.med)*YX.w),
+										Pjx.e0cp= (yYX.sum+YXm.e.e0cp*yYX.med)*YX.w/sum((yYX.sum+YXm.e.e0cp*yYX.med)*YX.w),
+										coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient')]
+						
 	#	exclude recipients with no evidence for direct transmission
 	tmp			<- subset(tmp, !is.nan(Pjx))					
 	#	compute N.raw etc	
@@ -8390,6 +8403,7 @@ project.athena.Fisheretal.check<- function()
 				z<- which( YX.part1o[, col, with=FALSE]!=YX.part1hpc[, col, with=FALSE] )				
 				stopifnot( length(z)==0 )
 			})
+	
 }
 ######################################################################################
 project.athena.Fisheretal.characteristics<- function()
@@ -8868,7 +8882,10 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	indir					<- paste(DATA,"fisheretal_140722",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140722",sep='/')
 	indir					<- paste(DATA,"fisheretal_140729",sep='/')
-	outdir					<- paste(DATA,"fisheretal_140729",sep='/')		
+	outdir					<- paste(DATA,"fisheretal_140729",sep='/')
+	indir					<- paste(DATA,"fisheretal_140814",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140814",sep='/')		
+	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	insignat				<- "Wed_Dec_18_11:37:00_2013"	
@@ -9046,6 +9063,16 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	#	3ka2H2V200			(ART.C)
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3ka2H2V200'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka2H2V51			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H2V51'
 	method.RISK		<- 'm2BwmxMv.tp'
 	method.WEIGHT	<- ''	
 	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
@@ -9406,7 +9433,7 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 			{
 				cat(paste('\nprocess', stat.select[i]))
 				ggplot(subset(run.tp, !is.na(v) & stat==stat.select[i]), aes(x=factor, y=v, fill=factor.legend, colour=factor.legend)) + labs(x="", y=ylab) + 
-						scale_y_continuous(breaks=seq(0,3000,100)) + scale_x_discrete(breaks=NULL, limits=run.tp[, levels(factor)]) +
+						scale_y_continuous(breaks=seq(0,300,10)) + scale_x_discrete(breaks=NULL, limits=run.tp[, levels(factor)]) +
 						scale_fill_manual(name='from cascade stage', values=run.tp[, unique(factor.color)]) + scale_colour_manual(name='from cascade stage', values = rep('black',11)) +
 						#scale_fill_brewer(palette='PRGn',name='from cascade stage') + scale_colour_manual(name='from cascade stage', values = rep('black',11)) +					
 						guides(colour=FALSE, fill = guide_legend(override.aes = list(size=5))) +
@@ -9947,6 +9974,9 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_140801",sep='/')	
 	indir					<- paste(DATA,"fisheretal_140804",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140804",sep='/')	
+	indir					<- paste(DATA,"fisheretal_140814",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140814",sep='/')	
+	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -11533,6 +11563,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.minQLowerU		<- 0.2
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 51
+		method.thresh.pcoal		<- 0.5
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
@@ -11634,7 +11665,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,19),
 									method.recentctime= return(substr(arg,21,nchar(arg))),NA)	}))
-		if(length(tmp)>0) method.recentctime<- tmp[1]	
+		if(length(tmp)>0) method.recentctime<- tmp[1]			
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,20),
+									method.thresh.pcoal= return(as.numeric(substr(arg,22,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) method.thresh.pcoal<- tmp[1]	
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,11),
 									method.PDT= return(substr(arg,13,nchar(arg))),NA)	}))
@@ -11642,9 +11677,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,17),
 									method.lRNA.supp= return(as.numeric(substr(arg,19,nchar(arg)))),NA)	}))
-		if(length(tmp)>0) method.lRNA.supp<- tmp[1]	
-		
-		
+		if(length(tmp)>0) method.lRNA.supp<- tmp[1]			
 	}	
 	clu.infile			<- infile
 	clu.indir			<- indir
@@ -11673,6 +11706,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		print(method.minQLowerU)
 		print(method.brl.bwhost)
 		print(method.lRNA.supp)
+		print(method.thresh.pcoal)
 	}	
 	if(method.nodectime=='any')
 		method				<- paste(method,'a',sep='')
@@ -11699,12 +11733,12 @@ hivc.prog.betareg.estimaterisks<- function()
 		dur.Acute			<- c(Yes= 5.28*30, Maybe=5.28*30)
 		method				<- paste(method,'H',sep='')
 	}		
+	if(method.minQLowerU!=0.01)
+		method				<- paste(method, method.minQLowerU*10,sep='')	
 	if(method.minQLowerU==0)
-		method				<- paste(method,'0',sep='')	
-	if(method.minQLowerU==0.1)
-		method				<- paste(method,'1',sep='')
-	if(method.minQLowerU==0.2)
-		method				<- paste(method,'2',sep='')
+		method				<- paste(method,'m',sep='')
+	if(method.thresh.pcoal!=0.5)
+		method				<- paste(method,'C',method.thresh.pcoal*10,sep='')	
 	if(method.lRNA.supp<1e3)
 		method				<- paste(method,'V',method.lRNA.supp,sep='')
 	adjust.AcuteByNegT		<- 1
@@ -11884,14 +11918,13 @@ hivc.prog.betareg.estimaterisks<- function()
 	YX.part1		<- project.athena.Fisheretal.YX.part1(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=df.tpairs, tperiod.info=NULL, lRNA.supp=method.lRNA.supp, t.period=t.period, t.endctime=t.endctime, save.file=save.file, resume=resume)
 	YX.part1		<- merge( YX.part1, subset( df.tpairs, select=c(FASTASampleCode, t.FASTASampleCode, cluster) ), by=c('FASTASampleCode','t.FASTASampleCode'), all.x=1)
 	YX.part1[, class:='pt']
-	gc()
-	thresh.pcoal	<- 0.5
+	gc()	
 	rm.zero.score	<- TRUE	
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'.R',sep='')
 	save.all		<- FALSE
 	#save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'_all.R',sep='')
 	#save.all		<- TRUE
-	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, brl.bwhost.multiplier=method.brl.bwhost, t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
+	YX				<- project.athena.Fisheretal.YX.part2(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=method.thresh.pcoal, brl.bwhost.multiplier=method.brl.bwhost, t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
 	gc()
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
 	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']

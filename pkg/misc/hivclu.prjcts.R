@@ -537,6 +537,77 @@ project.hivc.check<- function()
 	if(0) project.hivc.check.DateRes.after.T0()	
 }
 ######################################################################################
+project.hivc.check.Coal.threshold<- function()
+{
+	#Y.coal for linked --> usually high Y.coal but can go down to 0
+	tmp		<- merge( subset(cluphy.info, select=c(FASTASampleCode, cluster)), subset(Y.rawbrl.linked, select=c(Patient, FASTASampleCode, t.FASTASampleCode)), by='FASTASampleCode' )		
+	tmp		<- merge( data.table(t.FASTASampleCode= cluphy.info[, unique(FASTASampleCode)]), tmp, by='t.FASTASampleCode' )
+	Y.U		<- project.athena.Fisheretal.Y.infectiontime(tmp, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.infected')
+	setnames(tmp, 'Patient', 't.Patient')
+	setnames(Y.U, c('Patient','score.Inf'), c('t.Patient','U.score'))
+	Y.coal.l	<- project.athena.Fisheretal.Y.coal(tmp, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=NA, resume=0 )
+	#Y.coal for unlinked --> 95% quantile is large, 
+	tmp		<- subset(Y.rawbrl.unlinked, select=c(t.Patient, sc.FASTASampleCode, t.FASTASampleCode))
+	setnames(tmp, 'sc.FASTASampleCode', 'FASTASampleCode')
+	tmp		<- merge( subset(cluphy.info, select=c(FASTASampleCode, cluster)), tmp, by='FASTASampleCode' )		
+	tmp		<- merge( data.table(t.FASTASampleCode= cluphy.info[, unique(FASTASampleCode)]), tmp, by='t.FASTASampleCode' )
+	Y.U		<- project.athena.Fisheretal.Y.infectiontime(tmp, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter')
+	Y.coal.u	<- project.athena.Fisheretal.Y.coal(tmp, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=NA, resume=0 )
+	#Y.coal for female - female pairs
+	tmp		<- merge( subset(cluphy.info, select=c(cluster, FASTASampleCode)), subset(df.all, select=c(FASTASampleCode, Patient, Sex)), by='FASTASampleCode' )
+	tmp[, table(Sex)]
+	#females were dropped from clusters. ugh.	
+}
+######################################################################################
+project.hivc.check.Pjx<- function()
+{
+	#
+	#
+	#
+	#
+	z	<- subset(tmp, !is.nan(Pjx) & factor=='ART.suA.Y.4')
+	hist( z[, Pjx], breaks=seq(0,1,0.01) )
+	hist( z[, Pjx.e0cp], breaks=seq(0,1,0.01) )
+	
+	z	<- subset(tmp, !is.nan(Pjx) & factor=='ART.suA.Y.4' & Pjx.e0cp>0.2)
+	setkey(z, Pjx.e0cp)
+	#     risk Patient      factor       Pjx    Pjx.e0  Pjx.e0cp             coef
+	 #1: stage  M38112 ART.suA.Y.4 0.2456374 0.2262577 0.2052394 stageART.suA.Y.4
+	 #2: stage  M39212 ART.suA.Y.4 0.2638938 0.2374935 0.2148885 stageART.suA.Y.4
+	 #3: stage  M39252 ART.suA.Y.4 0.2638938 0.2376439 0.2159022 stageART.suA.Y.4
+	 #4: stage  M38097 ART.suA.Y.4 0.3029802 0.2660489 0.2312217 stageART.suA.Y.4
+	 #5: stage  M38876 ART.suA.Y.4 0.3099701 0.2782368 0.2490324 stageART.suA.Y.4
+	 #6: stage  M38750 ART.suA.Y.4 0.3109900 0.2815144 0.2539564 stageART.suA.Y.4
+	 #7: stage  M39137 ART.suA.Y.4 0.3431932 0.3103555 0.2831176 stageART.suA.Y.4
+	 #8: stage  M41876 ART.suA.Y.4 0.3976996 0.3476053 0.3031130 stageART.suA.Y.4
+	 #9: stage  M39614 ART.suA.Y.4 0.7455575 0.4325278 0.3132440 stageART.suA.Y.4
+	#10: stage  M37781 ART.suA.Y.4 0.4381747 0.3770513 0.3227846 stageART.suA.Y.4
+	#11: stage  M38881 ART.suA.Y.4 0.5905905 0.4804145 0.4031972 stageART.suA.Y.4
+	#12: stage  M38623 ART.suA.Y.4 0.6825126 0.5088493 0.4047791 stageART.suA.Y.4
+	#13: stage  M38138 ART.suA.Y.4 0.6239798 0.5043751 0.4132018 stageART.suA.Y.4
+	#14: stage  M37935 ART.suA.Y.4 1.0000000 0.7251842 0.5512027 stageART.suA.Y.4
+	
+	z2	<- merge( YX, unique(subset(z, select=Patient)), by='Patient')
+	z2[,list(np=length(unique(t.Patient)), nt=length(unique(t))), by='Patient']
+	
+	z2	<- subset(z2, CD4b.tperiod=='ART.suA.Y.4', c(Patient, t.Patient, t, score.Y, FASTASampleCode, t.FASTASampleCode))
+	setkey(z2, Patient, t.Patient)
+	unique(z2)
+	
+	subset( missing, factor=='ART.suA.Y.4'  & yYX.sum>1)
+	z	<- subset(merge( YX, unique(subset( missing, factor=='ART.suA.Y.4'  & yYX.sum>1, Patient)), by='Patient'), CD4b.tperiod=='ART.suA.Y.4', c(Patient, t.Patient, t, score.Y, FASTASampleCode, t.FASTASampleCode))
+	
+	#	try set COAL to include these
+	subset(df.tpairs, Patient=='M37935' & t.Patient=='M38982')
+	subset(df.tpairs, Patient=='M38138' & t.Patient=='M34329')
+	subset(df.tpairs, Patient=='M37781' & t.Patient=='M38876')
+	subset(df.tpairs, Patient=='M37781' & t.Patient=='M38506')
+	subset(df.tpairs, Patient=='M39614' & t.Patient=='M35997')
+	subset(df.tpairs, Patient=='M41876' & t.Patient=='M36082')
+	
+	
+}
+######################################################################################
 project.hivc.get.geneticdist.from.sdc<- function(dir.name= DATA)
 {	
 	tmp<- hivc.clu.geneticdist.cutoff(dir.name=dir.name, plot=1, verbose=1, level.retain.unlinked=0.05)
