@@ -537,6 +537,21 @@ project.hivc.check<- function()
 	if(0) project.hivc.check.DateRes.after.T0()	
 }
 ######################################################################################
+project.hivc.check.samplingmodel<- function()
+{	
+	ggplot(YXf, aes(x=score.Y, fill=stage)) + geom_histogram(binwidth=0.05) + facet_grid(stage ~ ., scales='free', margins=FALSE)
+	
+	z	<- gamlss(score.Y ~ stage-1, sigma.formula= ~ stage-1, family=BE, data=as.data.frame(subset(YX.m3, select=c(stage, score.Y))))
+	#extract coefficients
+	z	<- data.table(  risk='stage', factor=names(z[['mu.coefficients']]), mu= 1/(1+exp(-z[['mu.coefficients']])), sigma=1/(1+exp(-z[['sigma.coefficients']]))  )
+	set(z, NULL, 'factor', z[, substr(factor, 6, nchar(factor))])
+	z2	<- z[,  {
+				score.Y<- seq(0.001,0.999,0.001)
+				list(score.Y=score.Y, dBE=dBE(score.Y, mu=mu, sigma=sigma))
+			}, by=c('risk','factor')]
+	ggplot(z2, aes(x=score.Y, y=dBE, group=factor, colour=factor)) + geom_line() + facet_grid(factor ~ ., scales='free', margins=FALSE)
+}
+######################################################################################
 project.hivc.check.Coal.threshold<- function()
 {
 	#Y.coal for linked --> usually high Y.coal but can go down to 0

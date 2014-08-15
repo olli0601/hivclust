@@ -3355,10 +3355,10 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	#tmp		<- missing[, 	list(	factor=factor,  Pjx= yYX.sum*YX.w, Pjx.e0= (yYX.sum+YXm.e.e0*yYX.mean)*YX.w, Pjx.e0cp= (yYX.sum+YXm.e.e0cp*yYX.mean)*YX.w, coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient')]
 	tmp			<- missing[, 	list(	factor=factor, 	
 										Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
-										Pjx.e0= (yYX.sum+YXm.e.e0*yYX.mean)*YX.w/sum((yYX.sum+YXm.e.e0*yYX.mean)*YX.w),
-										#Pjx.e0= (yYX.sum+YXm.e.e0*yYX.med)*YX.w/sum((yYX.sum+YXm.e.e0*yYX.med)*YX.w),
-										Pjx.e0cp= (yYX.sum+YXm.e.e0cp*yYX.mean)*YX.w/sum((yYX.sum+YXm.e.e0cp*yYX.mean)*YX.w),
-										#Pjx.e0cp= (yYX.sum+YXm.e.e0cp*yYX.med)*YX.w/sum((yYX.sum+YXm.e.e0cp*yYX.med)*YX.w),
+										#Pjx.e0= (yYX.sum+YXm.e.e0*yYX.mean)*YX.w/sum((yYX.sum+YXm.e.e0*yYX.mean)*YX.w),
+										Pjx.e0= (yYX.sum+YXm.e.e0*yYX.med)*YX.w/sum((yYX.sum+YXm.e.e0*yYX.med)*YX.w),
+										#Pjx.e0cp= (yYX.sum+YXm.e.e0cp*yYX.mean)*YX.w/sum((yYX.sum+YXm.e.e0cp*yYX.mean)*YX.w),
+										Pjx.e0cp= (yYX.sum+YXm.e.e0cp*yYX.med)*YX.w/sum((yYX.sum+YXm.e.e0cp*yYX.med)*YX.w),
 										coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient')]
 	#	exclude recipients with no evidence for direct transmission
 	tmp			<- subset(tmp, !is.nan(Pjx))					
@@ -3509,15 +3509,19 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 				set(missing, NULL, 'risk', missing[, as.character(risk)])
 				set(missing, NULL, 'factor', missing[, as.character(factor)])
 				tmp			<- missing[, 	{
-												z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]	#this is on purpose YX.m3 instead of YX.m3.bs to make sure that we have scores for every factor
+												z	<- median( YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']] )	
+												#z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]	#this is on purpose YX.m3 instead of YX.m3.bs to make sure that we have scores for every factor
 												#z	<- c(z, rep(0, length(z)/PTx[1]-length(z) ))
 												#list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(c(0, z), sum(YXm.r.e0), prob=c(length(z)/PTx[1]-length(z), rep(1, length(z))), replace=TRUE)  )
 												list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(z, sum(YXm.r.e0), replace=TRUE)  )
 											}, by=c('risk','factor')]
+				#subset(tmp, Patient.bs=='M37593_bs131')
+				#hist( subset(tmp, factor=='ART.suA.Y.4')[, yYXm.r.e0], breaks=100)									
 				missing		<- merge(missing, tmp[, list(yYXm.sum.e0=sum(yYXm.r.e0)), by=c('Patient.bs','risk','factor')], by=c('Patient.bs','risk','factor'), all.x=TRUE)
 				#draw missing scores from all yijt in that stage	for number missing YXm.r.e0cp
 				tmp			<- missing[, 	{
-												z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]
+												z	<- median( YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']] )
+												#z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]
 												#z	<- c(z, rep(0, length(z)/PTx[1]-length(z) ))
 												#list(Patient.bs=rep(Patient.bs, YXm.r.e0cp), yYXm.r.e0cp=sample(c(0,z), sum(YXm.r.e0cp), prob=c(length(z)/PTx[1]-length(z), rep(1, length(z))), replace=TRUE)  )
 												list(Patient.bs=rep(Patient.bs, YXm.r.e0cp), yYXm.r.e0cp=sample(z, sum(YXm.r.e0cp), replace=TRUE)  )
@@ -9519,7 +9523,6 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 		ggsave(file=file, w=25, h=8)		
 	}
 	#	censoring model per risk group	
-	#	TODO extend to age groups
 	setkey(ct, factor2, t.period)
 	#ctm		<- subset(ctm, variable%in%c('d32','d03'))	
 	if(method.group=='cascade')
@@ -9528,6 +9531,7 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 		#	Beta model on censoring for U and UAna combined
 		#	use d02 because there is backlog. can use d03 for the first tperiod because not affected by backlog
 		tmp		<- subset(ctm, (variable=='d02' & factor2%in%c('U','UAna')) | (variable=='d03' & t.period==1 & factor2%in%c('U','UAna')))
+		set(tmp, tmp[, which(p.cens==1.)], 'p.cens', 0.999999 )
 		#tmp		<- subset(ctm, variable%in%c('d32','d03') & factor2%in%c('U','UAna'))		
 		tmp2	<- gamlss(p.cens~t, data=as.data.frame(tmp), family=BE)
 		tmp		<- predict(tmp2, newdata=data.frame(t=tperiod.info['4',][,t.period.max]-tperiod.info[, t.period.max]), data=as.data.frame(tmp), type='response')
@@ -11041,8 +11045,10 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		if(!is.na(save.file))
 		{						
 			#
+			gc()
 			cat(paste('\nsave YX.part1 to file=',save.file))
 			save(YX.part1, file=save.file)
+			cat('\nsave completed')
 		}			
 	}
 	YX.part1
@@ -11571,7 +11577,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.minQLowerU		<- 0.2
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 51
-		method.thresh.pcoal		<- 0.5
+		method.thresh.pcoal		<- 0.3
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
