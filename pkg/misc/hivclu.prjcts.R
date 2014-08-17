@@ -494,15 +494,14 @@ project.Gates.RootSeqSim.getrootseq<- function()
 project.Gates.RootSeqSim.runxml<- function()
 {
 	DATA		<<- "/work/or105/Gates_2014"
-	#DATA		<<- '/Users/Oliver/duke/2014_Gates'	
-	indir		<- paste(DATA,'methods_comparison_rootseqsim/140813',sep='/')
-	#search for XML files in indir
-	infiles		<- list.files(indir, pattern=paste(".xml$",sep=''))
-	insignat	<- ''	
-	hpc.ncpu	<- 8
-	
-	if(1)	#all tasks combined
+	#DATA		<<- '/Users/Oliver/duke/2014_Gates'		
+	if(0)	#all tasks combined
 	{
+		indir		<- paste(DATA,'methods_comparison_rootseqsim/140813',sep='/')
+		#search for XML files in indir
+		infiles		<- list.files(indir, pattern=paste(".xml$",sep=''))
+		insignat	<- ''	
+		hpc.ncpu	<- 8		
 		for(infile in infiles)
 		{
 			infile		<- substr(infile, 1, nchar(infile)-4) 		
@@ -517,12 +516,20 @@ project.Gates.RootSeqSim.runxml<- function()
 			hivc.cmd.hpccaller(outdir, outfile, cmd)		
 		}
 	}
-	if(0)	#only parse existing output
+	if(1)	#only parse existing output
 	{
-		tmp			<- paste(infile,'_',insignat,'.timetrees',sep='')
-		cmd			<- hivc.cmd.beast.read.nexus(indir, tmp, indir, tree.id=NA, method.node.stat='any.node')
-		cat(cmd)
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=48, hpc.mem="3700mb")
+		indir		<- paste(DATA,'methods_comparison_rootseqsim/140813/save',sep='/')
+		#search for XML files in indir
+		infiles		<- list.files(indir, pattern=paste(".timetrees$",sep=''))							
+		for(infile in infiles)
+		{
+			cmd			<- hivc.cmd.beast.read.nexus(indir, infile, indir, tree.id=NA, method.node.stat='any.node')
+			cat(cmd)
+			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=348, hpc.mem="3700mb")
+			outdir		<- indir
+			outfile		<- paste("b2p.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
+			hivc.cmd.hpccaller(outdir, outfile, cmd)
+		}				
 	}
 }
 ######################################################################################
