@@ -667,6 +667,18 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	}
 	if(0)
 	{
+		method					<- '3k'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		infilexml.opt			<- "mph4clutx4tip"
+		infilexml.template		<- "um192rhU2080"	
+		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')		
+	}
+	if(0)
+	{
 		method					<- '3e'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
@@ -701,9 +713,9 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	method.lRNA.supp	<- 51
+	method.lRNA.supp	<- 200
 	method.brl.bwhost	<- 2
-	method.minQLowerU	<- 0.2
+	method.minQLowerU	<- 0.4
 	method.thresh.pcoal	<- 0.3
 	method.PDT			<- 'SEQ'
 	#method.Acute		<- 'empirical'
@@ -770,7 +782,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tAb.clu.adj','m5.tAc.clu.adj','m5.tiA.clu.adj','m5.tiAb.clu.adj','m5.tiAc.clu.adj')
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tA.tp1.clu.adj','m5.tiA.tp1.clu.adj','m5.tA.tp2.clu.adj','m5.tiA.tp2.clu.adj','m5.tA.tp3.clu.adj','m5.tiA.tp3.clu.adj','m5.tA.tp4.clu.adj','m5.tiA.tp4.clu.adj')
 	#method.risk			<- c( 	'm5.tAc.clu.adj','m5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj')
-	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj' )
+	method.risk			<- c( 	'm2Bwmx.tp1.clu.adj' )
 	dummy	<- sapply(method.risk, function(x)
 			{
 				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.brl.bwhost, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, outdir=outdir, outfile=outfile, resume=1, verbose=1)
@@ -778,10 +790,10 @@ hivc.pipeline.betareg.estimate.risks<- function()
 				#stop()
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="1800mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=22, hpc.mem="1900mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
+				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
 				#cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
-				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="79000mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="99000mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 				hivc.cmd.hpccaller(outdir, outfile, cmd)			

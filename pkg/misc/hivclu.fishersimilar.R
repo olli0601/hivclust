@@ -8890,6 +8890,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outdir					<- paste(DATA,"fisheretal_140729",sep='/')
 	indir					<- paste(DATA,"fisheretal_140814",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140814",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140817",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140817",sep='/')		
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -9078,6 +9080,26 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	#	3ka2H2V51			(ART.C)
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3ka2H2V51'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka2H4C3V51			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H4C3V51'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka2H5C3V51			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H5C3V51'
 	method.RISK		<- 'm2BwmxMv.tp'
 	method.WEIGHT	<- ''	
 	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
@@ -9981,6 +10003,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_140804",sep='/')	
 	indir					<- paste(DATA,"fisheretal_140814",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140814",sep='/')	
+	indir					<- paste(DATA,"fisheretal_140817",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140817",sep='/')	
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
