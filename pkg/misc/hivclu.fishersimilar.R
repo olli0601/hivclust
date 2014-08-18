@@ -378,7 +378,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 			#	U [0,1]: prob that pot transmitter is still infected at time t. Needed to determine time of infection for transmitter (as quantile of the surival distribution)
 			Y.U					<- project.athena.Fisheretal.Y.infectiontime(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT)			
 			file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw',method,'.R',sep='')		
-			Y.coal				<- project.athena.Fisheretal.Y.coal(YX.tpairs, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=file, resume=resume )			
+			Y.coal				<- project.athena.Fisheretal.Y.coal(YX.tpairs, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=file, resume=resume, method.minLowerUWithNegT=method.minLowerUWithNegT )			
 		}
 		#	U [0,1]: prob that pot transmitter is still infected during infection window
 		Y.U						<- project.athena.Fisheretal.Y.transmitterinfected(YX.part1)		
@@ -8169,7 +8169,7 @@ project.athena.Fisheretal.Y.infectiontime<- function(YX.tpairs, df.all, predict.
 	b4care			
 }
 ######################################################################################
-project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period= 0.25, save.file=NA, resume=0 )
+project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, method.minLowerUWithNegT=TRUE, t.period= 0.25, save.file=NA, resume=0 )
 {
 	#coal.t.Uscore.min=0.01; coal.within.inf.grace= 0.25
 	#YX.tpairs	<- subset(X.pt, select=c(t.Patient, Patient, cluster, FASTASampleCode, t.FASTASampleCode))
@@ -8205,11 +8205,18 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, Y.U, cluphy, clup
 		tmp	<- subset(Y.U, U.score>coal.t.Uscore.min, c(t.Patient, t, U.score))		
 		stopifnot(tmp[, any(is.na(U.score))]==FALSE)
 		setkey(tmp, t.Patient, t)		
-		tmp					<- tmp[, list(t.UT= t[1]), by='t.Patient']
-		
+		tmp					<- tmp[, list(t.UT= t[1]), by='t.Patient']		
 		df.tpairs.mrca		<- merge(df.tpairs.mrca, tmp, by='t.Patient')
 		stopifnot(df.tpairs.mrca[, any(is.na(t.UT))]==FALSE)
-		tmp					<- df.tpairs.mrca[, list(t.queryT= max(t.NegT, t.UT, na.rm=TRUE)), by=c('FASTASampleCode','t.FASTASampleCode')]
+		if(method.minLowerUWithNegT)
+			tmp				<- df.tpairs.mrca[, list(t.queryT= max(t.NegT, t.UT, na.rm=TRUE)), by=c('FASTASampleCode','t.FASTASampleCode')]
+		if(!method.minLowerUWithNegT)
+			tmp				<- df.tpairs.mrca[, list(t.queryT= t.UT), by=c('FASTASampleCode','t.FASTASampleCode')]
+		if(tmp[, any(is.na(t.queryT))])
+		{
+			print(subset(df.tpairs.mrca, is.na(t.queryT)))
+			stop('XX')
+		}
 		df.tpairs.mrca		<- merge(df.tpairs.mrca, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))
 		tmp					<- subset( df.tpairs.mrca, select=c(cluster, node, FASTASampleCode, t.FASTASampleCode, t.queryT) )
 		tmp					<- merge(tmp, subset(df.all, select=c(FASTASampleCode, AnyPos_T1)), by='FASTASampleCode')
