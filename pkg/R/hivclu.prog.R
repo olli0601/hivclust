@@ -88,8 +88,8 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 		if(verbose) cat(paste("\nread",file))
 		tmp			<- load(file)
 		if(length(tmp)!=1)	stop("Unexpected lenght of loaded objects")
-		eval(parse(text=paste("seq.PROT.RT<- ",tmp,sep='')))		
-		print(seq.PROT.RT)
+		eval(parse(text=paste("seq<- ",tmp,sep='')))		
+		print(seq)
 		#print(bs)
 		if(bs)		#keep bs0 intact
 		{
@@ -101,15 +101,15 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 				j			<- j+1
 				if(opt.bootstrap.by=="codon")
 				{
-					bs.blocks.n	<- floor( ncol(seq.PROT.RT )/3)
+					bs.blocks.n	<- floor( ncol(seq )/3)
 					bs.blocks.s	<- sample(seq_len(bs.blocks.n),bs.blocks.n,replace=T)-1
 					bs.seq.s	<- as.numeric( sapply(bs.blocks.s,function(x)		3*x+c(1,2,3)		) )
 				}
 				else if(opt.bootstrap.by=="nucleotide")
 				{
-					bs.seq.s	<- sample(seq_len(ncol(seq.PROT.RT )),ncol(seq.PROT.RT ),replace=T)
+					bs.seq.s	<- sample(seq_len(ncol(seq )),ncol(seq ),replace=T)
 				}
-				seq.BS		<- seq.PROT.RT[,bs.seq.s]				
+				seq.BS		<- seq[,bs.seq.s]				
 				if(check.any.bs.identical)
 				{
 					if(verbose) cat(paste("\ncheck for identity proposed boostrap seq alignment no",j))
@@ -139,7 +139,7 @@ hivc.prog.get.bootstrapseq<- function(check.any.bs.identical=0)
 		else
 		{
 			cat(paste("\nkeep boostrap seq alignment no",bs,"as original"))
-			seq.BS	<- seq.PROT.RT
+			seq.BS	<- seq
 		}
 		file		<- paste(outdir,"/",infile,"_",gsub('/',':',signat.out),".phylip.",sprintf("%03d",bs),sep='')
 		cat(paste("\nsave boostrap seq alignment to",file))

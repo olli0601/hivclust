@@ -491,6 +491,49 @@ project.Gates.RootSeqSim.getrootseq<- function()
 	}	
 }
 ######################################################################################
+project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML<- function()
+{
+	DATA				<<- "/work/or105/Gates_2014"
+	#DATA				<<- '/Users/Oliver/duke/2014_Gates'
+	dir.name			<- DATA  	
+	indir				<- paste(dir.name,'methods_comparison_rootseqsim/140813',sep='/')
+	#	ExaML bootstrap args
+	bs.from		<- 0
+	bs.to		<- 0
+	bs.n		<- 100
+	
+	#	search for 'checkdraw' files
+	infiles		<- list.files(indir)
+	infiles		<- infiles[ sapply(infiles, function(x) grepl('checkdraw[0-9]+',x) ) ]	
+	if(!length(infiles))	stop('cannot find files matching criteria')
+	
+	outdir		<- indir
+	for(infile in infiles)
+	{
+		#infile		<- files[1]
+		infile		<- substr(infile, 1, nchar(infile)-2)
+		insignat	<- regmatches(infile, regexpr('checkdraw[0-9]+_.*', infile))
+		insignat	<- regmatches(insignat,regexpr('_.*',insignat))
+		insignat	<- substr(insignat,2,nchar(insignat))
+		infile		<- regmatches(infile, regexpr('.*checkdraw[0-9]+', infile))
+		
+		
+		cmd			<- hivc.cmd.examl.bootstrap(indir, infile, insignat, insignat, bs.from=bs.from, bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
+		dummy		<- lapply(cmd, function(x)
+				{				
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q="pqeph", hpc.mem="3850mb", hpc.nproc=8)
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("exa",signat,sep='.')
+					#cat(x)
+					hivc.cmd.hpccaller(outdir, outfile, x)
+					Sys.sleep(1)
+				})
+		stop()
+	}
+	
+}
+######################################################################################
 project.Gates.RootSeqSim.runxml<- function()
 {
 	DATA		<<- "/work/or105/Gates_2014"
@@ -535,7 +578,8 @@ project.Gates.RootSeqSim.runxml<- function()
 ######################################################################################
 project.Gates.RootSeqSim<- function()
 {
-	project.Gates.RootSeqSim.runxml()
+	#project.Gates.RootSeqSim.runxml()
+	project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML()
 }
 ######################################################################################
 project.hivc.check<- function()

@@ -11686,7 +11686,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 51
 		method.thresh.pcoal		<- 0.3
-		method.minLowerUWithNegT<- 1
+		method.minLowerUWithNegT<- 0
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
