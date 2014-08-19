@@ -508,9 +508,9 @@ project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML<- function()
 	if(!length(infiles))	stop('cannot find files matching criteria')
 	
 	outdir		<- indir
-	for(infile in infiles)
+	for(i in seq_along(infiles))
 	{
-		#infile		<- files[1]
+		infile		<- infiles[i]
 		infile		<- substr(infile, 1, nchar(infile)-2)
 		insignat	<- regmatches(infile, regexpr('checkdraw[0-9]+_.*', infile))
 		insignat	<- regmatches(insignat,regexpr('_.*',insignat))
@@ -529,7 +529,8 @@ project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML<- function()
 					hivc.cmd.hpccaller(outdir, outfile, x)
 					Sys.sleep(1)
 				})
-		stop()
+		if(i==3)
+			stop()
 	}
 	
 }
