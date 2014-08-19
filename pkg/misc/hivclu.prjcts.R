@@ -539,7 +539,7 @@ project.Gates.RootSeqSim.runxml<- function()
 {
 	DATA		<<- "/work/or105/Gates_2014"
 	#DATA		<<- '/Users/Oliver/duke/2014_Gates'		
-	if(0)	#all tasks combined
+	if(1)	#all tasks combined
 	{
 		indir		<- paste(DATA,'methods_comparison_rootseqsim/140813',sep='/')
 		#search for XML files in indir
@@ -554,13 +554,13 @@ project.Gates.RootSeqSim.runxml<- function()
 			cmd			<- paste(cmd, hivc.cmd.beast.read.nexus(indir, tmp, indir, tree.id=NA, method.node.stat='any.node'), sep='\n')
 			cmd			<- paste(cmd, hivc.cmd.beast.run.treeannotator(indir, infile, insignat, prog.beastmcc=PR.BEASTMCC, beastmcc.burnin=500, beastmcc.heights="median"), sep='\n')
 			cat(cmd)	
-			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=391, hpc.mem="3700mb")		
+			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=591, hpc.mem="7700mb")		
 			outdir		<- indir
 			outfile		<- paste("b2m.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
 			hivc.cmd.hpccaller(outdir, outfile, cmd)		
 		}
 	}
-	if(1)	#only parse existing output
+	if(0)	#only parse existing output
 	{
 		indir		<- paste(DATA,'methods_comparison_rootseqsim/140813/save',sep='/')
 		#search for XML files in indir
@@ -579,8 +579,8 @@ project.Gates.RootSeqSim.runxml<- function()
 ######################################################################################
 project.Gates.RootSeqSim<- function()
 {
-	#project.Gates.RootSeqSim.runxml()
-	project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML()
+	project.Gates.RootSeqSim.runxml()
+	#project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML()
 }
 ######################################################################################
 project.hivc.check<- function()
