@@ -504,7 +504,7 @@ project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML<- function()
 	
 	#	search for 'checkdraw' files
 	infiles		<- list.files(indir)
-	infiles		<- infiles[ sapply(infiles, function(x) grepl('checkdraw[0-9]+',x) ) ]	
+	infiles		<- infiles[ sapply(infiles, function(x) grepl('.*checkdraw[0-9]+.*R$',x) ) ]	
 	if(!length(infiles))	stop('cannot find files matching criteria')
 	
 	outdir		<- indir

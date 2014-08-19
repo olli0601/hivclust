@@ -3235,7 +3235,7 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	set(nt.table, tmp, 'X.clu', nt.table[tmp, X.seq])
 	tmp			<- nt.table[, which(YX>X.clu)]
 	if(length(tmp))	cat(paste('\nWARNING: YX>X.clu for entries n=',length(tmp)))
-	stopifnot(length(tmp)==0)	
+	#stopifnot(length(tmp)==0)	
 	set(nt.table, tmp, 'YX', nt.table[tmp, X.clu])
 	#	make sure all risk factors are in nt.table for every patient (even if zero)
 	tmp			<- merge( unique(subset(nt.table, select=c(risk, Patient))), unique(subset(risk.df, select=c(risk,factor))), by='risk', allow.cartesian=TRUE)
@@ -9182,6 +9182,28 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	#	3ka2H5C3V51			(ART.C)
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3ka2H5C3V51'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka2H2C3V51N0			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H2C3V51N0'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka2H4C3V51N0			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H4C3V51N0'
 	method.RISK		<- 'm2BwmxMv.tp'
 	method.WEIGHT	<- ''
 	method.DATING	<- 'sasky'
