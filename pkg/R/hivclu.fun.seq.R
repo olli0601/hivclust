@@ -182,6 +182,118 @@ seq.dist<- function(seq.DNAbin.matrix, verbose=1)
 	ans
 }
 ######################################################################################
+#' Reads newick file with singletons and node labels (extends read.newick in phytools)
+#' @export
+seq.read.newick<- function (file = "", text) 
+{
+	if (file != "") 
+		text <- scan(file, sep = "\n", what = "character")	
+	Nnode		<- length(gregexpr("\\(", text)[[1]])
+	Ntip		<- 1+length(gregexpr(",", text)[[1]])	
+	tree 		<- unlist(strsplit(text, NULL))
+	tip.label 	<- vector(mode = "character")
+	node.label	<- vector(mode = 'character')
+	edge 		<- matrix(data = 0, Nnode + Ntip - 1, 2)
+	edge.length <- rep(0, Nnode + Ntip - 1)
+	ntip 		<- vector(mode = "numeric")
+	currnode 	<- Ntip + 1
+	nodecount 	<- currnode
+	i 	<- 1
+	j 	<- 1
+	k 	<- 1
+	while(tree[i] != ";") 
+	{
+		if(tree[i] == "(") 
+		{
+			edge[j, 1] <- currnode
+			i <- i + 1
+			if(is.na(match(tree[i], c("(", ")", ",", ":", ";")))) 
+			{
+				l				<- gregexpr(",|:|\\)", substr(text, i, nchar(text)))[[1]][1]
+				stopifnot(l>0)
+				tip.label[k] 	<- substr(text, i, i+l-2)	
+				i				<- i+l-1
+				edge[j, 2] 		<- k
+				k 				<- k + 1
+				ntip[j] 		<- 1
+				if (tree[i] == ":") 
+				{
+					i				<- i + 1
+					l				<- gregexpr(",|\\)", substr(text, i, nchar(text)))[[1]][1]
+					stopifnot(l>0)
+					edge.length[j]	<- as.numeric(substr(text, i, i+l-2))
+					i				<- i+l-1					
+				}
+			}
+			else if(tree[i] == "(") 
+			{
+				nodecount 	<- nodecount + 1
+				currnode 	<- nodecount
+				edge[j, 2] 	<- currnode
+			}
+			j <- j + 1
+		}
+		else if(tree[i] == ")") 
+		{
+			i <- i + 1			
+			if(is.na(match(tree[i], c(":", ")")))) 
+			{
+				l	<- gregexpr(":|;|\\)", substr(text, i, nchar(text)))[[1]][1]
+				stopifnot(l>0)
+				node.label[currnode-Ntip]	<- substr(text, i, i+l-2)
+				i	<- i+l-1				
+			}
+			if(tree[i] == ":") 
+			{
+				i 	<- i + 1
+				l	<- gregexpr(",|\\)", substr(text, i, nchar(text)))[[1]][1]
+				stopifnot(l>0)
+				edge.length[match(currnode, edge[, 2])] <- as.numeric(substr(text, i, i+l-2))
+				i	<- i+l-1	
+			}
+			ntip[match(currnode, edge[, 2])] 	<- sum(ntip[which(edge[, 1] == currnode)])
+			currnode 							<- edge[match(currnode, edge[, 2]), 1]
+		}
+		else if(tree[i]==",") 
+		{
+			edge[j, 1] 	<- currnode
+			i 			<- i + 1
+			if(is.na(match(tree[i], c("(", ")", ",", ":", ";")))) 
+			{
+				l				<- gregexpr(",|:|\\)", substr(text, i, nchar(text)))[[1]][1]
+				stopifnot(l>0)
+				tip.label[k] 	<- substr(text, i, i+l-2)	
+				i				<- i+l-1
+				edge[j, 2] 		<- k
+				k 				<- k + 1
+				ntip[j] 		<- 1
+				if (tree[i] == ":") 
+				{
+					i				<- i + 1
+					l				<- gregexpr(",|\\)", substr(text, i, nchar(text)))[[1]][1]
+					stopifnot(l>0)
+					edge.length[j]	<- as.numeric(substr(text, i, i+l-2))
+					i				<- i+l-1
+				}
+			}
+			else if (tree[i] == "(") 
+			{
+				nodecount 	<- nodecount + 1
+				currnode 	<- nodecount
+				edge[j, 2] 	<- currnode
+			}
+			j <- j + 1
+		}
+	}
+	phy <- list(edge = edge, Nnode = as.integer(Nnode), tip.label = tip.label, Ndesc = ntip)
+	if(sum(edge.length) > 1e-08) 
+		phy$edge.length	<- edge.length
+	if(length(node.label))
+		phy$node.label	<- node.label
+	class(phy) <- "phylo"
+	return(phy)
+}
+######################################################################################
 #' @export
 seq.read.GenBank<- function (access.nb, seq.names = access.nb, species.names = TRUE, gene.names = FALSE, as.character = FALSE, attributes= c("origin")) 
 {
@@ -369,7 +481,8 @@ seq.rmgaps<- function(seq.DNAbin.matrix, rm.only.col.gaps=1, rm.char='-', verbos
 	else
 	{		
 		gap					<- apply(seq.DNAbin.matrix,2,function(x) all(x==rm.char)) 
-		if(verbose)	cat(paste("\nremove gaps, n=",length(which(gap))))
+		if(verbose)		cat(paste("\nremove gaps, n=",length(which(gap))))
+		if(verbose>1)	cat(paste("\nremove gaps, at pos=",which(gap)))
 		seq.DNAbin.matrix	<- seq.DNAbin.matrix[,!gap]	
 	}
 	as.DNAbin( seq.DNAbin.matrix )

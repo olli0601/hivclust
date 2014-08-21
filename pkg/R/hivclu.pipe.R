@@ -825,6 +825,33 @@ hivc.pipeline.various<- function()
 		cmd			<- ''
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
+	if(1)	#compute branch length distances between tips in phylogenetic trees
+	{
+		indir		<- paste(DATA,"tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013",sep='/')
+		infiles		<- list.files(indir)
+		infiles		<- infiles[ grepl('^ExaML_result.*finaltree*',infiles)  ]	
+		if(!length(infiles))	stop('cannot find files matching criteria')				
+		cmd		<- sapply( seq_along(infiles), function(i)
+			{
+				infile		<- infiles[i]
+				file		<- paste(indir, '/', infile, sep='')
+				hivc.cmd.ph.dist.tips(file)					
+			})	
+		#put 50 into one job
+		n		<- 50
+		dummy<- lapply( seq_len(length(cmd)/n), function(i)
+				{					
+					tmp			<- paste( cmd[ seq.int((i-1)*n+1, min(i*n, length(cmd))) ], sep='\n' )
+					tmp			<- hivc.cmd.hpcwrapper(tmp, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="31400mb")
+					signat		<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outdir		<- indir
+					outfile		<- paste("dtp",signat,sep='.')					
+					cat(tmp)
+					hivc.cmd.hpccaller(outdir, outfile, tmp)
+					stop()			
+				})
+		stop()
+	}
 	if(0)	#compute raw pairwise genetic distances accounting correctly for ambiguous IUPAC nucleotides 
 	{				
 		gd.max		<- 0.045
@@ -855,7 +882,7 @@ hivc.pipeline.various<- function()
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
 	}
-	if(1)
+	if(0)
 	{
 		project.Gates.RootSeqSim()
 		quit("no")

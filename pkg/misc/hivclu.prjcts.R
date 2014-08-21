@@ -499,7 +499,7 @@ project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML<- function()
 	indir				<- paste(dir.name,'methods_comparison_rootseqsim/140813',sep='/')
 	#	ExaML bootstrap args
 	bs.from		<- 0
-	bs.to		<- 0
+	bs.to		<- 100
 	bs.n		<- 100
 	
 	#	search for 'checkdraw' files
@@ -579,8 +579,8 @@ project.Gates.RootSeqSim.runxml<- function()
 ######################################################################################
 project.Gates.RootSeqSim<- function()
 {
-	project.Gates.RootSeqSim.runxml()
-	#project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML()
+	#project.Gates.RootSeqSim.runxml()
+	project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML()
 }
 ######################################################################################
 project.hivc.check<- function()
@@ -4188,6 +4188,7 @@ project.hivc.examlclock<- function()
 	#	
 	require(ape)
 	require(adephylo)
+	require(phytools)
 	indir				<- paste(DATA,"tmp",sep='/')
 	infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	infiletree			<- paste(infile,"examlbs500",sep="_")
@@ -4196,9 +4197,18 @@ project.hivc.examlclock<- function()
 	insignat			<- "Wed_Dec_18_11:37:00_2013"		
 	file				<- paste(indir,'/',infiletree,'_',gsub('/',':',insignat),".R",sep='')
 	load(file)
-	tmp					<- node.depth.edgelength(ph)
-	df					<- data.table(FASTASampleCode= ph$tip.label, height=tmp[seq_len(Ntip(ph))])
-	
+	#
+	file	<- paste( indir, '/', infiletree, '_', insignat,'_ExaMLTree.pdf', sep='' )
+	pdf(file=file, h=150, w=10)
+	plot(ph, cex=0.7)
+	dev.off()
+	#	visual inspection: H0576-19 is 'outgoup' to Dutch seqs (and not in the Dutch database)
+	tmp		<- which(ph$tip.label=="H0576-19")
+	ph		<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
+	ph		<- ladderize(ph)	
+	tmp		<- node.depth.edgelength(ph)
+	df		<- data.table(FASTASampleCode= ph$tip.label, height=tmp[seq_len(Ntip(ph))])
+	#
 	file				<- paste(indircov,'/',infilecov,".R",sep='')
 	load(file)
 	df			<- merge( subset(df.all, select=c(FASTASampleCode, Patient, PosSeqT, AnyPos_T1, AnyT_T1)), df, by='FASTASampleCode' )
@@ -4247,6 +4257,47 @@ project.hivc.examlclock<- function()
 			theme(legend.position=c(0,1), legend.justification=c(0,1))	
 	file	<- '/Users/Oliver/duke/2014_HIVNL_monitoringreport/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_clock.pdf'
 	ggsave(file=file, w=15, h=5)
+	#
+	#	repeat R2 for all bootstrap trees, just to check
+	#
+	indir			<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013'
+	infiles			<- list.files(indir)
+	infiles			<- infiles[ grepl('^ExaML_result.*finaltree*',infiles)  ]	
+	if(!length(infiles))	stop('cannot find files matching criteria')	
+	df.r2t			<- lapply(seq_along(infiles), function(j)
+			{					
+				infile	<- infiles[j]
+				cat(paste('\nprocess file', infile))
+				file	<- paste(indir, infile, sep='/')
+				ph		<- read.tree(file)
+				tmp		<- which(ph$tip.label=="H0576-19")
+				ph		<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
+				ph		<- ladderize(ph)
+				tmp		<- node.depth.edgelength(ph)
+				df		<- data.table(FASTASampleCode= ph$tip.label, height=tmp[seq_len(Ntip(ph))])
+				df		<- merge( subset(df.all, select=c(FASTASampleCode, Patient, PosSeqT, AnyPos_T1, AnyT_T1)), df, by='FASTASampleCode' )
+				set(df, NULL, 'PosSeqT', hivc.db.Date2numeric(df[,PosSeqT]))
+				set(df, NULL, 'AnyT_T1', hivc.db.Date2numeric(df[,AnyT_T1]))
+				df		<- subset(df, !is.na(PosSeqT))
+				df		<- df[, 	{
+										z<- which.min(PosSeqT)
+										list(FASTASampleCode=FASTASampleCode[z], PosSeqT= PosSeqT[z], AnyT_T1=AnyT_T1[z], height=height[z])
+									}, by='Patient']
+				set(df, NULL, 'BS', as.numeric(substr(infile, nchar(infile)-2, nchar(infile))) )
+				df
+			})
+	df.r2t		<- do.call('rbind',df.r2t)
+	file	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_R2T.R'
+	save(df.r2t, file=file)
+	df.r2t.su	<- df.r2t[,	{
+								tmp		<- lm(height ~ PosSeqT)		 					 	
+								list( R2=round(summary(tmp)$r.squared,d=3) )				
+							},by='BS']						
+	ggplot( df.r2t.su, aes(x=R2)) + geom_histogram(binwidth=0.05)
+	#> summary(df.r2t.su[, R2])
+	#Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+	#0.0570  0.1020  0.1140  0.1136  0.1280  0.1740
+
 	#
 	#	within host divergence
 	#

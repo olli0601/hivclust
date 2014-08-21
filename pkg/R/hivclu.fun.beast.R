@@ -446,20 +446,28 @@ hivc.beast2out.read.nodeidtree <- function(bstr, method.node.stat='any.node')
 			}) 			
 	dummy.tree	<- paste(dummy.tree, collapse=':',sep='')
 	dummy.tree	<- regmatches(dummy.tree, regexpr('\\(.*',dummy.tree))
-	dummy.tree	<- paste(dummy.tree, ';', sep='')
-	read.tree(text=dummy.tree)	
+	dummy.tree	<- paste(dummy.tree, ';', sep='')	
+	ph<-  tryCatch(
+		{
+			read.tree(text=dummy.tree)	
+		}, error=function(e)
+		{ 
+			cat(paste('\nerror in read.tree\n',e$message,'\ntry seq.read.newick'))
+			return( seq.read.newick(text=dummy.tree) )			
+		})
+	ph
 }
 ######################################################################################
-hivc.beast2out.read.nexus.and.stats <- function(file, tree.id=NA, method.node.stat='any.node') 
+hivc.beast2out.read.nexus.and.stats<- function(file, tree.id=NA, method.node.stat='any.node') 
 {	
 	stopifnot(method.node.stat%in%c('any.node','inner.node'))
 	
 	X				<- scan(file = file, what = "", sep = "\n", quiet = TRUE)	
 	#	read TRANSLATE chunk
-	X.endblock		<- grep("END;|ENDBLOCK;", X, ignore.case = TRUE)
+	X.endblock		<- grep("END;|ENDBLOCK;|End;", X, ignore.case = TRUE)
 	X.semico 		<- grep(";", X)
-	X.i1 			<- grep("BEGIN TREES;", X, ignore.case = TRUE)
-	X.i2 			<- grep("TRANSLATE", X, ignore.case = TRUE)	
+	X.i1 			<- grep("BEGIN TREES;|Begin trees;", X, ignore.case = TRUE)
+	X.i2 			<- grep("TRANSLATE|Translate", X, ignore.case = TRUE)	
 	tmp 			<- X.semico[X.semico > X.i2][1]
 	tmp 			<- X[(X.i2 + 1):tmp]
 	tmp				<- gsub('[,;]$','',gsub('^\\s+','',tmp))
@@ -519,8 +527,11 @@ hivc.beast2out.read.nexus.and.stats <- function(file, tree.id=NA, method.node.st
 					set(tmp, NULL, 'TREE_ID', tree.id[i] )
 					tmp
 				})
-		node.stat	<- do.call('rbind',node.stat)
-		set(node.stat, NULL, 'NODE_ID', NA_integer_)
+		if(length(node.stat)>1)
+			node.stat	<- do.call('rbind',node.stat)
+		if(length(node.stat)==1)
+			node.stat	<- node.stat[[1]]
+		node.stat[, NODE_ID:=NA_integer_]		
 		setkey(node.stat, TREE_ID, NODE_PARSE_ID)
 		btree		<- vector('list',length(tree.id))
 		for(i in seq_along(tree.id))
@@ -553,10 +564,15 @@ hivc.beast2out.read.nexus.and.stats <- function(file, tree.id=NA, method.node.st
 			btree.i$node.label	<- NULL	
 			btree[[i]]			<- btree.i
 		}
+		if(length(btree)>=2)
+		{
+			names(btree)	<- tree.id
+			class(btree)	<- "multiPhylo"			
+		}
+		if(length(btree)<2)
+			btree	<- btree[[1]]
 		tmp				<- node.stat[, length(which(is.na(NODE_ID)))]
 		cat(paste('\nTotal unlinked node statistics [should be zero], n=', tmp  ))
-		names(btree)	<- tree.id
-		class(btree)	<- "multiPhylo"
 		set(node.stat,NULL,'NODE_PARSE_ID',NULL)
 	}
 	list(tree=btree, node.stat=node.stat)	 

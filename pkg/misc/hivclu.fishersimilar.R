@@ -9168,6 +9168,17 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outfile			<- infile
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)				
 	#	m2Bwmx
+	#	3ka2H1C3V51			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H1C3V51'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''	
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)					
+	#	m2Bwmx
 	#	3ka2H4C3V51			(ART.C)
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3ka2H4C3V51'

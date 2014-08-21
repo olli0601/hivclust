@@ -376,7 +376,8 @@ if(length(args))
 					BEAST2.PIPE.CLUTREES	= "hivc.pipeline.BEASTout.get.cluster.trees",
 					BEAST2.CLUTREES			= "hivc.prog.BEAST2.get.cluster.trees",
 					BEAST2.CLUPOSTERIOR		= "hivc.prog.BEAST2.process.cluster.trees",					
-					BEAST2.PLOTCLUTREES		= "hivc.prog.BEAST2.plot.cluster.trees",					
+					BEAST2.PLOTCLUTREES		= "hivc.prog.BEAST2.plot.cluster.trees",
+					PH.DISTTIPS				= "hivc.prog.get.dist.tips",
 					RECOMB.PROCESS3SEQOUT	= "hivc.prog.recombination.process.3SEQ.output",
 					RECOMB.CHECKCANDIDATES	= "hivc.prog.recombination.check.candidates",
 					RECOMB.PLOTINCONGRUENCE	= "hivc.prog.recombination.plot.incongruence",
@@ -395,7 +396,6 @@ if(length(args))
 }
 ###############################################################################
 if(HIVC.DEBUG)	options(error= my.dumpframes)	
-require(abc.n)
 cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	
 cat("\nhivclu: ",ifelse(HIVC.DEBUG,"debug","")," end\n")

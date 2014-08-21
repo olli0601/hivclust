@@ -2623,6 +2623,31 @@ hivc.prog.get.clustering<- function()
 	ans
 }
 ######################################################################################
+hivc.prog.get.dist.tips<- function()
+{
+	require(ape)
+	require(adephylo)
+	require(data.table)
+	require(RColorBrewer)
+	verbose	<- 1
+	file	<- NA
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,5),
+									file= return(substr(arg,7,nchar(arg))),NA)	}))
+		if(length(tmp)>0) file<- tmp[1]								
+	}		
+	if(verbose)	cat(paste('\nget dist tips for file=',file))
+	ph		<- read.tree(file)			
+	if(verbose)	cat(paste('\nloaded file=', tmp))
+	print(ph)
+	brl		<- distTips(ph , method='patristic')
+	file	<- paste( file,"_distTips.R", sep='' )
+	cat(paste('\nsave dist tips to file=',file))
+	save(brl, file=file)	
+}
+######################################################################################
 hivc.prog.get.clustering.precompute<- function()
 {
 	library(ape)

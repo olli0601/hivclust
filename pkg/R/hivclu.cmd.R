@@ -98,6 +98,9 @@ PR.BEAST2CLUPOSTERIOR	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BE
 PR.BEAST2.PLOTCLUTREES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.PLOTCLUTREES",sep='/')
 
 #' @export
+PR.PH.DISTTIPS	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=PH.DISTTIPS",sep='/')
+
+#' @export
 PR.BETAREG.ESTRISK		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BETAREG.ESTRISK",sep='/')
 
 #' @export
@@ -122,6 +125,21 @@ hivc.cmd.hpcsys<- function()
 	tmp<- system('domainname',intern=T)
 	if(!nchar(tmp))	tmp<- "debug"
 	tmp
+}
+######################################################################################
+#' @export
+hivc.cmd.ph.dist.tips<- function(file, prog=PR.PH.DISTTIPS)
+{
+	cmd<- "#######################################################
+# start: run PR.PH.DISTTIPS
+#######################################################"
+	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	cmd<- paste(cmd,prog," -file=",file,sep='')
+	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
+	cmd<- paste(cmd,"#######################################################
+# end: run PR.PH.DISTTIPS
+#######################################################\n",sep='')
+	cmd			
 }
 ######################################################################################
 #' generate clustalo command
