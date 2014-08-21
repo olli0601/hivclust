@@ -841,7 +841,7 @@ hivc.pipeline.various<- function()
 		n		<- 50
 		dummy<- lapply( seq_len(length(cmd)/n), function(i)
 				{					
-					tmp			<- paste( cmd[ seq.int((i-1)*n+1, min(i*n, length(cmd))) ], sep='\n' )
+					tmp			<- paste( cmd[ seq.int((i-1)*n+1, min(i*n, length(cmd))) ], collapse='' )
 					tmp			<- hivc.cmd.hpcwrapper(tmp, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="31400mb")
 					signat		<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outdir		<- indir
