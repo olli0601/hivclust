@@ -454,6 +454,10 @@ hivc.beast2out.read.nodeidtree <- function(bstr, method.node.stat='any.node')
 		{ 
 			cat(paste('\nerror in read.tree\n',e$message,'\ntry seq.read.newick'))
 			return( seq.read.newick(text=dummy.tree) )			
+		}, warning=function(e)
+		{ 
+			cat(paste('\nwarning in read.tree\n',e$message,'\ntry seq.read.newick'))
+			return( seq.read.newick(text=dummy.tree) )			
 		})
 	ph
 }

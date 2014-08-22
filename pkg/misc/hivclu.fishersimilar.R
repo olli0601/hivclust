@@ -1803,7 +1803,7 @@ gamlss.centiles.get<- function(obj, xvar, cent = c(2.5, 97.5), with.ordering=TRU
 	ans
 }
 ######################################################################################
-project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='empirical', method.minQLowerU=0.01, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes= 365/2, dur.AcuteMaybe=320, plot.file=NULL)
+project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='empirical', method.minQLowerU=0.01, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes= 365/2, dur.AcuteMaybe=320, t.recent.endctime=2011, plot.file=NULL)
 {
 	require(MASS)
 	require(grid)
@@ -1826,23 +1826,25 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	cat(paste('\nnumber of seroconverters with !is.na(NegT), n=',nrow(df.sc.negT)))
 	
 	tmp				<- df.sc.negT[, list(	dt.NegT=as.numeric(difftime(AnyPos_T1, NegT, units='days'))/365,
-					mp.NegT=round(as.numeric(difftime(AnyPos_T1, NegT, units='days'))/adjust.NegT),
-					dt.CD4=as.numeric(difftime(PosCD4_T1, AnyPos_T1, units='days'))/365,
-					AnyPos_a=as.numeric(difftime(AnyPos_T1, DateBorn, units='days'))/365,
-					AnyPos_y=hivc.db.Date2numeric(AnyPos_T1)), by='Patient']
+											mp.NegT=round(as.numeric(difftime(AnyPos_T1, NegT, units='days'))/adjust.NegT),
+											dt.CD4=as.numeric(difftime(PosCD4_T1, AnyPos_T1, units='days'))/365,
+											AnyPos_a=as.numeric(difftime(AnyPos_T1, DateBorn, units='days'))/365,
+											AnyPos_y=hivc.db.Date2numeric(AnyPos_T1)), by='Patient']
 	#	seroconverters
 	df.sc.negT		<- merge(df.sc.negT, tmp, by='Patient')
 	#	seroconverters with acute infection at diagnosis
-	df.scay.cd4		<- subset( df.sc.negT, isAcute=='Yes' & mp.NegT>0 & AnyPos_y>adjust.AnyPos_y & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+	df.scay.cd4		<- subset( df.sc.negT, isAcute=='Yes' & mp.NegT>0 & AnyPos_y>adjust.AnyPos_y & AnyPos_y<t.recent.endctime & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
 	#	seroconverters with acute infection at diagnosis
-	df.scaym.cd4	<- subset( df.sc.negT, ( isAcute=='Maybe' ) & mp.NegT>0 & AnyPos_y>adjust.AnyPos_y & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)	
+	df.scaym.cd4	<- subset( df.sc.negT, ( isAcute=='Maybe' ) & mp.NegT>0 & AnyPos_y>adjust.AnyPos_y & AnyPos_y<t.recent.endctime & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)	
 	#	seroconverters with chronic infection at diagnosis
-	df.scchr.negT	<- subset( df.sc.negT, isAcute=='No' & AnyPos_y>adjust.AnyPos_y)
-	df.scana.negT	<- subset( df.sc.negT, is.na(isAcute) & AnyPos_y>adjust.AnyPos_y)
+	df.scchr.negT	<- subset( df.sc.negT, isAcute=='No' & AnyPos_y>adjust.AnyPos_y & AnyPos_y<t.recent.endctime)
+	df.scana.negT	<- subset( df.sc.negT, is.na(isAcute) & AnyPos_y>adjust.AnyPos_y & AnyPos_y<t.recent.endctime)
 	#	seroconverters with chronic infection at diagnosis and 1st CD4 count within 1 year after diagnosis and before ART
 	df.scchr.cd4	<- subset( df.scchr.negT, dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
 	df.scana.cd4	<- subset( df.scana.negT, dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
-	
+	#	no evidence from midpoints that calendar time matters
+	#ggplot(subset(df.scchr.cd4, CD4_T1<250), aes(x=AnyPos_y, y=mp.NegT)) + geom_point() + geom_smooth()
+	#ggplot(subset(df.scchr.cd4, CD4_T1>250 & CD4_T1<850), aes(x=AnyPos_y, y=mp.NegT)) + geom_point() + geom_smooth()	
 	m4a	<- glm.nb(mp.NegT ~  1, data=subset(df.scchr.cd4, CD4_T1>850 & dt.NegT<4), link=identity, trace= 1, maxit= 50)	
 	m4d	<- glm.nb(mp.NegT ~  AnyPos_a, data=subset(df.scchr.negT, AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
 	m4e	<- glm.nb(mp.NegT ~  AnyPos_a, data=subset(df.scana.negT, AnyPos_a<=45), link=identity, trace= 1, maxit= 50)	
@@ -11083,7 +11085,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		X.incare				<- project.athena.Fisheretal.X.followup(X.incare, df.all, df.immu, t.period=t.period, t.endctime=t.endctime)
 		X.b4care				<- project.athena.Fisheretal.X.b4care(df.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, method.minLowerUWithNegT=method.minLowerUWithNegT)
 		tmp						<- merge(X.incare, X.b4care, by=c('t.Patient','t'))
-		cat(paste('\nnumber entries (Patient,t) that overlap in and before care [should be zero], n=',nrow(tmp)))
+		cat(paste('\nnumber entries (Patient,t) that overlap in and before care [should be zero], n=',nrow(tmp)))		
 		X.pt					<- merge(X.incare, X.b4care, by=c('t.Patient','t'), all.x=1, all.y=1)
 		set(X.pt, X.pt[,which(is.na(stage))], 'stage', 'U')							
 		X.pt[, AnyT_T1:=NULL]
@@ -11104,6 +11106,21 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		#	compute infection window of recipient for direct potential transmitters ri	
 		Y.infwindow				<- project.athena.Fisheretal.Y.infectiontime( ri, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=1, method='for.infected', method.minLowerUWithNegT=TRUE)
 		Y.infwindow[, AnyPos_a:=NULL]
+		#	some plots
+		if(0)
+		{
+			tmp	<- X.b4care[,  {
+						z<- sapply(c(0.01, 0.02, 0.03, 0.04, 0.05, 0.1), function(x) max(which(U.score>=x)) )								
+						list(U=t[z], Q=c(0.01, 0.02, 0.03, 0.04, 0.05, 0.1) , AnyPos_T1=AnyPos_T1[1], AnyPos_a=AnyPos_a[1], isAcute=isAcute[1])	
+					}, by='t.Patient']
+			tmp[, t2D:= tmp[, AnyPos_T1-U]]
+			set(tmp,NULL,'Q',tmp[,factor(Q)]) 
+			tmp	<- subset(tmp, U>1996.5 & U<2011)
+			ggplot(tmp, aes(x=U, y=t2D, colour=Q)) + geom_point(data=subset(tmp, Q==0.03), position=position_jitter(w = 0.1, h=0), alpha=0.65) + geom_smooth() +
+					scale_y_continuous(breaks=seq(0,20,1)) + scale_x_continuous(breaks=seq(1996,2020,1)) + labs(y='time to diagnosis\n(years)', x='time of HIV infection', colour='quantile\nparameter')
+			file	<- '/Users/Oliver/duke/2014_HIVMSMbyProp/fig/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_2011_Time2Diag.pdf'
+			ggsave(file=file, w=8, h=8)			
+		}
 		if('FASTASampleCode'%in%colnames(df.tpairs))		#mode 1
 		{			
 			tmp						<- subset(df.tpairs, select=c(t.Patient, t.FASTASampleCode, FASTASampleCode))
@@ -11715,11 +11732,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Bwmx.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.2
+		method.minQLowerU		<- 0.01
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 51
 		method.thresh.pcoal		<- 0.3
-		method.minLowerUWithNegT<- 0
+		method.minLowerUWithNegT<- 1
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
@@ -11973,7 +11990,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 't2inf',method.PDT,method,sep='')
 	tmp				<- project.athena.Fisheretal.t2inf(	indircov, infile.cov.study,
 														method.Acute=method.Acute, method.minQLowerU=method.minQLowerU,
-														adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], 
+														adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], t.recent.endctime=t.recent.endctime, 
 														plot.file=plot.file)
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args

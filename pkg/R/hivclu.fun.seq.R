@@ -182,6 +182,47 @@ seq.dist<- function(seq.DNAbin.matrix, verbose=1)
 	ans
 }
 ######################################################################################
+#' Collapse singleton nodes (bugfix to collapse.singles in ape)
+#' @export
+seq.collapse.singles<- function (tree) 
+{
+	elen 		<- tree$edge.length
+	xmat 		<- tree$edge
+	node.lab 	<- tree$node.label
+	nnode 		<- tree$Nnode
+	ntip 		<- length(tree$tip.label)
+	root		<- 0
+	singles 	<- NA
+	while (length(singles) > 0) 
+	{
+		tx <- tabulate(xmat[, 1])
+		singles <- which(tx == 1)
+		if (length(singles) > 0) 
+		{
+			i 					<- singles[1]
+			prev.node 			<- which(xmat[, 2] == i)
+			next.node 			<- which(xmat[, 1] == i)
+			xmat[prev.node, 2] 	<- xmat[next.node, 2]
+			xmat 				<- xmat[xmat[, 1] != i, , drop=0]
+			xmat[xmat > i] 		<- xmat[xmat > i] - 1L
+			if(!length(prev.node))
+				root			<- root + elen[next.node]
+			if(length(prev.node))
+				elen[prev.node] <- elen[prev.node] + elen[next.node]
+			if (!is.null(node.lab)) 
+				node.lab <- node.lab[-c(i - ntip)]
+			nnode <- nnode - 1L
+			elen <- elen[-next.node]
+		}
+	}
+	tree$edge 			<- xmat
+	tree$edge.length 	<- elen
+	tree$node.label 	<- node.lab
+	tree$Nnode 			<- nnode
+	tree$root.edge		<- root
+	tree
+}
+######################################################################################
 #' Reads newick file with singletons and node labels (extends read.newick in phytools)
 #' @export
 seq.read.newick<- function (file = "", text) 
@@ -284,6 +325,16 @@ seq.read.newick<- function (file = "", text)
 			}
 			j <- j + 1
 		}
+	}
+	tmp	<- which(edge[,1]==0)
+	if(length(tmp))
+	{
+		edge		<- edge[-tmp,]
+		edge.length	<- edge.length[-tmp]		
+		tmp			<- sort( unique( as.numeric( edge ) ) )
+		tmp			<- rbind(tmp, seq_along(tmp))		
+		tmp			<- sapply( as.numeric( edge ), function(j)	tmp[2, match(j, tmp[1,])] )
+		edge		<- matrix(tmp, ncol=2)
 	}
 	phy <- list(edge = edge, Nnode = as.integer(Nnode), tip.label = tip.label, Ndesc = ntip)
 	if(sum(edge.length) > 1e-08) 
