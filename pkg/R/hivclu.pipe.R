@@ -825,7 +825,7 @@ hivc.pipeline.various<- function()
 		cmd			<- ''
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
-	if(1)	#compute branch length distances between tips in phylogenetic trees
+	if(0)	#compute branch length distances between tips in phylogenetic trees
 	{
 		indir		<- paste(DATA,"tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013",sep='/')
 		infiles		<- list.files(indir)
@@ -885,6 +885,11 @@ hivc.pipeline.various<- function()
 	if(0)
 	{
 		project.Gates.RootSeqSim()
+		quit("no")
+	}
+	if(1)
+	{
+		project.hivc.examl.median.brl()
 		quit("no")
 	}
 	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')

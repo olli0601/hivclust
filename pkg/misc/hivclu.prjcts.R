@@ -4180,7 +4180,69 @@ project.hivc.clustering.selectparticularclusters<- function()
 		tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=3, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
 	}
 }
-
+######################################################################################
+project.hivc.examl.median.brl<- function()
+{
+	require(reshape2)
+	require(data.table)
+	require(ape)
+	#stop()
+	indir					<- paste(DATA,"fisheretal_data",sep='/')
+	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	infiletree				<- paste(infile,"examlbs500",sep="_")
+	insignat				<- "Wed_Dec_18_11:37:00_2013"
+	infilepairs				<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+	
+	file			<- paste(indir, '/', infilepairs, '_', gsub('/',':',insignat),"_tpairs.R",sep='')
+	load(file)	#expect df.tpairs
+	print(df.tpairs)
+	
+	indir.dtp		<- paste(DATA,"tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013",sep='/')
+	infiles.dtp		<- list.files(indir.dtp)
+	infiles.dtp		<- infiles.dtp[ grepl('^ExaML_result.*finaltree.*distTips.R$',infiles.dtp)  ]	
+	if(!length(infiles.dtp))	stop('cannot find files matching criteria')
+			
+	for(i in seq_along(infiles.dtp))
+	{
+		i	<- 1
+		infile.dtp	<- infiles.dtp[i]
+		cat(paste('\nprocess file', infile.dtp))
+		infile.exa	<- substr(infile.dtp, 1, nchar(infile.dtp)-11)
+		
+		#	read phylogeny for which distTips was generated
+		file	<- paste( indir.dtp, '/', infile.exa, sep='' )	
+		ph		<- read.tree(file)
+		#	load brl
+		file	<- paste(indir.dtp, '/', infile.dtp, sep='')
+		load(file)	#expect brl	
+		#
+		#	compute branch lengths between infected and all potential transmitters
+		#
+		df.tpairs.brl		<- df.tpairs
+		tmp					<- unique( subset(df.tpairs.brl, select=FASTASampleCode) )	
+		tmp					<- tmp[, list(sc.i=match(FASTASampleCode, ph$tip.label)), by='FASTASampleCode']
+		df.tpairs.brl		<- merge(df.tpairs.brl, tmp, by='FASTASampleCode')
+		tmp					<- unique( subset(df.tpairs.brl, select=t.FASTASampleCode) )
+		tmp					<- tmp[, list(sc.t=match(t.FASTASampleCode, ph$tip.label)), by='t.FASTASampleCode']
+		df.tpairs.brl		<- merge(df.tpairs.brl, tmp, by='t.FASTASampleCode')
+		tmp					<- df.tpairs.brl[, which(sc.t<sc.i)]
+		tmp2				<- df.tpairs.brl[tmp, sc.t]
+		set(df.tpairs.brl, tmp, 'sc.t', df.tpairs.brl[tmp,sc.i])
+		set(df.tpairs.brl, tmp, 'sc.i', tmp2)
+		brl.n				<- attr(brl,'Size')
+		df.tpairs.brl		<- df.tpairs.brl[, 	list( brl= brl[ my.lower.tri.index(brl.n, sc.t, sc.i) ]) ,by=c('FASTASampleCode','t.FASTASampleCode')]
+		df.tpairs.brl		<- subset(df.tpairs.brl, !is.na(brl))		#some requested brl may be missing because sequences have been deselected (too short or recombinants)
+		#
+		file				<- paste( indir.dtp, '/', infile.exa, '_distPairs.R',sep='' )
+		cat(paste('\nsave to file',file))
+		save(df.tpairs.brl, file= file)
+		#	remove distTips
+		file	<- paste(indir.dtp, '/', infile.dtp, sep='')
+		file.remove(file)	
+		stop()
+	}
+}
+######################################################################################
 project.hivc.examlclock<- function()
 {
 	#
@@ -4787,7 +4849,7 @@ project.hivc.examlclock<- function()
 	#		theme(legend.justification=c(0,1), legend.position=c(0,1), legend.key.size=unit(13,'mm'), legend.title = element_blank())
 	#ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_zagaqq','.pdf',sep=''), w=4,h=6)		
 }
-
+######################################################################################
 project.hivc.examl<- function(dir.name= DATA)
 {
 	require(ape)
@@ -4813,7 +4875,7 @@ project.hivc.examl<- function(dir.name= DATA)
 	#delete phylip file
 	
 }
-
+######################################################################################
 hivc.project.remove.resistancemut.save<- function()
 {
 	dr		<- as.data.table( read.csv( paste( CODE.HOME,"/data/IAS_primarydrugresistance_201303.csv",sep='' ), stringsAsFactors=F ) )	
@@ -4831,7 +4893,7 @@ hivc.project.remove.resistancemut.save<- function()
 	IAS_primarydrugresistance_201303	<- data.frame(dr)
 	save(IAS_primarydrugresistance_201303, file=paste( CODE.HOME,"/data/IAS_primarydrugresistance_201303.rda",sep='' ))	
 }
-
+######################################################################################
 project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 {			
 	if(0)
