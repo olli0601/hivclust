@@ -462,6 +462,7 @@ hivc.beast2out.read.nodeidtree <- function(bstr, method.node.stat='any.node')
 	ph
 }
 ######################################################################################
+#' @export
 hivc.beast2out.read.nexus.and.stats<- function(file, tree.id=NA, method.node.stat='any.node') 
 {	
 	stopifnot(method.node.stat%in%c('any.node','inner.node'))
@@ -758,6 +759,7 @@ hivc.beast2out.tip.date.check<- function(ph, fun, ...)
 	max( abs( ph.info[1,TipT]-tmp[1]+tmp  -  ph.info[,TipT] ) ) 		
 }
 ######################################################################################
+#' @export
 hivc.beast2out.read.trees<- function(file, opt.rescale.edge.length= 1., opt.burnin=0 )
 {
 	mph			<- read.nexus(file)

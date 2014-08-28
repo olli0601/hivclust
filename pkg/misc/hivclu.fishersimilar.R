@@ -339,7 +339,8 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 		#
 		#	BRL	[0,1]: raw branch length between pot transmitter and infected
 		method.restrictTPtoRI	<- ifelse(substr(method,1,2)%in%c('3a','3b'),1,0)
-		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlraw',method,sep='')	
+		#file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlraw',method,sep='')
+		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlrawmed',method,sep='')
 		tmp						<- project.athena.Fisheretal.Y.rawbrl(YX.tpairs, indir, insignat, indircov, infilecov, infiletree, df.tpairs.tptn=df.tpairs.4.rawbrl, save.file=paste(file, '.R', sep=''), resume=resume, plot.file=paste(file, '.pdf', sep=''), method.restrictTPtoRI=method.restrictTPtoRI)
 		Y.rawbrl				<- tmp$tpairs
 		Y.rawbrl.linked			<- tmp$linked
@@ -1346,7 +1347,9 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 		file	<- paste(indir, '/', infiletree, '_', gsub('/',':',insignat),".R",sep='')
 		load(file)	#loads ph	
 		file	<- paste(indir, '/', infiletree, '_', gsub('/',':',insignat),"_distTips.R",sep='')
-		load(file)	#loads brl	
+		load(file)	#loads brl
+		file	<- paste(indir, '/', infiletree, '_', gsub('/',':',insignat),"_distPairs.R",sep='')
+		load(file)	#loads brl.tpairs	
 		#require(adephylo)
 		#brl		<- distTips(ph , method='patristic')
 		#save(brl, file=file)
@@ -1384,20 +1387,31 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 		msm.linked			<- msm.linked[, 	list( brl= brl[ my.lower.tri.index(brl.n, sc.t, sc.i) ], Patient=Patient) ,by=c('FASTASampleCode','t.FASTASampleCode')]
 		#
 		#	compute branch lengths between infected and all potential transmitters
-		#
-		df.tpairs.brl		<- YX.tpairs
-		tmp					<- unique( subset(df.tpairs.brl, select=FASTASampleCode) )	
-		tmp					<- tmp[, list(sc.i=match(FASTASampleCode, ph$tip.label)), by='FASTASampleCode']
-		df.tpairs.brl		<- merge(df.tpairs.brl, tmp, by='FASTASampleCode')
-		tmp					<- unique( subset(df.tpairs.brl, select=t.FASTASampleCode) )
-		tmp					<- tmp[, list(sc.t=match(t.FASTASampleCode, ph$tip.label)), by='t.FASTASampleCode']
-		df.tpairs.brl		<- merge(df.tpairs.brl, tmp, by='t.FASTASampleCode')
-		tmp					<- df.tpairs.brl[, which(sc.t<sc.i)]
-		tmp2				<- df.tpairs.brl[tmp, sc.t]
-		set(df.tpairs.brl, tmp, 'sc.t', df.tpairs.brl[tmp,sc.i])
-		set(df.tpairs.brl, tmp, 'sc.i', tmp2)		
-		df.tpairs.brl		<- df.tpairs.brl[, 	list( brl= brl[ my.lower.tri.index(brl.n, sc.t, sc.i) ]) ,by=c('FASTASampleCode','t.FASTASampleCode')]
-		df.tpairs.brl		<- subset(df.tpairs.brl, !is.na(brl))		#some requested brl may be missing because sequences have been deselected (too short or recombinants)
+		if(1)
+		{
+			#	use median brl.tpairs
+			df.tpairs.brl		<- brl.tpairs[, list(brl=median(brl)), by=c('FASTASampleCode','t.FASTASampleCode')]
+			df.tpairs.brl		<- merge( subset(YX.tpairs, select=c(FASTASampleCode, t.FASTASampleCode)), df.tpairs.brl, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE	)
+			stopifnot(df.tpairs.brl[, !any(is.na(FASTASampleCode))])
+			stopifnot(df.tpairs.brl[, !any(is.na(t.FASTASampleCode))])
+		}
+		if(0)
+		{
+			#	use brl of tree with largest max likelihood
+			df.tpairs.brl		<- YX.tpairs
+			tmp					<- unique( subset(df.tpairs.brl, select=FASTASampleCode) )	
+			tmp					<- tmp[, list(sc.i=match(FASTASampleCode, ph$tip.label)), by='FASTASampleCode']
+			df.tpairs.brl		<- merge(df.tpairs.brl, tmp, by='FASTASampleCode')
+			tmp					<- unique( subset(df.tpairs.brl, select=t.FASTASampleCode) )
+			tmp					<- tmp[, list(sc.t=match(t.FASTASampleCode, ph$tip.label)), by='t.FASTASampleCode']
+			df.tpairs.brl		<- merge(df.tpairs.brl, tmp, by='t.FASTASampleCode')
+			tmp					<- df.tpairs.brl[, which(sc.t<sc.i)]
+			tmp2				<- df.tpairs.brl[tmp, sc.t]
+			set(df.tpairs.brl, tmp, 'sc.t', df.tpairs.brl[tmp,sc.i])
+			set(df.tpairs.brl, tmp, 'sc.i', tmp2)		
+			df.tpairs.brl		<- df.tpairs.brl[, 	list( brl= brl[ my.lower.tri.index(brl.n, sc.t, sc.i) ]) ,by=c('FASTASampleCode','t.FASTASampleCode')]
+			df.tpairs.brl		<- subset(df.tpairs.brl, !is.na(brl))		#some requested brl may be missing because sequences have been deselected (too short or recombinants)			
+		}
 		if(!is.na(save.file))
 		{
 			cat(paste('\nsave to file',save.file))
@@ -9203,6 +9217,29 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outfile			<- infile
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
 	#	m2Bwmx
+	#	3ka2H0.5C3V51			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H0.5C3V51'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3ka2H0.3C3V51			(ART.C)
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3ka2H0.3C3V51'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P','P.e0','P.e0cp','P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	
+	#	m2Bwmx
 	#	3ka2H2C3V51N0			(ART.C)
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3ka2H2C3V51N0'
@@ -11732,7 +11769,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Bwmx.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.01
+		method.minQLowerU		<- 0.03
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 51
 		method.thresh.pcoal		<- 0.3

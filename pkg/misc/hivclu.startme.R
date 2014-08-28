@@ -34,6 +34,9 @@ if(any(args=='--args'))
 	args<- args[-(1:match("--args", args)) ]
 
 require(data.table)
+require(grid)
+require(reshape2)
+require(ggplot2)
 require(hivclust)
 
 

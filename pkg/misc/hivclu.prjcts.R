@@ -4241,6 +4241,54 @@ project.hivc.examl.median.brl<- function()
 		file.remove(file)	
 		stop()
 	}
+	#
+	#	part 2 after computation on cluster
+	#
+	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013_distPairs'
+	infiles		<- list.files(indir)
+	infiles		<- infiles[ grepl('*distPairs.R$',infiles)  ]	
+	if(!length(infiles))	stop('cannot find files matching criteria')
+	if(length(infiles))		cat(paste('\nfound files, n=', length(infiles)))
+	
+	brl.tpairs	<- lapply(seq_along(infiles), function(i)
+			{
+				infile	<- infiles[i]
+				file	<- paste(indir, '/', infile, sep='')
+				load(file)	#expect df.tpairs.brl
+				tmp		<- regmatches(infile, regexpr('finaltree\\.[0-9]{3}', infile))
+				df.tpairs.brl[, BS:= as.numeric(substr(tmp, 11, nchar(tmp)))]
+				df.tpairs.brl
+			})
+	brl.tpairs	<- do.call('rbind', brl.tpairs)	
+	setkey(brl.tpairs, FASTASampleCode, t.FASTASampleCode)
+	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013_distPairs.R'
+	save(brl.tpairs, file=file)
+	#
+	#	plot random sample
+	#
+	tmp			<- unique(brl.tpairs)
+	tmp			<- tmp[sample(nrow(tmp),5e2),]
+	tmp			<- merge(subset(tmp, select=c(FASTASampleCode, t.FASTASampleCode)), brl.tpairs, by=c('FASTASampleCode','t.FASTASampleCode'))
+	tmp[, interaction:= tmp[, paste(FASTASampleCode, t.FASTASampleCode, sep='::')]]
+	setkey(tmp, interaction)
+	tmp[, variable:='from bootstrap\nreplicate\nof data']
+	tmp			<- rbind(tmp, tmp[, list(FASTASampleCode=FASTASampleCode[1], t.FASTASampleCode=t.FASTASampleCode[1], brl=median(brl), BS=NA_real_, variable='median\npatristic distance'), by='interaction'], use.names=TRUE)
+	set(tmp, tmp[, which(BS==0)], 'variable', 'from data')
+	#set(tmp, tmp[, which(BS==409)], 'variable', 'maximum\nlikelihood\tree')
+	set(tmp, tmp[, which(BS==288)], 'variable', 'with largest\nmaximum likelihood\nacross bootstrap replicates')		#second best tree
+	set(tmp, NULL, 'variable', tmp[, factor(variable, levels=c('from data','from bootstrap\nreplicate\nof data','with largest\nmaximum likelihood\nacross bootstrap replicates','median\npatristic distance'))])
+	
+	ggplot(tmp, aes(x=interaction, y=brl, colour=variable)) + geom_point(size=1) + 
+			geom_point(data=subset(tmp, variable=='from data'), size=2) + geom_point(data=subset(tmp, variable=='with largest\nmaximum likelihood\nacross bootstrap replicates'), size=2) +
+			geom_point(data=subset(tmp, variable=='median\npatristic distance'), size=2) +
+			scale_y_continuous(expand = c(0.01, 0.001)) +
+			scale_colour_manual(values=c("#7FC97F",'black', "#BEAED4", "#FDC086")) +
+			labs(colour='maximum\nlikelihood\ntree', y='estimated patristic distance', x='sequence pairs,\nfirst sequence from recipient MSM and second sequence from potential transmitter') +
+			theme_bw() +
+			theme(axis.text.x=element_blank(), axis.ticks=element_blank(),legend.key.size=unit(11,'mm'))
+	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013_distPairs.pdf'
+	ggsave(file=file, h=8, w=16)
+	
 }
 ######################################################################################
 project.hivc.examlclock<- function()
