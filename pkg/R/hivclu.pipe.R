@@ -586,7 +586,7 @@ hivc.pipeline.BEASTout<- function()
 ######################################################################################
 hivc.pipeline.betareg.estimate.risks<- function()
 {
-	#stop()
+	stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
@@ -882,12 +882,12 @@ hivc.pipeline.various<- function()
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
 	}
-	if(0)
+	if(1)
 	{
 		project.Gates.RootSeqSim()
 		quit("no")
 	}
-	if(1)
+	if(0)
 	{
 		project.hivc.examl.median.brl()
 		quit("no")

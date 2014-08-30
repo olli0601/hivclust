@@ -8930,6 +8930,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outdir					<- paste(DATA,"fisheretal_140814",sep='/')		
 	indir					<- paste(DATA,"fisheretal_140817",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140817",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140828",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140828",sep='/')		
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -10160,6 +10162,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_140814",sep='/')	
 	indir					<- paste(DATA,"fisheretal_140817",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140817",sep='/')	
+	indir					<- paste(DATA,"fisheretal_140828",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140828",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -11147,16 +11151,17 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		if(0)
 		{
 			tmp	<- X.b4care[,  {
-						z<- sapply(c(0.01, 0.02, 0.03, 0.04, 0.05, 0.1), function(x) max(which(U.score>=x)) )								
-						list(U=t[z], Q=c(0.01, 0.02, 0.03, 0.04, 0.05, 0.1) , AnyPos_T1=AnyPos_T1[1], AnyPos_a=AnyPos_a[1], isAcute=isAcute[1])	
+						z<- sapply(c(0.03, 0.05, 0.1, 0.2), function(x) max(which(U.score>=x)) )								
+						list(U=t[z], Q=c(0.03, 0.05, 0.1, 0.2) , AnyPos_T1=AnyPos_T1[1], AnyPos_a=AnyPos_a[1], isAcute=isAcute[1])	
 					}, by='t.Patient']
 			tmp[, t2D:= tmp[, AnyPos_T1-U]]
 			set(tmp,NULL,'Q',tmp[,factor(Q)]) 
 			tmp	<- subset(tmp, U>1996.5 & U<2011)
-			ggplot(tmp, aes(x=U, y=t2D, colour=Q)) + geom_point(data=subset(tmp, Q==0.03), position=position_jitter(w = 0.1, h=0), alpha=0.65) + geom_smooth() +
-					scale_y_continuous(breaks=seq(0,20,1)) + scale_x_continuous(breaks=seq(1996,2020,1)) + labs(y='time to diagnosis\n(years)', x='time of HIV infection', colour='quantile\nparameter')
+			ggplot(tmp, aes(x=U, y=t2D, colour=Q)) + geom_point(data=subset(tmp, Q==0.1), position=position_jitter(w = 0.1, h=0), alpha=0.65) + geom_smooth() +
+					scale_y_continuous(breaks=seq(0,20,1)) + scale_x_continuous(breaks=seq(1996,2020,1)) + labs(y='time to diagnosis\n(years)', x='time of HIV infection', colour='quantile\nparameter') +
+					scale_colour_brewer(palette='Set2') + theme_bw()
 			file	<- '/Users/Oliver/duke/2014_HIVMSMbyProp/fig/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_2011_Time2Diag.pdf'
-			ggsave(file=file, w=8, h=8)			
+			ggsave(file=file, w=8, h=6)			
 		}
 		if('FASTASampleCode'%in%colnames(df.tpairs))		#mode 1
 		{			
