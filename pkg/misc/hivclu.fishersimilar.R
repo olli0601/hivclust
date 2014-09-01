@@ -1865,39 +1865,41 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	m4b	<- glm.nb(mp.NegT ~  AnyPos_a+0+offset(rep(m4d$coefficients["(Intercept)"],length(mp.NegT))), data=subset(df.scchr.cd4, CD4_T1<=850 & CD4_T1>250 & AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
 	m4c	<- glm.nb(mp.NegT ~  AnyPos_a+0+offset(rep(m4d$coefficients["(Intercept)"],length(mp.NegT))), data=subset(df.scchr.cd4, CD4_T1<250 & AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
 	#plots
-	if(!is.na(plot.file))
+	if(0 & !is.na(plot.file))
 	{
-		tmp	<- subset(df.sc.negT, !is.na(isAcute) & AnyPos_y>adjust.AnyPos_y & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+		tmp	<- subset(df.sc.negT, AnyPos_y>1996 & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+		set(tmp, tmp[, which(is.na(isAcute))],'isAcute','not reported')
 		set(tmp, tmp[, which(isAcute=='No')],'isAcute','Chronic')
-		set(tmp, tmp[, which(isAcute=='Maybe')],'isAcute','Potentially acute')
-		set(tmp, tmp[, which(isAcute=='Yes')],'isAcute','Acute')
-		set(tmp, NULL, 'isAcute', tmp[, factor(isAcute, levels=c('Acute','Potentially acute','Chronic'))] )
+		set(tmp, tmp[, which(isAcute=='Maybe')],'isAcute','Recent')
+		set(tmp, tmp[, which(isAcute=='Yes')],'isAcute','Recent')
+		set(tmp, NULL, 'isAcute', tmp[, factor(isAcute, levels=c('Recent','Chronic','not reported'))] )
 		set(tmp, NULL, 'AnyPos_y', factor(tmp[, round(AnyPos_y, d=0)]))
 		ggplot(tmp, aes(x=AnyPos_y, fill=isAcute)) + geom_bar(binwidth=1.5, position='dodge') +
-				scale_y_continuous(breaks=seq(0,100,20)) +
-				labs(x="Year of diagnosis", y='MSM HIV seroconverters (number)') +
+				scale_y_continuous(breaks=seq(0,500,20)) +
+				labs(x="year of diagnosis", y='HIV seroconverters among MSM\nwith first CD4 count within 12 mo of diagnosis\nand before ART start\n(total)') +
 				scale_fill_brewer(palette='Set2',name='Stage of HIV infection\n at diagnosis')
-		ggsave(paste(plot.file,'sc_numbers.pdf'), w=15, h=5)		
+		ggsave(paste(plot.file,'sc_numbers.pdf'), w=15, h=6)		
 				
 	}
-	if(!is.na(plot.file))
+	if(0 & !is.na(plot.file))
 	{
-		df.scay.cd4[, mpy.NegT:= mp.NegT/365.25]
-		set(df.scay.cd4, NULL, 'CD4_T1c', df.scay.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
-		setkey(df.scay.cd4, CD4_T1c, AnyPos_a)
-		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(df.scay.cd4, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
-		df.scay.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
-		tmp	<- gamlss.centiles.get(tmp, df.scay.cd4$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
-		df.scay.cd4	<- cbind(df.scay.cd4, tmp)
-		ggplot(df.scay.cd4, aes(x=AnyPos_a, y=mpy.NegT)) + 
-				geom_point() + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
+		tmp	<- rbind(df.scay.cd4, df.scaym.cd4)
+		tmp[, mpy.NegT:= mp.NegT/365.25]
+		set(tmp, NULL, 'CD4_T1c', tmp[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
+		setkey(tmp, CD4_T1c, AnyPos_a)
+		tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+		tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+		tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+		tmp		<- cbind(tmp, tmp3)
+		ggplot(tmp, aes(x=AnyPos_a, y=mpy.NegT)) + 
+				geom_point(size=0.85) + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
 				geom_line(aes(y=y.b), colour='blue') +
 				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
-				labs(x="Age at diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)') +
-				facet_grid(. ~ CD4_T1c)
-		ggsave(paste(plot.file,'scay_cd4_age.pdf'), w=10, h=6)
+				labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
+				facet_grid(. ~ CD4_T1c) + theme_bw()
+		ggsave(paste(plot.file,'scay_cd4_age.pdf'), w=15, h=6)
 	}
-	if(!is.na(plot.file))
+	if(0 & !is.na(plot.file))
 	{
 		df.scaym.cd4[, mpy.NegT:= mp.NegT/365.25]
 		set(df.scaym.cd4, NULL, 'CD4_T1c', df.scaym.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
@@ -1910,22 +1912,21 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 				geom_point() + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
 				geom_line(aes(y=y.b), colour='blue') +
 				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
-				labs(x="Age at diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)') +
-				facet_grid(. ~ CD4_T1c)
+				labs(x="age at diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)') +
+				facet_grid(. ~ CD4_T1c) 
 		ggsave(paste(plot.file,'scam_cd4_age.pdf'), w=10, h=6)
-	}
-	
-	if(!is.na(plot.file))
+	}	
+	if(0 & !is.na(plot.file))
 	{
 		df.scchr.cd4[, mpy.NegT:= mp.NegT/365.25]
-		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(CD4_T1, degree=7)'), sigma.formula=as.formula('~ bs(CD4_T1, degree=3)'), data=as.data.frame(subset(df.scchr.cd4, select=c(mpy.NegT, CD4_T1))), family=GA)		 
+		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(CD4_T1, degree=7)'), sigma.formula=as.formula('~ bs(CD4_T1, degree=3)'), data=as.data.frame(subset(df.scchr.cd4, select=c(mpy.NegT, CD4_T1))), family=GA)		
 		df.scchr.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
 		tmp	<- gamlss.centiles.get(tmp, df.scchr.cd4$CD4_T1, cent = c(2.5, 97.5) )
 		df.scchr.cd4	<- cbind(df.scchr.cd4, tmp)
 		ggplot(df.scchr.cd4, aes(x=CD4_T1, y=mpy.NegT)) + 
 				geom_point() + scale_y_continuous(limits=c(0,11), breaks=seq(0,10,2)) +			
-				geom_line(aes(y=y.b), colour='blue') +
-				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+				geom_line(aes(y=y.b), colour='blue') + theme_bw() +
+				#geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) + 
 				labs(x="1st CD4 count after diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)')		
 		ggsave(paste(plot.file,'scchr_cd4.pdf'), w=5, h=5)
 		df.scchr.cd4[, y.b:=NULL]
@@ -1936,15 +1937,20 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	if(0)
 	{
 		df.scana.cd4[, mpy.NegT:= mp.NegT/365.25]
-		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(CD4_T1, degree=7)'), sigma.formula=as.formula('~ bs(CD4_T1, degree=3)'), data=as.data.frame(subset(df.scana.cd4, select=c(mpy.NegT, CD4_T1))), family=GA)		 
-		df.scana.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
-		tmp	<- gamlss.centiles.get(tmp, df.scana.cd4$CD4_T1, cent = c(2.5, 97.5) )
+		set(df.scana.cd4, NULL, 'CD4_T1c', df.scana.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
+		setkey(df.scana.cd4, CD4_T1c, AnyPos_a)		
+		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=3)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(df.scana.cd4, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)
+		#Rsq(tmp)	20.17%
+		df.scana.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]
+		tmp	<- gamlss.centiles.get(tmp, df.scana.cd4$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
 		df.scana.cd4	<- cbind(df.scana.cd4, tmp)
-		ggplot(df.scana.cd4, aes(x=CD4_T1, y=mpy.NegT)) + 
-				geom_point() + scale_y_continuous(limits=c(0,11), breaks=seq(0,10,2)) +			
-				geom_line(aes(y=y.b), colour='blue') +
-				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
-				labs(x="1st CD4 count after diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)')		
+		ggplot(df.scana.cd4, aes(x=AnyPos_a, y=mpy.NegT)) + 
+				geom_point(size=1) + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
+				geom_line(aes(y=y.b), colour='blue') + theme_bw() +
+				#geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) + 
+				labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
+				facet_grid(. ~ CD4_T1c)
+		ggsave(paste(plot.file,'scana_cd4_age.pdf'), w=15, h=6)		
 		df.scana.cd4[, y.b:=NULL]
 		df.scana.cd4[, x:=NULL]
 		df.scana.cd4[, q2.5:=NULL]
@@ -1952,19 +1958,21 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	}
 	if(!is.na(plot.file))
 	{	
+		df.scchr.cd4[, mpy.NegT:= mp.NegT/365.25]
 		set(df.scchr.cd4, NULL, 'CD4_T1c', df.scchr.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
 		setkey(df.scchr.cd4, CD4_T1c, AnyPos_a)
-		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=7)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(df.scchr.cd4, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(df.scchr.cd4, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)
+		#Rsq(tmp)	20.10%
 		df.scchr.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
-		tmp	<- gamlss.centiles.get(tmp, df.scchr.cd4$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+		tmp	<- gamlss.centiles.get(tmp, df.scchr.cd4$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )		
 		df.scchr.cd4	<- cbind(df.scchr.cd4, tmp)
 		ggplot(df.scchr.cd4, aes(x=AnyPos_a, y=mpy.NegT)) + 
-				geom_point() + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
-				geom_line(aes(y=y.b), colour='blue') +
-				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
-				labs(x="Age at diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)') +
+				geom_point(size=1) + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
+				geom_line(aes(y=y.b), colour='blue') + theme_bw() +
+				#geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) + 
+				labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
 				facet_grid(. ~ CD4_T1c)
-		ggsave(paste(plot.file,'scchr_cd4_age.pdf'), w=10, h=6)
+		ggsave(paste(plot.file,'scchr_cd4_age.pdf'), w=15, h=6)
 		df.scchr.cd4[, y.b:=NULL]
 		df.scchr.cd4[, x:=NULL]
 		df.scchr.cd4[, q2.5:=NULL]
@@ -2134,10 +2142,10 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	if(!is.na(plot.file))
 	{		
 		t.period	<- 1/64
-		b4care		<- do.call('rbind', list(	subset(df.scay.cd4, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
-												subset(df.scaym.cd4, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
-												subset(df.scchr.cd4, AnyPos_a>35.0 & AnyPos_a<35.99, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
-												subset(df.scana.cd4, AnyPos_a>35.0 & AnyPos_a<35.99, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,]
+		b4care		<- do.call('rbind', list(	subset(df.scchr.cd4, AnyPos_a>25.0 & AnyPos_a<25.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(df.scchr.cd4, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(df.scchr.cd4, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1>250 & CD4_T1<850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(df.scchr.cd4, AnyPos_a>34.5 & AnyPos_a<35.99 & CD4_T1>850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,]												
 												))
 		set(b4care, NULL, 'DateBorn', hivc.db.Date2numeric(b4care[,DateBorn]))
 		set(b4care, NULL, 'AnyPos_T1', hivc.db.Date2numeric(b4care[,AnyPos_T1]))
@@ -2151,19 +2159,22 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		tmp			<- predict.t2inf(seq(0,10,t.period)*365, b4care, t2inf.args)	
 		tmp			<- merge( subset( tmp, !is.na(score) ), subset(b4care, select=c(Patient,isAcute,ts,te)), by='Patient' )
 		set(tmp, NULL, 'q', tmp[,q/365])
-		labels		<- c(	'Acute HIV infection at diagnosis',
-							'Potentially acute HIV infection at diagnosis',
-							'Chronic HIV infection at diagnosis,\n CD4<250,\n 35 years at diagnosis')
-		set(tmp, tmp[, which(isAcute=='No')],'isAcute',labels[3])
-		set(tmp, tmp[, which(isAcute=='Maybe')],'isAcute',labels[2])
-		set(tmp, tmp[, which(isAcute=='Yes')],'isAcute',labels[1])
-		set(tmp, NULL, 'isAcute', tmp[, factor(isAcute, levels=labels)] )
-		setkey(tmp, isAcute)
-		ggplot(tmp, aes(x=q, y=score, group=isAcute, colour=isAcute)) + geom_line() +
+		tmp[, label:='']
+		labels		<- c(	'chronic HIV infection at diagnosis,\n CD4 < 250,\n 25 years at diagnosis',
+							'chronic HIV infection at diagnosis,\n CD4 < 250,\n 35 years at diagnosis',
+							'chronic HIV infection at diagnosis,\n CD4 in [250-850],\n 35 years at diagnosis',
+							'chronic HIV infection at diagnosis,\n CD4 > 850,\n 35 years at diagnosis')
+		set(tmp, tmp[, which(Patient=='M31752')], 'label', labels[2])
+		set(tmp, tmp[, which(Patient=='M32501')], 'label', labels[3])
+		set(tmp, tmp[, which(Patient=='M34515')], 'label', labels[1])
+		set(tmp, tmp[, which(Patient=='M39133')], 'label', labels[4])
+		set(tmp, NULL, 'label', tmp[, factor(label, levels=labels)] )
+		setkey(tmp, label)
+		ggplot(tmp, aes(x=q, y=score, group=label, colour=label)) + geom_line() + theme_bw() + theme(legend.key.size=unit(13,'mm'))  +
 				scale_x_continuous(breaks=seq(0,10,1)) +
-				labs(x="t (years)", y='Probability that surrogate\ninfection time is < t') + 
+				labs(x="t\n(years)", y='Probability that\nsurrogate time between HIV infection and diagnosis is > t') + 
 				scale_colour_brewer(palette='Set2',name='Individual with')
-		ggsave(paste(plot.file,'sc_predict.pdf'), w=15, h=5)
+		ggsave(paste(plot.file,'sc_predict.pdf'), w=15, h=7)
 	}
 	#
 	list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args)
@@ -11774,7 +11785,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Bwmx.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.03
+		method.minQLowerU		<- 0.1
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 51
 		method.thresh.pcoal		<- 0.3
