@@ -5067,7 +5067,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 	ans
 }
 ######################################################################################
-project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA)
+project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, bs.n=100, bs.cdelta.min=3, bs.cdelta.max=4)
 {	
 	if(resume & !is.na(save.file))
 	{
@@ -5252,7 +5252,10 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 												tmp[[risk]]	<- factor[1]
 												tmp
 											}, by=c('risk','factor')]
+			#						
 			#	cens.table for all potential transmitters
+			#	these will be treated as uncensored in bootstrap estimation of censoring
+			#
 			cens.table		<- do.call('rbind',list(
 							risk.df[,	{
 										z	<- table( YX[, risk, with=FALSE], useNA='ifany')
@@ -5270,99 +5273,62 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 										z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
 										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')
 									},by='risk']))
-			#	cens.table for all potential transmitters up to TP4 start
-			cens.tmax		<- tperiod.info[, rev(t.period.max)[2]]
-			tmp				<- do.call('rbind',list(
-							risk.df[,	{
-										z	<- table( subset(YX, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX.c3')												
-									},by='risk'],
-							risk.df[,	{
-										z	<- table( subset(X.clu, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu.c3')												
-									},by='risk'],
-							risk.df[,	{
-										z	<- table( subset(X.den, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq.c3')												
-									},by='risk'],
-							risk.df[,	{
-										z	<- table( subset(X.msm, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm.c3')
-									},by='risk']))
-			cens.table		<- rbind(cens.table, tmp)
-			#	cens.table for all potential transmitters up to TP3 start
-			cens.tmax		<- tperiod.info[, rev(t.period.max)[3]]
-			tmp				<- do.call('rbind',list(
-							risk.df[,	{
-										z	<- table( subset(YX, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX.c2')												
-									},by='risk'],
-							risk.df[,	{
-										z	<- table( subset(X.clu, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu.c2')												
-									},by='risk'],
-							risk.df[,	{
-										z	<- table( subset(X.den, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq.c2')												
-									},by='risk'],
-							risk.df[,	{
-										z	<- table( subset(X.msm, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm.c2')
-									},by='risk']))
-			cens.table		<- rbind(cens.table, tmp)
-			#	cens.table for all potential transmitters up to TP2 start
-			cens.tmax		<- tperiod.info[, rev(t.period.max)[4]]
-			tmp				<- do.call('rbind',list(
-							risk.df[,	{
-										z	<- table( subset(YX, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX.c1')												
-									},by='risk'],
-							risk.df[,	{
-										z	<- table( subset(X.clu, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu.c1')												
-									},by='risk'],
-							risk.df[,	{
-										z	<- table( subset(X.den, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq.c1')												
-									},by='risk'],
-							risk.df[,	{
-										z	<- table( subset(X.msm, t.AnyPos_T1<=cens.tmax & AnyPos_T1<cens.tmax)[, risk, with=FALSE], useNA='ifany')
-										list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm.c1')
-									},by='risk']))
-			cens.table	<- rbind(cens.table, tmp)			
-			#
 			cens.table[, t.period:=cens.table[, substr(factor, nchar(factor), nchar(factor))]]
 			cens.table[, factor2:=cens.table[, substr(factor, 1, nchar(factor)-2)]]
 			cens.table		<- merge(cens.table, cens.table[, list(factor=factor, sum=sum(n, na.rm=TRUE), p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
-			cens.table.all	<- copy(cens.table)
-			cens.table		<- subset( cens.table, stat%in%c('YX','X.clu','X.seq','X.msm') )
 			gc()
-			#	adjust for censoring, keeping number of undiagnosed as in tperiod=='2'
-			cens.table[, n.adjbyNU:=n]
-			cens.Ugroups	<- unique(YX[[risk.col]])
-			cens.Ugroups	<- cens.Ugroups[ grepl('U',cens.Ugroups) ]
-			print(cens.Ugroups)
-			for(f in cens.Ugroups)
-				for(z in cens.table[, unique(t.period)])	
-					set(cens.table, cens.table[, which(factor2==f & stat=='X.msm' & t.period==z)], 'n.adjbyNU',  cens.table[which(factor2==f & stat=='X.msm' & t.period%in%c('2',z)), max(n.adjbyNU)])
-			#	adjust for censoring, keeping proportion of undiagnosed as in tperiod=='2'
-			cens.table[, n.adjbyPU:=n]		
+			#
+			#	bootstrap approach to estimata right censoring
+			#
+			#	need temporarily factor without tp for X.msm
+			set(X.msm, NULL, 'stage', X.msm[[risk.col]])
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
+			#
+			#	start boostrapping estimation of censoring
+			#			
+			bs.cdelta		<- runif(bs.n, bs.cdelta.min, bs.cdelta.max)
+			#	table with bootstrap versions of calendar time periods for censoring
+			tperiod.bs		<- copy(tperiod.info)			
+			tmp				<- tperiod.bs[, max(t.period.max)]
+			tperiod.bs		<- lapply(seq_along(bs.cdelta), function(b)
+					{
+						tmp	<- tperiod.bs[, list(t.period.min.bs= t.period.min-bs.cdelta[b], t.period.max.bs= t.period.max-bs.cdelta[b], cens.t=tmp-bs.cdelta[b], cens.delta=bs.cdelta[b]), by='t.period']
+						tmp[, BS:=b]
+						tmp
+					})
+			tperiod.bs		<- do.call('rbind', tperiod.bs)		
+			#	expand tperiod.bs to include risk and factor
+			tmp				<- tperiod.info[, unique(t.period)] 
+			tmp				<- data.table(risk='stage',factor=X.msm[, levels(stage)])[, list(t.period=tmp), by=c('risk','factor')]
+			tperiod.bs		<- merge(tperiod.bs, tmp, by='t.period',allow.cartesian=TRUE)
+			# compute cens.table.bs	
+			# for every bootstrap cdelta.bs
+			#	compute tperiod.bs by	tperiod.start/end - cdelta.bs
+			#	get table
+			cens.table.bs	<- tperiod.bs[, {
+													bs.breaks	<- c( t.period.min.bs, max(t.period.max.bs), Inf)
+													tmp			<- which( X.msm[[risk]]==factor )							
+													tmp			<- cut( X.msm[tmp, AnyPos_T1], breaks=bs.breaks, labels=paste(factor,seq.int(1,length(bs.breaks)-1),sep='.'), right=FALSE)
+													tmp			<- table( tmp, useNA='ifany'  )
+													list(factor.tp=rownames(tmp), n=as.numeric(unclass(tmp)), t.period.min.bs=c(t.period.min.bs,NA_real_), t.period.max.bs=c(t.period.max.bs,NA_real_), cens.delta=cens.delta[1], cens.t=cens.t[1], BS=BS[1])
+											}, by=c('BS','risk','factor')]	
+			cens.table.bs	<- subset(cens.table.bs, !is.na(t.period.min.bs))
+			setnames(cens.table.bs, c('factor.tp','factor'), c('factor', 'factor2'))			
+			set(cens.table.bs, NULL, 'stat',  cens.table.bs[, paste('X.msm.cbs',BS,sep='')])
+			cens.table.bs[, BS:= NULL]
+			cens.table.bs[, t.period:= cens.table.bs[, substr(factor, nchar(factor), nchar(factor))]]
+			# end boostrapping
+			#
+			# revert factor to tp for X.msm
+			set(X.msm, NULL, 'stage', X.msm[[risktp.col]])
+			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])									
+			#
 			gc()
-			if(length(cens.Ugroups))
-				for(z in cens.table[, unique(t.period)])
-				{
-					tmp			<- rbind(	unadjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period==z)[, p]),
-											adjusted	= sapply(cens.Ugroups, function(f2)	subset(cens.table, factor2==f2 & stat=='X.msm' & t.period%in%c('2',z))[, max(p, na.rm=TRUE) ])		)			
-					tmp2		<- cens.table[which(stat=='X.msm' & t.period==z), sum[1] * sum(tmp['adjusted',]) * (1-sum(tmp['unadjusted',]))/(1-sum(tmp['adjusted',])) ]
-					tmp2		<- tmp['unadjusted',]/sum(tmp['unadjusted',]) * tmp2
-					names(tmp2)	<- cens.Ugroups
-					for(f2 in cens.Ugroups)
-						set(cens.table, cens.table[, which(factor2==f2 & stat=='X.msm' & t.period==z)], 'n.adjbyPU',  tmp2[f2])				
-				}
-			gc()
-			cens.table		<- merge(cens.table, cens.table[, list(factor=factor, p.adjbyNU= n.adjbyNU/sum(n.adjbyNU, na.rm=TRUE), p.adjbyPU= n.adjbyPU/sum(n.adjbyPU, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))			
-			gc()
+			ans$cens.table		<- cens.table
+			ans$cens.table.bs	<- cens.table.bs
+			#
 			#	if 'tp' is not '', reduce data to t.period
+			#
 			if(tp!='')
 			{
 				tp			<- substr(tp, 2, 2)
@@ -5381,9 +5347,7 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 				set(X.den, NULL, 'stage', X.den[[risk.col]])
 				set(X.msm, NULL, 'stage', X.msm[[risk.col]])				
 			}
-			ans$cens.table		<- cens.table
-			ans$cens.table.all	<- cens.table.all
-			#	subsetting or resetting: need to readjust levels
+			#	due to subsetting or resetting: need to readjust levels
 			set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])									
 			set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 			set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
@@ -9806,59 +9770,72 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 ######################################################################################
 project.athena.Fisheretal.censoring.explore<- function()
 {
-	require(data.table)	
-	require(reshape2)
-	require(grid)
-	require(ggplot2)
-	require(gamlss)
-	require(RColorBrewer)
-	
+	require(data.table)
+	require(ape)
+	#stop()
 	resume					<- 1 
+	indir					<- paste(DATA,"fisheretal",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140828",sep='/')		
+	
+	
+	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	insignat				<- "Wed_Dec_18_11:37:00_2013"	
+	outfile					<- infile
+	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
-	indir					<- paste(DATA,"fisheretal",sep='/')	
-	outdir					<- paste(DATA,"fisheretal_140722",sep='/')
-	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013"
-	outfile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_2011"
-	runs.opt				<- expand.grid(method.brl=c('3kaH','3kaH1','3kaH2'), method.denom='SEQ', method.risk=paste('m2Bwmx.tp',1:4,sep=''))
-	runs.opt				<- as.data.table(runs.opt)
-	runs.opt[, file:= paste(indir,'/',infile,'_Yscore',method.brl,'_tables',method.denom,'_',method.risk,'.R',sep='')]
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period	
+	select					<- 'Yscore3ka2H[0-9\\.]+C3V51'
+	
+	files					<- list.files(indir)
+	files					<- files[ sapply(files, function(x) grepl('*tables.*R$',x) & grepl(select, x)) ]	
+	if(!length(files))	stop('cannot find files matching criteria')
+	runs.opt	<- lapply( files, function(z)
+			{
+				print(z)
+				method.brl			<- regmatches(z, regexpr('Yscore[^_]*',z))
+				method.brl			<- substr(method.brl, 7, nchar(method.brl))
+				method.risk			<- regmatches(z, regexpr('[^_]*.R$',z))
+				method.risk			<- substr(method.risk,1,nchar(method.risk)-2)
+				method.dating		<- ifelse(grepl('sasky',z),'sasky','gmrf')
+				method.recentctime	<- ifelse(grepl('2011',z),'2011','2013-03-01')
+				method.nodectime	<- ifelse(grepl('a',method.brl),'any','map')
+				data.table(file=z, method.brl=method.brl, method.nodectime=method.nodectime, method.dating=method.dating, method.risk=method.risk, method.recentctime=method.recentctime)				
+			})
+	runs.opt	<- do.call('rbind', runs.opt)
+	setkey(runs.opt, method.dating, method.brl)	
+	runs.opt	<- subset(runs.opt, !is.na(file))
+	print(runs.opt)	
 	#
 	#	set up cens.table
 	#
 	cens.tables	<- runs.opt[,	{
-									cat(paste('\nprocess file=',file))
-									tmp	<- load(file)
+									tmp	<- paste(indir,'/',file,sep='')
+									cat(paste('\nprocess file=',tmp))
+									tmp	<- load(tmp)
 									ans	<- ans$cens.table.all
 									ans[, method.risk:=method.risk]
-									ans[, method.brl:=method.brl ]
-									ans[, method.denom:=method.denom]									
+									ans[, method.brl:=method.brl ]																		
 									ans
 								},by='file']
 	cens.tables[, file:=NULL]
 	set(cens.tables, NULL, 'n', cens.tables[, n/8])
 	
-	cens.AnyPos_T1	<- runs.opt[,	{
-										cat(paste('\nprocess file=',file))
-										tmp	<- load(file)
-										ans	<- ans$cens.AnyPos_T1
-										ans[, method.risk:=method.risk]
-										ans[, method.brl:=method.brl ]
-										ans[, method.denom:=method.denom]									
-										ans
-									},by='file']
-	cens.AnyPos_T1[, file:=NULL]				
-	
 	cens.Patient.n	<- runs.opt[,	{
-										cat(paste('\nprocess file=',file))
-										tmp	<- load(file)
+										tmp	<- paste(indir,'/',file,sep='')
+										cat(paste('\nprocess file=',tmp))
+										tmp	<- load(tmp)
 										ans	<- ans$cens.Patient.n
 										ans[, method.risk:=method.risk]
-										ans[, method.brl:=method.brl ]
-										ans[, method.denom:=method.denom]									
+										ans[, method.brl:=method.brl ]								
 										ans
 									},by='file']
 	cens.Patient.n[, file:=NULL]
 	
+	file	<- paste(outdir, '/', "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_tables.R", sep='')
+	save(cens.tables, cens.Patient.n, file=file)
+	#"/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_140828/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_tables.R"
 	#
 	#	set up factor legends
 	#
@@ -9900,34 +9877,34 @@ project.athena.Fisheretal.censoring.explore<- function()
 	#
 	#	CASCADE
 	#	
-	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3kaH')	
+	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3ka2H1C3V51')	
 	setkey(ct, stat, t.period, risk, factor)
 	ct			<- unique(ct)
-	ctn			<- subset(cens.Patient.n, grepl('X.msm',stat) & method.brl=='3kaH')
+	ctn			<- subset(cens.Patient.n, grepl('X.msm',stat) & method.brl=='3ka2H1C3V51')
 	setkey(ctn, stat, t.period)
 	ctn			<- unique(ctn)
 	tmp			<- subset(factors, method.risk=='m2Bwmx')
-	plot.file	<- paste(outdir, '/', outfile, '_', ct[1,method.denom], '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
-	ct.p.H		<- project.athena.Fisheretal.censoring.model(ct, ctn, plot.file=plot.file, factors=tmp, tperiod.info=tperiod.info)
+	plot.file	<- paste(outdir, '/', outfile, '_', 'SEQ', '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
+	ct.p.H1		<- project.athena.Fisheretal.censoring.model(ct, ctn, plot.file=plot.file, factors=tmp, tperiod.info=tperiod.info)
 	#
-	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3kaH1')	
+	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3ka2H0.5C3V51')	
 	setkey(ct, stat, t.period, risk, factor)
 	ct			<- unique(ct)
-	ctn			<- subset(cens.Patient.n, grepl('X.msm',stat) & method.brl=='3kaH1')
+	ctn			<- subset(cens.Patient.n, grepl('X.msm',stat) & method.brl=='3ka2H0.5C3V51')
 	setkey(ctn, stat, t.period)
 	ctn			<- unique(ctn)	
 	tmp			<- subset(factors, method.risk=='m2Bwmx')
-	plot.file	<- paste(outdir, '/', outfile, '_', ct[1,method.denom], '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
-	ct.p.H1		<- project.athena.Fisheretal.censoring.model(ct, ctn, plot.file=plot.file, factors=tmp, tperiod.info=tperiod.info)
+	plot.file	<- paste(outdir, '/', outfile, '_', 'SEQ', '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
+	ct.p.H05		<- project.athena.Fisheretal.censoring.model(ct, ctn, plot.file=plot.file, factors=tmp, tperiod.info=tperiod.info)
 	#
-	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3kaH2')	
+	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3ka2H2C3V51')	
 	setkey(ct, stat, t.period, risk, factor)
 	ct			<- unique(ct)
-	ctn			<- subset(cens.Patient.n, grepl('X.msm',stat) & method.brl=='3kaH2')
+	ctn			<- subset(cens.Patient.n, grepl('X.msm',stat) & method.brl=='3ka2H2C3V51')
 	setkey(ctn, stat, t.period)
 	ctn			<- unique(ctn)		
 	tmp			<- subset(factors, method.risk=='m2Bwmx')
-	plot.file	<- paste(outdir, '/', outfile, '_', ct[1,method.denom], '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
+	plot.file	<- paste(outdir, '/', outfile, '_', 'SEQ', '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
 	ct.p.H2		<- project.athena.Fisheretal.censoring.model(ct, ctn, plot.file=plot.file, factors=tmp, tperiod.info=tperiod.info)	
 	#
 	#	AGE
