@@ -5067,7 +5067,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 	ans
 }
 ######################################################################################
-project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, bs.n=100, bs.cdelta.min=3, bs.cdelta.max=4)
+project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
 {	
 	if(resume & !is.na(save.file))
 	{
@@ -5308,14 +5308,16 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			cens.table.bs	<- tperiod.bs[, {
 													bs.breaks	<- c( t.period.min.bs, max(t.period.max.bs), Inf)
 													tmp			<- which( X.msm[[risk]]==factor )							
-													tmp			<- cut( X.msm[tmp, AnyPos_T1], breaks=bs.breaks, labels=paste(factor,seq.int(1,length(bs.breaks)-1),sep='.'), right=FALSE)
-													tmp			<- table( tmp, useNA='ifany'  )
-													list(factor.tp=rownames(tmp), n=as.numeric(unclass(tmp)), t.period.min.bs=c(t.period.min.bs,NA_real_), t.period.max.bs=c(t.period.max.bs,NA_real_), cens.delta=cens.delta[1], cens.t=cens.t[1], BS=BS[1])
+													n.all		<- cut( X.msm[tmp, AnyPos_T1], breaks=bs.breaks, labels=paste(factor,seq.int(1,length(bs.breaks)-1),sep='.'), right=FALSE)
+													n.all		<- table(n.all, useNA='ifany'  )
+													n.pseudocens<- cut( subset(X.msm[tmp,], t.AnyPos_T1<cens.t[1])[, AnyPos_T1], breaks=bs.breaks, labels=paste(factor,seq.int(1,length(bs.breaks)-1),sep='.'), right=FALSE)
+													n.pseudocens<- table(n.pseudocens, useNA='ifany'  )
+													tmp			<- merge( data.table( factor.tp=rownames(n.all), n=as.numeric(unclass(n.all)) ), data.table( factor.tp=rownames(n.pseudocens), nc=as.numeric(unclass(n.pseudocens)) ), by='factor.tp', all.x=TRUE, all.y=TRUE )																										
+													list(factor.tp=tmp[, factor.tp], n=tmp[, n], nc=tmp[, nc], t.period.min.bs=c(t.period.min.bs,NA_real_), t.period.max.bs=c(t.period.max.bs,NA_real_), cens.delta=cens.delta[1], cens.t=cens.t[1])
 											}, by=c('BS','risk','factor')]	
 			cens.table.bs	<- subset(cens.table.bs, !is.na(t.period.min.bs))
 			setnames(cens.table.bs, c('factor.tp','factor'), c('factor', 'factor2'))			
 			set(cens.table.bs, NULL, 'stat',  cens.table.bs[, paste('X.msm.cbs',BS,sep='')])
-			cens.table.bs[, BS:= NULL]
 			cens.table.bs[, t.period:= cens.table.bs[, substr(factor, nchar(factor), nchar(factor))]]
 			# end boostrapping
 			#
@@ -9634,6 +9636,11 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 		if(method.group!='age')
 			theme_set(theme.cascade())	
 	}
+	#	ct.bs contains counts at times [t1bs, t2bs]
+	#	divide these by the counts at times [t1,t2] --> bootstrap fraction
+	
+	
+	
 	set(ct, ct[, which(grepl('c3',stat) & t.period>3)], c('n','sum','p'), NA_real_)
 	set(ct, ct[, which(grepl('c2',stat) & t.period>2)], c('n','sum','p'), NA_real_)
 	set(ct, ct[, which(grepl('c1',stat) & t.period>1)], c('n','sum','p'), NA_real_)
@@ -9663,18 +9670,14 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 		ct.plot		<- copy(ctm)	
 		ct.plot		<- subset(ct.plot, variable%in%c('d03','d02'))
 		ct.plot		<- merge( ct.plot, factors, by='factor2')
-		set(ct.plot, ct.plot[,which(variable=='d03')], 'variable', 'censored\ntime period 4')
-		set(ct.plot, ct.plot[,which(variable=='d02')], 'variable', 'censored\ntime period 3, 4')		
-		set(ct.plot, NULL, 'variable', ct.plot[, factor(variable, levels=c('censored\ntime period 3, 4','censored\ntime period 4'))])
-		ggplot(ct.plot, aes(x=t, y=p.cens, colour=factor.legend, shape=variable)) + geom_point(size=3) +
-				labs(x=expression(t[C]^textstyle("*")-t[2]), y='fraction of potential transmission intervals in cohort\nthat are not censored',shape='artificial\ncensoring\ntimes') +
-				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +
-				scale_shape_discrete(labels=c(expression(t[C]^textstyle("*")==2008), expression(t[C]^textstyle("*")==2009.5))) +
+		ggplot(ct.plot, aes(x=t, y=p.cens, colour=factor.legend)) + geom_point(size=3) +
+				labs(x=expression('bootstrap time to censoring '*t[C]-t[2]), y=expression('bootstrap samples '*hat(c)[b])) +
+				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +		
 				theme(panel.grid.minor.x = element_blank(), legend.position = "bottom") +
 				scale_x_continuous(lim=c(-0.5, 3.5)) +
 				facet_grid(. ~ factor.legend, margins=FALSE)
 		file		<- paste(plot.file,'_censoringfraction.pdf',sep='')
-		ggsave(file=file, w=25, h=8)		
+		ggsave(file=file, w=15, h=6)		
 	}
 	#	censoring model per risk group	
 	setkey(ct, factor2, t.period)
@@ -9735,33 +9738,35 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctn, plot.file=NA, fact
 		
 		ct.plot		<- merge( ct.plot, tmp, by='t.period')
 		ct.plot[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
-		set(ct.plot, ct.plot[,which(cgroup=='c0')], 'cgroup', 'data')
+		set(ct.plot, ct.plot[,which(cgroup=='c0')], 'cgroup', 'observed counts')
 		#set(ct.plot, ct.plot[,which(cgroup=='c3')], 'cgroup', 'censored\ntime period 4')
 		#set(ct.plot, ct.plot[,which(cgroup=='c2')], 'cgroup', 'censored\ntime period 3, 4')
-		set(ct.plot, ct.plot[,which(cgroup=='c')], 'cgroup', 'data adjusted\nfor censoring')
+		set(ct.plot, ct.plot[,which(cgroup=='c')], 'cgroup', 'estimate adjusted\nfor right censoring')
 		#set(ct.plot, NULL, 'cgroup', ct.plot[, factor(cgroup, levels=c('data','censored\ntime period 4','censored\ntime period 3, 4','data adjusted\nfor censoring'))])
-		set(ct.plot, NULL, 'cgroup', ct.plot[, factor(cgroup, levels=c('data','data adjusted\nfor censoring'))])
+		set(ct.plot, NULL, 'cgroup', ct.plot[, factor(cgroup, levels=c('observed counts','estimate adjusted\nfor right censoring'))])
 		ggplot(ct.plot, aes(x=t.period.long, y=n, colour=factor.legend, shape=cgroup)) + geom_point(size=3) +
-				labs(x='', y='potential transmission intervals in cohort\n(person-years per recipient MSM)',shape='data adjusted\nfor censoring') +
+				labs(x='', y='potential transmission intervals in cohort\n(person-years per recipient MSM)',shape='') +
 				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +	
-				facet_grid(. ~ factor.legend, margins=FALSE)
+				scale_shape_manual(values=c(8,2)) +
+				facet_grid(. ~ factor.legend, margins=FALSE) + theme(legend.position = "bottom")
 		file		<- paste(plot.file,'_censoringmodel.pdf',sep='')
-		ggsave(file=file, w=25, h=8)	
+		ggsave(file=file, w=17, h=6)	
 		#
 		ct.plot		<- copy(ct)				
 		ct.plot		<- melt(ct.plot, measure.vars=c('prop.c0','prop.c'), id.vars=c('t.period','risk','factor2','stat','factor'), variable.name='cgroup', value.name='prop')
 		ct.plot		<- merge( ct.plot, factors, by='factor2')
 		ct.plot		<- merge( ct.plot, tmp, by='t.period')
 		ct.plot[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
-		set(ct.plot, ct.plot[,which(cgroup=='prop.c0')], 'cgroup', 'data')
-		set(ct.plot, ct.plot[,which(cgroup=='prop.c')], 'cgroup', 'data adjusted\nfor censoring')
-		set(ct.plot, NULL, 'cgroup', ct.plot[, factor(cgroup, levels=c('data','data adjusted\nfor censoring'))])
+		set(ct.plot, ct.plot[,which(cgroup=='prop.c0')], 'cgroup', 'observed proportion')
+		set(ct.plot, ct.plot[,which(cgroup=='prop.c')], 'cgroup', 'estimated proportion,\nadjusted for right censoring')
+		set(ct.plot, NULL, 'cgroup', ct.plot[, factor(cgroup, levels=c('observed proportion','estimated proportion,\nadjusted for right censoring'))])
 		ggplot(ct.plot, aes(x=t.period.long, y=prop, colour=factor.legend, shape=cgroup)) + geom_point(size=3) +
 				labs(x='', y='potential transmission intervals in cohort\n(% within each time period)',shape='') +
 				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +	
-				facet_grid(. ~ factor.legend, margins=FALSE)
+				scale_shape_manual(values=c(8,2)) +
+				facet_grid(. ~ factor.legend, margins=FALSE) + theme(legend.position = "bottom")
 		file		<- paste(plot.file,'_censoringmodelprop.pdf',sep='')
-		ggsave(file=file, w=25, h=8)	
+		ggsave(file=file, w=17, h=6)	
 	}
 	#
 	ct		<- subset(ct, select=c(stat, t.period, risk, factor, factor2, p.cens))
@@ -9877,6 +9882,15 @@ project.athena.Fisheretal.censoring.explore<- function()
 	#
 	#	CASCADE
 	#	
+
+	load('~/duke/2013_HIV_NL/ATHENA_2013/data/z/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3ka2H1C3V51_tablesSEQ_m2Bwmx.tp1.R')
+	ans$cens.table
+	ct			<- subset(ans$cens.table, stat=='X.msm', c(stat, t.period, risk, factor, factor2, n))
+	set(ct, NULL, c('t.period.min.bs','t.period.max.bs','cens.delta','cens.t','BS'), NA_real_)
+	ct			<- rbind(ct, ans$cens.table.bs, use.names=TRUE)
+	ctn			<- ans$cens.Patient.n
+	
+	
 	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3ka2H1C3V51')	
 	setkey(ct, stat, t.period, risk, factor)
 	ct			<- unique(ct)
@@ -9921,15 +9935,20 @@ project.athena.Fisheretal.censoring.explore<- function()
 	#
 	# illustrate extent of censoring
 	#
-	tmp		<- subset(cens.AnyPos_T1, stage%in%c('U.2','UA.2') & method.brl=='3kaH' & method.risk=='m2Bwmx.tp1')
+	file			<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3ka2H1C3V51_tablesSEQ_m2Bwmx.tp1.R'
+	load(file)
+	cens.AnyPos_T1	<- ans$cens.AnyPos_T1
+	tmp				<- subset(cens.AnyPos_T1, stage%in%c('U.2','UA.2'))
 	set(tmp, tmp[, which(stage=='UA.2')], 'stage', 'Undiagnosed,\n Recent infection\n at diagnosis')
 	set(tmp, tmp[, which(stage=='U.2')], 'stage', 'Undiagnosed,\n Chronic infection\n at diagnosis')
 	ggplot( tmp, aes(x=t.AnyPos_T1, fill=stage)) + geom_histogram(binwidth=0.25) +
-			labs(x='time of diagnosis of potential transmitters\nto recipient MSM diagnosed between 2006-5 and 2007-12', fill='', colour='') +
+			labs(y='number of potential transmitters\nto recipient MSM diagnosed between 2006-5 and 2007-12', x='time of diagnosis of potential transmitter', fill='', colour='') +
 			scale_fill_manual(values=c("#EF6548","#990000"), guide = FALSE) + geom_vline(xintercept = c(2006.408, 2008.)) +
+			scale_y_continuous(breaks=seq(0,2000,20)) + scale_x_continuous(breaks=seq(2005, 2015, 0.5)) +
 			facet_grid(. ~ stage, margins=FALSE)
+			#facet_grid(. ~ stage, scales='free_x', space='free_x', margins=FALSE)
 	plot.file	<- paste(outdir, '/', outfile, '_', 'SEQ', '_','3kaH','_','censoringUandUA.pdf', sep='')
-	ggsave(file=plot.file, w=10, h=6)
+	ggsave(file=plot.file, w=12, h=6)
 	#
 	#
 	#
