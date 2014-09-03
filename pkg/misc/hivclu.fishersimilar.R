@@ -9884,11 +9884,13 @@ project.athena.Fisheretal.censoring.explore<- function()
 	#	
 
 	load('~/duke/2013_HIV_NL/ATHENA_2013/data/z/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3ka2H1C3V51_tablesSEQ_m2Bwmx.tp1.R')
-	ans$cens.table
+	
 	ct			<- subset(ans$cens.table, stat=='X.msm', c(stat, t.period, risk, factor, factor2, n))
 	set(ct, NULL, c('t.period.min.bs','t.period.max.bs','cens.delta','cens.t','BS'), NA_real_)
 	ct			<- rbind(ct, ans$cens.table.bs, use.names=TRUE)
-	ctn			<- ans$cens.Patient.n
+	
+	ct			<- copy(ans$cens.table.bs)
+	ctn			<- copy(ans$cens.Patient.n)
 	
 	
 	ct			<- subset(cens.tables, grepl('X.msm',stat) & method.brl=='3ka2H1C3V51')	
