@@ -577,7 +577,7 @@ project.Gates.RootSeqSim.runxml<- function()
 	}
 	if(1)
 	{			
-		indir		<- paste(DATA,'methods_comparison_rootseqsim/140902',sep='/')
+		indir		<- paste(DATA,'methods_comparison_rootseqsim/140907',sep='/')
 		#search for XML files in indir
 		infiles		<- list.files(indir, pattern=paste(".xml$",sep=''))
 		insignat	<- ''	
@@ -599,10 +599,78 @@ project.Gates.RootSeqSim.runxml<- function()
 	}
 }
 ######################################################################################
-project.Gates.RootSeqSim<- function()
+project.Gates.test.ExaMLrun<- function()
 {
-	project.Gates.RootSeqSim.runxml()
+	require(phytools)
+	require(hivclust)
+	tree.id.labelsep		<- '|'
+	tree.id.label.idx.ctime	<- 4 
+	DATA		<<- "/work/or105/Gates_2014"
+	#DATA		<<- "/Users/Oliver/duke/2014_Gates"
+	indir		<- paste(DATA,'methods_comparison_pipeline/140914',sep='/')	  
+	outdir		<- indir
+	infiles		<- list.files(indir, '.*INTERNAL.R$', full.names=FALSE)
+	#
+	#	run ExaML 
+	#
+	for(i in seq_along(infiles))
+	{
+		infile		<- infiles[i]
+		#	load simulated data
+		file			<- paste(indir, '/', infile, sep='')
+		cat(paste('\nLoading file', file))
+		load(file)		#expect "df.epi"    "df.trms"   "df.inds"   "df.sample" "df.seq"
+		#	load outgroup sequences
+		file			<- system.file(package="rPANGEAHIVsim", "misc",'PANGEA_SSAfg_HXB2outgroup.R')
+		cat(paste('\nLoading outgroup seq from file', file))
+		load(file)		#expect "outgroup.seq.gag" "outgroup.seq.pol" "outgroup.seq.env"
+		
+		tmp				<- tolower(do.call('rbind',strsplit(df.seq[, GAG],'')))
+		rownames(tmp)	<- df.seq[, LABEL]
+		df.seq.gag		<- as.DNAbin(tmp)
+		tmp				<- tolower(do.call('rbind',strsplit(df.seq[, POL],'')))
+		rownames(tmp)	<- df.seq[, LABEL]
+		df.seq.pol		<- as.DNAbin(tmp)	
+		tmp				<- tolower(do.call('rbind',strsplit(df.seq[, ENV],'')))
+		rownames(tmp)	<- df.seq[, LABEL]
+		df.seq.env		<- as.DNAbin(tmp)
+		#
+		#	run ExaML on pol
+		#
+		seq				<- df.seq.pol
+		seq				<- rbind(seq, outgroup.seq.pol[, seq_len(ncol(seq))])
+		infile.seq.sig	<- "Sun_Sep_14_12:59:06_2013"
+		infile.seq		<- paste(substr(infile,1,nchar(infile)-20),'INFO_simu_polseq',sep='')
+		file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+		save(seq, file=file)
+		#	run ExaML
+		cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
+		cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=24, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+		cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+		Sys.sleep(1)	
+		#
+		#	run ExaML on concatenated
+		#
+		seq				<- cbind(df.seq.gag,df.seq.pol,df.seq.env)
+		tmp				<- cbind(outgroup.seq.gag[,1:ncol(df.seq.gag)], outgroup.seq.pol, outgroup.seq.env)
+		seq				<- rbind(seq,tmp)
+		infile.seq.sig	<- "Sun_Sep_14_12:59:06_2013"
+		infile.seq		<- paste(substr(infile,1,nchar(infile)-20),'INFO_simu_concseq',sep='')
+		file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+		save(seq, file=file)
+		#	run ExaML
+		cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
+		cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=24, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+		cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+		Sys.sleep(1)	
+	}		
+}
+######################################################################################
+project.Gates<- function()
+{
+	#project.Gates.RootSeqSim.runxml()
 	#project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML()
+	project.Gates.test.ExaMLrun()
 }
 ######################################################################################
 project.hivc.check<- function()

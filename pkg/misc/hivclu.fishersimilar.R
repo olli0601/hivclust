@@ -385,7 +385,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 		Y.U						<- project.athena.Fisheretal.Y.transmitterinfected(YX.part1)		
 		#	screen for likely missed intermediates/sources
 		plot.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'missed_',method,'.pdf',sep='')		
-		YX.tpairs.select		<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=Y.coal, cut.date=thresh.pcoal, cut.brl=1e-3, any.pos.grace.yr= any.pos.grace.yr, rm.zero.score=rm.zero.score, plot.file=plot.file, t.period=t.period)
+		YX.tpairs.select		<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=Y.coal, thresh.pcoal=thresh.pcoal, cut.brl=1e-3, any.pos.grace.yr= any.pos.grace.yr, rm.zero.score=rm.zero.score, plot.file=plot.file, t.period=t.period)
 		#	take branch length weight ONLY to derive "score.Y"
 		Y.score					<- merge( YX.tpairs.select, subset(Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, brl, score.brl.TPp, score.brl.TPd)), by=c('FASTASampleCode','t.FASTASampleCode'))
 		#	keep only one (Patient, t.Patient) pair if there are multiple sequences per individual. Take the one with largest brl score
@@ -955,7 +955,9 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	}
 	if(!is.na(plot.file.score) && substr(method,1,2)%in%c('3k'))
 	{
-		plot.df<- data.table(brlz=rep( seq(0,0.15,0.005), each=3), ART.C=c('Yes','Yes','No'), t.ART.C=c('Yes','No','No'), score.brl.TPp=NA_real_)
+	
+		plot.df	<- data.table(brlz=rep( seq(0,0.15,0.005), each=3), ART.C=c('Yes','Yes','No'), t.ART.C=c('Yes','No','No'), score.brl.TPp=NA_real_)		
+		plot.df	<- merge(plot.df, data.table(brlz=rep( seq(0,0.15,0.005), each=3), brl.bwhost.multiplier=c(1.5, 2, 2.5)), by='brlz', allow.cartesian=TRUE)
 		#	set score for cases F/F
 		tmp				<- plot.df[, which(t.ART.C=='No' & ART.C=='No')]
 		tmp				<- 2*ml.zaga.CN.pa['nu']*(1-ml.zaga.CN.pa['nu'])*pGA( plot.df[tmp,brlz*brl.bwhost.multiplier],  mu=ml.zaga.CN.pa['mu'], sigma=ml.zaga.CN.pa['sigma'] ) + (1-ml.zaga.CN.pa['nu'])*(1-ml.zaga.CN.pa['nu'])*pgamma( plot.df[tmp,brlz*brl.bwhost.multiplier],  shape=2*ml.zaga.CN.pa['shape'], scale=ml.zaga.CN.pa['scale'] ) 
@@ -980,13 +982,16 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 		set(plot.df, plot.df[, which(ART.C=='Yes' & t.ART.C=='No')], 'ART.C.long', tmp[2])
 		set(plot.df, plot.df[, which(ART.C=='Yes' & t.ART.C=='Yes')], 'ART.C.long', tmp[3])
 		set(plot.df, NULL, 'ART.C.long', plot.df[, factor(ART.C.long, levels=tmp, labels=tmp)])
-		ggplot(plot.df, aes(x=brlz, y=score.brl.TPp, group=ART.C.long, colour=ART.C.long)) + geom_line() + 
-				#geom_point() +
-				coord_cartesian(xlim=c(0, 0.16)) + scale_x_continuous(breaks=seq(0,0.2,0.02), minor_breaks=seq(0, 0.2, 0.005)) + scale_y_continuous(breaks=seq(0,1,0.2), minor_breaks=seq(0, 1, 0.05)) +
-				theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(11,'mm')) +
+		set(plot.df, NULL, 'brl.bwhost.multiplier', plot.df[, factor(brl.bwhost.multiplier)])
+		ggplot(plot.df, aes(x=brlz, y=score.brl.TPp, group=interaction(ART.C.long, brl.bwhost.multiplier), colour=ART.C.long, linetype=brl.bwhost.multiplier)) + geom_line() + 
+				coord_cartesian(xlim=c(0, 0.1)) + scale_x_continuous(breaks=seq(0,0.2,0.02), minor_breaks=seq(0, 0.2, 0.005) ) + scale_y_continuous(breaks=seq(0,1,0.2), minor_breaks=seq(0, 1, 0.05)) +
+				#theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(11,'mm')) +
+				theme(legend.position='bottom', legend.key.size=unit(11,'mm'), strip.background = element_blank(), strip.text = element_blank(), panel.margin = unit(2, "lines")) +
 				scale_colour_brewer(palette='Set1', name='treatment status at\nsequence sampling time') +
-				labs(x="between-host divergence", y='generation divergence distribution\n (survival density)')				
-		ggsave(file=plot.file.score, w=10, h=6)	
+				scale_linetype_manual(values=c(2,1,4)) + 
+				facet_grid(.~brl.bwhost.multiplier, margins=FALSE ) +
+				labs(x=expression(atop("evolutionary distance "*d[ij],"(estimated substitutions/site)")), y=expression(y[ij]), linetype=expression(alpha))				
+		ggsave(file=plot.file.score, w=11, h=8)	
 		#
 		#	PDF
 		#
@@ -1096,9 +1101,9 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	Y.brl		
 }
 ######################################################################################
-project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=NULL, cut.date=0.5, cut.brl=1e-3, any.pos.grace.yr= 3.5, rm.zero.score=FALSE, plot.file=NA, pyiw=NULL, t.period=0.25)
+project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=NULL, thresh.pcoal=0.5, cut.brl=1e-3, any.pos.grace.yr= 3.5, rm.zero.score=FALSE, plot.file=NA, pyiw=NULL, t.period=0.25)
 {
-	#cut.date=0.5; cut.brl=1e-3; any.pos.grace.yr= 3.5; rm.zero.score=FALSE
+	#thresh.pcoal=0.5; cut.brl=1e-3; any.pos.grace.yr= 3.5; rm.zero.score=FALSE
 	missed					<- merge(YX.tpairs, Y.brl, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE)
 	if(!is.null(Y.coal))
 		missed				<- merge(missed, Y.coal, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE)
@@ -1138,8 +1143,8 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 			pyiw	<- rbind(pyiw, data.table(pop='with.unlinkedbydeath', t.py= nrow(subset(missed, score.Y>0))*t.period, t.n= subset(missed, score.Y>0)[, length(unique(t.Patient))], n= subset(missed, score.Y>0)[, length(unique(Patient))] ))		
 		if(!is.null(Y.coal))
 		{	
-			cat(paste('\nprop of PYIW that meet the BRL.TN & COAL cutoff:', nrow(subset( missed, score.brl.TN<cut.brl &  coal.after.t.NegT>cut.date))/nrow(missed)  ))
-			set(missed, missed[, which(!is.na(coal.after.t.NegT) & coal.after.t.NegT<=cut.date)], 'score.Y', NA_real_)
+			cat(paste('\nprop of PYIW that meet the BRL.TN & COAL cutoff:', nrow(subset( missed, score.brl.TN<cut.brl &  coal.after.t.NegT>thresh.pcoal))/nrow(missed)  ))
+			set(missed, missed[, which(!is.na(coal.after.t.NegT) & coal.after.t.NegT<=thresh.pcoal)], 'score.Y', NA_real_)
 			if(!is.null(pyiw))
 				pyiw	<- rbind(pyiw, data.table(pop='with.coal', t.py= nrow(subset(missed, score.Y>0))*t.period, t.n= subset(missed, score.Y>0)[, length(unique(t.Patient))], n= subset(missed, score.Y>0)[, length(unique(Patient))] ))
 			cat(paste('\nnumber of pn PYIW with score.Y>0:',missed[, length(which(is.na(coal.after.t.NegT) & class=='pn' & score.Y>0))]))			
@@ -1162,7 +1167,7 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 		cat(paste('\nnumber of rows with NA score and Yijt < 1/nrow(!is.na(Y)). Setting to ZERO, n=',length(tmp)))
 		set(missed, tmp, 'score.Y', 0.)
 		#	add also small COAL
-		tmp		<- missed[,  mean(!is.na(coal.after.t.NegT) & coal.after.t.NegT>cut.date)]		#proportion of rows that pass coal criterion for pos Yijt
+		tmp		<- missed[,  mean(!is.na(coal.after.t.NegT) & coal.after.t.NegT>thresh.pcoal)]		#proportion of rows that pass coal criterion for pos Yijt
 		cat(paste('\nproportion of rows that satisfy COAL criterion (for Yijt>0), p=',tmp))
 		tmp		<- missed[, quantile(coal.after.t.NegT, p=tmp)]			#cut-off for zero Yijt so that the same proportion is retained
 		cat(paste('\ncorresponding cut off for Yijt=0 is ',tmp))		#roughly p(COAL within transmitter)<0.25	
@@ -1202,7 +1207,7 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	if(!is.na(plot.file))
 	{
 		missed[, cutoff:= 'posterior probability\n > 0.5']
-		set(missed, missed[, which(coal.after.t.NegT<=cut.date)], 'cutoff', 'posterior probability\n <= 0.5')
+		set(missed, missed[, which(coal.after.t.NegT<=thresh.pcoal)], 'cutoff', 'posterior probability\n <= 0.5')
 		#set(missed, missed[, which(score.brl.TN>=cut.brl)], 'cutoff', 'GD > GD(Unlinked-by-Death)')
 		tmp		<- missed[, list( FASTASampleCode=FASTASampleCode[which.min(brl)], t.FASTASampleCode=t.FASTASampleCode[which.min(brl)] ), by=c('Patient','t.Patient')]
 		tmp		<- merge(subset(tmp, select=c(FASTASampleCode, t.FASTASampleCode)), missed, by=c('FASTASampleCode','t.FASTASampleCode'))
@@ -8911,6 +8916,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outdir					<- paste(DATA,"fisheretal_140817",sep='/')		
 	indir					<- paste(DATA,"fisheretal_140828",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140828",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140905",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140905",sep='/')		
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -9722,7 +9729,7 @@ project.athena.Fisheretal.censoring.explore<- function()
 	#stop()
 	resume					<- 1 
 	indir					<- paste(DATA,"fisheretal",sep='/')
-	outdir					<- paste(DATA,"fisheretal_140828",sep='/')		
+	outdir					<- paste(DATA,"fisheretal_140905",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -9734,7 +9741,8 @@ project.athena.Fisheretal.censoring.explore<- function()
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period	
 	select					<- 'Yscore3ka2H[0-9\\.]+C3V51'
-	select					<- 'Yscore3ka2H1C3V51'
+	select					<- 'Yscore3ka2H[0\\.5|1|2]C3V51'
+	select					<- 'Yscore3ka2H0.5C3V51|Yscore3ka2H1C3V51|Yscore3ka2H2C3V51'
 	
 	files					<- list.files(indir)
 	files					<- files[ sapply(files, function(x) grepl('*tables.*R$',x) & grepl(select, x)) ]	
@@ -9775,7 +9783,7 @@ project.athena.Fisheretal.censoring.explore<- function()
 										tmp	<- paste(indir,'/',file,sep='')
 										cat(paste('\nprocess file=',tmp))
 										tmp	<- load(tmp)
-										ans	<- ans$cens.table
+										ans	<- subset(ans$cens.table, select=c(stat, t.period, factor, risk, n, factor2, sum, p))										
 										ans[, method.risk:=method.risk]
 										ans[, method.brl:=method.brl ]																		
 										ans
@@ -9848,7 +9856,35 @@ project.athena.Fisheretal.censoring.explore<- function()
 	setkey(ctn, stat, t.period)
 	ctn			<- unique(ctn)
 	plot.file	<- paste(outdir, '/', outfile, '_', 'SEQ', '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
-	project.athena.Fisheretal.censoring.model(ct, ctb, ctn, plot.file=plot.file, factors=tmp)	
+	tmp			<- subset(factors, method.risk=='m2Bwmx')
+	ct1			<- project.athena.Fisheretal.censoring.model(ct, ctb, ctn, plot.file=plot.file, factors=tmp)
+	
+	ctb			<- subset(cens.tables.bs, method.brl=='3ka2H0.5C3V51')
+	setkey(ctb, stat, t.period, risk, factor)
+	ctb			<- unique(ctb)
+	ct			<- subset(cens.tables, method.brl=='3ka2H0.5C3V51')
+	setkey(ct, stat, t.period, risk, factor)
+	ct			<- unique(ct)	
+	ctn			<- subset(cens.Patient.n, grepl('X.msm',stat) & method.brl=='3ka2H0.5C3V51')
+	setkey(ctn, stat, t.period)
+	ctn			<- unique(ctn)
+	plot.file	<- paste(outdir, '/', outfile, '_', 'SEQ', '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
+	tmp			<- subset(factors, method.risk=='m2Bwmx')
+	ct05		<- project.athena.Fisheretal.censoring.model(ct, ctb, ctn, plot.file=plot.file, factors=tmp)
+	
+	ctb			<- subset(cens.tables.bs, method.brl=='3ka2H2C3V51')
+	setkey(ctb, stat, t.period, risk, factor)
+	ctb			<- unique(ctb)
+	ct			<- subset(cens.tables, method.brl=='3ka2H2C3V51')
+	setkey(ct, stat, t.period, risk, factor)
+	ct			<- unique(ct)	
+	ctn			<- subset(cens.Patient.n, grepl('X.msm',stat) & method.brl=='3ka2H2C3V51')
+	setkey(ctn, stat, t.period)
+	ctn			<- unique(ctn)
+	plot.file	<- paste(outdir, '/', outfile, '_', 'SEQ', '_',ct[1,method.brl],'_',ct[1, method.risk], sep='')
+	tmp			<- subset(factors, method.risk=='m2Bwmx')
+	ct2			<- project.athena.Fisheretal.censoring.model(ct, ctb, ctn, plot.file=plot.file, factors=tmp)	
+	
 	#
 	#	AGE
 	#
@@ -10100,6 +10136,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_140817",sep='/')	
 	indir					<- paste(DATA,"fisheretal_140828",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140828",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140905",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140905",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
