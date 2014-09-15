@@ -82,11 +82,11 @@ EPS			<<- 1e-12
 #default.fun 	<- "hivc.pipeline.BEAST"
 #default.fun		<- "hivc.pipeline.BEASTout"
 #default.fun		<- "hivc.prog.betareg.estimaterisks"
-default.fun		<- "hivc.pipeline.betareg.estimate.risks"
+#default.fun		<- "hivc.pipeline.betareg.estimate.risks"
 #default.fun		<- "project.athena.Fisheretal.numbers"
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
-#default.fun		<- "hivc.pipeline.various"
+default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -398,6 +398,7 @@ if(length(args))
 	argv<<- args
 }
 ###############################################################################
+#stop()
 if(HIVC.DEBUG)	options(error= my.dumpframes)	
 cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	

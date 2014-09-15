@@ -535,6 +535,30 @@ project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML<- function()
 	
 }
 ######################################################################################
+project.Gates.test.runxml<- function()
+{
+	DATA		<<- "/work/or105/Gates_2014"
+	#DATA		<<- '/Users/Oliver/duke/2014_Gates'		
+	if(1)
+	{			
+		indir		<- paste(DATA,'methods_comparison_pipeline/140914',sep='/')
+		#search for XML files in indir
+		infiles		<- list.files(indir, pattern=paste(".xml$",sep=''))
+		insignat	<- ''	
+		hpc.ncpu	<- 8		
+		for(infile in infiles)
+		{
+			infile		<- substr(infile, 1, nchar(infile)-4) 		
+			cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
+			cat(cmd)	
+			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=791, hpc.mem="3700mb")		
+			outdir		<- indir
+			outfile		<- paste("bpg.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
+			hivc.cmd.hpccaller(outdir, outfile, cmd)		
+		}
+	}
+}
+######################################################################################
 project.Gates.RootSeqSim.runxml<- function()
 {
 	DATA		<<- "/work/or105/Gates_2014"
@@ -645,7 +669,7 @@ project.Gates.test.ExaMLrun<- function()
 		save(seq, file=file)
 		#	run ExaML
 		cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
-		cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=24, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+		cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
 		hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
 		Sys.sleep(1)	
 		#
@@ -660,7 +684,7 @@ project.Gates.test.ExaMLrun<- function()
 		save(seq, file=file)
 		#	run ExaML
 		cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
-		cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=24, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+		cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
 		hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
 		Sys.sleep(1)	
 	}		
@@ -671,6 +695,7 @@ project.Gates<- function()
 	#project.Gates.RootSeqSim.runxml()
 	#project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML()
 	project.Gates.test.ExaMLrun()
+	project.Gates.test.runxml()
 }
 ######################################################################################
 project.hivc.check<- function()
