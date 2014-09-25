@@ -317,7 +317,7 @@ project.athena.Fisheretal.tripletweights<- function(Y.score, save.file=NA)
 	triplet.weight
 }
 ######################################################################################
-project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, infile.trm.model, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, thresh.pcoal=0.5, brl.bwhost.multiplier=1, method.minLowerUWithNegT=TRUE, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
+project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, infile.trm.model, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, dur.Acute=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, thresh.pcoal=0.5, brl.bwhost.multiplier=1, method.minLowerUWithNegT=TRUE, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
 {
 	if(resume && !is.na(save.file))
 	{
@@ -361,7 +361,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 		if(substr(method,1,2)=='3k')	#expect central brl	
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, brl.bwhost.multiplier=brl.bwhost.multiplier, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
 		if(substr(method,1,2)=='3l')	#expect central brl	
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight.3l(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, plot.file.score=plot.file.score)		
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight.3l(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, dur.Acute=dur.Acute, plot.file.score=plot.file.score)		
 		if(substr(method,1,2)=='3e')	#expect large brl				
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.0175, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
 		if(substr(method,1,2)=='3f')	#expect small brl				
@@ -435,7 +435,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 		return( list(YX=YX, YX.tpairs=YX.tpairs, df.all=df.all, Y.brl=Y.brl, Y.U=Y.U, Y.coal=Y.coal) )
 }
 ######################################################################################
-project.athena.Fisheretal.Y.brlweight.3l<- function(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, plot.file.score=NA)
+project.athena.Fisheretal.Y.brlweight.3l<- function(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, dur.Acute=NULL, plot.file.score=NA)
 {
 	require(reshape2)
 	require(ggplot2)
@@ -11981,7 +11981,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	save.all		<- FALSE
 	#save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'_all.R',sep='')
 	#save.all		<- TRUE
-	YX				<- project.athena.Fisheretal.YX.part2(	YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, 
+	YX				<- project.athena.Fisheretal.YX.part2(	YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, dur.Acute=dur.Acute,
 															rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=method.thresh.pcoal, brl.bwhost.multiplier=method.brl.bwhost, method.minLowerUWithNegT=method.minLowerUWithNegT, 
 															t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
 	gc()
@@ -12013,7 +12013,8 @@ hivc.prog.betareg.estimaterisks<- function()
 		rm.zero.score	<- FALSE
 		thresh.pcoal	<- 0.75
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_RICT_tATHENAseq','.R',sep='')
-		YXS				<- project.athena.Fisheretal.YX.part2(YXS.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method)		
+		YXS				<- project.athena.Fisheretal.YX.part2(	YXS.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, dur.Acute=dur.Acute, 
+																rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method)		
 	}
 	#
 	#	get timelines for all clustering candidate transmitters to the recently infected RI.PT
