@@ -452,8 +452,9 @@ project.athena.Fisheretal.Y.TSupp<- function(df.TS, df.viro, t.period=0.25, lRNA
 	set(df.TS, NULL, 'ts', df.TS[, floor(ts) + floor( (ts%%1)*100 %/% (t.period*100) ) * t.period] )
 	set(df.TS, NULL, 'te', df.TS[, floor(te) + ceiling( (te%%1)*100 %/% (t.period*100) ) * t.period] )
 	df.TS		<- df.TS[, list(t= seq(ts, te, by=t.period), Patient=Patient), by='DUMMY']
-	#	get viral loads for time [FromT, ToT] under which individual is on ART	
-	tmp			<- project.athena.Fisheretal.X.viro(unique(subset(Y.brl, select=t.Patient)), df.viro, t.period=t.period, lRNA.cutoff=NA)
+	#	get viral loads for time [FromT, ToT] under which individual is on ART
+	tmp			<- data.table(t.Patient=df.TS[, unique(Patient)])	
+	tmp			<- project.athena.Fisheretal.X.viro(tmp, df.viro, t.period=t.period, lRNA.cutoff=NA)
 	setnames(tmp, 't.Patient','Patient')	
 	df.TS		<- merge( df.TS, subset(tmp, !is.na(lRNA)), by=c('Patient','t'), all.x=TRUE )	
 	tmp			<- df.TS[, {
