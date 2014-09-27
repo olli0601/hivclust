@@ -317,7 +317,7 @@ project.athena.Fisheretal.tripletweights<- function(Y.score, save.file=NA)
 	triplet.weight
 }
 ######################################################################################
-project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, infile.trm.model, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, dur.Acute=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, thresh.pcoal=0.5, brl.bwhost.multiplier=1, method.minLowerUWithNegT=TRUE, t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
+project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df.viro, predict.t2inf, t2inf.args, indir, insignat, indircov, infilecov, infiletree, infile.trm.model, outdir, outfile, cluphy=NULL, cluphy.info=NULL, cluphy.map.nodectime=NULL, df.tpairs.4.rawbrl=NULL, dur.Acute=NULL, rm.zero.score=FALSE, any.pos.grace.yr=3.5, thresh.pcoal=0.5, brl.bwhost.multiplier=1, method.minLowerUWithNegT=TRUE, lRNA.supp=log10(51), t.period=0.25, save.file=NA, save.all=FALSE, resume=1, method='3aa')
 {
 	if(resume && !is.na(save.file))
 	{
@@ -360,8 +360,8 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, brl.bwhost.multiplier=brl.bwhost.multiplier, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
 		if(substr(method,1,2)=='3k')	#expect central brl	
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, brl.bwhost.multiplier=brl.bwhost.multiplier, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
-		if(substr(method,1,2)=='3l')	#expect central brl	
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight.3l(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, dur.Acute=dur.Acute, plot.file.score=plot.file.score)		
+		if(substr(method,1,2)=='3l')	#expect central brl
+			Y.brl				<- project.athena.Fisheretal.Y.brlweight.3l(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.viro, dur.Acute=dur.Acute, t.period=t.period, lRNA.supp=lRNA.supp, plot.file.score=plot.file.score)					
 		if(substr(method,1,2)=='3e')	#expect large brl				
 			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.0175, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
 		if(substr(method,1,2)=='3f')	#expect small brl				
@@ -435,7 +435,113 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, pr
 		return( list(YX=YX, YX.tpairs=YX.tpairs, df.all=df.all, Y.brl=Y.brl, Y.U=Y.U, Y.coal=Y.coal) )
 }
 ######################################################################################
-project.athena.Fisheretal.Y.brlweight.3l<- function(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, dur.Acute=NULL, plot.file.score=NA)
+project.athena.Fisheretal.Y.TSupp<- function(df.TS, df.viro, t.period=0.25, lRNA.supp=3)
+{
+	#	get time in [meanInfT,  PosSeqT] under which individual is on ART 
+	tmp			<- df.TS[, {
+								tmp	<-  range(PosSeqT, meanInfT)
+								if(is.na(AnyT_T1) | tmp[2]<AnyT_T1)						#no time potentially suppressed	
+									tmp[2]<- tmp[1]
+								if(!is.na(AnyT_T1) & tmp[1]<AnyT_T1 & tmp[2]>=AnyT_T1)	#only time between ART start and tmp[2] potentially suppressed
+									tmp[1]<- AnyT_T1
+								list( ts= tmp[1], te=tmp[2]  )
+							}, by='DUMMY']
+	df.TS		<- merge(subset(df.TS, select=c(DUMMY,Patient)), tmp, by='DUMMY')
+	df.TS		<- subset(df.TS, te>ts)
+	#	adjust ts, te to t.period intervals and expand
+	set(df.TS, NULL, 'ts', df.TS[, floor(ts) + floor( (ts%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(df.TS, NULL, 'te', df.TS[, floor(te) + ceiling( (te%%1)*100 %/% (t.period*100) ) * t.period] )
+	df.TS		<- df.TS[, list(t= seq(ts, te, by=t.period), Patient=Patient), by='DUMMY']
+	#	get viral loads for time [FromT, ToT] under which individual is on ART	
+	tmp			<- project.athena.Fisheretal.X.viro(unique(subset(Y.brl, select=t.Patient)), df.viro, t.period=t.period, lRNA.cutoff=NA)
+	setnames(tmp, 't.Patient','Patient')	
+	df.TS		<- merge( df.TS, subset(tmp, !is.na(lRNA)), by=c('Patient','t'), all.x=TRUE )	
+	tmp			<- df.TS[, {
+								tmp			<- which(!is.na(lRNA))
+								lRNAext		<- lRNA
+								if( length(tmp)>0 && tail(tmp,1)!=length(lRNA))	#if last non-NA is not final entry
+								{
+									lRNAext	<- c(lRNA[1:tail(tmp,1)], rep( lRNA[tail(tmp,1)], length(lRNA)-tail(tmp,1) ))
+								}
+								list(t=t, lRNAext=lRNAext)
+							}, by='DUMMY']
+	df.TS		<- merge( df.TS, tmp, by=c('DUMMY','t'))				
+	#	count time suppressed
+	df.TS[, list( tsupp= t.period*length(which(!is.na(lRNA) & lRNAext<=lRNA.supp))), by='DUMMY']		
+}
+######################################################################################
+project.athena.Fisheretal.Y.brlweight.3l<- function(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.viro, dur.Acute=NULL, t.period=0.25, lRNA.supp=log10(51), plot.file.score=NA)
+{
+	require(reshape2)
+	require(ggplot2)
+	require(gamlss)		
+	#
+	#	compute cdf for pairs given they are unlinked
+	#
+	setkey(Y.rawbrl.unlinked, brl)
+	p.rawbrl.unlinked	<- Y.rawbrl.unlinked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]
+	setkey(Y.rawbrl.linked, brl)
+	p.rawbrl.linked		<- Y.rawbrl.linked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]
+	#
+	#	add sequence sampling times	
+	#
+	Y.brl				<- copy(Y.rawbrl)
+	Y.brl				<- merge( Y.brl, unique(subset(df.all, select=c(FASTASampleCode, Patient, PosSeqT, AnyT_T1, isAcute))), by='FASTASampleCode' )	
+	tmp					<- merge( data.table(FASTASampleCode=Y.brl[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, Patient, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	Y.brl				<- merge( Y.brl, tmp, by='t.FASTASampleCode')
+	stopifnot( Y.brl[, all(isAcute%in%c('Yes','Maybe'))] )
+	#
+	#	calculate d_TSeqT
+	#
+	Y.brl				<- merge( Y.brl, data.table(isAcute=c('Yes', 'Maybe'), meanInfWindow= dur.Acute[c('Yes','Maybe')] ), by='isAcute' )		
+	Y.brl[, meanInfT:= PosSeqT-meanInfWindow/365.25]
+	Y.brl[, DUMMY:=seq_len(nrow(Y.brl))]
+	#	calculate time spent suppressed for transmitter
+	df.TS		<- subset(Y.brl, select=c(DUMMY, t.Patient, t.AnyT_T1, meanInfT, t.PosSeqT))
+	setnames(df.TS, colnames(df.TS), gsub('t.', '', colnames(df.TS), fixed=TRUE))	
+	df.TS		<- project.athena.Fisheretal.Y.TSupp(df.TS, df.viro, t.period=t.period, lRNA.supp=lRNA.supp)
+	setnames(df.TS, 'tsupp', 't.tsupp')
+	Y.brl		<- merge(Y.brl, df.TS, by='DUMMY', all.x=TRUE)
+	set(Y.brl, Y.brl[, which(is.na(t.tsupp))], 't.tsupp', 0.)
+	#	calculate time spent suppressed for infected
+	df.TS		<- subset(Y.brl, select=c(DUMMY, Patient, AnyT_T1, meanInfT, PosSeqT))	
+	df.TS		<- project.athena.Fisheretal.Y.TSupp(df.TS, df.viro, t.period=t.period, lRNA.supp=lRNA.supp)
+	Y.brl		<- merge(Y.brl, df.TS, by='DUMMY', all.x=TRUE)
+	set(Y.brl, Y.brl[, which(is.na(tsupp))], 'tsupp', 0.)
+	cat(paste('\nFound person-years of suppressed evolution, ', Y.brl[, sum(t.tsupp)+sum(tsupp)]))
+	#	calculate time evolving in transmitter and  infected
+	Y.brl[, t.d_TSeqT:=  abs(t.PosSeqT-meanInfT)-t.tsupp ]
+	set(Y.brl, Y.brl[, which(t.d_TSeqT<0)], 't.d_TSeqT', 0.)	
+	Y.brl[, i.d_TSeqT:=  abs(PosSeqT-meanInfT)-tsupp ]
+	set(Y.brl, Y.brl[, which(i.d_TSeqT<0)], 'i.d_TSeqT', 0.)	
+	Y.brl[, d_TSeqT:=t.d_TSeqT+i.d_TSeqT]
+	cat(paste('\nFound person-years of unsuppressed evolution, ', Y.brl[, sum(d_TSeqT)]))
+	#
+	#	load Gamma model and compute likelihood
+	#
+	load(infile.trm.model)		#expect "trm.pol.GA" "trm.pol"   
+	Y.brl[, mu:= predict(trm.pol.GA, data=trm.pol, newdata=as.data.frame(subset(Y.brl, select=d_TSeqT)), what='mu', type='link')]
+	Y.brl[, sigma:= exp( predict(trm.pol.GA, data=trm.pol, newdata=as.data.frame(subset(Y.brl, select=d_TSeqT)), what='sigma', type='link') )]	
+	Y.brl[, score.brl.TPd:= Y.brl[, dGA(brl, mu=mu, sigma=sigma)]]
+	Y.brl[, score.brl.TPp:= Y.brl[, score.brl.TPd]]
+	#
+	#	set branch length quantiles
+	#	
+	Y.brl[, score.brl.TN:= p.rawbrl.unlinked(brl)]
+	Y.brl[, score.brl.TP:= p.rawbrl.linked(brl)]
+	#	
+	if(!is.na(plot.file.score))
+	{
+		#ggplot(Y.brl, aes(x=score.brl.TPd)) + geom_histogram()		
+	}
+	#
+	Y.brl		<- subset( Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, score.brl.TPd, score.brl.TPp, score.brl.TN, score.brl.TP, brl) )
+	cat(paste('\nReturn brl score for #t.Patient seqs=',Y.brl[, length(unique(t.FASTASampleCode))]))
+	Y.brl		
+}
+######################################################################################
+project.athena.Fisheretal.Y.brlweight.3l.v1<- function(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, dur.Acute=NULL, plot.file.score=NA)
 {
 	require(reshape2)
 	require(ggplot2)
@@ -3755,6 +3861,316 @@ project.athena.Fisheretal.estimate.risk.core.noWadj<- function(YX.m3, X.tables, 
 	list(risk=risk.ans, fit.rr=betafit.rr, risk.bs=risk.ans.bs)
 }
 ######################################################################################
+project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, X.tables, method.risk, risk.df, bs.n=1e3 )
+{
+	options(warn=0)
+	#
+	#	pre-processing
+	#
+	nt.table	<- copy(X.tables$nt.table)
+	set(nt.table, NULL, 'Patient', nt.table[, factor(Patient)])
+	set(nt.table, NULL, 'risk', nt.table[, factor(risk)])
+	set(nt.table, NULL, 'stat', nt.table[, factor(stat)])	
+	nt.table	<- dcast.data.table(nt.table, Patient + risk + factor ~ stat, value.var="nt")
+	##	sense check nt.table
+	tmp			<- nt.table[, which(X.seq>X.msm)]
+	if(length(tmp))	cat(paste('\nWARNING: X.seq>X.msm for entries n=',length(tmp)))
+	stopifnot(length(tmp)==0)
+	set(nt.table, tmp, 'X.seq', nt.table[tmp, X.msm])	
+	tmp			<- nt.table[, which(X.clu>X.seq)]
+	if(length(tmp))	cat(paste('\nWARNING: X.clu>X.seq for entries n=',length(tmp)))
+	stopifnot(length(tmp)==0)
+	set(nt.table, tmp, 'X.clu', nt.table[tmp, X.seq])
+	tmp			<- nt.table[, which(YX>X.clu)]
+	if(length(tmp))	cat(paste('\nWARNING: YX>X.clu for entries n=',length(tmp)))
+	#stopifnot(length(tmp)==0)	
+	set(nt.table, tmp, 'YX', nt.table[tmp, X.clu])
+	#	make sure all risk factors are in nt.table for every patient (even if zero)
+	tmp			<- merge( unique(subset(nt.table, select=c(risk, Patient))), unique(subset(risk.df, select=c(risk,factor))), by='risk', allow.cartesian=TRUE)
+	nt.table	<- merge(tmp, nt.table, by=c('risk','factor','Patient'))
+	set(nt.table, nt.table[, which(is.na(YX))], c('X.clu','X.msm','X.seq','YX'), 0)	
+	#	X.msm not adjusted for censoring
+	setnames(nt.table, 'X.msm', 'X.msm.e0')
+	#	X.msm adjusted for censoring	
+	tmp			<- copy(X.tables$cens.table)
+	setkey(tmp, stat, t.period, risk, factor)
+	tmp2		<- copy(X.tables$cens.table.bs)
+	setkey(tmp2, stat, t.period, risk, factor)
+	tmp			<- project.athena.Fisheretal.censoring.model(unique(tmp), unique(tmp2), plot.file=NA )
+	tmp			<- merge( nt.table[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], subset(tmp, select=c(risk, factor, p.cens)), by=c('risk','factor'))
+	#	total censored number of potential transmission intervals 
+	tmp			<- tmp[, list( PYe0cpr=round(X.msm.e0/p.cens-X.msm.e0)), by=c('risk','factor')]		
+	#	need to allocate the PYe0cpr potential transmission intervals among all Patients with given risk factor for whom yijt>0
+	#	simply take mean
+	tmp			<- merge(tmp, nt.table[, list(X.msm.e0cp= length(unique(Patient))), by=c('risk','factor') ], by=c('risk','factor')) 
+	set(tmp, NULL, 'X.msm.e0cp', round( tmp[, PYe0cpr/X.msm.e0cp] ))
+	nt.table	<- merge(nt.table, subset(tmp, select=c(risk, factor, X.msm.e0cp)), by=c('risk','factor'))
+	set(nt.table, NULL, 'X.msm.e0cp', nt.table[, X.msm.e0+X.msm.e0cp])	
+	#	compute extra variables from nt.table. 
+	#	PYs: potential transmission intervals including zero yijt
+	#	PTx: prob of non-zero yijt 
+	#	X.msm.e0: potential transmission intervals in cohort
+	#	X.msm.e0.cp: potential transmission intervals in cohort adjusted for clustering
+	#	SX.e0: fraction of potential transmission intervals in cohort that is sampled
+	#	SX.e0.cp: fraction of potential transmission intervals in cohort, adjusted for censoring, that is sampled
+	adj			<- nt.table[, list(YX=sum(YX), X.clu=sum(X.clu), X.seq=sum(X.seq), X.msm.e0=sum(X.msm.e0), X.msm.e0cp=sum(X.msm.e0cp)), by=c('risk','factor')]
+	tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
+	adj[, PYs:= adj[[tmp]]]
+	adj[, PTx:= adj[, YX] / adj[[tmp]]]
+	adj[, Sx.e0:= PYs/X.msm.e0]					
+	adj[, Sx.e0cp:= PYs/X.msm.e0cp]
+	#	prepare risk.df and nt.table as needed
+	adj.s		<- copy(adj)
+	risk.df		<- merge(risk.df, subset(adj.s, select=c(risk, factor, PYs, PTx, X.msm.e0, X.msm.e0cp)), by=c('risk','factor'))
+	nt.table	<- merge(nt.table, subset(adj, select=c(risk, factor, Sx.e0, Sx.e0cp)), by=c('risk','factor'))
+	#	add PTx.ref to risk.df
+	setkey(risk.df, risk, factor)
+	tmp			<- subset(unique(risk.df), select=c(risk, factor, PTx))
+	setnames(tmp, colnames(tmp), paste(colnames(tmp),'.ref',sep=''))
+	risk.df		<- merge(risk.df, tmp, by=c('risk.ref','factor.ref'))
+	set(risk.df, NULL, 'risk.ref', risk.df[, as.character(risk.ref)])
+	set(risk.df, NULL, 'factor.ref', risk.df[, as.character(factor.ref)])
+	set(risk.df, NULL, 'risk', risk.df[, as.character(risk)])
+	set(risk.df, NULL, 'factor', risk.df[, as.character(factor)])	
+	#	construct bias and censoring adjustments
+	adj	<- subset(adj.s, !grepl('U',factor), c(risk, factor, PYs, X.msm.e0cp))[, list(risk=risk, factor=factor, X.msm.e0cp=sum(X.msm.e0cp)*PYs/sum(PYs))]
+	adj	<- rbind(adj, subset(adj.s, grepl('U',factor), c(risk, factor, X.msm.e0cp)))		
+	adj	<- merge(subset(adj.s, select=c(risk, factor, PTx, PYs, X.msm.e0)), adj, by=c('risk','factor'))	
+	adj	<- adj[, list(	risk=risk, factor=factor, cens.e0= 1, cens.e0cp= X.msm.e0cp/PYs	)]		
+	tmp	<- subset(adj.s, select=c(risk, factor, PTx, PYs, X.msm.e0, X.msm.e0cp))
+	tmp	<- tmp[, list(	risk=risk, factor=factor,
+					bias.e0= X.msm.e0/PYs, bias.e0cp= X.msm.e0cp/PYs, 
+					P= PYs/sum(PYs), P.raw= PYs/sum(PYs), 
+					P.e0= X.msm.e0/sum(X.msm.e0), P.e0cp= X.msm.e0cp/sum(X.msm.e0cp), 
+					P.raw.e0= X.msm.e0/sum(X.msm.e0), P.raw.e0cp= X.msm.e0cp/sum(X.msm.e0cp)	)]
+	adj	<- merge(adj, tmp, by=c('risk','factor'))	
+	#
+	#	ready to go:
+	#
+	#	potential transmission intervals in denominator pop (either X.seq or X.clu)
+	cat(paste('\nintervals with evidence for or against transmission (denominator)'))
+	setkey(risk.df, coef)
+	tmp			<- unique(risk.df)
+	tmp[, stat:='PYs']
+	tmp			<- subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, PYs))
+	set(tmp, NULL, c('coef.ref','risk.ref', 'factor.ref'), 'None')
+	setnames(tmp,'PYs','v')
+	risk.ans	<- copy(tmp)
+	#
+	#	number of transmissions and proportions by raw count
+	#
+	cat(paste('\nnumber and proportion of transmissions using raw evidence for transmission (y_ijt*w_ijt)'))
+	missing		<- merge(nt.table, unique( subset( risk.df, select=c(risk, factor, PTx) ) ), by=c('risk','factor'))	
+	# compute the mean Y by stage for non-zero Y
+	tmp			<- YX.m3[, list(yYX.mean= mean(score.Y), yYX.med= median(score.Y)), by='stage']
+	setnames(tmp, 'stage','factor')
+	tmp[, risk:='stage']	
+	missing		<- merge(missing, tmp, by=c('risk','factor'))
+	#compute the mean Y by stage including zero Y
+	set(missing, NULL, 'yYX.mean', missing[, yYX.mean*PTx])
+	set(missing, NULL, 'yYX.med', missing[, yYX.med*PTx])
+	#	compute the sum of observed Y's by stage for each recipient
+	tmp			<- YX.m3[, list(yYX.sum= sum(score.Y), YX.n=length(score.Y), YX.w=w.t[1]), by=c('stage','Patient')]
+	setnames(tmp, 'stage','factor')
+	tmp[, risk:='stage']	
+	missing		<- merge(missing, tmp, by=c('risk','factor','Patient'), all.x=TRUE)
+	set(missing, missing[, which(is.na(YX.n))], 'YX.w', 1.) 
+	set(missing, missing[, which(is.na(YX.n))], c('yYX.sum','YX.n'), 0.)
+	#	calculate number expected missing potential transmission intervals for recipient j and factor x
+	tmp			<- melt( subset(missing, select=c(Patient, risk, factor, X.seq, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )
+	set( tmp, tmp[, which(X.seq==0)], 'X.seq', 1)	#mean of sampling for no observed intervals coincides with sampling model for 1 observed interval 
+	tmp[, YXm.e:= tmp[, as.integer(round( X.seq*(1-Sx)/Sx )) ]]
+	set(tmp, NULL, 'Sx.method', tmp[, gsub('Sx','YXm.e',Sx.method)])
+	missing		<- merge(missing, dcast.data.table(tmp, Patient + risk + factor ~ Sx.method, value.var="YXm.e"), by=c('Patient','risk','factor'))
+	#missing[, YXm.sum.e0:=YXm.e.e0*yYX.mean]
+	#missing[, YXm.sum.e0cp:=YXm.e.e0cp*yYX.mean]	
+	missing[, YXm.sum.e0:=YXm.e.e0*yYX.med]
+	missing[, YXm.sum.e0cp:=YXm.e.e0cp*yYX.med]
+	#	calculate prob Pj(x) that recipient j got infected from x  - with and without adjustment	
+	tmp			<- missing[, 	list(	factor=factor, 	
+										Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
+										Pjx.e0= (yYX.sum+YXm.sum.e0)*YX.w/sum((yYX.sum+YXm.sum.e0)*YX.w),					
+										Pjx.e0cp= (yYX.sum+YXm.sum.e0cp)*YX.w/sum((yYX.sum+YXm.sum.e0cp)*YX.w),
+										coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient')]
+	#	exclude recipients with no evidence for direct transmission
+	tmp			<- subset(tmp, !is.nan(Pjx))					
+	#	compute N.raw etc	
+	tmp			<- tmp[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
+					risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
+	tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#compute proportions from the various N.raw
+	tmp			<- tmp[, list(v= v/sum(v, na.rm=TRUE), risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef=coef, coef.ref='None') , by='stat']
+	set(tmp, NULL, 'stat', tmp[, gsub('N','P',stat)])
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#	ggplot(YX.m3, aes(x=score.Y)) + geom_histogram() + facet_grid(CD4b.tperiod~.) + scale_x_continuous(limits=c(0,100))
+	#
+	#	relative transmissibilities
+	#
+	cat(paste('\nrelative transmissibilities'))	
+	tmp			<- subset( melt(adj, id.vars=c('risk','factor'), variable.name='stat', value.name='p'), !grepl('cens',stat) & !grepl('^bias',stat)	)	
+	tmp			<- merge( subset(risk.ans, grepl('P.',stat) | stat=='P' ), tmp, by=c('risk','factor','stat'))
+	set(tmp, NULL, 'v', tmp[, v/p])
+	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)	
+	set(tmp, NULL, 'stat', tmp[, gsub('P','RI',stat)])
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#	risk ratio from relative transmissibilities
+	cat(paste('\n term-wise risk ratio from identity RR(x,z)=RT(x)/RT(z).'))	
+	setkey(risk.df, coef.ref, coef)
+	tmp			<- subset(risk.df, coef!=coef.ref, select=c(coef.ref, coef))
+	tmp.ref		<- merge(data.table(coef=tmp[, unique(coef.ref)]), subset(risk.ans, grepl('RI',stat), select=c(coef, risk, factor, stat, v)), by='coef')
+	setnames(tmp.ref, c('coef','risk','factor','v'), c('coef.ref','risk.ref','factor.ref','v.ref'))
+	tmp			<- merge(tmp, subset(risk.ans, grepl('RI',stat), select=c(coef, risk, factor, stat, v)), by='coef', allow.cartesian=TRUE)
+	tmp			<- merge(tmp.ref, tmp, by=c('stat','coef.ref'))
+	tmp.ref		<- NULL
+	set(tmp, NULL, 'v', tmp[, v/v.ref])
+	set(tmp, NULL, 'stat', tmp[, gsub('RI','RR',stat)])
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#	Bootstraps	on ratio and on prob
+	cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
+	tmp			<- lapply(seq_len(bs.n), function(bs.i)
+			{
+				if(bs.i%%100==0)	cat(paste('\nprocess bootstrap data sets bs.i=',bs.i))
+				#bootstrap over recently infected Patient
+				tmp					<- unique(subset(YX.m3, select=Patient))					
+				#
+				YX.m3.bs			<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
+				#recipient MSM are not necessarily unique any longer - need to create unique bs id
+				YX.m3.bs[, Patient.bs:=paste(Patient, seq_len(nrow(tmp)),sep='_bs' )]
+				YX.m3.bs			<- merge( YX.m3, YX.m3.bs, by='Patient', allow.cartesian=TRUE )
+				#	odds ratio and risk ratio
+				setkey(risk.df, coef.ref, coef)
+				#
+				#	raw number of transmissions
+				#				
+				missing		<- merge(nt.table, unique( subset( risk.df, select=c(risk, factor, PTx) ) ), by=c('risk','factor'))
+				#	reduce to bootstrap sampled recipients
+				tmp			<- subset(YX.m3.bs, select=c(Patient, Patient.bs))		
+				setkey(tmp, Patient, Patient.bs)
+				missing		<- merge(unique(tmp), missing, by='Patient', allow.cartesian=TRUE)
+				#	compute the sum of observed Y's by stage for each recipient
+				tmp			<- YX.m3.bs[, list(Patient=Patient[1], yYX.sum= sum(score.Y), YX.bs=length(score.Y), YX.w=w.t[1]), by=c('stage','Patient.bs')]
+				setnames(tmp, 'stage','factor')
+				tmp[, risk:='stage']	
+				missing		<- merge(missing, tmp, by=c('risk','factor','Patient','Patient.bs'), all.x=TRUE)
+				set(missing, missing[, which(is.na(YX.bs))], 'YX.w', 1.) 
+				set(missing, missing[, which(is.na(YX.bs))], c('yYX.sum','YX.bs'), 0.)
+				#draw number missing potential transmission intervals from neg binomial
+				tmp			<- melt( subset(missing, select=c(Patient.bs, risk, factor, X.seq, PTx, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )				
+				tmp[, YXm.r:= rznbinom(nrow(tmp), tmp[, X.seq], tmp[, Sx])]
+				#tmp[, YXm.r:= tmp[, round((1-Sx)*X.seq/Sx)]]
+				set(tmp, NULL, 'Sx.method', tmp[, gsub('Sx','YXm.r',Sx.method)])
+				#draw number of missing non-zero potential transmission intervals under PTx
+				set(tmp, NULL, 'YXm.r', rbinom(nrow(tmp), tmp[,YXm.r], tmp[,PTx]))
+				#set(tmp, NULL, 'YXm.r', tmp[,round(YXm.r*PTx)])
+				missing		<- merge(missing, dcast.data.table(tmp, Patient.bs + risk + factor ~ Sx.method, value.var="YXm.r"), by=c('Patient.bs','risk','factor'), all.x=1)				
+				#draw missing scores from all yijt in that stage	for number missing YXm.r.e0
+				set(missing, NULL, 'risk', missing[, as.character(risk)])
+				set(missing, NULL, 'factor', missing[, as.character(factor)])
+				tmp			<- missing[, 	{
+							z	<- median( YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']] )	
+							#z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]	#this is on purpose YX.m3 instead of YX.m3.bs to make sure that we have scores for every factor
+							#z	<- c(z, rep(0, length(z)/PTx[1]-length(z) ))
+							#list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(c(0, z), sum(YXm.r.e0), prob=c(length(z)/PTx[1]-length(z), rep(1, length(z))), replace=TRUE)  )
+							list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(z, sum(YXm.r.e0), replace=TRUE)  )
+						}, by=c('risk','factor')]
+				#subset(tmp, Patient.bs=='M37593_bs131')
+				#hist( subset(tmp, factor=='ART.suA.Y.4')[, yYXm.r.e0], breaks=100)									
+				missing		<- merge(missing, tmp[, list(yYXm.sum.e0=sum(yYXm.r.e0)), by=c('Patient.bs','risk','factor')], by=c('Patient.bs','risk','factor'), all.x=TRUE)
+				#draw missing scores from all yijt in that stage	for number missing YXm.r.e0cp
+				tmp			<- missing[, 	{
+							z	<- median( YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']] )
+							#z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]
+							#z	<- c(z, rep(0, length(z)/PTx[1]-length(z) ))
+							#list(Patient.bs=rep(Patient.bs, YXm.r.e0cp), yYXm.r.e0cp=sample(c(0,z), sum(YXm.r.e0cp), prob=c(length(z)/PTx[1]-length(z), rep(1, length(z))), replace=TRUE)  )
+							list(Patient.bs=rep(Patient.bs, YXm.r.e0cp), yYXm.r.e0cp=sample(z, sum(YXm.r.e0cp), replace=TRUE)  )
+						}, by=c('risk','factor')]
+				missing		<- merge(missing, tmp[, list(yYXm.sum.e0cp=sum(yYXm.r.e0cp)), by=c('Patient.bs','risk','factor')], by=c('Patient.bs','risk','factor'), all.x=TRUE)
+				set(missing, missing[, which(is.na(yYXm.sum.e0))], 'yYXm.sum.e0', 0.)
+				set(missing, missing[, which(is.na(yYXm.sum.e0cp))], 'yYXm.sum.e0cp', 0.)
+				#	calculate prob Pj(x) that recipient j got infected from x  - with and without adjustment				
+				tmp			<- missing[, 	list(	factor=factor, 	
+								Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
+								Pjx.e0= (yYX.sum+yYXm.sum.e0)*YX.w/sum((yYX.sum+yYXm.sum.e0)*YX.w),
+								Pjx.e0cp= (yYX.sum+yYXm.sum.e0cp)*YX.w/sum((yYX.sum+yYXm.sum.e0cp)*YX.w),
+								coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient.bs')]
+				#	exclude recipients with no evidence for direct transmission
+				tmp			<- subset(tmp, !is.nan(Pjx))					
+				#various N.raw									
+				tmp			<- tmp[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
+								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
+				tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")				
+				risk.ans.bs	<- subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v))
+				#
+				#	denominator population: y_ijt=0 AND y_ijt>0
+				#
+				tmp			<- subset(risk.ans, stat=='PYs')
+				set(tmp, NULL, 'v', rbinom(nrow(tmp), tmp[, sum(v)], tmp[, v/sum(v)]))
+				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+				#	sampling probabilities
+				tmp			<- risk.df[,	{
+							z	<- table( YX.m3.bs[, risk, with=FALSE])
+							list(factor=rownames(z), n=as.numeric(unclass(z)))												
+						}, by='risk']
+				tmp			<- merge( subset(risk.ans.bs, stat=='PYs'), tmp, by=c('risk','factor'))		
+				set(tmp, NULL, 'v', tmp[, n/v])
+				set(tmp, NULL, 'stat', 'PTx')
+				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+				risk.ans.bs[, bs:=bs.i]
+			})
+	risk.ans.bs	<- do.call('rbind',tmp)
+	#
+	#	compute adjustments for each bootstrap sample: collect PYe0 etc to compute sampling proportion relative to bootstrap PYs
+	#
+	tmp			<- dcast.data.table( subset(risk.ans.bs, stat=='PYs' | stat=='PTx', select=c(risk,factor,v,bs,stat)), risk+factor+bs ~ stat, value.var='v' )
+	tmp			<- merge( tmp, unique(subset(risk.df, select=c(risk, factor, X.msm.e0, X.msm.e0cp))), by=c('risk','factor'))
+	tmp2		<- tmp[, list(  	factor=factor, 
+					X.msm.e0=rbinom(length(X.msm.e0), sum(X.msm.e0), X.msm.e0/sum(X.msm.e0)),
+					X.msm.e0cp=rbinom(length(X.msm.e0cp), sum(X.msm.e0cp), X.msm.e0cp/sum(X.msm.e0cp))	), by=c('bs','risk')]
+	tmp			<- merge( subset(tmp, select=c(risk, factor, bs, PYs, PTx)), tmp2, by=c('bs','risk','factor') )	
+	adj.bs		<- tmp[, list(	factor=factor,
+					P= PYs/sum(PYs), P.raw= PYs/sum(PYs), 
+					P.e0= X.msm.e0/sum(X.msm.e0), P.e0cp= X.msm.e0cp/sum(X.msm.e0cp),
+					P.raw.e0= X.msm.e0/sum(X.msm.e0), P.raw.e0cp= X.msm.e0cp/sum(X.msm.e0cp)	), by=c('bs','risk')]
+	#
+	# 	add Proportions
+	#
+	tmp			<- subset(risk.ans.bs, grepl('N',stat))	
+	tmp			<- tmp[, list(v= v/sum(v, na.rm=TRUE), risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef=coef, coef.ref='None') , by=c('stat','bs')]	
+	set(tmp, NULL, 'stat', tmp[, gsub('N','P',stat)])
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))
+	#	set missing values in N P to zero
+	set(risk.ans.bs, risk.ans.bs[, which(is.na(v) & (grepl('P',stat) | grepl('PYs',stat) | grepl('N',stat)))], 'v', 0.)
+	#
+	#	add RIs
+	#	
+	tmp			<- melt(adj.bs, id.vars=c('risk','factor','bs'), variable.name='stat', value.name='p')
+	tmp2		<- subset(risk.ans.bs, grepl('P',stat) & !grepl('PT',stat) & !grepl('PY',stat) )
+	tmp			<- merge(tmp2, tmp, by=c('risk','factor','stat','bs'))
+	set(tmp, NULL, 'v', tmp[, v/p])
+	set(tmp, tmp[,which(is.nan(v) | v==0)],'v',NA_real_)	
+	set(tmp, NULL, 'stat', tmp[, gsub('P','RI',stat)])
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))
+	#
+	#	Risk ratio from relative transmissibilities
+	#
+	tmp			<- subset(risk.df, coef!=coef.ref, select=c(coef.ref, coef))
+	tmp2		<- merge(data.table(coef=tmp[, unique(coef.ref)]), subset(risk.ans.bs, grepl('RI',stat), select=c(bs, coef, risk, factor, stat, v)), by='coef')
+	setnames(tmp2, c('coef','risk','factor','v'), c('coef.ref','risk.ref','factor.ref','v.ref'))
+	tmp			<- merge(tmp, subset(risk.ans.bs, grepl('RI',stat), select=c(bs, coef, risk, factor, stat, v)), by='coef', allow.cartesian=TRUE)
+	tmp			<- merge(tmp2, tmp, by=c('bs','stat','coef.ref'))
+	tmp2		<- NULL
+	set(tmp, NULL, 'v', tmp[, v/v.ref])
+	set(tmp, NULL, 'stat', tmp[, gsub('RI','RR',stat)])
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))
+	#
+	tmp			<- risk.ans.bs[,	list(l95.bs=quantile(v, prob=0.025, na.rm=TRUE), u95.bs=quantile(v, prob=0.975, na.rm=TRUE)), by=c('coef','coef.ref','stat')]
+	risk.ans	<- merge(risk.ans, tmp, by=c('coef','coef.ref','stat'), all.x=TRUE)
+	#	
+	setkey(risk.ans, stat, coef.ref, coef)
+	list(risk=risk.ans, risk.bs=risk.ans.bs)
+}
+######################################################################################
 project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=1e3, gamlss.BE.required.limit=0.99, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0) )
 {
 	require(gamlss)
@@ -4544,8 +4960,9 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 									list(t.Age=t.Age)
 								}, by=c('risk','factor')], by=c('risk','factor'))						
 			}			
+			ans			<- project.athena.Fisheretal.estimate.risk.core.Wallinga(YX, X.tables, method.risk, risk.df, bs.n=bs.n )
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
+			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
 		}
 		if(grepl('m3.tnic',method.risk) & !grepl('m3.tnicNo',method.risk) & !grepl('m3.tnicv',method.risk))
 		{
@@ -11512,90 +11929,6 @@ hivc.prog.betareg.estimaterisks<- function()
 	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
 	resume					<- 1
 	verbose					<- 1
-	if(0)
-	{
-		method					<- '3c'
-		method.recentctime		<- '2013-03-01'
-		method.nodectime		<- 'any'
-		method.risk				<- 'm21st.cas'
-		method.PDT				<- 'SEQ'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"					
-		clu.infilexml.opt		<- "mph4clutx4tip"
-		clu.infilexml.template	<- "um192rhU2080"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',sep='')
-	}
-	if(0)
-	{
-		method					<- '3d'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		method.risk				<- 'm21st.cas'
-		method.PDT				<- 'SEQ'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"					
-		clu.infilexml.opt		<- "mph4clutx4tip"
-		clu.infilexml.template	<- "um192rhU2080"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_gmrf',sep='')
-	}	
-	if(0)
-	{		
-		method					<- '3d'
-		method.recentctime		<- '2013-03-01'
-		method.nodectime		<- 'any'
-		method.risk				<- 'm2B1st.cas'
-		method.PDT				<- 'SEQ'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		clu.infilexml.opt		<- "clrh80"
-		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
-	}	
-	if(0)
-	{		
-		method					<- '3e'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		method.risk				<- 'm2B1st.cas'
-		method.PDT				<- 'SEQ'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		clu.infilexml.opt		<- "clrh80"
-		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
-	}
-	if(0)
-	{		
-		method					<- '3f'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		method.risk				<- 'm2B1st.cas'
-		method.PDT				<- 'SEQ'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		clu.infilexml.opt		<- "clrh80"
-		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
-	}
-	if(0)
-	{		
-		method					<- '3g'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		method.risk				<- 'm2B1st.cas'
-		method.PDT				<- 'SEQ'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		clu.infilexml.opt		<- "clrh80"
-		clu.infilexml.template	<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
-	}	
 	if(1)
 	{		
 		method					<- '3k'
@@ -11616,12 +11949,18 @@ hivc.prog.betareg.estimaterisks<- function()
 		clu.infilexml.template	<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
 	}
-	if(0)
+	if(1)
 	{		
-		method					<- '3j'
+		method					<- '3l'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Bt.cas'# 'm2Bt.cas'# 'm2Bt.tp3'# 'm2B1st.cas'# 'm5.tA' #
+		method.risk				<- 'm2Bwmx.tp4'
+		method.Acute			<- 'higher'	#'central'#'empirical'
+		method.minQLowerU		<- 0.1
+		method.brl.bwhost		<- 2
+		method.lRNA.supp		<- 51
+		method.thresh.pcoal		<- 0.3
+		method.minLowerUWithNegT<- 1
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
@@ -11981,8 +12320,8 @@ hivc.prog.betareg.estimaterisks<- function()
 	save.all		<- FALSE
 	#save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'_all.R',sep='')
 	#save.all		<- TRUE
-	YX				<- project.athena.Fisheretal.YX.part2(	YX.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, dur.Acute=dur.Acute,
-															rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=method.thresh.pcoal, brl.bwhost.multiplier=method.brl.bwhost, method.minLowerUWithNegT=method.minLowerUWithNegT, 
+	YX				<- project.athena.Fisheretal.YX.part2(	YX.part1, df.all, df.treatment, df.viro, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, dur.Acute=dur.Acute,
+															rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=method.thresh.pcoal, brl.bwhost.multiplier=method.brl.bwhost, method.minLowerUWithNegT=method.minLowerUWithNegT, lRNA.supp=method.lRNA.supp,
 															t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
 	gc()
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
@@ -12013,8 +12352,8 @@ hivc.prog.betareg.estimaterisks<- function()
 		rm.zero.score	<- FALSE
 		thresh.pcoal	<- 0.75
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method,'_RICT_tATHENAseq','.R',sep='')
-		YXS				<- project.athena.Fisheretal.YX.part2(	YXS.part1, df.all, df.treatment, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, dur.Acute=dur.Acute, 
-																rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, t.period=t.period, save.file=save.file, resume=resume, method=method)		
+		YXS				<- project.athena.Fisheretal.YX.part2(	YXS.part1, df.all, df.treatment, df.viro, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, paste(outfile, 'RICT_tATHENAseq', sep='_'), cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, dur.Acute=dur.Acute, 
+																rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=thresh.pcoal, lRNA.supp=method.lRNA.supp, t.period=t.period, save.file=save.file, resume=resume, method=method)		
 	}
 	#
 	#	get timelines for all clustering candidate transmitters to the recently infected RI.PT

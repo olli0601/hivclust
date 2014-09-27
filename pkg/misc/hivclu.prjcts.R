@@ -545,13 +545,13 @@ project.Gates.test.runxml<- function()
 		#search for XML files in indir
 		infiles		<- list.files(indir, pattern=paste(".xml$",sep=''))
 		insignat	<- ''	
-		hpc.ncpu	<- 8		
+		hpc.ncpu	<- 4		
 		for(infile in infiles)
 		{
 			infile		<- substr(infile, 1, nchar(infile)-4) 		
 			cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
 			cat(cmd)	
-			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=hpc.ncpu, hpc.walltime=791, hpc.mem="3700mb")		
+			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=hpc.ncpu, hpc.walltime=24, hpc.mem="1800mb")		
 			outdir		<- indir
 			outfile		<- paste("bpg.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
 			hivc.cmd.hpccaller(outdir, outfile, cmd)		
@@ -658,48 +658,57 @@ project.Gates.test.ExaMLrun<- function()
 		tmp				<- tolower(do.call('rbind',strsplit(df.seq[, ENV],'')))
 		rownames(tmp)	<- df.seq[, LABEL]
 		df.seq.env		<- as.DNAbin(tmp)
-		#
-		#	run ExaML on gag
-		#
-		seq				<- df.seq.gag
-		seq				<- rbind(seq, outgroup.seq.gag[, seq_len(ncol(seq))])
-		infile.seq.sig	<- "Sun_Sep_14_12:59:06_2013"
-		infile.seq		<- paste(substr(infile,1,nchar(infile)-20),'INFO_simu_gagseq',sep='')
-		file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
-		save(seq, file=file)
-		#	run ExaML
-		cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
-		cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
-		hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
-		Sys.sleep(1)			
-		#
-		#	run ExaML on pol
-		#
-		seq				<- df.seq.pol
-		seq				<- rbind(seq, outgroup.seq.pol[, seq_len(ncol(seq))])
-		infile.seq.sig	<- "Sun_Sep_14_12:59:06_2013"
-		infile.seq		<- paste(substr(infile,1,nchar(infile)-20),'INFO_simu_polseq',sep='')
-		file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
-		save(seq, file=file)
-		#	run ExaML
-		cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
-		cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
-		hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
-		Sys.sleep(1)	
-		#
-		#	run ExaML on env
-		#
-		seq				<- df.seq.env
-		seq				<- rbind(seq, outgroup.seq.env[, seq_len(ncol(seq))])
-		infile.seq.sig	<- "Sun_Sep_14_12:59:06_2013"
-		infile.seq		<- paste(substr(infile,1,nchar(infile)-20),'INFO_simu_envseq',sep='')
-		file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
-		save(seq, file=file)
-		#	run ExaML
-		cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
-		cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
-		hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
-		Sys.sleep(1)			
+		if(0)
+		{
+			#
+			#	run ExaML on gag
+			#
+			seq				<- df.seq.gag
+			seq				<- rbind(seq, outgroup.seq.gag[, seq_len(ncol(seq))])
+			infile.seq.sig	<- "Sun_Sep_14_12:59:06_2013"
+			infile.seq		<- paste(substr(infile,1,nchar(infile)-20),'INFO_simu_gagseq',sep='')
+			file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+			save(seq, file=file)
+			#	run ExaML
+			cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
+			cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+			hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+			Sys.sleep(1)						
+		}
+		if(1)
+		{
+			#
+			#	run ExaML on pol
+			#
+			seq				<- df.seq.pol
+			seq				<- rbind(seq, outgroup.seq.pol[, seq_len(ncol(seq))])
+			infile.seq.sig	<- "Sun_Sep_14_12:59:06_2013"
+			infile.seq		<- paste(substr(infile,1,nchar(infile)-20),'INFO_simu_polseq',sep='')
+			file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+			save(seq, file=file)
+			#	run ExaML
+			cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
+			cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+			hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+			Sys.sleep(1)				
+		}
+		if(0)
+		{
+			#
+			#	run ExaML on env
+			#
+			seq				<- df.seq.env
+			seq				<- rbind(seq, outgroup.seq.env[, seq_len(ncol(seq))])
+			infile.seq.sig	<- "Sun_Sep_14_12:59:06_2013"
+			infile.seq		<- paste(substr(infile,1,nchar(infile)-20),'INFO_simu_envseq',sep='')
+			file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+			save(seq, file=file)
+			#	run ExaML
+			cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
+			cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+			hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+			Sys.sleep(1)						
+		}
 		#
 		#	run ExaML on concatenated
 		#
