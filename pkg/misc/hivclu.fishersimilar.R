@@ -4068,12 +4068,14 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, X.tables
 				#draw missing scores from all yijt in that stage	for number missing YXm.r.e0
 				set(missing, NULL, 'risk', missing[, as.character(risk)])
 				set(missing, NULL, 'factor', missing[, as.character(factor)])
-				tmp			<- missing[, 	{
-							z	<- median( YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']] )	
+				tmp			<- missing[, 	{							
+							z	<- median( YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']] )
+							#	TODO: if activate, double check sample -- these were integers !?
 							#z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]	#this is on purpose YX.m3 instead of YX.m3.bs to make sure that we have scores for every factor
 							#z	<- c(z, rep(0, length(z)/PTx[1]-length(z) ))
 							#list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(c(0, z), sum(YXm.r.e0), prob=c(length(z)/PTx[1]-length(z), rep(1, length(z))), replace=TRUE)  )
-							list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(z, sum(YXm.r.e0), replace=TRUE)  )
+							#list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(z, sum(YXm.r.e0), replace=TRUE)  )
+							list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=z  )
 						}, by=c('risk','factor')]
 				#subset(tmp, Patient.bs=='M37593_bs131')
 				#hist( subset(tmp, factor=='ART.suA.Y.4')[, yYXm.r.e0], breaks=100)									
@@ -4084,7 +4086,8 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, X.tables
 							#z	<- YX.m3[ which( YX.m3[[risk]]==factor ), ][['score.Y']]
 							#z	<- c(z, rep(0, length(z)/PTx[1]-length(z) ))
 							#list(Patient.bs=rep(Patient.bs, YXm.r.e0cp), yYXm.r.e0cp=sample(c(0,z), sum(YXm.r.e0cp), prob=c(length(z)/PTx[1]-length(z), rep(1, length(z))), replace=TRUE)  )
-							list(Patient.bs=rep(Patient.bs, YXm.r.e0cp), yYXm.r.e0cp=sample(z, sum(YXm.r.e0cp), replace=TRUE)  )
+							#list(Patient.bs=rep(Patient.bs, YXm.r.e0cp), yYXm.r.e0cp=sample(z, sum(YXm.r.e0cp), replace=TRUE)  )
+							list(Patient.bs=rep(Patient.bs, YXm.r.e0cp), yYXm.r.e0cp=z  )
 						}, by=c('risk','factor')]
 				missing		<- merge(missing, tmp[, list(yYXm.sum.e0cp=sum(yYXm.r.e0cp)), by=c('Patient.bs','risk','factor')], by=c('Patient.bs','risk','factor'), all.x=TRUE)
 				set(missing, missing[, which(is.na(yYXm.sum.e0))], 'yYXm.sum.e0', 0.)
@@ -9157,6 +9160,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outdir					<- paste(DATA,"fisheretal_140828",sep='/')		
 	indir					<- paste(DATA,"fisheretal_140905",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140905",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140929",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140929",sep='/')		
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -9201,6 +9206,76 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )	
+	#	m2Bwmx
+	#	3la2H1V51
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3la2H1V51'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3la2H1V100
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3la2H1V100'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3la2H1V200
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3la2H1V200'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3la2H1C3V51
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3la2H1C3V51'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3la2H1V100
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3la2H1C3V100'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	m2Bwmx
+	#	3la2H1C3V200
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3la2H1C3V200'
+	method.RISK		<- 'm2BwmxMv.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	
+	
+	
+	     
 	#	m2Bwmx
 	#	3da
 	method.DENOM	<- 'CLU'
@@ -10410,6 +10485,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_140828",sep='/')		
 	indir					<- paste(DATA,"fisheretal_140905",sep='/')
 	outdir					<- paste(DATA,"fisheretal_140905",sep='/')		
+	indir					<- paste(DATA,"fisheretal_140929",sep='/')
+	outdir					<- paste(DATA,"fisheretal_140929",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -11955,7 +12032,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3l'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Bwmx.tp4'
+		method.risk				<- 'm2Bwmx.tp2'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.1
 		method.brl.bwhost		<- 2
