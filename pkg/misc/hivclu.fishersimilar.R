@@ -3888,19 +3888,24 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, X.tables
 	set(nt.table, tmp, 'YX', nt.table[tmp, X.clu])
 	#	make sure all risk factors are in nt.table for every patient (even if zero)
 	tmp			<- merge( unique(subset(nt.table, select=c(risk, Patient))), unique(subset(risk.df, select=c(risk,factor))), by='risk', allow.cartesian=TRUE)
-	nt.table	<- merge(tmp, nt.table, by=c('risk','factor','Patient'))
+	nt.table	<- merge(tmp, nt.table, by=c('risk','factor','Patient'), all.x=TRUE)
 	set(nt.table, nt.table[, which(is.na(YX))], c('X.clu','X.msm','X.seq','YX'), 0)	
 	#	X.msm not adjusted for censoring
 	setnames(nt.table, 'X.msm', 'X.msm.e0')
 	#	X.msm adjusted for censoring	
 	tmp			<- copy(X.tables$cens.table)
 	setkey(tmp, stat, t.period, risk, factor)
+	ct			<- unique(tmp)
 	tmp2		<- copy(X.tables$cens.table.bs)
 	setkey(tmp2, stat, t.period, risk, factor)
-	tmp			<- project.athena.Fisheretal.censoring.model(unique(tmp), unique(tmp2), plot.file=NA )
-	tmp			<- merge( nt.table[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], subset(tmp, select=c(risk, factor, p.cens)), by=c('risk','factor'))
+	ctb			<- unique(tmp2)
+	tmp			<- project.athena.Fisheretal.censoring.model(ct, ctb, plot.file=NA )
+	ct			<- tmp$ctn
+	tmp			<- ct[, list(n.adj.med=round(median(n.adj))), by=c('risk','factor','t.period')]
+	tmp			<- merge( nt.table[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], tmp, by=c('risk','factor'))
+	stopifnot( tmp[, all(X.msm.e0<=n.adj.med)] )
 	#	total censored number of potential transmission intervals 
-	tmp			<- tmp[, list( PYe0cpr=round(X.msm.e0/p.cens-X.msm.e0)), by=c('risk','factor')]		
+	tmp			<- tmp[, list( PYe0cpr=round(n.adj.med-X.msm.e0)), by=c('risk','factor')]		
 	#	need to allocate the PYe0cpr potential transmission intervals among all Patients with given risk factor for whom yijt>0
 	#	simply take mean
 	tmp			<- merge(tmp, nt.table[, list(X.msm.e0cp= length(unique(Patient))), by=c('risk','factor') ], by=c('risk','factor')) 
@@ -4038,25 +4043,59 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, X.tables
 	tmp			<- lapply(seq_len(bs.n), function(bs.i)
 			{
 				if(bs.i%%100==0)	cat(paste('\nprocess bootstrap data sets bs.i=',bs.i))
-				#bootstrap over recently infected Patient
-				tmp					<- unique(subset(YX.m3, select=Patient))					
 				#
+				#	bootstrap over recently infected Patient
+				#
+				tmp					<- unique(subset(YX.m3, select=Patient))					
 				YX.m3.bs			<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
 				#	debug
-				#YX.m3.bs			<- unique(subset(YX.m3, select=Patient))
-				
-				#recipient MSM are not necessarily unique any longer - need to create unique bs id
+				#YX.m3.bs			<- unique(subset(YX.m3, select=Patient))				
+				#	recipient MSM are not necessarily unique any longer - need to create unique bs id
 				YX.m3.bs[, Patient.bs:=paste(Patient, seq_len(nrow(tmp)),sep='_bs' )]
 				YX.m3.bs			<- merge( YX.m3, YX.m3.bs, by='Patient', allow.cartesian=TRUE )
 				#
+				#	bootstrap denominator population: y_ijt=0 AND y_ijt>0
+				#
+				tmp					<- subset(risk.ans, stat=='PYs')
+				set(tmp, NULL, 'v', rbinom(nrow(tmp), tmp[, sum(v)], tmp[, v/sum(v)]))
+				risk.ans.bs			<- subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v))				
+				#	bootstrap non-zero scores
+				tmp			<- risk.df[,	{
+												z	<- table( YX.m3.bs[, risk, with=FALSE])
+												list(factor=rownames(z), n=as.numeric(unclass(z)))												
+											}, by='risk']
+				tmp			<- merge( subset(risk.ans.bs, stat=='PYs'), tmp, by=c('risk','factor'))		
+				set(tmp, NULL, 'v', tmp[, n/v])
+				set(tmp, NULL, 'stat', 'PTx')				
+				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))				
+				#
+				#	bootstrap sample censoring
+				#
+				tmp					<- ct[, list(n.adj.bs=round(sample(n.adj, 1))), by=c('risk','factor','t.period')]
+				tmp					<- merge( nt.table[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], tmp, by=c('risk','factor'))
+				stopifnot( tmp[, all(X.msm.e0<=n.adj.bs)] )			 
+				tmp					<- tmp[, list( PYe0cpr=round(n.adj.bs-X.msm.e0)), by=c('risk','factor')]		
+				tmp					<- merge(tmp, nt.table[, list(X.msm.e0cp= length(unique(Patient))), by=c('risk','factor') ], by=c('risk','factor')) 
+				set(tmp, NULL, 'X.msm.e0cp', round( tmp[, PYe0cpr/X.msm.e0cp] ))				
+				nt.table			<- merge(subset(nt.table, select=c(risk, factor, Patient, X.clu, X.msm.e0, X.seq, YX)), subset(tmp, select=c(risk, factor, X.msm.e0cp)), by=c('risk','factor'))
+				set(nt.table, NULL, 'X.msm.e0cp', nt.table[, X.msm.e0+X.msm.e0cp])	
+				#	combine bootstrap censoring with boostrap denom pop / non-zero
+				tmp					<- nt.table[, list(YX=sum(YX), X.clu=sum(X.clu), X.seq=sum(X.seq), X.msm.e0=sum(X.msm.e0), X.msm.e0cp=sum(X.msm.e0cp)), by=c('risk','factor')]
+				tmp					<- merge(tmp, subset(risk.ans.bs, stat=='PYs', c(risk, factor, v)), by=c('risk','factor'))
+				setnames(tmp, 'v', 'PYs')
+				tmp[, Sx.e0:= PYs/X.msm.e0]					
+				tmp[, Sx.e0cp:= PYs/X.msm.e0cp]
+				tmp					<- merge(tmp, subset(risk.ans.bs, stat=='PTx', c(risk, factor, v)), by=c('risk','factor'))
+				setnames(tmp, 'v', 'PTx')
+				#	prepare risk.df and nt.table as needed
+				nt.table			<- merge(nt.table, subset(tmp, select=c(risk, factor, PTx, Sx.e0, Sx.e0cp)), by=c('risk','factor'))
+				#
 				#	raw number of transmissions
 				#
-				setkey(risk.df, risk, factor)
-				missing		<- merge(nt.table, unique( subset( risk.df, select=c(risk, factor, PTx) ) ), by=c('risk','factor'))
 				#	reduce to bootstrap sampled recipients
 				tmp			<- subset(YX.m3.bs, select=c(Patient, Patient.bs))		
 				setkey(tmp, Patient, Patient.bs)
-				missing		<- merge(unique(tmp), missing, by='Patient', allow.cartesian=TRUE)
+				missing		<- merge(unique(tmp), nt.table, by='Patient', allow.cartesian=TRUE)
 				#	compute the sum of observed Y's by risk factor for each recipient
 				tmp			<- YX.m3.bs[, list(Patient=Patient[1], yYX.sum= sum(score.Y), YX.bs=length(score.Y), YX.w=w.t[1]), by=c('stage','Patient.bs')]
 				setnames(tmp, 'stage','factor')
@@ -4109,23 +4148,9 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, X.tables
 				#various N.raw									
 				tmp			<- tmp[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
 								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
-				tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")				
-				risk.ans.bs	<- subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v))
+				tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")
+				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))				
 				#
-				#	denominator population: y_ijt=0 AND y_ijt>0
-				#
-				tmp			<- subset(risk.ans, stat=='PYs')
-				set(tmp, NULL, 'v', rbinom(nrow(tmp), tmp[, sum(v)], tmp[, v/sum(v)]))
-				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
-				#	sampling probabilities
-				tmp			<- risk.df[,	{
-							z	<- table( YX.m3.bs[, risk, with=FALSE])
-							list(factor=rownames(z), n=as.numeric(unclass(z)))												
-						}, by='risk']
-				tmp			<- merge( subset(risk.ans.bs, stat=='PYs'), tmp, by=c('risk','factor'))		
-				set(tmp, NULL, 'v', tmp[, n/v])
-				set(tmp, NULL, 'stat', 'PTx')
-				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 				risk.ans.bs[, bs:=bs.i]
 			})
 	risk.ans.bs	<- do.call('rbind',tmp)
@@ -4939,21 +4964,6 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 				set(YX, NULL, 'w', YX[, w/w.i])				
 			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
 				set(YX, NULL, 'w', 1.)				
-			if(grepl('Mv', method.risk))	
-			{				
-				include.colnames<- c('score.Y','w','stage','t.Age')				
-				formula			<- 'score.Y ~ bs(t.Age, knots=c(30,45), degree=1)+stage-1'
-				predict.df		<- data.table(	stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=YX[, levels(stage)]), 												
-												t.Age=subset(YX, stage==paste('ART.suA.Y',tp,sep='.'))[, mean(t.Age, na.rm=TRUE)],
-												w=1.)										
-			}
-			if(!grepl('Mv', method.risk))
-			{				
-				formula			<- 'score.Y ~ stage-1'
-				sigma.formula	<- '~1'
-				include.colnames<- c('score.Y','w','stage')						
-				predict.df		<- data.table(stage=factor(paste('ART.suA.Y',tp,sep='.'), levels=YX[, levels(stage)]), w=1.)
-			}
 			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
 			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='A' ]
@@ -10020,6 +10030,9 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctb, ctn=NULL, plot.fil
 		if(method.group=='cascade')
 			ggsave(file=file, w=10, h=6)		
 	}
+	#	compute adjusted numbers for each bootstrap run
+	ctn		<- merge( subset(ct, stat=='X.msm', c(risk, factor, factor2, t.period, n)), subset(ctb, select=c(risk, factor, factor2, t.period, BS, c)), by=c('t.period','risk','factor','factor2'))
+	ctn[, n.adj:= ctn[, n/c]]	
 	#	compute sample mean and median of bootstrap fraction -- mean is OK
 	ctb		<- ctb[, list(p.cens.med=median(c), p.cens=mean(c), p.cens.95l=quantile(c, p=0.025), p.cens.95u=quantile(c, p=0.975)), by=c('t.period','risk','factor')]
 	ctb		<- merge(subset(ct, stat=='X.msm', c(risk, factor, factor2, t.period, n)), ctb, by=c('t.period','risk','factor'))	
@@ -10072,7 +10085,8 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctb, ctn=NULL, plot.fil
 	}
 	#
 	ctb		<- subset(ctb, select=c(t.period, risk, factor, factor2, p.cens, p.cens.95l, p.cens.95u))
-	ctb
+	ctn		<- subset(ctn, select=c(t.period, risk, factor, factor2, n.adj))
+	list( ctb=ctb, ctn=ctn )
 }	
 ######################################################################################
 project.athena.Fisheretal.censoring.explore<- function()
