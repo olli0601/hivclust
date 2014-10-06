@@ -5011,13 +5011,20 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
 			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
 		}
-		if(grepl('m2wmx.tp', method.risk) | grepl('m2wmxMv.tp', method.risk) | grepl('m2Bwmx.tp', method.risk) | grepl('m2BwmxMv.tp', method.risk))
+		if(	grepl('m2wmx.tp', method.risk) | grepl('m2wmxMv.tp', method.risk) | 
+			grepl('m2Bwmx.tp', method.risk) | grepl('m2BwmxMv.tp', method.risk) | 
+			grepl('m2Cwmx.tp', method.risk) | grepl('m2CwmxMv.tp', method.risk))
 		{			
 			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			cat(paste('\nprocess time period',tp))
 			tp				<- substr(tp, 3, 3)
 			YX				<- subset(YX, t.period==tp)						
-			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4b.tperiod")
+			if( grepl('m2wmx',method.risk) )
+				tmp			<- "CD41st.tperiod"
+			if( grepl('m2Bwmx',method.risk) )
+				tmp			<- "CD4b.tperiod"	
+			if( grepl('m2Cwmx',method.risk) )
+				tmp			<- "CD4c.tperiod"	
 			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
 			#	use cluster weights?
 			#	use cluster weights?
@@ -5040,15 +5047,6 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
 			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
-			if(grepl('Mv', method.risk))
-			{
-				setkey(risk.df, risk, factor)
-				risk.df		<- merge(risk.df, unique(risk.df)[, {
-									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
-									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
-									list(t.Age=t.Age)
-								}, by=c('risk','factor')], by=c('risk','factor'))						
-			}			
 			ans			<- project.athena.Fisheretal.estimate.risk.core.Wallinga(YX, X.tables, method.risk, risk.df, bs.n=bs.n )
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
@@ -5697,8 +5695,8 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 			if(grepl('m2Cwmx',method))
 			{
 				factor.ref.v	<- paste('ART.suA.Y',tp,sep='')
-				risktp.col		<- 'CD4t.tperiod'
-				risk.col		<- 'CD4t'
+				risktp.col		<- 'CD4c.tperiod'
+				risk.col		<- 'CD4c'
 			}		
 			if(grepl('m3.ind',method))
 			{
@@ -8051,13 +8049,14 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	YX.m2[, CD4b:=CD4a]
 	set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4b', 'UAna')	
 	#	set UAna for CD4t
-	set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4t', 'UAna')
+	set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4t', 'UAna')	
 	#
 	cat(paste('\nsubset\n'))
 	if('score.Y'%in%colnames(YX.m2))
 		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, w.tn, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 	if(!'score.Y'%in%colnames(YX.m2))
-		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))	
+		YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))
+	YX.m2[, CD4c:=CD4b]
 	gc()
 	#
 	#	add suppressed to 'stage'
@@ -8070,31 +8069,53 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 	cat(paste('\nadding lRNA.mx\n'))
 	set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
 	YX.m2[,lRNA.c:=NULL]
+	#	stratify suppressed by max VL at all times during infection window
 	YX.m2	<- merge(YX.m2, YX.m2[, {
-						tmp<- which(!is.na(lRNA))
-						list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>lRNA.supp, 'ART.suA.N', 'ART.suA.Y'), 'ART.vlNA') )
-					}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)
+										tmp<- which(!is.na(lRNA))
+										list( lRNA.c= ifelse(length(tmp), ifelse( max(lRNA[tmp])>lRNA.supp || length(t)>length(which(stage=='ART.started')), 'ART.suA.N', 'ART.suA.Y'), 'ART.vlNA') )
+									}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)
 	gc()
+	#	stratify suppressed by current VL
 	YX.m2	<- merge(YX.m2, YX.m2[, {
-							ans	<- list(t=t, lRNA.c2=lRNA.c)
-							if( !all(lRNA.c=='ART.suA.Y' & stage.orig=='ART.started') )
-								ans$lRNA.c2[ lRNA.c=='ART.suA.Y' ]	<- 'ART.suA.M'
-							ans
-						}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient','t'), all.x=TRUE)
-	gc()
+										ans	<- list(t=t, lRNA.c2=lRNA.c)
+										if( !all(lRNA.c=='ART.suA.Y' & stage.orig=='ART.started') )
+											ans$lRNA.c2[ lRNA.c=='ART.suA.Y' ]	<- 'ART.suA.M'
+										ans
+									}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient','t'), all.x=TRUE)
+	#	stratify suppressed by max VL with no other possibility (ie no other stage in window, and at least two measurements)
+	set(df.viro, NULL, 'PosRNA', df.viro[, hivc.db.Date2numeric(PosRNA)] )
+	YX.m2	<- merge(YX.m2, YX.m2[, {
+										lRNA.c3			<- 'ART.vlNA'
+										tmp				<- which(!is.na(lRNA))
+										if( length(tmp) && ( max(lRNA[tmp])>lRNA.supp || length(t)>length(which(stage=='ART.started')) ) )
+											lRNA.c3		<- 'ART.suA.N'
+										if( length(tmp) &&  max(lRNA[tmp])<=lRNA.supp && length(t)<=length(which(stage=='ART.started'))  )
+										{
+											tmp2		<- which( df.viro[['Patient']]==t.Patient[1] & df.viro[['PosRNA']]>=min(t[tmp]) & df.viro[['PosRNA']]<max(t[tmp])+0.125 )
+											if(length(tmp2)<=1)
+												lRNA.c3	<- 'ART.suA.Y1'
+											if(length(tmp2)>1)
+												lRNA.c3	<- 'ART.suA.Y2'
+										} 
+										list( lRNA.c3=lRNA.c3 )
+									}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)
+	gc()	
 	#	set CD41st and CD4t
 	tmp		<- YX.m2[, which(stage.orig=='ART.started')]
 	set(YX.m2, tmp, 'CD41st', YX.m2[tmp, lRNA.c])
 	set(YX.m2, NULL, 'CD41st', YX.m2[, factor(as.character(CD41st))])
 	set(YX.m2, tmp, 'CD4t', YX.m2[tmp, lRNA.c])
 	set(YX.m2, NULL, 'CD4t', YX.m2[, factor(as.character(CD4t))])
-	set(YX.m2, tmp, 'CD4b', YX.m2[tmp, lRNA.c])
-	set(YX.m2, NULL, 'CD4b', YX.m2[, factor(as.character(CD4b))])	
 	set(YX.m2, tmp, 'CD4a', YX.m2[tmp, lRNA.c2])
-	set(YX.m2, NULL, 'CD4a', YX.m2[, factor(as.character(CD4a))])	
+	set(YX.m2, NULL, 'CD4a', YX.m2[, factor(as.character(CD4a))])		
+	set(YX.m2, tmp, 'CD4b', YX.m2[tmp, lRNA.c])
+	set(YX.m2, NULL, 'CD4b', YX.m2[, factor(as.character(CD4b))])
+	set(YX.m2, tmp, 'CD4c', YX.m2[tmp, lRNA.c3])
+	set(YX.m2, NULL, 'CD4c', YX.m2[, factor(as.character(CD4c))])		
 	YX.m2[, stage.orig:=NULL]
 	YX.m2[, lRNA.c:=NULL]
 	YX.m2[, lRNA.c2:=NULL]
+	YX.m2[, lRNA.c3:=NULL]
 	#
 	#	add tperiod
 	#
@@ -8109,6 +8130,8 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		set(YX.m2, NULL, 'CD4a.tperiod', YX.m2[, factor(as.character(CD4a.tperiod))])
 		YX.m2[, CD4b.tperiod:= paste(CD4b, t.period,sep='.')]
 		set(YX.m2, NULL, 'CD4b.tperiod', YX.m2[, factor(as.character(CD4b.tperiod))])
+		YX.m2[, CD4c.tperiod:= paste(CD4c, t.period,sep='.')]
+		set(YX.m2, NULL, 'CD4c.tperiod', YX.m2[, factor(as.character(CD4c.tperiod))])
 	}
 	gc()
 	YX.m2
