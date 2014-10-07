@@ -5011,9 +5011,12 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
 			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
 		}
-		if(	grepl('m2wmx.tp', method.risk) | grepl('m2wmxMv.tp', method.risk) | 
-			grepl('m2Bwmx.tp', method.risk) | grepl('m2BwmxMv.tp', method.risk) | 
-			grepl('m2Cwmx.tp', method.risk) | grepl('m2CwmxMv.tp', method.risk))
+		if(	grepl('m2wmx.tp', method.risk) | grepl('m2wmxMv.tp', method.risk) |
+			grepl('m2wmx.wtn.tp', method.risk) | grepl('m2wmxMv.wtn.tp', method.risk) |
+			grepl('m2Bwmx.tp', method.risk) | grepl('m2BwmxMv.tp', method.risk) |
+			grepl('m2Bwmx.wtn.tp', method.risk) | grepl('m2BwmxMv.wtn.tp', method.risk) |
+			grepl('m2Cwmx.tp', method.risk) | grepl('m2CwmxMv.tp', method.risk) |
+			grepl('m2Cwmx.wtn.tp', method.risk) | grepl('m2CwmxMv.wtn.tp', method.risk) )
 		{			
 			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			cat(paste('\nprocess time period',tp))
