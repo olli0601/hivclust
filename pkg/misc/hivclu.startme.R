@@ -1,4 +1,4 @@
-#! /Library/Frameworks/R.framework/Versions/2.15/Resources/bin/Rscript
+#! /Library/Frameworks/R.framework/Versions/3.1/Resources/bin/Rscript
 ##	first line in shell script starts with #! and start Rscript
 ##	CHANGE  as needed
 ##! /Library/Frameworks/R.framework/Versions/2.11/Resources/bin/Rscript
@@ -398,7 +398,7 @@ if(length(args))
 	argv<<- args
 }
 ###############################################################################
-#stop()
+stop()
 if(HIVC.DEBUG)	options(error= my.dumpframes)	
 cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	
