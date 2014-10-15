@@ -413,7 +413,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 		YX						<- project.athena.Fisheretal.YX.calendarperiod.byweight(YX, df.all, t.period=t.period, c.nperiod= 4)
 		#	re-arrange a little
 		YX						<- subset(YX, select=	c(	t, t.Patient, Patient, cluster, score.Y, 																	#triplets identifiers and Y score
-															t.period, stage, U.score, contact, CDCC, lRNA, CD4, 														#main covariates							
+															t.period, stage, U.score, contact, CDCC, lRNA, nlRNA.supp, nlRNA.nsupp, CD4, 														#main covariates							
 															t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.T, ART.pulse, ART.nDrug, ART.nNRT, ART.nNNRT, ART.nPI, ART.nBoost, ART.TDF.EFV.FTC, fw.up.mx, fw.up.med, t2.care.t1, t2.vl.supp, 		#secondary covariates
 															t.AnyPos_T1,  AnyPos_T1, t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, t.Trm, Trm,												#other 
 															FASTASampleCode, t.FASTASampleCode, w, w.i, w.in, w.t, w.tn, class										#other							
@@ -454,7 +454,7 @@ project.athena.Fisheretal.Y.TSupp<- function(df.TS, df.viro, t.period=0.25, lRNA
 	df.TS		<- df.TS[, list(t= seq(ts, te, by=t.period), Patient=Patient), by='DUMMY']
 	#	get viral loads for time [FromT, ToT] under which individual is on ART
 	tmp			<- data.table(t.Patient=df.TS[, unique(Patient)])	
-	tmp			<- project.athena.Fisheretal.X.viro(tmp, df.viro, t.period=t.period, lRNA.cutoff=NA)
+	tmp			<- project.athena.Fisheretal.X.viro(tmp, df.viro, t.period=t.period, lRNA.supp=lRNA.supp)
 	setnames(tmp, 't.Patient','Patient')	
 	df.TS		<- merge( df.TS, subset(tmp, !is.na(lRNA)), by=c('Patient','t'), all.x=TRUE )	
 	tmp			<- df.TS[, {
@@ -2769,8 +2769,8 @@ project.athena.Fisheretal.X.incare<- function(df.tpairs, df.all, df.viro, df.imm
 	incare.t[, stage:='Diag']
 	setnames(incare.t, 'Patient','t.Patient')
 	cat(paste('\nincare.t entries, n=',nrow(incare.t)))		
-	#	compute X: viral load of potential transmitter  	
-	X.viro		<- project.athena.Fisheretal.X.viro(df.tpairs, df.viro, t.period=t.period, lRNA.cutoff=NA)
+	#	compute X: viral load of potential transmitter  
+	X.viro		<- project.athena.Fisheretal.X.viro(df.tpairs, df.viro, t.period=t.period, lRNA.supp=lRNA.supp)	
 	cat(paste('\nVL info available for pot transmitters, n=',X.viro[, length(unique(t.Patient))]))
 	#	compute X: CD4 of potential transmitter
 	X.cd4		<- project.athena.Fisheretal.X.cd4(df.tpairs, df.immu, t.period=t.period)
@@ -8085,9 +8085,9 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		#
 		cat(paste('\nsubset\n'))
 		if('score.Y'%in%colnames(YX.m2))
-			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, w.tn, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
+			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, stage, CDCC, lRNA, t.isAcute, nlRNA.supp, nlRNA.nsupp, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, w.tn, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
 		if(!'score.Y'%in%colnames(YX.m2))
-			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, t.isAcute, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))
+			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, nlRNA.supp, nlRNA.nsupp, t.isAcute, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))
 		YX.m2[, CD4c:=CD4b]
 		gc()
 		#
@@ -8101,8 +8101,9 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		cat(paste('\nadding lRNA.mx\n'))
 		set(YX.m2, NULL, 'stage', YX.m2[, stage.orig])
 		YX.m2[,lRNA.c:=NULL]
+		set(df.viro, NULL, 'PosRNA', df.viro[, hivc.db.Date2numeric(PosRNA)] )
 		#	stratify suppressed by max VL at all times during infection window
-		if(1)
+		if(0)
 		{
 			YX.m2	<- merge(YX.m2, YX.m2[, {
 								lRNA.c		<- 'ART.vlNA'
@@ -8118,29 +8119,29 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 								list( lRNA.c= lRNA.c )
 							}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)
 		}	
-		if(0)
+		if(1)
 		{
 			YX.m2	<- merge(YX.m2, YX.m2[, {
 								lRNA.c		<- 'ART.vlNA'
 								tmp			<- which(!is.na(lRNA))
 								if( length(tmp) && ( max(lRNA[tmp])>lRNA.supp || length(t)>length(which(stage=='ART.started')) ) )
-								{
-									tmp2		<- which( df.viro[['Patient']]==t.Patient[1] & df.viro[['PosRNA']]>=min(t[tmp]) & df.viro[['PosRNA']]<max(t[tmp])+0.125 )
-									if(length(tmp2)<=0)
+								{									
+									tmp2		<- sum(nlRNA.nsupp, na.rm=TRUE)
+									if(tmp2<=0)
 										lRNA.c	<- 'ART.vlNA'
-									if(length(tmp2)>0)
+									if(tmp2>0)
 										lRNA.c	<- 'ART.suA.N'
 								}
 								if( length(tmp) &&  max(lRNA[tmp])<=lRNA.supp && length(t)<=length(which(stage=='ART.started'))  )
 								{
-									tmp2		<- which( df.viro[['Patient']]==t.Patient[1] & df.viro[['PosRNA']]>=min(t[tmp]) & df.viro[['PosRNA']]<max(t[tmp])+0.125 )
-									if(length(tmp2)<=0)
+									tmp2		<- sum(nlRNA.supp, na.rm=TRUE)
+									if(tmp2<=0)
 										lRNA.c	<- 'ART.vlNA'
-									if(length(tmp2)>0)
+									if(tmp2>0)
 										lRNA.c	<- 'ART.suA.Y'
 								} 
 								list( lRNA.c= lRNA.c )
-							}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)
+							}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)			
 		}	
 		gc()
 		#	stratify suppressed by current VL
@@ -8150,8 +8151,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 												ans$lRNA.c2[ lRNA.c=='ART.suA.Y' ]	<- 'ART.suA.M'
 											ans
 										}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient','t'), all.x=TRUE)
-		#	stratify suppressed by max VL with no other possibility (ie no other stage in window, and at least two measurements)
-		set(df.viro, NULL, 'PosRNA', df.viro[, hivc.db.Date2numeric(PosRNA)] )
+		#	stratify suppressed by max VL with no other possibility (ie no other stage in window, and at least two measurements)		
 		if(0)
 		{
 			YX.m2	<- merge(YX.m2, YX.m2[, {
@@ -8177,22 +8177,22 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 								tmp				<- which(!is.na(lRNA))
 								if( length(tmp) && ( max(lRNA[tmp])>lRNA.supp || length(t)>length(which(stage=='ART.started')) ) )
 								{
-									tmp2		<- which( df.viro[['Patient']]==t.Patient[1] & df.viro[['PosRNA']]>=min(t[tmp]) & df.viro[['PosRNA']]<max(t[tmp])+0.125 )
-									if(length(tmp2)<=0)
+									tmp2		<- sum(nlRNA.nsupp, na.rm=TRUE)
+									if(tmp2<=0)
 										lRNA.c3	<- 'ART.vlNA'
-									if(length(tmp2)==1)
+									if(tmp2==1)
 										lRNA.c3	<- 'ART.suA.N1'
-									if(length(tmp2)>1)
+									if(tmp2>1)
 										lRNA.c3	<- 'ART.suA.N2'
 								}							
 								if( length(tmp) &&  max(lRNA[tmp])<=lRNA.supp && length(t)<=length(which(stage=='ART.started'))  )
 								{
-									tmp2		<- which( df.viro[['Patient']]==t.Patient[1] & df.viro[['PosRNA']]>=min(t[tmp]) & df.viro[['PosRNA']]<max(t[tmp])+0.125 )
-									if(length(tmp2)<=0)
+									tmp2		<- sum(nlRNA.supp, na.rm=TRUE)
+									if(tmp2<=0)
 										lRNA.c3	<- 'ART.vlNA'
-									if(length(tmp2)==1)
+									if(tmp2==1)
 										lRNA.c3	<- 'ART.suA.Y1'
-									if(length(tmp2)>1)
+									if(tmp2>1)
 										lRNA.c3	<- 'ART.suA.Y2'															
 								} 
 								list( lRNA.c3=lRNA.c3 )
@@ -8592,7 +8592,7 @@ project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.immu, t.period=0.25)
 	immu		
 }
 ######################################################################################
-project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, lRNA.cutoff= log10(1e3))
+project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, lRNA.supp=log10(51))
 {
 	stopifnot(class(df.viro$Patient)=='character',class(df.tpairs$t.Patient)=='character') 
 	viro	<- subset( df.viro, select=c(Patient, PosRNA, lRNA) )
@@ -8600,7 +8600,8 @@ project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, l
 	viro	<- merge(viro, unique(subset(df.tpairs, select=t.Patient)), by='t.Patient')	
 	set(viro, NULL, 'PosRNA', hivc.db.Date2numeric(viro[,PosRNA]))
 	tmp		<- subset(viro, select=c(t.Patient, PosRNA))[, list(ts=min(PosRNA), te=max(PosRNA)), by='t.Patient']
-	set(tmp, NULL, 'ts', tmp[, floor(ts) + round( (ts%%1)*100 %/% (t.period*100) ) * t.period] )
+	#set(tmp, NULL, 'ts', tmp[, floor(ts) + round( (ts%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(tmp, NULL, 'ts', tmp[, floor(ts) + floor( (ts%%1)*100 %/% (t.period*100) ) * t.period] )
 	set(tmp, NULL, 'te', tmp[, floor(te) + round( (te%%1)*100 %/% (t.period*100) ) * t.period] )
 	tmp		<- tmp[, list(t= seq(ts, te, by=t.period)),by='t.Patient']
 	
@@ -8614,23 +8615,19 @@ project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, l
 							y	<- rep(NA, nrow(z))
 							y[z[,which( PosRNA<=t+t.period )[1]]]<- lRNA
 							y2	<- y
+							ynl	<- ynu <- rep(0, nrow(z))
 						}
 						else
 						{
-							y	<- approx(PosRNA , lRNA, xout=z[,t]+t.period/2, yleft=NA_real_, yright=NA_real_, rule=2, method='linear')$y
-							y2	<- approx(PosRNA , lRNA, xout=z[,t]+t.period/2, yleft=NA_real_, yright=NA_real_, rule=2, method='constant')$y
+							y	<- approx(PosRNA , lRNA, xout=z[,t]+t.period/2, rule=2, method='linear')$y
+							y2	<- approx(PosRNA , lRNA, xout=z[,t]+t.period/2, rule=2, method='constant')$y
+							ynl	<- table(cut(PosRNA[which(lRNA<lRNA.supp)], breaks=c(z[,t], z[,max(t)]+t.period), right=FALSE, labels=z[,t]))
+							ynl	<- as.numeric(ynl)							
+							ynu	<- table(cut(PosRNA[which(lRNA>=lRNA.supp)], breaks=c(z[,t], z[,max(t)]+t.period), right=FALSE, labels=z[,t]))							
+							ynu	<- as.numeric(ynu)														
 						}
-						list(t=z[,t], lRNA=y, lRNAc=y2)
-					},by='t.Patient']	
-	if(!is.na(lRNA.cutoff))
-	{
-		set(viro, viro[, which(lRNA<lRNA.cutoff)], 'lRNA', 0.)
-		set(viro, viro[, which(lRNA>=lRNA.cutoff)], 'lRNA', 1.)
-		set(viro, NULL, 'lRNA', as.integer(viro[,lRNA]))
-		set(viro, viro[, which(lRNAc<lRNA.cutoff)], 'lRNAc', 0.)
-		set(viro, viro[, which(lRNAc>=lRNA.cutoff)], 'lRNAc', 1.)
-		set(viro, NULL, 'lRNAc', as.integer(viro[,lRNAc]))
-	}
+						list(t=z[,t], lRNA=y, lRNAc=y2, nlRNA.supp=ynl, nlRNA.nsupp=ynu)
+					},by='t.Patient']		
 	viro
 }
 ######################################################################################
@@ -10150,6 +10147,335 @@ project.athena.Fisheretal.sensitivity.getfigures.counts.m5<- function(runs.table
 	ggsave(file=file, w=18, h=5)
 }	
 ######################################################################################
+project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, group)
+{			
+	df		<- subset(runs.table, method.denom==method.DENOM & method.BRL==method.brl & grepl(method.RISK,method.risk), c(stat, method.risk, factor, n, p, l95.bs, u95.bs))
+	if(method.WEIGHT=='')
+		df		<- subset(df, !grepl('wstar',method.risk) & !grepl('now',method.risk))
+	if(method.WEIGHT!='')
+		df		<- subset(df, grepl(method.WEIGHT,method.risk) )
+	set(df, NULL, 'factor', df[, as.character(factor)])	
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'factor', df[, factor(factor, levels=factors[, levels(factor)])])
+		
+	#	prop potential transmission intervals 
+	tmp		<- subset(df, stat%in%c('X.seq','nRec'))
+	tmp2	<- subset(df, stat=='X.seq', select=c(factor, t.period, p))
+	tmp		<- dcast.data.table(tmp, t.period+factor+method.risk~stat, value.var='n')
+	tmp		<- merge(tmp, tmp2, by=c('t.period','factor'))
+	tmp[, n:= X.seq/nRec*100]	
+	#set(tmp, NULL, 'p', tmp[, round(p, d=3)]*100)
+	set(tmp, NULL, 'n', tmp[, round(n, d=0)])		
+	setnames(tmp, 'p', 'p.coh')
+	ans		<- subset(tmp, select=c(t.period, factor,  p.coh))
+	#	prop likely transmission intervals 
+	tmp		<- subset(df, stat%in%c('YX','nRecLkl'))
+	tmp2	<- subset(df, stat=='YX', select=c(factor, t.period, p))
+	tmp		<- dcast.data.table(tmp, t.period+factor+method.risk~stat, value.var='n')
+	tmp		<- merge(tmp, tmp2, by=c('factor','t.period'))
+	tmp[, n:= YX/nRecLkl*100]	
+	#set(tmp, NULL, 'p', tmp[, round(p, d=3)]*100)
+	set(tmp, NULL, 'n', tmp[, round(n, d=0)])	
+	setnames(tmp, 'p', 'p.lkl')
+	ans		<- merge(ans, subset(tmp, select=c(factor, t.period, p.lkl)), by=c('t.period','factor'))
+	#	prop likely transmission intervals + expected missing intervals per 100 'recipient with lkl transmitter' in time period
+	tmp		<- subset(df, stat%in%c('YX','Sx.e0cp','nRecLkl'))
+	tmp2	<- subset(df, stat=='Sx.e0cp', select=c(factor, t.period, l95.bs, u95.bs))
+	tmp		<- dcast.data.table(tmp, t.period+factor+method.risk~stat, value.var='n')
+	tmp		<- merge(tmp, tmp2, by=c('factor','t.period'))
+	tmp[, n:= (YX+Sx.e0cp/8)/nRecLkl*100]
+	tmp[, l95.bs:= (YX+l95.bs/8)/nRecLkl*100]
+	tmp[, u95.bs:= (YX+u95.bs/8)/nRecLkl*100]	
+	tmp		<- merge(tmp, tmp[, list(factor=factor, p=n/sum(n)), by='t.period'], by=c('t.period','factor'))	
+	#set(tmp, NULL, 'p', tmp[, round(p, d=3)]*100)
+	setnames(tmp, 'p', 'p.lklm')
+	ans		<- merge(ans, subset(tmp, select=c(factor, t.period, p.lklm)), by=c('t.period','factor'))
+	#	ratio of proportions
+	ans[, r.lkl:= p.lkl/p.coh]
+	ans[, r.lklm:= p.lklm/p.coh]
+	ans		<- melt(ans, measure.vars=c('r.lkl','r.lklm'))	
+	# group
+	if(group=='cascade')
+	{
+		scale.name	<- 'in treatment\ncascade stage'
+		ans[, group:=ans[, substr(factor, 1, 1)]]
+		set(ans, ans[,which(group=='A')], 'group', 'ART started')
+		set(ans, ans[,which(group=='U')], 'group', 'Undiagnosed')
+		set(ans, ans[,which(group=='D')], 'group', 'Diagnosed')
+		set(ans, NULL, 'group', ans[, factor(group, levels=c('Undiagnosed','Diagnosed','ART started'))])		
+	}
+	if(group=='age')
+	{		
+		scale.name	<- 'from age group'
+		ans[, group:=NA_character_ ]
+		set(ans, ans[,which(factor%in%c('t<=20','t<=25'))], 'group', '<30')
+		set(ans, ans[,which(factor%in%c('t<=30','t<=35'))], 'group', '30-39')
+		set(ans, ans[,which(factor%in%c('t<=40','t<=45','t<=100'))], 'group', '40-')
+		set(ans, NULL, 'group', ans[, factor(group, levels=c('<30','30-39','40-'))])
+		theme.age <- function (base_size = 12, base_family = "") 
+		{
+			theme_grey(base_size = base_size, base_family = base_family) %+replace% 
+					theme(	legend.key.size=unit(11,'mm'), 
+							axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5), 
+							panel.background = element_rect(fill = 'grey60'),
+							panel.grid.minor.y = element_line(colour='grey70'),
+							panel.grid.major = element_line(colour='grey70'),
+							legend.key=element_rect(fill='grey60'))
+		}
+		theme_set(theme.age())
+	}
+	#tperiod.long
+	ans	<- merge(ans, tperiod.info, by='t.period')
+	ans[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]		
+	#factor.long	
+	ans	<- merge(ans, factors, by='factor')	
+	ans	<- subset(ans, variable=='r.lklm')
+	ggplot(ans, aes(x=t.period.long, y=value, group=factor.legend, colour=factor.legend, pch=variable))  + 				
+			scale_colour_manual(name=scale.name, values=ans[, unique(factor.color)]) +
+			scale_y_continuous(breaks=seq(0,10,1)) +			
+			geom_line() + geom_point(shape=17) +
+			labs(x='', y=expression(frac('% likely transmission intervals','% potential transmission intervals'))) +
+			theme_bw() + theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			facet_grid(. ~ group, scales='free_y', margins=FALSE)		
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','ratio',".pdf", sep='')	
+	ggsave(file=file, w=8, h=6)
+}
+######################################################################################
+project.athena.Fisheretal.sensitivity.getfigures.likelihood<- function()
+{
+	require(data.table)
+	require(ape)
+	require(grid)
+	require(reshape2)
+	require(ggplot2)
+	#stop()
+	indir			<- paste(DATA,"fisheretal",sep='/')
+	outdir			<- paste(DATA,"fisheretal_140929",sep='/')
+	infile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXm2_SEQ_3la2H1C3V100.R'
+	outfile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXm2_SEQ_3la2H1C3V100_lkl.pdf'
+	file			<- paste(indir, '/', infile, sep='')
+	load(file)
+	YX				<- copy(YX.m2)
+	set(YX, NULL, 'score.Y', YX[, score.Y*w.tn])
+	YX				<- subset(YX, select=c(t.period, t, t.Patient, Patient, score.Y, CD4b, CD4c ))
+	setnames( YX, 'CD4b', 'factor')
+	#	set up factor legends
+	factor.color	<- c("#990000","#EF6548","#FDBB84","#0570B0","#74A9CF","#7A0177","#F768A1","#FCC5C0","#005824","#41AB5D","#ADDD8E")
+	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
+							'Undiagnosed,\n Chronic infection\n at diagnosis',
+							'Undiagnosed,\n Unknown if recent',
+							'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+							'Diagnosed,\n CD4 progression to\n >500',
+							'Diagnosed,\n CD4 progression to\n [350-500]',
+							'Diagnosed,\n CD4 progression to\n <350',			
+							'Diagnosed,\n Unknown CD4',
+							'cART initiated,\n no viral suppression',
+							'cART initiated,\n viral suppression',
+							'cART initiated,\n Unknown viral load'				)
+	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")
+	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='CD4b')
+	factor.color	<- c("#990000","#EF6548","#FDBB84","#0570B0","#74A9CF","#7A0177","#F768A1","#FCC5C0","#005824","#41AB5D","#F7FCB9","#ADDD8E")
+	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
+							'Undiagnosed,\n Chronic infection\n at diagnosis',
+							'Undiagnosed,\n Unknown if recent',
+							'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+							'Diagnosed,\n CD4 progression to\n >500',
+							'Diagnosed,\n CD4 progression to\n [350-500]',
+							'Diagnosed,\n CD4 progression to\n <350',			
+							'Diagnosed,\n Unknown CD4',
+							'cART initiated,\n no viral suppression',
+							'cART initiated,\n viral suppression <2 obs',
+							'cART initiated,\n viral suppression >=2 obs',
+							'cART initiated,\n Unknown viral load'				)
+	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","ART.vlNA")
+	factors			<- rbind(factors, data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='CD4c'))	
+	#
+	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
+	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
+	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )	
+	#
+	ans				<- merge(YX, subset(factors, method.risk=='CD4b'), by='factor')
+	#
+	scale.name	<- 'in treatment\ncascade stage'
+	ans[, group:=ans[, substr(factor, 1, 1)]]
+	set(ans, ans[,which(group=='A')], 'group', 'ART started')
+	set(ans, ans[,which(group=='U')], 'group', 'Undiagnosed')
+	set(ans, ans[,which(group=='D')], 'group', 'Diagnosed')
+	set(ans, NULL, 'group', ans[, factor(group, levels=c('Undiagnosed','Diagnosed','ART started'))])
+	#	tperiod.long
+	ans				<- merge(ans, tperiod.info, by='t.period')
+	ans[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
+	#	boxplot
+	ggplot(ans, aes(x=factor.legend, y=score.Y, colour=factor.legend, fill=factor.legend), log='y')  + 
+			labs(x='', y='likelihood of direct HIV transmission') +				
+		scale_colour_manual(name=scale.name, values=ans[, unique(factor.color)], guide=FALSE) +
+		scale_fill_manual(name=scale.name, values=ans[, unique(factor.color)], guide=FALSE) +
+		scale_y_continuous(breaks=c(0.1, 0.5, 1, 2, 5, 10, 20, 100), minor_breaks=c(0.1)) +
+		coord_trans(ytrans="log10", limy=c(0.01, 1000)) +		
+		geom_boxplot(outlier.shape = NA) +
+		stat_summary(geom= "crossbar", width=0.65, fatten=0, color="white", fun.data = function(x){ return(c(y=median(x), ymin=median(x), ymax=median(x))) }) +		
+		theme_bw() + theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) 		
+	file			<- paste(outdir, '/', outfile, sep='')
+	ggsave(file=file, w=8, h=6)		
+
+}
+######################################################################################
+project.athena.Fisheretal.sensitivity.getfigures.npotentialtransmissionintervals<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, group)
+{			
+	df		<- subset(runs.table, method.denom==method.DENOM & method.BRL==method.brl & grepl(method.RISK,method.risk), c(stat, method.risk, factor, n, p))
+	if(method.WEIGHT=='')
+		df		<- subset(df, !grepl('wstar',method.risk) & !grepl('now',method.risk))
+	if(method.WEIGHT!='')
+		df		<- subset(df, grepl(method.WEIGHT,method.risk) )
+	set(df, NULL, 'factor', df[, as.character(factor)])	
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'factor', df[, factor(factor, levels=factors[, levels(factor)])])
+	
+	tmp		<- subset(df, stat%in%c('X.seq','nRec'))
+	tmp2	<- subset(df, stat=='X.seq', select=c(factor, t.period, p))
+	tmp		<- dcast.data.table(tmp, t.period+factor+method.risk~stat, value.var='n')
+	tmp		<- merge(tmp, tmp2, by=c('t.period','factor'))
+	tmp[, n:= X.seq/nRec]	
+	set(tmp, NULL, 'p', tmp[, round(p, d=3)]*100)
+	set(tmp, NULL, 'n', tmp[, round(n, d=0)])	
+	ans		<- tmp
+	# group
+	if(group=='cascade')
+	{
+		scale.name	<- 'in treatment\ncascade stage'
+		ans[, group:=ans[, substr(factor, 1, 1)]]
+		set(ans, ans[,which(group=='A')], 'group', 'ART started')
+		set(ans, ans[,which(group=='U')], 'group', 'Undiagnosed')
+		set(ans, ans[,which(group=='D')], 'group', 'Diagnosed')
+		set(ans, NULL, 'group', ans[, factor(group, levels=c('Undiagnosed','Diagnosed','ART started'))])		
+	}
+	if(group=='age')
+	{		
+		scale.name	<- 'from age group'
+		ans[, group:=NA_character_ ]
+		set(ans, ans[,which(factor%in%c('t<=20','t<=25'))], 'group', '<30')
+		set(ans, ans[,which(factor%in%c('t<=30','t<=35'))], 'group', '30-39')
+		set(ans, ans[,which(factor%in%c('t<=40','t<=45','t<=100'))], 'group', '40-')
+		set(ans, NULL, 'group', ans[, factor(group, levels=c('<30','30-39','40-'))])
+		theme.age <- function (base_size = 12, base_family = "") 
+		{
+			theme_grey(base_size = base_size, base_family = base_family) %+replace% 
+					theme(	legend.key.size=unit(11,'mm'), 
+							axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5), 
+							panel.background = element_rect(fill = 'grey60'),
+							panel.grid.minor.y = element_line(colour='grey70'),
+							panel.grid.major = element_line(colour='grey70'),
+							legend.key=element_rect(fill='grey60'))
+		}
+		theme_set(theme.age())
+	}
+	#tperiod.long
+	ans	<- merge(ans, tperiod.info, by='t.period')
+	ans[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]		
+	#factor.long	
+	ans	<- merge(ans, factors, by='factor')	
+	
+	ggplot(ans, aes(x=t.period.long, y=n, group=factor.legend, colour=factor.legend))  + labs(x='', y='potential transmission intervals\nper recipient MSM\n(person-years)') +				
+				scale_colour_manual(name=scale.name, values=ans[, unique(factor.color)]) +
+				scale_y_continuous(breaks=seq(0,2000,200)) +
+				geom_line() + geom_point() + 				
+				theme_bw() + theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+				facet_grid(. ~ group, scales='free_y', margins=FALSE)		
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','censoring',".pdf", sep='')	
+	ggsave(file=file, w=8, h=6)			
+}
+######################################################################################
+project.athena.Fisheretal.sensitivity.getfigures.pseq<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, group)
+{	
+	require(Hmisc)
+	
+	df		<- subset(runs.table, method.denom==method.DENOM & method.BRL==method.brl & grepl(method.RISK,method.risk), c(stat, method.risk, factor, n, p))
+	if(method.WEIGHT=='')
+		df		<- subset(df, !grepl('wstar',method.risk) & !grepl('now',method.risk))
+	if(method.WEIGHT!='')
+		df		<- subset(df, grepl(method.WEIGHT,method.risk) )
+	set(df, NULL, 'factor', df[, as.character(factor)])	
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'factor', df[, factor(factor, levels=factors[, levels(factor)])])
+	tmp		<- df[, 	{
+				#BINCONF not appropriate because potential transmission intervals are not independent
+				p.seq.cis	<- as.double(binconf( sum(n[stat=='X.seq']), sum(n[stat=='X.msm']), alpha=0.05, method= "wilson", include.x=FALSE, include.n=FALSE, return.df=FALSE))
+				list( 	p.seq= sum(n[stat=='X.seq']) / sum(n[stat=='X.msm']),
+						p.seq.l= p.seq.cis[2],
+						p.seq.u= p.seq.cis[3] )
+			}, by=c('factor','t.period')]
+	tmp		<- merge(tmp, df[, list( factor=factor[stat=='X.msm'], pp.coh=n[stat=='X.msm']/sum(n[stat=='X.msm']), pp.pos=n[stat=='YX']/sum(n[stat=='YX']) ), by='t.period'], by=c('factor','t.period'))
+	ans		<- tmp
+	set(ans, NULL, 'p.seq', ans[, round(p.seq, d=3)]*100)		
+	# group
+	if(group=='cascade')
+	{
+		scale.name	<- 'from cascade stage'
+		ans[, group:=ans[, substr(factor, 1, 1)]]
+		set(ans, ans[,which(group=='A')], 'group', 'cART initiated')
+		set(ans, ans[,which(group=='U')], 'group', 'Undiagnosed')
+		set(ans, ans[,which(group=='D')], 'group', 'Diagnosed')
+		set(ans, NULL, 'group', ans[, factor(group, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
+		theme.cascade <- function (base_size = 12, base_family = "") 
+		{
+			theme_grey(base_size = base_size, base_family = base_family) %+replace% 
+					theme(	legend.key.size=unit(11,'mm'), 
+							axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5))
+		}		
+		theme_set(theme.cascade())	
+	}
+	if(group=='age')
+	{		
+		scale.name	<- 'from age group'
+		ans[, group:=NA_character_ ]
+		set(ans, ans[,which(factor%in%c('t<=20','t<=25'))], 'group', '<30')
+		set(ans, ans[,which(factor%in%c('t<=30','t<=35'))], 'group', '30-39')
+		set(ans, ans[,which(factor%in%c('t<=40','t<=45','t<=100'))], 'group', '40-')
+		set(ans, NULL, 'group', ans[, factor(group, levels=c('<30','30-39','40-'))])
+		theme.age <- function (base_size = 12, base_family = "") 
+		{
+			theme_grey(base_size = base_size, base_family = base_family) %+replace% 
+					theme(	legend.key.size=unit(11,'mm'), 
+							axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5), 
+							panel.background = element_rect(fill = 'grey60'),
+							panel.grid.minor.y = element_line(colour='grey70'),
+							panel.grid.major = element_line(colour='grey70'),
+							legend.key=element_rect(fill='grey60'))
+		}
+		theme_set(theme.age())
+	}
+	#tperiod.long
+	ans	<- merge(ans, tperiod.info, by='t.period')
+	ans[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]		
+	#factor.long	
+	ans	<- merge(ans, factors, by='factor')	
+	#	plot p.seq	
+	if(0)
+	{
+		ggplot(ans, aes(x=factor.legend, y=p.seq, fill=factor.legend)) +			
+				labs(x='', y=expression(frac(atop('potential transmission intervals','with a sequence'),atop('potential transmission intervals','in cohort'))*' * 100')) +			
+				scale_fill_manual(name=scale.name, values=ans[, unique(factor.color)]) + 
+				geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
+				theme(plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
+				facet_grid(. ~ t.period.long, scales='free', margins=FALSE)
+		file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqsampling',".pdf", sep='')	
+		ggsave(file=file, w=25, h=8)		
+	}
+	if(1)
+	{
+		ggplot(ans, aes(x=factor.legend, y=p.seq, pch=t.period.long)) + geom_point() +
+				theme_bw() + theme(legend.position='bottom', axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) + 
+				scale_y_continuous(breaks=seq(0,100,10)) +
+				labs(x='', y='proportion of\npotentialtransmission intervals\nwith a sequence\n(%)',pch='observation\nperiod')
+		file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqsampling',".pdf", sep='')
+		cat(paste('plot to',file))
+		ggsave(file=file, w=8, h=5)
+	}	
+}
+######################################################################################
 project.athena.Fisheretal.sensitivity.getfigures.counts<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, group)
 {	
 	require(Hmisc)
@@ -10159,7 +10485,7 @@ project.athena.Fisheretal.sensitivity.getfigures.counts<- function(runs.table, m
 		df		<- subset(df, !grepl('wstar',method.risk) & !grepl('now',method.risk))
 	if(method.WEIGHT!='')
 		df		<- subset(df, grepl(method.WEIGHT,method.risk) )
-	
+	set(df, NULL, 'factor', df[, as.character(factor)])	
 	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
 	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
 	set(df, NULL, 'factor', df[, factor(factor, levels=factors[, levels(factor)])])
@@ -10242,15 +10568,6 @@ project.athena.Fisheretal.sensitivity.getfigures.counts<- function(runs.table, m
 			facet_grid(. ~ t.period.long, scales='free', margins=FALSE)
 	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','censoringp',".pdf", sep='')	
 	ggsave(file=file, w=25, h=8)			
-	#	plot p.seq	
-	ggplot(ans, aes(x=factor.legend, y=p.seq, fill=factor.legend)) +			
-			labs(x='', y=expression(frac(atop('potential transmission intervals','with a sequence'),atop('potential transmission intervals','in cohort'))*' * 100')) +			
-			scale_fill_manual(name=scale.name, values=ans[, unique(factor.color)]) + 
-			geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
-			theme(plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
-			facet_grid(. ~ t.period.long, scales='free', margins=FALSE)
-	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqsampling',".pdf", sep='')	
-	ggsave(file=file, w=25, h=8)
 	#	plot p.clu	
 	ggplot(ans, aes(x=factor.legend, y=p.clu, fill=factor.legend)) +			
 			labs(x='', y=expression(frac(atop('potential transmission intervals','in a cluster'),atop('potential transmission intervals','with a sequence'))*' * 100')) +			
@@ -10782,6 +11099,9 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.table.Rdata", sep='')		
 	readAttempt			<- try(suppressWarnings(load(file)))	
 	
+	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
+	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
+	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )		
 	#	set up factor legends
 	factor.color	<- c("","#990000","#EF6548","#FDBB84","#0570B0","","#74A9CF","#7A0177","#F768A1","#FCC5C0","","#005824","#41AB5D","#ADDD8E")
 	factor.long		<- c(	'=\"Undiagnosed (all)\"',
@@ -10805,37 +11125,51 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	#tmp			<- c("t<=20","t<=25","t<=30","t<=35","t<=40","t<=45","t<=100")
 	#factors		<- rbind(factors, data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m5.tAc'))
 	#
-	#	get n.coh p.seq etc by time period
-	#	
+	#	get n.coh p.seq etc by time period: table
+	#
 	file	<- paste(outdir,'/','table_m2BwmxMv.wtn.tp','.csv',sep='')	
 	df		<- subset(runs.table, grepl('m2BwmxMv.wtn.tp',method.risk) & method.brl=='3la2H1C3V51', select=c(stat, method.risk, factor, n, p, l95.bs, u95.bs))
 	project.athena.Fisheretal.sensitivity.tables.m2(df, factors, levels, file)
-	
-
-	df		<- subset(runs.table, grepl('m2CwmxMv.wtn.tp',method.risk) & method.brl=='3la2H1C3V100', select=c(stat, method.risk, factor, n, p, l95.bs, u95.bs))
-	
-	
 	#
-	file	<- paste(outdir,'/','table_m2BwmxMv.tp','.csv',sep='')
-	levels	<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")
-	df		<- subset(runs.risk, grepl('m2BwmxMv.tp',method.risk) & !grepl('wstar',method.risk) , c(stat, method.risk, factor.ref, factor, v, l95.bs, u95.bs))	
-	project.athena.Fisheretal.sensitivity.tables.m2(df, levels, file)
+	#	get n.coh p.seq etc by time period: figure
 	#
-	#
-	#
-	df		<- subset(runs.risk, method.nodectime=='any' & method.brl=='3da' & method.dating=='sasky' & grepl('m5.tAc.tp',method.risk) & !grepl('wstar',method.risk)  )
-	levels	<- c('t<=20','t<=25','t<=30','t<=35','t<=40','t<=45','t<=100')
-	file	<- paste(outdir,'/','table_m5tAc.tp','.csv',sep='')
-	project.athena.Fisheretal.sensitivity.tables.m5(df, levels, file)	
-	
-	#
-	#	get n.coh p.seq etc by time period
+	#	set up factor legends
+	factor.color	<- c("#990000","#EF6548","#FDBB84","#0570B0","#74A9CF","#7A0177","#F768A1","#FCC5C0","#005824","#41AB5D","#ADDD8E")
+	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
+							'Undiagnosed,\n Chronic infection\n at diagnosis',
+							'Undiagnosed,\n Unknown if recent',
+							'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+							'Diagnosed,\n CD4 progression to\n >500',
+							'Diagnosed,\n CD4 progression to\n [351-500]',
+							'Diagnosed,\n CD4 progression to\n <=350',			
+							'Diagnosed,\n Unknown CD4',
+							'cART initiated,\n no viral suppression',
+							'cART initiated,\n viral suppression',
+							'cART initiated,\n Unknown viral load'				)
+	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y","ART.vlNA")
+	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Bwmx')		
+	factor.color	<- c("#990000","#EF6548","#FDBB84","#0570B0","#74A9CF","#7A0177","#F768A1","#FCC5C0","#005824","#41AB5D","#F7FCB9","#ADDD8E")
+	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
+							'Undiagnosed,\n Chronic infection\n at diagnosis',
+							'Undiagnosed,\n Unknown if recent',
+							'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+							'Diagnosed,\n CD4 progression to\n >500',
+							'Diagnosed,\n CD4 progression to\n [351-500]',
+							'Diagnosed,\n CD4 progression to\n <=350',			
+							'Diagnosed,\n Unknown CD4',
+							'cART initiated,\n no viral suppression',
+							'cART initiated,\n viral suppression <2 obs',
+							'cART initiated,\n viral suppression >=2 obs',
+							'cART initiated,\n Unknown viral load'				)
+	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","ART.vlNA")
+	factors			<- rbind(factors, data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Cwmx'))
 	#
 	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3kaH'
-	method.RISK		<- 'm2BwmxMv.tp'
+	method.BRL		<- '3la2H1C3V51'
+	method.RISK		<- 'm2BwmxMv.wtn.tp'
 	method.WEIGHT	<- ''	
 	factors			<- subset(factors, grepl('m2Bwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	outfile			<- infile	
 	project.athena.Fisheretal.sensitivity.getfigures.counts(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
 	#
 	#	get n.coh p.seq etc by time period
@@ -11873,6 +12207,7 @@ project.athena.Fisheretal.CT.resolution<- function(info, df.viro, df.immu, t.sta
 #	mode1	if df.tpairs is not null, return the transmitter-infected-time period triplets for all **sequence** pairs in df.tpairs
 #	mode2	if ri is not null and nsample is NA, return the triplets for all **patient** pairs of infected in ri and any transmitter in df.all
 #	mode3	if ri is not null and nsample is not NA, return a **sample** of the triplets for all **sequence pairs** of the sequences belonging to ri and to any transmitter in df.all
+#lRNA.supp=method.lRNA.supp, method.minLowerUWithNegT=method.minLowerUWithNegT; t.period=t.period; t.endctime=t.endctime;
 project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treatment, predict.t2inf, t2inf.args, ri=NULL, df.tpairs=NULL, tperiod.info=NULL, lRNA.supp=3, t.period=0.25, t.endctime=2013., sample.n=NA, sample.exclude=NULL, method.minLowerUWithNegT=TRUE, save.file=NA, resume=FALSE)
 {
 	#df.all<- df.all.allmsm; df.immu<-df.immu.allmsm; df.viro<-df.viro.allmsm; df.treatment<-df.treatment.allmsm; ri<-ri.SEQ; df.tpairs<- NULL	
@@ -12487,7 +12822,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method					<- '3l'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Bwmx.tp4'
+		method.risk				<- 'm2Bwmx.wtn.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.1
 		method.brl.bwhost		<- 2
@@ -13008,7 +13343,6 @@ hivc.prog.betareg.estimaterisks<- function()
 				X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, lRNA.supp=method.lRNA.supp, plot.file.or=NA, resume=1, save.file=save.file )
 				X.msm				<- subset(X.msm, select=c(t, Patient, t.Patient, t.period, AnyPos_T1, t.AnyPos_T1, CD4b, CD4c, CD4b.tperiod, CD4c.tperiod))
 				gc()
-stop()				
 			}
 			if(any(sapply(c('m21st','m2B1st'), grepl, x=method.risk)))
 			{

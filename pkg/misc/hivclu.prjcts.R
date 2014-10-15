@@ -5517,11 +5517,11 @@ project.Tchain.Belgium.sensecheck	<- function()
 		#0.006431 0.041570 0.055770 0.062380 0.086620 0.121200 
 		ggplot(trm.pol, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1)) + geom_line(data=trm.pol.p2, aes(y=BRL_p)) + 
 					#geom_ribbon(data=trm.pol.p2, aes(ymin=BRLql, ymax=BRLqu), alpha=0.2) + 
-					labs(x='cumulated time since transmission in recipient and source\n(years)', y='evolutionary divergence between sequences from confirmed transmission pairs\n(estimated number of nucleotide substitutions / site)') +
+					labs(x='cumulated time since transmission\nin recipient and source\n(years)', y='evolutionary divergence\nbetween sequences from confirmed transmission pairs\n(nucleotide substitutions / site)') +
 					scale_y_continuous(limits=c(0,0.13), breaks=seq(0, 0.2, 0.01)) +
-					scale_x_continuous(limits=c(0,22), breaks=seq(0,30,2))
+					scale_x_continuous(limits=c(0,22), breaks=seq(0,30,2)) + theme_bw()
 		file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_GAfit.pdf", sep='')
-		ggsave(file=file, w=5, h=8)		
+		ggsave(file=file, w=5, h=5)		
 		Rsq(trm.pol.GA)	#0.5884969
 		#
 		#
@@ -5546,10 +5546,11 @@ project.Tchain.Belgium.sensecheck	<- function()
 		set( trm.lkl, NULL, 'lkl', trm.lkl[, dGA(BRL, mu=mu, sigma=sigma)])
 		set( trm.lkl, NULL, 'd_TSeqT', trm.lkl[, factor(d_TSeqT, levels=c(1,3,10), labels=c('1 yr','3 yrs','10 yrs'))])
 		ggplot(trm.lkl, aes(x=BRL, y=lkl, group=d_TSeqT, colour=d_TSeqT)) + geom_line() + facet_grid(d_TSeqT~., scales='free_y') + 
-				scale_x_continuous(breaks=seq(0, 0.2, 0.01)) + theme(strip.background = element_blank(), strip.text = element_blank(), legend.position='bottom') +
-				labs(y='likelihood of direct HIV transmission', x='evolutionary divergence\nbetween sequences from confirmed transmission pairs\n(estimated number of nucleotide substitutions / site)', colour='cumulated time since transmission\nin recipient and source')
+				scale_x_continuous(breaks=seq(0, 0.2, 0.01)) + theme_bw() + theme(strip.background = element_blank(), strip.text = element_blank(), legend.justification=c(1,1), legend.position=c(1,1)) +
+				labs(y='likelihood of direct HIV transmission', x='evolutionary divergence\nbetween sequences from confirmed transmission pairs\n(nucleotide substitutions / site)', 
+						colour='cumulated time\nsince transmission\nin recipient and\nsource')
 		file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_likelihood.pdf", sep='')
-		ggsave(file=file, w=5, h=8)	
+		ggsave(file=file, w=5, h=5)	
 				
 		file	<- paste(indir, '/',"140921_set7_pol_GAmodel_INFO.R", sep='')
 		save(file=file, trm.pol.GA, trm.pol)
