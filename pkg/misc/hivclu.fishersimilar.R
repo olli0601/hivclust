@@ -3972,9 +3972,15 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 	set(tmp, NULL, c('coef.ref','risk.ref', 'factor.ref'), 'None')
 	setnames(tmp,'PYs','v')
 	risk.ans	<- copy(tmp)
-	#
+	#	number of adjusted potential transmission intervals
+	cat(paste('\nnumber of adjusted potential transmission intervals'))
+	tmp			<- subset(adj.s, select=c(risk, factor, X.msm.e0cp))
+	tmp[, stat:='X.msm.e0cp']
+	set(tmp, NULL, c('coef.ref','risk.ref', 'factor.ref'), 'None')
+	set(tmp, NULL, 'coef', tmp[, paste(risk,factor,sep='')])
+	setnames(tmp,'X.msm.e0cp','v')	
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 	#	number of expected missing transmission intervals
-	#
 	cat(paste('\nnumber of expected missing transmission intervals'))
 	tmp			<- melt( subset(adj.s, select=c(risk, factor, YX, X.seq, PTx, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), value.name='Sx', variable.name='stat' )
 	set(tmp, NULL, 'v', tmp[, round(YX*(1-Sx)/Sx)])
@@ -4052,8 +4058,7 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 	#compute proportions from the various N.raw
 	tmp			<- tmp[, list(v= v/sum(v, na.rm=TRUE), risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef=coef, coef.ref='None') , by='stat']
 	set(tmp, NULL, 'stat', tmp[, gsub('N','P',stat)])
-	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
-	#	ggplot(YX.m3, aes(x=score.Y)) + geom_histogram() + facet_grid(CD4b.tperiod~.) + scale_x_continuous(limits=c(0,100))
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))	
 	#
 	#	relative transmissibilities
 	#	*** compare proportions transmitted among recipient with likely transmitter against population proportion among all recipient ***
@@ -4078,6 +4083,9 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 	set(tmp, NULL, 'stat', tmp[, gsub('RI','RR',stat)])
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 	#	Bootstraps	on ratio and on prob
+	setkey(ct, t.period, risk, factor)
+	tmp			<- ct[, seq_len( length(n.adj)/length(unique(factor)) )]
+	set(ct, NULL, 'bs', tmp) 
 	cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
 	tmp			<- lapply(seq_len(bs.n), function(bs.i)
 			{
@@ -4121,8 +4129,13 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 				#
 				#	bootstrap sample censoring
 				#
-				tmp					<- ct[, list(n.adj.bs=round(sample(n.adj, 1))), by=c('risk','factor','t.period')]
+				tmp					<- subset( ct, bs==sample(ct[, unique(bs)], 1) )
+				set(tmp, NULL, 'n.adj', tmp[, as.integer(round(n.adj))])	
+				setnames(tmp, 'n.adj', 'n.adj.bs' )
 				tmp					<- merge( nt.table[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], tmp, by=c('risk','factor'))
+				#debug only
+				#tmp2	<- tmp[, which(X.msm.e0>n.adj.bs)]
+				#set(tmp, tmp2,'X.msm.e0', tmp[tmp2, n.adj.bs]) 				
 				stopifnot( tmp[, all(X.msm.e0<=n.adj.bs)] )			 
 				tmp					<- tmp[, list( PYe0cpr=round(n.adj.bs-X.msm.e0)), by=c('risk','factor')]		
 				tmp					<- merge(tmp, nt.table[, list(X.msm.e0cp= length(unique(Patient))), by=c('risk','factor') ], by=c('risk','factor')) 
@@ -4139,13 +4152,16 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 				setnames(tmp, 'v', 'PTx')
 				#	prepare risk.df and nt.table as needed
 				nt.table			<- merge(nt.table, subset(tmp, select=c(risk, factor, PTx, Sx.e0, Sx.e0cp)), by=c('risk','factor'))				
-				#	bootstrap number of recipients
-				tmp			<- subset(tmp, select=c(risk, factor, nRec))
+				#	bootstrap number of recipients				
 				set(tmp, NULL, c('risk.ref','factor.ref','coef.ref'), 'None')
 				set(tmp, NULL, 'coef', tmp[, paste(risk,factor,sep='')])
 				set(tmp, NULL, 'stat', 'nRec')
 				setnames(tmp, 'nRec', 'v')
-				risk.ans.bs	<- rbind( risk.ans.bs, tmp, use.names=TRUE )	
+				risk.ans.bs	<- rbind( risk.ans.bs, subset(tmp, select=c(risk, factor, risk.ref, factor.ref, coef.ref, coef, stat, v)), use.names=TRUE )
+				#	bootstrap number of adjusted potential transmission intervals
+				set(tmp, NULL, 'stat', 'X.msm.e0cp')
+				setnames(tmp, c('v','X.msm.e0cp'),  c('nRec','v'))
+				risk.ans.bs	<- rbind( risk.ans.bs, subset(tmp, select=c(risk, factor, risk.ref, factor.ref, coef.ref, coef, stat, v)), use.names=TRUE )
 				#
 				#	raw number of transmissions
 				#
