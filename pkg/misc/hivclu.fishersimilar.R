@@ -3961,6 +3961,10 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 					P.raw.e0= X.msm.e0/sum(X.msm.e0), P.raw.e0cp= X.msm.e0cp/sum(X.msm.e0cp)	)]
 	adj	<- merge(adj, tmp, by=c('risk','factor'))	
 	#
+	set(nt.table, NULL, 'risk', nt.table[, as.character(risk)])
+	set(nt.table, NULL, 'factor', nt.table[, as.character(factor)])
+	set(nt.table, NULL, 'Patient', nt.table[, as.character(Patient)])
+	#
 	#	ready to go:
 	#
 	#	potential transmission intervals in denominator pop (either X.seq or X.clu)
@@ -4003,7 +4007,7 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 	#	*** among recipients with likely transmitter only ***
 	#
 	cat(paste('\nnumber and proportion of transmissions using raw evidence for transmission (y_ijt*w_ijt)'))
-	missing		<- merge(nt.table, unique( subset( risk.df, select=c(risk, factor, PTx) ) ), by=c('risk','factor'))	
+	missing		<- merge(nt.table, unique( subset( risk.df, select=c(risk, factor, PTx) ) ), by=c('risk','factor'))
 	#	reduce to sampled recipients
 	tmp			<- unique(subset(YX.m3, select=Patient))		
 	missing		<- merge(tmp, missing, by='Patient', allow.cartesian=TRUE)	
@@ -4133,9 +4137,6 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 				set(tmp, NULL, 'n.adj', tmp[, as.integer(round(n.adj))])	
 				setnames(tmp, 'n.adj', 'n.adj.bs' )
 				tmp					<- merge( nt.table[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], tmp, by=c('risk','factor'))
-				#debug only
-				#tmp2	<- tmp[, which(X.msm.e0>n.adj.bs)]
-				#set(tmp, tmp2,'X.msm.e0', tmp[tmp2, n.adj.bs]) 				
 				stopifnot( tmp[, all(X.msm.e0<=n.adj.bs)] )			 
 				tmp					<- tmp[, list( PYe0cpr=round(n.adj.bs-X.msm.e0)), by=c('risk','factor')]		
 				tmp					<- merge(tmp, nt.table[, list(X.msm.e0cp= length(unique(Patient))), by=c('risk','factor') ], by=c('risk','factor')) 
