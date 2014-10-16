@@ -4102,7 +4102,7 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 				tmp					<- unique(subset(YX.m3, select=Patient))					
 				YX.m3.bs			<- tmp[ sample( seq_len(nrow(tmp)), nrow(tmp), replace=TRUE ), ]
 				#	debug
-YX.m3.bs			<- unique(subset(YX.m3, select=Patient))				
+				#YX.m3.bs			<- unique(subset(YX.m3, select=Patient))				
 				#	recipient MSM are not necessarily unique any longer - need to create unique bs id
 				YX.m3.bs[, Patient.bs:=paste(Patient, seq_len(nrow(tmp)),sep='_bs' )]
 				YX.m3.bs			<- merge( YX.m3, YX.m3.bs, by='Patient', allow.cartesian=TRUE )
