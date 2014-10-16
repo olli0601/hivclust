@@ -3909,7 +3909,7 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 	setkey(tmp2, stat, t.period, risk, factor)
 	ctb			<- unique(tmp2)
 	tmp			<- project.athena.Fisheretal.censoring.model(ct, ctb, plot.file=NA )
-	ct			<- tmp$ctn
+	ct			<- copy(tmp$ctn)
 	tmp			<- ct[, list(n.adj.med=round(median(n.adj))), by=c('risk','factor','t.period')]
 	tmp			<- merge( nt.table[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], tmp, by=c('risk','factor'))
 	stopifnot( tmp[, all(X.msm.e0<=n.adj.med)] )
@@ -4089,7 +4089,7 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 	#	Bootstraps	on ratio and on prob
 	setkey(ct, t.period, risk, factor)
 	tmp			<- ct[, seq_len( length(n.adj)/length(unique(factor)) )]
-	set(ct, NULL, 'bs', tmp) 
+	ct[, bs:=rep(tmp, nrow(ct)/length(tmp))]
 	cat(paste('\nregression on bootstrap data sets bs.n=',bs.n))
 	tmp			<- lapply(seq_len(bs.n), function(bs.i)
 			{
