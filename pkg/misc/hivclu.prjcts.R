@@ -5053,30 +5053,39 @@ project.hivc.examlclock<- function()
 	#ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_zagaqq','.pdf',sep=''), w=4,h=6)		
 }
 ######################################################################################
-project.hivc.examl<- function(dir.name= DATA)
+project.hivc.examl<- function()
 {
 	require(ape)
 	
-	indir		<- paste(DATA,"derived",sep='/')
-	outdir		<- paste(DATA,"tmp",sep='/')
-	signat.out	<- signat.in	<- "Wed_May__1_17/08/15_2013"
-	verbose		<- resume		<- 1
-	infile		<- "ATHENA_2013_03_FirstAliSequences_PROTRT"
-	file		<- paste(indir,'/',infile,"_",gsub('/',':',signat.in),".R",sep='')
-	if(verbose) cat(paste("\nload ",file))
-	load(file)
-	str(seq.PROT.RT)
+	dir.name	<- DATA  	
+	indir		<- paste(dir.name,'bezemer',sep='/')
+	infile		<- "NLB10BLAST_cutRmu"
+	insignat	<- "Tue_Nov_4_2014"
 	
-	#debug	
+	if(1)
+	{
+		seq.PROT.RT	<- read.dna(paste(indir, '/', infile, '.fasta', sep=''), format='fasta')
+		file		<- paste(indir, '/', infile, '_', insignat, '.R', sep='')
+		save(seq.PROT.RT, file=file)
+	}	
+	#	ExaML bootstrap args
+	bs.from		<- 0
+	bs.to		<- 2
+	bs.n		<- 200
+	outdir		<- indir
+	cmd			<- hivc.cmd.examl.bootstrap(indir, infile, insignat, insignat, bs.from=bs.from, bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
 	
 	
-	cat(cmd)
-	stop()
-	#create ExaML binary file from phylip
-	#create Parsimonator starting tree
-	#run ExaML starting tree
-	#delete phylip file
-	
+	dummy		<- lapply(cmd, function(x)
+				{				
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q="pqeph", hpc.mem="3850mb", hpc.nproc=8)
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("exa",signat,sep='.')
+					#cat(x)
+					hivc.cmd.hpccaller(outdir, outfile, x)
+					Sys.sleep(1)
+				})	
 }
 ######################################################################################
 hivc.project.remove.resistancemut.save<- function()

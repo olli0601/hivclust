@@ -10724,15 +10724,17 @@ project.athena.Fisheretal.sensitivity.getfigures.npotentialtransmissionintervals
 	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','ptadjwl',".pdf", sep='')	
 	ggsave(file=file, w=9, h=8)	
 	
-	ggplot(ans, aes(x=t.period.long, y=n, ymin=l95.bs, ymax=u95.bs, group=group, fill=factor.legend))  + 
+	ggplot(ans, aes(x=t.period, y=n, ymin=l95.bs, ymax=u95.bs, group=group, fill=factor.legend, colour=t.period))  + 
 			labs(x='', y='potential transmission intervals\nper recipient MSM (person-years)') +				
 			scale_fill_manual(name=scale.name, values=ans[, unique(factor.color)], guide=FALSE) +
+			scale_color_manual(name='time of diagnosis\nof recipient MSM', values=rep('transparent',nrow(tperiod.info)), label= paste('period ',tperiod.info[, t.period],':\n',tperiod.info[, t.period.min],' - ',tperiod.info[, t.period.max],sep='')) +
+			scale_x_discrete(labels=paste('period',tperiod.info[, t.period])) +
 			scale_y_continuous(breaks=seq(0,20000,1000), minor_breaks=seq(0,20000,200)) +
-			geom_bar(stat='identity') + geom_errorbar(stat='identity',width=.2) +  				
-			theme_bw() + theme(legend.key.size=unit(12,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+			geom_bar(stat='identity') + geom_errorbar(stat='identity',width=.2,colour='black') +  				
+			theme_bw() + theme(legend.key.height=unit(12,'mm'), legend.key.width=unit(0,'mm'), legend.key=element_rect(colour='transparent', fill='transparent'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
 			facet_grid(. ~ group, scales='free_y', margins=FALSE)	
 	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','ptadj',".pdf", sep='')	
-	ggsave(file=file, w=7, h=5)	
+	ggsave(file=file, w=9, h=5)	
 	
 }
 ######################################################################################
@@ -11469,6 +11471,9 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )		
+	set(tperiod.info, NULL, 't.period.min', tperiod.info[, factor(t.period.min, levels=c('1996-7','2006-5','2008-1','2009-7'), labels=c('Jul 1996','May 2006','Jan 2008','Jul 2009'))])
+	set(tperiod.info, NULL, 't.period.max', tperiod.info[, factor(t.period.max, levels=c('2006-4','2007-12','2009-6','2010-12'), labels=c('Apr 2006','Dec 2007','Jun 2009','Dec 2010'))])
+	
 	#
 	#
 	#	set up factor legends

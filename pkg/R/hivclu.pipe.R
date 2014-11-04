@@ -884,6 +884,11 @@ hivc.pipeline.various<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		quit("no")
 	}	
+	if(1)	#run ExaML
+	{
+		project.hivc.examl()
+		quit("no")
+	}
 	if(0)	#run fisher similar analysis
 	{
 		indir		<- paste(dir.name,"tmp",sep='/')
@@ -898,7 +903,7 @@ hivc.pipeline.various<- function()
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
 	}
-	if(1)
+	if(0)
 	{
 		project.Gates()
 		quit("no")
@@ -907,16 +912,7 @@ hivc.pipeline.various<- function()
 	{
 		project.hivc.examl.median.brl()
 		quit("no")
-	}
-	signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-	outdir	<- paste(dir.name,"tmp",sep='/')
-	outfile	<- paste("vrs",signat,sep='.')					
-	dummy	<- lapply(cmd, function(x)
-			{				
-				#x<- hivc.cmd.hpcwrapper(x, hpc.q="pqeph")
-				cat(x)
-				hivc.cmd.hpccaller(outdir, outfile, x)
-			})							
+	}						
 }
 
 
