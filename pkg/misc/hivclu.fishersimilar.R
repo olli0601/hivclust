@@ -13518,12 +13518,12 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(method=='3l')
 	{
 		infile.trm.model	<- paste(indircov,"TchainBelgium_set7_pol_GAmodel_INFO.R",sep='/')
-		cat(paste('\using file', infile.trm.model))
+		cat(paste('\nusing file', infile.trm.model))
 	}		
 	if(method=='3m')
 	{
 		infile.trm.model	<- paste(indircov,"TchainBelgium_set7_pol_GAmodel_nA_INFO.R",sep='/')
-		cat(paste('\using file', infile.trm.model))
+		cat(paste('\nusing file', infile.trm.model))
 	}
 	if(method.nodectime=='any')
 		method				<- paste(method,'a',sep='')
