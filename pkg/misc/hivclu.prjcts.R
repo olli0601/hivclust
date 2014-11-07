@@ -5062,7 +5062,7 @@ project.hivc.examl<- function()
 	infile		<- "NLB10BLAST_cutRmu"
 	insignat	<- "Tue_Nov_4_2014"
 	
-	if(1)
+	if(0)
 	{
 		seq.PROT.RT	<- read.dna(paste(indir, '/', infile, '.fasta', sep=''), format='fasta')
 		file		<- paste(indir, '/', infile, '_', insignat, '.R', sep='')
@@ -5078,8 +5078,8 @@ project.hivc.examl<- function()
 	
 	dummy		<- lapply(cmd, function(x)
 				{				
-					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
-					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=24, hpc.q="pqeph", hpc.mem="3850mb", hpc.nproc=8)
+					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=34, hpc.q="pqeph", hpc.mem="450mb", hpc.nproc=1)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("exa",signat,sep='.')
 					#cat(x)
@@ -5191,6 +5191,391 @@ project.hivc.clustalo<- function(dir.name= DATA, min.seq.len=21)
 	}
 }
 ######################################################################################
+project.Tchain.MTC.sensecheck	<- function()
+{	
+	#
+	#	check if drug resistance mutations are masked	
+	if(0)
+	{
+		indir	<- '/Users/Oliver/duke/2014_HIV_MTCNL'
+		infile	<- 'Mother_Child_cohort.fasta'
+		file	<- paste(indir, '/',infile, sep='')
+		seq.pol	<- read.dna(file, format='fasta')		
+		#
+		file	<- system.file(package="rPANGEAHIVsim", "misc",'PANGEA_SSAfg_HXB2outgroup.R')
+		cat(paste('\nLoading outgroup seq from file', file))
+		load(file)		#expect "outgroup.seq.gag" "outgroup.seq.pol" "outgroup.seq.env"
+		#	align against HXB2
+		seq.pol <- c(as.list(outgroup.seq.pol), as.list(seq.pol))		
+		infile	<- '141105_MTCNL58_Drcheck.fasta'
+		file	<- paste(indir,'/',infile, sep='')
+		write.dna(file=file, seq.pol, format='fasta')
+		#	hand-curate: just a bit of noise at the end
+		infile	<- '141105_MTCNL58_Drcheck_HIValign2.fasta'
+		file	<- paste(indir,'/',infile, sep='')
+		seq.pol	<- read.dna(file=file, format='fa')		
+		seq.pol	<- as.character(seq.pol	)
+		seq.pol	<- as.DNAbin(seq.pol[, 169:1469])		
+		# first site is 2253 in HXB2
+		
+		#load drug resistance mutations and select unique mutants by codon
+		load( system.file(package="hivclust", "data",'IAS_primarydrugresistance_201303.rda') )		
+		dr				<- as.data.table(IAS_primarydrugresistance_201303)		
+		alignment.start	<- 2253	
+		set(dr, NULL, "Alignment.nuc.pos", dr[,Alignment.nuc.pos]-alignment.start+1)
+		#if alignment equals any of the drug resistance mutants, replace with NNN	
+		seq.pol			<- seq.rm.drugresistance(as.character(seq.pol), dr, verbose=1, rtn.DNAbin=1 )	
+		#rm HX1B and close gaps
+		seq.pol			<- seq.pol[!grepl('HXB2',rownames(seq.pol)),]
+		#	save
+		infile			<- "141105_MTCNL58_nodr.fasta"
+		file			<- paste(indir,'/',infile, sep='')
+		write.dna(file=file, seq.pol, format='fasta')			
+	}
+	#	
+	#	collect seq, ExaML phylos and patristic distances
+	#
+	if(0)
+	{
+		indir			<- '/Users/Oliver/duke/2014_HIV_MTCNL'		
+		infile.pol		<- "141105_MTCNL58_nodr.fasta"
+		file			<- paste(indir,'/',infile.pol, sep='')
+		seq.pol			<- read.dna(file, format='fa')
+		#
+		#	run ExaML to get trees in same way
+		#
+		seq					<- seq.pol	
+		infile				<- infile.pol
+		infile.seq.sig		<- "Wed_Sep_24_12:59:06_2013"
+		infile.seq			<- paste(substr(infile,1,nchar(infile)-6),'',sep='')
+		file				<- paste( indir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+		save(seq, file=file)
+		cmd					<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+		tmp					<- hivc.cmd.hpccaller(indir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+		#
+		#	get patristic distance
+		#	
+		file				<- list.files(indir, paste('^ExaML_result.141105_.*','finaltree.000$',sep=''), full.names=TRUE)
+		ph.pol				<- read.tree(file)
+		brl.pol				<- as.matrix( distTips(ph.pol , method='patristic') )
+		tmp					<- as.data.table(expand.grid(TIP1=rownames(brl.pol), TIP2=colnames(brl.pol), stringsAsFactors = FALSE))
+		tmp					<- tmp[, list(BRL= brl.pol[TIP1, TIP2]), by=c('TIP1','TIP2')]
+		tmp					<- subset(tmp, TIP1!=TIP2)
+		brl.pol				<- tmp
+		#
+		infile				<- '141105_MTCNL58_nodr_INFO.R'
+		file				<- paste(indir, '/',infile, sep='')
+		save(seq.pol, brl.pol, ph.pol, file=file)
+	}	
+	#	
+	#	get time elapsed versus brl in transmission pairs
+	#
+	if(1)
+	{
+		# 	read metavariables
+		indir	<- '/Users/Oliver/duke/2014_HIV_MTCNL'
+		infile	<- 'Mother_Child_cohort_data.csv'
+		file	<- paste(indir,'/',infile, sep='')
+		df.ind	<- read.csv(file=file, stringsAsFactors=FALSE )
+		df.ind	<- as.data.table(df.ind)
+		df.ind[, PosSeqT:=df.ind[, as.Date(gsub('\\s','',sampling.date), format='%d-%m-%Y')]]
+		set(df.ind, NULL, 'PosSeqT', df.ind[, hivc.db.Date2numeric(PosSeqT)])
+		set(df.ind, NULL, 'patient.code', df.ind[, gsub('\\s|#','',patient.code)])
+		df.ind[, PAIR:= df.ind[, sapply(strsplit(patient.code,'-'),'[[',2)]]
+		df.ind[, PATIENT:= df.ind[, sapply(strsplit(patient.code,'-'),'[[',1)]]				
+		df.ind[, TIME_TR:= paste('15-',month.of.birth,'-',year.of.birth,sep='')]
+		set(df.ind, df.ind[, which(is.na(year.of.birth))], 'TIME_TR', NA_character_)
+		set(df.ind, NULL, 'TIME_TR', df.ind[, as.Date(gsub('\\s','',TIME_TR), format='%d-%m-%Y')])
+		set(df.ind, NULL, 'TIME_TR', df.ind[, hivc.db.Date2numeric(TIME_TR)])
+		tmp		<- subset(df.ind, PATIENT=='mother' & (PAIR=='08' | PAIR=='17'))
+		set(tmp, NULL, 'PAIR', tmp[, paste(PAIR,'b',sep='')]) 
+		df.ind	<- rbind(df.ind, tmp)
+		tmp		<- df.ind[, which(PATIENT=='mother' & (PAIR=='08' | PAIR=='17'))]
+		set(df.ind, tmp, 'PAIR', df.ind[tmp, paste(PAIR,'a',sep='')])
+		#	get transmissions
+		tmp		<- subset(df.ind, PATIENT=='mother', select=c(patient.code, PosSeqT, PAIR))
+		df.trm	<- subset(df.ind, PATIENT=='child', select=c(patient.code, PosSeqT, PAIR, TIME_TR))
+		setnames(df.trm, c('patient.code','PosSeqT'), c('TO','TO_PosSeqT'))
+		setnames(tmp, c('patient.code','PosSeqT'), c('FROM','FROM_PosSeqT'))
+		df.trm	<- merge(tmp, df.trm, by='PAIR')		
+		#
+		#	
+		#	merge branch lengths and transmissions
+		infile	<- '141105_MTCNL58_nodr_INFO.R'
+		file	<- paste(indir,'/',infile, sep='')
+		load(file)
+		setnames(brl.pol, c('TIP1','TIP2'), c('FROM','TO'))
+		trm.pol	<- merge(df.trm, brl.pol, by=c('FROM','TO'))
+		#	set times between sampling times etc
+		trm.pol[, d_SeqT:=abs(TO_PosSeqT-FROM_PosSeqT)]
+		trm.pol[, d_TSeqT:= abs(TO_PosSeqT-TIME_TR) + abs(FROM_PosSeqT-TIME_TR)]		
+		#
+		#	explore
+		#
+		if(1)
+		{
+			ggplot(trm.pol, aes(x=d_TSeqT, y=BRL)) + geom_point() + 
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					#coord_cartesian(xlim=c(0,22), ylim=c(0,0.125)) +					
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75")) 
+			file	<- paste(indir, '/',"141105_MTCNL58_nodr_patristic_dTS_all.pdf", sep='')
+			ggsave(file=file, w=5, h=5)	
+		}
+		#
+		#	are there multi drug resistant sites for a particular person?
+		#
+		tmp		<- apply( as.character(seq.pol), 1, function(x) length(which(x=='n')))
+		tmp		<- data.table(DR= tmp/3, PATIENT=names(tmp))
+		setnames(tmp, c('PATIENT','DR'), c('FROM','FROM_DR'))
+		trm.pol	<- merge(trm.pol, tmp, by='FROM')
+		setnames(tmp, c('FROM','FROM_DR'), c('TO','TO_DR'))
+		trm.pol	<- merge(trm.pol, tmp, by='TO')
+		if(1)
+		{
+			ggplot(trm.pol, aes(x=d_TSeqT, y=BRL, colour=FROM_DR>0 | TO_DR>0)) + geom_point() + 
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					#coord_cartesian(xlim=c(0,22), ylim=c(0,0.125)) +
+					scale_colour_brewer(name='DR present\nin mother or child',palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75")) 
+			file	<- paste(indir, '/',"141105_MTCNL58_nodr_patristic_dTS_all_byDR.pdf", sep='')
+			ggsave(file=file, w=7, h=5)	
+		}
+	}
+}
+######################################################################################
+project.Tchain.Swedish.sensecheck	<- function()
+{
+	require(adephylo)	
+	#	get readable fasta file	
+	if(0)
+	{
+		indir	<- '/Users/Oliver/duke/2014_HIV_TChainSwedish'
+		#
+		#	gag
+		#
+		infile	<- 'set2_seqs_gag.fasta'
+		file	<- paste(indir, '/',infile, sep='')				
+		txt		<- scan(file = file, what = "", sep = "\n", quiet = TRUE)
+		#	search for '>' names 
+		tmp			<- c( which( grepl('^>',txt) ), length(txt)+1 )
+		tmp			<- lapply(seq_len(length(tmp)-1), function(i)
+				{				
+					data.table( LABEL= gsub('>','',txt[tmp[i]]), SEQ= paste(txt[(tmp[i]+1):(tmp[i+1]-1)], sep='', collapse='') )
+				})
+		seq				<- do.call('rbind', tmp)	
+		tmp				<- tolower(do.call('rbind',strsplit(seq[, SEQ],'')))
+		rownames(tmp)	<- seq[, LABEL]
+		seq				<- as.DNAbin(tmp)		
+		infile			<- '141105_set2_seqs_gag.fasta'
+		file			<- paste(indir,'/',infile, sep='')
+		write.dna(file=file, seq, format='fasta')
+		#
+		#	env
+		#
+		infile	<- 'set2_seqs_env.fasta'
+		file	<- paste(indir, '/',infile, sep='')				
+		txt		<- scan(file = file, what = "", sep = "\n", quiet = TRUE)
+		#	search for '>' names 
+		tmp			<- c( which( grepl('^>',txt) ), length(txt)+1 )
+		tmp			<- lapply(seq_len(length(tmp)-1), function(i)
+				{				
+					data.table( LABEL= gsub('>','',txt[tmp[i]]), SEQ= paste(txt[(tmp[i]+1):(tmp[i+1]-1)], sep='', collapse='') )
+				})
+		seq				<- do.call('rbind', tmp)	
+		tmp				<- tolower(do.call('rbind',strsplit(seq[, SEQ],'')))
+		rownames(tmp)	<- seq[, LABEL]
+		seq				<- as.DNAbin(tmp)		
+		infile		<- '141105_set2_seqs_env.fasta'
+		file		<- paste(indir,'/',infile, sep='')
+		write.dna(file=file, seq, format='fasta')		
+	}
+	#	
+	#	collect seq, ExaML phylos and patristic distances
+	#
+	if(1)
+	{
+		#
+		#	get ExaML tree
+		#		
+		indir				<- '/Users/Oliver/duke/2014_HIV_TChainSwedish'
+		infile				<- '141105_set2_seqs_gag.fasta'
+		file				<- paste(indir,'/',infile, sep='')
+		seq					<- read.dna(file, format='fa')
+		infile.seq.sig		<- "Wed_Sep_24_12:59:06_2013"
+		infile.seq			<- paste(substr(infile,1,nchar(infile)-6),'',sep='')
+		file				<- paste( indir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+		save(seq, file=file)
+		cmd					<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+		tmp					<- hivc.cmd.hpccaller(indir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+		
+		infile				<- '141105_set2_seqs_env.fasta'
+		file				<- paste(indir,'/',infile, sep='')
+		seq					<- read.dna(file, format='fa')
+		infile.seq.sig		<- "Wed_Sep_24_12:59:06_2013"
+		infile.seq			<- paste(substr(infile,1,nchar(infile)-6),'',sep='')
+		file				<- paste( indir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+		save(seq, file=file)
+		cmd					<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+		tmp					<- hivc.cmd.hpccaller(indir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+		
+		infile				<- '141105_set2_seqs_gag.fasta'
+		file				<- paste(indir,'/',infile, sep='')
+		seq					<- read.dna(file, format='fa')
+		seq.gag				<- seq
+		infile				<- '141105_set2_seqs_env.fasta'
+		file				<- paste(indir,'/',infile, sep='')
+		seq.env				<- read.dna(file, format='fa')
+		stopifnot( all(rownames(seq)==rownames(seq.env)) )
+		seq					<- cbind(seq, seq.env)
+		seq.conc			<- seq
+		infile.seq.sig		<- "Wed_Sep_24_12:59:06_2013"
+		infile				<- '141105_set2_seqs_conc.fasta'
+		infile.seq			<- paste(substr(infile,1,nchar(infile)-6),'',sep='')
+		file				<- paste( indir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+		save(seq, file=file)
+		cmd					<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+		tmp					<- hivc.cmd.hpccaller(indir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+		#
+		#	get patristic distance
+		#	
+		file				<- list.files(indir, paste('^ExaML_result.141105_.*','gag','.*finaltree.000$',sep=''), full.names=TRUE)
+		ph					<- read.tree(file)
+		brl					<- as.matrix( distTips(ph , method='patristic') )
+		tmp					<- as.data.table(expand.grid(TIP1=rownames(brl), TIP2=colnames(brl), stringsAsFactors = FALSE))
+		tmp					<- tmp[, list(BRL= brl[TIP1, TIP2]), by=c('TIP1','TIP2')]
+		tmp					<- subset(tmp, TIP1!=TIP2)
+		tmp					<- tmp[, {
+					if(TIP1<TIP2)	z<- list(TIP1n=TIP1, TIP2n=TIP2, BRL=BRL)
+					if(TIP1>TIP2)	z<- list(TIP1n=TIP2, TIP2n=TIP1, BRL=BRL)
+					z
+				}, by=c('TIP1','TIP2')]
+		set(tmp, NULL, c('TIP1','TIP2'), NULL)
+		setnames(tmp, c('TIP1n','TIP2n'), c('TIP1','TIP2'))
+		setkey(tmp, TIP1, TIP2)
+		ph.gag				<- ph
+		brl.gag				<- unique(tmp)		
+		#							
+		file				<- list.files(indir, paste('^ExaML_result.141105_.*','env','.*finaltree.000$',sep=''), full.names=TRUE)
+		ph					<- read.tree(file)
+		brl					<- as.matrix( distTips(ph , method='patristic') )
+		tmp					<- as.data.table(expand.grid(TIP1=rownames(brl), TIP2=colnames(brl), stringsAsFactors = FALSE))
+		tmp					<- tmp[, list(BRL= brl[TIP1, TIP2]), by=c('TIP1','TIP2')]
+		tmp					<- subset(tmp, TIP1!=TIP2)
+		tmp					<- tmp[, {
+					if(TIP1<TIP2)	z<- list(TIP1n=TIP1, TIP2n=TIP2, BRL=BRL)
+					if(TIP1>TIP2)	z<- list(TIP1n=TIP2, TIP2n=TIP1, BRL=BRL)
+					z
+				}, by=c('TIP1','TIP2')]
+		set(tmp, NULL, c('TIP1','TIP2'), NULL)
+		setnames(tmp, c('TIP1n','TIP2n'), c('TIP1','TIP2'))
+		setkey(tmp, TIP1, TIP2)
+		ph.env				<- ph
+		brl.env				<- unique(tmp)		
+		#
+		file				<- list.files(indir, paste('^ExaML_result.141105_.*','conc','.*finaltree.000$',sep=''), full.names=TRUE)
+		ph					<- read.tree(file)
+		brl					<- as.matrix( distTips(ph , method='patristic') )
+		tmp					<- as.data.table(expand.grid(TIP1=rownames(brl), TIP2=colnames(brl), stringsAsFactors = FALSE))
+		tmp					<- tmp[, list(BRL= brl[TIP1, TIP2]), by=c('TIP1','TIP2')]
+		tmp					<- subset(tmp, TIP1!=TIP2)
+		tmp					<- tmp[, {
+					if(TIP1<TIP2)	z<- list(TIP1n=TIP1, TIP2n=TIP2, BRL=BRL)
+					if(TIP1>TIP2)	z<- list(TIP1n=TIP2, TIP2n=TIP1, BRL=BRL)
+					z
+				}, by=c('TIP1','TIP2')]
+		set(tmp, NULL, c('TIP1','TIP2'), NULL)
+		setnames(tmp, c('TIP1n','TIP2n'), c('TIP1','TIP2'))
+		setkey(tmp, TIP1, TIP2)
+		ph.conc				<- ph
+		brl.conc			<- unique(tmp)		
+		#
+		#
+		infile				<- '141105_set2_seqs_INFO.R'
+		file				<- paste(indir, '/',infile, sep='')
+		save(seq.env, seq.gag, seq.conc, brl.env, brl.gag, brl.conc, ph.env, ph.gag, ph.conc, file=file)
+	}	
+	#
+	# 	get divergence between transmission pairs
+	#
+	if(1)
+	{
+		infile	<- 'set2_anno.csv'
+		df.s	<- read.csv( paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE )
+		df.s	<- subset( df.s, select=c(Patient.code, PAT.id, Patient.sex, Risk.factor, Infection.country, Sampling.year, Accession, Name) )
+		#	from comments variable
+		df.trm	<- list(data.table(FROM='P1', TO=c('P2','P5','P7','P8','P11'), MODE=c('HET','HET','HET','HET','HET')),
+					data.table(FROM='P8', TO='P10', MODE= 'HET'),
+					data.table(FROM='P8', TO='P9', MODE= 'MTC'),
+					data.table(FROM='P5', TO='P6', MODE= 'HET'),
+					data.table(FROM='P2', TO='P3', MODE= 'MTC')	)
+		#	read transmission times
+		infile	<- 'set2_transmission.tree'
+		read.paste(indir, '/', infile, sep='')
+	
+		df.trm	<- do.call('rbind',df.trm)
+		require(splines)
+		require(gamlss)
+		#
+		#	sampling dates
+		#
+		infile	<- '140921_set7_sample_dates.csv'
+		df.s	<- read.csv( paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE )
+		df.s	<- as.data.table(df.s)[1:25,]
+		set(df.s, NULL, 'sample', df.s[, gsub('\\s','',sample)])
+		df.s[, PosSeqT:=df.s[, as.Date(gsub('\\s','',sample.date), format='%d-%b-%Y')]]
+		tmp		<- df.s[, which(is.na(PosSeqT))]
+		set(df.s, tmp, 'PosSeqT', df.s[tmp, as.Date(gsub('\\s','',sample.date), format='%d-%m-%Y')])
+		set(df.s, NULL, 'PosSeqT', df.s[, hivc.db.Date2numeric(PosSeqT)])		
+		df.s	<- subset(df.s, select=c(sample, PosSeqT))
+		tmp		<- df.s[, which(grepl('_1',sample,fixed=1))]
+		set(df.s,tmp,'sample',df.s[tmp, substr(sample, 1, 3)])
+		#
+		#	transmission dates
+		#
+		infile	<- "140921_set7_transmission_dates.csv"
+		df.trm	<- read.csv( paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE )
+		df.trm	<- as.data.table(df.trm)[1:11,]
+		df.trm[, FROM:=df.trm[, sapply(strsplit(patients, '->'),'[[',1)]]
+		df.trm[, TO:=df.trm[, sapply(strsplit(patients, '->'),'[[',2)]]
+		set(df.trm, NULL, 'TO', df.trm[, gsub('\\s|\\*','',TO)])
+		set(df.trm, NULL, 'FROM', df.trm[, gsub('\\s|\\*','',FROM)])
+		df.trm[, TIME_TR_MIN:=df.trm[, sapply(strsplit(window.of.transmission, '-'),'[[',1)]]
+		df.trm[, TIME_TR_MAX:=df.trm[, sapply(strsplit(window.of.transmission, '-'),'[[',2)]]
+		set(df.trm, NULL, 'TIME_TR_MIN', df.trm[, gsub('\\s|\\*|\\?','',TIME_TR_MIN)])
+		set(df.trm, NULL, 'TIME_TR_MAX', df.trm[, gsub('\\s|\\*|\\?','',TIME_TR_MAX)])		
+		set(df.trm, NULL, 'TIME_TR_MIN', df.trm[, hivc.db.Date2numeric(as.Date(TIME_TR_MIN, format='%d/%m/%y'))])
+		set(df.trm, NULL, 'TIME_TR_MAX', df.trm[, hivc.db.Date2numeric(as.Date(TIME_TR_MAX, format='%d/%m/%y'))])
+		tmp		<- df.trm[, which(is.na(TIME_TR_MIN))]
+		set(df.trm, tmp, 'TIME_TR_MIN', df.trm[tmp,TIME_TR_MAX-1])
+		df.trm[, TIME_TR:=df.trm[, (TIME_TR_MIN+TIME_TR_MAX)/2]]
+		df.trm	<- subset( df.trm, select=c(FROM, TO, TIME_TR) )
+		#	A	M	MB 1995-08								H 1996-01
+		#	B	F	MB 1990-09 -- 1992-12, 1996-01->death
+		#	C	M											H 2000-01
+		#	D	F											H 1998-01
+		#	E	F
+		#	F	F											H 2002-05
+		#	G	M											H 2002-05
+		#	H	M	MB 1996-08 -- 1997-11					H 1997-12
+		#	I	M	MB 1997-08 -- 1999-12					H 2000-01
+		#	J
+		#	K
+		#	L
+		df.ind	<- data.table( 	ID		= c('A','B','C','D','E','F','G','H','I','J','K','L'),
+				AnyT_T1	= c(1995+7/12, 1990+8/12, 2000, 1998, Inf, 2002+4/12, 2002+4/12, 1996+7/12, 1997+7/12, NA, NA, NA))						
+		indir	<- '/Users/Oliver/duke/2014_HIV_TChainBelgium'
+		infile	<- '140921_set7_INFO.R'
+		file	<- paste(indir, '/',infile, sep='')
+		load(file)	#expect seq.env, seq.pol, brl.env, brl.pol, ph.env, ph.pol
+	}
+}
+######################################################################################
 project.Tchain.Belgium.sensecheck	<- function()
 {
 	require(adephylo)
@@ -5219,12 +5604,114 @@ project.Tchain.Belgium.sensecheck	<- function()
 		file			<- paste(indir,'/',infile, sep='')
 		write.dna(file=file, seq.pol, format='fasta')
 	}
-	#	read Vrancken et al fasta file
+	#
+	#	check if there are zero distance seqs
+	if(0)
+	{
+		indir	<- '/Users/Oliver/duke/2014_HIV_TChainBelgium'
+		infile	<- '141105_Vrancken_pol_2.fasta'
+		file	<- paste(indir,'/',infile, sep='')
+		seq.pol	<- read.dna(file, format='fa')		
+		seq.pol	<- as.character(seq.pol)
+		seq.pol <- seq.pol[, 2097:3515]
+		seq.ext	<- as.DNAbin(seq.pol)
+		
+		infile	<- '140921_set7_Drcheck_HIValign2.fasta'
+		file	<- paste(indir,'/',infile, sep='')
+		seq.pol	<- read.dna(file=file, format='fa')		
+		seq.pol	<- as.character(seq.pol	)
+		seq.pol	<- as.DNAbin(seq.pol[, 13:1431])
+		rownames(seq.pol)	<- paste(rownames(seq.pol),'STUDY',sep='_')
+		
+		seq.ext	<- rbind(seq.pol, seq.ext)
+		infile	<- '141105_Vrancken_pol_ext.fasta'
+		file	<- paste(indir,'/',infile, sep='')
+		write.dna(file=file, seq.ext, format='fasta')
+		#	cleaning of alignment
+		seq.ext			<- as.character(seq.ext)	
+		query.yes		<- seq.find(seq.ext, 89, c("-","-","-",'g','a','g','g'))	
+		seq.ext[query.yes,89:95]<- matrix( c('g','a','g','g',"-","-","-"), nrow=length(query.yes), ncol=7, byrow=1 )
+		query.yes		<- seq.find(seq.ext, 89, c("-","-","-",'g','a','a','g'))	
+		seq.ext[query.yes,89:95]<- matrix( c('g','a','a','g',"-","-","-"), nrow=length(query.yes), ncol=7, byrow=1 )
+		query.yes		<- seq.find(seq.ext, 89, c("-","-","-",'g','g','g','g'))	
+		seq.ext[query.yes,89:95]<- matrix( c('g','g','g','g',"-","-","-"), nrow=length(query.yes), ncol=7, byrow=1 )		
+		query.yes		<- seq.find(seq.ext, 101, c("-","-","-"))
+		seq.ext[query.yes,96:103]<- cbind( matrix( '-', nrow=length(query.yes), ncol=3 ), seq.ext[query.yes,96:100])		
+		query.yes		<- seq.find(seq.ext, 143, c("-","-","-"))
+		seq.ext[query.yes,140:145]<- cbind( matrix( '-', nrow=length(query.yes), ncol=3 ), seq.ext[query.yes,140:142])		
+		infile	<- '141105_Vrancken_pol_ext2.fasta'
+		file	<- paste(indir,'/',infile, sep='')
+		write.dna(file=file, seq.ext, format='fasta')
+		#	manual clean
+		seq.ext	<- read.dna(file, format='fa')		
+		#	distances		
+		seq.d	<- dist.dna(seq.ext, model='N', as.matrix=1)		
+		tmp		<- lapply(seq_len(nrow(seq.d)), function(i)
+					{
+						tmp	<- setdiff(which(seq.d[i,]==0),i)
+						if(!length(tmp))	tmp<- NA_integer_
+						data.table(FROM=i, EQU=tmp)
+					})
+		tmp		<- do.call('rbind',tmp)
+		seq.eq	<- subset(tmp, !is.na(EQU))
+		set(seq.eq, NULL, 'FROM', seq.eq[, rownames(seq.d)[FROM]])
+		set(seq.eq, NULL, 'EQU', seq.eq[, colnames(seq.d)[EQU]])
+		
+		seq.eq	<- subset( seq.eq, grepl('STUDY',FROM) & !grepl('HXB2', FROM) )
+		seq.eq[, EQU.ID:=NA_character_]
+		tmp		<- seq.eq[, which(!grepl('STUDY',EQU))]
+		set(seq.eq, tmp, 'EQU.ID', seq.eq[tmp, sapply(strsplit(EQU,'.',fixed=1),'[[',4) ])
+		set(seq.eq, tmp, 'EQU.ID', seq.eq[tmp, paste(EQU.ID,'STUDY',sep='_') ])
+		
+		subset( seq.eq, FROM!=EQU.ID )		
+		# 	none are equal between individuals ... 		
+	}
+	#
+	#	check if drug resistance mutations are masked
+	if(0)
+	{
+		infile	<- '140921_set7_INFO_withDR.R'
+		file	<- paste(indir, '/',infile, sep='')
+		load(file)	#expect seq.env, seq.pol, brl.env, brl.pol, ph.env, ph.pol
+		#
+		file	<- system.file(package="rPANGEAHIVsim", "misc",'PANGEA_SSAfg_HXB2outgroup.R')
+		cat(paste('\nLoading outgroup seq from file', file))
+		load(file)		#expect "outgroup.seq.gag" "outgroup.seq.pol" "outgroup.seq.env"
+		#	align against HXB2
+		seq.pol <- c(as.list(outgroup.seq.pol), as.list(seq.pol))		
+		infile	<- '140921_set7_Drcheck.fasta'
+		file	<- paste(indir,'/',infile, sep='')
+		write.dna(file=file, seq.pol, format='fasta')
+		#	hand-curate: there are a few double runs!
+		infile	<- '140921_set7_Drcheck_HIValign2.fasta'
+		file	<- paste(indir,'/',infile, sep='')
+		seq.pol	<- read.dna(file=file, format='fa')		
+		seq.pol	<- as.character(seq.pol	)
+		seq.pol	<- as.DNAbin(seq.pol[, 13:1431])
+		# first site is 2097 in HXB2
+	
+		#load drug resistance mutations and select unique mutants by codon
+		load( system.file(package="hivclust", "data",'IAS_primarydrugresistance_201303.rda') )		
+		dr				<- as.data.table(IAS_primarydrugresistance_201303)		
+		alignment.start	<- 2097	
+		set(dr, NULL, "Alignment.nuc.pos", dr[,Alignment.nuc.pos]-alignment.start+1)
+		#if alignment equals any of the drug resistance mutants, replace with NNN	
+		seq.pol			<- seq.rm.drugresistance(as.character(seq.pol), dr, verbose=1, rtn.DNAbin=1 )	
+		#rm HX1B and close gaps
+		seq.pol			<- seq.pol[!grepl('HXB2',rownames(seq.pol)),]
+		seq.pol			<- seq.rmallchar(seq.pol, rm.char='-', verbose=1)
+		
+		#	check visually
+		infile			<- "140921_pol_norecombnodr.fasta"
+		file			<- paste(indir,'/',infile, sep='')
+		write.dna(file=file, seq.pol, format='fasta')
+	}
+	#	
 	#	collect seq, ExaML phylos and patristic distances
 	if(1)
 	{
 		indir			<- '/Users/Oliver/duke/2014_HIV_TChainBelgium'
-		infile.pol		<- "140921_pol_norecomb.fasta"
+		infile.pol		<- "140921_pol_norecombnodr.fasta"
 		file			<- paste(indir,'/',infile.pol, sep='')
 		seq.pol			<- read.dna(file, format='fa')
 		infile.env		<- "140921_env_norecomb.fasta"
@@ -5256,8 +5743,8 @@ project.Tchain.Belgium.sensecheck	<- function()
 		Sys.sleep(1)
 		#
 		#	get patristic distance
-		#
-		file				<- list.files(indir, paste('^ExaML_result.140921_*','pol','.*finaltree.000$',sep=''), full.names=TRUE)
+		#	
+		file				<- list.files(indir, paste('^ExaML_result.140921_*','pol_norecombnodr','.*finaltree.000$',sep=''), full.names=TRUE)
 		ph.pol				<- read.tree(file)
 		brl.pol				<- as.matrix( distTips(ph.pol , method='patristic') )
 		tmp					<- as.data.table(expand.grid(TIP1=rownames(brl.pol), TIP2=colnames(brl.pol), stringsAsFactors = FALSE))
@@ -5347,7 +5834,7 @@ project.Tchain.Belgium.sensecheck	<- function()
 		#							
 		file				<- list.files(indir, paste('^ExaML_result.*','env','.*finaltree.000$',sep=''), full.names=TRUE)
 		ph.env				<- read.tree(file)
-		brl.env				<- as.matrix( distTips(ph.pol , method='patristic') )
+		brl.env				<- as.matrix( distTips(ph.env , method='patristic') )
 		tmp					<- as.data.table(expand.grid(TIP1=rownames(brl.env), TIP2=colnames(brl.env), stringsAsFactors = FALSE))
 		tmp					<- tmp[, list(BRL= brl.env[TIP1, TIP2]), by=c('TIP1','TIP2')]
 		tmp					<- subset(tmp, TIP1!=TIP2)
@@ -5365,24 +5852,45 @@ project.Tchain.Belgium.sensecheck	<- function()
 		file				<- paste(indir, '/',infile, sep='')
 		save(seq.env, seq.pol, brl.env, brl.pol, ph.env, ph.pol, file=file)
 	}
-	# 	get divergence between transmission pairs
+	# 	get divergence-pair matrix
 	if(1)
 	{
 		require(splines)
 		require(gamlss)
-		#	A<-->B		1990-01
-		#	A-->F		1995-04
-		#	F-->G		2002-01
-		#	B-->C		1993-12
-		#	B-->H		1995-06
-		#	B-->I		1993-01
-		#	C-->D		1995-04
-		#	C-->E		2000-12
-		#	C-->L		2002-05
-		#	E-->K		2004-01
-		df.trm	<- data.table(	FROM	=c('A','B','A','F','B','B','B','C','C','C','E'),
-								TO		=c('B','A','F','G','C','H','I','D','E','L','K'),
-								TIME_TR	=c(1990, 1990, 1995+3/12, 2002, 1993+11/12, 1995.5, 1993, 1995+3/12, 2000+11/12, 2002+4/12, 2004))
+		#
+		#	sampling dates
+		#
+		infile	<- '140921_set7_sample_dates.csv'
+		df.s	<- read.csv( paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE )
+		df.s	<- as.data.table(df.s)[1:25,]
+		set(df.s, NULL, 'sample', df.s[, gsub('\\s','',sample)])
+		df.s[, PosSeqT:=df.s[, as.Date(gsub('\\s','',sample.date), format='%d-%b-%Y')]]
+		tmp		<- df.s[, which(is.na(PosSeqT))]
+		set(df.s, tmp, 'PosSeqT', df.s[tmp, as.Date(gsub('\\s','',sample.date), format='%d-%m-%Y')])
+		set(df.s, NULL, 'PosSeqT', df.s[, hivc.db.Date2numeric(PosSeqT)])		
+		df.s	<- subset(df.s, select=c(sample, PosSeqT))
+		tmp		<- df.s[, which(grepl('_1',sample,fixed=1))]
+		set(df.s,tmp,'sample',df.s[tmp, substr(sample, 1, 3)])
+		#
+		#	transmission dates
+		#
+		infile	<- "140921_set7_transmission_dates.csv"
+		df.trm	<- read.csv( paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE )
+		df.trm	<- as.data.table(df.trm)[1:11,]
+		df.trm[, FROM:=df.trm[, sapply(strsplit(patients, '->'),'[[',1)]]
+		df.trm[, TO:=df.trm[, sapply(strsplit(patients, '->'),'[[',2)]]
+		set(df.trm, NULL, 'TO', df.trm[, gsub('\\s|\\*','',TO)])
+		set(df.trm, NULL, 'FROM', df.trm[, gsub('\\s|\\*','',FROM)])
+		df.trm[, TIME_TR_MIN:=df.trm[, sapply(strsplit(window.of.transmission, '-'),'[[',1)]]
+		df.trm[, TIME_TR_MAX:=df.trm[, sapply(strsplit(window.of.transmission, '-'),'[[',2)]]
+		set(df.trm, NULL, 'TIME_TR_MIN', df.trm[, gsub('\\s|\\*|\\?','',TIME_TR_MIN)])
+		set(df.trm, NULL, 'TIME_TR_MAX', df.trm[, gsub('\\s|\\*|\\?','',TIME_TR_MAX)])		
+		set(df.trm, NULL, 'TIME_TR_MIN', df.trm[, hivc.db.Date2numeric(as.Date(TIME_TR_MIN, format='%d/%m/%y'))])
+		set(df.trm, NULL, 'TIME_TR_MAX', df.trm[, hivc.db.Date2numeric(as.Date(TIME_TR_MAX, format='%d/%m/%y'))])
+		tmp		<- df.trm[, which(is.na(TIME_TR_MIN))]
+		set(df.trm, tmp, 'TIME_TR_MIN', df.trm[tmp,TIME_TR_MAX-1])
+		df.trm[, TIME_TR:=df.trm[, (TIME_TR_MIN+TIME_TR_MAX)/2]]
+		df.trm	<- subset( df.trm, select=c(FROM, TO, TIME_TR) )
 		#	A	M	MB 1995-08								H 1996-01
 		#	B	F	MB 1990-09 -- 1992-12, 1996-01->death
 		#	C	M											H 2000-01
@@ -5398,28 +5906,27 @@ project.Tchain.Belgium.sensecheck	<- function()
 		df.ind	<- data.table( 	ID		= c('A','B','C','D','E','F','G','H','I','J','K','L'),
 								AnyT_T1	= c(1995+7/12, 1990+8/12, 2000, 1998, Inf, 2002+4/12, 2002+4/12, 1996+7/12, 1997+7/12, NA, NA, NA))						
 		indir	<- '/Users/Oliver/duke/2014_HIV_TChainBelgium'
-		infile	<- '140921_set7_INFO.R'
+		infile	<- '140919_set7_INFO.R'
 		file	<- paste(indir, '/',infile, sep='')
 		load(file)	#expect seq.env, seq.pol, brl.env, brl.pol, ph.env, ph.pol
 		#
-		#	overall brl distribution in transmission pairs
+		#	POL	overall brl distribution in transmission pairs
 		#
 		brl.pol[, PATIENT1:=brl.pol[,substr(TIP1,1,1)]]
 		brl.pol[, PATIENT2:=brl.pol[,substr(TIP2,1,1)]]
 		brl.pol	<- subset(brl.pol, PATIENT1!=PATIENT2)
 		#	extract sequence sampling year
-		brl.pol[, PATIENT1_SeqT:=brl.pol[,substr(TIP1,2,3)]]
-		brl.pol[, PATIENT2_SeqT:=brl.pol[,substr(TIP2,2,3)]]
-		tmp		<- brl.pol[, which(substr(TIP1,2,2)=='0')]
-		set(brl.pol, tmp, 'PATIENT1_SeqT', brl.pol[tmp, paste('20',PATIENT1_SeqT,sep='')])
-		tmp		<- brl.pol[, which(substr(TIP1,2,2)!='0')]
-		set(brl.pol, tmp, 'PATIENT1_SeqT', brl.pol[tmp, paste('19',PATIENT1_SeqT,sep='')])
-		tmp		<- brl.pol[, which(substr(TIP2,2,2)=='0')]
-		set(brl.pol, tmp, 'PATIENT2_SeqT', brl.pol[tmp, paste('20',PATIENT2_SeqT,sep='')])
-		tmp		<- brl.pol[, which(substr(TIP2,2,2)!='0')]
-		set(brl.pol, tmp, 'PATIENT2_SeqT', brl.pol[tmp, paste('19',PATIENT2_SeqT,sep='')])
-		set(brl.pol, NULL, 'PATIENT1_SeqT', brl.pol[, as.numeric(PATIENT1_SeqT)])
-		set(brl.pol, NULL, 'PATIENT2_SeqT', brl.pol[, as.numeric(PATIENT2_SeqT)])				
+		brl.pol[, sample:=brl.pol[,regmatches(TIP1, regexpr('.*c',TIP1))]]
+		set(brl.pol, NULL, 'sample', brl.pol[, substr(sample,1,nchar(sample)-1)])
+		stopifnot(!length(setdiff(brl.pol[, unique(sample)], df.s[, sample])))		
+		brl.pol	<- merge(brl.pol, df.s, by='sample')
+		setnames(brl.pol, 'PosSeqT', 'PATIENT1_SeqT')
+		brl.pol[, sample:=brl.pol[,regmatches(TIP2, regexpr('.*c',TIP2))]]
+		set(brl.pol, NULL, 'sample', brl.pol[, substr(sample,1,nchar(sample)-1)])
+		stopifnot(!length(setdiff(brl.pol[, unique(sample)], df.s[, sample])))		
+		brl.pol	<- merge(brl.pol, df.s, by='sample')
+		setnames(brl.pol, 'PosSeqT', 'PATIENT2_SeqT')
+		brl.pol[, sample:=NULL]
 		#	add Tb4S manually		
 		df.tb4s	<- data.table( TIP1=unique(c(subset( brl.pol, grepl('A', TIP1) )[, TIP1], subset( brl.pol, grepl('A', TIP2) )[, unique(TIP2)])), Tb4S='Yes' )
 		tmp		<- unique(c(subset( brl.pol, grepl('B', TIP1) )[, unique(TIP1)], subset( brl.pol, grepl('B', TIP2) )[, unique(TIP2)]))
@@ -5470,102 +5977,434 @@ project.Tchain.Belgium.sensecheck	<- function()
 		set(trm.pol, trm.pol[, which(FROM_Tb4S=='No' & TO_Tb4S=='No')], 'Tb4S', 'none')
 		set(trm.pol, trm.pol[, which(FROM_Tb4S=='Unknown' & TO_Tb4S=='Unknown')], 'Tb4S', 'Unknown')
 		#
-		#	plot all
-		#	divergence
-		ggplot(trm.pol, aes(x=BRL, fill=Tb4S)) + geom_histogram(binwidth=0.0005) +
-				theme(legend.position='bottom') +
-				labs(fill='Treatment start before\nsequence sampling date', x='patristic distance\n(estimated subst/site)', y='sequence pairs of transmission pairs\n(number)')
-		file	<- paste(indir, '/',"140921_set7_pol_patristic_all.pdf", sep='')
-		ggsave(file=file, w=12, h=6)
+		trm.pol[, withA:= trm.pol[,grepl('A',TIP1) | grepl('A',TIP2)]]
+		trm.pol[, withB:= trm.pol[,grepl('B',TIP1) | grepl('B',TIP2)]]
+		trm.pol[, withC:= trm.pol[,grepl('C',TIP1) | grepl('C',TIP2)]]
+		trm.pol[, withD:= trm.pol[,grepl('D',TIP1) | grepl('D',TIP2)]]
+		trm.pol[, withE:= trm.pol[,grepl('E',TIP1) | grepl('E',TIP2)]]
+		trm.pol[, withF:= trm.pol[,grepl('F',TIP1) | grepl('F',TIP2)]]
+		#trm.pol[, withG:= trm.pol[,grepl('G',TIP1) | grepl('G',TIP2)]]
+		trm.pol[, withH:= trm.pol[,grepl('H',TIP1) | grepl('H',TIP2)]]
+		trm.pol[, withI:= trm.pol[,grepl('I',TIP1) | grepl('I',TIP2)]]
+		#trm.pol[, withJ:= trm.pol[,grepl('J',TIP1) | grepl('J',TIP2)]]
+		trm.pol[, withK:= trm.pol[,grepl('K',TIP1) | grepl('K',TIP2)]]
+		trm.pol[, withL:= trm.pol[,grepl('L',TIP1) | grepl('L',TIP2)]]
 		#
-		ggplot(trm.pol, aes(x=d_TSeqT, y=BRL, colour=Tb4S)) + geom_point() + stat_smooth(method = "lm", formula= y ~ ns(x,3)) + facet_grid(.~Tb4S)
-		file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all.pdf", sep='')
-		ggsave(file=file, w=12, h=6)		
-		ggplot(trm.pol, aes(x=d_SeqT, y=BRL, colour=Tb4S)) + geom_point() + stat_smooth(method = "lm", formula= y ~ ns(x,3)) + facet_grid(.~Tb4S)
-		file	<- paste(indir, '/',"140921_set7_pol_patristic_dSS_all.pdf", sep='')
-		ggsave(file=file, w=12, h=6)	
+		#	ENV	overall brl distribution in transmission pairs
+		#
+		brl.env[, PATIENT1:=brl.env[,substr(TIP1,1,1)]]
+		brl.env[, PATIENT2:=brl.env[,substr(TIP2,1,1)]]
+		brl.env	<- subset(brl.env, PATIENT1!=PATIENT2)
+		#	extract sequence sampling year
+		brl.env[, sample:=brl.env[,regmatches(TIP1, regexpr('.*c',TIP1))]]
+		set(brl.env, NULL, 'sample', brl.env[, substr(sample,1,nchar(sample)-1)])
+		stopifnot(!length(setdiff(brl.env[, unique(sample)], df.s[, sample])))		
+		brl.env	<- merge(brl.env, df.s, by='sample')
+		setnames(brl.env, 'PosSeqT', 'PATIENT1_SeqT')
+		brl.env[, sample:=brl.env[,regmatches(TIP2, regexpr('.*c',TIP2))]]
+		set(brl.env, NULL, 'sample', brl.env[, substr(sample,1,nchar(sample)-1)])
+		stopifnot(!length(setdiff(brl.env[, unique(sample)], df.s[, sample])))		
+		brl.env	<- merge(brl.env, df.s, by='sample')
+		setnames(brl.env, 'PosSeqT', 'PATIENT2_SeqT')
+		brl.env[, sample:=NULL]
+		#	add Tb4S manually		
+		df.tb4s	<- data.table( TIP1=unique(c(subset( brl.env, grepl('A', TIP1) )[, TIP1], subset( brl.env, grepl('A', TIP2) )[, unique(TIP2)])), Tb4S='Yes' )
+		tmp		<- unique(c(subset( brl.env, grepl('B', TIP1) )[, unique(TIP1)], subset( brl.env, grepl('B', TIP2) )[, unique(TIP2)]))
+		df.tb4s	<- rbind( df.tb4s, data.table( TIP1=tmp[grepl('B90',tmp)], Tb4S='No' ), data.table( TIP1=tmp[!grepl('B90',tmp)], Tb4S='Yes' ))
+		tmp		<- unique(c(subset( brl.env, grepl('C', TIP1) )[, unique(TIP1)], subset( brl.env, grepl('C', TIP2) )[, unique(TIP2)]))
+		df.tb4s	<- rbind( df.tb4s, data.table( TIP1=tmp, Tb4S='Yes' ) )
+		tmp		<- unique(c(subset( brl.env, grepl('D', TIP1) )[, unique(TIP1)], subset( brl.env, grepl('D', TIP2) )[, unique(TIP2)]))
+		df.tb4s	<- rbind( df.tb4s, data.table( TIP1=tmp, Tb4S='Yes' ) )
+		tmp		<- unique(c(subset( brl.env, grepl('E', TIP1) )[, unique(TIP1)], subset( brl.env, grepl('E', TIP2) )[, unique(TIP2)]))
+		df.tb4s	<- rbind( df.tb4s, data.table( TIP1=tmp, Tb4S='Unknown' ) )
+		tmp		<- unique(c(subset( brl.env, grepl('F', TIP1) )[, unique(TIP1)], subset( brl.env, grepl('F', TIP2) )[, unique(TIP2)]))
+		#subset( brl.env, grepl('G', TIP2) )[, unique(TIP2)]
+		df.tb4s	<- rbind( df.tb4s, data.table( TIP1=tmp[grepl('F02',tmp)], Tb4S='No' ), data.table( TIP1=tmp[!grepl('F02',tmp)], Tb4S='Yes' ))
+		tmp		<- unique(c(subset( brl.env, grepl('H', TIP1) )[, unique(TIP1)], subset( brl.env, grepl('H', TIP2) )[, unique(TIP2)]))
+		df.tb4s	<- rbind( df.tb4s, data.table( TIP1=tmp[grepl('H96',tmp)], Tb4S='No' ), data.table( TIP1=tmp[!grepl('H96',tmp)], Tb4S='Yes' ))
+		tmp		<- unique(c(subset( brl.env, grepl('I', TIP1) )[, unique(TIP1)], subset( brl.env, grepl('I', TIP2) )[, unique(TIP2)]))
+		df.tb4s	<- rbind( df.tb4s, data.table( TIP1=tmp, Tb4S='Yes' ) )
+		#subset( brl.env, grepl('J', TIP2) )[, unique(TIP2)]
+		tmp		<- unique(c(subset( brl.env, grepl('K', TIP1) )[, unique(TIP1)], subset( brl.env, grepl('K', TIP2) )[, unique(TIP2)]))
+		df.tb4s	<- rbind( df.tb4s, data.table( TIP1=tmp, Tb4S='Unknown' ) )
+		tmp		<- unique(c(subset( brl.env, grepl('L', TIP1) )[, unique(TIP1)], subset( brl.env, grepl('L', TIP2) )[, unique(TIP2)]))
+		df.tb4s	<- rbind( df.tb4s, data.table( TIP1=tmp, Tb4S='Unknown' ) )
+		setnames(df.tb4s, 'Tb4S', 'PATIENT1_Tb4S')
+		brl.env	<- merge(brl.env, df.tb4s, by='TIP1')
+		setnames(df.tb4s, c('TIP1','PATIENT1_Tb4S'), c('TIP2','PATIENT2_Tb4S'))
+		brl.env	<- merge(brl.env, df.tb4s, by='TIP2')		
+		#	get other way round in transmission pair
+		tmp		<- copy(brl.env)
+		setnames(tmp, c('PATIENT1','PATIENT2','PATIENT1_SeqT','PATIENT2_SeqT','PATIENT1_Tb4S','PATIENT2_Tb4S'),c('PATIENT2','PATIENT1','PATIENT2_SeqT','PATIENT1_SeqT','PATIENT2_Tb4S','PATIENT1_Tb4S'))
+		brl.env	<- rbind(brl.env, tmp, use.names=TRUE)
+		#	merge with transmission pairs
+		setnames(brl.env, c('PATIENT1','PATIENT2','PATIENT1_SeqT','PATIENT2_SeqT','PATIENT1_Tb4S','PATIENT2_Tb4S'), c('FROM','TO','FROM_SeqT','TO_SeqT','FROM_Tb4S','TO_Tb4S'))
+		trm.env	<- merge(df.trm, brl.env, by=c('FROM','TO'))
+		trm.env[, table(FROM_Tb4S, TO_Tb4S)]
+		#
+		tmp		<- trm.env[, which( substr(TIP1,1,1)!=FROM )]
+		tmp2	<- trm.env[tmp, TIP2]
+		set(trm.env, tmp, 'TIP2', trm.env[tmp, TIP1])
+		set(trm.env, tmp, 'TIP1', tmp2)
+		#	set times between sampling times etc
+		trm.env[, d_SeqT:=abs(TO_SeqT-FROM_SeqT)]
+		trm.env[, d_TSeqT:= abs(TO_SeqT-TIME_TR) + abs(FROM_SeqT-TIME_TR)]		
+		#	set Tb4S	
+		trm.env[, Tb4S:=NA_character_]
+		set(trm.env, trm.env[, which(FROM_Tb4S=='Yes' & TO_Tb4S=='Yes')], 'Tb4S', 'both')
+		set(trm.env, trm.env[, which(FROM_Tb4S=='Yes' & TO_Tb4S%in%c('No','Unknown'))], 'Tb4S', 'one')
+		set(trm.env, trm.env[, which(FROM_Tb4S%in%c('No','Unknown') & TO_Tb4S=='Yes')], 'Tb4S', 'one')
+		set(trm.env, trm.env[, which(FROM_Tb4S=='No' & TO_Tb4S=='No')], 'Tb4S', 'none')
+		set(trm.env, trm.env[, which(FROM_Tb4S=='Unknown' & TO_Tb4S=='Unknown')], 'Tb4S', 'Unknown')
+		#
+		#
+		trm.env[, withA:= trm.env[,grepl('A',TIP1) | grepl('A',TIP2)]]
+		trm.env[, withB:= trm.env[,grepl('B',TIP1) | grepl('B',TIP2)]]
+		trm.env[, withC:= trm.env[,grepl('C',TIP1) | grepl('C',TIP2)]]
+		trm.env[, withD:= trm.env[,grepl('D',TIP1) | grepl('D',TIP2)]]
+		trm.env[, withE:= trm.env[,grepl('E',TIP1) | grepl('E',TIP2)]]
+		trm.env[, withF:= trm.env[,grepl('F',TIP1) | grepl('F',TIP2)]]
+		#trm.env[, withG:= trm.env[,grepl('G',TIP1) | grepl('G',TIP2)]]
+		trm.env[, withH:= trm.env[,grepl('H',TIP1) | grepl('H',TIP2)]]
+		trm.env[, withI:= trm.env[,grepl('I',TIP1) | grepl('I',TIP2)]]
+		#trm.env[, withJ:= trm.env[,grepl('J',TIP1) | grepl('J',TIP2)]]
+		trm.env[, withK:= trm.env[,grepl('K',TIP1) | grepl('K',TIP2)]]
+		trm.env[, withL:= trm.env[,grepl('L',TIP1) | grepl('L',TIP2)]]
+		#
+		#	save
+		#
+		infile	<- '140921_set7_INFO_TRM.R'
+		file	<- paste(indir, '/',infile, sep='')
+		save(file=file, seq.env, seq.pol, brl.env, brl.pol, ph.env, ph.pol, trm.env, trm.pol) 
+	}
+	#
+	#	explore
+	#
+	if(0)
+	{
+		indir	<- '/Users/Oliver/duke/2014_HIV_TChainBelgium'
+		infile	<- '140921_set7_INFO_TRM.R'
+		file	<- paste(indir, '/',infile, sep='')
+		load(file)
+		
+		if(0)
+		{
+			#
+			#	plot all
+			#	divergence
+			ggplot(trm.pol, aes(x=BRL, fill=Tb4S)) + geom_histogram(binwidth=0.0005) +
+					theme(legend.position='bottom') +
+					labs(fill='Treatment start before\nsequence sampling date', x='patristic distance\n(estimated subst/site)', y='sequence pairs of transmission pairs\n(number)')
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_all.pdf", sep='')
+			ggsave(file=file, w=12, h=6)
+			#
+			ggplot(trm.pol, aes(x=d_TSeqT, y=BRL, colour=Tb4S)) + geom_point() + stat_smooth(method = "lm", formula= y ~ ns(x,3)) + facet_grid(.~Tb4S)
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all.pdf", sep='')
+			ggsave(file=file, w=12, h=6)		
+			ggplot(trm.pol, aes(x=d_SeqT, y=BRL, colour=Tb4S)) + geom_point() + stat_smooth(method = "lm", formula= y ~ ns(x,3)) + facet_grid(.~Tb4S)
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dSS_all.pdf", sep='')
+			ggsave(file=file, w=12, h=6)				
+		}
 		#
 		#	fit linear model through origin
 		#
-		trm.pol.data.b	<- subset(trm.pol, Tb4S=='both')
-		trm.pol.ZAGA.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), nu.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.b), family=ZAGA(mu.link='identity'), n.cyc = 40)
-		trm.pol.GA.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.b), family=GA(mu.link='identity'), n.cyc = 40)
-		trm.pol.EXP.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), data=as.data.frame(trm.pol.data.b), family=EXP, n.cyc = 40)
-		trm.pol.NO.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.b), family=NO, n.cyc = 40)
-		AIC(trm.pol.ZAGA.b, trm.pol.GA.b, trm.pol.EXP.b, trm.pol.NO.b)
-		trm.pol.data.o	<- subset(trm.pol, Tb4S=='one')
-		trm.pol.ZAGA.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), nu.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.o), family=ZAGA(mu.link='identity'), n.cyc = 40)
-		trm.pol.GA.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.o), family=GA(mu.link='identity'), n.cyc = 40)
-		trm.pol.EXP.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), data=as.data.frame(trm.pol.data.o), family=EXP, n.cyc = 40)
-		trm.pol.NO.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.o), family=NO, n.cyc = 40)
-		AIC(trm.pol.ZAGA.o, trm.pol.GA.o, trm.pol.EXP.o, trm.pol.NO.o)
-		sapply( list(trm.pol.GA.b, trm.pol.GA.o, trm.pol.GA.n, trm.pol.GA.u), Rsq )
-		#	normal model fits best, but we need a positive model -- just Gamma?
-		trm.pol.data.n	<- subset(trm.pol, Tb4S=='none')
-		trm.pol.GA.n	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.n), family=GA(mu.link='identity'), n.cyc = 40)
-		trm.pol.data.u	<- subset(trm.pol, Tb4S=='Unknown')
-		trm.pol.GA.u	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.u), family=GA(mu.link='identity'), n.cyc = 40)
-		#	predict
-		trm.pol.p		<- data.table(d_TSeqT=seq(0,25,0.1))
-		trm.pol.p[, both:=predict(trm.pol.GA.b, data=trm.pol.data.b, newdata=as.data.frame(trm.pol.p), type='response', se.fit=FALSE)]
-		trm.pol.p[, one:=predict(trm.pol.GA.o, data=trm.pol.data.o, newdata=as.data.frame(subset(trm.pol.p, select=d_TSeqT)), type='response', se.fit=FALSE)]
-		trm.pol.p[, none:=predict(trm.pol.GA.n, data=trm.pol.data.n, newdata=as.data.frame(subset(trm.pol.p, select=d_TSeqT)), type='response', se.fit=FALSE)]
-		trm.pol.p[, Unknown:=predict(trm.pol.GA.u, data=trm.pol.data.u, newdata=as.data.frame(subset(trm.pol.p, select=d_TSeqT)), type='response', se.fit=FALSE)]
-		trm.pol.p		<- melt(trm.pol.p, id.vars=c('d_TSeqT'), variable.name='Tb4S', value='BRL_p')
-		#	plot
-		ggplot(trm.pol, aes(x=d_TSeqT, y=BRL, colour=Tb4S)) + geom_point() + geom_line(data=trm.pol.p, aes(y=BRL_p)) + facet_grid(.~Tb4S) + scale_y_continuous(limits=c(0,0.15))
-		file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_linear.pdf", sep='')
-		ggsave(file=file, w=12, h=6)	
+		if(0)
+		{
+			trm.pol.data.b	<- subset(trm.pol, Tb4S=='both')
+			trm.pol.ZAGA.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), nu.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.b), family=ZAGA(mu.link='identity'), n.cyc = 40)
+			trm.pol.GA.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.b), family=GA(mu.link='identity'), n.cyc = 40)
+			trm.pol.EXP.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), data=as.data.frame(trm.pol.data.b), family=EXP, n.cyc = 40)
+			trm.pol.NO.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.b), family=NO, n.cyc = 40)
+			AIC(trm.pol.ZAGA.b, trm.pol.GA.b, trm.pol.EXP.b, trm.pol.NO.b)
+			trm.pol.data.o	<- subset(trm.pol, Tb4S=='one')
+			trm.pol.ZAGA.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), nu.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.o), family=ZAGA(mu.link='identity'), n.cyc = 40)
+			trm.pol.GA.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.o), family=GA(mu.link='identity'), n.cyc = 40)
+			trm.pol.EXP.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), data=as.data.frame(trm.pol.data.o), family=EXP, n.cyc = 40)
+			trm.pol.NO.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.o), family=NO, n.cyc = 40)
+			AIC(trm.pol.ZAGA.o, trm.pol.GA.o, trm.pol.EXP.o, trm.pol.NO.o)
+			sapply( list(trm.pol.GA.b, trm.pol.GA.o, trm.pol.GA.n, trm.pol.GA.u), Rsq )
+			#	normal model fits best, but we need a positive model -- just Gamma?
+			trm.pol.data.n	<- subset(trm.pol, Tb4S=='none')
+			trm.pol.GA.n	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.n), family=GA(mu.link='identity'), n.cyc = 40)
+			trm.pol.data.u	<- subset(trm.pol, Tb4S=='Unknown')
+			trm.pol.GA.u	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.u), family=GA(mu.link='identity'), n.cyc = 40)
+			#	predict
+			trm.pol.p		<- data.table(d_TSeqT=seq(0,25,0.1))
+			trm.pol.p[, both:=predict(trm.pol.GA.b, data=trm.pol.data.b, newdata=as.data.frame(trm.pol.p), type='response', se.fit=FALSE)]
+			trm.pol.p[, one:=predict(trm.pol.GA.o, data=trm.pol.data.o, newdata=as.data.frame(subset(trm.pol.p, select=d_TSeqT)), type='response', se.fit=FALSE)]
+			trm.pol.p[, none:=predict(trm.pol.GA.n, data=trm.pol.data.n, newdata=as.data.frame(subset(trm.pol.p, select=d_TSeqT)), type='response', se.fit=FALSE)]
+			trm.pol.p[, Unknown:=predict(trm.pol.GA.u, data=trm.pol.data.u, newdata=as.data.frame(subset(trm.pol.p, select=d_TSeqT)), type='response', se.fit=FALSE)]
+			trm.pol.p		<- melt(trm.pol.p, id.vars=c('d_TSeqT'), variable.name='Tb4S', value='BRL_p')
+			#	plot
+			ggplot(trm.pol, aes(x=d_TSeqT, y=BRL, colour=Tb4S)) + geom_point() + geom_line(data=trm.pol.p, aes(y=BRL_p)) + facet_grid(.~Tb4S) + scale_y_continuous(limits=c(0,0.15))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_linear.pdf", sep='')
+			ggsave(file=file, w=12, h=6)
+		}
+		if(1)
+		{
+			trm.pol.data.b	<- subset(trm.pol, !grepl('A',TIP1) & !grepl('A',TIP2) & Tb4S=='both')
+			trm.pol.ZAGA.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), nu.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.b), family=ZAGA(mu.link='identity'), n.cyc = 40)
+			trm.pol.GA.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.b), family=GA(mu.link='identity'), n.cyc = 40)
+			trm.pol.EXP.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), data=as.data.frame(trm.pol.data.b), family=EXP, n.cyc = 40)
+			trm.pol.NO.b	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.b), family=NO, n.cyc = 40)
+			AIC(trm.pol.ZAGA.b, trm.pol.GA.b, trm.pol.EXP.b, trm.pol.NO.b)
+			trm.pol.data.o	<- subset(trm.pol, !grepl('A',TIP1) & !grepl('A',TIP2) & Tb4S=='one')
+			trm.pol.ZAGA.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), nu.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.o), family=ZAGA(mu.link='identity'), n.cyc = 40)
+			trm.pol.GA.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.o), family=GA(mu.link='identity'), n.cyc = 40)
+			trm.pol.EXP.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), data=as.data.frame(trm.pol.data.o), family=EXP, n.cyc = 40)
+			trm.pol.NO.o	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.o), family=NO, n.cyc = 40)
+			AIC(trm.pol.ZAGA.o, trm.pol.GA.o, trm.pol.EXP.o, trm.pol.NO.o)
+			sapply( list(trm.pol.GA.b, trm.pol.GA.o, trm.pol.GA.n, trm.pol.GA.u), Rsq )
+			#	normal model fits best, but we need a positive model -- just Gamma?
+			trm.pol.data.n	<- subset(trm.pol, !grepl('A',TIP1) & !grepl('A',TIP2) & Tb4S=='none')
+			trm.pol.GA.n	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.n), family=GA(mu.link='identity'), n.cyc = 40)
+			trm.pol.data.u	<- subset(trm.pol, !grepl('A',TIP1) & !grepl('A',TIP2) & Tb4S=='Unknown')
+			trm.pol.GA.u	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.data.u), family=GA(mu.link='identity'), n.cyc = 40)
+			#	predict
+			trm.pol.p		<- data.table(d_TSeqT=seq(0,25,0.1))
+			trm.pol.p[, both:=predict(trm.pol.GA.b, data=trm.pol.data.b, newdata=as.data.frame(trm.pol.p), type='response', se.fit=FALSE)]
+			trm.pol.p[, one:=predict(trm.pol.GA.o, data=trm.pol.data.o, newdata=as.data.frame(subset(trm.pol.p, select=d_TSeqT)), type='response', se.fit=FALSE)]
+			trm.pol.p[, none:=predict(trm.pol.GA.n, data=trm.pol.data.n, newdata=as.data.frame(subset(trm.pol.p, select=d_TSeqT)), type='response', se.fit=FALSE)]
+			trm.pol.p[, Unknown:=predict(trm.pol.GA.u, data=trm.pol.data.u, newdata=as.data.frame(subset(trm.pol.p, select=d_TSeqT)), type='response', se.fit=FALSE)]
+			trm.pol.p		<- melt(trm.pol.p, id.vars=c('d_TSeqT'), variable.name='Tb4S', value='BRL_p')
+			#	plot
+			ggplot(subset(trm.pol, !grepl('A',TIP1) & !grepl('A',TIP2)), aes(x=d_TSeqT, y=BRL, colour=Tb4S)) + geom_point() + geom_line(data=trm.pol.p, aes(y=BRL_p)) + facet_grid(.~Tb4S) + scale_y_continuous(limits=c(0,0.15))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_linear_noA.pdf", sep='')
+			ggsave(file=file, w=12, h=6)
+		}
 		#
 		#	since fits not too dissimilar, lump all together
 		#
-		trm.pol.GA		<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol), family=GA(mu.link='identity'), n.cyc = 40)
-		trm.pol.p2		<- data.table(d_TSeqT=seq(0,25,0.1))
-		trm.pol.p2[, BRL_p:=predict(trm.pol.GA, data=trm.pol, newdata=as.data.frame(trm.pol.p2), type='response', se.fit=FALSE)]		
-		#tmp				<- gamlss.centiles.get(trm.pol.GA, trm.pol.p2$d_TSeqT, cent = c(2.5, 97.5), with.ordering=TRUE )
-		#setnames(tmp, c('x','q2.5','q97.5'), c('d_TSeqT', 'BRLql', 'BRLqu'))
-		#trm.pol.p2		<- merge(trm.pol.p2, tmp, by='d_TSeqT')
+		if(0)	
+		{
+			#	all patients
+			trm.pol.GA		<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol), family=GA(mu.link='identity'), n.cyc = 40)
+			trm.pol.p2		<- data.table(d_TSeqT=seq(0,25,0.1))
+			trm.pol.p2[, BRL_p:=predict(trm.pol.GA, data=trm.pol, newdata=as.data.frame(trm.pol.p2), type='response', se.fit=FALSE)]
+			trm.pol.p3		<- gamlss.centiles.get(trm.pol.GA, trm.pol$d_TSeqT, cent = c(2.5, 97.5) )		
+			setkey(trm.pol.p3, x)
+			trm.pol.p3		<- unique(trm.pol.p3)
+			
+			#tmp				<- gamlss.centiles.get(trm.pol.GA, trm.pol.p2$d_TSeqT, cent = c(2.5, 97.5), with.ordering=TRUE )
+			#setnames(tmp, c('x','q2.5','q97.5'), c('d_TSeqT', 'BRLql', 'BRLqu'))
+			#trm.pol.p2		<- merge(trm.pol.p2, tmp, by='d_TSeqT')
+			trm.pol[, summary(BRL)]
+			#0.006431 0.041570 0.055770 0.062380 0.086620 0.121200 
+			ggplot(trm.pol, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1)) + geom_line(data=trm.pol.p2, aes(y=BRL_p)) + 
+					geom_ribbon(data=trm.pol.p3, aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+					#geom_vline(xintercept=0.5+3+2*4.1, color="#E41A1C", linetype=2) +
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,22), ylim=c(0,0.125)) +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_GAfit.pdf", sep='')
+			ggsave(file=file, w=5, h=5)		
+			Rsq(trm.pol.GA)	#0.5884969
+		}
+		
 		trm.pol[, summary(BRL)]
-		#0.006431 0.041570 0.055770 0.062380 0.086620 0.121200 
-		ggplot(trm.pol, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1)) + geom_line(data=trm.pol.p2, aes(y=BRL_p)) + 
-					#geom_ribbon(data=trm.pol.p2, aes(ymin=BRLql, ymax=BRLqu), alpha=0.2) + 
-					labs(x='cumulated time since transmission\nin recipient and source\n(years)', y='evolutionary divergence\nbetween sequences from confirmed transmission pairs\n(nucleotide substitutions / site)') +
-					scale_y_continuous(limits=c(0,0.13), breaks=seq(0, 0.2, 0.01)) +
-					scale_x_continuous(limits=c(0,22), breaks=seq(0,30,2)) + theme_bw()
-		file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_GAfit.pdf", sep='')
-		ggsave(file=file, w=5, h=5)		
-		Rsq(trm.pol.GA)	#0.5884969
+		#0.006431 0.041570 0.055770 0.062380 0.086620 0.121200
+					
+		if(0)
+		{
+			#	stratify by patients
+			tmp		<- melt(trm.pol, measure.vars=c('withA','withB','withC','withD','withE','withF','withH','withI','withK','withL'))
+			set(tmp, NULL, 'variable', tmp[, gsub('with','Patient ',variable)])
+			ggplot(tmp, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL, colour=value), size=1.2, alpha=0.5, position = position_jitter(width = .1)) + 
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,22), ylim=c(0,0.125)) +
+					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75")) +
+					facet_wrap( ~ variable, ncol=3)
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_GAfit_byPatient.pdf", sep='')
+			ggsave(file=file, w=15, h=15)		
+		}		
+		if(1)
+		{
+			#	
+			#	all together, not patient A, POL
+			#
+			trm.pol.nA		<- subset(trm.pol, withA==FALSE, select=c(d_SeqT, d_TSeqT, BRL)) 
+			#trm.pol.nA		<- rbind(trm.pol.nA, data.table(BRL=rep(1e-3,100), d_SeqT=5e-4, d_TSeqT=5e-4), fill=TRUE)			
+			#trm.pol.GA		<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+			#trm.pol.GA		<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=2)'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity'), n.cyc = 40)			
+			#trm.pol.GA		<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=3)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity'), n.cyc = 40)
+			if(0)
+			{
+				trm.pol.GA1		<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=3)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+				trm.pol.GA2		<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=2)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=3)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+				trm.pol.GA3		<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=3)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=3)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+				trm.pol.GA4		<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=3)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+				trm.pol.GA5		<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=5)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=3)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+				trm.pol.GA6		<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=6)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=3)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity', sigma.link='identity'), n.cyc = 40)			
+				#	AIC is a joke ..
+				AIC(trm.pol.GA1,trm.pol.GA2,trm.pol.GA3,trm.pol.GA4,trm.pol.GA5,trm.pol.GA6)				
+			}
+			trm.pol.GA42	<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+			trm.pol.GA		<- trm.pol.GA42
+			#trm.pol.GA		<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4, Boundary.knots=c(0,15))'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=1, knots=c(5), Boundary.knots=c(0,15))'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+			#trm.pol.GA		<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4, Boundary.knots=c(0,15))'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity'), n.cyc = 40)
+			#trm.pol.GA		<- gamlss(as.formula('BRL ~ ns(d_TSeqT, knots=c(2,4), Boundary.knots=c(0,15))'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity'), n.cyc = 40)			
+			#trm.pol.GA		<- gamlss(as.formula('BRL ~ ns(d_TSeqT, knots=c(2,6,9))'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity'), n.cyc = 40)
+			trm.pol.p2		<- data.table(d_TSeqT=seq(0,15,0.1))	
+			trm.pol.p2[, BRL_p:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(trm.pol.p2), type='response', se.fit=FALSE)]
+			trm.pol.p3		<- gamlss.centiles.get(trm.pol.GA, trm.pol.nA$d_TSeqT, cent = c(2.5, 97.5) )		
+			setkey(trm.pol.p3, x)
+			trm.pol.p3		<- unique(trm.pol.p3)			
+			ggplot(trm.pol.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1)) + geom_line(data=trm.pol.p2, aes(y=BRL_p)) + 
+					geom_ribbon(data=trm.pol.p3, aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+					#geom_vline(xintercept=0.5+3+2*4.1, color="#E41A1C", linetype=2) +
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,15), ylim=c(0,0.08)) +
+					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_GAfit.pdf", sep='')
+			ggsave(file=file, w=5, h=5)	
+			Rsq(trm.pol.GA42)	#0.895
+		}
+		if(0)
+		{
+			#	
+			#	all together, not patient A, POL
+			#
+			#	NORMAL MODEL
+			trm.pol.nA		<- subset(trm.pol, withA==FALSE, select=c(d_SeqT, d_TSeqT, BRL))
+			trm.pol.nA		<- rbind(trm.pol.nA, data.table(BRL=seq(-0.001-0.005,0.001-0.005,len=20), d_SeqT=-0.025, d_TSeqT=-0.025), fill=TRUE)
+			trm.pol.NO42	<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=NO(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+			trm.pol.NO		<- trm.pol.NO42
+			trm.pol.p2		<- data.table(d_TSeqT=seq(0,15,0.1))	
+			trm.pol.p2[, BRL_p:=predict(trm.pol.NO, data=trm.pol.nA, newdata=as.data.frame(trm.pol.p2), type='response', se.fit=FALSE)]
+			trm.pol.p3		<- gamlss.centiles.get(trm.pol.NO, trm.pol.nA$d_TSeqT, cent = c(2.5, 97.5) )		
+			setkey(trm.pol.p3, x)
+			trm.pol.p3		<- unique(trm.pol.p3)			
+			ggplot(trm.pol.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1)) + geom_line(data=trm.pol.p2, aes(y=BRL_p)) + 
+					geom_ribbon(data=trm.pol.p3, aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+					#geom_vline(xintercept=0.5+3+2*4.1, color="#E41A1C", linetype=2) +
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,15), ylim=c(0,0.08)) +
+					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_GAfit.pdf", sep='')
+			ggsave(file=file, w=5, h=5)	
+			Rsq(trm.pol.NO42)	#0.783
+		}
+		if(1)
+		{
+			#	
+			#	all together, not patient A, POL
+			#
+			#	GAMMA MODEL
+			trm.pol.nA		<- subset(trm.pol, withA==FALSE, select=c(d_SeqT, d_TSeqT, BRL))			
+			#trm.pol.nA		<- rbind(trm.pol.nA, data.table(BRL=0.005, d_SeqT=seq(0.5,2,len=40), d_TSeqT=seq(0.05,2,len=40)), fill=TRUE)
+			trm.pol.nA		<- rbind(trm.pol.nA, data.table(BRL=0.001, d_SeqT=rep(0.1,40), d_TSeqT=rep(0.1,40)), fill=TRUE)			
+			trm.pol.GA32	<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
+			#trm.pol.NO42	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), nu.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.nA), family=ZAGA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
+			trm.pol.GA		<- trm.pol.GA32
+			trm.pol.p2		<- data.table(d_TSeqT=seq(0,15,0.1))	
+			trm.pol.p2[, BRL_p:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(trm.pol.p2), type='response', se.fit=FALSE)]
+			trm.pol.p3		<- gamlss.centiles.get(trm.pol.GA, trm.pol.nA$d_TSeqT, cent = c(2.5, 97.5) )		
+			setkey(trm.pol.p3, x)
+			trm.pol.p3		<- unique(trm.pol.p3)			
+			ggplot(trm.pol.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol.nA, BRL>0.002)) + geom_line(data=trm.pol.p2, aes(y=BRL_p)) + 
+					geom_ribbon(data=trm.pol.p3, aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+					#geom_vline(xintercept=0.5+3+2*4.1, color="#E41A1C", linetype=2) +
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,15), ylim=c(0,0.08)) +
+					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_GAfit.pdf", sep='')
+			ggsave(file=file, w=5, h=5)
+			
+			ggplot(trm.pol.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol.nA, BRL>0.002)) +  
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,15), ylim=c(0,0.08)) +
+					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_data.pdf", sep='')
+			ggsave(file=file, w=5, h=5)	
+			
+			Rsq(trm.pol.GA32)	#0.90
+		}
+		
+		if(1)
+		{
+			#	
+			#	all together, not patient A, ENV
+			#
+			trm.env.nA		<- subset(trm.env, withA==FALSE, select=c(d_SeqT, d_TSeqT, BRL))
+			trm.env.nA		<- rbind(trm.env.nA, data.table(BRL=seq(-0.0075-0.01,0.0075-0.01,len=20), d_SeqT=-0.01, d_TSeqT=-0.01), fill=TRUE)
+			trm.env.NO42	<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.env.nA), family=NO(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+			trm.env.NO		<- trm.env.NO42
+			trm.env.p2		<- data.table(d_TSeqT=seq(0,15,0.1))	
+			trm.env.p2[, BRL_p:=predict(trm.env.NO, data=trm.env.nA, newdata=as.data.frame(trm.env.p2), type='response', se.fit=FALSE)]
+			trm.env.p3		<- gamlss.centiles.get(trm.env.NO, trm.env.nA$d_TSeqT, cent = c(2.5, 97.5) )		
+			setkey(trm.env.p3, x)
+			trm.env.p3		<- unique(trm.env.p3)			
+			ggplot(trm.env.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1)) + geom_line(data=trm.env.p2, aes(y=BRL_p)) + 
+					geom_ribbon(data=trm.env.p3, aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+					#geom_vline(xintercept=0.5+3+2*4.1, color="#E41A1C", linetype=2) +
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,15), ylim=c(0,0.18)) +
+					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
+			file	<- paste(indir, '/',"140921_set7_env_patristic_dTS_notA_GAfit.pdf", sep='')
+			ggsave(file=file, w=5, h=5)	
+			Rsq(trm.env.NO42)	#0.895
+		}
 		#
-		#
-		set(trm.pol, trm.pol[,which(d_SeqT==0)], 'd_SeqT', 0.5)
-		trm.pol.GA2		<- gamlss(as.formula('BRL ~ d_SeqT'), sigma.formula=as.formula('~ d_SeqT'), data=as.data.frame(trm.pol), family=GA(mu.link='identity'), n.cyc = 40)
-		trm.pol.p3		<- data.table(d_SeqT=seq(0,25,0.1))
-		trm.pol.p3[, BRL_p:=predict(trm.pol.GA2, data=trm.pol, newdata=as.data.frame(trm.pol.p3), type='response', se.fit=FALSE)]				
-		ggplot(trm.pol, aes(x=d_SeqT)) + geom_jitter(aes(y=BRL), size=1, alpha=0.5, position = position_jitter(width = .1)) + geom_line(data=trm.pol.p3, aes(y=BRL_p)) + 
-				#geom_ribbon(data=trm.pol.p2, aes(ymin=BRLql, ymax=BRLqu), alpha=0.2) + 
-				labs(x='difference in sequence sampling times\n(years)', y='patristic distance among transmission pairs\n(estimated subst/site)') +
-				scale_y_continuous(limits=c(0,0.15), breaks=seq(0, 0.2, 0.01)) +
-				scale_x_continuous(limits=c(0,22), breaks=seq(0,30,2))
-		file	<- paste(indir, '/',"140921_set7_pol_patristic_dSS_all_GAfit.pdf", sep='')
-		ggsave(file=file, w=9, h=6)		
-		Rsqu(trm.pol.GA2)	#0.2350969
+		if(0)
+		{
+			#	final model, pol, comparing to d_SeqT
+			trm.pol.nAb		<- subset(trm.pol, withA==FALSE, select=c(d_SeqT, d_TSeqT, BRL))
+			set(trm.pol.nAb, trm.pol.nAb[,which(d_SeqT==0)], 'd_SeqT', 0.5)			
+			trm.pol.NO42b	<- gamlss(as.formula('BRL ~ bs(d_SeqT, degree=4)'), sigma.formula=as.formula('~ bs(d_SeqT, degree=2)'), data=as.data.frame(trm.pol.nAb), family=NO(mu.link='identity', sigma.link='identity'), n.cyc = 40)
+			trm.pol.p2b		<- data.table(d_SeqT=seq(0,15,0.1))
+			trm.pol.p2b[, BRL_p:=predict(trm.pol.NO42b, data=trm.pol.nAb, newdata=as.data.frame(trm.pol.p2b), type='response', se.fit=FALSE)]
+			trm.pol.p3b		<- gamlss.centiles.get(trm.pol.NO42b, trm.pol.nAb$d_SeqT, cent = c(2.5, 97.5) )		
+			setkey(trm.pol.p3b, x)
+			trm.pol.p3b		<- unique(trm.pol.p3b)			
+			ggplot(trm.pol.nAb, aes(x=d_SeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1)) + geom_line(data=trm.pol.p2b, aes(y=BRL_p)) + 
+					geom_ribbon(data=trm.pol.p3b, aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+					#geom_vline(xintercept=0.5+3+2*4.1, color="#E41A1C", linetype=2) +
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,15), ylim=c(0,0.08)) +
+					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
+			
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dSS_notA_GAfit.pdf", sep='')
+			ggsave(file=file, w=9, h=6)		
+			Rsq(trm.pol.NO42b)	#0.243			
+		}
 		#
 		#	plot likelihood
 		#
-		trm.lkl			<- as.data.table(expand.grid(BRL=seq(0.001, 0.1, 0.001), d_TSeqT=c(1, 3, 10)))
-		trm.lkl[, mu:= predict(trm.pol.GA, data=trm.pol, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='mu', type='link')]
-		trm.lkl[, sigma:= exp( predict(trm.pol.GA, data=trm.pol, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='sigma', type='link') )]
-		set( trm.lkl, NULL, 'lkl', trm.lkl[, dGA(BRL, mu=mu, sigma=sigma)])
-		set( trm.lkl, NULL, 'd_TSeqT', trm.lkl[, factor(d_TSeqT, levels=c(1,3,10), labels=c('1 yr','3 yrs','10 yrs'))])
-		ggplot(trm.lkl, aes(x=BRL, y=lkl, group=d_TSeqT, colour=d_TSeqT)) + geom_line() + facet_grid(d_TSeqT~., scales='free_y') + 
-				scale_x_continuous(breaks=seq(0, 0.2, 0.01)) + theme_bw() + theme(strip.background = element_blank(), strip.text = element_blank(), legend.justification=c(1,1), legend.position=c(1,1)) +
-				labs(y='likelihood of direct HIV transmission', x='evolutionary divergence\nbetween sequences from confirmed transmission pairs\n(nucleotide substitutions / site)', 
-						colour='cumulated time\nsince transmission\nin recipient and\nsource')
-		file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_likelihood.pdf", sep='')
-		ggsave(file=file, w=5, h=5)	
-				
-		file	<- paste(indir, '/',"140921_set7_pol_GAmodel_INFO.R", sep='')
-		save(file=file, trm.pol.GA, trm.pol)
+		if(1)
+		{
+			trm.lkl			<- as.data.table(expand.grid(BRL=seq(0.0001, 0.1, 0.0001), d_TSeqT=c(0.25, 0.5, 1, 3, 10, 15)))
+			trm.lkl[, mu:= predict(trm.pol.GA32, data=trm.pol.nA, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='mu', type='link')]
+			trm.lkl[, sigma:= predict(trm.pol.GA32, data=trm.pol.nA, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='sigma', type='link') ]
+			#trm.lkl[, nu:= as.double(1/(1+exp(-predict(trm.pol.GA32, data=trm.pol.nA, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='nu', type='link')))) ]
+			set( trm.lkl, NULL, 'lkl', trm.lkl[, dGA(BRL, mu=mu, sigma=sigma)])
+			#set( trm.lkl, NULL, 'lkl', trm.lkl[, dZAGA(BRL, mu=mu, sigma=sigma, nu=nu)])
+			set( trm.lkl, NULL, 'd_TSeqT', trm.lkl[, factor(d_TSeqT, levels=c(0.25, 0.5, 1,3,10, 15), labels=c('3mo','6 mo','1 yr','3 yrs','10 yrs', '15 yrs'))])
+			ggplot(trm.lkl, aes(x=BRL, y=lkl, group=d_TSeqT, colour=d_TSeqT)) + geom_line() + facet_grid(d_TSeqT~., scales='free_y') + 
+					scale_x_continuous(breaks=seq(0, 0.2, 0.01)) + theme_bw() + theme(strip.background = element_blank(), strip.text = element_blank(), legend.justification=c(1,1), legend.position=c(1,1)) +
+					labs(y='likelihood of direct HIV transmission', x='evolutionary divergence\nbetween sequences from confirmed transmission pairs\n(nucleotide substitutions / site)', 
+							colour='cumulated time\nsince transmission\nin recipient and\nsource')
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_likelihood.pdf", sep='')
+			ggsave(file=file, w=5, h=5)	
+			
+			trm.pol.GA		<- trm.pol.GA32
+			file	<- paste(indir, '/',"141105_set7_pol_GAmodel_nA_INFO.R", sep='')
+			save(file=file, trm.pol.GA, trm.pol.nA)			
+		}
 		#
 		#	reduce to sampling years closest to transmission
 		#

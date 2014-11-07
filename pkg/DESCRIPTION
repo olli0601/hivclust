@@ -5,7 +5,9 @@ Title: hivclust
 Author: {Oliver Ratmann}
 Maintainer: Oliver Ratmann <o.ratmann@imperial.ac.uk>
 Depends:
-    R (>= 3.1)
+    R (>= 3.1),
+    ape,
+    adephylo
 Description: tools for HIV sequence analysis
 License: GPL (>=2)
 LazyLoad: yes
