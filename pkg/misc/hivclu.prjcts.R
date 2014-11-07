@@ -6271,7 +6271,7 @@ project.Tchain.Belgium.sensecheck	<- function()
 			#
 			#	NORMAL MODEL
 			trm.pol.nA		<- subset(trm.pol, withA==FALSE, select=c(d_SeqT, d_TSeqT, BRL))
-			trm.pol.nA		<- rbind(trm.pol.nA, data.table(BRL=seq(-0.001-0.005,0.001-0.005,len=20), d_SeqT=-0.025, d_TSeqT=-0.025), fill=TRUE)
+			trm.pol.nA		<- rbind(trm.pol.nA, data.table(BRL=seq(-0.005-0.005,0.001-0.005,len=20), d_SeqT=-0.025, d_TSeqT=-0.025), fill=TRUE)
 			trm.pol.NO42	<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=NO(mu.link='identity', sigma.link='identity'), n.cyc = 40)
 			trm.pol.NO		<- trm.pol.NO42
 			trm.pol.p2		<- data.table(d_TSeqT=seq(0,15,0.1))	
@@ -6287,7 +6287,7 @@ project.Tchain.Belgium.sensecheck	<- function()
 					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
 					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
 					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
-			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_GAfit.pdf", sep='')
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_NOfit.pdf", sep='')
 			ggsave(file=file, w=5, h=5)	
 			Rsq(trm.pol.NO42)	#0.783
 		}
@@ -6387,6 +6387,27 @@ project.Tchain.Belgium.sensecheck	<- function()
 		#
 		if(1)
 		{
+			#	NORMAL model
+			trm.lkl			<- as.data.table(expand.grid(BRL=seq(0.0001, 0.1, 0.0001), d_TSeqT=c(0.25, 0.5, 1, 3, 10, 15)))
+			trm.lkl[, mu:= predict(trm.pol.NO42, data=trm.pol.nA, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='mu', type='link')]
+			trm.lkl[, sigma:= predict(trm.pol.NO42, data=trm.pol.nA, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='sigma', type='link') ]
+			#trm.lkl[, nu:= as.double(1/(1+exp(-predict(trm.pol.GA32, data=trm.pol.nA, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='nu', type='link')))) ]
+			set( trm.lkl, NULL, 'lkl', trm.lkl[, dNO(BRL, mu=mu, sigma=sigma)])			
+			set( trm.lkl, NULL, 'd_TSeqT', trm.lkl[, factor(d_TSeqT, levels=c(0.25, 0.5, 1,3,10, 15), labels=c('3mo','6 mo','1 yr','3 yrs','10 yrs', '15 yrs'))])
+			ggplot(trm.lkl, aes(x=BRL, y=lkl, group=d_TSeqT, colour=d_TSeqT)) + geom_line() + facet_grid(d_TSeqT~., scales='free_y') + 
+					scale_x_continuous(breaks=seq(0, 0.2, 0.01)) + theme_bw() + theme(strip.background = element_blank(), strip.text = element_blank(), legend.justification=c(1,1), legend.position=c(1,1)) +
+					labs(y='likelihood of direct HIV transmission', x='evolutionary divergence\nbetween sequences from confirmed transmission pairs\n(nucleotide substitutions / site)', 
+							colour='cumulated time\nsince transmission\nin recipient and\nsource')
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_NO42_likelihood.pdf", sep='')
+			ggsave(file=file, w=5, h=5)	
+			
+			trm.pol.NO		<- trm.pol.NO42
+			file	<- paste(indir, '/',"141105_set7_pol_GAmodel_nA_NO_INFO.R", sep='')
+			save(file=file, trm.pol.NO, trm.pol.nA)			
+		}
+		if(1)
+		{
+			#	GAMMA model
 			trm.lkl			<- as.data.table(expand.grid(BRL=seq(0.0001, 0.1, 0.0001), d_TSeqT=c(0.25, 0.5, 1, 3, 10, 15)))
 			trm.lkl[, mu:= predict(trm.pol.GA32, data=trm.pol.nA, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='mu', type='link')]
 			trm.lkl[, sigma:= predict(trm.pol.GA32, data=trm.pol.nA, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='sigma', type='link') ]
@@ -6398,7 +6419,7 @@ project.Tchain.Belgium.sensecheck	<- function()
 					scale_x_continuous(breaks=seq(0, 0.2, 0.01)) + theme_bw() + theme(strip.background = element_blank(), strip.text = element_blank(), legend.justification=c(1,1), legend.position=c(1,1)) +
 					labs(y='likelihood of direct HIV transmission', x='evolutionary divergence\nbetween sequences from confirmed transmission pairs\n(nucleotide substitutions / site)', 
 							colour='cumulated time\nsince transmission\nin recipient and\nsource')
-			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_likelihood.pdf", sep='')
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_GA32_likelihood.pdf", sep='')
 			ggsave(file=file, w=5, h=5)	
 			
 			trm.pol.GA		<- trm.pol.GA32
