@@ -1782,8 +1782,9 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 	list(tpairs=df.tpairs.brl, linked=msm.linked, unlinked=msm.unlinked.bytime)	
 }
 ######################################################################################
+#infilecov<- infile.cov.study; infile.viro<- infile.viro.study; infile.immu<- infile.immu.study; infile.treatment<- infile.treatment.study; adjust.AcuteByNegT=adjust.AcuteByNegT; adjust.NegT4Acute=NA; adjust.NegTByDetectability=0.25; adjust.minSCwindow=0.25; adjust.AcuteSelect=c('Yes','Maybe'); use.Acute_Spec=0; t.recent.endctime=t.recent.endctime; t.recent.startctime=t.recent.startctime; df.viro.part=NULL; df.immu.part=NULL; df.treatment.part=NULL; df.all.part=NULL
 project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat, indircov, infilecov, infile.viro, infile.immu, infile.treatment, 
-															infiletree=NULL, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'), t.recent.startctime=1996., t.recent.endctime=2013.,
+															infiletree=NULL, adjust.AcuteByNegT=NA, adjust.NegT4Acute=NA, adjust.NegTByDetectability=NA, adjust.minSCwindow=NA, adjust.AcuteSelect=c('Yes'), use.AcuteSpec=0, t.recent.startctime=1996., t.recent.endctime=2013.,
 															df.viro.part=NULL, df.immu.part=NULL, df.treatment.part=NULL, df.all.part=NULL)
 {
 	#	adjust.AcuteByNegT<- 0.75
@@ -1853,6 +1854,11 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 		tmp		<- which( df.all[, (is.na(isAcute) | isAcute=='No') & !is.na(NegT) & AnyPos_T1<=NegT+adjust.AcuteByNegT])
 		cat(paste('\ndf.all: set Acute==Maybe when NegT is close to AnyPos_T1, n=',length(tmp)))
 		set(df.all, tmp, 'isAcute', 'Maybe')
+	}	
+	if(use.AcuteSpec)
+	{
+		cat(paste('\nUsing use.Acute_Spec=',use.AcuteSpec))
+		setnames(df.all, c('isAcute','isAcuteNew'), c('isAcuteOld','isAcute'))
 	}
 	#	date all NegT back by adjust.NegTByDetectability to allow for infection that the test does not pick up 
 	if(!is.na(adjust.NegTByDetectability))
@@ -1887,7 +1893,7 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	msm.recent		<- subset(msm.recent, t.recent.startctime<=AnyPos_T1 & AnyPos_T1<t.recent.endctime)
 	cat(paste('\nmsm after startctime',t.recent.startctime,'before endctime',t.recent.endctime,': #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
 	setkey(msm.recent, isAcute)
-	msm.recent		<- msm.recent[adjust.AcuteSelect,]
+	msm.recent		<- subset(msm.recent, isAcute%in%adjust.AcuteSelect)	
 	set(msm.recent, NULL, 'Trm', msm.recent[,factor(as.character(Trm))])
 	cat(paste('\nmsm isAcute: #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
 	# 	recent msm seroconverters
@@ -1914,8 +1920,8 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 			set( clumsm.info, z, 'AnyPos_T1', clumsm.info[z, min(AnyPos_T1)])
 		}
 		# 	recently infected MSM in cluster
-		setkey(clumsm.info, isAcute)	
-		clumsm.recent	<- clumsm.info[adjust.AcuteSelect,] 
+		setkey(clumsm.info, isAcute)			
+		clumsm.recent	<- subset(clumsm.info, isAcute%in%adjust.AcuteSelect) 
 		clumsm.recent	<- subset( clumsm.recent, Trm%in%c('MSM','BI') )
 		set(clumsm.recent, NULL, 'Trm', clumsm.recent[,factor(as.character(Trm))])
 		clumsm.recent		<- subset(clumsm.recent, t.recent.startctime<=AnyPos_T1 & AnyPos_T1<t.recent.endctime)
@@ -2135,7 +2141,7 @@ gamlss.centiles.get<- function(obj, xvar, cent = c(2.5, 97.5), with.ordering=TRU
 	ans
 }
 ######################################################################################
-project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='empirical', method.minQLowerU=0.01, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes= 365/2, dur.AcuteMaybe=320, t.recent.endctime=2011, plot.file=NULL)
+project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='empirical', method.minQLowerU=0.01, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes= 365/2, dur.AcuteMaybe=320, use.AcuteSpec=0, t.recent.endctime=2011, plot.file=NULL)
 {
 	require(MASS)
 	require(grid)
@@ -2143,7 +2149,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	require(ggplot2)
 	require(gamlss)	
 	
-	load(paste(indircov,'/',infilecov,'.R',sep=''))		
+	load(paste(indircov,'/',infilecov,'.R',sep=''))	
 	#	adjust Acute=='Maybe' by NegT 
 	if(!is.na(adjust.AcuteByNegT))
 	{
@@ -2151,6 +2157,11 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		cat(paste('\nset Acute==Maybe when NegT is close to AnyPos_T1, n=',length(tmp)))
 		set(df.all, tmp, 'isAcute', 'Maybe')
 	}
+	if(use.AcuteSpec)
+	{
+		cat(paste('\nUsing use.Acute_Spec=',use.AcuteSpec))
+		setnames(df.all, c('isAcute','isAcuteNew'), c('isAcuteOld','isAcute'))
+	}	
 	tmp				<- subset(df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') )
 	df.sc.negT		<- subset(tmp, !is.na(NegT))
 	setkey(df.sc.negT, Patient)
@@ -13426,6 +13437,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.risk				<- 'm2Bwmx.wtn.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.1
+		method.use.AcuteSpec	<- 1
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 100
 		method.thresh.pcoal		<- 0.3
@@ -13445,6 +13457,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Bwmx.wtn.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
+		method.use.AcuteSpec	<- 1
 		method.minQLowerU		<- 0.1
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 100
@@ -13523,9 +13536,9 @@ hivc.prog.betareg.estimaterisks<- function()
 									method.Acute= return(substr(arg,15,nchar(arg))),NA)	}))
 		if(length(tmp)>0) method.Acute<- tmp[1]				
 		tmp<- na.omit(sapply(argv,function(arg)
-						{	switch(substr(arg,2,18),
-									method.brl.bwhost= return(as.numeric(substr(arg,20,nchar(arg)))),NA)	}))
-		if(length(tmp)>0) method.brl.bwhost<- tmp[1]		
+						{	switch(substr(arg,2,21),
+									method.use.AcuteSpec= return(as.numeric(substr(arg,23,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) method.use.AcuteSpec<- tmp[1]		
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,18),
 									method.minQLowerU= return(as.numeric(substr(arg,20,nchar(arg)))),NA)	}))
@@ -13583,7 +13596,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		print(method.PDT)
 		print(method.Acute)
 		print(method.minQLowerU)
-		print(method.brl.bwhost)
+		print(method.use.AcuteSpec)
 		print(method.lRNA.supp)
 		print(method.thresh.pcoal)
 		print(method.minLowerUWithNegT)
@@ -13607,8 +13620,10 @@ hivc.prog.betareg.estimaterisks<- function()
 		method				<- paste(method,'a',sep='')
 	if(method.nodectime=='map')
 		method				<- paste(method,'m',sep='')	
-	if(method.brl.bwhost>1)
-		method				<- paste(method, method.brl.bwhost, sep='')
+	if(method.use.AcuteSpec==0)
+		method				<- paste(method, 2, sep='')		#replaces variable method.brl.bwhost since this is now fixed
+	if(method.use.AcuteSpec==1)
+		method				<- paste(method, method.use.AcuteSpec, sep='')
 	if(method.Acute=='empirical')
 	{
 		dur.Acute			<- c(Yes= 365/2, Maybe=320)	
@@ -13705,14 +13720,14 @@ hivc.prog.betareg.estimaterisks<- function()
 	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 't2inf',method.PDT,method,sep='')
 	tmp				<- project.athena.Fisheretal.t2inf(	indircov, infile.cov.study,
 														method.Acute=method.Acute, method.minQLowerU=method.minQLowerU,
-														adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], t.recent.endctime=t.recent.endctime, 
+														adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, 
 														plot.file=plot.file)
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args
 	#
 	#	get data relating to study population (subtype B sequ)
 	#
-	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
 	df.all			<- tmp$df.all	
 	df.denom.CLU	<- tmp$df.select
 	df.denom.SEQ	<- tmp$df.select.SEQ
@@ -13725,11 +13740,12 @@ hivc.prog.betareg.estimaterisks<- function()
 	clumsm.info		<- tmp$clumsm.info
 	clumsm.ph		<- tmp$clumsm.ph
 	setkey(clumsm.info, cluster)
+stop()	
 	#
 	#	get data relating to full population (MSM including those without seq)
 	#	this merges the patients with HIV 1 B sequences and the MSM patients without a sequence 
 	tmp					<- project.athena.Fisheretal.select.denominator(	indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, 
-																			infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), 
+																			infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec,
 																			t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime,
 																			df.viro.part=df.viro, df.immu.part=df.immu, df.treatment.part=df.treatment, df.all.part=df.all)	
 	df.all.allmsm		<- tmp$df.all

@@ -1112,14 +1112,40 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		tmp		<- which( df.all[,!is.na(AnyT_T1) & AnyT_T1<AnyPos_T1] )
 		if(verbose)		cat(paste("\nnumber of seq with !is.na(AnyT_T1) & AnyT_T1<AnyPos_T1, n=",length(tmp),"SET AnyPos_T1 to lower value"))
 		set(df.all, tmp, "AnyPos_T1", df.all[tmp,AnyT_T1])
-		df.all[, AnyT_T1_Acc:=NULL]
-		
+		df.all[, AnyT_T1_Acc:=NULL]		
 		df.all[, idx:=NULL]
-		#	round numbers
-		#set(df.all, NULL, "TrI.p", round(df.all[,TrI.p],d=2))
-		#set(df.all, NULL, "TrI.mo", round(df.all[,TrI.mo],d=1))
+		
+		#	reset Acute field		
+		df.all[, DUMMY:= df.all[, as.numeric(difftime(AnyPos_T1, NegT, units="days"))/365]]		
+		tmp	<- df.all[, which(isAcute=='Yes' & Acute_Spec=='SYM' & DUMMY<=0.5)]
+		cat(paste('\nFound patients with isAcyte==Yes & NegT<6mo & SYM -> CLIN, n=', length(tmp)))
+		set( df.all, tmp, 'Acute_Spec', 'CLIN' )
+		tmp	<- df.all[, which(isAcute=='Maybe'  & DUMMY<=0.5)]
+		cat(paste('\nFound patients with isAcyte==Maybe & NegT<6mo & CLIN -> Acute=Yes, n=', length(tmp)))
+		set( df.all, tmp, 'isAcute', 'Yes' )
+		set( df.all, tmp, 'Acute_Spec', 'CLIN' )		
+		#df.all[, table(isAcute, Acute_Spec)]
+		#subset(df.all, isAcute=='Yes' & Acute_Spec=='SYM' & DUMMY>1)[, unique(Patient)]
+		#subset(df.all, isAcute=='Maybe' & Acute_Spec=='CLIN' & DUMMY>=1)[, unique(Patient)]
+		#subset(df.all, isAcute=='Yes' & Acute_Spec=='SYM' & DUMMY>0.5)[, unique(Patient)]
+		#subset(df.all, isAcute=='Yes' & Acute_Spec=='SYM' & is.na(DUMMY))[, unique(Patient)]
+		#subset(df.all, isAcute=='Maybe' & Acute_Spec=='CLIN' & DUMMY>=0.5)[, unique(Patient)]
+		#subset(df.all, isAcute=='Maybe' & Acute_Spec=='CLIN' & is.na(DUMMY))[, unique(Patient)]
+		#
+		df.all[, isAcuteNew:= NA_character_]
+		set(df.all, df.all[, which(Acute_Spec=='CLIN')], 'isAcuteNew', 'Yes')
+		set(df.all, df.all[, which(Acute_Spec=='SYM')], 'isAcuteNew', 'Maybe')
+		set(df.all, df.all[, which(isAcute=='No')], 'isAcuteNew', 'No')			
+		set(df.all, df.all[, which( !is.na(NegT) & DUMMY<=1)], 'isAcuteNew', 'Yes')
+		set(df.all, df.all[, which(isAcuteNew=='Maybe')], 'isAcuteNew', NA_character_)
+		set(df.all, NULL, 'isAcuteNew', df.all[, factor(isAcuteNew)])
+		#
+		df.all[, DUMMY:=NULL]
+		df.all[, Acute_Spec_1:=NULL]
+		df.all[, Acute_Spec_2:=NULL]
+		df.all[, Acute_Spec_3:=NULL]
+		df.all[, Acute_Spec_4:=NULL]
 		if(verbose)	cat(paste("\nsave to file",file.out))
-		#setkey(df.all, FASTASampleCode)
 		save(df.all,file=file.out)
 		str(df.all)		
 	}	
@@ -2125,10 +2151,16 @@ project.hivc.Excel2dataframe.Viro.process.QC.Corrections<- function(df)
 ######################################################################################
 project.hivc.Excel2dataframe.Viro<- function()		
 {
-	file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
-	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro.csv",sep='/')	
-	file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
-	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.csv",sep='/')
+	if(1)
+	{
+		file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
+		file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro.csv",sep='/')			
+	}
+	if(1)
+	{
+		file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
+		file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.csv",sep='/')		
+	}
 	
 	verbose				<- 1
 	dir.name			<- DATA
@@ -2177,6 +2209,12 @@ project.hivc.Excel2dataframe.Viro<- function()
 	df.up		<- merge(df, df.up, by=c('Patient','PosRNA','RNA'), all.x=1, all.y=1, allow.cartesian=1)		
 	tmp			<- nrow(merge( unique(subset(df, select=Patient)), df.up, by='Patient' ))
 	if(verbose) cat(paste("\nnumber of entries updated [should be larger or equal than read], n=",tmp))		
+	#
+	#	corrections
+	#
+	set(df, df[, which(Patient=='M12818' & PosRNA=='1996-09-18')], 'RNA', 400)
+	set(df, df[, which(Patient=='M32210' & PosRNA=='2010-10-05')], 'RNA', 50)
+	set(df, df[, which(Patient=='M36914' & PosRNA=='2010-12-04')], 'RNA', 0)
 	#
 	#	if duplicate per day, keep those with higher Source variable
 	#	
@@ -2518,9 +2556,17 @@ project.hivc.Excel2dataframe.Viro<- function()
 ######################################################################################
 project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 {
-	file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient.csv",sep='/')
-	file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient_AllMSM.csv",sep='/')
-	file.update			<- paste(dir.name,"derived/ATHENA_2014_06_Patient_All.csv",sep='/')
+	if(1)
+	{
+		file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient.csv",sep='/')			#all with sequence
+		file.update			<- paste(dir.name,"derived/ATHENA_2014_06_Patient_All.csv",sep='/')		
+	}
+	if(1)
+	{
+		file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient_AllMSM.csv",sep='/')	#all MSM
+		file.update			<- paste(dir.name,"derived/ATHENA_2014_06_Patient_AllMSM.csv",sep='/')	#all MSM update		
+	}
+	
 	
 	NA.Acute			<- c(NA,9)
 	NA.CountryInfection	<- c(NA,"")
@@ -2543,6 +2589,11 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	cat(paste('\nFound patients with no update, n=',nrow(tmp)))
 	#	update for all other patients in df
 	df					<- merge( subset(df, select=c(Patient, DateFirstEverCDCC)), df.update, by='Patient' )
+	for(x in setdiff(colnames(df), colnames(tmp)))
+	{
+		cat(paste('\nadding new row to those entries with no update',x))
+		tmp[[x]]= NA
+	}		
 	df					<- rbind( df, subset(tmp, select=colnames(df)) )
 	#	
 	#
@@ -2592,6 +2643,19 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	set(df, NULL, "isDead", factor(df[,isDead], levels=c(0,1), labels=c("No","Yes")))
 	set(df, NULL, "Trm", factor(df[, Trm], levels=c(100, 101,  102,  202, 103,  104,  105,  106,  107, 108,  110), labels= c("MSM","BI","HET","HETfa","IDU","BLOOD","NEEACC", "PREG", "BREAST", "OTH", "SXCH")) )
 	set(df, NULL, "RegionHospital", factor(df[,RegionHospital], levels=c(1,2,3,4,5,6), labels=c("Amst","N","E","S","W","Curu")))
+		
+	tmp	<- df[, {
+				tmp		<- NA_character_
+				z		<- Acute_Spec_1%in%c(1L,2L) | Acute_Spec_2%in%c(1L,2L) | Acute_Spec_3%in%c(1L,2L) | Acute_Spec_4%in%c(1L,2L)
+				if(!is.na(z) & z)
+					tmp	<- 'CLIN'
+				z		<- Acute_Spec_1%in%c(3L,4L,8L,9L) | Acute_Spec_2%in%c(3L,4L,8L,9L) | Acute_Spec_3%in%c(3L,4L,8L,9L) | Acute_Spec_4%in%c(3L,4L,8L,9L)
+				if(is.na(tmp) & !is.na(z) & z)
+					tmp	<- 'SYM'
+				list(Acute_Spec=tmp)
+			}, by='Patient']
+	df	<- merge(df, tmp, by='Patient')
+	set(df, NULL, 'Acute_Spec', df[, factor(Acute_Spec)])
 	setkey(df,Patient)
 	str(df)
 	
@@ -2616,7 +2680,23 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	set(df, tmp, 'MyDateNeg1', NA)
 	set(df, tmp, 'NegT_Acc', NA_character_)
 	
+	#df[, table(is.na(isAcute), Acute_Spec)]; subset(df, is.na(isAcute) & !is.na(Acute_Spec))
+	#df[, table(isAcute, Acute_Spec)]
 	
+	#reset isAcute
+	tmp	<- df[, which(Acute_Spec=='SYM' & is.na(isAcute))]
+	cat(paste('\nFound entries with AcuteSpec and is.na(isAcute), n=', length(tmp)))
+	set(df, tmp, 'isAcute', 'Maybe') 
+	tmp	<- df[, which(Acute_Spec=='CLIN' & is.na(isAcute))]
+	cat(paste('\nFound entries with AcuteSpec and is.na(isAcute), n=', length(tmp)))
+	set(df, tmp, 'isAcute', 'Yes') 	
+	tmp	<- df[, which(Acute_Spec=='CLIN' & isAcute=='No')]
+	cat(paste('\nFound entries with AcuteSpec and isAcute==No, n=', length(tmp)))
+	set(df, tmp, 'isAcute', 'Yes') 
+	tmp	<- df[, which(Acute_Spec=='SYM' & isAcute=='No')]
+	cat(paste('\nFound entries with AcuteSpec and isAcute==No, n=', length(tmp)))
+	set(df, tmp, 'isAcute', 'Maybe') 
+		
 	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
 	if(verbose) cat(paste("\nsave to", file))	
 	save(df, file=file)	
