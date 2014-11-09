@@ -677,7 +677,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(1)
+	if(0)
 	{
 		method					<- '3m'
 		method.recentctime		<- '2011-01-01'
@@ -689,9 +689,21 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(0)
+	if(1)
 	{
 		method					<- '3n'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		infilexml.opt			<- "clrh80"
+		infilexml.template		<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+	}
+	if(0)
+	{
+		method					<- '3o'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -712,42 +724,6 @@ hivc.pipeline.betareg.estimate.risks<- function()
 		infilexml.opt			<- "mph4clutx4tip"
 		infilexml.template		<- "um192rhU2080"	
 		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')		
-	}
-	if(0)
-	{
-		method					<- '3e'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3f'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3g'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
 	method.lRNA.supp			<- 100
 	method.use.AcuteSpec		<- 1
@@ -822,6 +798,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tA.tp1.clu.adj','m5.tiA.tp1.clu.adj','m5.tA.tp2.clu.adj','m5.tiA.tp2.clu.adj','m5.tA.tp3.clu.adj','m5.tiA.tp3.clu.adj','m5.tA.tp4.clu.adj','m5.tiA.tp4.clu.adj')
 	#method.risk			<- c( 	'm5.tAc.clu.adj','m5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj')
 	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Cwmx.tp1.clu.adj' )
+	method.risk			<- c( 	'm2Cwmx.tp1.clu.adj','m2Cwmx.tp2.clu.adj','m2Cwmx.tp3.clu.adj','m2Cwmx.tp4.clu.adj' )
 	method.risk			<- c( 	'm2Cwmx.tp1.clu.adj' )
 	dummy	<- sapply(method.risk, function(x)
 			{
