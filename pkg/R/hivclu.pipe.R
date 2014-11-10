@@ -715,15 +715,15 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	}
 	if(0)
 	{
-		method					<- '3k'
+		method					<- '3p'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "mph4clutx4tip"
-		infilexml.template		<- "um192rhU2080"	
-		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')		
+		infilexml.opt			<- "clrh80"
+		infilexml.template		<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
 	method.lRNA.supp			<- 100
 	method.use.AcuteSpec		<- 1
