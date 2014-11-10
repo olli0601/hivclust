@@ -655,7 +655,7 @@ hivc.beast2out.combine.clu.trees<- function(indir, file.info, beastlabel.idx.clu
 	list(cluphy=cluphy, cluphy.subtrees=cluphy.subtrees, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime)
 }
 ######################################################################################
-hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatment, ph, ph.root.ctime, ph.tip.ctime, ph.prob=NA, df.node.ctime=NULL, df.rates=NULL, df.tips=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20, pdf.xlim=NULL)
+hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatment, ph, ph.root.ctime, ph.tip.ctime, ph.prob=NA, df.node.ctime=NULL, df.rates=NULL, df.tips=NULL, end.ctime=2013.3,  cex.nodelabel=0.5,  cex.tiplabel=0.5,  file=NULL,  pdf.width=7, pdf.height=20, pdf.xlim=NULL, label.select=c("cluster","PatientA","Trm","isAcute","RegionHospital"))
 {
 	#df.all, df.immu, df.viro, df.treatment, 
 	#df.tips	<- df.tpairs.plot; ph<- cluphy; ph.root.ctime=cluphy.root.ctime; ph.tip.ctime=cluphy.tip.ctime; df.node.ctime=cluphy.map.nodectime;  cex.nodelabel=0.5;  cex.tiplabel=0.5;  file=NULL;  pdf.width=7; pdf.height=120; pdf.xlim=pdf.xlim
@@ -667,7 +667,7 @@ hivc.beast2out.plot.cluster.trees<- function(df.all, df.immu, df.viro, df.treatm
 	cols				<- brewer.pal(12,"Paired")
 	cols[1]				<- cols[8]			
 	#	get tip labels		
-	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=c("cluster","PatientA","Trm","isAcute","RegionHospital") )
+	ph.tiplabel			<- hivc.clu.get.tiplabels(ph, 	df.all, col.notmsm="#4EB3D3", col.Early="#EF9708", col.highVL="#FEE391", col.AfterTreat="#D4B9DA", col.green="#D9F0A3", col.latePres="#FA9FB5", select=label.select )
 	if(is.null(pdf.xlim))
 	{
 		tmp				<- max( apply(ph.tiplabel$text, 2, function(x)  sum(xinch(strwidth(x, units="inches", cex=cex.tiplabel)))  ) )

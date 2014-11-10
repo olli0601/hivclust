@@ -6413,6 +6413,46 @@ project.Tchain.Belgium.sensecheck	<- function()
 		if(1)
 		{
 			#	
+			#	EXPLORE all except patient A together, POL, prior for low brl
+			#
+			#	GAMMA MODEL
+			trm.pol.nA		<- subset(trm.pol, withA==FALSE, select=c(d_SeqT, d_TSeqT, BRL))			
+			trm.pol.nA		<- rbind(trm.pol.nA, data.table(BRL=0.0025, d_SeqT=seq(2,4,len=200), d_TSeqT=seq(2,8,len=200)), fill=TRUE)
+			#trm.pol.nA		<- rbind(trm.pol.nA, data.table(BRL=0.001, d_SeqT=rep(0.1,40), d_TSeqT=rep(0.1,40)), fill=TRUE)			
+			#trm.pol.GA32	<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
+			trm.pol.GA11e	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
+			trm.pol.GA		<- trm.pol.GA11e
+			trm.pol.p2		<- data.table(d_TSeqT=seq(0,15,0.1))	
+			trm.pol.p2[, BRL_p:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(trm.pol.p2), type='response', se.fit=FALSE)]
+			trm.pol.p3		<- gamlss.centiles.get(trm.pol.GA, trm.pol.nA$d_TSeqT, cent = c(2.5, 97.5) )		
+			setkey(trm.pol.p3, x)
+			trm.pol.p3		<- unique(trm.pol.p3)			
+			ggplot(trm.pol.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol.nA, BRL>0.002)) + geom_line(data=trm.pol.p2, aes(y=BRL_p)) + 
+					geom_ribbon(data=trm.pol.p3, aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+					#geom_vline(xintercept=0.5+3+2*4.1, color="#E41A1C", linetype=2) +
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,15), ylim=c(0,0.08)) +
+					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_GALINfit.pdf", sep='')
+			ggsave(file=file, w=5, h=5)
+			
+			ggplot(trm.pol.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol.nA, BRL>0.002)) +  
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,15), ylim=c(0,0.08)) +
+					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
+					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_data.pdf", sep='')
+			ggsave(file=file, w=5, h=5)	
+			
+			Rsq(trm.pol.GA11e)	#-0.02 , 1e-5; if the points at zero are included, this is 22%
+			summary(trm.pol.GA11e)	#all components significant, n=2807
+		}		
+		if(1)
+		{
+			#	
 			#	EXPLORE all together, not patient A, POL
 			#
 			#	GAMMA MODEL
@@ -6447,7 +6487,8 @@ project.Tchain.Belgium.sensecheck	<- function()
 			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_data.pdf", sep='')
 			ggsave(file=file, w=5, h=5)	
 			
-			Rsq(trm.pol.GA32)	#0.90
+			Rsq(trm.pol.GA11)	#-0.02 , 1e-5; if the points at zero are included, this is 22%
+			summary(trm.pol.GA11)	#all components significant, n=2807
 		}
 		if(1)
 		{
@@ -6563,7 +6604,25 @@ project.Tchain.Belgium.sensecheck	<- function()
 			file	<- paste(indir, '/',"141105_set7_pol_GA11model_nA_INFO.R", sep='')
 			save(file=file, trm.pol.GA, trm.pol.nA)			
 		}
-		
+		if(1)
+		{
+			#	GAMMA 11e model
+			trm.lkl			<- as.data.table(expand.grid(BRL=seq(0.0001, 0.1, 0.0001), d_TSeqT=c(0.25, 0.5, 1, 3, 10, 15)))
+			trm.lkl[, mu:= predict(trm.pol.GA11e, data=trm.pol.nA, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='mu', type='link')]
+			trm.lkl[, sigma:= predict(trm.pol.GA11e, data=trm.pol.nA, newdata=as.data.frame(subset(trm.lkl, select=d_TSeqT)), what='sigma', type='link') ]			
+			set( trm.lkl, NULL, 'lkl', trm.lkl[, dGA(BRL, mu=mu, sigma=sigma)])			
+			set( trm.lkl, NULL, 'd_TSeqT', trm.lkl[, factor(d_TSeqT, levels=c(0.25, 0.5, 1,3,10, 15), labels=c('3mo','6 mo','1 yr','3 yrs','10 yrs', '15 yrs'))])
+			ggplot(trm.lkl, aes(x=BRL, y=lkl, group=d_TSeqT, colour=d_TSeqT)) + geom_line() + facet_grid(d_TSeqT~., scales='free_y') + 
+					scale_x_continuous(breaks=seq(0, 0.2, 0.01)) + theme_bw() + theme(strip.background = element_blank(), strip.text = element_blank(), legend.justification=c(1,1), legend.position=c(1,1)) +
+					labs(y='likelihood of direct HIV transmission', x='evolutionary divergence\nbetween sequences from confirmed transmission pairs\n(nucleotide substitutions / site)', 
+							colour='cumulated time\nsince transmission\nin recipient and\nsource')
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_GA11e_likelihood.pdf", sep='')
+			ggsave(file=file, w=5, h=5)	
+			
+			trm.pol.GA		<- trm.pol.GA11e
+			file	<- paste(indir, '/',"141105_set7_pol_GA11emodel_nA_INFO.R", sep='')
+			save(file=file, trm.pol.GA, trm.pol.nA)			
+		}
 		#
 		#	reduce to sampling years closest to transmission
 		#
