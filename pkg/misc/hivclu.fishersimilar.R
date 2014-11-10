@@ -1785,6 +1785,21 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 			df.tpairs.brl		<- merge( subset(YX.tpairs, select=c(FASTASampleCode, t.FASTASampleCode)), df.tpairs.brl, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE	)
 			stopifnot(df.tpairs.brl[, !any(is.na(FASTASampleCode))])
 			stopifnot(df.tpairs.brl[, !any(is.na(t.FASTASampleCode))])
+			#	if any missing, use brl of tree with largest max likelihood
+			df.brlmiss			<- subset(df.tpairs.brl, is.na(brl), select=c(FASTASampleCode, t.FASTASampleCode))
+			cat(paste('\nWARNING: no median brl for pairs, using ML branch length. n=', nrow(df.brlmiss)))
+			tmp					<- unique( subset(df.brlmiss, select=FASTASampleCode) )	
+			tmp					<- tmp[, list(sc.i=match(FASTASampleCode, ph$tip.label)), by='FASTASampleCode']
+			df.brlmiss			<- merge(df.brlmiss, tmp, by='FASTASampleCode')
+			tmp					<- unique( subset(df.brlmiss, select=t.FASTASampleCode) )
+			tmp					<- tmp[, list(sc.t=match(t.FASTASampleCode, ph$tip.label)), by='t.FASTASampleCode']
+			df.brlmiss			<- merge(df.brlmiss, tmp, by='t.FASTASampleCode')
+			tmp					<- df.brlmiss[, which(sc.t<sc.i)]
+			tmp2				<- df.brlmiss[tmp, sc.t]
+			set(df.brlmiss, tmp, 'sc.t', df.brlmiss[tmp,sc.i])
+			set(df.brlmiss, tmp, 'sc.i', tmp2)		
+			df.brlmiss			<- df.brlmiss[, list( brl= brl[ my.lower.tri.index(brl.n, sc.t, sc.i) ]) , by=c('FASTASampleCode','t.FASTASampleCode')]			
+			df.tpairs.brl		<- rbind( subset(df.tpairs.brl, !is.na(brl)), df.brlmiss )			
 		}
 		if(0)
 		{
@@ -13532,6 +13547,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(1)
 	{		
 		method					<- '3n'
+		method					<- '3o'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Cwmx.wtn.tp4'
@@ -13945,7 +13961,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	save.all		<- FALSE
 	#save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'_all.R',sep='')
 	#save.all		<- TRUE
-	# df.tpairs.4.rawbrl=df.tpairs; thresh.pcoal=method.thresh.pcoal; brl.bwhost.multiplier=method.brl.bwhost; method.minLowerUWithNegT=method.minLowerUWithNegT; lRNA.supp=method.lRNA.supp
+	# df.tpairs.4.rawbrl=df.tpairs; thresh.pcoal=method.thresh.pcoal; brl.bwhost.multiplier=method.brl.bwhost; method.minLowerUWithNegT=method.minLowerUWithNegT; lRNA.supp=method.lRNA.supp; infilecov= infile.cov.study
 	YX				<- project.athena.Fisheretal.YX.part2(	YX.part1, df.all, df.treatment, df.viro, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, dur.Acute=dur.Acute,
 															rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=method.thresh.pcoal, brl.bwhost.multiplier=method.brl.bwhost, method.minLowerUWithNegT=method.minLowerUWithNegT, lRNA.supp=method.lRNA.supp,
 															t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
