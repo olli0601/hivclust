@@ -5407,10 +5407,11 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 				set(YX, NULL, 'w', 1.)				
 			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
-			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='A' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l350', levels(stage))] ] )	)
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
+			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste("Dtg500",tp,sep='.')) )			
+			#tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='A' ]
+			#risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l350', levels(stage))] ] )	)
+			#risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
+			#risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
 			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
 			ans			<- project.athena.Fisheretal.estimate.risk.core.Wallinga(YX, YXf, X.tables, method.risk, risk.df, bs.n=bs.n, use.YXf=1 )
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
@@ -9950,6 +9951,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )	
+	set(tperiod.info, NULL, 't.period.min', tperiod.info[, factor(t.period.min, levels=c('1996-7','2006-5','2008-1','2009-7'), labels=c('96/07','\n\n06/05','08/01','\n\n09/07'))])
+	set(tperiod.info, NULL, 't.period.max', tperiod.info[, factor(t.period.max, levels=c('2006-4','2007-12','2009-6','2010-12'), labels=c('06/04','07/12','09/06','10/12'))])
 	
 	#	set up factor legends for m2Bwmx
 	factor.color	<- c("#990000","#EF6548","#FDBB84","#0570B0","#74A9CF","#7A0177","#F768A1","#FCC5C0","#005824","#41AB5D","#ADDD8E")
@@ -10166,6 +10169,28 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	#
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3oa1H1C3V100'
+	method.RISK		<- 'm2CwmxMv.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#
+	#	WTN 3pa 	m2Cwmx
+	#
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa2H1C3V100'
+	method.RISK		<- 'm2CwmxMv.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1C3V100'
 	method.RISK		<- 'm2CwmxMv.wtn.tp'
 	method.WEIGHT	<- ''
 	method.DATING	<- 'sasky'
@@ -10759,7 +10784,9 @@ project.athena.Fisheretal.sensitivity.getfigures.likelihood<- function()
 	#
 	tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
-	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )	
+	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )
+	set(tperiod.info, NULL, 't.period.min', tperiod.info[, factor(t.period.min, levels=c('1996-7','2006-5','2008-1','2009-7'), labels=c('96/07','\n\n06/05','08/01','\n\n09/07'))])
+	set(tperiod.info, NULL, 't.period.max', tperiod.info[, factor(t.period.max, levels=c('2006-4','2007-12','2009-6','2010-12'), labels=c('06/04','07/12','09/06','10/12'))])	
 	#
 	#	CD4b
 	#	
@@ -10821,17 +10848,23 @@ project.athena.Fisheretal.sensitivity.getfigures.likelihood<- function()
 	#
 	infile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXm2_SEQ_3la2H1C3V100.R'
 	outfile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXm2Cwmx.wtn_SEQ_3la2H1C3V100_lkl.pdf'
+	indir			<- paste(DATA,"fisheretal",sep='/')
+	outdir			<- paste(DATA,"fisheretal_141108",sep='/')	
+	infile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXm2_SEQ_3pa1H1C3V100.R'
+	outfile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXm2Cwmx.wtn_SEQ_3pa1H1C3V100_lkl.pdf'	
 	file			<- paste(indir, '/', infile, sep='')
 	load(file)
 	YX				<- copy(YX.m2)
 	set(YX, NULL, 'score.Y', YX[, score.Y*w.tn])
-	YX				<- subset(YX, select=c(t.period, t, t.Patient, Patient, score.Y, CD4b, CD4c ))
+	YX				<- merge(YX, YX[, list(tprob=score.Y/sum(score.Y), t.Patient=t.Patient, t=t), by=c('Patient')], by=c('Patient','t.Patient','t'))
+	
+	YX				<- subset(YX, select=c(t.period, t, t.Patient, Patient, score.Y, tprob, telapsed, CD4b, CD4c ))
 	setnames( YX, 'CD4c', 'factor')	
 	#	set up factor legends
 	factor.color	<- c(	"#990000","#EF6548","#FDBB84",
-							"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
-							"#7A0177","#F768A1","#FCC5C0",
-							"#1A9850","#A6D96A")
+			"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
+			"#FCC5C0","#F768A1","#7A0177",
+			"#1A9850","#A6D96A")
 	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
 			'Undiagnosed,\n Chronic infection\n at diagnosis',
 			'Undiagnosed,\n Unknown if recent',
@@ -10840,12 +10873,12 @@ project.athena.Fisheretal.sensitivity.getfigures.likelihood<- function()
 			'Diagnosed,\n CD4 progression to [350-500]',
 			'Diagnosed,\n CD4 progression to <350',			
 			'Diagnosed,\n No CD4 measured',
-			'ART initiated,\n No viral suppression, >1 observations',
-			'ART initiated,\n No viral suppression, 1 observation',
-			'ART initiated,\n No viral load measured',			
-			'ART initiated,\n Viral suppression, 1 observation',
-			'ART initiated,\n Viral suppression, >1 observations')
-	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N2","ART.suA.N1","ART.vlNA","ART.suA.Y1","ART.suA.Y2")
+			'ART initiated,\n Before first viral suppression',													
+			'ART initiated,\n After first viral suppression\nNo viral load measured',		
+			'ART initiated,\n After first viral suppression\nNo viral suppression',	
+			'ART initiated,\n After first viral suppression\nViral suppression, 1 observation',
+			'ART initiated,\n After first viral suppression\nViral suppression, >1 observations')
+	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2")
 	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='CD4c')
 	
 	set(YX, NULL, 'factor', YX[, factor(as.character(factor), levels=tmp)])
@@ -10861,19 +10894,49 @@ project.athena.Fisheretal.sensitivity.getfigures.likelihood<- function()
 	ans				<- merge(ans, tperiod.info, by='t.period')
 	ans[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
 	setkey(ans, factor)
-	#	boxplot
+	#
+	#
+	ans[, summary(tprob)]
+	#Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+	#0.000000 0.004108 0.023080 0.048170 0.070660 1.000000 
+	ans[, summary(telapsed)]
+	#Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+	#0.4337  0.8674  1.5510  1.9490  2.6480  9.0890 
+	#
+	#	boxplot of likelihood
+	#
 	ggplot(ans, aes(x=factor.legend, y=score.Y, colour=factor.legend, fill=factor.legend), log='y')  + 
-			labs(x='', y='likelihood of direct HIV transmission') +				
+			labs(x='', y='phylogenetic, relative probability\nof direct HIV transmission') +				
 			scale_colour_manual(name=scale.name, values=ans[, unique(factor.color)], guide=FALSE) +
 			scale_fill_manual(name=scale.name, values=ans[, unique(factor.color)]) +
 			scale_y_continuous(breaks=c(0.1, 0.5, 1, 2, 5, 10, 20, 100), minor_breaks=c(0.1)) +
+			scale_x_discrete(breaks=NULL) +
 			coord_trans(ytrans="log10", limy=c(0.01, 1000)) +		
 			geom_boxplot(outlier.shape = NA) +
 			stat_summary(geom= "crossbar", width=0.65, fatten=0, color="white", fun.data = function(x){ return(c(y=median(x), ymin=median(x), ymax=median(x))) }) +		
-			theme_bw() + theme(legend.key.size=unit(11,'mm'), legend.position = "bottom", legend.box = "vertical", legend.title.align = 0, axis.text.x=element_blank(), axis.text.x = element_blank(), axis.ticks.margin = unit(c(0,0,0,0), "lines")) +
+			theme_bw() + theme(legend.key.size=unit(11,'mm'), legend.position = "bottom", legend.box = "vertical", legend.title.align = 0, axis.ticks.margin = unit(c(0,0,0,0), "lines"), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7)) +
 			guides(fill=guide_legend(nrow=4))
 	file			<- paste(outdir, '/', outfile, sep='')
 	ggsave(file=file, w=8, h=6)		
+	#
+	#	boxplot of transmission prob (observed only)
+	#
+	ggplot(ans, aes(x=factor.legend, y=tprob, colour=factor.legend, fill=factor.legend))  + 
+			labs(x='', y='phylogenetic probability\nof direct HIV transmission') +
+			geom_boxplot(outlier.shape = NA) +
+			scale_colour_manual(name=scale.name, values=ans[, unique(factor.color)], guide=FALSE) +
+			scale_fill_manual(name=scale.name, values=ans[, unique(factor.color)], guide=FALSE) +
+			scale_y_continuous(breaks=seq(0, 0.5, 0.1), minor_breaks=seq(0, 0.5, 0.02)) +
+			scale_x_discrete(breaks=NULL) +	
+			#coord_trans(ytrans="log10", limy=c(0.001, 0.3)) +
+			coord_cartesian(ylim=c(0, 0.31)) +
+			stat_summary(geom= "crossbar", width=0.65, fatten=0, color="white", fun.data = function(x){ return(c(y=median(x), ymin=median(x), ymax=median(x))) }) +		
+			theme_bw() + theme(legend.key.size=unit(11,'mm'), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7))
+	outfile			<- paste(substr(outfile, 1, nchar(outfile)-7),'tprob.pdf',sep='')
+	file			<- paste(outdir, '/', outfile, sep='')
+	ggsave(file=file, w=8, h=4)		
+	
+	
 	#
 	#	CD4c updated
 	#
@@ -11055,9 +11118,9 @@ project.athena.Fisheretal.sensitivity.getfigures.nlikelytransmissionintervals<- 
 	ggplot(ans, aes(x=t.period.long, y=n, ymin=l95.bs, ymax=u95.bs, group=group, fill=factor.legend))  + 
 			labs(x='', y='probable transmission intervals\nper 100 recipient MSM (person-years)') +				
 			scale_fill_manual(name=scale.name, values=ans[, unique(factor.color)], guide=FALSE) +
-			scale_y_continuous(breaks=seq(0,1000,50), minor_breaks=seq(0,1000,10)) +
+			scale_y_continuous(breaks=seq(0,1000,100), minor_breaks=seq(0,1000,20)) +
 			geom_bar(stat='identity') + geom_errorbar(stat='identity',width=.2) +  				
-			theme_bw() + theme(legend.key.size=unit(12,'mm'),panel.grid.minor=element_line(colour="grey70", size=0.2), panel.grid.major=element_line(colour="grey70")) +
+			theme_bw() + theme(legend.key.size=unit(12,'mm'), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7)) +
 			facet_grid(. ~ group, scales='free_y', margins=FALSE)	
 	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','lkladj',".pdf", sep='')	
 	ggsave(file=file, w=8/4*6, h=5)	
@@ -11124,9 +11187,9 @@ project.athena.Fisheretal.sensitivity.getfigures.npotentialtransmissionintervals
 		ggplot(ans, aes(x=t.period.long, y=n, ymin=l95.bs, ymax=u95.bs, group=group, fill=factor.legend))  + 
 				labs(x='', y='potential transmission intervals\nper recipient MSM\n(person-years)') +				
 				scale_fill_manual(name=scale.name, values=ans[, unique(factor.color)], guide=FALSE) +
-				scale_y_continuous(breaks=seq(0,20000,1000), minor_breaks=seq(0,20000,200)) +
+				scale_y_continuous(breaks=seq(0,20000,1000), minor_breaks=seq(0,20000,250)) +
 				geom_bar(stat='identity') + geom_errorbar(stat='identity',width=.2) +  				
-				theme_bw() + theme(legend.key.size=unit(12,'mm'), axis.title.x = element_text(vjust=-5), panel.grid.minor=element_line(colour="grey70", size=0.2), panel.grid.major=element_line(colour="grey70")) +				
+				theme_bw() + theme(legend.key.size=unit(12,'mm'), axis.title.x = element_text(vjust=-5), panel.grid.major.x = element_blank(), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.7)) +				
 				facet_grid(. ~ group, scales='free_y', margins=FALSE)	
 		file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','ptadj',".pdf", sep='')	
 		ggsave(file=file, w=9, h=5)
@@ -11140,13 +11203,11 @@ project.athena.Fisheretal.sensitivity.getfigures.npotentialtransmissionintervals
 				scale_x_discrete(labels=paste('period',tperiod.info[, t.period])) +
 				scale_y_continuous(breaks=seq(0,20000,1000), minor_breaks=seq(0,20000,200)) +
 				geom_bar(stat='identity') + geom_errorbar(stat='identity',width=.2,colour='black') +  				
-				theme_bw() + theme(legend.key.height=unit(12,'mm'), legend.key.width=unit(0,'mm'), legend.key=element_rect(colour='transparent', fill='transparent'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+				theme_bw() + theme(legend.key.height=unit(12,'mm'), legend.key.width=unit(0,'mm'), panel.grid.major.x = element_blank(), legend.key=element_rect(colour='transparent', fill='transparent'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
 				facet_grid(. ~ group, scales='free_y', margins=FALSE)	
 		file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','ptadj',".pdf", sep='')	
 		ggsave(file=file, w=9, h=5)	
 	}
-		
-	
 }
 ######################################################################################
 project.athena.Fisheretal.sensitivity.getfigures.pseq<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, group)
@@ -11361,7 +11422,57 @@ project.athena.Fisheretal.sensitivity.getfigures.counts<- function(runs.table, m
 ######################################################################################
 project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, factors, stat.select, outfile, tperiod.info=NULL, with.guide=FALSE)
 {
-	run.tp			<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('P.',stat,fixed=1) | stat=='P') )
+	if(0)
+	{
+		run.tp			<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('P.',stat,fixed=1) | stat=='P') )
+		if(method.WEIGHT=='')
+			run.tp		<- subset(run.tp, !grepl('wstar',method.risk) & !grepl('now',method.risk))
+		if(method.WEIGHT!='')
+			run.tp		<- subset(run.tp, grepl(method.WEIGHT,method.risk) )
+		if(is.null(tperiod.info))
+		{
+			tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
+			set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
+			set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )		
+		}		
+		run.tp[, m50.bs:=NULL]
+		ylab		<- "Proportion of transmissions"	
+		setkey(run.tp, factor)
+		run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
+		set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
+		run.tp[, cascade.stage:=run.tp[, substr(factor, 1, 1)]]	
+		set(run.tp, run.tp[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
+		set(run.tp, run.tp[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
+		set(run.tp, run.tp[,which(cascade.stage=='D' & factor%in%c("Dtl500","Dtl350"))], 'cascade.stage', 'Diagnosed\n CD4<=500')
+		set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')	
+		set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','Diagnosed\n CD4<=500','cART initiated'))])
+		set(run.tp, NULL, 'factor', run.tp[, factor(factor, levels=factors[, levels(factor)])])
+		run.tp	<- merge(run.tp, factors, by='factor')	
+		run.tp	<- merge(run.tp, tperiod.info, by='t.period')
+		run.tp[, t.period.long:= gsub('\n','',paste(t.period.min, '-', t.period.max,sep=''))]
+		set(run.tp, NULL, 't.period.long', run.tp[,factor(t.period.long, levels= tperiod.info[, gsub('\n','',paste(t.period.min, '-', t.period.max,sep=''))])])	
+		dummy	<- lapply(seq_along(stat.select), function(i)
+				{
+					cat(paste('\nprocess', stat.select[i]))
+					ggplot(subset(run.tp, !is.na(v) & stat==stat.select[i]), aes(x=factor, y=v, fill=factor.legend, colour=factor.legend)) + labs(x="", y=ylab) + 
+							scale_y_continuous(breaks=seq(0,0.9,0.1), minor_breaks=seq(0,0.9,0.02), labels=paste(seq(0,0.9,0.1)*100,'%',sep='')) + 
+							scale_x_discrete(breaks=NULL, limits=run.tp[, intersect(levels(factor), as.character(factor))]) +
+							scale_fill_manual(name='from cascade stage', values=run.tp[, unique(factor.color)], guide=with.guide) + 
+							scale_colour_manual(name='from cascade stage', values = rep('black',run.tp[, length(unique(factor))]), guide=with.guide) +
+							#scale_fill_brewer(palette='PRGn',name='from cascade stage') + scale_colour_manual(name='from cascade stage', values = rep('black',11)) +					
+							#guides(colour=FALSE, fill = guide_legend(override.aes = list(size=5))) +
+							theme_bw() + theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,0,-5,0),"mm"), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.7)) + #coord_flip() +
+							geom_bar(stat='identity',binwidth=1, position='dodge') + geom_errorbar(aes(ymin=l95.bs, ymax=u95.bs), width=0.3, position=position_dodge(width=0.9))	+ 
+							facet_grid(. ~ t.period.long, margins=FALSE)
+					file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',run.tp[1, method.recentctime],'_',run.tp[1, method.denom], '_',run.tp[1, method.dating], '_',run.tp[1, method.brl],'_',run.tp[1, method.risk],'_',stat.select[i],".pdf", sep='')
+					cat(paste('\nsave to file',file))							
+					ggsave(file=file, w=12,h=4)							
+				})	
+	}
+	#
+	#
+	#
+	run.tp			<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('P.',stat,fixed=1) | stat=='P' | grepl('N.',stat,fixed=1) | stat=='N') )
 	if(method.WEIGHT=='')
 		run.tp		<- subset(run.tp, !grepl('wstar',method.risk) & !grepl('now',method.risk))
 	if(method.WEIGHT!='')
@@ -11373,7 +11484,7 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 		set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )		
 	}		
 	run.tp[, m50.bs:=NULL]
-	ylab		<- "Proportion of transmissions"	
+	ylab		<- "Proportion of transmissions\n(Number of transmissions)"	
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
@@ -11384,26 +11495,37 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 	set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')	
 	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','Diagnosed\n CD4<=500','cART initiated'))])
 	set(run.tp, NULL, 'factor', run.tp[, factor(factor, levels=factors[, levels(factor)])])
-	run.tp	<- merge(run.tp, factors, by='factor')	
+	run.tp	<- merge(run.tp, subset(factors, select=factors[, which(colnames(factors)!='method.risk')]), by='factor')	
 	run.tp	<- merge(run.tp, tperiod.info, by='t.period')
-	run.tp[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]		
+	run.tp[, t.period.long:= gsub('\n','',paste(t.period.min, '-', t.period.max,sep=''))]
+	set(run.tp, NULL, 't.period.long', run.tp[,factor(t.period.long, levels= tperiod.info[, gsub('\n','',paste(t.period.min, '-', t.period.max,sep=''))])])
+	
+	yscale	<- subset(run.tp, factor=='UA')
+	set(yscale, NULL, 'stat', yscale[, as.character(stat)])
+	yscale[, stat1:= yscale[, substr(stat,1,1)]]
+	yscale[, stat:= yscale[, substr(stat,3,nchar(stat))]]
+	yscale	<- yscale[, list(scale= v[which(stat1=='N')]/v[which(stat1=='P')]), by=c('t.period.long','stat')]
+	set(yscale, NULL, 'stat', yscale[, paste('P.',stat,sep='')])
+	run.tp	<- merge(run.tp, yscale, by=c('t.period.long','stat'))
 	dummy	<- lapply(seq_along(stat.select), function(i)
 			{
 				cat(paste('\nprocess', stat.select[i]))
-				ggplot(subset(run.tp, !is.na(v) & stat==stat.select[i]), aes(x=factor, y=v, fill=factor.legend, colour=factor.legend)) + labs(x="", y=ylab) + 
-						scale_y_continuous(breaks=seq(0,0.9,0.1), minor_breaks=seq(0,0.9,0.01), labels=paste(seq(0,0.9,0.1)*100,'%',sep='')) + 
+				tmp	<- subset(run.tp, !is.na(v) & stat==stat.select[i])
+				ggplot(tmp, aes(x=factor, y=v, fill=factor.legend, colour=factor.legend)) + labs(x="", y=ylab) + 
+						scale_y_continuous(breaks=seq(0,0.9,0.1), minor_breaks=seq(0,0.9,0.02), labels=paste(seq(0,0.9,0.1)*100,'%\n(n=',round(seq(0,0.9,0.1)*tmp$scale[1], d=1),')',sep='')) + 
 						scale_x_discrete(breaks=NULL, limits=run.tp[, intersect(levels(factor), as.character(factor))]) +
 						scale_fill_manual(name='from cascade stage', values=run.tp[, unique(factor.color)], guide=with.guide) + 
 						scale_colour_manual(name='from cascade stage', values = rep('black',run.tp[, length(unique(factor))]), guide=with.guide) +
 						#scale_fill_brewer(palette='PRGn',name='from cascade stage') + scale_colour_manual(name='from cascade stage', values = rep('black',11)) +					
 						#guides(colour=FALSE, fill = guide_legend(override.aes = list(size=5))) +
-						theme_bw() + theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,0,-5,0),"mm")) + #coord_flip() +
+						theme_bw() + theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,0,-5,0),"mm"), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.7)) + #coord_flip() +
 						geom_bar(stat='identity',binwidth=1, position='dodge') + geom_errorbar(aes(ymin=l95.bs, ymax=u95.bs), width=0.3, position=position_dodge(width=0.9))	+ 
 						facet_grid(. ~ t.period.long, margins=FALSE)
 				file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',run.tp[1, method.recentctime],'_',run.tp[1, method.denom], '_',run.tp[1, method.dating], '_',run.tp[1, method.brl],'_',run.tp[1, method.risk],'_',stat.select[i],".pdf", sep='')
 				cat(paste('\nsave to file',file))							
 				ggsave(file=file, w=12,h=4)							
 			})
+	
 	#
 	ylab		<- "Relative transmissibility"
 	run.tp		<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RI.',stat,fixed=1) | stat=='RI') )
@@ -11421,7 +11543,8 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 	set(run.tp, NULL, 'factor', run.tp[, factor(factor, levels=factors[, levels(factor)])])
 	run.tp	<- merge(run.tp, factors, by='factor')		
 	run.tp	<- merge(run.tp, tperiod.info, by='t.period')
-	run.tp[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
+	run.tp[, t.period.long:= paste(t.period.min, '-', t.period.max,sep='')]
+	set(run.tp, NULL, 't.period.long', run.tp[,factor(t.period.long, levels= tperiod.info[, paste(t.period.min, '-', t.period.max,sep='')])])		
 	color	<- run.tp[, unique(factor.color)]
 	dummy	<- lapply(seq_along(stat.select), function(i)
 			{
@@ -11436,7 +11559,7 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 							scale_fill_manual(name='from cascade stage', values = color, guide=with.guide) + 
 							scale_colour_manual(name='from cascade stage', values = rep('black',run.tp[, length(unique(factor))]), guide=with.guide) +
 							#guides(colour=FALSE, fill = guide_legend(override.aes = list(size=5))) +
-							theme_bw() + theme(legend.key.size=unit(10.5,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) + #coord_flip() +
+							theme_bw() + theme(legend.key.size=unit(10.5,'mm'), panel.grid.minor=element_line(colour="grey70", size=0.2), panel.grid.major=element_line(colour="grey70")) + #coord_flip() +
 							geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE)	+ geom_errorbar(aes(ymin=l95.bs, ymax=u95.bs), width=0.3, position=position_dodge(width=0.9))	+ 
 							facet_grid(. ~ factor.legend, margins=FALSE)
 					ggsave(file=file, w=16,h=5.5)
@@ -11449,45 +11572,48 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 							scale_fill_manual(name='from cascade stage', values = color, guide=with.guide) + 
 							scale_colour_manual(name='from cascade stage', values = color, guide=with.guide) +
 							geom_hline(yintercept=1) + geom_errorbar(position=position_dodge(.5), width=0.4) + geom_point(position=position_dodge(.5) , shape=18, size=3) +  
-							theme_bw() + theme(legend.key.size=unit(11,'mm'), axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) +
+							theme_bw() + theme(legend.key.size=unit(11,'mm'), panel.grid.minor=element_line(colour="grey70", size=0.2), panel.grid.major=element_line(colour="grey70")) +
 							facet_wrap( ~ group, scales='free_y', ncol=4)		
 					ggsave(file=file, w=12,h=4)
 				}									
 			})
 	#
-	ylab		<- "Number of transmissions"
-	run.tp		<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('N.',stat,fixed=1) | stat=='N' ) )
-	stat.select	<- gsub('RI','N', stat.select)	
-	setkey(run.tp, factor)
-	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
-	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
-	run.tp[, cascade.stage:=run.tp[, substr(factor, 1, 1)]]	
-	set(run.tp, run.tp[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
-	set(run.tp, run.tp[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
-	set(run.tp, run.tp[,which(cascade.stage=='D' & factor%in%c("Dtl500","Dtl350"))], 'cascade.stage', 'Diagnosed\n CD4<=500')
-	set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')	
-	set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','Diagnosed\n CD4<=500','cART initiated'))])
-	set(run.tp, NULL, 'factor', run.tp[, factor(factor, levels=factors[, levels(factor)])])
-	run.tp	<- merge(run.tp, factors, by='factor')	
-	run.tp	<- merge(run.tp, tperiod.info, by='t.period')
-	run.tp[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]		
-	dummy	<- lapply(seq_along(stat.select), function(i)
-			{
-				cat(paste('\nprocess', stat.select[i]))
-				ggplot(subset(run.tp, !is.na(v) & stat%in%c(stat.select[i])), aes(x=factor, y=v, fill=factor.legend, colour=factor.legend)) + labs(x="", y=ylab) + 
-						scale_y_continuous(breaks=seq(0,300,10), minor_breaks=seq(0,300,1)) + scale_x_discrete(breaks=NULL, limits=run.tp[, levels(factor)]) +
-						scale_fill_manual(name='from cascade stage', values=run.tp[, unique(factor.color)], guide=with.guide) + 
-						scale_colour_manual(name='from cascade stage', values = rep('black',run.tp[, length(unique(factor))]), guide=with.guide) +
-						#scale_fill_brewer(palette='PRGn',name='from cascade stage') + scale_colour_manual(name='from cascade stage', values = rep('black',11)) +					
-						#guides(colour=FALSE, fill = guide_legend(override.aes = list(size=5))) +
-						theme_bw() + theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,0,-5,0),"mm")) + #coord_flip() +
-						geom_bar(stat='identity',binwidth=1, position='dodge')	+ geom_errorbar(aes(ymin=l95.bs, ymax=u95.bs), width=0.3, position=position_dodge(width=0.9))	+ 
-						facet_grid(. ~ t.period.long, margins=FALSE)
-				file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',run.tp[1, method.recentctime],'_',run.tp[1, method.denom], '_',run.tp[1, method.dating], '_',run.tp[1, method.brl],'_',run.tp[1, method.risk],'_',stat.select[i],".pdf", sep='')
-				cat(paste('\nsave to file',file))							
-				ggsave(file=file, w=16,h=5.5)							
-			})
-	
+	if(0)
+	{
+		ylab		<- "Number of transmissions"
+		run.tp		<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('N.',stat,fixed=1) | stat=='N' ) )
+		stat.select	<- gsub('RI','N', stat.select)	
+		setkey(run.tp, factor)
+		run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
+		set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
+		run.tp[, cascade.stage:=run.tp[, substr(factor, 1, 1)]]	
+		set(run.tp, run.tp[,which(cascade.stage=='A')], 'cascade.stage', 'cART initiated')
+		set(run.tp, run.tp[,which(cascade.stage=='U')], 'cascade.stage', 'Undiagnosed')
+		set(run.tp, run.tp[,which(cascade.stage=='D' & factor%in%c("Dtl500","Dtl350"))], 'cascade.stage', 'Diagnosed\n CD4<=500')
+		set(run.tp, run.tp[,which(cascade.stage=='D')], 'cascade.stage', 'Diagnosed')	
+		set(run.tp, NULL, 'cascade.stage', run.tp[, factor(cascade.stage, levels=c('Undiagnosed','Diagnosed','Diagnosed\n CD4<=500','cART initiated'))])
+		set(run.tp, NULL, 'factor', run.tp[, factor(factor, levels=factors[, levels(factor)])])
+		run.tp	<- merge(run.tp, factors, by='factor')	
+		run.tp	<- merge(run.tp, tperiod.info, by='t.period')
+		run.tp[, t.period.long:= gsub('\n','',paste(t.period.min, '-', t.period.max,sep=''))]
+		set(run.tp, NULL, 't.period.long', run.tp[,factor(t.period.long, levels= tperiod.info[, gsub('\n','',paste(t.period.min, '-', t.period.max,sep=''))])])		
+		dummy	<- lapply(seq_along(stat.select), function(i)
+				{
+					cat(paste('\nprocess', stat.select[i]))
+					ggplot(subset(run.tp, !is.na(v) & stat%in%c(stat.select[i])), aes(x=factor, y=v, fill=factor.legend, colour=factor.legend)) + labs(x="", y=ylab) + 
+							scale_y_continuous(breaks=seq(0,300,10), minor_breaks=seq(0,300,2)) + scale_x_discrete(breaks=NULL, limits=run.tp[, levels(factor)]) +
+							scale_fill_manual(name='from cascade stage', values=run.tp[, unique(factor.color)], guide=with.guide) + 
+							scale_colour_manual(name='from cascade stage', values = rep('black',run.tp[, length(unique(factor))]), guide=with.guide) +
+							#scale_fill_brewer(palette='PRGn',name='from cascade stage') + scale_colour_manual(name='from cascade stage', values = rep('black',11)) +					
+							#guides(colour=FALSE, fill = guide_legend(override.aes = list(size=5))) +
+							theme_bw() + theme(legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,0,-5,0),"mm"), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.7)) + #coord_flip() +
+							geom_bar(stat='identity',binwidth=1, position='dodge')	+ geom_errorbar(aes(ymin=l95.bs, ymax=u95.bs), width=0.3, position=position_dodge(width=0.9))	+ 
+							facet_grid(. ~ t.period.long, margins=FALSE)
+					file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',run.tp[1, method.recentctime],'_',run.tp[1, method.denom], '_',run.tp[1, method.dating], '_',run.tp[1, method.brl],'_',run.tp[1, method.risk],'_',stat.select[i],".pdf", sep='')
+					cat(paste('\nsave to file',file))							
+					ggsave(file=file, w=12,h=4)							
+				})		
+	}	
 }
 ######################################################################################
 project.athena.Fisheretal.censoring.model<- function(ct, ctb, ctn=NULL, plot.file=NA, factors=NULL)
@@ -11867,6 +11993,8 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	outdir					<- paste(DATA,"fisheretal_140929",sep='/')	
 	indir					<- paste(DATA,"fisheretal_141022",sep='/')	
 	outdir					<- paste(DATA,"fisheretal_141022",sep='/')	
+	indir					<- paste(DATA,"fisheretal_141108",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_141108",sep='/')	
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -12007,7 +12135,17 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 
 	#
 	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3la2H1C3V100'
+	method.BRL		<- '3pa2H1C3V100'
+	method.RISK		<- 'm2CwmxMv.wtn.tp'
+	method.WEIGHT	<- ''	
+	factors			<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	outfile			<- infile	
+	project.athena.Fisheretal.sensitivity.getfigures.npotentialtransmissionintervals.adjusted(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
+	project.athena.Fisheretal.sensitivity.getfigures.nlikelytransmissionintervals(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
+	project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
+	#
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1C3V100'
 	method.RISK		<- 'm2CwmxMv.wtn.tp'
 	method.WEIGHT	<- ''	
 	factors			<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
@@ -13672,7 +13810,7 @@ hivc.prog.betareg.estimaterisks<- function()
 	if(1)
 	{		
 		method					<- '3n'
-		method					<- '3o'
+		method					<- '3p'
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'

@@ -1117,27 +1117,18 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		
 		#	reset Acute field		
 		df.all[, DUMMY:= df.all[, as.numeric(difftime(AnyPos_T1, NegT, units="days"))/365]]		
-		tmp	<- df.all[, which(isAcute=='Yes' & Acute_Spec=='SYM' & DUMMY<=0.5)]
-		cat(paste('\nFound patients with isAcyte==Yes & NegT<6mo & SYM -> CLIN, n=', length(tmp)))
+		tmp	<- df.all[, which(!is.na(DUMMY) & DUMMY<=1)]
+		cat(paste('\nFound patients with NegT<1yr, n=', length(tmp)))
 		set( df.all, tmp, 'Acute_Spec', 'CLIN' )
-		tmp	<- df.all[, which(isAcute=='Maybe'  & DUMMY<=0.5)]
-		cat(paste('\nFound patients with isAcyte==Maybe & NegT<6mo & CLIN -> Acute=Yes, n=', length(tmp)))
-		set( df.all, tmp, 'isAcute', 'Yes' )
-		set( df.all, tmp, 'Acute_Spec', 'CLIN' )		
-		#df.all[, table(isAcute, Acute_Spec)]
-		#subset(df.all, isAcute=='Yes' & Acute_Spec=='SYM' & DUMMY>1)[, unique(Patient)]
-		#subset(df.all, isAcute=='Maybe' & Acute_Spec=='CLIN' & DUMMY>=1)[, unique(Patient)]
-		#subset(df.all, isAcute=='Yes' & Acute_Spec=='SYM' & DUMMY>0.5)[, unique(Patient)]
-		#subset(df.all, isAcute=='Yes' & Acute_Spec=='SYM' & is.na(DUMMY))[, unique(Patient)]
-		#subset(df.all, isAcute=='Maybe' & Acute_Spec=='CLIN' & DUMMY>=0.5)[, unique(Patient)]
-		#subset(df.all, isAcute=='Maybe' & Acute_Spec=='CLIN' & is.na(DUMMY))[, unique(Patient)]
 		#
 		df.all[, isAcuteNew:= NA_character_]
 		set(df.all, df.all[, which(Acute_Spec=='CLIN')], 'isAcuteNew', 'Yes')
 		set(df.all, df.all[, which(Acute_Spec=='SYM')], 'isAcuteNew', 'Maybe')
-		set(df.all, df.all[, which(isAcute=='No')], 'isAcuteNew', 'No')			
-		set(df.all, df.all[, which( !is.na(NegT) & DUMMY<=1)], 'isAcuteNew', 'Yes')
+		set(df.all, df.all[, which(isAcute=='Yes')], 'isAcuteNew', 'Yes')		
+		set(df.all, df.all[, which(isAcute=='No' & (is.na(Acute_Spec) | Acute_Spec!='CLIN'))], 'isAcuteNew', 'No')			
 		set(df.all, df.all[, which(isAcuteNew=='Maybe')], 'isAcuteNew', NA_character_)
+		#df.all[, table(isAcuteNew, Acute_Spec, useNA='if')]
+		#df.all[, table(isAcuteNew, isAcute, useNA='if')]
 		set(df.all, NULL, 'isAcuteNew', df.all[, factor(isAcuteNew)])
 		#
 		df.all[, DUMMY:=NULL]
@@ -2681,7 +2672,7 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	set(df, tmp, 'NegT_Acc', NA_character_)
 	
 	#df[, table(is.na(isAcute), Acute_Spec)]; subset(df, is.na(isAcute) & !is.na(Acute_Spec))
-	#df[, table(isAcute, Acute_Spec)]
+	#df[, table(isAcute, Acute_Spec, useNA='if')]
 	
 	#reset isAcute
 	tmp	<- df[, which(Acute_Spec=='SYM' & is.na(isAcute))]
@@ -2696,7 +2687,13 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	tmp	<- df[, which(Acute_Spec=='SYM' & isAcute=='No')]
 	cat(paste('\nFound entries with AcuteSpec and isAcute==No, n=', length(tmp)))
 	set(df, tmp, 'isAcute', 'Maybe') 
-		
+	tmp	<- df[, which(is.na(Acute_Spec) & isAcute=='Yes')]
+	cat(paste('\nFound entries with is.na(Acute_Spec) and isAcute==Yes, n=', length(tmp)))
+	set(df, tmp, 'Acute_Spec', 'CLIN') 
+	tmp	<- df[, which(is.na(Acute_Spec) & isAcute=='Maybe')]
+	cat(paste('\nFound entries with is.na(Acute_Spec) and isAcute==Maybe, n=', length(tmp)))
+	set(df, tmp, 'Acute_Spec', 'SYM') 
+	
 	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
 	if(verbose) cat(paste("\nsave to", file))	
 	save(df, file=file)	
@@ -5133,6 +5130,89 @@ project.hivc.examlclock<- function()
 	#ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_zagaqq','.pdf',sep=''), w=4,h=6)		
 }
 ######################################################################################
+project.hivc.bezemer<- function()
+{
+	#clustering
+	dir.name	<- DATA  	
+	indir		<- paste(dir.name,'bezemer',sep='/')
+	infile		<- 'NLB10BLAST_cutRmu_examlbs200_Tue_Nov_4_2014'
+
+	file		<- paste(indir, '/', infile, '.newick', sep='')
+	ph			<- ladderize(read.tree(file=file))
+	#	easy: extract bootstrap support
+	#ph$node.label[2]				<- 0								#little hack so that clustering works
+	ph.node.bs						<- as.numeric( ph$node.label )
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph.node.bs						<- ph.node.bs/100
+	ph$node.label					<- ph.node.bs
+	#
+	#	memory consuming: extract branch length statistic of subtree
+	#
+	dist.brl.casc					<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
+	gc()		
+	#	
+	thresh.bs		<- 0.7
+	thresh.brl		<- 0.1
+	clustering.70.10<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl.casc, nodesupport=ph.node.bs,retval="all")
+	
+	thresh.bs		<- 0.8
+	thresh.brl		<- 0.1
+	clustering.80.10<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl.casc, nodesupport=ph.node.bs,retval="all")
+	
+	thresh.bs		<- 0.8
+	thresh.brl		<- 0.08
+	clustering.80.08<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl.casc, nodesupport=ph.node.bs,retval="all")
+	
+	thresh.bs		<- 0.8
+	thresh.brl		<- 0.06
+	clustering.80.06<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl.casc, nodesupport=ph.node.bs,retval="all")
+	
+	thresh.bs		<- 0.9
+	thresh.brl		<- 0.1
+	clustering.90.10<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl.casc, nodesupport=ph.node.bs,retval="all")
+	
+	thresh.bs		<- 0.9
+	thresh.brl		<- 0.08
+	clustering.90.08<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl.casc, nodesupport=ph.node.bs,retval="all")
+	
+	thresh.bs		<- 0.9
+	thresh.brl		<- 0.06
+	clustering.90.06<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl.casc, nodesupport=ph.node.bs,retval="all")
+	
+	thresh.bs		<- 0.95
+	thresh.brl		<- 0.06
+	clustering.95.06<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl.casc, nodesupport=ph.node.bs,retval="all")
+	
+	#	save
+	file		<- paste(indir, '/', infile, '_CLUSTERING.R', sep='')
+	save(file=file, ph, dist.brl.casc, clustering.70.10, clustering.80.10, clustering.80.08, clustering.80.06, clustering.90.10, clustering.90.08, clustering.90.06, clustering.95.06)
+		
+	tmp			<- subset( data.table( LABEL=ph$tip.label, CLUSTER=clustering.70.10$clu.mem[ seq_len(Ntip(ph))] ), !is.na(CLUSTER) )
+	file		<- paste(indir, '/', infile, '_CLUSTERING_70_10.csv', sep='')
+	write.csv(tmp, file=file)
+	tmp			<- subset( data.table( LABEL=ph$tip.label, CLUSTER=clustering.80.10$clu.mem[ seq_len(Ntip(ph))] ), !is.na(CLUSTER) )
+	file		<- paste(indir, '/', infile, '_CLUSTERING_80_10.csv', sep='')
+	write.csv(tmp, file=file)
+	tmp			<- subset( data.table( LABEL=ph$tip.label, CLUSTER=clustering.80.08$clu.mem[ seq_len(Ntip(ph))] ), !is.na(CLUSTER) )
+	file		<- paste(indir, '/', infile, '_CLUSTERING_80_08.csv', sep='')
+	write.csv(tmp, file=file)
+	tmp			<- subset( data.table( LABEL=ph$tip.label, CLUSTER=clustering.80.06$clu.mem[ seq_len(Ntip(ph))] ), !is.na(CLUSTER) )
+	file		<- paste(indir, '/', infile, '_CLUSTERING_80_06.csv', sep='')
+	write.csv(tmp, file=file)
+	tmp			<- subset( data.table( LABEL=ph$tip.label, CLUSTER=clustering.90.10$clu.mem[ seq_len(Ntip(ph))] ), !is.na(CLUSTER) )
+	file		<- paste(indir, '/', infile, '_CLUSTERING_90_10.csv', sep='')
+	write.csv(tmp, file=file)
+	tmp			<- subset( data.table( LABEL=ph$tip.label, CLUSTER=clustering.90.08$clu.mem[ seq_len(Ntip(ph))] ), !is.na(CLUSTER) )
+	file		<- paste(indir, '/', infile, '_CLUSTERING_90_08.csv', sep='')
+	write.csv(tmp, file=file)
+	tmp			<- subset( data.table( LABEL=ph$tip.label, CLUSTER=clustering.90.06$clu.mem[ seq_len(Ntip(ph))] ), !is.na(CLUSTER) )
+	file		<- paste(indir, '/', infile, '_CLUSTERING_90_06.csv', sep='')
+	write.csv(tmp, file=file)	
+	tmp			<- subset( data.table( LABEL=ph$tip.label, CLUSTER=clustering.95.06$clu.mem[ seq_len(Ntip(ph))] ), !is.na(CLUSTER) )
+	file		<- paste(indir, '/', infile, '_CLUSTERING_95_06.csv', sep='')
+	write.csv(tmp, file=file)
+}
+######################################################################################
 project.hivc.examl<- function()
 {
 	require(ape)
@@ -5386,16 +5466,19 @@ project.Tchain.MTC.sensecheck	<- function()
 		file	<- paste(indir,'/',infile, sep='')
 		load(file)
 		setnames(brl.pol, c('TIP1','TIP2'), c('FROM','TO'))
-		trm.pol	<- merge(df.trm, brl.pol, by=c('FROM','TO'))
+		trm.pol.mtc	<- merge(df.trm, brl.pol, by=c('FROM','TO'))
 		#	set times between sampling times etc
-		trm.pol[, d_SeqT:=abs(TO_PosSeqT-FROM_PosSeqT)]
-		trm.pol[, d_TSeqT:= abs(TO_PosSeqT-TIME_TR) + abs(FROM_PosSeqT-TIME_TR)]		
+		trm.pol.mtc[, d_SeqT:=abs(TO_PosSeqT-FROM_PosSeqT)]
+		trm.pol.mtc[, d_TSeqT:= abs(TO_PosSeqT-TIME_TR) + abs(FROM_PosSeqT-TIME_TR)]
+		
+		file	<- paste(indir,'/','141105_MTCNL58_nodr_INFO_TRM.R', sep='')
+		save(file=file, trm.pol.mtc)
 		#
 		#	explore
 		#
 		if(1)
 		{
-			ggplot(trm.pol, aes(x=d_TSeqT, y=BRL)) + geom_point() + 
+			ggplot(trm.pol.mtc, aes(x=d_TSeqT, y=BRL)) + geom_point() + 
 					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
 					#coord_cartesian(xlim=c(0,22), ylim=c(0,0.125)) +					
 					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
@@ -5409,12 +5492,12 @@ project.Tchain.MTC.sensecheck	<- function()
 		tmp		<- apply( as.character(seq.pol), 1, function(x) length(which(x=='n')))
 		tmp		<- data.table(DR= tmp/3, PATIENT=names(tmp))
 		setnames(tmp, c('PATIENT','DR'), c('FROM','FROM_DR'))
-		trm.pol	<- merge(trm.pol, tmp, by='FROM')
+		trm.pol.mtc	<- merge(trm.pol.mtc, tmp, by='FROM')
 		setnames(tmp, c('FROM','FROM_DR'), c('TO','TO_DR'))
-		trm.pol	<- merge(trm.pol, tmp, by='TO')
+		trm.pol.mtc	<- merge(trm.pol.mtc, tmp, by='TO')
 		if(1)
 		{
-			ggplot(trm.pol, aes(x=d_TSeqT, y=BRL, colour=FROM_DR>0 | TO_DR>0)) + geom_point() + 
+			ggplot(trm.pol.mtc, aes(x=d_TSeqT, y=BRL, colour=FROM_DR>0 | TO_DR>0)) + geom_point() + 
 					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
 					#coord_cartesian(xlim=c(0,22), ylim=c(0,0.125)) +
 					scale_colour_brewer(name='DR present\nin mother or child',palette='Set1') +
@@ -6422,12 +6505,12 @@ project.Tchain.Belgium.sensecheck	<- function()
 			#trm.pol.GA32	<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
 			trm.pol.GA11e	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
 			trm.pol.GA		<- trm.pol.GA11e
-			trm.pol.p2		<- data.table(d_TSeqT=seq(0,15,0.1))	
+			trm.pol.p2		<- data.table(d_TSeqT=seq(0,18,0.1))	
 			trm.pol.p2[, BRL_p:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(trm.pol.p2), type='response', se.fit=FALSE)]
 			trm.pol.p3		<- gamlss.centiles.get(trm.pol.GA, trm.pol.nA$d_TSeqT, cent = c(2.5, 97.5) )		
 			setkey(trm.pol.p3, x)
 			trm.pol.p3		<- unique(trm.pol.p3)			
-			ggplot(trm.pol.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol.nA, BRL>0.002)) + geom_line(data=trm.pol.p2, aes(y=BRL_p)) + 
+			ggplot(trm.pol.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol.nA, BRL>0.003)) + geom_line(data=trm.pol.p2, aes(y=BRL_p)) + 
 					geom_ribbon(data=trm.pol.p3, aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
 					#geom_vline(xintercept=0.5+3+2*4.1, color="#E41A1C", linetype=2) +
 					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
@@ -6435,17 +6518,30 @@ project.Tchain.Belgium.sensecheck	<- function()
 					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
 					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
 					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
-			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_GALINfit.pdf", sep='')
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_GA11eLINfit.pdf", sep='')
 			ggsave(file=file, w=5, h=5)
-			
-			ggplot(trm.pol.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol.nA, BRL>0.002)) +  
-					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
-					coord_cartesian(xlim=c(0,15), ylim=c(0,0.08)) +
-					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
-					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
-					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
-			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_data.pdf", sep='')
-			ggsave(file=file, w=5, h=5)	
+		}
+		if(1)
+		{
+			file	<- "/Users/Oliver/duke/2014_HIV_MTCNL/141105_MTCNL58_nodr_INFO_TRM.R"
+			load(file)
+			trm.pol[, withA.long:= trm.pol[, factor(as.numeric(withA), levels=c(0,1), labels=c('No','Yes'))]]
+			ggplot(trm.pol, aes(x=d_TSeqT)) +
+					geom_point(aes(y=BRL, pch="MTC cohort"), size=1.4, colour="black", data=trm.pol.mtc) +
+					geom_jitter(aes(y=BRL, colour=withA.long, pch="Confirmed pairs"), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol, BRL>0.003)) +
+					#geom_point(aes(y=BRL), size=1.6, colour="#4DAF4A", pch=15, data=trm.pol.mtc) +					
+					geom_line(data=trm.pol.p2, aes(y=BRL_p)) +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dashed') +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dashed') +					
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,13), ylim=c(0,0.115)) +
+					scale_shape_manual(values=c(16,15), name='data set') + 
+					scale_colour_brewer(name='including patient with\nmulti-drug resistance', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.02)) + scale_x_continuous(breaks=seq(0,30,2)) + 
+					theme_bw() + theme(legend.key = element_blank(), legend.background = element_rect(fill="gray90", size=.5, linetype="dotted"), legend.justification=c(0,1), legend.position=c(0,1), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.2)) +
+					guides(colour=guide_legend(override.aes = list(size=4)), pch=guide_legend(override.aes = list(size=4)))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_data.pdf", sep='')
+			ggsave(file=file, w=6, h=6)	
 			
 			Rsq(trm.pol.GA11e)	#-0.02 , 1e-5; if the points at zero are included, this is 22%
 			summary(trm.pol.GA11e)	#all components significant, n=2807
