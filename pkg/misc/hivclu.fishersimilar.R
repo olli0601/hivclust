@@ -2306,6 +2306,7 @@ gamlss.centiles.get<- function(obj, xvar, cent = c(2.5, 97.5), with.ordering=TRU
 	ans
 }
 ######################################################################################
+#infilecov=infile.cov.study; method.Acute=method.Acute; method.minQLowerU=method.minQLowerU; adjust.AcuteByNegT=0.75; adjust.dt.CD4=1; adjust.AnyPos_y=2003; adjust.NegT=2; dur.AcuteYes=dur.Acute['Yes']; dur.AcuteMaybe=dur.Acute['Maybe']; use.AcuteSpec=method.use.AcuteSpec; t.recent.endctime=t.recent.endctime
 project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='empirical', method.minQLowerU=0.01, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes= 365/2, dur.AcuteMaybe=320, use.AcuteSpec=0, t.recent.endctime=2011, plot.file=NULL)
 {
 	require(MASS)
@@ -8553,25 +8554,25 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 							}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)	
 		}
 		if(1)
-		{
+		{			
 			YX.m2	<- merge(YX.m2, YX.m2[, {
 								lRNA.c3			<- 'ART.vlNA'
 								tmp				<- which(!is.na(lRNA))
-								if( length(tmp) && max(lRNA[tmp])>lRNA.supp  )
+								if( any(t<lRNA_T1.supp) | any(is.na(lRNA_T1.supp)))
+									lRNA.c3		<- 'ART.NotYetFirstSu'
+								if( all(t>=lRNA_T1.supp) && length(tmp) && max(lRNA[tmp])>lRNA.supp)
 								{
 									tmp2		<- sum(nlRNA.nsupp, na.rm=TRUE)
 									if(tmp2<=0)
 										lRNA.c3	<- 'ART.vlNA'
 									if(tmp2>0)
 										lRNA.c3	<- 'ART.suA.N'	
-									if(any(t<lRNA_T1.supp))
-										lRNA.c3	<- 'ART.NotYetFirstSu'
 								}
-								if( length(tmp) && max(lRNA[tmp])<=lRNA.supp && (length(t)>length(which(stage=='ART.started')) || any(t<lRNA_T1.supp) ) )
-								{
-									lRNA.c3		<- 'ART.NotYetFirstSu'
-								}
-								if( length(tmp) &&  max(lRNA[tmp])<=lRNA.supp && length(t)<=length(which(stage=='ART.started')) && !any(t<lRNA_T1.supp) )
+								#if( length(tmp) && max(lRNA[tmp])<=lRNA.supp && (length(t)>length(which(stage=='ART.started')) || any(t<lRNA_T1.supp) ) )
+								#{
+								#	lRNA.c3		<- 'ART.NotYetFirstSu'
+								#}
+								if( all(t>=lRNA_T1.supp) && length(tmp) &&  max(lRNA[tmp])<=lRNA.supp)
 								{
 									tmp2		<- sum(nlRNA.supp, na.rm=TRUE)
 									if(tmp2<=0)
@@ -10934,7 +10935,7 @@ project.athena.Fisheretal.sensitivity.getfigures.likelihood<- function()
 			theme_bw() + theme(legend.key.size=unit(11,'mm'), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7))
 	outfile			<- paste(substr(outfile, 1, nchar(outfile)-7),'tprob.pdf',sep='')
 	file			<- paste(outdir, '/', outfile, sep='')
-	ggsave(file=file, w=8, h=4)		
+	ggsave(file=file, w=9, h=4)		
 	
 	
 	#
@@ -11577,6 +11578,44 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 					ggsave(file=file, w=12,h=4)
 				}									
 			})
+	#
+	ylab		<- "Risk ratio relative to\nDiagnosed, CD4 progression to > 500"
+	run.tp		<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RR.',stat,fixed=1) | stat=='RR') & grepl('Dtg500',factor.ref))
+	stat.select	<- gsub('P','RR', stat.select)
+	setkey(run.tp, factor)
+	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
+	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
+	run.tp[, group:=run.tp[, substr(factor, 1, 1)]]	
+	set(run.tp, run.tp[,which(group=='A' & grepl('suA\\.Y',factor))], 'group', 'ART started and\nviral load < 100 / ml')
+	set(run.tp, run.tp[,which(group=='A' & !grepl('suA\\.Y',factor))], 'group', 'ART started and\nviral load > 100 / ml\nor not measured')
+	set(run.tp, run.tp[,which(group=='A')], 'group', 'ART initiated')
+	set(run.tp, run.tp[,which(group=='U')], 'group', 'Undiagnosed')	
+	set(run.tp, run.tp[,which(group=='D')], 'group', 'Diagnosed')	
+	set(run.tp, NULL, 'group', run.tp[, factor(group, levels=c('Undiagnosed','Diagnosed','ART started and\nviral load > 100 / ml\nor not measured','ART started and\nviral load < 100 / ml'))])	
+	set(run.tp, NULL, 'factor', run.tp[, factor(factor, levels=factors[, levels(factor)])])
+	run.tp	<- merge(run.tp, factors, by='factor')		
+	run.tp	<- merge(run.tp, tperiod.info, by='t.period')
+	run.tp[, t.period.long:= paste(t.period.min, '-', t.period.max,sep='')]
+	set(run.tp, NULL, 't.period.long', run.tp[,factor(t.period.long, levels= tperiod.info[, paste(t.period.min, '-', t.period.max,sep='')])])		
+	color	<- run.tp[, unique(factor.color)]
+	dummy	<- lapply(seq_along(stat.select), function(i)
+			{
+				cat(paste('\nprocess', stat.select[i]))
+				file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',run.tp[1, method.recentctime],'_',run.tp[1, method.denom], '_',run.tp[1, method.dating], '_',run.tp[1, method.brl],'_',run.tp[1, method.risk],'_',stat.select[i],".pdf", sep='')
+				cat(paste('\nsave to file',file))				
+				tmp		<- subset(run.tp, !is.na(v) & stat==stat.select[i])
+				ggplot(tmp, aes(x=t.period.long, y=v, ymin=l95.bs, ymax=u95.bs, fill=factor.legend, colour=factor.legend, group=factor.legend)) + 
+						labs(x="", y=ylab) + #coord_trans(ytrans=my_trans, limy=c(0.01, 15)) +	
+						#scale_y_continuous(breaks=c(seq(0,1,0.2), seq(1,4,1), seq(4,20,2))) +			
+						scale_fill_manual(name='from cascade stage', values = color, guide=with.guide) + 
+						scale_colour_manual(name='from cascade stage', values = color, guide=with.guide) +
+						geom_hline(yintercept=1) + geom_errorbar(position=position_dodge(.5), width=0.4) + geom_point(position=position_dodge(.5) , shape=18, size=3) +  
+						theme_bw() + theme(legend.key.size=unit(11,'mm'), panel.grid.minor=element_line(colour="grey70", size=0.2), panel.grid.major=element_line(colour="grey70")) +
+						facet_wrap( ~ group, scales='free_y', ncol=4)
+				ggsave(file=file, w=12,h=4)
+			})
+	
+	
 	#
 	if(0)
 	{
@@ -13274,18 +13313,23 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		#	some plots
 		if(0)
 		{
+			#tmp	<- c(0.03, 0.05, 0.1, 0.2)
+			#tmp	<- c(0.135, 0.18, 0.23, 0.32)
+			tmp	<- c(0.135, 0.18, 0.23)
 			tmp	<- X.b4care[,  {
-						z<- sapply(c(0.03, 0.05, 0.1, 0.2), function(x) max(which(U.score>=x)) )								
-						list(U=t[z], Q=c(0.03, 0.05, 0.1, 0.2) , AnyPos_T1=AnyPos_T1[1], AnyPos_a=AnyPos_a[1], isAcute=isAcute[1])	
+						z<- sapply(tmp, function(x) max(which(U.score>=x)) )								
+						list(U=t[z], Q=tmp, AnyPos_T1=AnyPos_T1[1], AnyPos_a=AnyPos_a[1], isAcute=isAcute[1])	
 					}, by='t.Patient']
 			tmp[, t2D:= tmp[, AnyPos_T1-U]]
 			set(tmp,NULL,'Q',tmp[,factor(Q)]) 
 			tmp	<- subset(tmp, U>1996.5 & U<2011)
-			ggplot(tmp, aes(x=U, y=t2D, colour=Q)) + geom_point(data=subset(tmp, Q==0.1), position=position_jitter(w = 0.1, h=0), alpha=0.65) + geom_smooth() +
-					scale_y_continuous(breaks=seq(0,20,1)) + scale_x_continuous(breaks=seq(1996,2020,1)) + labs(y='time to diagnosis\n(years)', x='time of HIV infection', colour='quantile\nparameter') +
-					scale_colour_brewer(palette='Set2') + theme_bw()
-			file	<- '/Users/Oliver/duke/2014_HIVMSMbyProp/fig/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_2011_Time2Diag.pdf'
-			ggsave(file=file, w=8, h=6)			
+			ggplot(tmp, aes(x=U, y=t2D, colour=Q)) + geom_point(data=subset(tmp, Q==0.23), position=position_jitter(w = 0.1, h=0), alpha=0.65, color='black', size=1.2) + geom_smooth() +
+					scale_y_continuous(breaks=seq(0,20,1)) + scale_x_continuous(breaks=seq(1996,2020,2)) + 
+					labs(y='time to diagnosis\n(years)', x='time of HIV infection', colour='quantile\nparameter') +
+					guides(color=guide_legend(override.aes=list(fill=NA))) +
+					scale_colour_brewer(palette='Set2') + theme_bw() + theme(legend.position='bottom',panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey60", size=0.2)) 
+			file	<- '/Users/Oliver/duke/2014_HIVMSMbyProp/fig/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_2011_Time2Diag_3pa1.pdf'
+			ggsave(file=file, w=6, h=6)			
 		}
 		if('FASTASampleCode'%in%colnames(df.tpairs))		#mode 1
 		{			

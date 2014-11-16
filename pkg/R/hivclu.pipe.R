@@ -727,7 +727,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	}
 	method.lRNA.supp			<- 100
 	method.use.AcuteSpec		<- 1
-	method.minQLowerU			<- 0.1
+	method.minQLowerU			<- 0.1	#0.135, 0.18, 0.23
 	method.thresh.pcoal			<- 0.3
 	method.PDT					<- 'SEQ'
 	#method.Acute				<- 'empirical'
@@ -799,19 +799,19 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	#method.risk			<- c( 	'm5.tAc.clu.adj','m5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj')
 	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Cwmx.tp1.clu.adj' )
 	#method.risk			<- c( 	'm2Cwmx.tp1.clu.adj','m2Cwmx.tp2.clu.adj','m2Cwmx.tp3.clu.adj','m2Cwmx.tp4.clu.adj' )
-	#method.risk			<- c( 	'm2Cwmx.tp1.clu.adj' )
+	method.risk			<- c( 	'm2Cwmx.tp1.clu.adj' )
 	dummy	<- sapply(method.risk, function(x)
 			{
 				cmd	<- hivc.cmd.betareg.estimate.risks(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 				cat(cmd)
 				#stop()
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=3, hpc.mem="1800mb")
+				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=3, hpc.mem="1800mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=22, hpc.mem="1900mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="3800mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="64000mb")
-				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="120000mb")
+				cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="120000mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 				hivc.cmd.hpccaller(outdir, outfile, cmd)			
