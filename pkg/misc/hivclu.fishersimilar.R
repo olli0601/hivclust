@@ -8361,7 +8361,25 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		{
 			tmp	<- YX.m2[, score.Y>0]
 			set(YX.m2, which(tmp), 'score.Y', YX.m2[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )
-		}		
+		}
+		#	
+		#	set Diagt		stage by time since diagnosis
+		#
+		t.delta<- 0.125
+		cat(paste('\nsetting Diagt\n'))
+		cd4.label	<- c('b4d','l3m','l6m','l1y','l3y','g3y')
+		cd4.cut		<- c(-Inf, 0, 0.25, 0.5, 1, 3, Inf)		
+		YX.m2[, Diagt:= cut(t+t.delta/2-t.AnyPos_T1, breaks=cd4.cut, labels=cd4.label, right=0)]
+		#	undiagnosed
+		set(YX.m2, YX.m2[, which(stage=='U' & (t.isAcute=='Yes' | t.isAcute=='Maybe'))], 'Diagt', 'UA')
+		set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='No')], 'Diagt', 'U')
+		set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'Diagt', 'UAna')
+		#	diagnosed acute
+		set(YX.m2, YX.m2[, which((t.isAcute=='Yes' | t.isAcute=='Maybe') & Diagt=='l3m')], 'Diagt', 'DA' )
+		#	ART
+		set(YX.m2, YX.m2[, which(stage=='ART.started')], 'Diagt', 'ART.started' )
+		#	check
+		stopifnot(length(YX.m2[, which(Diagt=='b4d')])==0)
 		#	
 		#	set CD41st
 		#
@@ -8432,9 +8450,9 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		#
 		cat(paste('\nsubset\n'))
 		if('score.Y'%in%colnames(YX.m2))
-			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, telapsed, brl, stage, CDCC, lRNA, t.isAcute, nlRNA.supp, nlRNA.nsupp, t.AnyT_T1, lRNA_T1.supp, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, w.tn, CD41st, CD4t, CD4a, CD4b, t.Age, t.RegionHospital  ))	
+			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, telapsed, brl, stage, CDCC, lRNA, t.isAcute, nlRNA.supp, nlRNA.nsupp, t.AnyT_T1, lRNA_T1.supp, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, w.tn, CD41st, CD4t, Diagt, CD4b, t.Age, t.RegionHospital  ))	
 		if(!'score.Y'%in%colnames(YX.m2))
-			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, nlRNA.supp, nlRNA.nsupp, t.isAcute, t.AnyT_T1, lRNA_T1.supp, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, CD41st, CD4t, CD4a, CD4b  ))
+			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, nlRNA.supp, nlRNA.nsupp, t.isAcute, t.AnyT_T1, lRNA_T1.supp, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, CD41st, CD4t, Diagt, CD4b  ))
 		YX.m2[, CD4c:=CD4b]
 		gc()
 		#
@@ -8647,10 +8665,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		#	set CD41st and CD4t
 		tmp		<- YX.m2[, which(stage.orig=='ART.started')]
 		set(YX.m2, tmp, 'CD41st', YX.m2[tmp, lRNA.c])		
-		set(YX.m2, tmp, 'CD4t', YX.m2[tmp, lRNA.c])		
-		set(YX.m2, tmp, 'CD4a', YX.m2[tmp, lRNA.c2])				
+		set(YX.m2, tmp, 'CD4t', YX.m2[tmp, lRNA.c])								
 		set(YX.m2, tmp, 'CD4b', YX.m2[tmp, lRNA.c])		
 		set(YX.m2, tmp, 'CD4c', YX.m2[tmp, lRNA.c3])
+		set(YX.m2, tmp, 'Diagt', YX.m2[tmp, lRNA.c3])
 		YX.m2[, lRNA.c:=NULL]
 		YX.m2[, lRNA.c2:=NULL]
 		YX.m2[, lRNA.c3:=NULL]
@@ -8659,10 +8677,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		#tmp		<- YX.m2[, which(stage.orig!='U' & contact!='Yes')]
 		#set(YX.m2, tmp, c('CD41st','CD4t','CD4a','CD4b','CD4c'), 'Lost')
 		set(YX.m2, NULL, 'CD41st', YX.m2[, factor(as.character(CD41st))])
-		set(YX.m2, NULL, 'CD4t', YX.m2[, factor(as.character(CD4t))])
-		set(YX.m2, NULL, 'CD4a', YX.m2[, factor(as.character(CD4a))])
+		set(YX.m2, NULL, 'CD4t', YX.m2[, factor(as.character(CD4t))])		
 		set(YX.m2, NULL, 'CD4b', YX.m2[, factor(as.character(CD4b))])
-		set(YX.m2, NULL, 'CD4c', YX.m2[, factor(as.character(CD4c))])		
+		set(YX.m2, NULL, 'CD4c', YX.m2[, factor(as.character(CD4c))])
+		set(YX.m2, NULL, 'Diagt', YX.m2[, factor(as.character(Diagt))])
 		YX.m2[, stage.orig:=NULL]		
 		#
 		#	add tperiod
@@ -8674,8 +8692,8 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 			set(YX.m2, NULL, 'CD41st.tperiod', YX.m2[, factor(as.character(CD41st.tperiod))])
 			YX.m2[, CD4t.tperiod:= paste(CD4t, t.period,sep='.')]
 			set(YX.m2, NULL, 'CD4t.tperiod', YX.m2[, factor(as.character(CD4t.tperiod))])
-			YX.m2[, CD4a.tperiod:= paste(CD4a, t.period,sep='.')]
-			set(YX.m2, NULL, 'CD4a.tperiod', YX.m2[, factor(as.character(CD4a.tperiod))])
+			YX.m2[, Diagt.tperiod:= paste(Diagt, t.period,sep='.')]
+			set(YX.m2, NULL, 'Diagt.tperiod', YX.m2[, factor(as.character(Diagt.tperiod))])
 			YX.m2[, CD4b.tperiod:= paste(CD4b, t.period,sep='.')]
 			set(YX.m2, NULL, 'CD4b.tperiod', YX.m2[, factor(as.character(CD4b.tperiod))])
 			YX.m2[, CD4c.tperiod:= paste(CD4c, t.period,sep='.')]
@@ -8683,7 +8701,9 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		}
 		gc()
 		#YX.m2[, list(LkL=median(score.Y*w.tn), n=length(score.Y)), by='CD4c']
-		#YX.m2[, list(LkL=median(score.Y*w.tn), n=length(score.Y)), by='CD4c.tperiod']				
+		#YX.m2[, list(LkL=median(score.Y*w.tn), n=length(score.Y)), by='CD4c.tperiod']
+		#YX.m2[, list(LkL=median(score.Y*w.tn), n=length(score.Y)), by='Diagt']
+		#YX.m2[, list(LkL=median(score.Y*w.tn), n=length(score.Y)), by='Diagt.tperiod']
 		if(!is.na(save.file))
 		{
 			cat(paste('\nsave YX.m2 to file', save.file))
@@ -9723,6 +9743,74 @@ project.athena.Fisheretal.compositionacute<- function()
 	tmp<- unique(tmp)
 }
 ######################################################################################
+project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, factors, stat.select, outfile, tperiod.info=NULL, with.guide=FALSE)
+{	
+	df		<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk))  
+	if(method.WEIGHT=='')
+		df	<- subset(df, !grepl('wstar',method.risk) & !grepl('now',method.risk))
+	if(method.WEIGHT!='')
+		df	<- subset(df, grepl(method.WEIGHT,method.risk) )
+					
+	#	time period	
+	set(df, NULL, 'factor', df[, as.character(factor)])
+	setkey(df, factor)
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	#	cascade group
+	set(df, NULL, 'group', df[, paste(substr(factor, 1, 1),'total',sep='_')])
+	#	reset factor order
+	set(df, NULL, 'factor', df[, factor(factor, levels=levels, labels=levels)])
+	setkey(df, stat, t.period, factor)
+	#df		<- unique(df)
+	#	prop infections by period
+	tmp		<- subset(df, stat%in%c('P.raw.e0cp'))	
+	tmp2	<- dcast.data.table(tmp, group+factor~t.period, value.var='v')
+	setnames(tmp2, as.character(1:4), paste('v.',1:4,sep=''))
+	tmp2	<- merge(tmp2, dcast.data.table(tmp, group+factor~t.period, value.var='l95.bs'), by=c('group','factor'))
+	setnames(tmp2, as.character(1:4), paste('l95.bs.',1:4,sep=''))
+	tmp2	<- merge(tmp2, dcast.data.table(tmp, group+factor~t.period, value.var='u95.bs'), by=c('group','factor'))
+	setnames(tmp2, as.character(1:4), paste('u95.bs.',1:4,sep=''))	
+	#	add group prop
+	tmp		<- tmp2[, lapply(.SD, sum ), by='group', .SDcol=c(paste('v.',1:4,sep=''), paste('l95.bs.',1:4,sep=''), paste('u95.bs.',1:4,sep=''))]
+	tmp[, factor:='']
+	tmp2	<- rbind(tmp, tmp2, use.names=TRUE)
+	#	prepare Excel
+	set(tmp2, NULL, '1', tmp2[, paste('=\"',round(v.1*100,d=1),' (',round(l95.bs.1*100,d=1),'-',round(u95.bs.1*100,d=1),')\"',sep='')])
+	set(tmp2, NULL, '2', tmp2[, paste('=\"',round(v.2*100,d=1),' (',round(l95.bs.2*100,d=1),'-',round(u95.bs.2*100,d=1),')\"',sep='')])
+	set(tmp2, NULL, '3', tmp2[, paste('=\"',round(v.3*100,d=1),' (',round(l95.bs.3*100,d=1),'-',round(u95.bs.3*100,d=1),')\"',sep='')])
+	set(tmp2, NULL, '4', tmp2[, paste('=\"',round(v.4*100,d=1),' (',round(l95.bs.4*100,d=1),'-',round(u95.bs.4*100,d=1),')\"',sep='')])
+	set(tmp2, NULL, paste('v.',1:4,sep=''), NULL)
+	set(tmp2, NULL, paste('l95.bs.',1:4,sep=''), NULL)
+	set(tmp2, NULL, paste('u95.bs.',1:4,sep=''), NULL)
+	ans		<- copy(tmp2)
+	#	prop infections overall
+	tmp		<- subset(df, stat%in%c('N.raw.e0cp'))
+	tmp		<- tmp[, list(group=group[1], v=sum(v), l95.bs=sum(l95.bs), u95.bs=sum(u95.bs)), by='factor']	
+	tmp2	<- tmp[, lapply(.SD, sum ), by='group', .SDcol=c('v','l95.bs','u95.bs')]
+	tmp2[, factor:='']
+	tmp		<- rbind(tmp2, tmp, use.names=TRUE)	
+	tmp2	<- unique( subset(df, stat=='nRecLkl', select=c(t.period, v)) )[, sum(v)]
+	set(tmp, NULL, 'All', tmp[, paste('=\"',round(v/tmp2*100,d=1),' (',round(l95.bs/tmp2*100,d=1),'-',round(u95.bs/tmp2*100,d=1),')\"',sep='')])
+	ans		<- merge(subset(tmp, select=c(factor, group, All)), ans, by=c('group','factor'))
+	#	get factor names
+	ans		<- merge(ans, subset(factors, select=c(factor, factor.legend)), by='factor', all.x=1)		
+	set(ans, ans[, which(is.na(factor.legend))], 'factor.legend', '')
+	#	get column names
+	tmp		<- copy(tperiod.info)
+	tmp[, window:= tmp[,paste(gsub('\n','',t.period.min),'-',gsub('\n','',t.period.max),sep='')]]
+	setnames(ans, tmp[, as.character(t.period)], tmp[, window])
+	setnames(ans, 'All', paste(tmp[1,t.period.min],'-',tmp[4,t.period.max],sep=''))
+	#	reorder	
+	set(ans, NULL, 'group', ans[, factor(group, levels=c('U_total','D_total','A_total'), labels=c('U_total','D_total','A_total'))])
+	setkey(ans, group, factor)
+	#	write to file
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',df[1, method.recentctime],'_',df[1, method.denom], '_',df[1, method.dating], '_',df[1, method.brl],'_',df[1, method.risk],'_table_PROP',".csv", sep='')
+	cat(paste('\nsave to file',file))
+	write.csv(subset(ans, select=c(8, 3, 4, 5, 6, 7)), file=file, eol="\r\n", row.names=FALSE)
+	#in Excel replace COMMA with ,
+	#right click on table or Apple-1 and set wrap text
+}
+######################################################################################
 project.athena.Fisheretal.sensitivity.tables.m2<- function(df, factors, levels, file)
 {
 	#	time period	
@@ -10108,8 +10196,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 							'ART initiated,\n After first viral suppression\nNo viral suppression',	
 							'ART initiated,\n After first viral suppression\nViral suppression, 1 observation',
 							'ART initiated,\n After first viral suppression\nViral suppression, >1 observations')
-	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2")
-	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Cwmx')	
+	levels			<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2")
+	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(levels, levels=levels), factor.color=factor.color, method.risk='m2Cwmx')	
 	
 	#
 	#	WTN 3ma 	m2Cwmx
@@ -10199,7 +10287,36 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
-	
+	#
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1.35C3V100'
+	method.RISK		<- 'm2CwmxMv.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1.8C3V100'
+	method.RISK		<- 'm2CwmxMv.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H2.3C3V100'
+	method.RISK		<- 'm2CwmxMv.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)				
 	#
 	#	WTN m2Cwmx
 	#
@@ -10232,6 +10349,20 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#
+	#	same thing as TABLE
+	#
+	#
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1.35C3V100'
+	method.RISK		<- 'm2CwmxMv.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+
 	
 	
 	#	m2Bwmx
@@ -11581,7 +11712,7 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 	#
 	ylab		<- "Risk ratio relative to\nDiagnosed, CD4 progression to > 500"
 	run.tp		<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RR.',stat,fixed=1) | stat=='RR') & grepl('Dtg500',factor.ref))
-	stat.select	<- gsub('P','RR', stat.select)
+	stat.select	<- gsub('RI','RR', stat.select)
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
 	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
@@ -12132,7 +12263,7 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	#
 	factor.color	<- c(	"#990000","#EF6548","#FDBB84",
 			"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
-			"#7A0177","#F768A1","#FCC5C0",
+			"#FCC5C0","#F768A1","#7A0177",
 			"#1A9850","#A6D96A")
 	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
 			'Undiagnosed,\n Chronic infection\n at diagnosis',
@@ -12142,13 +12273,17 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 			'Diagnosed,\n CD4 progression to [350-500]',
 			'Diagnosed,\n CD4 progression to <350',			
 			'Diagnosed,\n No CD4 measured',
-			'ART initiated,\n No viral suppression, >1 observations',
-			'ART initiated,\n No viral suppression, 1 observation',
-			'ART initiated,\n No viral load measured',			
-			'ART initiated,\n Viral suppression, 1 observation',
-			'ART initiated,\n Viral suppression, >1 observations')
-	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N2","ART.suA.N1","ART.vlNA","ART.suA.Y1","ART.suA.Y2")
-	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Cwmx')
+			'ART initiated,\n Before first viral suppression',													
+			'ART initiated,\n After first viral suppression\n No viral load measured',		
+			'ART initiated,\n After first viral suppression\n No viral suppression',	
+			'ART initiated,\n After first viral suppression\n Viral suppression, 1 observation',
+			'ART initiated,\n After first viral suppression\n Viral suppression, >1 observations')
+	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2")
+	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Cwmx')	
+
+	file	<- paste(outdir,'/','table_3pa1H1.35C3V100m_m2CwmxMv.wtn.tp','.csv',sep='')	
+	df		<- subset(runs.table, grepl('m2CwmxMv.wtn.tp',method.risk) & method.brl=='3pa1H1.35C3V100', select=c(stat, method.risk, factor, n, p, l95.bs, u95.bs))
+	project.athena.Fisheretal.sensitivity.tables.m2(df, factors, levels, file)	
 	#	
 	#	updated stages
 	#	set up factor legends
@@ -13860,7 +13995,7 @@ hivc.prog.betareg.estimaterisks<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Cwmx.wtn.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.1
+		method.minQLowerU		<- 0.135
 		method.use.AcuteSpec	<- 1
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 100

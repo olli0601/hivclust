@@ -623,6 +623,35 @@ project.Gates.RootSeqSim.runxml<- function()
 	}
 }
 ######################################################################################
+project.Gates.dual.ExaMLrun<- function()
+{
+	require(phytools)
+	require(hivclust)
+	tree.id.labelsep		<- '|'
+	tree.id.label.idx.ctime	<- 4 
+	DATA		<<- "/work/or105/Gates_2014"
+	#DATA		<<- "/Users/Oliver/duke/2014_Gates"
+	indir		<- paste(DATA,'dual/141128',sep='/')	  
+	outdir		<- indir
+	infile		<- 'Contigs_141126_BLASTstrict750_OR_linsi.R'
+	file		<- paste(indir, '/', infile, sep='')
+	cat(paste('\nLoading file', file))
+	load(file)		#expect "seqa"	
+	#
+	#	run ExaML 
+	#
+	infile.seq.sig	<- "Fri_Nov_28_12:59:06_2013"
+	infile.seq		<- infile
+	file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+	seq				<- seqa
+	save(seq, file=file)
+	#	
+	cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=500, verbose=1)
+	cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q='pqeph', hpc.mem="3600mb", hpc.nproc=8)
+	hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+	Sys.sleep(1)	
+}
+######################################################################################
 project.Gates.test.ExaMLrun<- function()
 {
 	require(phytools)
@@ -734,8 +763,9 @@ project.Gates<- function()
 {
 	#project.Gates.RootSeqSim.runxml()
 	#project.Gates.RootSeqSim.BEAST.SSAfg.checkancestralseq.runExaML()
-	project.Gates.test.ExaMLrun()
+	#project.Gates.test.ExaMLrun()
 	#project.Gates.test.runxml()
+	project.Gates.dual.ExaMLrun()
 }
 ######################################################################################
 project.hivc.check<- function()
@@ -5668,74 +5698,184 @@ project.Tchain.Swedish.sensecheck	<- function()
 	#
 	if(1)
 	{
+		indir	<- '/Users/Oliver/duke/2014_HIV_TChainSwedish'
 		infile	<- 'set2_anno.csv'
-		df.s	<- read.csv( paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE )
-		df.s	<- subset( df.s, select=c(Patient.code, PAT.id, Patient.sex, Risk.factor, Infection.country, Sampling.year, Accession, Name) )
-		#	from comments variable
-		df.trm	<- list(data.table(FROM='P1', TO=c('P2','P5','P7','P8','P11'), MODE=c('HET','HET','HET','HET','HET')),
-					data.table(FROM='P8', TO='P10', MODE= 'HET'),
-					data.table(FROM='P8', TO='P9', MODE= 'MTC'),
-					data.table(FROM='P5', TO='P6', MODE= 'HET'),
-					data.table(FROM='P2', TO='P3', MODE= 'MTC')	)
-		#	read transmission times
-		infile	<- 'set2_transmission.tree'
-		read.paste(indir, '/', infile, sep='')
-	
-		df.trm	<- do.call('rbind',df.trm)
-		require(splines)
-		require(gamlss)
-		#
-		#	sampling dates
-		#
-		infile	<- '140921_set7_sample_dates.csv'
-		df.s	<- read.csv( paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE )
-		df.s	<- as.data.table(df.s)[1:25,]
-		set(df.s, NULL, 'sample', df.s[, gsub('\\s','',sample)])
-		df.s[, PosSeqT:=df.s[, as.Date(gsub('\\s','',sample.date), format='%d-%b-%Y')]]
-		tmp		<- df.s[, which(is.na(PosSeqT))]
-		set(df.s, tmp, 'PosSeqT', df.s[tmp, as.Date(gsub('\\s','',sample.date), format='%d-%m-%Y')])
-		set(df.s, NULL, 'PosSeqT', df.s[, hivc.db.Date2numeric(PosSeqT)])		
-		df.s	<- subset(df.s, select=c(sample, PosSeqT))
-		tmp		<- df.s[, which(grepl('_1',sample,fixed=1))]
-		set(df.s,tmp,'sample',df.s[tmp, substr(sample, 1, 3)])
-		#
-		#	transmission dates
-		#
-		infile	<- "140921_set7_transmission_dates.csv"
-		df.trm	<- read.csv( paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE )
-		df.trm	<- as.data.table(df.trm)[1:11,]
-		df.trm[, FROM:=df.trm[, sapply(strsplit(patients, '->'),'[[',1)]]
-		df.trm[, TO:=df.trm[, sapply(strsplit(patients, '->'),'[[',2)]]
-		set(df.trm, NULL, 'TO', df.trm[, gsub('\\s|\\*','',TO)])
-		set(df.trm, NULL, 'FROM', df.trm[, gsub('\\s|\\*','',FROM)])
-		df.trm[, TIME_TR_MIN:=df.trm[, sapply(strsplit(window.of.transmission, '-'),'[[',1)]]
-		df.trm[, TIME_TR_MAX:=df.trm[, sapply(strsplit(window.of.transmission, '-'),'[[',2)]]
-		set(df.trm, NULL, 'TIME_TR_MIN', df.trm[, gsub('\\s|\\*|\\?','',TIME_TR_MIN)])
-		set(df.trm, NULL, 'TIME_TR_MAX', df.trm[, gsub('\\s|\\*|\\?','',TIME_TR_MAX)])		
-		set(df.trm, NULL, 'TIME_TR_MIN', df.trm[, hivc.db.Date2numeric(as.Date(TIME_TR_MIN, format='%d/%m/%y'))])
-		set(df.trm, NULL, 'TIME_TR_MAX', df.trm[, hivc.db.Date2numeric(as.Date(TIME_TR_MAX, format='%d/%m/%y'))])
-		tmp		<- df.trm[, which(is.na(TIME_TR_MIN))]
-		set(df.trm, tmp, 'TIME_TR_MIN', df.trm[tmp,TIME_TR_MAX-1])
+		df.s	<- as.data.table(read.csv( paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE ))
+		df.s	<- subset( df.s, select=c(Patient.code, PAT.id, Patient.sex, Risk.factor, Infection.country, Sampling.year, Accession, Name) )		
+		df.s	<- subset( df.s, select=c(Patient.code, Sampling.year, Name) )
+		setnames(df.s, c('Patient.code', 'Sampling.year', 'Name'), c('PATIENT','PosSeqT', 'LABEL'))
+		set(df.s, NULL, 'PosSeqT', df.s[, PosSeqT+.5]) 
+		setkey(df.s, LABEL)
+		df.s	<- unique(df.s)
+		set(df.s, NULL, 'LABEL', df.s[, paste(sapply(strsplit(LABEL, '_', fixed=1),'[[',1), '.',sapply(strsplit(LABEL, '_', fixed=1),'[[',2),sep='') ] )		
+		#	from comments variable and from what T Leitner sent
+		df.trm	<- list(data.table(FROM='P1', TO=c('P2','P5','P7','P8','P11'), TIME_TR_MIN=c('01-04-1983','01-08-1982','01-06-1982','01-10-1980','01-11-1981'), TIME_TR_MAX=c('01-05-1983','01-11-1982','01-9-1982','01-05-1981','01-01-1982'), MODE=c('HET','HET','HET','HET','HET')),
+					data.table(FROM='P8', TO='P10', TIME_TR_MIN=c('01-05-1986'), TIME_TR_MAX=c('01-12-1986'), MODE= 'HET'),
+					data.table(FROM='P8', TO='P9', TIME_TR_MIN=c('24-03-1984'), TIME_TR_MAX=c('24-03-1984'), MODE= 'MTC'),
+					data.table(FROM='P5', TO='P6', TIME_TR_MIN=c('01-01-1983'), TIME_TR_MAX=c('01-05-1983'), MODE= 'HET'),
+					data.table(FROM='P2', TO='P3', TIME_TR_MIN=c('04-09-1985'), TIME_TR_MAX=c('04-09-1985'), MODE= 'MTC')	)
+		df.trm	<- do.call('rbind',df.trm)				
+		set(df.trm, NULL, 'TIME_TR_MIN', df.trm[, hivc.db.Date2numeric(as.Date(TIME_TR_MIN, format='%d-%m-%Y'))])
+		set(df.trm, NULL, 'TIME_TR_MAX', df.trm[, hivc.db.Date2numeric(as.Date(TIME_TR_MAX, format='%d-%m-%Y'))])
 		df.trm[, TIME_TR:=df.trm[, (TIME_TR_MIN+TIME_TR_MAX)/2]]
-		df.trm	<- subset( df.trm, select=c(FROM, TO, TIME_TR) )
-		#	A	M	MB 1995-08								H 1996-01
-		#	B	F	MB 1990-09 -- 1992-12, 1996-01->death
-		#	C	M											H 2000-01
-		#	D	F											H 1998-01
-		#	E	F
-		#	F	F											H 2002-05
-		#	G	M											H 2002-05
-		#	H	M	MB 1996-08 -- 1997-11					H 1997-12
-		#	I	M	MB 1997-08 -- 1999-12					H 2000-01
-		#	J
-		#	K
-		#	L
-		df.ind	<- data.table( 	ID		= c('A','B','C','D','E','F','G','H','I','J','K','L'),
-				AnyT_T1	= c(1995+7/12, 1990+8/12, 2000, 1998, Inf, 2002+4/12, 2002+4/12, 1996+7/12, 1997+7/12, NA, NA, NA))						
-		indir	<- '/Users/Oliver/duke/2014_HIV_TChainBelgium'
-		infile	<- '140921_set7_INFO.R'
+		#
+		#	load seq divergence
+		#	
+		infile				<- '141105_set2_seqs_INFO.R'
+		file				<- paste(indir, '/',infile, sep='')
+		load(file)
+		#
+		#	GAG	overall brl distribution in transmission pairs
+		#		
+		brl					<- brl.gag		
+		brl[, PATIENT1:=brl[, sapply(strsplit(TIP1,'.',fixed=1),'[[',1)]]
+		brl[, PATIENT2:=brl[, sapply(strsplit(TIP2,'.',fixed=1),'[[',1)]]		
+		brl	<- subset(brl, PATIENT1!=PATIENT2)
+		#	extract sequence sampling year
+		setnames(df.s, c('LABEL','PosSeqT'),c('TIP1', 'PATIENT1_PosSeqT'))
+		brl		<- merge(brl, subset(df.s, select=c(TIP1, PATIENT1_PosSeqT)), by='TIP1')
+		setnames(df.s, c('TIP1', 'PATIENT1_PosSeqT'), c('TIP2', 'PATIENT2_PosSeqT'))
+		brl		<- merge(brl, subset(df.s, select=c(TIP2, PATIENT2_PosSeqT)), by='TIP2')		
+		#	get other way round in transmission pair
+		tmp		<- copy(brl)
+		setnames(tmp, c('PATIENT1','PATIENT2','PATIENT1_PosSeqT','PATIENT2_PosSeqT'),c('PATIENT2','PATIENT1','PATIENT2_PosSeqT','PATIENT1_PosSeqT'))
+		brl		<- rbind(brl, tmp, use.names=TRUE)
+		#	merge with transmission pairs
+		setnames(brl, c('PATIENT1','PATIENT2','PATIENT1_PosSeqT','PATIENT2_PosSeqT'), c('FROM','TO','FROM_SeqT','TO_SeqT'))
+		set(brl, NULL, 'FROM', brl[, gsub('p','P',FROM)])
+		set(brl, NULL, 'TO', brl[, gsub('p','P',TO)])
+		trm		<- merge(df.trm, brl, by=c('FROM','TO'))
+		#
+		#	set times between sampling times etc
+		trm[, d_SeqT:=abs(TO_SeqT-FROM_SeqT)]
+		trm[, d_TSeqT:= abs(TO_SeqT-TIME_TR) + abs(FROM_SeqT-TIME_TR)]
+		trm.gag	<- copy(trm)
+		brl.gag	<- brl		
+		#
+		#	ENV	overall brl distribution in transmission pairs
+		#		
+		brl					<- brl.env		
+		brl[, PATIENT1:=brl[, sapply(strsplit(TIP1,'.',fixed=1),'[[',1)]]
+		brl[, PATIENT2:=brl[, sapply(strsplit(TIP2,'.',fixed=1),'[[',1)]]		
+		brl	<- subset(brl, PATIENT1!=PATIENT2)
+		#	extract sequence sampling year
+		brl		<- merge(brl, subset(df.s, select=c(TIP2, PATIENT2_PosSeqT)), by='TIP2')
+		setnames(df.s, c('TIP2', 'PATIENT2_PosSeqT'), c('TIP1', 'PATIENT1_PosSeqT'))
+		brl		<- merge(brl, subset(df.s, select=c(TIP1, PATIENT1_PosSeqT)), by='TIP1')
+		#	get other way round in transmission pair
+		tmp		<- copy(brl)
+		setnames(tmp, c('PATIENT1','PATIENT2','PATIENT1_PosSeqT','PATIENT2_PosSeqT'),c('PATIENT2','PATIENT1','PATIENT2_PosSeqT','PATIENT1_PosSeqT'))
+		brl		<- rbind(brl, tmp, use.names=TRUE)
+		#	merge with transmission pairs
+		setnames(brl, c('PATIENT1','PATIENT2','PATIENT1_PosSeqT','PATIENT2_PosSeqT'), c('FROM','TO','FROM_SeqT','TO_SeqT'))
+		set(brl, NULL, 'FROM', brl[, gsub('p','P',FROM)])
+		set(brl, NULL, 'TO', brl[, gsub('p','P',TO)])
+		trm		<- merge(df.trm, brl, by=c('FROM','TO'))
+		#
+		#	set times between sampling times etc
+		trm[, d_SeqT:=abs(TO_SeqT-FROM_SeqT)]
+		trm[, d_TSeqT:= abs(TO_SeqT-TIME_TR) + abs(FROM_SeqT-TIME_TR)]
+		trm.env	<- copy(trm)
+		brl.env	<- brl
+		#
+		#	CONC	overall brl distribution in transmission pairs
+		#		
+		brl					<- brl.conc		
+		brl[, PATIENT1:=brl[, sapply(strsplit(TIP1,'.',fixed=1),'[[',1)]]
+		brl[, PATIENT2:=brl[, sapply(strsplit(TIP2,'.',fixed=1),'[[',1)]]		
+		brl	<- subset(brl, PATIENT1!=PATIENT2)
+		#	extract sequence sampling year
+		brl		<- merge(brl, subset(df.s, select=c(TIP1, PATIENT1_PosSeqT)), by='TIP1')
+		setnames(df.s, c('TIP1', 'PATIENT1_PosSeqT'), c('TIP2', 'PATIENT2_PosSeqT'))
+		brl		<- merge(brl, subset(df.s, select=c(TIP2, PATIENT2_PosSeqT)), by='TIP2')
+		#	get other way round in transmission pair
+		tmp		<- copy(brl)
+		setnames(tmp, c('PATIENT1','PATIENT2','PATIENT1_PosSeqT','PATIENT2_PosSeqT'),c('PATIENT2','PATIENT1','PATIENT2_PosSeqT','PATIENT1_PosSeqT'))
+		brl		<- rbind(brl, tmp, use.names=TRUE)
+		#	merge with transmission pairs
+		setnames(brl, c('PATIENT1','PATIENT2','PATIENT1_PosSeqT','PATIENT2_PosSeqT'), c('FROM','TO','FROM_SeqT','TO_SeqT'))
+		set(brl, NULL, 'FROM', brl[, gsub('p','P',FROM)])
+		set(brl, NULL, 'TO', brl[, gsub('p','P',TO)])
+		trm		<- merge(df.trm, brl, by=c('FROM','TO'))
+		#
+		#	set times between sampling times etc
+		trm[, d_SeqT:=abs(TO_SeqT-FROM_SeqT)]
+		trm[, d_TSeqT:= abs(TO_SeqT-TIME_TR) + abs(FROM_SeqT-TIME_TR)]
+		trm.conc<- copy(trm)
+		brl.conc<- brl
+		
+		#
+		#	save
+		#
+		infile	<- '141105_set2_seqs_INFO_TRM.R'		
 		file	<- paste(indir, '/',infile, sep='')
-		load(file)	#expect seq.env, seq.pol, brl.env, brl.pol, ph.env, ph.pol
+		save(file=file, seq.env, seq.gag, seq.conc, brl.env, brl.gag, brl.conc, ph.env, ph.gag, ph.conc, trm.env, trm.gag, trm.conc) 		
+	}
+	#	plot association 
+	if(1)
+	{
+		indir	<- '/Users/Oliver/duke/2014_HIV_TChainSwedish'
+		infile	<- '141105_set2_seqs_INFO_TRM.R'
+		file	<- paste(indir, '/',infile, sep='')
+		load(file)
+		
+		if(1)
+		{
+			#
+			#	plot GAG	divergence
+			#
+			tmp				<- subset(trm.gag, select=c(d_SeqT, d_TSeqT, BRL))			
+			trm.gag.swGA11	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(tmp), family=GA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
+			
+			trm.gag.p2		<- data.table(d_TSeqT=seq(0,15,0.1))	
+			trm.gag.p2[, BRL_p:=predict(trm.gag.swGA11, data=tmp, newdata=as.data.frame(trm.gag.p2), type='response', se.fit=FALSE)]
+			trm.gag.p3		<- gamlss.centiles.get(trm.gag.swGA11, tmp$d_TSeqT, cent = c(2.5, 97.5) )		
+			setkey(trm.gag.p3, x)
+			trm.gag.p3		<- unique(trm.gag.p3)			
+						
+			ggplot(trm.gag, aes(x=d_TSeqT)) + geom_point(aes(y=BRL, pch=MODE), size=2) + geom_line(data=trm.gag.p2, aes(y=BRL_p)) +
+					geom_line(data=trm.gag.p3, aes(x=x, y=q2.5), lty='dashed') +
+					geom_line(data=trm.gag.p3, aes(x=x, y=q97.5), lty='dashed') +					
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,13), ylim=c(0,0.115)) +
+					scale_shape_manual(values=c(16,15), name='transmission mode') + 					
+					scale_y_continuous(breaks=seq(0, 0.2, 0.02)) + scale_x_continuous(breaks=seq(0,30,2)) + 
+					theme_bw() + theme(legend.key = element_blank(), legend.background = element_rect(fill="gray90", size=.5, linetype="dotted"), legend.justification=c(0,1), legend.position=c(0,1), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.2)) +
+					guides(pch=guide_legend(override.aes = list(size=4)))
+			file	<- paste(indir, '/',"141105_set2_seqs_gag_patristic_dTS_data.pdf", sep='')
+			ggsave(file=file, w=6, h=6)
+			#
+			#slope: 0.00396 for GAG
+			#
+			
+			
+			#
+			#	plot ENV	divergence
+			#
+			tmp				<- subset(trm.env, select=c(d_SeqT, d_TSeqT, BRL))			
+			trm.env.swGA11	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(tmp), family=GA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
+			
+			trm.env.p2		<- data.table(d_TSeqT=seq(0,15,0.1))	
+			trm.env.p2[, BRL_p:=predict(trm.env.swGA11, data=tmp, newdata=as.data.frame(trm.env.p2), type='response', se.fit=FALSE)]
+			trm.env.p3		<- gamlss.centiles.get(trm.env.swGA11, tmp$d_TSeqT, cent = c(2.5, 97.5) )		
+			setkey(trm.env.p3, x)
+			trm.env.p3		<- unique(trm.env.p3)			
+			
+			ggplot(trm.env, aes(x=d_TSeqT)) + geom_point(aes(y=BRL, pch=MODE), size=2) + geom_line(data=trm.env.p2, aes(y=BRL_p)) +
+					geom_line(data=trm.env.p3, aes(x=x, y=q2.5), lty='dashed') +
+					geom_line(data=trm.env.p3, aes(x=x, y=q97.5), lty='dashed') +					
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,13), ylim=c(0,0.2)) +
+					scale_shape_manual(values=c(16,15), name='transmission mode') + 					
+					scale_y_continuous(breaks=seq(0, 0.2, 0.02)) + scale_x_continuous(breaks=seq(0,30,2)) + 
+					theme_bw() + theme(legend.key = element_blank(), legend.background = element_rect(fill="gray90", size=.5, linetype="dotted"), legend.justification=c(0,1), legend.position=c(0,1), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.2)) +
+					guides(pch=guide_legend(override.aes = list(size=4)))
+			file	<- paste(indir, '/',"141105_set2_seqs_env_patristic_dTS_data.pdf", sep='')
+			ggsave(file=file, w=6, h=6)
+			#
+			#	ENV slope	0.01137
+			#			
+		}
 	}
 }
 ######################################################################################
@@ -6239,7 +6379,11 @@ project.Tchain.Belgium.sensecheck	<- function()
 		infile	<- '140921_set7_INFO_TRM.R'
 		file	<- paste(indir, '/',infile, sep='')
 		save(file=file, seq.env, seq.pol, brl.env, brl.pol, ph.env, ph.pol, trm.env, trm.pol) 
-	}
+	}	
+}
+
+project.Tchain.Belgium.sensecheck.explore<- function()
+{
 	#
 	#	explore
 	#
@@ -6367,7 +6511,7 @@ project.Tchain.Belgium.sensecheck	<- function()
 		
 		trm.pol[, summary(BRL)]
 		#0.006431 0.041570 0.055770 0.062380 0.086620 0.121200
-					
+		
 		if(0)
 		{
 			#	stratify by patients
@@ -6507,19 +6651,97 @@ project.Tchain.Belgium.sensecheck	<- function()
 			trm.pol.GA		<- trm.pol.GA11e
 			trm.pol.p2		<- data.table(d_TSeqT=seq(0,18,0.1))	
 			trm.pol.p2[, BRL_p:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(trm.pol.p2), type='response', se.fit=FALSE)]
-			trm.pol.p3		<- gamlss.centiles.get(trm.pol.GA, trm.pol.nA$d_TSeqT, cent = c(2.5, 97.5) )		
+			trm.pol.p3		<- gamlss.centiles.get(trm.pol.GA, trm.pol.nA$d_TSeqT, cent = c(2.5, 10, 25, 75, 90, 97.5) )		
 			setkey(trm.pol.p3, x)
-			trm.pol.p3		<- unique(trm.pol.p3)			
-			ggplot(trm.pol.nA, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol.nA, BRL>0.003)) + geom_line(data=trm.pol.p2, aes(y=BRL_p)) + 
-					geom_ribbon(data=trm.pol.p3, aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
-					#geom_vline(xintercept=0.5+3+2*4.1, color="#E41A1C", linetype=2) +
-					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
-					coord_cartesian(xlim=c(0,15), ylim=c(0,0.08)) +
-					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
-					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
-					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75"))
+			trm.pol.p3		<- unique(trm.pol.p3)	
+			ggplot(trm.pol, aes(x=d_TSeqT)) +
+					geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol, withA==FALSE & BRL>0.003)) +									
+					geom_line(data=trm.pol.p2, aes(y=BRL_p)) +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dotted') + geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dotted') +
+					#geom_line(data=trm.pol.p3, aes(x=x, y=q1), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q99), lty='twodash') +
+					#geom_line(data=trm.pol.p3, aes(x=x, y=q25), lty='dashed') + geom_line(data=trm.pol.p3, aes(x=x, y=q75), lty='dashed') +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q10), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q90), lty='twodash') +
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,13), ylim=c(0,0.1)) +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.02)) + scale_x_continuous(breaks=seq(0,30,2)) + 
+					theme_bw() + theme(legend.key = element_blank(), legend.background = element_rect(fill="gray90", size=.5, linetype="dotted"), legend.justification=c(0,1), legend.position=c(0,1), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.2))
 			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_notA_GA11eLINfit.pdf", sep='')
-			ggsave(file=file, w=5, h=5)
+			ggsave(file=file, w=5, h=5)		
+			#
+			#	WITH DRUG RESISTANCE
+			#
+			trm.pol[, withA.long:= trm.pol[, factor(as.numeric(withA), levels=c(0,1), labels=c('No','Yes'))]]
+			ggplot(trm.pol, aes(x=d_TSeqT)) +					
+					geom_jitter(aes(y=BRL, colour=withA.long), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol, BRL>0.003)) +
+					#geom_point(aes(y=BRL), size=1.6, colour="#4DAF4A", pch=15, data=trm.pol.mtc) +					
+					geom_line(data=trm.pol.p2, aes(y=BRL_p)) +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dotted') + geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dotted') +
+					#geom_line(data=trm.pol.p3, aes(x=x, y=q1), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q99), lty='twodash') +
+					#geom_line(data=trm.pol.p3, aes(x=x, y=q25), lty='dashed') + geom_line(data=trm.pol.p3, aes(x=x, y=q75), lty='dashed') +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q10), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q90), lty='twodash') +
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,13), ylim=c(0,0.1)) +
+					scale_colour_brewer(name='patient with\nmulti-drug resistance', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.02)) + scale_x_continuous(breaks=seq(0,30,2)) + 
+					theme_bw() + theme(legend.key = element_blank(), legend.background = element_rect(fill="gray90", size=.5, linetype="dotted"), legend.justification=c(0,1), legend.position=c(0,1), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.2)) +
+					guides(colour=guide_legend(override.aes = list(size=4)))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_wTDR_GA11eLINfit.pdf", sep='')
+			ggsave(file=file, w=6, h=6)	
+			#
+			#	WITH MTC cohort
+			#	WITH Swedish chain
+			#
+			file	<- "/Users/Oliver/duke/2014_HIV_MTCNL/141105_MTCNL58_nodr_INFO_TRM.R"
+			load(file)	
+			file	<- '/Users/Oliver/duke/2014_HIV_TChainSwedish/141105_set2_seqs_INFO_TRM.R'			
+			load(file)
+			
+			ggplot(trm.pol, aes(x=d_TSeqT)) +
+					geom_point(aes(y=BRL, colour="MTC cohort,\nAmsterdam"), size=2, data=trm.pol.mtc) +
+					geom_point(aes(y=BRL, colour="Confirmed pairs,\nSweden (gag)"), size=2, data=trm.gag) +					
+					geom_jitter(aes(y=BRL, colour="Confirmed pairs,\nBelgium"), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol, withA==FALSE & BRL>0.003)) +										
+					geom_line(data=trm.pol.p2, aes(y=BRL_p)) +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dotted') + geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dotted') +
+					#geom_line(data=trm.pol.p3, aes(x=x, y=q1), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q99), lty='twodash') +
+					#geom_line(data=trm.pol.p3, aes(x=x, y=q25), lty='dashed') + geom_line(data=trm.pol.p3, aes(x=x, y=q75), lty='dashed') +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q10), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q90), lty='twodash') +
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
+					coord_cartesian(xlim=c(0,13), ylim=c(0,0.1)) +
+					scale_colour_brewer(name='data set', palette='Set1') +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.02)) + scale_x_continuous(breaks=seq(0,30,2)) + 
+					theme_bw() + theme(legend.key = element_blank(), legend.key.height=unit(2.5,"line"), legend.background = element_rect(fill="gray90", size=.5, linetype="dotted"), legend.justification=c(0,1), legend.position=c(0,1), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.2)) +
+					guides(colour=guide_legend(override.aes = list(size=4)))
+			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_wSWwMTC_GA11eLINfit.pdf", sep='')
+			ggsave(file=file, w=6, h=6)	
+			
+			
+			if(1)
+			{
+				#
+				#	plot GAG	divergence
+				#
+				tmp				<- subset(trm.gag, select=c(d_SeqT, d_TSeqT, BRL))			
+				trm.gag.swGA11	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(tmp), family=GA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
+				
+				trm.gag.p2		<- data.table(d_TSeqT=seq(0,15,0.1))	
+				trm.gag.p2[, BRL_p:=predict(trm.gag.swGA11, data=tmp, newdata=as.data.frame(trm.gag.p2), type='response', se.fit=FALSE)]
+				trm.gag.p3		<- gamlss.centiles.get(trm.gag.swGA11, tmp$d_TSeqT, cent = c(2.5, 97.5) )		
+				setkey(trm.gag.p3, x)
+				trm.gag.p3		<- unique(trm.gag.p3)			
+				
+				ggplot(trm.gag, aes(x=d_TSeqT)) + geom_point(aes(y=BRL, pch=MODE), size=2) + geom_line(data=trm.gag.p2, aes(y=BRL_p)) +
+						geom_line(data=trm.gag.p3, aes(x=x, y=q2.5), lty='dashed') +
+						geom_line(data=trm.gag.p3, aes(x=x, y=q97.5), lty='dashed') +					
+						labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
+						coord_cartesian(xlim=c(0,13), ylim=c(0,0.115)) +
+						scale_shape_manual(values=c(16,15), name='transmission mode') + 					
+						scale_y_continuous(breaks=seq(0, 0.2, 0.02)) + scale_x_continuous(breaks=seq(0,30,2)) + 
+						theme_bw() + theme(legend.key = element_blank(), legend.background = element_rect(fill="gray90", size=.5, linetype="dotted"), legend.justification=c(0,1), legend.position=c(0,1), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.2)) +
+						guides(pch=guide_legend(override.aes = list(size=4)))
+				file	<- paste(indir, '/',"141105_set2_seqs_gag_patristic_dTS_data.pdf", sep='')
+				ggsave(file=file, w=6, h=6)
+			}
+
 		}
 		if(1)
 		{
@@ -6528,13 +6750,15 @@ project.Tchain.Belgium.sensecheck	<- function()
 			trm.pol[, withA.long:= trm.pol[, factor(as.numeric(withA), levels=c(0,1), labels=c('No','Yes'))]]
 			ggplot(trm.pol, aes(x=d_TSeqT)) +
 					geom_point(aes(y=BRL, pch="MTC cohort"), size=1.4, colour="black", data=trm.pol.mtc) +
-					geom_jitter(aes(y=BRL, colour=withA.long, pch="Confirmed pairs"), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol, BRL>0.003)) +
+					geom_jitter(aes(y=BRL, colour=withA.long, pch="Confirmed pairs\nBelgium"), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol, BRL>0.003)) +
 					#geom_point(aes(y=BRL), size=1.6, colour="#4DAF4A", pch=15, data=trm.pol.mtc) +					
 					geom_line(data=trm.pol.p2, aes(y=BRL_p)) +
-					geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dashed') +
-					geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dashed') +					
+					geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dotted') + geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dotted') +
+					#geom_line(data=trm.pol.p3, aes(x=x, y=q1), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q99), lty='twodash') +
+					#geom_line(data=trm.pol.p3, aes(x=x, y=q25), lty='dashed') + geom_line(data=trm.pol.p3, aes(x=x, y=q75), lty='dashed') +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q10), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q90), lty='twodash') +
 					labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
-					coord_cartesian(xlim=c(0,13), ylim=c(0,0.115)) +
+					coord_cartesian(xlim=c(0,13), ylim=c(0,0.1)) +
 					scale_shape_manual(values=c(16,15), name='data set') + 
 					scale_colour_brewer(name='including patient with\nmulti-drug resistance', palette='Set1') +
 					scale_y_continuous(breaks=seq(0, 0.2, 0.02)) + scale_x_continuous(breaks=seq(0,30,2)) + 
@@ -6724,11 +6948,11 @@ project.Tchain.Belgium.sensecheck	<- function()
 		#
 		tmp		<- subset(trm.pol, select=c(FROM, TO, TIP1, TIP2, FROM_SeqT, TO_SeqT, TIME_TR))
 		tmp		<- tmp[, 	{
-								z1	<- FROM_SeqT[ which.min(abs(FROM_SeqT-TIME_TR)) ]
-								z2	<- TO_SeqT[ which.min(abs(TO_SeqT-TIME_TR)) ]
-								z	<- FROM_SeqT==z1 & TO_SeqT==z2
-								list(TIP1=TIP1[z], TIP2=TIP2[z])
-							}, by=c('FROM','TO')]
+					z1	<- FROM_SeqT[ which.min(abs(FROM_SeqT-TIME_TR)) ]
+					z2	<- TO_SeqT[ which.min(abs(TO_SeqT-TIME_TR)) ]
+					z	<- FROM_SeqT==z1 & TO_SeqT==z2
+					list(TIP1=TIP1[z], TIP2=TIP2[z])
+				}, by=c('FROM','TO')]
 		#
 		#	plot close
 		#	divergence		
@@ -6747,7 +6971,6 @@ project.Tchain.Belgium.sensecheck	<- function()
 		ggsave(file=file, w=12, h=6)		
 		
 	}
-	
 }
 ######################################################################################
 project.hivc.test<- function()
