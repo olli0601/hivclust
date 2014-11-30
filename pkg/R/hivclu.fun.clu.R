@@ -1626,7 +1626,7 @@ hivc.clu.plot<- function(	ph, clu, edge.col.basic="black", show.node.label= T, s
 	}	
 	if(!is.null(highlight.edge.of.tiplabel))
 	{
-		highlight.edge<- lapply(highlight.edge.of.tiplabel, function(x)		which( ph$edge[,2]%in%which( substr(ph$tip.label, 1, nchar(x))==x ) )		)					
+		highlight.edge<- lapply(highlight.edge.of.tiplabel, function(x)		which( ph$edge[,2]%in%which( grepl(x, ph$tip.label, fixed=1) ) ) )					
 		if(length(highlight.edge.of.tiplabel.col)==1)
 			highlight.edge.of.tiplabel.col	<- rep(highlight.edge, length(highlight.edge.of.tiplabel.col) )		
 		for(i in seq_along(highlight.edge))
