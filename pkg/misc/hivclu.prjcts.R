@@ -637,19 +637,41 @@ project.Gates.dual.ExaMLrun<- function()
 	file		<- paste(indir, '/', infile, sep='')
 	cat(paste('\nLoading file', file))
 	load(file)		#expect "seqa"	
+	
+	infile.seq.sig	<- "Fri_Nov_28_12:59:06_2013"
+	infile.seq		<- substr(infile,1,nchar(infile)-2)
+	file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
+	seq				<- seqa
+	save(seq, file=file)	
 	#
 	#	run ExaML 
 	#
-	infile.seq.sig	<- "Fri_Nov_28_12:59:06_2013"
-	infile.seq		<- infile
-	file			<- paste( outdir, '/', infile.seq,'_',gsub('/',':',infile.seq.sig),'.R', sep='' )
-	seq				<- seqa
-	save(seq, file=file)
-	#	
-	cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=500, verbose=1)
-	cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q='pqeph', hpc.mem="3600mb", hpc.nproc=8)
-	hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
-	Sys.sleep(1)	
+	if(1)
+	{		
+		bs.from		<- 0
+		bs.to		<- 200
+		bs.n		<- 200
+		outdir		<- indir
+		cmd			<- hivc.cmd.examl.bootstrap(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=bs.from, bs.to=bs.to,bs.n=bs.n,outdir=outdir, resume=1, verbose=1)
+		dummy		<- lapply(cmd, function(x)
+				{				
+					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q="pqeph", hpc.mem="450mb", hpc.nproc=1)
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("du",signat,sep='.')
+					#cat(x)
+					hivc.cmd.hpccaller(outdir, outfile, x)
+					Sys.sleep(1)
+				})	
+	}
+	if(0)
+	{
+		#	
+		cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=500, verbose=1)
+		cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=71, hpc.q='pqeph', hpc.mem="3600mb", hpc.nproc=8)
+		hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
+		Sys.sleep(1)	
+	}		
 }
 ######################################################################################
 project.Gates.test.ExaMLrun<- function()

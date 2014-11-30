@@ -885,7 +885,7 @@ hivc.pipeline.various<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		quit("no")
 	}	
-	if(1)	#run ExaML
+	if(0)	#run ExaML
 	{
 		project.hivc.examl()
 		quit("no")
@@ -904,7 +904,7 @@ hivc.pipeline.various<- function()
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
 	}
-	if(0)
+	if(1)
 	{
 		project.Gates()
 		quit("no")
