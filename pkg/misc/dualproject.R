@@ -11,7 +11,19 @@ project.dualinfections.build.blastdb<- function()
 	cat ( cmd )	
 }
 
-project.dualinfections.ExaML<- function()
+project.dualinfections.ExaML.AllTrees<- function()
+{
+	#	load R
+	indir	<- '/Users/Oliver/duke/2014_Gates1125_dualinfection/Contigs_141126_analysis'
+	infile	<- 'Contigs_141126_BLASTstrict_OR_linsi.fasta'
+	file	<- paste(indir, '/', substr(infile, 1, nchar(infile)-5),'R',sep='')
+	tmp		<- load(file)
+	print(tmp)
+	#	for each tree, see if contigs monophyletic. If no, flag as potential dual infection
+	
+}
+
+project.dualinfections.ExaML.DataTree<- function()
 {
 	if(0)
 	{
@@ -40,24 +52,30 @@ project.dualinfections.ExaML<- function()
 	{
 		#look at ExaML data tree with bootstrap values
 		indir	<- '/Users/Oliver/duke/2014_Gates1125_dualinfection/Contigs_141126_analysis'
-		infile	<- 'Contigs_141126_BLASTstrict750_OR_linsi_bs168.newick'
+		#infile	<- 'Contigs_141126_BLASTstrict750_OR_linsi_bs168.newick'
+		infile	<- gsub('/',':','Contigs_141126_BLASTstrict750_OR_linsi_examlbs200_Fri_Nov_28_12/59/06_2013.newick')
 		
 		ph			<- read.tree(paste(indir,'/',infile,sep=''))
+		#	re-root at SIV outgroup	http://www.ncbi.nlm.nih.gov/nuccore/AF103818
+		tmp			<- which(ph$tip.label=='Ref.CPZ.US.85.US_Marilyn.AF103818')
+		ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
+		#	drop irrelevant tips
+		tmp			<- c('Ref.CPZ.CM.05.SIVcpzMT145.DQ373066','Ref.CPZ.CD.90.ANT.U42720','Ref.P.FR.09.RBF168.GU111555','Ref.P.CM.06.U14788.HQ179987','Ref.O.CM.91.MVP5180.L20571','Ref.O.BE.87.ANT70.L20587','Ref.O.CM.98.98CMU2901.AY169812','Ref.O.SN.99.99SE_MP1300.AJ302647','Ref.N.CM.95.YBF30.AJ006022','Ref.N.CM.02.DJO0131.AY532635','Ref.N.CM.97.YBF106.AJ271370')
+		ph			<- drop.tip(ph, tmp)
+		#	*** ONLY for visualization purposes ***
+		ph$edge.length[1]	<- 0.31
+		#	bootstrap support		
 		tmp			<- as.numeric( ph$node.label ) / 100
 		tmp[which(is.na(tmp))]	<- 0
 		ph$node.label	<- tmp		
-		ph			<- ladderize(ph)
-		
-		
+		ph				<- ladderize(ph)		
+		#	clustering
 		dist.brl	<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)		
-		thresh.brl	<- quantile(dist.brl,seq(0.1,1,by=0.05))["100%"]
-		
+		thresh.brl	<- quantile(dist.brl,seq(0.1,1,by=0.05))["100%"]		
 		thresh.bs	<- 0.8
 		thresh.brl	<- 0.3
-		#
-		#	produce clustering and plot
-		#
-		clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph$node.label, retval="all")		
+		clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph$node.label, retval="all")
+		#	plot
 		file		<- paste(indir,'/',gsub('.','_',infile,fixed=1),'.pdf',sep='')
 		tmp			<- hivc.clu.plot(ph, clustering[["clu.mem"]], edge.col.basic="grey70", highlight.cluster=unique(na.omit(clustering[["clu.mem"]])), highlight.cluster.col='black', cex.edge.incluster=2, show.tip.label=TRUE, file=file, pdf.width=100 )
 		#
@@ -89,10 +107,14 @@ project.dualinfections.ExaML<- function()
 		setnames(patdp, c('TIP1','TIP2'), c('ID1','ID2'))
 		patdp		<- merge(patdp, subset(seqd.str, BS==0), by=c('ID1','ID2'), all.x=1)
 		#
-		ggplot(patdp, aes(x=BRL, fill= ST1==ST2)) + geom_histogram() + theme_bw() +labs(x='patristic distance\namong contigs from same patient')
-		ggplot(subset(patdp, BRL<1), aes(x=BRL, fill= ST1==ST2)) + geom_histogram() + theme_bw() +labs(x='patristic distance\namong contigs from same patient')
+		ggplot(patdp, aes(x=BRL, fill= ST1==ST2)) + geom_histogram(binwidth=0.05) + theme_bw() +labs(x='patristic distance among contigs from same patient\n(subst/site)') + theme(legend.position='bottom',panel.grid.minor=element_line(colour="grey70", size=0.4), panel.grid.major=element_line(colour="grey70", size=0.4)) +
+			scale_fill_brewer(palette='Set1', name='same BLAST subtype') +
+			scale_x_continuous(breaks=seq(0,2,0.2))
+		file		<- paste(indir,'/',gsub('.','_',infile,fixed=1),'_ContigSamePat_PatDist.pdf',sep='')
+		ggsave(file=file, w=8, h=5)
+		#	patdp[, summary(BRL)]
 		#
-		#	patristic distance super large: median 0.29 !!
+		#	patristic distance super large: median 0.21 !!
 		#
 		#	for now consider only those with rel large overlap
 		patdp[, summary(ID12_N)]
