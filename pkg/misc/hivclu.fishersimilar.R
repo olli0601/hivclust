@@ -2012,6 +2012,7 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	set(df.all, NULL, 'PosCD4_T1', hivc.db.Date2numeric(df.all[,PosCD4_T1]))
 	set(df.all, NULL, 'PosCD4_TS', hivc.db.Date2numeric(df.all[,PosCD4_TS]))
 	set(df.all, NULL, 'AnyT_T1', hivc.db.Date2numeric(df.all[,AnyT_T1]))	
+	df.all	<- subset(df.all, Sex=='M' & (is.na(Trm) | !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH')))
 	#
 	#	adjust Acute=='Maybe' by NegT 
 	if(!is.na(adjust.AcuteByNegT))
@@ -10286,7 +10287,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
 	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	
 	#
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3pa1H1.35C3V100'
@@ -10903,6 +10905,95 @@ project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals<- 
 			facet_grid(. ~ group, scales='free_y', margins=FALSE)		
 	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','ratio',".pdf", sep='')	
 	ggsave(file=file, w=9, h=7)
+}
+######################################################################################
+project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals.notime<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, group)
+{			
+	df		<- subset(runs.table, method.denom==method.DENOM & method.BRL==method.brl & grepl(method.RISK,method.risk), c(stat, method.risk, factor, n, p, l95.bs, u95.bs))
+	if(method.WEIGHT=='')
+		df		<- subset(df, !grepl('wstar',method.risk) & !grepl('now',method.risk))
+	if(method.WEIGHT!='')
+		df		<- subset(df, grepl(method.WEIGHT,method.risk) )
+	set(df, NULL, 'factor', df[, as.character(factor)])	
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'factor', df[, factor(factor, levels=factors[, levels(factor)])])
+	
+	#	prop potential transmission intervals 
+	tmp		<- subset(df, stat%in%c('X.msm.e0cp','nRec'))	
+	tmp		<- dcast.data.table(tmp, t.period+factor+method.risk~stat, value.var='n')
+	tmp[, n:= X.msm.e0cp/8/nRec*100]	
+	tmp		<- tmp[, list(n.coh=sum(n)), by='factor']
+	tmp[, p.coh:= tmp[, n.coh/sum(n.coh)]]
+	set(tmp, NULL, 'n.coh', tmp[, round(n.coh, d=0)])			
+	ans		<- subset(tmp, select=c(factor,  p.coh))
+	#	prop likely transmission intervals 
+	tmp		<- subset(df, stat%in%c('YX','nRecLkl'))
+	tmp2	<- subset(df, stat=='YX', select=c(factor, t.period, p))
+	tmp		<- dcast.data.table(tmp, t.period+factor+method.risk~stat, value.var='n')
+	tmp		<- merge(tmp, tmp2, by=c('factor','t.period'))
+	tmp[, n:= YX/nRecLkl*100]	
+	tmp		<- tmp[, list(n.lkl=sum(n)), by='factor']
+	tmp[, p.lkl:= tmp[, n.lkl/sum(n.lkl)]]	
+	set(tmp, NULL, 'n.lkl', tmp[, round(n.lkl, d=0)])		
+	ans		<- merge(ans, subset(tmp, select=c(factor, p.lkl)), by='factor')
+	#	prop likely transmission intervals + expected missing intervals per 100 'recipient with lkl transmitter' in time period
+	tmp		<- subset(df, stat%in%c('YX','Sx.e0cp','nRecLkl'))
+	tmp2	<- subset(df, stat=='Sx.e0cp', select=c(factor, t.period, l95.bs, u95.bs))
+	tmp		<- dcast.data.table(tmp, t.period+factor+method.risk~stat, value.var='n')
+	tmp		<- merge(tmp, tmp2, by=c('factor','t.period'))
+	tmp[, n:= (YX+Sx.e0cp/8)/nRecLkl*100]
+	tmp[, l95.bs:= (YX+l95.bs/8)/nRecLkl*100]
+	tmp[, u95.bs:= (YX+u95.bs/8)/nRecLkl*100]	
+	tmp		<- tmp[, list(n.lklm=sum(n), l95.lklm=sum(l95.bs), u95.lklm=sum(u95.bs)), by='factor']
+	tmp[, p.lklm:= tmp[, n.lklm/sum(n.lklm)]]
+	ans		<- merge(ans, subset(tmp, select=c(factor, p.lklm)), by='factor')
+	#	ratio of proportions
+	ans[, r.lkl:= p.lkl/p.coh]
+	ans[, r.lklm:= p.lklm/p.coh]
+	ans		<- melt(ans, measure.vars=c('p.coh','p.lklm'))
+	# group
+	if(group=='cascade')
+	{
+		scale.name	<- 'in infection/care stage'
+		ans[, group:=ans[, substr(factor, 1, 1)]]
+		set(ans, ans[,which(group=='A')], 'group', 'ART started')
+		set(ans, ans[,which(group=='U')], 'group', 'Undiagnosed')
+		set(ans, ans[,which(group=='D')], 'group', 'Diagnosed')
+		set(ans, NULL, 'group', ans[, factor(group, levels=c('Undiagnosed','Diagnosed','ART started'))])		
+	}
+	if(group=='age')
+	{		
+		scale.name	<- 'from age group'
+		ans[, group:=NA_character_ ]
+		set(ans, ans[,which(factor%in%c('t<=20','t<=25'))], 'group', '<30')
+		set(ans, ans[,which(factor%in%c('t<=30','t<=35'))], 'group', '30-39')
+		set(ans, ans[,which(factor%in%c('t<=40','t<=45','t<=100'))], 'group', '40-')
+		set(ans, NULL, 'group', ans[, factor(group, levels=c('<30','30-39','40-'))])
+		theme.age <- function (base_size = 12, base_family = "") 
+		{
+			theme_grey(base_size = base_size, base_family = base_family) %+replace% 
+					theme(	legend.key.size=unit(11,'mm'), 
+							axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5), 
+							panel.background = element_rect(fill = 'grey60'),
+							panel.grid.minor.y = element_line(colour='grey70'),
+							panel.grid.major = element_line(colour='grey70'),
+							legend.key=element_rect(fill='grey60'))
+		}
+		theme_set(theme.age())
+	}
+	#factor.long	
+	ans	<- merge(ans, factors, by='factor')	
+	ggplot(ans, aes(x=interaction(variable, factor), y=value*100, colour=variable, fill=factor.legend)) + geom_bar(stat='identity', position='dodge') +
+		scale_fill_manual(values=ans[, unique(factor.color)], guide=FALSE) +
+		scale_colour_manual(values=c('transparent','black'), guide=FALSE) +
+		scale_y_continuous(breaks=seq(0,50,10), minor_breaks=seq(0,50,2)) +
+		theme_bw() + 
+		geom_text(aes(x=seq_along(interaction(variable, factor)), y=-2, label='*'), size=7) +
+		labs(x='', y='Transmission intervals\n(%)') +
+		theme(legend.key.size=unit(11,'mm'), legend.position = "bottom", legend.box = "vertical", axis.ticks.x=element_blank(), axis.text.x=element_blank(), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7)) 
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','enrich',".pdf", sep='')	
+	ggsave(file=file, w=5, h=3)
 }
 ######################################################################################
 project.athena.Fisheretal.sensitivity.getfigures.likelihood<- function()
@@ -14299,7 +14390,9 @@ hivc.prog.betareg.estimaterisks<- function()
 	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
 	df.all			<- tmp$df.all	
 	df.denom.CLU	<- tmp$df.select
+	df.denom.CLU	<- subset(df.denom.CLU, Trm=='MSM')
 	df.denom.SEQ	<- tmp$df.select.SEQ
+	df.denom.SEQ	<- subset(df.denom.SEQ, Trm=='MSM')
 	ri.CLU			<- unique(subset(df.denom.CLU, select=Patient))
 	ri.SEQ			<- unique(subset(df.denom.SEQ, select=Patient))
 	df.viro			<- tmp$df.viro
@@ -14320,9 +14413,9 @@ hivc.prog.betareg.estimaterisks<- function()
 	df.viro.allmsm		<- tmp$df.viro
 	df.immu.allmsm		<- tmp$df.immu
 	df.treatment.allmsm	<- tmp$df.treatment
-	tmp					<- tmp$df.select.SEQ
+	tmp					<- tmp$df.select.SEQ	
 	setkey(tmp, Patient)
-	ri.ALLMSM			<- unique(tmp)	
+	ri.ALLMSM			<- unique(subset(tmp, Trm=='MSM'))	
 	#
 	if(0)
 	{

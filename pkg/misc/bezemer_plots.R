@@ -33,16 +33,49 @@ db.clusterR.plot<- function()
 	df		<- merge( df, df[, list(TMID= mean(c(TS, TE))), by=c('CID', 'TS') ], by=c('CID', 'TS') )
 	
 	tmp		<- df[, list(TMIN=min(TS)), by='CID']
-	tmp[, CID.ERA:= tmp[, cut(TMIN, breaks=c(-Inf, 1990, 2000, Inf), labels=c("before\n1991","1991\n -2000","after\n2000"))]]	
+	tmp[, CID.ERA:= tmp[, cut(TMIN, breaks=c(-Inf, 1990, 2000, Inf), labels=c("before 1991","1991 - 2000","after 2000"))]]	
 	df		<- merge(df, tmp, by='CID')
 	
-	dfq		<- df[, list(RMQL=quantile(RM, p=0.025), RMM=quantile(RM, p=0.5), RMQU=quantile(RM, p=0.975)), by='TMID']
+	dfq		<- df[, list(RQLM= mean(RQL), RQUM= mean(RQU), RMQL=quantile(RM, p=0.025), RMM=quantile(RM, p=0.5), RMQU=quantile(RM, p=0.975)), by='TMID']
 	dfq		<- subset(dfq, RMQL<RMQU)
 	setkey(dfq, TMID)
 	
-	dfq2		<- df[, list(RMQL=quantile(RM, p=0.025), RMM=quantile(RM, p=0.5), RMQU=quantile(RM, p=0.975)), by=c('CID.ERA','TMID')]
+	dfq2		<- df[, list(RQLM= mean(RQL), RQUM= mean(RQU), RMQL=quantile(RM, p=0.025), RMM=quantile(RM, p=0.5), RMQU=quantile(RM, p=0.975)), by=c('CID.ERA','TMID')]
 	dfq2		<- subset(dfq2, RMQL<RMQU)
 	setkey(dfq2, TMID)
+	#
+	#	new code: taking Anne's comment on board
+	#	
+	ggplot(df, aes(x=TMID)) + theme_bw() +	labs(x='', y='Case reproduction number within cluster\n(clusters of size > 10)\n') +		
+			geom_ribbon(alpha=0.01,  fill='black', aes(y=RM, ymax=RQU, ymin=RQL, group=CID)) +
+			geom_line(alpha=0.5, aes(y=RM, group=CID, colour=CID.ERA)) +
+			geom_line(data=dfq, linetype='dashed', aes(y=RQLM)) +
+			geom_line(data=dfq, linetype='dashed', aes(y=RQUM)) +
+			geom_line(alpha=0.5, aes(y=RM, group=CID, colour=CID.ERA)) +
+			geom_line(data=dfq, aes(y=RMM),size=2, colour='black') +
+			geom_hline(yintercept=1, linetype='dotdash') +			
+			scale_colour_brewer(palette='Set1', name='Era') +
+			coord_cartesian(ylim=c(0,2.5), xlim=c(1985, 2008)) +
+			scale_y_continuous(breaks=seq(0,3,0.2)) + scale_x_continuous(breaks=seq(1980,2020,5), minor_breaks=seq(1980,2020,1)) +
+			theme(legend.position=c(0,1), legend.justification=c(0,1), legend.direction='horizontal', legend.key.size=unit(10,'mm'))
+	file	<- paste(indir, '/', substr(infile,1,nchar(infile)-6),'_RAllEras.pdf', sep='')
+	ggsave(file=file, w=8, h=6)	
+	
+	ggplot(df, aes(x=TMID)) + theme_bw() +	labs(x='', y='Case reproduction number within cluster\n(clusters of size > 10)\n') +			
+			geom_ribbon(alpha=0.01,  fill='black', aes(y=RM, ymax=RQU, ymin=RQL, group=CID)) +
+			geom_line(alpha=0.5, aes(y=RM, group=CID, colour=CID.ERA)) +
+			geom_line(data=dfq2, linetype='dashed', aes(y=RQLM)) +
+			geom_line(data=dfq2, linetype='dashed', aes(y=RQUM)) +
+			geom_line(alpha=0.5, aes(y=RM, group=CID, colour=CID.ERA)) +
+			geom_line(data=dfq2, aes(y=RMM),size=2, colour='black') +
+			geom_hline(yintercept=1, linetype='dotdash') +			
+			scale_colour_brewer(palette='Set1', name='Era', guide=FALSE) +
+			coord_cartesian(ylim=c(0,2.5), xlim=c(1985, 2008)) +
+			scale_y_continuous(breaks=seq(0,3,0.2)) + scale_x_continuous(breaks=seq(1980,2020,5), minor_breaks=seq(1980,2020,1)) +
+			theme(legend.position=c(0,1), legend.justification=c(0,1), legend.direction='horizontal', legend.key.size=unit(10,'mm')) +
+			facet_grid(.~CID.ERA)
+	file	<- paste(indir, '/', substr(infile,1,nchar(infile)-6),'_RByEra.pdf', sep='')
+	ggsave(file=file, w=12, h=5)
 	
 	#
 	#	Rmean for all eras
@@ -73,20 +106,6 @@ db.clusterR.plot<- function()
 			facet_grid(.~CID.ERA)
 	file	<- paste(indir, '/', substr(infile,1,nchar(infile)-6),'_RmeanByEra.pdf', sep='')
 	ggsave(file=file, w=12, h=6)
-	#
-	#	experimental : R for all eras
-	#
-	dfd<- copy(df)
-	setkey(dfd, TMID)
-	set( dfd, NULL, 'TMID', dfd[, factor(TMID)])
-	ggplot(df, aes(x=TMID)) + theme_bw() + labs(x='', y='R per cluster') +
-			#geom_line(data=dfq, aes(y=RMM),size=2, colour='black') +
-			#geom_ribbon(data=dfq, aes(ymin=RMQL, ymax=RMQU), fill='black', alpha=0.2) +
-			geom_line(alpha=0.5, aes(y=RM, group=CID, colour=CID.ERA)) +
-			geom_hline(yintercept=1, linetype='dashed') +
-			geom_errorbar(aes(ymin=RQL, ymax=RQU), colour="black", alpha=0.2, width=.1, position=position_dodge(width=3)) +
-			scale_colour_brewer(palette='Set1', name='era') +
-			scale_y_continuous(breaks=seq(0,3,0.2)) + scale_x_continuous(breaks=seq(1980,2020,5), minor_breaks=seq(1980,2020,1)) +
-			theme(legend.position='bottom')
+	
 	
 }
