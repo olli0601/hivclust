@@ -236,7 +236,7 @@ hivc.pipeline.clustering<- function()
 ######################################################################################
 hivc.pipeline.BEAST<- function()
 {
-	if(1)	#run BEAST 1.7.5 GMRF skyline
+	if(0)	#run BEAST 1.7.5 GMRF skyline
 	{
 		indir				<- paste(DATA,"tmp",sep='/')		
 		indircov			<- paste(DATA,"derived",sep='/')
@@ -298,7 +298,7 @@ hivc.pipeline.BEAST<- function()
 		hivc.prog.BEAST.generate.xml()		
 		quit("no")
 	}
-	if(0)		#generate BEAST2 BDSKYline xml file
+	if(1)		#generate BEAST2 BDSKYline xml file
 	{
 		indir				<- paste(DATA,"tmp",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
@@ -890,6 +890,11 @@ hivc.pipeline.various<- function()
 		project.hivc.examl()
 		quit("no")
 	}
+	if(1)
+	{
+		hivc.pipeline.BEAST()
+		quit("no")
+	}
 	if(0)	#run fisher similar analysis
 	{
 		indir		<- paste(dir.name,"tmp",sep='/')
@@ -904,7 +909,7 @@ hivc.pipeline.various<- function()
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
 	}
-	if(1)
+	if(0)
 	{
 		project.Gates()
 		quit("no")

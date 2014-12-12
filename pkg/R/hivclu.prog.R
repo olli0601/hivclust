@@ -1048,8 +1048,8 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 	verbose		<- 1
 	resume		<- 1
 	indir		<- paste(DATA,"tmp",sep='/')		
-	infile		<- "ATHENA_2013_03_NoDRAll+LANL_Sequences_examlbs100"			
-	insignat	<- "Thu_Aug_01_17/05/23_2013"
+	infile		<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500"			
+	insignat	<- "Wed_Dec_18_11/37/00_2013"
 	indircov	<- paste(DATA,"derived",sep='/')
 	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
 	opt.brl		<- "dist.brl.casc" 
@@ -1157,7 +1157,7 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 		#
 		# remove singletons
 		#
-		if(verbose) cat(paste("\nnumber of seq in tree is n=", nrow(clu$df.cluinfo)))
+		if(verbose) cat(paste("\nnumber of seq in tree is n=", nrow(clu$df.seqinfo)))
 		df.cluinfo	<- subset(clu$df.seqinfo, !is.na(cluster) )
 		if(verbose) cat(paste("\nnumber of seq in clusters is n=", nrow(df.cluinfo)))
 		if(verbose) cat(paste("\nnumber of clusters is n=", length(unique(df.cluinfo[,cluster]))))
@@ -1191,26 +1191,40 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 		clustering	<- tmp$cluphy.clustering		
 		#
 		#get in-country clusters. this splits clusters with a foreign sequence
-		#		
-		outdir			<- indir
-		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"incountry",sep='')
-		outsignat		<- insignat									
-		#ph			<- clu.pre$ph; clustering	<- clu$clustering; plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); char.frgn  	='CountryInfection=="FRGN"'; char.frgntn	='CountryInfection=="FRGNTN"'; 
-		incountry		<- hivc.clu.getplot.incountry(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''))
-		ph				<- incountry$cluphy
-		clustering		<- incountry$clustering
-		df.cluinfo		<- incountry$df.cluinfo		
+		#don t use: self report may be unreliable		
+		if(0)
+		{
+			outdir			<- indir
+			outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"incountry",sep='')
+			outsignat		<- insignat									
+			#ph			<- clu.pre$ph; clustering	<- clu$clustering; plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); char.frgn  	='CountryInfection=="FRGN"'; char.frgntn	='CountryInfection=="FRGNTN"'; 
+			incountry		<- hivc.clu.getplot.incountry(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''))
+			ph				<- incountry$cluphy
+			clustering		<- incountry$clustering
+			df.cluinfo		<- incountry$df.cluinfo					
+		}
 		#
-		# get msm exposure group clusters. this splits clusters with HET-F
+		# get msm exposure group clusters. 
 		#
 		set(df.cluinfo, which( df.cluinfo[,Trm%in%c("BLOOD","BREAST","PREG","NEEACC")] ), "Trm", "OTH" )
 		set(df.cluinfo, which( df.cluinfo[,Trm=="HETfa"] ), "Trm", "HET" )		
 		set(df.cluinfo, NULL, "Trm", factor(df.cluinfo[,Trm]) )		
 		#ph<- incountry$cluphy; 		plot.file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); levels.msm=c("BI","MSM","IDU","NA"); levels.het=c("BI","HET","IDU","NA"); levels.mixed=c("BI","MSM","HET","IDU","NA"); levels.oth="OTH"
-		outdir			<- indir
-		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
-		outsignat		<- insignat							
-		msm				<- hivc.clu.getplot.msmexposuregroup(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''))		
+		if(0)	#	this splits clusters with HET-F	
+		{			
+			outdir			<- indir
+			outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
+			outsignat		<- insignat							
+			msm				<- hivc.clu.getplot.msmexposuregroup(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), split.clusters=0)					
+		}
+		if(1)	#	keep HET-F to calibrate compatibility test
+		{
+			outdir			<- indir
+			outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
+			outsignat		<- insignat							
+			msm				<- hivc.clu.getplot.msmexposuregroup(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), method.who='Other', split.clusters=0)
+			
+		}
 		#
 		# collapse within patient subclades in each subtree
 		#
@@ -1253,7 +1267,8 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 		outdir			<- indir
 		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr_bybwpatmedbrl",sep='')
 		outsignat		<- insignat									
-		tmp				<- hivc.clu.polyphyletic.clusters(df.cluinfo, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=35, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)
+		tmp				<- hivc.clu.polyphyletic.clusters(df.cluinfo, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),"anonymous.pdf",sep=''), pdf.scaley=35, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.3, label.select=c("Trm","Sex","NegT","AnyPos_T1","PosSeqT","AnyT_T1","PosCD4_T1","CD4_T1","RegionHospital"))
+		tmp				<- hivc.clu.polyphyletic.clusters(df.cluinfo, cluphy.subtrees=cluphy.subtrees, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), pdf.scaley=35, adj.tiplabel= c(-0.05,0.5), cex.tiplabel=0.3, pdf.xlim=0.36)		
 		cluphy			<- tmp$cluphy
 		#
 		# save

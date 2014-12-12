@@ -830,7 +830,8 @@ hivc.clu.clusterbytrueneg<- function(ph, dist.brl, nodesupport, ph.unlinked.info
 	ans		
 }
 ######################################################################################
-hivc.clu.polyphyletic.clusters<- function(cluphy.df=NULL, cluphy.subtrees=NULL, ph=NULL, clustering=NULL, verbose=1, plot.file=NA, pdf.scaley=25, pdf.xlim=NULL, cex.nodelabel=0.2, cex.tiplabel=0.2, adj.tiplabel= c(-0.15,0.5))
+hivc.clu.polyphyletic.clusters<- function(	cluphy.df=NULL, cluphy.subtrees=NULL, ph=NULL, clustering=NULL, verbose=1, plot.file=NA, pdf.scaley=25, pdf.xlim=NULL, cex.nodelabel=0.2, cex.tiplabel=0.2, adj.tiplabel= c(-0.15,0.5),
+											label.select=c("CountryInfection","Trm","Sex","isAcute","lRNA.early","NegT","AnyPos_T1","PosSeqT","lRNA.hb4tr_LT","lRNA_bTS","lRNA_TS","lRNA_aTS","lRNAi_bTS","lRNAi_aTS","AnyT_T1","TrImo_bTS","TrImo_aTS","PosCD4_T1","CD4_T1","CD4_bTS","CD4_TS","CD4_aTS","Patient","RegionHospital"))
 {
 	if(!is.null(ph) && !is.null(clustering))
 	{
@@ -851,7 +852,7 @@ hivc.clu.polyphyletic.clusters<- function(cluphy.df=NULL, cluphy.subtrees=NULL, 
 	if(!is.na(plot.file))
 	{		
 		if(is.null(cluphy.df))	stop('cluphy.df required when !is.na(plot.file)')
-		cluphy.tiplabels						<- hivc.clu.get.tiplabels( cluphy, copy(cluphy.df) )
+		cluphy.tiplabels						<- hivc.clu.get.tiplabels( cluphy, copy(cluphy.df), select=label.select )
 		if(verbose) cat(paste("\nwrite tree to file",plot.file))
 		color.except.rootedge					<- rep(1, Nnode(cluphy, internal.only=F))
 		color.except.rootedge[Ntip(cluphy)+1]	<- NA
@@ -955,8 +956,9 @@ hivc.clu.getplot.incountry<- function(ph, clustering, df.cluinfo, verbose=1, plo
 	list(clustering=clustering, df.cluinfo=df.cluinfo, cluphy=cluphy, cluphy.subtrees=cluphy.subtrees)
 }
 ######################################################################################
-hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, levels.msm=c("BI","MSM","IDU","NA"), levels.het=c("BI","HET","IDU","NA"), levels.mixed=c("BI","MSM","HET","IDU","NA"),levels.oth="OTH", split.clusters=0)
+hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, levels.msm=c("BI","MSM","IDU","NA"), levels.het=c("BI","HET","IDU","NA"), levels.mixed=c("BI","MSM","HET","IDU","NA"),levels.oth="OTH", split.clusters=0, method.who='Females_Other')
 {	
+	stopifnot(method.who%in%c('Females_Other','Other'))
 	clut						<- table( df.cluinfo[,cluster,Trm], useNA= "always" )
 	rownames(clut)[nrow(clut)]	<- "NA"
 	clut						<- clut[,-ncol(clut)]
@@ -1007,7 +1009,15 @@ hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose
 	# combine cluphy.oth and cluphy.hetF for splitting
 	if(length(intersect( unique(cluphy.hetF[,cluster]),unique(cluphy.oth[,cluster]) )))
 		stop("unexpected overlap between cluphy.hetF and cluphy.oth")
-	cluphy.split						<- rbind(cluphy.hetF, cluphy.oth)
+	cat(paste('\nusing method.who=',method.who))
+	if(method.who=='Females_Other')
+		cluphy.split					<- rbind(cluphy.hetF, cluphy.oth)
+	if(method.who=='Other')
+	{
+		cluphy.split					<- copy(cluphy.oth)
+		tmp								<- hivc.clu.polyphyletic.clusters(cluphy.hetF , ph=ph, clustering=clustering)$cluphy.subtrees
+		cluphy.msm.subtrees				<- c(cluphy.msm.subtrees, tmp)
+	}
 	# exclude pairs -- split would result in singleton
 	tmp									<- cluphy.split[, list(size=length(unique(FASTASampleCode))), by="cluster"]
 	cluphy.split.rm						<- subset(tmp,size<=2, cluster)[,cluster]		
@@ -1027,7 +1037,7 @@ hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose
 		#z<- subset(tmp$cluphy.df[cluphy.hetF[,FASTASampleCode],], !is.na(cluster),select=c(cluster,FASTASampleCode,Patient,Sex,Trm))			
 		if(verbose)	cat(paste("\nnumber of retained clusters is n=",length(cluphy.split.subtrees)))		
 	}
-	else				#drop HETF or OTH sequence from cluster
+	else 				#drop HETF or OTH sequence from cluster
 	{		
 		if(verbose)	cat(paste("\nnumber of droptip clusters is n=",length(unique(cluphy.split[,cluster]))))
 		cluphy.split.subtrees			<- hivc.clu.droptipincluster(cluphy.split.subtrees, df.cluinfo, parse(text='Sex=="F" | Trm=="OTH"') )		
@@ -1038,7 +1048,7 @@ hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose
 	#	
 	cluphy.subtrees				<- c(cluphy.split.subtrees, cluphy.msm.subtrees)
 	setkey(df.cluinfo, FASTASampleCode)
-	tmp							<- which(sapply(cluphy.subtrees, function(x)		nrow(subset( df.cluinfo[x$tip.label,], any(Trm=="MSM") & length(unique(na.omit(Patient)))>1 ))>0			))	
+	tmp							<- which(sapply(cluphy.subtrees, function(x)		nrow(subset( df.cluinfo[x$tip.label,],  length(unique(na.omit(Patient)))>1 ))>0			))	
 	if(verbose)	cat(paste("\nnumber of final MSM clusters is n=",length(tmp)))
 	cluphy.subtrees.names		<- as.numeric(names(cluphy.subtrees)[tmp])
 	cluphy.subtrees				<- lapply(tmp, function(i) cluphy.subtrees[[i]]	)
