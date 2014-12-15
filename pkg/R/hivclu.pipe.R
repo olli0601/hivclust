@@ -727,7 +727,7 @@ hivc.pipeline.betareg.estimate.risks<- function()
 	}
 	method.lRNA.supp			<- 100
 	method.use.AcuteSpec		<- 1
-	method.minQLowerU			<- 0.1	#0.135, 0.18, 0.23
+	method.minQLowerU			<- 0.135	#0.135, 0.18, 0.23
 	method.thresh.pcoal			<- 0.3
 	method.PDT					<- 'SEQ'
 	#method.Acute				<- 'empirical'
