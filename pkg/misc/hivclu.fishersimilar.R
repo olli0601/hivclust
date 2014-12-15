@@ -15057,7 +15057,7 @@ hivc.prog.betareg.estimaterisks<- function()
 			X.seq			<- project.athena.Fisheretal.YX.model5.stratify(X.seq)
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
 		}					
-		stop()
+		#stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
@@ -15110,11 +15110,11 @@ hivc.prog.betareg.estimaterisks<- function()
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model4_',method.risk,'.R',sep='')		
 	if(grepl('m5',method.risk))
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model5_',method.risk,'.R',sep='')			
-	tmp					<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, tperiod.info, plot.file.or=NA, bs.n=1e3, resume=resume, save.file=save.file, method.risk=method.risk)					
+	tmp					<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, tperiod.info, plot.file.or=NA, bs.n=1e3, resume=resume, save.file=save.file, method.risk=method.risk)						
+	
+	
 	
 	stop()
-		
-		
 	tmp		<- subset(YX, select=c(Patient, t.Patient, score.Y))	
 	setkey(tmp, Patient, t.Patient)
 	tmp		<- unique(tmp)
