@@ -101,7 +101,7 @@ PR.BEAST2.PLOTCLUTREES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=B
 PR.PH.DISTTIPS	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=PH.DISTTIPS",sep='/')
 
 #' @export
-PR.BETAREG.ESTRISK		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BETAREG.ESTRISK",sep='/')
+PR.PROPS.ESTIMATE		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=PROPS.ESTIMATE",sep='/')
 
 #' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
@@ -436,10 +436,10 @@ hivc.cmd.get.firstseq<- function(indir, infile, signat.in, signat.out, outdir=in
 }	
 ######################################################################################
 #' @export
-hivc.cmd.betareg.estimate.risks<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, outdir=indir, outfile=infile, prog= PR.BETAREG.ESTRISK, resume=1, verbose=1)
+hivc.cmd.props.estimate<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, outdir=indir, outfile=infile, prog= PR.PROPS.ESTIMATE, resume=1, verbose=1)
 {
 	cmd		<- "#######################################################
-# start: run beta regression and estimate risks
+# start: estimate proportions etc
 #######################################################"
 	cmd		<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
 	#default commands
@@ -451,7 +451,7 @@ hivc.cmd.betareg.estimate.risks<- function(indir, infile, insignat, indircov, in
 	#verbose stuff
 	cmd		<- paste(cmd,paste("\necho \'end ",prog,"\'",sep=''))
 	cmd		<- paste(cmd,"\n#######################################################
-# end: run beta regression and estimate risks
+# end: estimate proportions etc
 #######################################################\n",sep='')
 	cmd
 }
