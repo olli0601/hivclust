@@ -7855,10 +7855,10 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	immu.sm		<- subset(immu.sm, !is.na(t))
 	setnames(immu.sm, 'Patient','t.Patient')
 	#	make sure we have all prob transmitters in immu.sm for whom we have at least one CD4 measurement
-	tmp			<- setdiff( YX[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
+	tmp			<- setdiff( YX.m2[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
 	tmp			<- merge(df.immu, data.table(Patient=tmp), by='Patient')
 	stopifnot(nrow(tmp)==0)		#may change in future; nothing to fill in for now
-	immu.sm		<- merge(immu.sm, unique(subset(YX, select=t.Patient)), by='t.Patient', all.y=TRUE)
+	immu.sm		<- merge(immu.sm, unique(subset(YX.m2, select=t.Patient)), by='t.Patient', all.y=TRUE)
 	#
 	#	set CD4 at diagnosis (CD41st)
 	#
@@ -8025,10 +8025,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	immu.sm		<- subset(immu.sm, !is.na(t))
 	setnames(immu.sm, 'Patient','t.Patient')
 	#	make sure we have all prob transmitters in immu.sm for whom we have at least one CD4 measurement
-	tmp			<- setdiff( YX[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
+	tmp			<- setdiff( YX.m2[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
 	tmp			<- merge(df.immu, data.table(Patient=tmp), by='Patient')
 	stopifnot(nrow(tmp)==0)		#may change in future; nothing to fill in for now
-	immu.sm		<- merge(immu.sm, unique(subset(YX, select=t.Patient)), by='t.Patient', all.y=TRUE)
+	immu.sm		<- merge(immu.sm, unique(subset(YX.m2, select=t.Patient)), by='t.Patient', all.y=TRUE)
 	#
 	#	set CD4 at diagnosis (CD41st)
 	#
@@ -8203,10 +8203,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 	immu.sm		<- subset(immu.sm, !is.na(t))
 	setnames(immu.sm, 'Patient','t.Patient')
 	#	make sure we have all prob transmitters in immu.sm for whom we have at least one CD4 measurement
-	tmp			<- setdiff( YX[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
+	tmp			<- setdiff( YX.m2[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
 	tmp			<- merge(df.immu, data.table(Patient=tmp), by='Patient')
 	stopifnot(nrow(tmp)==0)		#may change in future; nothing to fill in for now
-	immu.sm		<- merge(immu.sm, unique(subset(YX, select=t.Patient)), by='t.Patient', all.y=TRUE)
+	immu.sm		<- merge(immu.sm, unique(subset(YX.m2, select=t.Patient)), by='t.Patient', all.y=TRUE)
 	#
 	#	set CD4 at diagnosis (CD41st)
 	#
@@ -8472,10 +8472,10 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		immu.sm		<- subset(immu.sm, !is.na(t))
 		setnames(immu.sm, 'Patient','t.Patient')
 		#	make sure we have all prob transmitters in immu.sm for whom we have at least one CD4 measurement
-		tmp			<- setdiff( YX[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
+		tmp			<- setdiff( YX.m2[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
 		tmp			<- merge(df.immu, data.table(Patient=tmp), by='Patient')
 		stopifnot(nrow(tmp)==0)		#may change in future; nothing to fill in for now
-		immu.sm		<- merge(immu.sm, unique(subset(YX, select=t.Patient)), by='t.Patient', all.y=TRUE)
+		immu.sm		<- merge(immu.sm, unique(subset(YX.m2, select=t.Patient)), by='t.Patient', all.y=TRUE)
 		#
 		#	set CD4 at diagnosis (CD41st)
 		#
@@ -14947,7 +14947,7 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Cwmx.wtn.tp4'
+		method.risk				<- 'm2Cwmx.wtn.tp5'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.135
 		method.use.AcuteSpec	<- 1
@@ -15216,15 +15216,14 @@ hivc.prog.props_univariate<- function()
 	bs.n				<- 1e3
 	if(method.PDT=='')
 		method.PDT<- 'PDT'
-	if(grepl('m2',method.risk))
-		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model2_',method.risk,'.R',sep='')
-	if(grepl('m3',method.risk))
-		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model3_',method.risk,'.R',sep='')	
-	if(grepl('m4',method.risk))
-		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model4_',method.risk,'.R',sep='')		
-	if(grepl('m5',method.risk))
-		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model5_',method.risk,'.R',sep='')			
-	tmp					<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, tperiod.info, plot.file.or=NA, bs.n=1e3, resume=resume, save.file=save.file, method.risk=method.risk)						
+	if(grepl('m[0-9]',method.risk))
+	{
+		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
+		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
+		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, tperiod.info, plot.file.or=NA, bs.n=1e3, resume=resume, save.file=save.file, method.risk=method.risk)
+	}
+		
+							
 	#	see if we can pool results
 	
 	
