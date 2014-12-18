@@ -7818,7 +7818,7 @@ project.athena.Fisheretal.YX.model2<- function(YX, clumsm.info, df.viro, vl.supp
 	}	
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, df.viro, df.immu, indircov, lRNA.supp=log10(1e3))
+project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, df.viro, df.immu, indircov, lRNA.supp=log10(1e3), t.delta=0.125)
 {
 	#YX.m2	<- copy(YX)
 	gc()
@@ -7857,7 +7857,14 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	#	make sure we have all prob transmitters in immu.sm for whom we have at least one CD4 measurement
 	tmp			<- setdiff( YX.m2[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
 	tmp			<- merge(df.immu, data.table(Patient=tmp), by='Patient')
-	stopifnot(nrow(tmp)==0)		#may change in future; nothing to fill in for now
+	if(nrow(tmp))
+	{
+		setnames(tmp, c('Patient', 'PosCD4'), c('t.Patient','t'))
+		set(tmp, NULL, c('PosCD4_T1','CD4_T1'), NULL)
+		set(tmp, NULL, 't', tmp[, hivc.db.Date2numeric(t)] )
+		set(tmp, NULL, 't', tmp[, floor(t) + ceiling( (t%%1)*100 %/% (t.delta*100) ) * t.delta] )
+		immu.sm	<- rbind(immu.sm, tmp)
+	}	
 	immu.sm		<- merge(immu.sm, unique(subset(YX.m2, select=t.Patient)), by='t.Patient', all.y=TRUE)
 	#
 	#	set CD4 at diagnosis (CD41st)
@@ -7988,7 +7995,7 @@ project.athena.Fisheretal.YX.model2.stratify.VL1stsu<- function(YX.m2, df.all, d
 	YX.m2
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.viro, df.immu, indircov, lRNA.supp=log10(1e3), plot.file.or=NA )
+project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.viro, df.immu, indircov, lRNA.supp=log10(1e3), plot.file.or=NA, t.delta=0.125 )
 {
 	#YX.m2	<- copy(YX)
 	gc()
@@ -8027,7 +8034,14 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	#	make sure we have all prob transmitters in immu.sm for whom we have at least one CD4 measurement
 	tmp			<- setdiff( YX.m2[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
 	tmp			<- merge(df.immu, data.table(Patient=tmp), by='Patient')
-	stopifnot(nrow(tmp)==0)		#may change in future; nothing to fill in for now
+	if(nrow(tmp))
+	{
+		setnames(tmp, c('Patient', 'PosCD4'), c('t.Patient','t'))
+		set(tmp, NULL, c('PosCD4_T1','CD4_T1'), NULL)
+		set(tmp, NULL, 't', tmp[, hivc.db.Date2numeric(t)] )
+		set(tmp, NULL, 't', tmp[, floor(t) + ceiling( (t%%1)*100 %/% (t.delta*100) ) * t.delta] )
+		immu.sm	<- rbind(immu.sm, tmp)
+	}
 	immu.sm		<- merge(immu.sm, unique(subset(YX.m2, select=t.Patient)), by='t.Patient', all.y=TRUE)
 	#
 	#	set CD4 at diagnosis (CD41st)
@@ -8166,7 +8180,7 @@ project.athena.Fisheretal.YX.model2.stratify.VLt<- function(YX.m2, df.all, df.vi
 	YX.m2
 }
 ######################################################################################
-project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.viro, df.immu, indircov, lRNA.supp=log10(1e3), plot.file.or=NA )
+project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.viro, df.immu, indircov, lRNA.supp=log10(1e3), plot.file.or=NA, t.delta=0.125 )
 {
 	#YX.m2	<- copy(YX)
 	gc()
@@ -8205,7 +8219,14 @@ project.athena.Fisheretal.YX.model2.stratify.VLgm<- function(YX.m2, df.all, df.v
 	#	make sure we have all prob transmitters in immu.sm for whom we have at least one CD4 measurement
 	tmp			<- setdiff( YX.m2[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
 	tmp			<- merge(df.immu, data.table(Patient=tmp), by='Patient')
-	stopifnot(nrow(tmp)==0)		#may change in future; nothing to fill in for now
+	if(nrow(tmp))
+	{
+		setnames(tmp, c('Patient', 'PosCD4'), c('t.Patient','t'))
+		set(tmp, NULL, c('PosCD4_T1','CD4_T1'), NULL)
+		set(tmp, NULL, 't', tmp[, hivc.db.Date2numeric(t)] )
+		set(tmp, NULL, 't', tmp[, floor(t) + ceiling( (t%%1)*100 %/% (t.delta*100) ) * t.delta] )
+		immu.sm	<- rbind(immu.sm, tmp)
+	}
 	immu.sm		<- merge(immu.sm, unique(subset(YX.m2, select=t.Patient)), by='t.Patient', all.y=TRUE)
 	#
 	#	set CD4 at diagnosis (CD41st)
@@ -8474,7 +8495,14 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		#	make sure we have all prob transmitters in immu.sm for whom we have at least one CD4 measurement
 		tmp			<- setdiff( YX.m2[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
 		tmp			<- merge(df.immu, data.table(Patient=tmp), by='Patient')
-		stopifnot(nrow(tmp)==0)		#may change in future; nothing to fill in for now
+		if(nrow(tmp))
+		{
+			setnames(tmp, c('Patient', 'PosCD4'), c('t.Patient','t'))
+			set(tmp, NULL, c('PosCD4_T1','CD4_T1'), NULL)
+			set(tmp, NULL, 't', tmp[, hivc.db.Date2numeric(t)] )
+			set(tmp, NULL, 't', tmp[, floor(t) + ceiling( (t%%1)*100 %/% (t.delta*100) ) * t.delta] )
+			immu.sm	<- rbind(immu.sm, tmp)
+		}
 		immu.sm		<- merge(immu.sm, unique(subset(YX.m2, select=t.Patient)), by='t.Patient', all.y=TRUE)
 		#
 		#	set CD4 at diagnosis (CD41st)
@@ -9038,7 +9066,7 @@ project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.all, df.immu, indircov=
 		setnames(immu.sm, 'Patient','t.Patient')
 		tmp			<- setdiff( df.tpairs[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
 		cat(paste('\nCD4 model not found for ',paste(tmp, collapse=', ')))		
-		immu.sm	<- merge(immu.sm, unique(subset(df.tpairs, select=t.Patient)), by='t.Patient')			
+		immu.sm		<- merge(immu.sm, unique(subset(df.tpairs, select=t.Patient)), by='t.Patient')			
 	}
 	else
 	{
@@ -14947,7 +14975,7 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Cwmx.wtn.tp5'
+		method.risk				<- 'm2Cwmx.wtn.tp6'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.135
 		method.use.AcuteSpec	<- 1
