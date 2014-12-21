@@ -488,25 +488,24 @@ hivc.pipeline.BEASTout<- function()
 {
 	if(1)
 	{
-		indircov			<- paste(DATA,"derived",sep='/')
-		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		#indircov			<- paste(DATA,"derived",sep='/')
+		#infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
 		#
-		indir				<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast_131011"		
-		infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
-		insignat			<- "Tue_Aug_26_09:13:47_2013"				
-		infilexml.template	<- "um232rhU2045"
-		infilexml.opt		<- "mph4clutx4tip"
-		burnin				<- 2e7
+		#indir				<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/beast/beast_131011"		
+		#infile				<- "ATHENA_2013_03_NoDRAll+LANL_Sequences"		
+		#insignat			<- "Tue_Aug_26_09:13:47_2013"				
+		#infilexml.template	<- "um232rhU2045"
+		#infilexml.opt		<- "mph4clutx4tip"
+		#burnin				<- 2e7
 		#
 		indir				<- paste(DATA,"tmp",sep='/')
-		indir				<- paste(DATA,"zip",sep='/')
-		
+		#indir				<- paste(DATA,"zip",sep='/')		
 		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"		
 		insignat			<- "Wed_Dec_18_11:37:00_2013"		
 		infilexml.template	<- "sasky_sdr06fr"
-		infilexml.opt		<- "alrh160"
+		#infilexml.opt		<- "alrh160"
 		infilexml.opt		<- "clrh80"
-		burnin				<- 5e6
+		burnin				<- 1e7
 		#
 		#infilexml.template	<- "um192rhU2080"
 		#infilexml.opt		<- "mph4clutx4tip"
@@ -531,7 +530,7 @@ hivc.pipeline.BEASTout<- function()
 					#cmd			<- paste(cmd, hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, resume=1, verbose=1), sep='')
 					cat(cmd)
 					stop()
-					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=21, hpc.mem="3800mb")
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=31, hpc.mem="3800mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
 					outfile		<- paste("b2p.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
@@ -890,11 +889,16 @@ hivc.pipeline.various<- function()
 		project.hivc.examl()
 		quit("no")
 	}
-	if(1)
+	if(0)
 	{
 		hivc.pipeline.BEAST()
 		quit("no")
 	}
+	if(1)
+	{
+		hivc.pipeline.BEASTout()
+		quit("no")
+	}	
 	if(0)	#run fisher similar analysis
 	{
 		indir		<- paste(dir.name,"tmp",sep='/')

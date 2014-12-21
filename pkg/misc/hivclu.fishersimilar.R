@@ -4301,10 +4301,10 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 	adj	<- adj[, list(	risk=risk, factor=factor, cens.e0= 1, cens.e0cp= X.msm.e0cp/PYs	)]		
 	tmp	<- subset(adj.s, select=c(risk, factor, PTx, PYs, X.msm.e0, X.msm.e0cp))
 	tmp	<- tmp[, list(	risk=risk, factor=factor,
-					bias.e0= X.msm.e0/PYs, bias.e0cp= X.msm.e0cp/PYs, 
-					P= PYs/sum(PYs), P.raw= PYs/sum(PYs), 
-					P.e0= X.msm.e0/sum(X.msm.e0), P.e0cp= X.msm.e0cp/sum(X.msm.e0cp), 
-					P.raw.e0= X.msm.e0/sum(X.msm.e0), P.raw.e0cp= X.msm.e0cp/sum(X.msm.e0cp)	)]
+					bias.e0= X.msm.e0/PYs, bias.e0cp= X.msm.e0cp/PYs, 					
+					P= X.msm.e0/sum(X.msm.e0), P.raw= X.msm.e0/sum(X.msm.e0),		#X.msm.e0 is not adjusted for right censoring; for denominator, there is no sampling 
+					P.e0= X.msm.e0/sum(X.msm.e0), P.raw.e0= X.msm.e0/sum(X.msm.e0), 
+					P.e0cp= X.msm.e0cp/sum(X.msm.e0cp), P.raw.e0cp= X.msm.e0cp/sum(X.msm.e0cp)	)]
 	adj	<- merge(adj, tmp, by=c('risk','factor'))	
 	#
 	set(nt.table, NULL, 'risk', nt.table[, as.character(risk)])
@@ -4323,7 +4323,18 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 	setnames(tmp,'PYs','v')
 	risk.ans	<- copy(tmp)
 	#	number of adjusted potential transmission intervals
-	cat(paste('\nnumber of adjusted potential transmission intervals'))
+	cat(paste('\nnumber of potential transmission intervals'))
+	#not adj for right censoring, not adjusted for sampling
+	tmp			<- subset(adj.s, select=c(risk, factor, X.msm.e0))
+	tmp[, stat:='X.msm']		
+	set(tmp, NULL, c('coef.ref','risk.ref', 'factor.ref'), 'None')
+	set(tmp, NULL, 'coef', tmp[, paste(risk,factor,sep='')])
+	setnames(tmp,'X.msm.e0','v')	
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#not adj for right censoring, adjusted for sampling
+	tmp[, stat:='X.msm.e0']
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#adj for right censoring, adjusted for sampling
 	tmp			<- subset(adj.s, select=c(risk, factor, X.msm.e0cp))
 	tmp[, stat:='X.msm.e0cp']
 	set(tmp, NULL, c('coef.ref','risk.ref', 'factor.ref'), 'None')
@@ -4480,7 +4491,7 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 				set(tmp, NULL, 'coef', tmp[, paste(risk,factor,sep='')])				
 				risk.ans.bs	<- rbind(risk.ans.bs, tmp, use.names=TRUE)
 				#
-				#	bootstrap sample censoring
+				#	bootstrap sample censoring probability
 				#
 				tmp					<- subset( ct, bs==sample(ct[, unique(bs)], 1) )
 				set(tmp, NULL, 'n.adj', tmp[, as.integer(round(n.adj))])	
@@ -4492,27 +4503,36 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 				set(tmp, NULL, 'X.msm.e0cp', round( tmp[, PYe0cpr/X.msm.e0cp] ))				
 				nt.table.bs			<- merge(subset(nt.table, select=c(risk, factor, Patient, X.clu, X.msm.e0, X.seq, YX)), subset(tmp, select=c(risk, factor, X.msm.e0cp)), by=c('risk','factor'))
 				set(nt.table.bs, NULL, 'X.msm.e0cp', nt.table.bs[, X.msm.e0+X.msm.e0cp])	
-				#	combine bootstrap censoring with boostrap denom pop / non-zero
+				#	bootstrap sample number potential transmitters sampled
 				tmp					<- nt.table.bs[, list(YX=sum(YX), X.clu=sum(X.clu), X.seq=sum(X.seq), X.msm.e0=sum(X.msm.e0), X.msm.e0cp=sum(X.msm.e0cp), nRec=length(unique(Patient))), by=c('risk','factor')]
 				tmp					<- merge(tmp, subset(risk.ans.bs, stat=='PYs', c(risk, factor, v)), by=c('risk','factor'))
-				setnames(tmp, 'v', 'PYs')
+				setnames(tmp, 'v', 'PYs')				
+				set(tmp, NULL, 'X.msm.e0', tmp[, rbinom(length(X.msm.e0), sum(X.msm.e0), X.msm.e0/sum(X.msm.e0))])
+				set(tmp, NULL, 'X.msm.e0cp', tmp[, rbinom(length(X.msm.e0cp), sum(X.msm.e0cp), X.msm.e0cp/sum(X.msm.e0cp))])
+				#	YX PYs already bs sampled, X.clu, X.seq not needed further
 				tmp[, Sx.e0:= PYs/X.msm.e0]					
 				tmp[, Sx.e0cp:= PYs/X.msm.e0cp]
+				#	combine bootstrap censoring with boostrap denom pop / non-zero
 				tmp					<- merge(tmp, subset(risk.ans.bs, stat=='PTx', c(risk, factor, v)), by=c('risk','factor'))
 				setnames(tmp, 'v', 'PTx')
 				set(tmp, NULL, 'risk', tmp[, as.character(risk)])
 				set(tmp, NULL, 'factor', tmp[, as.character(factor)])								
 				#	prepare risk.df and nt.table.bs as needed
 				nt.table.bs			<- merge(nt.table.bs, subset(tmp, select=c(risk, factor, PTx, Sx.e0, Sx.e0cp)), by=c('risk','factor'))				
-				#	bootstrap number of recipients				
+				#	record bootstrap number of recipients				
 				set(tmp, NULL, c('risk.ref','factor.ref','coef.ref'), 'None')
 				set(tmp, NULL, 'coef', tmp[, paste(risk,factor,sep='')])
 				set(tmp, NULL, 'stat', 'nRec')
 				setnames(tmp, 'nRec', 'v')
 				risk.ans.bs	<- rbind( risk.ans.bs, subset(tmp, select=c(risk, factor, risk.ref, factor.ref, coef.ref, coef, stat, v)), use.names=TRUE )
-				#	bootstrap number of adjusted potential transmission intervals
+				#	record bootstrap number of adjusted potential transmission intervals
 				set(tmp, NULL, 'stat', 'X.msm.e0cp')
 				setnames(tmp, c('v','X.msm.e0cp'),  c('nRec','v'))
+				risk.ans.bs	<- rbind( risk.ans.bs, subset(tmp, select=c(risk, factor, risk.ref, factor.ref, coef.ref, coef, stat, v)), use.names=TRUE )
+				set(tmp, NULL, 'stat', 'X.msm.e0')
+				setnames(tmp, c('v','X.msm.e0'),  c('X.msm.e0cp','v'))
+				risk.ans.bs	<- rbind( risk.ans.bs, subset(tmp, select=c(risk, factor, risk.ref, factor.ref, coef.ref, coef, stat, v)), use.names=TRUE )
+				set(tmp, NULL, 'stat', 'X.msm')
 				risk.ans.bs	<- rbind( risk.ans.bs, subset(tmp, select=c(risk, factor, risk.ref, factor.ref, coef.ref, coef, stat, v)), use.names=TRUE )
 				#
 				#	raw number of transmissions
@@ -4587,19 +4607,14 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 	#
 	#	compute adjustments for each bootstrap sample: collect PYe0 etc to compute sampling proportion relative to bootstrap PYs
 	#
-	tmp			<- dcast.data.table( subset(risk.ans.bs, stat=='PYs' | stat=='PTx', select=c(risk,factor,v,bs,stat)), risk+factor+bs ~ stat, value.var='v' )
-	tmp			<- merge( tmp, unique(subset(risk.df, select=c(risk, factor, X.msm.e0, X.msm.e0cp))), by=c('risk','factor'))
-	tmp2		<- tmp[, list(  	factor=factor, 
-					X.msm.e0=rbinom(length(X.msm.e0), sum(X.msm.e0), X.msm.e0/sum(X.msm.e0)),
-					X.msm.e0cp=rbinom(length(X.msm.e0cp), sum(X.msm.e0cp), X.msm.e0cp/sum(X.msm.e0cp))	), by=c('bs','risk')]
-	tmp			<- merge( subset(tmp, select=c(risk, factor, bs, PYs, PTx)), tmp2, by=c('bs','risk','factor') )	
+	tmp			<- dcast.data.table( subset(risk.ans.bs, stat=='PYs' | stat=='PTx' | grepl('X.msm',stat) | grepl('Sx',stat), select=c(risk,factor,v,bs,stat)), risk+factor+bs ~ stat, value.var='v' )
 	adj.bs		<- tmp[, list(	factor=factor,
-								P= PYs/sum(PYs), P.raw= PYs/sum(PYs), 
+								P= X.msm.e0/sum(X.msm.e0), P.raw= X.msm.e0/sum(X.msm.e0), 
 								P.e0= X.msm.e0/sum(X.msm.e0), P.e0cp= X.msm.e0cp/sum(X.msm.e0cp),
 								P.raw.e0= X.msm.e0/sum(X.msm.e0), P.raw.e0cp= X.msm.e0cp/sum(X.msm.e0cp),
 								Sx.e0= PYs/X.msm.e0, Sx.e0cp= PYs/X.msm.e0cp), by=c('bs','risk')]
 	#
-	# 	add Proportions
+	# 	add expected missing
 	#
 	tmp			<- melt( subset(adj.bs, select=c(bs, risk, factor, Sx.e0, Sx.e0cp)), measure.vars=c('Sx.e0','Sx.e0cp'), value.name='s', variable.name='stat' )
 	tmp			<- merge(tmp, subset(risk.ans.bs, stat=='YX', select=c(bs, risk, factor, v)), by=c('bs','risk','factor'))
@@ -4621,6 +4636,7 @@ project.athena.Fisheretal.estimate.risk.core.Wallinga<- function(YX.m3, YXf, X.t
 	#	add RIs
 	#	
 	tmp			<- melt(adj.bs, id.vars=c('risk','factor','bs'), variable.name='stat', value.name='p')
+	tmp			<- subset(tmp, grepl('^P',stat))
 	tmp2		<- subset(risk.ans.bs, grepl('P',stat) & !grepl('PT',stat) & !grepl('PY',stat) )
 	tmp			<- merge(tmp2, tmp, by=c('risk','factor','stat','bs'))
 	set(tmp, NULL, 'v', tmp[, v/p])
@@ -6004,13 +6020,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 		if(!is.na(save.file))
 		{
 			ans$YX			<- YX
-			ans$risk.table	<- X.tables$risk.table
-			ans$cens.table	<- X.tables$cens.table
-			ans$cens.table.all	<- X.tables$cens.table.all
-			ans$adj.seq		<- X.tables$adj.seq
-			ans$adj.clu		<- X.tables$adj.clu
-			ans$adj.cens.seq<- X.tables$adj.cens.seq
-			ans$adj.cens.clu<- X.tables$adj.cens.clu
+			ans$X.tables	<- X.tables
 			cat(paste('\nsave to file', save.file))
 			save(ans, file=save.file)
 		}
@@ -14975,7 +14985,7 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Cwmx.wtn.tp6'
+		method.risk				<- 'm2Cwmx.wtn.tp1'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.135
 		method.use.AcuteSpec	<- 1
@@ -15250,10 +15260,116 @@ hivc.prog.props_univariate<- function()
 		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
 		tmp			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, tperiod.info, plot.file.or=NA, bs.n=1e3, resume=resume, save.file=save.file, method.risk=method.risk)
 	}
-		
-							
-	#	see if we can pool results
-	
+									
+	#	see if we can pool results for tperiod 4
+	if(method.tpcut%in%c(7))
+	{
+		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
+		tmp2		<- regmatches(method.risk,regexpr('.*tp[0-9]', method.risk))
+		tmp2		<- substr(tmp2, 1, nchar(tmp2)-1)
+		#	see if we can pool estimation output
+		df.est		<- lapply(4:6, function(i)
+						{
+							method.risk <- paste(tmp2, i, sep='')
+							save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
+							options(show.error.messages = FALSE)		
+							readAttempt	<- try(suppressWarnings(load(save.file)))
+							if(inherits(readAttempt, "try-error"))
+								df.est	<- NULL
+							if(!inherits(readAttempt, "try-error"))	
+							{
+								df.est 	<- copy(ans$risk)	
+								set(df.est, NULL, c('l95.bs','u95.bs','m50.bs'),NULL)
+								set(df.est, NULL, 'bs', 0L)
+								df.est	<- rbind(df.est, ans$risk.bs)
+							}
+							df.est
+						})
+		#	stop if some estimation output is missing
+		stopifnot( all(sapply(seq_along(df.est), function(i) !is.null(df.est[[i]]) )) )		
+		df.est		<- do.call('rbind', df.est)
+		set(df.est, NULL, 'risk', df.est[, as.character(risk)])
+		set(df.est, NULL, 'risk.ref', df.est[, as.character(risk.ref)])
+		set(df.est, NULL, 'factor', df.est[, as.character(factor)])
+		set(df.est, NULL, 'factor.ref', df.est[, as.character(factor.ref)])
+		#	re-set coef, coef.ref, factor, factor.ref	
+		tmp			<- df.est[, which(coef!='None')]
+		set( df.est, tmp, 'coef', df.est[tmp, paste(substr(coef,1,nchar(coef)-1),4,sep='')] )
+		tmp			<- df.est[, which(coef.ref!='None')]
+		set( df.est, tmp, 'coef.ref', df.est[tmp, paste(substr(coef.ref,1,nchar(coef.ref)-1),4,sep='')] )
+		set(df.est, NULL, 'factor', df.est[, as.character(factor)])
+		tmp			<- df.est[, which(factor!='None')]
+		set( df.est, tmp, 'factor', df.est[tmp, paste(substr(factor,1,nchar(factor)-1),4,sep='')] )
+		set(df.est, NULL, 'factor.ref', df.est[, as.character(factor.ref)])
+		tmp			<- df.est[, which(factor.ref!='None')]
+		set( df.est, tmp, 'factor.ref', df.est[tmp, paste(substr(factor.ref,1,nchar(factor.ref)-1),4,sep='')] )
+		#	get risk.df
+		risk.df		<- subset(df.est, bs==0 & stat=='RR.raw.e0cp', select=c(coef, coef.ref, risk, factor, risk.ref, factor.ref))
+		setkey(risk.df, risk.ref, factor.ref, risk, factor)
+		risk.df		<- unique(risk.df)
+		# 	pool N's
+		df.est		<- subset(df.est, grepl('N.',stat,fixed=1) | grepl('X.msm',stat,fixed=1) | grepl('nRec',stat,fixed=1) | grepl('Sx',stat,fixed=1))
+		df.est		<- dcast.data.table(df.est, coef+coef.ref+risk+risk.ref+factor+factor.ref+bs ~ stat, value.var='v',fun.aggregate=sum)
+		stopifnot( df.est[, unique(coef.ref)]=='None' )
+		#	get Proportions and RIs for pooled tperiods		
+		tmp			<- df.est[, list(	factor=factor, P.raw=N.raw/sum(N.raw), P.raw.e0=N.raw.e0/sum(N.raw.e0), P.raw.e0cp=N.raw.e0cp/sum(N.raw.e0cp),
+										RI.raw=N.raw/sum(N.raw)*sum(X.msm)/X.msm, RI.raw.e0=N.raw.e0/sum(N.raw.e0)*sum(X.msm.e0)/X.msm.e0, RI.raw.e0cp=N.raw.e0cp/sum(N.raw.e0cp)*sum(X.msm.e0cp)/X.msm.e0cp
+										), by=c('risk','bs')]
+		df.est		<- merge(df.est, tmp, by=c('risk','factor','bs'))
+		#	get RRs for pooled tperiods
+		set(df.est, NULL, c('coef.ref','risk.ref','factor.ref'), NULL)
+		tmp			<- subset(df.est, select=c(risk, factor, bs, RI.raw, RI.raw.e0, RI.raw.e0cp))
+		setnames(tmp, c('risk','factor','RI.raw','RI.raw.e0','RI.raw.e0cp'), c('risk.ref','factor.ref','RI.raw.ref','RI.raw.e0.ref','RI.raw.e0cp.ref'))
+		tmp			<- as.data.table(merge.data.frame(risk.df, tmp, by=c('risk.ref','factor.ref')))		
+		tmp			<- merge(tmp, subset(df.est, select=c(risk, factor, bs, RI.raw, RI.raw.e0, RI.raw.e0cp)), by=c('risk','factor','bs'))		
+		tmp[, RR.raw:= tmp[,RI.raw/RI.raw.ref]]
+		tmp[, RR.raw.e0:= tmp[,RI.raw.e0/RI.raw.e0.ref]]
+		tmp[, RR.raw.e0cp:= tmp[,RI.raw.e0cp/RI.raw.e0cp.ref]]
+		#	melt
+		df.est		<- melt(df.est, id.vars=c('risk','factor','bs','coef'), variable.name='stat', value.name='v')
+		set(df.est, NULL, c('coef.ref','risk.ref','factor.ref'), 'None')		
+		tmp			<- subset(tmp, select=c(coef, coef.ref, risk, factor, risk.ref, factor.ref, RR.raw, RR.raw.e0, RR.raw.e0cp,bs))
+		tmp			<- melt(tmp, id.vars=c('coef','coef.ref','risk','factor','risk.ref','factor.ref','bs'), variable.name='stat', value.name='v')
+		df.est		<- rbind(tmp, df.est, use.names=TRUE)                      
+		#	set bootstrap quantiles
+		risk.ans.bs	<- subset(df.est, bs>0)
+		risk.ans	<- subset(df.est, bs==0)
+		set(risk.ans, NULL, 'bs', NULL)
+		tmp			<- risk.ans.bs[,	list(l95.bs=quantile(v, prob=0.025, na.rm=TRUE), u95.bs=quantile(v, prob=0.975, na.rm=TRUE), m50.bs=quantile(v, prob=0.5, na.rm=TRUE)), by=c('coef','coef.ref','stat')]
+		risk.ans	<- merge(risk.ans, tmp, by=c('coef','coef.ref','stat'), all.x=TRUE)	
+		setkey(risk.ans, stat, coef.ref, coef)
+		setkey(risk.ans.bs, stat, coef.ref, coef)		
+		#	construct pooled X.tables
+		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
+		tmp2		<- regmatches(method.risk,regexpr('.*tp[0-9]', method.risk))
+		tmp2		<- substr(tmp2, 1, nchar(tmp2)-1)
+		tmp			<- lapply(4:6, function(i)
+				{
+					method.risk <- paste(tmp2, i, sep='')
+					save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
+					options(show.error.messages = FALSE)		
+					readAttempt	<- try(suppressWarnings(load(save.file)))
+					ans$X.tables
+				})
+		X.tables	<- tmp[[1]]
+		X.tables[['risk.table']]	<- do.call('rbind',lapply(tmp, '[[', 'risk.table' ))
+		X.tables[['nt.table']]		<- do.call('rbind',lapply(tmp, '[[', 'nt.table' ))
+		X.tables[['nt.table.pt']]	<- do.call('rbind',lapply(tmp, '[[', 'nt.table.pt' ))
+		#	save			
+		ans			<- list(risk=risk.ans, risk.bs=risk.ans.bs, X.tables=X.tables, YX=YX)		
+		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
+		tmp2		<- regmatches(method.risk,regexpr('.*tp[0-9]', method.risk))
+		tmp2		<- substr(tmp2, 1, nchar(tmp2)-1)		
+		lapply(4:6, function(i)
+				{
+					method.risk <- paste(tmp2, i, sep='')
+					from.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
+					to.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',gsub('tp','beforepool',method.risk),'.R',sep='')
+					file.rename(from.file, to.file)															
+				})
+		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',tmp2,'4.R',sep='')
+		save(file=save.file, ans)
+	}
 	
 	stop()
 	tmp		<- subset(YX, select=c(Patient, t.Patient, score.Y))	
