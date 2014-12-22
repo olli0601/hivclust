@@ -10509,6 +10509,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outdir					<- paste(DATA,"fisheretal_141022",sep='/')		
 	indir					<- paste(DATA,"fisheretal_141108",sep='/')
 	outdir					<- paste(DATA,"fisheretal_141108",sep='/')		
+	indir					<- paste(DATA,"fisheretal_141221",sep='/')
+	outdir					<- paste(DATA,"fisheretal_141221",sep='/')		
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -10770,9 +10772,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
 	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	
-	#
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)	
+	#	WTN 3pa1 1.35 
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3pa1H1.35C3V100'
 	method.RISK		<- 'm2CwmxMv.wtn.tp'
@@ -10782,6 +10783,16 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
 	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
+	#	WTN 3pa1 1.35 T7
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1.35C3V100T7'
+	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)				
 	#
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3pa1H1.8C3V100'
@@ -13013,6 +13024,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_141022",sep='/')		
 	indir					<- paste(DATA,"fisheretal_141108",sep='/')
 	outdir					<- paste(DATA,"fisheretal_141108",sep='/')		
+	indir					<- paste(DATA,"fisheretal_141221",sep='/')
+	outdir					<- paste(DATA,"fisheretal_141221",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -13060,6 +13073,7 @@ project.athena.Fisheretal.sensitivity<- function()
 		runs.opt	<- do.call('rbind', runs.opt)
 		setkey(runs.opt, method.dating, method.brl)	
 		runs.opt	<- subset(runs.opt, !is.na(file))
+		runs.opt	<- subset(runs.opt, !grepl('beforepool',file))
 		print(runs.opt)
 		#	load risk estimates
 		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
@@ -13089,7 +13103,7 @@ project.athena.Fisheretal.sensitivity<- function()
 					tmp	<- paste(indir, runs.opt[i,file], sep='/')
 					cat(paste('\nprocess file=',runs.opt[i,file]))
 					tmp	<- load(tmp)					
-					ans	<- ans$risk.table
+					ans	<- ans$X.tables$risk.table
 					if(!any(colnames(ans)=='p'))
 						ans	<- merge(ans, ans[, list(risk=risk, factor=factor, p= n/sum(n)  ), by='stat'], by=c('risk','factor','stat'))
 					ans[, method.risk:=runs.opt[i,method.risk]]
@@ -15355,6 +15369,16 @@ hivc.prog.props_univariate<- function()
 		X.tables[['risk.table']]	<- do.call('rbind',lapply(tmp, '[[', 'risk.table' ))
 		X.tables[['nt.table']]		<- do.call('rbind',lapply(tmp, '[[', 'nt.table' ))
 		X.tables[['nt.table.pt']]	<- do.call('rbind',lapply(tmp, '[[', 'nt.table.pt' ))
+		#	reset YX to tperiod==4
+		YX			<- subset(YX, as.numeric(t.period)>=4)
+		tmp			<- regmatches(colnames(YX), regexpr('.*.tperiod',colnames(YX),fixed=0))
+		for(x in tmp)
+		{
+			set(YX, NULL, x, as.character(YX[[x]]))
+			set(YX, NULL, x, paste(substr(YX[[x]],1,nchar(YX[[x]])-1),4,sep=''))
+			set(YX, NULL, x, as.factor(YX[[x]]))
+		}			
+		YX[, stage:=CD4c.tperiod]
 		#	save			
 		ans			<- list(risk=risk.ans, risk.bs=risk.ans.bs, X.tables=X.tables, YX=YX)		
 		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
