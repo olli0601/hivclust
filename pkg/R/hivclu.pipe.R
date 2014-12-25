@@ -486,7 +486,7 @@ hivc.pipeline.BEASTout.get.cluster.trees<- function()
 ######################################################################################
 hivc.pipeline.BEASTout<- function()
 {
-	if(0)
+	if(1)
 	{
 		#indircov			<- paste(DATA,"derived",sep='/')
 		#infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
@@ -529,14 +529,14 @@ hivc.pipeline.BEASTout<- function()
 					#cmd			<- paste(cmd, hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, verbose=1, resume=1), sep='')
 					#cmd			<- paste(cmd, hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, resume=1, verbose=1), sep='')
 					cat(cmd)
-					stop()
+					#stop()
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=31, hpc.mem="3800mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
 					outfile		<- paste("b2p.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
 				})
 	}
-	if(1)
+	if(0)
 	{
 		indir				<- paste(DATA,"tmp",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
