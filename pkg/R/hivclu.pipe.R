@@ -498,7 +498,7 @@ hivc.pipeline.BEASTout<- function()
 		#infilexml.opt		<- "mph4clutx4tip"
 		#burnin				<- 2e7
 		#
-		indir				<- paste(DATA,"tmp",sep='/')
+		indir				<- paste(DATA,"tmp2",sep='/')
 		#indir				<- paste(DATA,"zip",sep='/')		
 		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"		
 		insignat			<- "Wed_Dec_18_11:37:00_2013"		

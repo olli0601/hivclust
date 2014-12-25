@@ -3835,7 +3835,9 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	cat(paste("\nfound files, n=",length(files)))
 	dummy		<- lapply(seq_along(files), function(i)
 			{
-				file					<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',i,'.R',sep='')
+				pool.i		<- regmatches(files[i], regexpr('pool_[0-9]+',files[i]))
+				pool.i		<- as.numeric(substr(pool.i, 6, nchar(pool.i)))
+				file		<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',pool.i,'.R',sep='')
 				if(resume)
 				{
 					options(show.error.messages = FALSE)		
@@ -3861,15 +3863,17 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	#	for each cluster, extract monophyletic subtrees corresponding to clusters
 	dummy		<- lapply(seq_along(files), function(i)
 			{
+				pool.i			<- regmatches(files[i], regexpr('pool_[0-9]+',files[i]))
+				pool.i			<- as.numeric(substr(pool.i, 6, nchar(pool.i)))				
 				if(resume)
 				{
 					tmp			<- list.files(outdir)
-					tmp			<- tmp[ sapply(tmp, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',outsignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl(paste('_pool_',i,'_clu_[0-9]+',sep=''),x) & grepl('.R$',x) ) ]
+					tmp			<- tmp[ sapply(tmp, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',outsignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl(paste('_pool_',pool.i,'_clu_[0-9]+',sep=''),x) & grepl('.R$',x) ) ]
 					tmp			<- length(tmp)
 				}
 				if(!resume || !tmp )
 				{
-					file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',i,'.R',sep='')
+					file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',pool.i,'.R',sep='')
 					cat(paste("\nload file",file))
 					options(show.error.messages = FALSE)		
 					readAttempt		<- try(suppressWarnings(load(file)))
@@ -3882,13 +3886,13 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 					#for each cluster, produce R and possibly nexus tree file
 					dummy			<- lapply(seq_along(mph.by.clu), function(clu)
 							{
-								file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',i,'_clu_',names(mph.by.clu)[clu],'.R',sep='')
+								file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',pool.i,'_clu_',names(mph.by.clu)[clu],'.R',sep='')
 								mph.clu	<- mph.by.clu[[clu]]
 								cat(paste("\nsave mph.clu to file",file))
 								save(mph.clu, file=file)
 								if(opt.save.cluster.nexfile)
 								{
-									file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',i,'_clu_',names(mph.by.clu)[clu],'.nex',sep='')
+									file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),'_pool_',pool.i,'_clu_',names(mph.by.clu)[clu],'.nex',sep='')
 									cat(paste("\nsave mph.clu to file",file))
 									write.nexus(mph.clu, file=file)					
 								}
