@@ -4664,6 +4664,7 @@ hivc.prog.BEAST.generate.xml<- function()
 	#	select seroconverters
 	#
 	df.cluinfo				<- msm$df.cluinfo
+	print( df.cluinfo[, table(Sex)] )
 	tmp						<- df.cluinfo[,	list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], fNegT=length(which(!is.na(NegT))) / clu.ntip[1]),by="cluster"]										
 	tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=opt.fNegT) )
 	cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )

@@ -2380,7 +2380,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	m4b	<- glm.nb(mp.NegT ~  AnyPos_a+0+offset(rep(m4d$coefficients["(Intercept)"],length(mp.NegT))), data=subset(df.scchr.cd4, CD4_T1<=850 & CD4_T1>250 & AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
 	m4c	<- glm.nb(mp.NegT ~  AnyPos_a+0+offset(rep(m4d$coefficients["(Intercept)"],length(mp.NegT))), data=subset(df.scchr.cd4, CD4_T1<250 & AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
 	#plots
-	if(0 & !is.na(plot.file))
+	if(0 & !is.null(plot.file))
 	{
 		tmp	<- subset(df.sc.negT, AnyPos_y>1996 & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
 		set(tmp, tmp[, which(is.na(isAcute))],'isAcute','not reported')
@@ -2396,7 +2396,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		ggsave(paste(plot.file,'sc_numbers.pdf'), w=15, h=6)		
 				
 	}
-	if(0 & !is.na(plot.file))
+	if(0 & !is.null(plot.file))
 	{
 		tmp	<- rbind(df.scay.cd4, df.scaym.cd4)
 		tmp[, mpy.NegT:= mp.NegT/365.25]
@@ -2414,7 +2414,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 				facet_grid(. ~ CD4_T1c) + theme_bw()
 		ggsave(paste(plot.file,'scay_cd4_age.pdf'), w=15, h=6)
 	}
-	if(0 & !is.na(plot.file))
+	if(0 & !is.null(plot.file))
 	{
 		df.scaym.cd4[, mpy.NegT:= mp.NegT/365.25]
 		set(df.scaym.cd4, NULL, 'CD4_T1c', df.scaym.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
@@ -2431,7 +2431,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 				facet_grid(. ~ CD4_T1c) 
 		ggsave(paste(plot.file,'scam_cd4_age.pdf'), w=10, h=6)
 	}	
-	if(0 & !is.na(plot.file))
+	if(0 & !is.null(plot.file))
 	{
 		df.scchr.cd4[, mpy.NegT:= mp.NegT/365.25]
 		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(CD4_T1, degree=7)'), sigma.formula=as.formula('~ bs(CD4_T1, degree=3)'), data=as.data.frame(subset(df.scchr.cd4, select=c(mpy.NegT, CD4_T1))), family=GA)		
@@ -2471,7 +2471,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		df.scana.cd4[, q2.5:=NULL]
 		df.scana.cd4[, q97.5:=NULL]		
 	}
-	if(!is.na(plot.file))
+	if(!is.null(plot.file))
 	{	
 		df.scchr.cd4[, mpy.NegT:= mp.NegT/365.25]
 		set(df.scchr.cd4, NULL, 'CD4_T1c', df.scchr.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
@@ -2493,7 +2493,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 		df.scchr.cd4[, q2.5:=NULL]
 		df.scchr.cd4[, q97.5:=NULL]	
 	}
-	if(!is.na(plot.file))
+	if(!is.null(plot.file))
 	{
 		df.scchr.negT[, mpy.NegT:= mp.NegT/365.25]
 		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=7)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(df.scchr.negT, select=c(mpy.NegT, AnyPos_a))), family=GA)		 
@@ -2654,7 +2654,7 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 					}, by='Patient']			
 		}
 	}
-	if(!is.na(plot.file))
+	if(!is.null(plot.file))
 	{		
 		t.period	<- 1/64
 		b4care		<- do.call('rbind', list(	subset(df.scchr.cd4, AnyPos_a>25.0 & AnyPos_a<25.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
@@ -2961,7 +2961,7 @@ project.athena.Fisheretal.get.dated.phylo.for.selection<- function(df.tpairs, cl
 	cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
 	file.info	<- data.table(file=files, cluster=cluster)
 	setkey(file.info, cluster)
-	#	subset of clusters: those in df.tpairs.select	
+	#	subset of clusters: those in df.tpairs	
 	if(!is.null(df.tpairs))
 	{
 		tmp					<- sort(setdiff( df.tpairs[,unique(cluster)], file.info[, unique(cluster)] ))
@@ -2969,8 +2969,9 @@ project.athena.Fisheretal.get.dated.phylo.for.selection<- function(df.tpairs, cl
 		print(tmp)
 		file.info	<- merge(file.info, unique(subset(df.tpairs, select=cluster)), by='cluster')
 		df.tpairs.reduced	<- merge(df.tpairs, subset(file.info, select=cluster), by='cluster')
-		cat(paste('\nnumber of remaining Patients with one potential transmitter', length(df.tpairs.reduced[, unique(Patient)])))
+		cat(paste('\nnumber of remaining patients with one potential transmitter', length(df.tpairs.reduced[, unique(Patient)])))
 		cat(paste('\nnumber of remaining potential transmitter', length(df.tpairs.reduced[, unique(t.Patient)])))
+		cat(paste('\nnumber of remaining pairs', nrow(df.tpairs.reduced)))
 	}			
 	#	combine dated cluster phylogenies
 	clu			<- hivc.beast2out.combine.clu.trees(clu.indir, file.info, method.nodectime=method.nodectime)
@@ -14598,6 +14599,111 @@ hivc.prog.props_univariate.Xtables<- function(method, method.PDT, method.risk, o
 		}
 	}
 	X.tables
+}
+######################################################################################
+hivc.prog.props_univariate.F2Fincompatibilityprob<- function(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,
+													clu.indir, clu.insignat, clu.infile,
+													infile, infiletree, insignat, clu.infilexml.opt, clu.infilexml.template,
+													method, method.recentctime, method.nodectime, method.risk, method.Acute, method.minQLowerU, method.use.AcuteSpec, method.brl.bwhost, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.tpcut, method.PDT, method.cut.brl, tp.cut, adjust.AcuteByNegT, any.pos.grace.yr, dur.Acute,
+													outdir, outfile,
+													t.period, t.recent.startctime, t.endctime, t.recent.endctime,
+													X.tables, resume, verbose
+												)
+{
+	#	
+	opt.brl			<- "dist.brl.casc" 
+	thresh.brl		<- 0.096
+	thresh.bs		<- 0.8	
+	argv			<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, thresh.brl, thresh.bs, resume=1)
+	argv			<<- unlist(strsplit(argv,' '))		
+	tmp				<- hivc.prog.get.clustering.MSM()
+	df.cluinfo		<- copy(tmp$df.cluinfo)		
+	set(df.cluinfo, NULL, 'Patient', df.cluinfo[, as.character(Patient)])
+	set(df.cluinfo, NULL, 'PosSeqT', hivc.db.Date2numeric(df.cluinfo[,PosSeqT]))
+	set(df.cluinfo, NULL, 'DateBorn', hivc.db.Date2numeric(df.cluinfo[,DateBorn]))	
+	set(df.cluinfo, NULL, 'NegT', hivc.db.Date2numeric(df.cluinfo[,NegT]))
+	set(df.cluinfo, NULL, 'PosT', hivc.db.Date2numeric(df.cluinfo[,PosT]))
+	set(df.cluinfo, NULL, 'DateDied', hivc.db.Date2numeric(df.cluinfo[,DateDied]))
+	set(df.cluinfo, NULL, 'DateLastContact', hivc.db.Date2numeric(df.cluinfo[,DateLastContact]))
+	set(df.cluinfo, NULL, 'DateFirstEverCDCC', hivc.db.Date2numeric(df.cluinfo[,DateFirstEverCDCC]))
+	set(df.cluinfo, NULL, 'AnyPos_T1', hivc.db.Date2numeric(df.cluinfo[,AnyPos_T1]))
+	set(df.cluinfo, NULL, 'PoslRNA_T1', hivc.db.Date2numeric(df.cluinfo[,PoslRNA_T1]))
+	set(df.cluinfo, NULL, 'PoslRNA_TS', hivc.db.Date2numeric(df.cluinfo[,PoslRNA_TS]))
+	set(df.cluinfo, NULL, 'lRNA.hb4tr_LT', hivc.db.Date2numeric(df.cluinfo[,lRNA.hb4tr_LT]))
+	set(df.cluinfo, NULL, 'PosCD4_T1', hivc.db.Date2numeric(df.cluinfo[,PosCD4_T1]))
+	set(df.cluinfo, NULL, 'PosCD4_TS', hivc.db.Date2numeric(df.cluinfo[,PosCD4_TS]))
+	set(df.cluinfo, NULL, 'AnyT_T1', hivc.db.Date2numeric(df.cluinfo[,AnyT_T1]))	
+	#	select MSM clusters with F-F pairs
+	setkey(df.cluinfo, Patient)
+	tmp				<- unique(df.cluinfo)[, list(nF= length(which(Sex=='F'))), by='cluster']
+	df.FFinfo		<- merge( df.cluinfo, subset(tmp, nF>1, select=cluster), by='cluster' )
+	cat(paste('Found clusters with Female-Female patient pairs, n=', df.FFinfo[, length(unique(cluster))]))
+	#	extract F-F pairs
+	df.FFpairs		<- df.FFinfo[, {
+										tmp		<- which(Sex=='F')					
+										tmp2	<- combn(length(tmp),2)
+										list( t.FASTASampleCode= FASTASampleCode[tmp[tmp2[1,]]], FASTASampleCode=FASTASampleCode[tmp[tmp2[2,]]] )	
+									}, by='cluster']	
+	df.FFpairs		<- merge( df.FFpairs, subset(df.cluinfo, select=c(Patient, Sex, FASTASampleCode)), by='FASTASampleCode' )
+	tmp				<- subset(df.cluinfo, select=c(Patient, Sex, FASTASampleCode))
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	df.FFpairs		<- merge( df.FFpairs, tmp, by='t.FASTASampleCode' )
+	df.FFpairs		<- subset(df.FFpairs, Patient!=t.Patient)
+	cat(paste('Found Female-Female sequence pairs, n=', nrow(df.FFpairs)))
+	#	predict time of infection
+	tmp				<- project.athena.Fisheretal.t2inf(	indircov, infile.cov.study,
+														method.Acute=method.Acute, method.minQLowerU=method.minQLowerU,
+														adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime )
+	predict.t2inf	<- tmp$predict.t2inf
+	t2inf.args		<- tmp$t2inf.args	
+	Y.U				<- project.athena.Fisheretal.Y.infectiontime(df.FFpairs, df.cluinfo, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT)				
+	#	get distribution of coalescence times for FF pairs
+	tmp						<- project.athena.Fisheretal.get.dated.phylo.for.selection(df.FFpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, method.nodectime=method.nodectime)
+	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime
+	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
+	cluphy.info				<- tmp$clu$cluphy.info
+	cluphy					<- tmp$clu$cluphy
+	setdiff( df.FFpairs[, unique(FASTASampleCode)], cluphy$tip.label )
+	
+	Y.coal			<- project.athena.Fisheretal.Y.coal(df.FFpairs, df.cluinfo, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, resume=FALSE, method.minLowerUWithNegT=method.minLowerUWithNegT )			
+	
+	
+	#
+	#	get data relating to study population (subtype B sequ)
+	#
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
+	df.all			<- tmp$df.all	
+	df.denom.CLU	<- tmp$df.select
+	df.denom.CLU	<- subset(df.denom.CLU, Trm=='MSM')
+	df.denom.SEQ	<- tmp$df.select.SEQ
+	df.denom.SEQ	<- subset(df.denom.SEQ, Trm=='MSM')
+	ri.CLU			<- unique(subset(df.denom.CLU, select=Patient))
+	ri.SEQ			<- unique(subset(df.denom.SEQ, select=Patient))
+	df.viro			<- tmp$df.viro
+	df.immu			<- tmp$df.immu
+	df.treatment	<- tmp$df.treatment	
+	clumsm.subtrees	<- tmp$clumsm.subtrees
+	clumsm.info		<- tmp$clumsm.info
+	clumsm.ph		<- tmp$clumsm.ph
+	setkey(clumsm.info, cluster)	
+	#
+	#	get data relating to full population (MSM including those without seq)
+	#	this merges the patients with HIV 1 B sequences and the MSM patients without a sequence 
+	tmp					<- project.athena.Fisheretal.select.denominator(	indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, 
+			infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec,
+			t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime,
+			df.viro.part=df.viro, df.immu.part=df.immu, df.treatment.part=df.treatment, df.all.part=df.all)	
+	df.all.allmsm		<- tmp$df.all
+	df.viro.allmsm		<- tmp$df.viro
+	df.immu.allmsm		<- tmp$df.immu
+	df.treatment.allmsm	<- tmp$df.treatment
+	tmp					<- tmp$df.select.SEQ	
+	setkey(tmp, Patient)
+	ri.ALLMSM			<- unique(subset(tmp, Trm=='MSM'))	
+	
+	
+	
+	
 }
 ######################################################################################
 hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,
