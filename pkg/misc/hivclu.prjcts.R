@@ -2621,9 +2621,32 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	#	read PATIENT csv data file	
 	df					<- read.csv(file, stringsAsFactors=FALSE)	
 	#
-	#	UPDATE
-	#
+	#	UPDATE	
+	#	
 	df.update			<- read.csv(file.update, stringsAsFactors=FALSE)
+	tmp					<- as.data.table( merge( subset(df, select=c('Patient','Transmission')), subset(df.update, select=c('Patient','Transmission')), by='Patient' ) )
+	setkey(tmp, Transmission.x)
+	#	Transmission codes changed	!!!
+	#	Transmission.x Transmission.y
+	#   100            100
+	#	101            110
+	#	102            200
+	#	103            300
+	#	104            400
+	#	105            450
+	#	106            600
+	#	108            800
+	#	110            150
+	#	202            202
+	#	900            900
+	df.update$Transmission[df.update$Transmission==110]	<- 101
+	df.update$Transmission[df.update$Transmission==200]	<- 102
+	df.update$Transmission[df.update$Transmission==300]	<- 103
+	df.update$Transmission[df.update$Transmission==400]	<- 104
+	df.update$Transmission[df.update$Transmission==450]	<- 105
+	df.update$Transmission[df.update$Transmission==600]	<- 106
+	df.update$Transmission[df.update$Transmission==800]	<- 108
+	df.update$Transmission[df.update$Transmission==150]	<- 110	
 	cat(paste('\ndifferent variables that are new in update=',paste(setdiff(colnames(df.update), colnames(df)), collapse=' ')))
 	#	no update for same patients in df
 	tmp					<- merge( data.frame(Patient=setdiff( df[, 'Patient'], df.update[, 'Patient'])), df, by='Patient' )

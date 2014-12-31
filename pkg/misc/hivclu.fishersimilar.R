@@ -2031,7 +2031,7 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	set(df.all, NULL, 'PosCD4_T1', hivc.db.Date2numeric(df.all[,PosCD4_T1]))
 	set(df.all, NULL, 'PosCD4_TS', hivc.db.Date2numeric(df.all[,PosCD4_TS]))
 	set(df.all, NULL, 'AnyT_T1', hivc.db.Date2numeric(df.all[,AnyT_T1]))	
-	df.all	<- subset(df.all, Sex=='M' & (is.na(Trm) | !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH')))
+	df.all		<- subset(df.all, Sex=='M')
 	#
 	#	adjust Acute=='Maybe' by NegT 
 	if(!is.na(adjust.AcuteByNegT))
@@ -2074,7 +2074,7 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	}	
 	#
 	#
-	msm.recent		<- subset( df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') )	
+	msm.recent		<- subset( df.all, Sex=='M' & !is.na(Trm) & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') )	
 	msm.recent		<- subset(msm.recent, t.recent.startctime<=AnyPos_T1 & AnyPos_T1<t.recent.endctime)
 	cat(paste('\nmsm after startctime',t.recent.startctime,'before endctime',t.recent.endctime,': #seq=',nrow(msm.recent),'#patient=',length(msm.recent[,unique(Patient)])))
 	setkey(msm.recent, isAcute)
@@ -10159,6 +10159,7 @@ project.athena.Fisheretal.composition.CD4model<- function()
 		df.cov	<- unique(df.cov)
 		#
 		# get first time CD4<350
+		#
 		file	<- paste(DATA,'/derived/','ATHENA_2014_06_Patient_AllMSM_CD4.R',sep='')
 		load(file)
 		immu.sm	<- subset(immu.sm, !is.na(t))		
@@ -10167,38 +10168,66 @@ project.athena.Fisheretal.composition.CD4model<- function()
 									list(CD4_350_T1=ifelse(length(tmp), t, NA_real_))
 								}, by='Patient']
 		df.cov	<- merge(df.cov, tmp, all.x=TRUE, by='Patient')
+		subset(df.cov, Trm=='MSM' | Trm=='BI')
 		#	13 patients missing that have 1 CD4 count and not interpolated
-		#	1044 patients without CD4
-		
+		#	1044 patients without CD4		
 		df.cd4cov	<- data.table(t= seq(t.recent.startctime, t.recent.endctime, 1/12))
 		df.cd4cov	<- df.cd4cov[, list(	N_CD4_350=nrow(subset(df.cov, (is.na(DateDied) | DateDied<t) & t>=CD4_350_T1 )),
 										  	N_CD4_350_ART=nrow(subset(df.cov, (is.na(DateDied) | DateDied<t) & t>=CD4_350_T1 & t>=AnyT_T1))	), by='t']
 		df.cd4cov[, N_CD4_350_NoART:= N_CD4_350-N_CD4_350_ART]
 		
-		ggplot(df.cd4cov, aes(x=t, y=N_CD4_350_ART/N_CD4_350)) + geom_bar(stat='identity') + theme_bw() +
-			scale_y_continuous(breaks=seq(0,1,0.1)) + scale_x_continuous(breaks=seq(1996,2014,2)) +
-			labs(x='', y='ART coverage\namong diagnosed with CD4 < 350')
-		file		<- paste(DATA, '/tmp/', 'ATHENA_2014_06_Patient_AllMSM_ARTcoverage_CD4350.pdf',sep='')
-		ggsave(file=file, w=6, h=4)
+		if(0)
+		{
+			ggplot(df.cd4cov, aes(x=t, y=N_CD4_350_ART/N_CD4_350)) + geom_bar(stat='identity') + theme_bw() +
+					scale_y_continuous(breaks=seq(0,1,0.1)) + scale_x_continuous(breaks=seq(1996,2014,2)) +
+					labs(x='', y='ART coverage\namong diagnosed with CD4 < 350')
+			file		<- paste(DATA, '/tmp/', 'ATHENA_2014_06_Patient_AllMSM_ARTcoverage_CD4350.pdf',sep='')
+			ggsave(file=file, w=6, h=4)
+			
+			tmp			<- melt(df.cd4cov, measure.vars=c('N_CD4_350_ART','N_CD4_350_NoART'), id.vars='t', variable.name='CD4_350', value.name='N')
+			set(tmp, NULL, 'CD4_350', tmp[, sapply(strsplit(as.character(CD4_350),'_',fixed=1),'[[',4)])
+			set(tmp, NULL, 'CD4_350', tmp[, factor(CD4_350, labels=c('NoART','ART'), levels=c('NoART','ART'))])
+			ggplot(tmp, aes(x=t, y=N, fill=CD4_350)) + geom_bar(stat='identity') + scale_fill_brewer(palette='Set1') + theme_bw() +
+					scale_y_continuous(breaks=seq(0,1e4,500)) + scale_x_continuous(breaks=seq(1996,2014,2)) +
+					labs(x='', y='Patients with CD4<350')
+			file		<- paste(DATA, '/tmp/', 'ATHENA_2014_06_Patient_AllMSM_ARTcoverage_CD4350n.pdf',sep='')
+			ggsave(file=file, w=6, h=4)			
+		}
+		#
+		#	load estimated prop and Nt
+		#
+		file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_141221/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_method.risks.Rdata'
+		load(file)
+		df.Nraw.e0cp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3pa1H1.35C3V100T7' & method.denom=='SEQ' & method.recentctime==2011 & method.dating=='sasky' & stat=='N.raw.e0cp' & grepl('stageDtl350', coef))
+		set(df.Nraw.e0cp, NULL, 't.period', df.Nraw.e0cp[, as.character(factor)])
+		set(df.Nraw.e0cp, NULL, 't.period', df.Nraw.e0cp[, factor(substr(t.period, nchar(t.period), nchar(t.period)))])
+		#df.cd4cov	<- subset(df.cd4cov, select=c(t, N_CD4_350_NoART))
+
+		#tp.cut				<- c(-Inf, 2006.5, 2008, 2009.5, 2011)
+		tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.5, 2006.5, 2008, 2009.5)+0.001, t.period.max = c(2006.5, 2008, 2009.5, 2011)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
 		
-		tmp			<- melt(df.cd4cov, measure.vars=c('N_CD4_350_ART','N_CD4_350_NoART'), id.vars='t', variable.name='CD4_350', value.name='N')
-		set(tmp, NULL, 'CD4_350', tmp[, sapply(strsplit(as.character(CD4_350),'_',fixed=1),'[[',4)])
-		set(tmp, NULL, 'CD4_350', tmp[, factor(CD4_350, labels=c('NoART','ART'), levels=c('NoART','ART'))])
-		ggplot(tmp, aes(x=t, y=N, fill=CD4_350)) + geom_bar(stat='identity') + scale_fill_brewer(palette='Set1') + theme_bw() +
-				scale_y_continuous(breaks=seq(0,1e4,500)) + scale_x_continuous(breaks=seq(1996,2014,2)) +
-				labs(x='', y='Patients with CD4<350')
-		file		<- paste(DATA, '/tmp/', 'ATHENA_2014_06_Patient_AllMSM_ARTcoverage_CD4350n.pdf',sep='')
-		ggsave(file=file, w=6, h=4)
+		df.cd4me	<- tperiod.info[, list(M_CD4_350_NoART=subset(df.cd4cov, t>=t.period.min & t<t.period.max)[, mean(N_CD4_350_NoART)]), by=t.period]
+		df.cd4me	<- merge(tperiod.info, df.cd4me, by='t.period')
+		df.cd4me	<- merge(df.cd4me, df.Nraw.e0cp, by='t.period')
+		tmp			<- lm(M_CD4_350_NoART~v, data=df.cd4me)
+		set(df.cd4me, NULL, 'tv', predict(tmp))
+		set(df.cd4me, NULL, 'tl95.bs', predict(tmp, data.frame(v= df.cd4me$l95.bs)))
+		set(df.cd4me, NULL, 'tu95.bs', predict(tmp, data.frame(v= df.cd4me$u95.bs)))
+		set(df.cd4cov, NULL, 't.period', df.cd4cov[, cut(t, breaks=c(-Inf, 2006.5, 2008, 2009.5, 2011), labels=1:4)])
 		
-		df.cd4cov	<- subset(df.cd4cov, select=c(t, N_CD4_350_NoART))
-		tperiod.info<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.50, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2011)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))
 		
-		tmp			<- tperiod.info[, list(M_CD4_350_NoART=subset(df.cd4cov, t>=t.period.min & t<t.period.max)[,mean(N_CD4_350_NoART)]), by=t.period]
-		tmp			<- merge(tperiod.info, tmp, by='t.period')
-		ggplot(df.cd4cov) + geom_bar(aes(x=t, y=N_CD4_350_NoART), stat='identity', fill='grey50') + theme_bw() +
-				scale_x_continuous(breaks=seq(1996,2014,2)) + 
-				geom_segment(data=tmp, aes(x=t.period.min, xend=t.period.max, y=M_CD4_350_NoART, yend=M_CD4_350_NoART)) +
-				labs(x='', y='Patients with CD4<350, not on ART')
+		ggplot(df.cd4cov) + geom_bar(aes(x=t, y=N_CD4_350_NoART), stat='identity', fill="#41B6C4", width=1/12) + theme_bw() +
+				scale_x_continuous(breaks=seq(1997,2014,2), expand=c(0,0)) + 
+				geom_segment(data=df.cd4me, aes(x=t.period.min, xend=t.period.max, y=M_CD4_350_NoART, yend=M_CD4_350_NoART), col='grey40', linetype='longdash') +
+				geom_point(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2, y=tv), col='black') +				
+				geom_errorbar(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2, ymin=tl95.bs, ymax=tu95.bs), col='black', width=0.5) +
+				geom_text(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2+0.4, y=tv, label=round(v,d=1))) +
+				geom_text(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2+0.4, y=tu95.bs*1.05, label=round(u95.bs,d=1))) +
+				geom_text(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2+0.4, y=tl95.bs/1.1, label=round(l95.bs,d=1))) +
+				labs(x='', y='Patients with CD4<350, not on ART') + 
+				facet_grid(.~t.period, scales='free_x', space='free_x') +
+				#facet_wrap(~t.period, scales='free_x', shrink=0) +
+				theme(strip.background = element_blank(), strip.text = element_blank())
 		file		<- paste(DATA, '/tmp/', 'ATHENA_2014_06_Patient_AllMSM_ARTno_CD4350.pdf',sep='')
 		ggsave(file=file, w=6, h=4)		
 	}
@@ -14731,9 +14760,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
 	df.all			<- tmp$df.all	
 	df.denom.CLU	<- tmp$df.select
-	df.denom.CLU	<- subset(df.denom.CLU, Trm=='MSM')
-	df.denom.SEQ	<- tmp$df.select.SEQ
-	df.denom.SEQ	<- subset(df.denom.SEQ, Trm=='MSM')
+	df.denom.SEQ	<- tmp$df.select.SEQ	
 	ri.CLU			<- unique(subset(df.denom.CLU, select=Patient))
 	ri.SEQ			<- unique(subset(df.denom.SEQ, select=Patient))
 	df.viro			<- tmp$df.viro
@@ -14747,16 +14774,16 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 	#	get data relating to full population (MSM including those without seq)
 	#	this merges the patients with HIV 1 B sequences and the MSM patients without a sequence 
 	tmp					<- project.athena.Fisheretal.select.denominator(	indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, 
-			infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec,
-			t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime,
-			df.viro.part=df.viro, df.immu.part=df.immu, df.treatment.part=df.treatment, df.all.part=df.all)	
+																			infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec,
+																			t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime,
+																			df.viro.part=df.viro, df.immu.part=df.immu, df.treatment.part=df.treatment, df.all.part=df.all)	
 	df.all.allmsm		<- tmp$df.all
 	df.viro.allmsm		<- tmp$df.viro
 	df.immu.allmsm		<- tmp$df.immu
 	df.treatment.allmsm	<- tmp$df.treatment
 	tmp					<- tmp$df.select.SEQ	
 	setkey(tmp, Patient)
-	ri.ALLMSM			<- unique(subset(tmp, Trm=='MSM'))	
+	ri.ALLMSM			<- unique(tmp)	
 	#
 	if(0)
 	{
@@ -15032,7 +15059,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			X.seq			<- project.athena.Fisheretal.YX.model5.stratify(X.seq)
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
 		}					
-#stop()
+stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
@@ -15105,7 +15132,7 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Cwmx.wtn.tp1'
+		method.risk				<- 'm2Cwmx.wtn.tp3'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.135
 		method.use.AcuteSpec	<- 1

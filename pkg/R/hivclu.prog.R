@@ -1185,46 +1185,33 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 		#
 		# remove clusters with all seq coming from frgn infection
 		#
-		tmp			<- hivc.clu.getplot.excludeallmultifrgninfection(clu.pre$ph, clu$clustering, df.cluinfo )
+		tmp			<- hivc.clu.getplot.excludeallmultifrgninfection(clu.pre$ph, clu$clustering, df.cluinfo, char.select= "!all(!is.na(CountryInfection) & grepl('FRGN',CountryInfection) )")
 		ph			<- tmp$cluphy
 		df.cluinfo	<- tmp$cluphy.df
 		clustering	<- tmp$cluphy.clustering		
 		#
-		#get in-country clusters. this splits clusters with a foreign sequence
-		#don t use: self report may be unreliable		
-		if(0)
-		{
-			outdir			<- indir
-			outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"incountry",sep='')
-			outsignat		<- insignat									
-			#ph			<- clu.pre$ph; clustering	<- clu$clustering; plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); char.frgn  	='CountryInfection=="FRGN"'; char.frgntn	='CountryInfection=="FRGNTN"'; 
-			incountry		<- hivc.clu.getplot.incountry(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''))
-			ph				<- incountry$cluphy
-			clustering		<- incountry$clustering
-			df.cluinfo		<- incountry$df.cluinfo					
-		}
+		#get in-country clusters. this drops foreign sequences in clusters				
+		outdir			<- indir
+		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"incountry",sep='')
+		outsignat		<- insignat									
+		#ph			<- clu.pre$ph; clustering	<- clu$clustering; plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); char.frgn  	='CountryInfection=="FRGN"'; char.frgntn	='CountryInfection=="FRGNTN"'; 
+		incountry		<- hivc.clu.getplot.incountry(ph, clustering, df.cluinfo, split.clusters=FALSE, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), char.frgn='CountryInfection=="FRGN"', char.frgntn='CountryInfection=="FRGNTN"')
+		ph				<- incountry$cluphy
+		clustering		<- incountry$clustering
+		df.cluinfo		<- incountry$df.cluinfo
+		stopifnot( nrow(subset(df.cluinfo, is.na(PosSeqT)))==0 )
 		#
-		# get msm exposure group clusters. 
+		# get msm exposure group clusters. this drops clusters with no MSM / BI patient
 		#
 		set(df.cluinfo, which( df.cluinfo[,Trm%in%c("BLOOD","BREAST","PREG","NEEACC")] ), "Trm", "OTH" )
 		set(df.cluinfo, which( df.cluinfo[,Trm=="HETfa"] ), "Trm", "HET" )		
 		set(df.cluinfo, NULL, "Trm", factor(df.cluinfo[,Trm]) )		
 		#ph<- incountry$cluphy; 		plot.file	<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); levels.msm=c("BI","MSM","IDU","NA"); levels.het=c("BI","HET","IDU","NA"); levels.mixed=c("BI","MSM","HET","IDU","NA"); levels.oth="OTH"
-		if(0)	#	this splits clusters with HET-F	
-		{			
-			outdir			<- indir
-			outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
-			outsignat		<- insignat							
-			msm				<- hivc.clu.getplot.msmexposuregroup(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), split.clusters=0)					
-		}
-		if(1)	#	keep HET-F to calibrate compatibility test
-		{
-			outdir			<- indir
-			outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
-			outsignat		<- insignat							
-			msm				<- hivc.clu.getplot.msmexposuregroup(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), method.who='Other', split.clusters=0)
-			
-		}
+		outdir			<- indir
+		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
+		outsignat		<- insignat
+		#	keep HET-F to calibrate compatibility test
+		msm				<- hivc.clu.getplot.msmexposuregroup(ph, clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), split.clusters=FALSE, exclude.F=FALSE)
 		#
 		# collapse within patient subclades in each subtree
 		#
@@ -4385,6 +4372,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 	#	select seroconverters
 	#
 	df.cluinfo				<- msm$df.cluinfo
+	print( df.cluinfo[, table(Sex)] )
 	tmp						<- df.cluinfo[,	list(clu.bwpat.medbrl=clu.bwpat.medbrl[1],clu.npat=clu.npat[1], clu.fPossAcute=clu.fPossAcute[1], fNegT=length(which(!is.na(NegT))) / clu.ntip[1]),by="cluster"]										
 	tmp						<- subset(tmp, fNegT>=quantile(tmp[,fNegT], probs=beast2.spec$pool.fNegT) )
 	cluphy.df				<- merge( subset(tmp,select=cluster), df.cluinfo, all.x=1, by="cluster" )

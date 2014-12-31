@@ -884,7 +884,7 @@ hivc.clu.brl.bwpat<- function(cluphy.subtrees, cluphy.df, rtn.val.for.na.patient
 	cluphy.brl.bwpat
 }
 ######################################################################################
-hivc.clu.getplot.incountry<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, char.frgn='CountryInfection=="FRGN"', char.frgntn='CountryInfection=="FRGNTN"')
+hivc.clu.getplot.incountry<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, split.clusters=FALSE, char.frgn='CountryInfection=="FRGN"', char.frgntn='CountryInfection=="FRGNTN"')
 {
 	clut						<- parse(text=paste("!is.na(CountryInfection) & (",char.frgn," | ",char.frgntn,") ", sep=''))		
 	clut						<- table( df.cluinfo[,cluster, eval(clut) ] )
@@ -905,35 +905,39 @@ hivc.clu.getplot.incountry<- function(ph, clustering, df.cluinfo, verbose=1, plo
 	#
 	clut.mixed					<- apply(clut, 2, function(x)	all(x>0)		)		
 	clut.mixed					<- as.numeric( colnames(clut[,clut.mixed]) )
-	if(verbose) cat(paste("\nnumber of clusters with at least one in-country seq is n=", length(clut.mixed)))
+	if(verbose) cat(paste("\nnumber of clusters with at least one foreign seq is n=", length(clut.mixed)))
 	cluphy.mixed				<- merge(data.table(cluster=clut.mixed), df.cluinfo, by="cluster")
-	if(verbose) cat(paste("\nnumber of seq in clusters with at least one in-country seq is n=", nrow(cluphy.mixed)))
+	if(verbose) cat(paste("\nnumber of seq in clusters with at least one foreign seq is n=", nrow(cluphy.mixed)))
 	#
 	# split mixed clusters
 	#
-	#exclude pairs -- split would result in singleton
+	# exclude pairs -- split would result in singleton
 	tmp							<- cluphy.mixed[, list(size=length(unique(FASTASampleCode))), by="cluster"]
 	cluphy.mixed.rm				<- subset(tmp,size<=2, cluster)[,cluster]		
 	cluphy.mixed				<- merge( subset(tmp,size>2, cluster), df.cluinfo, all.x=1, by="cluster" )
-	if(verbose) cat(paste("\nnumber of splitting clusters is n=", length(unique(cluphy.mixed[,cluster])) ))
+	if(verbose) cat(paste("\nnumber of clusters with at least one in-country seq of those with at least one foreign sequence is n=", length(unique(cluphy.mixed[,cluster])) ))
 	if(length(intersect( unique(cluphy.mixed[,cluster]),unique(cluphy.nofrgn[,cluster]) )))
 		stop("unexpected overlap between 'cluphy.mixed' and 'cluphy.nofrgn'")		
-	#extract selected clusters		
+	# extract in-country sequences from mixed clusters		
 	cluphy.cluidx				<- clustering[["clu.idx"]][ unique( cluphy.mixed[,cluster] ) ]					
-	cluphy.split.subtrees		<- lapply(cluphy.cluidx, function(x)		extract.clade(ph, x, root.edge= 1, interactive = FALSE) 		)
-	names(cluphy.split.subtrees)<- unique( cluphy.mixed[,cluster] )				
-	#split selected clusters				
-	#subset(cluphy.mixed, select=c(cluster,FASTASampleCode,Patient,CountryInfection))
-	#splitexpr<- parse(text=paste( char.frgn, char.frgntn, sep=" | " ))
-	#cluphy.df<- df.cluinfo
-	cluphy.split.subtrees		<- hivc.clu.splitcluster(cluphy.split.subtrees, df.cluinfo, parse(text=paste( char.frgn, char.frgntn, sep=" | " )) )
-	#z<- subset(tmp$cluphy.df[cluphy.mixed[,FASTASampleCode],], !is.na(cluster),select=c(cluster,FASTASampleCode,Patient,CountryInfection))
-	#length(unique(z[,cluster]))	
-	if(verbose) cat(paste("\nnumber of splitted clusters is n=", length(cluphy.split.subtrees)))
+	cluphy.drop.subtrees		<- lapply(cluphy.cluidx, function(x)		extract.clade(ph, x, root.edge= 1, interactive = FALSE) 		)
+	names(cluphy.drop.subtrees)<- unique( cluphy.mixed[,cluster] )				
+	#split or drop foreign sequences in mixed clusters
+	cat(paste('\nSplit clusters?', split.clusters))
+	if(split.clusters)
+	{
+		cluphy.drop.subtrees		<- hivc.clu.splitcluster(cluphy.drop.subtrees, df.cluinfo, parse(text=paste( char.frgn, char.frgntn, sep=" | " )) )
+		if(verbose) cat(paste("\nnumber of splitted clusters is n=", length(cluphy.drop.subtrees)))		
+	}
+	if(!split.clusters)
+	{
+		cluphy.drop.subtrees		<- hivc.clu.droptipincluster(cluphy.drop.subtrees, df.cluinfo, parse(text=paste( char.frgn, char.frgntn, sep=" | " )) )		
+		if(verbose)	cat(paste("\nnumber of retained clusters is n=",length(cluphy.drop.subtrees)))		
+	}	
 	#
 	# collect all subtrees and verify that at least two patients in subtree 
 	#	
-	cluphy.subtrees				<- c(cluphy.split.subtrees, cluphy.nofrgn.subtrees)
+	cluphy.subtrees				<- c(cluphy.drop.subtrees, cluphy.nofrgn.subtrees)
 	setkey(df.cluinfo, FASTASampleCode)
 	tmp							<- which(sapply(cluphy.subtrees, function(x)		nrow(subset( df.cluinfo[x$tip.label,], length(unique(na.omit(Patient)))>1 ))>0			))	
 	if(verbose)	cat(paste("\nnumber of final in-country clusters is n=",length(tmp)))
@@ -956,7 +960,7 @@ hivc.clu.getplot.incountry<- function(ph, clustering, df.cluinfo, verbose=1, plo
 	list(clustering=clustering, df.cluinfo=df.cluinfo, cluphy=cluphy, cluphy.subtrees=cluphy.subtrees)
 }
 ######################################################################################
-hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, levels.msm=c("BI","MSM","IDU","NA"), levels.het=c("BI","HET","IDU","NA"), levels.mixed=c("BI","MSM","HET","IDU","NA"),levels.oth="OTH", split.clusters=0, method.who='Females_Other')
+hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, levels.msm=c("BI","MSM"), levels.het=c("HET","OTH","IDU"), split.clusters=FALSE, exclude.F=FALSE)
 {	
 	stopifnot(method.who%in%c('Females_Other','Other'))
 	clut						<- table( df.cluinfo[,cluster,Trm], useNA= "always" )
@@ -967,82 +971,78 @@ hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose
 	#
 	# clusters with MSM only
 	#
-	clut.onlymsm				<- apply(clut, 2, function(x)		sum( x[levels.msm] )==x["sum"]		)
+	clut.onlymsm				<- apply(clut, 2, function(x)		sum( x[c(levels.msm,"NA")] )==x["sum"]		)
 	clut.onlymsm				<- as.numeric(colnames(clut[,clut.onlymsm]))
 	cluphy.onlymsm				<- merge(data.table(cluster=clut.onlymsm), df.cluinfo, by="cluster")	
-	if(verbose)	cat(paste("\nnumber of clusters with MSM only seq is n=",length(unique(cluphy.onlymsm[,cluster]))))		
+	if(verbose)	cat(paste("\nnumber of clusters with MSM only seq is n=",length(unique(cluphy.onlymsm[,cluster]))))
 	#
-	# clusters with MSM/HET
+	# clusters with HET only
 	#
-	clut.het					<- apply(clut, 2, function(x)		sum( x[levels.msm] )!=x["sum"] & sum( x[levels.het] )!=x["sum"] & sum( x[levels.mixed] )==x["sum"]		)
+	clut.het					<- apply(clut, 2, function(x)		sum( x[c(levels.het,"NA")] )==x["sum"]		)
 	clut.het					<- as.numeric(colnames(clut[,clut.het]))
 	cluphy.het					<- merge(data.table(cluster=clut.het), df.cluinfo, by="cluster")
-	if(verbose)	cat(paste("\nnumber of clusters with MSM/HET seq is n=",length(unique(cluphy.het[,cluster]))))
+	if(verbose)	cat(paste("\nnumber of clusters with HET seq is n=",length(unique(cluphy.het[,cluster]))))	
+	#
+	# clusters with MIXED
+	#
+	clut.mxd					<- apply(clut, 2, function(x)		sum( x[c(levels.msm,"NA")] )!=x["sum"] & sum( x[c(levels.het,"NA")] )!=x["sum"] & sum(x[levels.msm])>0  )
+	clut.mxd					<- as.numeric(colnames(clut[,clut.mxd]))
+	cluphy.mxd					<- merge(data.table(cluster=clut.mxd), df.cluinfo, by="cluster")
+	if(verbose)	cat(paste("\nnumber of clusters with MIXED seq is n=",length(unique(cluphy.mxd[,cluster]))))
+	#
+	tmp							<- setdiff(colnames(clut), as.character( c(clut.onlymsm, clut.het, clut.mxd) ))
+	stopifnot(length(tmp)==0)	
 	#	
 	# clusters with MSM/HET-M
 	#	
-	cluphy.hetM 				<- cluphy.het[,list( HetM.only= all(Sex=="M") ),by=cluster]
-	if(verbose)	cat(paste("\nnumber of clusters with MSM/HET-M seq is n=",nrow(subset(cluphy.hetM,HetM.only))))
-	cluphy.hetM					<- merge(subset(cluphy.hetM,HetM.only,select=cluster), df.cluinfo, all.x=1, by="cluster")					
-	#
-	# get subtrees corresponding to MSM only and MSM/HET-M clusters
-	#
-	cluphy.msm					<- rbind(cluphy.onlymsm, cluphy.hetM)
-	cluphy.msm.subtrees			<- hivc.clu.polyphyletic.clusters(cluphy.msm , ph=ph, clustering=clustering)$cluphy.subtrees
+	tmp 						<- cluphy.mxd[,list( HetM.only= all(Sex=="M") ), by=cluster]
+	if(verbose)	cat(paste("\nnumber of clusters with MSM/HET-M seq is n=",nrow(subset(tmp,HetM.only))))
+	cluphy.hetM					<- merge(subset(tmp,HetM.only,select=cluster), df.cluinfo, all.x=1, by="cluster")					
 	#
 	# clusters with MSM/HET-F
-	#
-	cluphy.hetF 				<- cluphy.het[,list( with.HETF= any(Sex=="F") ),by=cluster]
-	if(verbose)	cat(paste("\nnumber of clusters with MSM/HET-F seq is n=",nrow(subset(cluphy.hetF,with.HETF))))
-	cluphy.hetF					<- merge(subset(cluphy.hetF,with.HETF,select=cluster), df.cluinfo, all.x=1, by="cluster")
+	#	
+	if(verbose)	cat(paste("\nnumber of clusters with MSM/HET-F seq is n=",nrow(subset(tmp,!HetM.only))))
+	cluphy.hetF					<- merge(subset(tmp,!HetM.only,select=cluster), df.cluinfo, all.x=1, by="cluster")
 	if(length(intersect( unique(cluphy.hetF[,cluster]),unique(cluphy.hetM[,cluster]) )))
 		stop("unexpected overlap between cluphy.hetF and cluphy.hetM")
 	if(length(intersect( unique(cluphy.onlymsm[,cluster]),unique(cluphy.hetM[,cluster]) )))
 		stop("unexpected overlap between cluphy.onlymsm and cluphy.hetM")		
 	#
-	# clusters with OTH
+	# split / drop Females?
 	#	
-	clut.oth							<- apply(clut, 2, function(x)		x["MSM"]>0 & sum( x[levels.msm] )!=x["sum"] & x[levels.oth]>0 & sum( x[levels.oth] )!=x["sum"] & sum( x[levels.het] )!=x["sum"] & sum( x[unique(c(levels.msm,levels.het,levels.oth))] )==x["sum"]		)
-	clut.oth							<- as.numeric(colnames(clut[,clut.oth]))
-	cluphy.oth							<- merge(data.table(cluster=clut.oth), df.cluinfo, by="cluster")
-	if(verbose)	cat(paste("\nnumber of clusters with OTH seq is n=",length(unique(cluphy.oth[,cluster]))))
-	# combine cluphy.oth and cluphy.hetF for splitting
-	if(length(intersect( unique(cluphy.hetF[,cluster]),unique(cluphy.oth[,cluster]) )))
-		stop("unexpected overlap between cluphy.hetF and cluphy.oth")
-	cat(paste('\nusing method.who=',method.who))
-	if(method.who=='Females_Other')
-		cluphy.split					<- rbind(cluphy.hetF, cluphy.oth)
-	if(method.who=='Other')
+	if(exclude.F)
 	{
-		cluphy.split					<- copy(cluphy.oth)
-		tmp								<- hivc.clu.polyphyletic.clusters(cluphy.hetF , ph=ph, clustering=clustering)$cluphy.subtrees
-		cluphy.msm.subtrees				<- c(cluphy.msm.subtrees, tmp)
+		cluphy.msm							<- rbind(cluphy.onlymsm, cluphy.hetM)
+		cluphy.split						<- copy(cluphy.hetF)
+		tmp									<- hivc.clu.polyphyletic.clusters(cluphy.hetF , ph=ph, clustering=clustering)$cluphy.subtrees
+		# exclude pairs -- split would result in singleton
+		tmp									<- cluphy.split[, list(size=length(unique(FASTASampleCode))), by="cluster"]
+		cluphy.split.rm						<- subset(tmp,size<=2, cluster)[,cluster]		
+		cluphy.split						<- merge( subset(tmp,size>2, cluster), df.cluinfo, all.x=1, by="cluster" )	
+		# extract subtrees 		
+		cluphy.cluidx						<- clustering[["clu.idx"]][ unique( cluphy.split[,cluster] ) ]					
+		cluphy.split.subtrees				<- lapply(cluphy.cluidx, function(x)		extract.clade(ph, x, root.edge= 1, interactive = FALSE) 		)
+		names(cluphy.split.subtrees)		<- unique( cluphy.split[,cluster] )	
+		if(split.clusters)	#split cluster 
+		{
+			# split HET-F, OTH clusters					
+			if(verbose)	cat(paste("\nnumber of splitting clusters is n=",length(unique(cluphy.split[,cluster]))))
+			cluphy.split.subtrees			<- hivc.clu.splitcluster(cluphy.split.subtrees, df.cluinfo, parse(text='Sex=="F" | Trm=="OTH"'))						
+			if(verbose)	cat(paste("\nnumber of retained clusters is n=",length(cluphy.split.subtrees)))		
+		}
+		else 				#drop from cluster
+		{		
+			if(verbose)	cat(paste("\nnumber of droptip clusters is n=",length(unique(cluphy.split[,cluster]))))
+			cluphy.split.subtrees			<- hivc.clu.droptipincluster(cluphy.split.subtrees, df.cluinfo, parse(text='Sex=="F" | Trm=="OTH"') )		
+			if(verbose)	cat(paste("\nnumber of retained clusters is n=",length(cluphy.split.subtrees)))						
+		}		
 	}
-	# exclude pairs -- split would result in singleton
-	tmp									<- cluphy.split[, list(size=length(unique(FASTASampleCode))), by="cluster"]
-	cluphy.split.rm						<- subset(tmp,size<=2, cluster)[,cluster]		
-	cluphy.split						<- merge( subset(tmp,size>2, cluster), df.cluinfo, all.x=1, by="cluster" )	
-	# extract subtrees for MSM/HET-F clusters		
-	cluphy.cluidx						<- clustering[["clu.idx"]][ unique( cluphy.split[,cluster] ) ]					
-	cluphy.split.subtrees				<- lapply(cluphy.cluidx, function(x)		extract.clade(ph, x, root.edge= 1, interactive = FALSE) 		)
-	names(cluphy.split.subtrees)		<- unique( cluphy.split[,cluster] )	
-	if(split.clusters)	#split cluster at HETF or OTH sequence
+	if(!exclude.F)
 	{
-		# split HET-F, OTH clusters					
-		#subset(cluphy.hetF, select=c(cluster,FASTASampleCode,Patient,Sex))
-		#splitexpr<- parse(text='Sex=="F"')
-		#cluphy.df<- df.cluinfo
-		if(verbose)	cat(paste("\nnumber of splitting clusters is n=",length(unique(cluphy.split[,cluster]))))
-		cluphy.split.subtrees			<- hivc.clu.splitcluster(cluphy.split.subtrees, df.cluinfo, parse(text='Sex=="F" | Trm=="OTH"'))
-		#z<- subset(tmp$cluphy.df[cluphy.hetF[,FASTASampleCode],], !is.na(cluster),select=c(cluster,FASTASampleCode,Patient,Sex,Trm))			
-		if(verbose)	cat(paste("\nnumber of retained clusters is n=",length(cluphy.split.subtrees)))		
+		cluphy.msm						<- rbind(cluphy.onlymsm, cluphy.hetM, cluphy.hetF)
+		cluphy.split.subtrees			<- NULL
 	}
-	else 				#drop HETF or OTH sequence from cluster
-	{		
-		if(verbose)	cat(paste("\nnumber of droptip clusters is n=",length(unique(cluphy.split[,cluster]))))
-		cluphy.split.subtrees			<- hivc.clu.droptipincluster(cluphy.split.subtrees, df.cluinfo, parse(text='Sex=="F" | Trm=="OTH"') )		
-		if(verbose)	cat(paste("\nnumber of retained clusters is n=",length(cluphy.split.subtrees)))						
-	}
+	cluphy.msm.subtrees					<- hivc.clu.polyphyletic.clusters(cluphy.msm , ph=ph, clustering=clustering)$cluphy.subtrees	
 	#
 	# collect all subtrees and verify that at least one Trm=="MSM" and at least two patients in subtree 
 	#	
@@ -1058,7 +1058,8 @@ hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose
 	setkey(cluphy.df, FASTASampleCode)
 	df.cluinfo[,cluster:=NULL]
 	df.cluinfo					<- merge(cluphy.df,df.cluinfo,by="FASTASampleCode")
-	if(verbose) cat(paste("\nnumber of seq in in-country clusters is n=", nrow(df.cluinfo)))
+	if(verbose) cat(paste("\nnumber of seq in MSM clusters is n=", nrow(df.cluinfo)))
+	if(verbose) cat(paste("\nnumber of final MSM clusters is n=", df.cluinfo[, length(unique(cluster))]))	
 	#
 	# build polyphyletic tree from clusters and construct 'clustering' for this tree
 	#
@@ -1088,15 +1089,15 @@ hivc.clu.getplot.mixedexposuregroup<- function(ph, clustering, df.cluinfo, verbo
 	ans
 }	
 ######################################################################################
-hivc.clu.getplot.excludeallmultifrgninfection<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, char.select= "!all(!is.na(CountryInfection) & CountryInfection!='NL')", pdf.scaley=25, pdf.xlim=0, cex.nodelabel=0.2, cex.tiplabel=0.2, adj.tiplabel= c(-0.15,0.5))
+hivc.clu.getplot.excludeallmultifrgninfection<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, char.select= "!all(!is.na(CountryInfection) & grepl('FRGN',CountryInfection) )", pdf.scaley=25, pdf.xlim=0, cex.nodelabel=0.2, cex.tiplabel=0.2, adj.tiplabel= c(-0.15,0.5))
 {		
 	require(phangorn)
 	expr.select	<- parse(text=char.select)
 	tmp			<- subset( df.cluinfo[,eval(expr.select),by="cluster"], V1, cluster )
 	clu.exlc	<- setdiff( df.cluinfo[,cluster], tmp[,cluster] )
-	if(verbose) cat(paste("\nnumber of clusters with at least one patient with NL or NA CountryInfection, n=", nrow(tmp)))
+	if(verbose) cat(paste("\nnumber of clusters with at least one patient with non FRGN CountryInfection, n=", nrow(tmp)))
 	cluphy.df	<- merge(tmp, df.cluinfo, by="cluster")
-	if(verbose) cat(paste("\nseq in clusters with at least one patient with NL or NA CountryInfection, n=", nrow(cluphy.df)))
+	if(verbose) cat(paste("\nseq in clusters with at least one patient with non FRGN CountryInfection, n=", nrow(cluphy.df)))
 	
 	tmp						<- hivc.clu.polyphyletic.clusters(cluphy.df, ph=ph, clustering=clustering, plot.file=plot.file, pdf.scaley=pdf.scaley, pdf.xlim=pdf.xlim, cex.nodelabel=cex.nodelabel, cex.tiplabel=cex.tiplabel )
 	cluphy					<- tmp$cluphy
