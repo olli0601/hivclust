@@ -4669,7 +4669,7 @@ project.athena.Fisheretal.Hypo.prepmissingbs<- function(YX.bs, nt.table, missing
 	missing.bs
 }
 ######################################################################################
-project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc<- function(YXf.h, method.risk, t.firstsuppressed=0.3, method.realloc='ImmediateART', method.sample= 'stage=prop, y=mean', verbose=TRUE)
+project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc<- function(YXe, YXf.h, method.risk, t.firstsuppressed=0.3, method.realloc='ImmediateART', method.sample= 'stage=prop, y=mean', verbose=TRUE)
 {
 	stopifnot(grepl('stage=sample|stage=prop',method.sample))
 	stopifnot(grepl('y=sample|y=median|y=mean',method.sample))
@@ -4792,7 +4792,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, method.realloc='
 		YX					<- copy(YXe$YX)
 		YXf.h				<- copy(YXe$YXf)
 		cat(paste('\nusing method',method.realloc))
-		tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YXf.h, method.risk, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='stage=prop, y=mean')
+		tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YXe, YXf.h, method.risk, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='stage=prop, y=mean')
 		YX.h				<- copy(tmp$YX.h)
 		nt.table.h			<- copy(tmp$nt.table.h)
 		#
@@ -4872,7 +4872,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, method.realloc='
 							if(bs.i%%100==0)	cat(paste('\nprocess bootstrap data sets bs.i=',bs.i))
 							#	bootstrap over ART assignment
 							YXf.h.bs		<- copy(YXe$YXf)
-							tmp				<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YXf.h.bs, method.risk, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='stage=sample, y=sample', verbose=FALSE)						
+							tmp				<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YXe, YXf.h.bs, method.risk, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='stage=sample, y=sample', verbose=FALSE)						
 							YX.h			<- copy(tmp$YX.h)
 							nt.table.h		<- copy(tmp$nt.table.h)				
 							#	bootstrap over recently infected Patient
