@@ -4595,7 +4595,7 @@ project.athena.Fisheretal.Wallinga.prep.nttable<- function(YX, X.tables, risk.df
 	list(nt.table=nt.table, ct=ct)
 }
 ######################################################################################
-project.athena.Fisheretal.Hypo.prepmissingbs<- function(YX.bs, nt.table, missing, ct.bs, method.risk, method.reallocate=NA, YXf=NULL)
+project.athena.Fisheretal.Hypo.prepmissingbs<- function(YX.bs, risk.df, nt.table, missing, ct.bs, method.risk, method.reallocate=NA, YX=NULL, YXf=NULL)
 {
 	stopifnot(is.na(method.reallocate) | grepl('Dt|DA',method.reallocate) | grepl('Dtl500|Dtl350',method.reallocate))
 	#	bootstrap sample censoring adjustment on nt.table
@@ -4887,11 +4887,11 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, method.realloc='
 							set(ct.bs, NULL, 'n.adj', ct.bs[, as.integer(round(n.adj))])	
 							setnames(ct.bs, 'n.adj', 'n.adj.bs' )
 							#	bootstrap sample censoring adjustments
-							missing.bs			<- project.athena.Fisheretal.Hypo.prepmissingbs(YX.bs, nt.table, missing, ct.bs, method.risk, method.reallocate=NA, YXf=YXf)
+							missing.bs			<- project.athena.Fisheretal.Hypo.prepmissingbs(YX.bs, risk.df, nt.table, missing, ct.bs, method.risk, method.reallocate=NA, YXf=YXf)
 							X.tables.h			<- copy(YXe$X.tables)	
 							X.tables.h$nt.table	<- nt.table.h
 							nt.table.h			<- copy(project.athena.Fisheretal.Wallinga.prep.nttable(YX.h, X.tables.h, risk.df, method.reallocate=method.reallocate)$nt.table)													
-							missing.h.bs		<- project.athena.Fisheretal.Hypo.prepmissingbs(YX.h.bs, nt.table.h, missing.h, ct.bs, method.risk, method.reallocate=method.reallocate, YXf=YXf)
+							missing.h.bs		<- project.athena.Fisheretal.Hypo.prepmissingbs(YX.h.bs, risk.df, nt.table.h, missing.h, ct.bs, method.risk, method.reallocate=method.reallocate, YXf=YXf)
 							#	calculate proportion of recipients averted	
 							averted.bs			<- missing.bs[, 	list(	Pjx.e0cp.sum= sum((yYX.sum+yYXm.sum.e0cp)*YX.w)), by=c('risk','Patient.bs')]
 							tmp					<- missing.h.bs[, 	list(	Pjx.e0cp.sum.h= sum((yYX.sum+yYXm.sum.e0cp)*YX.w)), by=c('risk','Patient.bs')]
