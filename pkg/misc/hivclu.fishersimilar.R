@@ -4747,7 +4747,7 @@ project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc<- function(YXf.h, metho
 	set(df.artinfo, NULL, 'pt', df.artinfo[, pt] * length(ARTns.i) / (length(ARTns.i)+length(ARTs.i)))
 	df.artinfo	<- rbind(df.artinfo, data.table(stage=paste('ART.NotYetFirstSu.',tp,sep=''), pt= length(ARTs.i) / (length(ARTns.i)+length(ARTs.i))), fill=TRUE)
 	setkey(df.artinfo, pt)
-	stopifnot( df.artinfo[, tail(cumsum(pt),1)==1] )
+	#stopifnot( df.artinfo[, tail(cumsum(pt),1)==1] )
 	#	prepare nt.table for hypothetical scenario
 	nt.table.h	<- copy(YXe$X.tables$nt.table)	
 	nt.table.h	<- nt.table.h[,{
