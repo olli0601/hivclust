@@ -535,6 +535,7 @@ hivc.pipeline.BEASTout<- function()
 					outfile		<- paste("b2p.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
 				})
+		stop()
 	}
 	if(0)
 	{
