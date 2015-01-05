@@ -4813,7 +4813,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, method.realloc='
 		adj.h		<- nt.table.h[, list(YX=sum(YX), X.clu=sum(X.clu), X.seq=sum(X.seq), X.msm.e0=sum(X.msm.e0), X.msm.e0cp=sum(X.msm.e0cp), nRec=length(unique(Patient))), by=c('risk','factor')]
 		tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
 		adj.h[, PYs:= adj.h[[tmp]]]
-		adj.h[, PTx:= adj[, YX] / adj.h[[tmp]]]
+		adj.h[, PTx:= adj.h[, YX] / adj.h[[tmp]]]
 		adj.h[, Sx.e0:= PYs/X.msm.e0]					
 		adj.h[, Sx.e0cp:= PYs/X.msm.e0cp]
 		set(adj.h, adj.h[, which(!is.finite(Sx.e0))], 'Sx.e0', 1)
