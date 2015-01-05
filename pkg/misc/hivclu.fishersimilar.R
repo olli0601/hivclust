@@ -2978,7 +2978,7 @@ project.athena.Fisheretal.get.dated.phylo.for.selection<- function(df.tpairs, cl
 	list(clu=clu, df.tpairs=df.tpairs.reduced)
 }
 ######################################################################################
-project.athena.Fisheretal.poolIntoGroups<- function( YXe, save.file=NA)
+project.athena.Fisheretal.poolIntoGroups<- function( YXe, method.risk, save.file=NA)
 {
 	df.est 	<- copy(YXe$risk)	
 	set(df.est, NULL, c('l95.bs','u95.bs','m50.bs'),NULL)
@@ -3231,7 +3231,7 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 	ans
 }	
 ######################################################################################
-project.athena.Fisheretal.poolARTstarted<- function( YXe, save.file=NA)
+project.athena.Fisheretal.poolARTstarted<- function( YXe, method.risk, save.file=NA)
 {
 	df.est 	<- copy(YXe$risk)	
 	set(df.est, NULL, c('l95.bs','u95.bs','m50.bs'),NULL)
@@ -16216,12 +16216,12 @@ hivc.prog.props_univariate<- function()
 		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
 		save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'ARTstarted.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')	
-		tmp			<- project.athena.Fisheretal.poolARTstarted( YXe, save.file=save.file)
+		tmp			<- project.athena.Fisheretal.poolARTstarted( YXe, method.risk, save.file=save.file)
 		#	pool into groups U D A, re-estimate
 		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
 		save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'GoupsUDA.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')	
-		tmp			<- project.athena.Fisheretal.poolARTstarted( YXe, save.file=save.file)
+		tmp			<- project.athena.Fisheretal.poolIntoGroups( YXe, method.risk, save.file=save.file)
 		#	hypothetical: immediate ART
 		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
