@@ -4968,7 +4968,7 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, X.tables, method.r
 	#
 	#	pre-processing
 	#
-	tmp			<- project.athena.Fisheretal.Wallinga.prep.nttable(YX.m3, X.tables, risk.df)
+	tmp			<- project.athena.Fisheretal.Wallinga.prep.nttable(YX.m3, X.tables, risk.df, method.reallocate=NA)
 	nt.table	<- copy(tmp$nt.table)
 	ct			<- copy(tmp$ct)
 	#	compute extra variables from nt.table. 
@@ -5066,7 +5066,7 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, X.tables, method.r
 	#	number of transmissions and proportions by raw count
 	#	*** among recipients with likely transmitter only ***
 	#
-	missing		<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table, risk.df, YX, YXf, use.YXf=use.YXf)	
+	missing		<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table, risk.df, YX.m3, YXf, use.YXf=use.YXf)	
 	#	calculate prob Pj(x) that recipient j got infected from x  - with and without adjustment	
 	tmp			<- missing[, 	list(	factor=factor, 	
 										Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
