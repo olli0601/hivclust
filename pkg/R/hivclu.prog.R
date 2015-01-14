@@ -3804,7 +3804,7 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 	#	read tree files	- this takes a while
 	#	do this one by one as reading all in one go is too mem intensive
 	files		<- list.files(indir)
-	files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('trees$',x) ) ]
+	files		<- files[ grepl(infile, files, fixed=1) & grepl(gsub('/',':',insignat), files, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), files, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), files, fixed=1) & grepl('trees$',files)  ]
 	if(!length(files))	stop('cannot find files matching criteria')
 	cat(paste('\nfound files', paste(files, collapse=', ')))
 	files		<- paste(indir, files, sep='/')
@@ -3855,7 +3855,7 @@ hivc.prog.BEAST2.get.cluster.trees<- function()
 				if(resume)
 				{
 					tmp			<- list.files(outdir)
-					tmp			<- tmp[ sapply(tmp, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',outsignat), x, fixed=1) & grepl(infilexml.opt, x, fixed=1) & grepl(infilexml.template,x, fixed=1) & grepl(paste('_pool_',pool.i,'_clu_[0-9]+',sep=''),x) & grepl('.R$',x) ) ]
+					tmp			<- tmp[ grepl(outfile, tmp, fixed=1) & grepl(gsub('/',':',outsignat), tmp, fixed=1) & grepl(infilexml.opt, tmp, fixed=1) & grepl(infilexml.template,tmp, fixed=1) & grepl(paste('_pool_',pool.i,'_clu_[0-9]+',sep=''),tmp) & grepl('.R$',tmp)  ]
 					tmp			<- length(tmp)
 				}
 				if(!resume || !tmp )

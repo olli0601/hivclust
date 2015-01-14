@@ -762,6 +762,19 @@ hivc.beast2out.tip.date.check<- function(ph, fun, ...)
 #' @export
 hivc.beast2out.read.trees<- function(file, opt.rescale.edge.length= 1., opt.burnin=0 )
 {
+	tmp			<- readLines(file, n=2e3)
+	tmp			<- which( grepl('#NEXUS', tmp) )
+	if(length(tmp)>1)
+	{
+		cat(paste('\nFound #NEXUS headers, n=',length(tmp),'.\nDiscard all lines before last entry on line', tail(tmp,1)))
+		cmd		<- paste('sed -i".bak" 1,',tail(tmp,1)-1,'d ', file, sep='')
+		system(cmd)
+		cmd		<- paste('sed -i".bak2" 1s/\\;// ', file, sep='')
+		system(cmd)
+		cmd		<- list.files(paste(rev(rev(strsplit(file, '/')[[1]])[-1]),collapse='/'), pattern='*bak*', full.names=TRUE)
+		cat(paste('\nrm files\n', paste(cmd, collapse='\n')))
+		file.remove(cmd)
+	}	
 	mph			<- read.nexus(file)
 	#	remove burn in 
 	tmp			<- regexpr('[0-9]+',names(mph))

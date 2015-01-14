@@ -516,7 +516,7 @@ hivc.pipeline.BEASTout<- function()
 		opt.pool			<- NA
 		#
 		files		<- list.files(indir)
-		files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('_pool_[0-9]+',x) & grepl('trees$',x) ) ]				
+		files		<- files[ grepl(infile, files, fixed=1) & grepl(gsub('/',':',insignat), files, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), files, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), files, fixed=1) & grepl('_pool_[0-9]+',files) & grepl('trees$',files) ]				
 		if(!length(files))	stop('no input files matching criteria')
 		tmp			<- regmatches( files, regexpr('_pool_[0-9]+',files)) 
 		pool		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
@@ -529,6 +529,8 @@ hivc.pipeline.BEASTout<- function()
 					#cmd			<- paste(cmd, hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, verbose=1, resume=1), sep='')
 					#cmd			<- paste(cmd, hivc.cmd.beast2.plotclustertrees(indir, infile, insignat, indircov, infilecov, infilexml.opt, infilexml.template, resume=1, verbose=1), sep='')
 					cat(cmd)
+					#argv			<<- unlist(strsplit(cmd,' '))
+					#hivc.prog.BEAST2.get.cluster.trees()
 					#stop()
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=31, hpc.mem="3800mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
@@ -539,7 +541,7 @@ hivc.pipeline.BEASTout<- function()
 	}
 	if(0)
 	{
-		indir				<- paste(DATA,"tmp",sep='/')
+		indir				<- paste(DATA,"tmp2",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
 		outdir				<- indir
 		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"		
@@ -561,7 +563,7 @@ hivc.pipeline.BEASTout<- function()
 		#infilexml.template		<- "sasky_sdr06"
 		
 		files		<- list.files(indir)
-		files		<- files[ sapply(files, function(x) grepl(infile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), x, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), x, fixed=1) & grepl('_pool_[0-9]+',x) & grepl('_clu_[0-9]+',x) & grepl('R$',x) ) ]				
+		files		<- files[ grepl(infile, files, fixed=1) & grepl(gsub('/',':',insignat), files, fixed=1) & grepl(paste('_',infilexml.opt,'_',sep=''), files, fixed=1) & grepl(paste('_',infilexml.template,'_',sep=''), files, fixed=1) & grepl('_pool_[0-9]+',files) & grepl('_clu_[0-9]+',files) & grepl('R$',files) ]				
 		if(!length(files))	stop('no input files matching criteria')
 		tmp			<- regmatches( files, regexpr('_clu_[0-9]+',files)) 
 		cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
