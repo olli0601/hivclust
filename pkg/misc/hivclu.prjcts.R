@@ -6699,13 +6699,18 @@ project.Tchain.Belgium.sensecheck.explore<- function()
 			trm.pol.p3		<- gamlss.centiles.get(trm.pol.GA, trm.pol.nA$d_TSeqT, cent = c(2.5, 10, 25, 75, 90, 97.5) )		
 			setkey(trm.pol.p3, x)
 			trm.pol.p3		<- unique(trm.pol.p3)	
+			colors			<- c("#377EB8","#E41A1C")
+			line.size		<- 0.8
 			ggplot(trm.pol, aes(x=d_TSeqT)) +
+					geom_ribbon(aes(x=c(10.17,20), ymin=0, ymax=1), fill='grey30', alpha=0.2) +
+					geom_ribbon(aes(x=c(0,10.17), ymin=0, ymax=1), fill=colors[2], alpha=0.2) +
 					geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol, withA==FALSE & BRL>0.003)) +									
 					geom_line(data=trm.pol.p2, aes(y=BRL_p)) +
-					geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dotted') + geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dotted') +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dotted', color=colors[1], size=line.size) + geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dotted', color=colors[1], size=line.size) +
 					#geom_line(data=trm.pol.p3, aes(x=x, y=q1), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q99), lty='twodash') +
 					#geom_line(data=trm.pol.p3, aes(x=x, y=q25), lty='dashed') + geom_line(data=trm.pol.p3, aes(x=x, y=q75), lty='dashed') +
-					geom_line(data=trm.pol.p3, aes(x=x, y=q10), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q90), lty='twodash') +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q10), lty='twodash', color=colors[1], size=line.size) + geom_line(data=trm.pol.p3, aes(x=x, y=q90), lty='twodash', color=colors[1], size=line.size) +
+					#geom_vline(xintercept=10.17, color=colors[2] ) +					
 					labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
 					coord_cartesian(xlim=c(0,13), ylim=c(0,0.1)) +
 					scale_y_continuous(breaks=seq(0, 0.2, 0.02)) + scale_x_continuous(breaks=seq(0,30,2)) + 
