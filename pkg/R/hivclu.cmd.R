@@ -436,7 +436,7 @@ hivc.cmd.get.firstseq<- function(indir, infile, signat.in, signat.out, outdir=in
 }	
 ######################################################################################
 #' @export
-hivc.cmd.props.estimate<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, outdir=indir, outfile=infile, prog= PR.PROPS.ESTIMATE, resume=1, verbose=1)
+hivc.cmd.props.estimate<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, outdir=indir, outfile=infile, prog= PR.PROPS.ESTIMATE, resume=1, verbose=1)
 {
 	cmd		<- "#######################################################
 # start: estimate proportions etc
@@ -446,7 +446,7 @@ hivc.cmd.props.estimate<- function(indir, infile, insignat, indircov, infilecov,
 	cmd		<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov, " -infiletree=",infiletree, sep='')
 	cmd		<- paste(cmd,	" -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -method=",method," -method.nodectime=",method.nodectime," -method.risk=",method.risk, 
 							" -method.recentctime=",method.recentctime," -method.PDT=",method.PDT, " -method.Acute=",method.Acute,' -method.use.AcuteSpec=',method.use.AcuteSpec,' -method.minQLowerU=',method.minQLowerU,
-							' -method.lRNA.supp=',method.lRNA.supp,' -method.thresh.pcoal=',method.thresh.pcoal, ' -method.minLowerUWithNegT=',method.minLowerUWithNegT, sep='')
+							' -method.lRNA.supp=',method.lRNA.supp,' -method.thresh.pcoal=',method.thresh.pcoal, ' -method.minLowerUWithNegT=',method.minLowerUWithNegT, ' -method.cut.brl=', method.cut.brl, sep='')
 	cmd		<- paste(cmd," -outdir=",outdir," -outfile=",outfile, sep='')
 	#verbose stuff
 	cmd		<- paste(cmd,paste("\necho \'end ",prog,"\'",sep=''))

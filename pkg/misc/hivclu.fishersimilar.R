@@ -4939,7 +4939,7 @@ project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc<- function(YX, nt.table
 	list(YX.h=YX.h, nt.table.h=nt.table.h)	
 }
 ######################################################################################
-project.athena.Fisheretal.Hypo.ReallocUToNone.getYXetc<- function( YX, nt.table, method.risk, predict.t2inf, t2inf.args, df.all, th.starttime=2009.5, p.reachable=0.38, method.realloc='RPrEP', method.sample= 'stage=prop, y=mean', verbose=FALSE)
+project.athena.Fisheretal.Hypo.ReallocUToNone.getYXetc<- function( YX, nt.table, method.risk, predict.t2inf, t2inf.args, df.all, th.starttime=2009.5, p.reachable=0.38, method.minLowerUWithNegT=1, method.realloc='RPrEP', method.sample= 'stage=prop, y=mean', verbose=FALSE)
 {
 	stopifnot(grepl('stage=sample|stage=prop',method.sample))
 	stopifnot(grepl('y=sample|y=median|y=mean',method.sample))
@@ -16506,6 +16506,7 @@ hivc.prog.props_univariate<- function()
 		method.lRNA.supp		<- 100
 		method.thresh.pcoal		<- 0.3
 		method.minLowerUWithNegT<- 1
+		method.cut.brl			<- Inf		#does not make a difference because compatibility test kills these anyway
 		method.tpcut			<- 7
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -16628,6 +16629,12 @@ hivc.prog.props_univariate<- function()
 						{	switch(substr(arg,2,17),
 									method.lRNA.supp= return(as.numeric(substr(arg,19,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) method.lRNA.supp<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,15),
+									method.cut.brl= return(as.numeric(substr(arg,17,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) method.cut.brl<- tmp[1]		
+		
+		
 		
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,25),
@@ -16665,6 +16672,7 @@ hivc.prog.props_univariate<- function()
 		print(method.lRNA.supp)
 		print(method.thresh.pcoal)
 		print(method.minLowerUWithNegT)
+		print(method.cut.brl)
 	}	
 	if(method=='3l')
 	{
@@ -16728,6 +16736,8 @@ hivc.prog.props_univariate<- function()
 		method				<- paste(method,'V',method.lRNA.supp,sep='')
 	if(!method.minLowerUWithNegT)
 		method				<- paste(method,'N',method.minLowerUWithNegT,sep='')
+	if(method.cut.brl!=0.08)
+		method				<- paste(method,'b',method.cut.brl,sep='')
 	if(method.tpcut==4)
 		tp.cut				<- NULL
 	if(method.tpcut==7)
@@ -16738,7 +16748,7 @@ hivc.prog.props_univariate<- function()
 	adjust.AcuteByNegT		<- 1
 	any.pos.grace.yr		<- Inf	
 	method.lRNA.supp		<- log10(method.lRNA.supp)	
-	method.cut.brl			<- Inf		#does not make a difference because compatibility test kills these anyway
+	
 	
 	#	check if we are done	
 	if(0 && resume)
