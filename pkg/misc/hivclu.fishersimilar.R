@@ -5043,6 +5043,10 @@ project.athena.Fisheretal.Hypo.ReallocUToNone.getYXetc<- function( YX, nt.table,
 #tmp			<- merge(df.rec, subset(YX, t.period==tp), by='Patient')
 #nrow(merge(df.tr, tmp, by='t.Patient')) / nrow(merge(df.rec, subset(YX, t.period==tp), by='Patient'))	
 	#	select nt.table for remaining recipients
+	#	proportion of transmission intervals for which PrEP works		
+	p.tri.PrEPEff	<- nrow(merge(df.tr, YX, by='t.Patient')) / nrow(YX)
+	if(verbose)
+		cat(paste('\nProportion of transmission intervals lost because transmitters removed=', p.tri.PrEPEff))
 	#
 	#	prepare df.trinfo
 	#
@@ -5060,10 +5064,6 @@ project.athena.Fisheretal.Hypo.ReallocUToNone.getYXetc<- function( YX, nt.table,
 	
 if(1)
 {	
-	#	proportion of transmission intervals for which PrEP works		
-	p.tri.PrEPEff	<- nrow(merge(df.tr, YX, by='t.Patient')) / nrow(YX)
-	if(verbose)
-		cat(paste('\nProportion of transmission intervals lost because transmitters removed=', p.tri.PrEPEff))
 	#	make sure nt.table.YX contains also recipients with no prob transmitters 
 	tmp				<- merge( unique(subset(nt.table.h, select=c(risk, Patient))), unique(subset(nt.table.h, select=c(risk, factor))), by='risk', allow.cartesian=TRUE)
 	stopifnot( nrow(merge(nt.table.h, tmp, all.y=1, by=c('Patient','risk','factor')))==nrow(tmp)*4 )	
@@ -16424,7 +16424,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			X.seq			<- project.athena.Fisheretal.YX.model5.stratify(X.seq)
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
 		}					
-#stop()
+stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
