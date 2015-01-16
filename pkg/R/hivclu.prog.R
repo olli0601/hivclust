@@ -4399,13 +4399,13 @@ hivc.prog.BEAST2.generate.xml<- function()
 							df							<- df.clupool$pool.df[[pool.id]]
 							setkey(df, cluster)							
 							beast2.spec$xml.dir			<- indir
-							beast2.spec$xml.filename	<- paste(infilexml,'-',beast2.spec$pool.ntip,'_pool_',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',thresh.bs,'_',thresh.brl,'_',gsub('/',':',outsignat),sep='')
+							beast2.spec$xml.filename	<- paste(infilexml,'-',beast2.spec$pool.ntip,'_pool_',pool.id,'_',infilexml.template,'_',infilexml.opt,'_bs',thresh.bs,'_brl',thresh.brl,'_',gsub('/',':',outsignat),sep='')
 							beast2.spec$starttree.newick<- hivc.beast2.get.startingtree(ph, df, beast2.spec, verbose=verbose)
 							beast2.xml					<- hivc.beast2.get.xml( bxml.template, seq.PROT.RT, df, beast2.spec, verbose=1)			
 							file						<- paste(beast2.spec$xml.dir,'/',beast2.spec$xml.filename,".xml", sep='')
 							if(verbose)	cat(paste("\nwrite xml file to",file))
 							saveXML(beast2.xml, file=file)
-							paste(infilexml,'-',beast2.spec$pool.ntip,'_pool_',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',thresh.bs,'_',thresh.brl,sep='')
+							paste(infilexml,'-',beast2.spec$pool.ntip,'_pool_',pool.id,'_',infilexml.template,'_',infilexml.opt,'_bs',thresh.bs,'_brl',thresh.brl,sep='')
 						})
 	#
 	#	generate BEAST commands and run
@@ -4683,7 +4683,7 @@ hivc.prog.BEAST.generate.xml<- function()
 				setkey(df, cluster)
 				#print( unique(df[,cluster]) )
 				#	get xml file 
-				outfile				<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',thresh.bs,'_',thresh.brl,'_',gsub('/',':',outsignat),sep='')
+				outfile				<- paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_bs',thresh.bs,'_brl',thresh.brl,'_',gsub('/',':',outsignat),sep='')
 				beast.label.datepos	<- ifelse(!is.na(df.resetTipDate), 5, 4)
 				beast.usingDates	<- ifelse(grepl("NoTd",infilexml.opt), "false", "true")
 				bxml				<- hivc.beast.get.xml(btemplate, seq.PROT.RT, df, outfile, ph=ph, xml.monophyly4clusters=xml.monophyly4clusters, xml.taxon4tipstem=xml.taxon4tipstem, xml.prior4tipstem=xml.prior4tipstem, beast.label.datepos=beast.label.datepos, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", beast.usingDates=beast.usingDates, beast.mcmc.chainLength=beast.mcmc.chainLength, verbose=1)
@@ -4693,7 +4693,7 @@ hivc.prog.BEAST.generate.xml<- function()
 				if(verbose)	cat(paste("\nwrite xml file to",file))
 				saveXML(bxml, file=file)		
 				#	freed through R garbage collection (I hope!) since addFinalizer=TRUE throughout
-				paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_',thresh.bs,'_',thresh.brl,sep='')
+				paste(infilexml,'-',pool.ntip,'-',pool.id,'_',infilexml.template,'_',infilexml.opt,'_bs',thresh.bs,'_brl',thresh.brl,sep='')
 			})
 	#
 	#	generate BEAST commands and run
