@@ -317,8 +317,12 @@ hivc.pipeline.BEAST<- function()
 		outsignat			<- insignat
 		
 		opt.brl				<- "dist.brl.casc" 
-		thresh.brl			<- 0.096
+		#thresh.brl			<- 0.096
+		thresh.brl			<- 1000
 		thresh.bs			<- 0.8
+		thresh.bs			<- 0.85
+		thresh.bs			<- 0.9
+		thresh.bs			<- 0.95
 		pool.ntip			<- NA		
 		resume				<- 1
 		verbose				<- 1
@@ -857,8 +861,8 @@ hivc.pipeline.various<- function()
 				file		<- paste(indir, '/', infile, sep='')
 				hivc.cmd.ph.dist.tips(file)					
 			})	
-		#put 50 into one job
-		n		<- 50
+		#put 1 into one job
+		n		<- 1
 		dummy<- lapply( seq_len(length(cmd)/n), function(i)
 				{					
 					tmp			<- paste( cmd[ seq.int((i-1)*n+1, min(i*n, length(cmd))) ], collapse='' )
@@ -868,7 +872,7 @@ hivc.pipeline.various<- function()
 					outfile		<- paste("dtp",signat,sep='.')					
 					cat(tmp)
 					hivc.cmd.hpccaller(outdir, outfile, tmp)
-					stop()			
+					#stop()			
 				})
 		stop()
 	}

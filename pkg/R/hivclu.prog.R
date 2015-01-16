@@ -4419,7 +4419,7 @@ hivc.prog.BEAST2.generate.xml<- function()
 				cat(cmd)
 				outfile		<- paste("b2",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 				hivc.cmd.hpccaller(outdir, outfile, cmd)
-				stop()
+				#stop()
 			})	
 }
 ######################################################################################
