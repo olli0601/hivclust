@@ -962,7 +962,6 @@ hivc.clu.getplot.incountry<- function(ph, clustering, df.cluinfo, verbose=1, plo
 ######################################################################################
 hivc.clu.getplot.msmexposuregroup<- function(ph, clustering, df.cluinfo, verbose=1, plot.file= NA, levels.msm=c("BI","MSM"), levels.het=c("HET","OTH","IDU"), split.clusters=FALSE, exclude.F=FALSE)
 {	
-	stopifnot(method.who%in%c('Females_Other','Other'))
 	clut						<- table( df.cluinfo[,cluster,Trm], useNA= "always" )
 	rownames(clut)[nrow(clut)]	<- "NA"
 	clut						<- clut[,-ncol(clut)]

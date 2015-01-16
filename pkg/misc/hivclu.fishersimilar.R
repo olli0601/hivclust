@@ -11147,18 +11147,23 @@ project.athena.Fisheretal.composition.seqcoverage<- function()
 	#	because of recent decline in coverage, the average prob is quite generous
 	
 	#	load a few YX to see how many recipients retained
-	
-	
-	tmp	<- list( 	data.table(b=Inf, c=0.3, FILE='ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXSEQ3pa1H1.35C3V100bInfT7.R'),
+	files	<- list( 	data.table(b=Inf, c=0.3, FILE='ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXSEQ3pa1H1.35C3V100bInfT7.R'),
 					data.table(b=0.08, c=0.3, FILE='ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXSEQ3pa1H1.35C3V100T7.R'),	
 					data.table(b=Inf, c=0.4, FILE='ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXSEQ3pa1H1.35C4V100bInfT7.R'),
 					data.table(b=Inf, c=0.5, FILE='ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXSEQ3pa1H1.35V100bInfT7.R')	
 					)
-	tmp		<- do.call('rbind',tmp)
+	files		<- do.call('rbind',files)
 	
-	YX.info	<- tmp[, {
+	#X.msm.prs	<- unique(subset(X.msm, select=c(Patient, t.Patient)))	
+	#load( paste(outdir,'/',files[1,FILE],sep='') )	
+	#tmp	<- merge( X.msm.prs, unique(subset(YX, select=Patient)), by='Patient' )
+	#tmp[, length(unique(t.Patient))]
+	
+	alpha	<- 0.01
+	YX.info	<- files[, {
 						load( paste(outdir,'/',FILE,sep='') )
-						list(nRexp= nrow(ri.SEQ)*prob.pt.seq, nR= YX[, length(unique(Patient))], nPT=YX[, length(unique(t.Patient))], nI=nrow(YX))
+						list(	nRexp= nrow(ri.SEQ)*prob.pt.seq, nRexp.ql=qbinom(alpha/2, nrow(ri.SEQ), prob.pt.seq), nRexp.qu=qbinom(1-alpha/2, nrow(ri.SEQ), prob.pt.seq), 
+								nR= YX[, length(unique(Patient))], nPT=YX[, length(unique(t.Patient))], nI=nrow(YX))
 					}, by=c('b','c')]
 }
 ######################################################################################
