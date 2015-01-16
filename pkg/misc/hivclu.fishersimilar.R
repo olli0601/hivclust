@@ -4743,7 +4743,7 @@ project.athena.Fisheretal.Hypo.ReallocHandler.cens<- function(method.realloc)
 			ct.table							
 		}		
 	}
-	if(grepl('RPrEP',method.realloc) & grepl('ImmediateART',method.realloc))
+	if(grepl('RPrEP',method.realloc) & grepl('ImmediateART|ARTat500',method.realloc))
 	{
 		reallocate.handler.cens	<- function(ct.table)
 		{	
@@ -4762,7 +4762,7 @@ project.athena.Fisheretal.Hypo.ReallocHandler.cens<- function(method.realloc)
 			}			
 			ct.table							
 		}		
-	}
+	}	
 	reallocate.handler.cens
 }
 ######################################################################################
@@ -5166,25 +5166,28 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	}
 	
 	set(runs.av, NULL, 'method.realloc', runs.av[, regmatches(method.risk,regexpr('Hypo[[:alnum:]]+', method.risk))])	
-	runs.av.info	<- subset(runs.av, BS==0)[, list(AV.bs0= 1-mean(Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by=c('method.risk', 'method.dating', 'method.nodectime', 'method.brl', 'method.denom', 'method.recentctime', 'method.realloc')]
 	
+	runs.av.info	<- subset(runs.av, BS==0)[, list(AV.bs0= 1-mean(Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by=c('method.risk', 'method.dating', 'method.nodectime', 'method.brl', 'method.denom', 'method.recentctime', 'method.realloc')]	
 	tmp				<- subset(runs.av, BS>0)[, list(AV= 1-mean(Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by=c('method.risk', 'method.dating', 'method.nodectime', 'method.brl', 'method.denom', 'method.recentctime', 'method.realloc','BS')]
-	tmp				<- tmp[, list(AV.ql95= quantile(AV, probs=0.025), AV.q50= quantile(AV, probs=0.5), AV.qu95= quantile(AV, probs=0.975)), by=c('method.risk', 'method.dating', 'method.nodectime', 'method.brl', 'method.denom', 'method.recentctime', 'method.realloc')]
+	tmp				<- tmp[, list(AV.ql95= quantile(AV, probs=0.025), AV.ql25= quantile(AV, probs=0.25), AV.q50= quantile(AV, probs=0.5), AV.qu75= quantile(AV, probs=0.75), AV.qu95= quantile(AV, probs=0.975)), by=c('method.risk', 'method.dating', 'method.nodectime', 'method.brl', 'method.denom', 'method.recentctime', 'method.realloc')]
 	runs.av.info	<- merge(runs.av.info, tmp, by=c('method.risk', 'method.dating', 'method.nodectime', 'method.brl', 'method.denom', 'method.recentctime', 'method.realloc') )
-	tmp				<- data.table(	method.realloc= c('HypoARTat500','HypoImmediateART'), 
-									legend=c('ART at CD4<500', 'Immediate ART'))
+	tmp				<- data.table(	method.realloc= c('HypoARTat500','HypoImmediateART','HypoRPrEP33','HypoRPrEP50','HypoRPrEP33ImmediateART','HypoRPrEP50ImmediateART'), 
+									legend=c('ART at CD4<500', 'Immediate ART','Oral PrEP','Oral PrEP, cov=50%','Oral PrEP +\nImmediate ART','Oral PrEP, cov=50% +\nImmediate ART'))
 	runs.av.info	<- merge(runs.av.info, tmp, by='method.realloc')
 	runs.av.info[, DUMMY:= -AV.bs0]
+	runs.av.info[, COMBI:= factor( 	as.numeric(grepl('+',legend,fixed=1)) + as.numeric(2*grepl('%',legend,fixed=1)), 
+									levels=c(0,1,2,3),
+									labels=c('\nsingle\nintervention','hypothetical\ncombination\nintervention','hypothetical\nsingle\nintervention\nadditional assumptions','hypothetical\ncombination\nintervention\nadditional assumptions'))]
 	setkey(runs.av.info, DUMMY)
 	set(runs.av.info, NULL, 'legend', runs.av.info[, factor(legend, levels=runs.av.info$legend, labels=runs.av.info$legend)])
-	ggplot( runs.av.info, aes(x=legend, y=AV.bs0*100, ymin=AV.ql95*100, ymax=AV.qu95*100) ) + 
-			geom_point(size=6, pch=18) +  
-			geom_errorbar(width=0.25, size=1.25) +
-			#scale_y_continuous(expand=c(0,0), limits=c(0,max(runs.av.info$AV.qu95*100)*1.1), breaks=seq(0,100,10), minor_breaks=seq(0,100,2)) +
-			scale_y_continuous(expand=c(0,0), limits=c(0,30), breaks=seq(0,100,10), minor_breaks=seq(0,100,2)) +
+	ggplot( runs.av.info, aes(x=legend, fill=COMBI) ) + 			
+			scale_fill_manual(values=c("#A6CEE3","#1F78B4","#FDBF6F","#FF7F00"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			geom_boxplot(aes(ymin=AV.ql95*100, ymax=AV.qu95*100, lower=AV.ql25*100, middle=AV.bs0*100, upper=AV.qu75*100), stat="identity", fatten=4) +
+			scale_y_continuous(expand=c(0,0), limits=c(0, NA), breaks=seq(0,100,10), minor_breaks=seq(0,100,2)) +
 			labs(x='', y='Proportion of MSM infections averted\n(%)') + 
-			coord_flip() +  
-			theme_bw() + theme(axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank())	
+			coord_flip() +			
+			theme_bw() + theme(legend.position='bottom', legend.title=element_text(size=12), legend.text=element_text(size=12), axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) 
+			#guides(fill = guide_legend(nrow = 2))
 	file			<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.HypoAverted.pdf", sep='')
 	ggsave(file=file, w=8, h=3)
 }
@@ -5192,7 +5195,8 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NULL, t2inf.args=NULL, df.all=NULL, method.realloc='ImmediateART', t.firstsuppressed=0.3, use.YXf= 1, bs.n=1e3, t.period=0.125, save.file=NA, resume=FALSE)
 {
 	#	get prop in ART stages after first suppression	
-	stopifnot(grepl('ImmediateART|ARTat500|RPrEP|RPrEP+ImmediateART',method.realloc))	
+	#	method.realloc<- 'CTest'
+	stopifnot(grepl('CTest|ImmediateART|ARTat500|RPrEP|RPrEP+ImmediateART',method.realloc))	
 	options(warn=0)	
 	if(resume & !is.na(save.file))
 	{
@@ -5214,6 +5218,13 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 		nt.table				<- X.tables$nt.table
 		nt.table.h				<- copy(X.tables$nt.table)
 		cat(paste('\nusing method',method.realloc))
+		if(grepl('ART',method.realloc))
+		{
+			tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h, nt.table.h, method.risk, YXf=YXf, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='pair, stage=prop, y=median')
+			YX.h				<- copy(tmp$YX.h)
+			nt.table.h			<- copy(tmp$nt.table.h)
+			df.trinfo			<<- copy(tmp$df.trinfo)		#NULL -- need this for reallocate.handler.cens	
+		}
 		if(grepl('ART',method.realloc))
 		{
 			tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h, nt.table.h, method.risk, YXf=YXf, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='pair, stage=prop, y=median')
@@ -5344,8 +5355,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 							}
 							if(!is.null(df.trinfo))
 							{
-								set(df.trinfo, NULL, 'Patient.nztr.h', 	tmp$df.trinfo[,Patient.nztr.h])		# the number of bs recipients with a prob transmitter may vary
-								print(df.trinfo)	#make sure this works
+								set(df.trinfo, NULL, 'Patient.nztr.h', 	tmp$df.trinfo[,Patient.nztr.h])		# the number of bs recipients with a prob transmitter may vary								
 							}				
 							stopifnot( length(setdiff( YX.h.bs[, unique(Patient)], YX.bs[, unique(Patient)] ))==0  )
 							stopifnot( length(setdiff( nt.table.h.bs[, unique(Patient)], nt.table.bs[, unique(Patient)] ))==0 )
@@ -15900,7 +15910,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			X.seq			<- project.athena.Fisheretal.YX.model5.stratify(X.seq)
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
 		}					
-stop()
+#stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
@@ -15974,7 +15984,7 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Cwmx.wtn.tp3'
+		method.risk				<- 'm2Cwmx.wtn.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.135
 		method.use.AcuteSpec	<- 1

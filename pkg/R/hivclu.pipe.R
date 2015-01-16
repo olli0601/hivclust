@@ -807,6 +807,7 @@ hivc.pipeline.props_univariate<- function()
 	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Cwmx.tp1.clu.adj' )
 	method.risk			<- c( 	'm2Cwmx.tp1.clu.adj','m2Cwmx.tp2.clu.adj','m2Cwmx.tp3.clu.adj','m2Cwmx.tp4.clu.adj','m2Cwmx.tp5.clu.adj','m2Cwmx.tp6.clu.adj' )
 	#method.risk				<- c( 	'm2Cwmx.tp1.clu.adj' )	
+	#method.risk				<- 'm2Cwmx.wtn.tp1'
 	dummy	<- sapply(method.risk, function(x)
 			{
 				cmd	<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, outdir=outdir, outfile=outfile, resume=1, verbose=1)
