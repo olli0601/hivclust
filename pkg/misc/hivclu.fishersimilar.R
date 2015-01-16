@@ -5219,7 +5219,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 			tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h, nt.table.h, method.risk, YXf=YXf, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='pair, stage=prop, y=median')
 			YX.h				<- copy(tmp$YX.h)
 			nt.table.h			<- copy(tmp$nt.table.h)
-			df.trinfo			<- copy(tmp$df.trinfo)		#NULL			
+			df.trinfo			<<- copy(tmp$df.trinfo)		#NULL -- need this for reallocate.handler.cens	
 		}
 		if(grepl('PrEP',method.realloc))
 		{
@@ -5228,7 +5228,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 			tmp					<- project.athena.Fisheretal.Hypo.ReallocUToNone.getYXetc(YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, p.reachable=p.reachable, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=prop, y=median')
 			YX.h				<- copy(tmp$YX.h)
 			nt.table.h			<- copy(tmp$nt.table.h)
-			df.trinfo			<- copy(tmp$df.trinfo)		#not NULL -- need this for reallocate.handler.cens
+			df.trinfo			<<- copy(tmp$df.trinfo)		#not NULL -- need this for reallocate.handler.cens
 		}
 		#
 		#	prepare nt.table for YX and YX.hypothetical
@@ -5343,8 +5343,10 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 								nt.table.h.bs		<- copy(tmp$nt.table.h)
 							}
 							if(!is.null(df.trinfo))
+							{
 								set(df.trinfo, NULL, 'Patient.nztr.h', 	tmp$df.trinfo[,Patient.nztr.h])		# the number of bs recipients with a prob transmitter may vary
-#print(df.trinfo)							
+								print(df.trinfo)	#make sure this works
+							}				
 							stopifnot( length(setdiff( YX.h.bs[, unique(Patient)], YX.bs[, unique(Patient)] ))==0  )
 							stopifnot( length(setdiff( nt.table.h.bs[, unique(Patient)], nt.table.bs[, unique(Patient)] ))==0 )
 							#	prepare nt.table for bs YX and YX.hypothetical
