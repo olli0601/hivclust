@@ -846,9 +846,9 @@ hivc.pipeline.various<- function()
 		cmd			<- ''
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
-	if(0)	#compute branch length distances between tips in phylogenetic trees
+	if(1)	#compute branch length distances between tips in phylogenetic trees
 	{
-		indir		<- paste(DATA,"tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013",sep='/')
+		indir		<- paste(DATA,"ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout",sep='/')
 		infiles		<- list.files(indir)
 		infiles		<- infiles[ grepl('^ExaML_result.*finaltree\\.[0-9]{3}$',infiles)  ]	
 		if(!length(infiles))	stop('cannot find files matching criteria')				
@@ -863,7 +863,7 @@ hivc.pipeline.various<- function()
 		dummy<- lapply( seq_len(length(cmd)/n), function(i)
 				{					
 					tmp			<- paste( cmd[ seq.int((i-1)*n+1, min(i*n, length(cmd))) ], collapse='' )
-					tmp			<- hivc.cmd.hpcwrapper(tmp, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="31400mb")
+					tmp			<- hivc.cmd.hpcwrapper(tmp, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="31400mb")
 					signat		<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outdir		<- indir
 					outfile		<- paste("dtp",signat,sep='.')					
@@ -899,7 +899,7 @@ hivc.pipeline.various<- function()
 		hivc.pipeline.BEAST()
 		quit("no")
 	}
-	if(1)
+	if(0)
 	{
 		hivc.pipeline.BEASTout()
 		quit("no")

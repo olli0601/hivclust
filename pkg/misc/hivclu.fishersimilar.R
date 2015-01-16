@@ -3,7 +3,7 @@ project.athena.Fisheretal.YX.Trm.Region<- function(YX, clumsm.info)
 {
 	t.group	<- merge( data.table(Patient=YX[, unique(t.Patient)]), unique(subset( clumsm.info, select=c(Patient, RegionHospital, Trm))), by='Patient' )
 	#	Exposure group for transmitter - MSM or Other or NA
-	set(t.group, t.group[, which(Trm!='MSM')], 'Trm', 'OTH' )
+	#set(t.group, t.group[, which(Trm!='MSM')], 'Trm', 'OTH' )
 	set(t.group, NULL, 'Trm', as.factor(as.character(t.group[,Trm])) )
 	set(t.group, NULL, 'RegionHospital', as.factor(as.character(t.group[,RegionHospital])) )
 	tmp	<- table(t.group[,Trm])
@@ -17,7 +17,7 @@ project.athena.Fisheretal.YX.Trm.Region<- function(YX, clumsm.info)
 	#
 	t.group	<- merge( data.table(Patient=YX[, unique(Patient)]), unique(subset( clumsm.info, select=c(Patient, RegionHospital, Trm))), by='Patient' )
 	#	Exposure group for infected - MSM or Other or NA
-	set(t.group, t.group[, which(Trm!='MSM')], 'Trm', 'OTH' )
+	#set(t.group, t.group[, which(Trm!='MSM')], 'Trm', 'OTH' )
 	set(t.group, NULL, 'Trm', as.factor(as.character(t.group[,Trm])) )
 	set(t.group, NULL, 'RegionHospital', as.factor(as.character(t.group[,RegionHospital])) )
 	tmp	<- table(t.group[,Trm])
@@ -11123,8 +11123,12 @@ project.athena.Fisheretal.compositioncoal<- function()
 ######################################################################################
 project.athena.Fisheretal.composition.seqcoverage<- function()
 {
-	pts	<- unique(subset(X.seq, select=t.Patient))
-	pt	<- unique(subset(X.msm, select=t.Patient))
+	require(Hmisc)
+	pts			<- unique(subset(X.seq, select=t.Patient))
+	pt			<- unique(subset(X.msm, select=t.Patient))
+	prob.pt.seq	<- nrow(pts)/nrow(pt)
+	
+	#	calculate sequence coverage over time
 	setnames(pts, 't.Patient','Patient')
 	setnames(pt, 't.Patient','Patient')
 	tmp	<- subset(df.all.allmsm, select=c(Patient, AnyPos_T1, DateDied, PosSeqT))
@@ -11137,11 +11141,25 @@ project.athena.Fisheretal.composition.seqcoverage<- function()
 	dfd	<- dfd[, list( 	NPT=subset(pt, AnyPos_T1>=t & (is.na(DateDied) | DateDied<t))[, length(unique(Patient))],
 						NPTS=subset(pts, AnyPos_T1>=t & (is.na(DateDied) | DateDied<t))[, length(unique(Patient))]		)
 						, by='t']
-	dfd[, SIFD:=NPTS/NPT]
-	
-	dfr	<- YX[, list(NR=length(unique(Patient))), by='t.Patient']
-	
+	dfd[, SIFD:=NPTS/NPT]	
+	dfr	<- YX[, list(NR=length(unique(Patient))), by='t.Patient']	
 	ggplot(dfd, aes(x=t, y=SIFD)) + geom_line()
+	#	because of recent decline in coverage, the average prob is quite generous
+	
+	#	load a few YX to see how many recipients retained
+	
+	
+	tmp	<- list( 	data.table(b=Inf, c=0.3, FILE='ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXSEQ3pa1H1.35C3V100bInfT7.R'),
+					data.table(b=0.08, c=0.3, FILE='ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXSEQ3pa1H1.35C3V100T7.R'),	
+					data.table(b=Inf, c=0.4, FILE='ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXSEQ3pa1H1.35C4V100bInfT7.R'),
+					data.table(b=Inf, c=0.5, FILE='ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXSEQ3pa1H1.35V100bInfT7.R')	
+					)
+	tmp		<- do.call('rbind',tmp)
+	
+	YX.info	<- tmp[, {
+						load( paste(outdir,'/',FILE,sep='') )
+						list(nRexp= nrow(ri.SEQ)*prob.pt.seq, nR= YX[, length(unique(Patient))], nPT=YX[, length(unique(t.Patient))], nI=nrow(YX))
+					}, by=c('b','c')]
 }
 ######################################################################################
 project.athena.Fisheretal.composition.vrancken.brl<- function()
@@ -16508,7 +16526,7 @@ hivc.prog.props_univariate<- function()
 		method.lRNA.supp		<- 100
 		method.thresh.pcoal		<- 0.3
 		method.minLowerUWithNegT<- 1
-		method.cut.brl			<- Inf		#does not make a difference because compatibility test kills these anyway
+		method.cut.brl			<- 0.08		#does not make a difference because compatibility test kills these anyway
 		method.tpcut			<- 7
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
