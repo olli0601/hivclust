@@ -5466,7 +5466,8 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 		nt.table				<- X.tables$nt.table
 		nt.table.h				<- copy(X.tables$nt.table)
 		cat(paste('\nusing method',method.realloc))
-		df.trinfo	<- df.uinfo	<- NULL
+		df.trinfo				<<- NULL 
+		df.uinfo				<<- NULL
 		if(grepl('Test',method.realloc))
 		{			
 			tmp					<- project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc( YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=prop, y=median')			
@@ -5487,7 +5488,9 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 			tmp					<- project.athena.Fisheretal.Hypo.ReallocUToNone.getYXetc(YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, p.reachable=p.reachable, th.starttime=2008.5, t.period=t.period, method.sample= 'stage=prop, y=median')
 			YX.h				<- copy(tmp$YX.h)
 			nt.table.h			<- copy(tmp$nt.table.h)
-			df.trinfo			<<- copy(tmp$df.trinfo)		#not NULL -- need this for reallocate.handler.cens
+			tmp					<- tmp$df.trinfo		#not NULL -- need this for reallocate.handler.cens
+			print(tmp)
+			df.trinfo			<<- copy(tmp)
 			print(df.trinfo)
 		}
 		#
