@@ -5473,7 +5473,8 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 			tmp					<- project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc( YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=prop, y=median')			
 			YX.h				<- copy(tmp$YX.h)
 			nt.table.h			<- copy(tmp$nt.table.h)
-			df.uinfo			<<- copy(tmp$df.uinfo)		#not NULL -- need this for reallocate.handler.cens	
+			tmp					<- tmp$df.uinfo		#not NULL -- need this for reallocate.handler.cens
+			df.uinfo			<<- copy(tmp)
 		}
 		if(grepl('ART',method.realloc))
 		{
@@ -5489,9 +5490,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 			YX.h				<- copy(tmp$YX.h)
 			nt.table.h			<- copy(tmp$nt.table.h)
 			tmp					<- tmp$df.trinfo		#not NULL -- need this for reallocate.handler.cens
-			print(tmp)
 			df.trinfo			<<- copy(tmp)
-			print(df.trinfo)
 		}
 		#
 		#	prepare nt.table for YX and YX.hypothetical
@@ -5599,7 +5598,8 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 								tmp					<- project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc( YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2009.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=median', verbose=FALSE)			
 								YX.h.bs				<- copy(tmp$YX.h)
 								nt.table.h.bs		<- copy(tmp$nt.table.h)
-								set(df.uinfo, NULL, 'UPT', tmp$df.uinfo[, UPT])		#not NULL -- need this for reallocate.handler.cens	
+								tmp					<- copy(tmp$df.uinfo)
+								set(df.uinfo, NULL, 'UPT', tmp[, UPT])		#not NULL -- need this for reallocate.handler.cens	
 							}
 							if(grepl('ART',method.realloc))
 							{
@@ -5613,7 +5613,6 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 								YX.h.bs				<- copy(tmp$YX.h)
 								nt.table.h.bs		<- copy(tmp$nt.table.h)
 								tmp					<- copy(tmp$df.trinfo)	
-								print(tmp)
 								set(df.trinfo, NULL, 'Patient.nztr.h', 	tmp[,Patient.nztr.h])		# the number of bs recipients with a prob transmitter may vary
 							}
 							stopifnot( length(setdiff( YX.h.bs[, unique(Patient)], YX.bs[, unique(Patient)] ))==0  )
@@ -11884,6 +11883,7 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	setnames(tmp2, as.character(1:4), paste('u95.bs.',1:4,sep=''))	
 	#	add group prop
 	tmp		<- subset(dfg, stat%in%c('P.raw.e0cp'))
+	
 	tmp3	<- dcast.data.table(tmp, group+factor~t.period, value.var='v')
 	setnames(tmp3, as.character(1:4), paste('v.',1:4,sep=''))
 	tmp3	<- merge(tmp3, dcast.data.table(tmp, group+factor~t.period, value.var='l95.bs'), by=c('group','factor'))
@@ -12268,6 +12268,34 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	#	WTN 3pa1 1.35 T7
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3pa1H1.35C3V100T7'
+	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
+	method.RISK		<- "m2Cwmx.wtn"
+	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	#	WTN 3pa1 1.35 T7 BRL INF
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1.35C3V100bInfT7'
+	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
+	method.RISK		<- "m2Cwmx.wtn"
+	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	
+	
+	#	WTN 3pa1 1.35 T7 BRL INF
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1.35C3V100bInfT7'
 	method.RISK		<- 'm2Cwmx.wtn.tp'
 	method.WEIGHT	<- ''
 	method.DATING	<- 'sasky'
@@ -16251,7 +16279,7 @@ hivc.prog.props_univariate<- function()
 		method.lRNA.supp		<- 100
 		method.thresh.pcoal		<- 0.3
 		method.minLowerUWithNegT<- 1
-		method.cut.brl			<- 0.08		#does not make a difference because compatibility test kills these anyway
+		method.cut.brl			<- Inf		#does not make a difference because compatibility test kills these anyway
 		method.tpcut			<- 7
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
