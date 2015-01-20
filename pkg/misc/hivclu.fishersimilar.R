@@ -4956,14 +4956,8 @@ project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc<- function( YX, nt.table,
 {
 	stopifnot(grepl('stage=sample|stage=prop',method.sample))
 	stopifnot(grepl('y=sample|y=median|y=mean',method.sample))
-	stopifnot(grepl('TestC18m|TestAW|TestA18m|TestA1y|TestA6m',method.realloc))
+	stopifnot(grepl('TestC18m|TestA18m|TestA1y|TestA6m',method.realloc))
 	method.reallocate	<- '^U'
-	if(method.realloc=='TestCW')	#chronic, everyone at 2009.5
-	{
-		method.tested.at.start	<- 1
-		test.repeat				<- Inf
-		test.delay				<- 3/12		 
-	}
 	if(method.realloc=='TestC18m')
 	{
 		method.tested.at.start	<- 0
@@ -4971,29 +4965,26 @@ project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc<- function( YX, nt.table,
 		test.delay				<- 3/12		
 		test.interval			<- 1.5
 	}
-	if(method.realloc=='TestAW')
-	{
-		method.tested.at.start	<- 1
-		test.repeat				<- 2*(th.endtime-th.starttime)
-		test.delay				<- 0		 
-	}
 	if(method.realloc=='TestA18m')
 	{
 		method.tested.at.start	<- 1
 		test.repeat				<- 1.5
-		test.delay				<- 0		 
+		test.delay				<- 0
+		test.interval			<- 1.5	#no effect
 	}
 	if(method.realloc=='TestA1y')
 	{
 		method.tested.at.start	<- 1
 		test.repeat				<- 1
 		test.delay				<- 0		 
+		test.interval			<- 1.5	#no effect
 	}
 	if(method.realloc=='TestA6m')
 	{
 		method.tested.at.start	<- 1
 		test.repeat				<- 0.5
 		test.delay				<- 0		 
+		test.interval			<- 1.5	#no effect
 	}
 	#
 	rTest<- function(df.dinfo, n, method.sample, test.interval=1, th.starttime=2009.5)
@@ -11882,8 +11873,7 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	tmp2	<- merge(tmp2, dcast.data.table(tmp, group+factor~t.period, value.var='u95.bs'), by=c('group','factor'))
 	setnames(tmp2, as.character(1:4), paste('u95.bs.',1:4,sep=''))	
 	#	add group prop
-	tmp		<- subset(dfg, stat%in%c('P.raw.e0cp'))
-	
+	tmp		<- subset(dfg, stat%in%c('P.raw.e0cp'))	
 	tmp3	<- dcast.data.table(tmp, group+factor~t.period, value.var='v')
 	setnames(tmp3, as.character(1:4), paste('v.',1:4,sep=''))
 	tmp3	<- merge(tmp3, dcast.data.table(tmp, group+factor~t.period, value.var='l95.bs'), by=c('group','factor'))
@@ -11892,6 +11882,14 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	setnames(tmp3, as.character(1:4), paste('u95.bs.',1:4,sep=''))	
 	tmp3[, factor:='']
 	tmp2	<- rbind(tmp3, tmp2, use.names=TRUE)
+	#	prepare number of recipient with at least one prob transmitter
+	tmp3	<- unique(subset(df, stat=='nRecLkl', select=c(t.period, v)))
+	tmp3[, All:=sum(v)]
+	set(tmp3, NULL, 'v', tmp3[, paste('=\"(n=', v, ')\"', sep='')])
+	set(tmp3, NULL, 'All', tmp3[, paste('=\"(n=', All, ')\"', sep='')])
+	tmp3	<- dcast.data.table(tmp3, All~t.period, value.var='v')
+	tmp3[, group:='']
+	tmp3[, factor:='']
 	#	prepare Excel
 	set(tmp2, NULL, '1', tmp2[, paste('=\"',round(v.1*100,d=1),' (',round(l95.bs.1*100,d=1),'-',round(u95.bs.1*100,d=1),')\"',sep='')])
 	set(tmp2, NULL, '2', tmp2[, paste('=\"',round(v.2*100,d=1),' (',round(l95.bs.2*100,d=1),'-',round(u95.bs.2*100,d=1),')\"',sep='')])
@@ -11910,6 +11908,8 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	tmp2	<- unique( subset(df, stat=='nRecLkl', select=c(t.period, v)) )[, sum(v)]
 	set(tmp, NULL, 'All', tmp[, paste('=\"',round(v/tmp2*100,d=1),' (',round(l95.bs/tmp2*100,d=1),'-',round(u95.bs/tmp2*100,d=1),')\"',sep='')])
 	ans		<- merge(subset(tmp, select=c(factor, group, All)), ans, by=c('group','factor'))
+	#	add number of recipient with at least one prob transmitter
+	ans		<- rbind(ans, tmp3, use.names=TRUE) 
 	#	get factor names
 	ans		<- merge(ans, subset(factors, select=c(factor, factor.legend)), by='factor', all.x=1)		
 	set(ans, ans[, which(is.na(factor.legend))], 'factor.legend', '')
@@ -11919,8 +11919,9 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	setnames(ans, tmp[, as.character(t.period)], tmp[, window])
 	setnames(ans, 'All', paste(tmp[1,t.period.min],'-',tmp[4,t.period.max],sep=''))
 	#	reorder	
-	set(ans, NULL, 'group', ans[, factor(group, levels=c('U_total','D_total','A_total'), labels=c('U_total','D_total','A_total'))])
+	set(ans, NULL, 'group', ans[, factor(group, levels=c('','U_total','D_total','A_total'), labels=c('','U_total','D_total','A_total'))])
 	setkey(ans, group, factor)
+	
 	#	write to file
 	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',df[1, method.recentctime],'_',df[1, method.denom], '_',df[1, method.dating], '_',df[1, method.brl],'_',df[1, method.risk],'_table_PROP',".csv", sep='')
 	cat(paste('\nsave to file',file))
@@ -12291,11 +12292,22 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	method.RISK		<- "m2Cwmx.wtn"
 	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
 	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	
-	
 	#	WTN 3pa1 1.35 T7 BRL INF
 	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1.35C3V100bInfT7'
+	method.BRL		<- '3pa1H1.35C4V100bInfT7'
+	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
+	method.RISK		<- "m2Cwmx.wtn"
+	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	#	WTN 3pa1 1.35 T7 BRL INF
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1.35V100bInfT7'
 	method.RISK		<- 'm2Cwmx.wtn.tp'
 	method.WEIGHT	<- ''
 	method.DATING	<- 'sasky'
