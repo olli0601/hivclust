@@ -3065,8 +3065,10 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 				{
 					method.risk <- paste(tmp2, i, sep='')
 					save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
+					cat(paste('\ntry read',save.file))
 					options(show.error.messages = FALSE)		
 					readAttempt	<- try(suppressWarnings(load(save.file)))
+					options(show.error.messages = TRUE)	
 					if(inherits(readAttempt, "try-error"))
 						df.est	<- NULL
 					if(!inherits(readAttempt, "try-error"))	
@@ -3074,7 +3076,8 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 						df.est 	<- copy(ans$risk)	
 						set(df.est, NULL, c('l95.bs','u95.bs','m50.bs'),NULL)
 						set(df.est, NULL, 'bs', 0L)
-						df.est	<- rbind(df.est, ans$risk.bs)
+						tmp		<- copy(ans$risk.bs)
+						df.est	<- rbind(df.est, tmp)
 					}
 					df.est
 				})
@@ -3113,6 +3116,16 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 						RI.raw=N.raw/sum(N.raw)*sum(X.msm)/X.msm, RI.raw.e0=N.raw.e0/sum(N.raw.e0)*sum(X.msm.e0)/X.msm.e0, RI.raw.e0cp=N.raw.e0cp/sum(N.raw.e0cp)*sum(X.msm.e0cp)/X.msm.e0cp
 				), by=c('risk','bs')]
 		df.est		<- merge(df.est, tmp, by=c('risk','factor','bs'))
+		#	add UA/(U+UA)
+		tmp			<- melt( subset(df.est, grepl('^U\\.|^UA\\.',factor)), id.vars=c('risk','factor','bs'), measure.vars=c('N.raw','N.raw.e0','N.raw.e0cp') )
+		tp			<- substr( tmp[1,factor],nchar(tmp[1,factor]),nchar(tmp[1,factor]))	
+		set(tmp, NULL, 'factor', tmp[, substr(factor, 1, nchar(factor)-2)])
+		tmp			<- dcast.data.table( tmp,	risk+variable+bs ~ factor, value.var='value' )
+		tmp[, v:=UA/(U+UA)]
+		tmp[, factor:= paste('UA.',tp,sep='')]
+		set(tmp, NULL, 'variable', tmp[, gsub('N.','CUA.',variable)])
+		tmp			<- dcast.data.table( tmp,	risk+factor+bs ~ variable, value.var='v' )
+		df.est		<- merge(df.est, tmp, all.x=TRUE, by=c('risk','factor','bs'))
 		#	get RRs for pooled tperiods
 		set(df.est, NULL, c('coef.ref','risk.ref','factor.ref'), NULL)
 		tmp			<- subset(df.est, select=c(risk, factor, bs, RI.raw, RI.raw.e0, RI.raw.e0cp))
@@ -3125,6 +3138,7 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 		#	melt
 		df.est		<- melt(df.est, id.vars=c('risk','factor','bs','coef'), variable.name='stat', value.name='v')
 		set(df.est, NULL, c('coef.ref','risk.ref','factor.ref'), 'None')		
+		df.est		<- subset(df.est, !is.na(v))
 		tmp			<- subset(tmp, select=c(coef, coef.ref, risk, factor, risk.ref, factor.ref, RR.raw, RR.raw.e0, RR.raw.e0cp,bs))
 		tmp			<- melt(tmp, id.vars=c('coef','coef.ref','risk','factor','risk.ref','factor.ref','bs'), variable.name='stat', value.name='v')
 		df.est		<- rbind(tmp, df.est, use.names=TRUE)                      
@@ -3243,6 +3257,7 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 					file.rename(from.file, to.file)															
 				})
 		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',tmp2,'4.R',sep='')
+		cat(paste('\nsave to',save.file))
 		save(file=save.file, ans)
 	}
 	ans
@@ -5598,6 +5613,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 		#	averted[, list(averted=mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by='BS'][, c(summary(averted), quantile(averted, p=c(0.025,0.5,0.975)))]
 		#	
 		#	need nt.table of YX for censoring
+		YXf			<- copy(YXe$YXf)
 		nt.table	<- copy(YXe$X.tables$nt.table)	
 		nt.table	<- project.athena.Fisheretal.Wallinga.prep.nttable(nt.table)		
 		cat(paste('\nbootstrap Hypo.run, bs.n=',bs.n))
@@ -11973,6 +11989,9 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	ans		<- merge(subset(tmp, select=c(factor, group, All)), ans, by=c('group','factor'))
 	#	add number of recipient with at least one prob transmitter
 	ans		<- rbind(ans, tmp3, use.names=TRUE) 
+stop()	
+	tmp		<- unique(subset(df, stat=='CUA.raw.e0cp'))
+	tmp3	<- dcast.data.table(tmp, group+factor~t.period, value.var='v')
 	#	get factor names
 	ans		<- merge(ans, subset(factors, select=c(factor, factor.legend)), by='factor', all.x=1)		
 	set(ans, ans[, which(is.na(factor.legend))], 'factor.legend', '')
@@ -16354,7 +16373,7 @@ hivc.prog.props_univariate<- function()
 		method.lRNA.supp		<- 100
 		method.thresh.pcoal		<- 0.3
 		method.minLowerUWithNegT<- 1
-		method.cut.brl			<- 0.08		#does not make a difference because compatibility test kills these anyway
+		method.cut.brl			<- Inf		#does not make a difference because compatibility test kills these anyway
 		method.tpcut			<- 7
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -16637,21 +16656,24 @@ hivc.prog.props_univariate<- function()
 		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
 		#	estimate as stratified
 		YXe			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, tperiod.info, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method.risk=method.risk)
-		#	pool ART stages, re-estimate
-		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-		save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'ARTstarted.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')	
-		tmp			<- project.athena.Fisheretal.poolARTstarted( YXe, method.risk, save.file=save.file)
-		#	pool into groups U D A, re-estimate
-		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-		save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'GroupsUDA.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')	
-		tmp			<- project.athena.Fisheretal.poolIntoGroups( YXe, save.file=save.file)
+		if( as.numeric(substring(regmatches(method.risk,regexpr('tp[0-9]', method.risk)),3))<4 )
+		{
+			#	pool ART stages, re-estimate
+			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
+			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
+			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'ARTstarted.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')	
+			tmp			<- project.athena.Fisheretal.poolARTstarted( YXe, method.risk, save.file=save.file)
+			#	pool into groups U D A, re-estimate
+			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
+			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
+			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'GroupsUDA.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')	
+			tmp			<- project.athena.Fisheretal.poolIntoGroups( YXe, save.file=save.file)	
+		}		
 	}	
 	#	see if we can pool results for tperiod 4
 	if(method.tpcut%in%c(7))
 	{
-		YXe			<- project.athena.Fisheretal.pool.TP4(outdir, outfile, insignat, method, method.PDT, method.risk)
+		YXe			<- project.athena.Fisheretal.pool.TP4(outdir, outfile, insignat, method, method.PDT, method.risk, resume=0)
 		#	if success, 
 		if(!is.null(YXe))
 		{
