@@ -4556,17 +4556,21 @@ project.athena.Fisheretal.Wallinga.censoring<- function(ct, nt.table.4a, nt.tabl
 {
 	ct.table				<- ct[, list(n.adj.med=round(median(n.adj))), by=c('risk','factor')]
 	ct.table				<- merge( nt.table.4c[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], ct.table, by=c('risk','factor'))
+	#print(ct.table)
 	if(!is.null(reallocate.handler.cens))
 		ct.table			<- reallocate.handler.cens(ct.table)
 	if( !ct.table[, all(X.msm.e0<=n.adj.med)] )	
 		print(ct.table)
 	stopifnot( ct.table[, all(X.msm.e0<=n.adj.med)] )		
-	set(ct.table, NULL, 'X.msm.total.e0cp', ct.table[, round(n.adj.med-X.msm.e0)])		
+	set(ct.table, NULL, 'X.msm.total.e0cp', ct.table[, round(n.adj.med-X.msm.e0)])
+	#print(ct.table)
 	#	select recipients with at least one transmitter
-	tmp						<- subset(nt.table.4a[, list(Patient.nztr= any(YX>0)), by='Patient'], Patient.nztr, Patient)
-	tmp						<- merge(tmp, nt.table.4a, by='Patient')[, list(nRec= length(unique(Patient))), by=c('risk','factor') ]
+	#tmp					<- subset(nt.table.4a[, list(Patient.nztr= any(YX>0)), by='Patient'], Patient.nztr, Patient)
+	#tmp					<- merge(tmp, nt.table.4a, by='Patient')[, list(nRec= length(unique(Patient))), by=c('risk','factor') ]
+	tmp						<- nt.table.4a[, list(nRec= length(unique(Patient))), by=c('risk','factor') ]
 	ct.table				<- merge(ct.table, tmp, by=c('risk','factor')) 
-	set(ct.table, NULL, 'X.msm.rec.e0cp', round( ct.table[, X.msm.total.e0cp/nRec] ))				
+	set(ct.table, NULL, 'X.msm.rec.e0cp', round( ct.table[, X.msm.total.e0cp/nRec] ))
+	#print(ct.table)
 	nt.table.4a				<- merge( subset(nt.table.4a, select=setdiff(colnames(nt.table.4a),c('X.msm.rec.e0cp','X.msm.e0cp'))), subset(ct.table, select=c(risk, factor, X.msm.rec.e0cp)), by=c('risk','factor'))
 	set(nt.table.4a, NULL, 'X.msm.e0cp', nt.table.4a[, X.msm.e0+X.msm.rec.e0cp])	
 	nt.table.4a
@@ -4651,11 +4655,11 @@ project.athena.Fisheretal.Hypo.prepmissingbs<- function(YX.bs, nt.table.bs, meth
 		YX.used	<- YX
 	if(!is.null(YXf))
 		YX.used	<- YXf
-	missing.bs[, factor2:= substr(factor, 1, nchar(factor)-2)]
+	missing.bs[, factor2:= substr(factor, 1, nchar(factor)-1)]
 	if(grepl('y=mean',method.missingy))
 		tmp			<- missing.bs[, {		
-										#z	<- YX.used[ which( grepl(factor2[1], YX.used[[risk]]) ), ]
-										z	<- subset(YX.used, grepl(factor2[1], YX.used[[risk]]), c('Patient','t.Patient','score.Y'))
+										#z	<- YX.used[ which( grepl(factor2[1], YX.used[[risk]], fixed=TRUE) ), ]
+										z	<- subset(YX.used, grepl(factor2[1], YX.used[[risk]], fixed=TRUE), c('Patient','t.Patient','score.Y'))
 										setkey(z, Patient, t.Patient)
 										z	<- unique(z)																																																			
 										z	<- mean( z[['score.Y']] )																						
@@ -4663,22 +4667,22 @@ project.athena.Fisheretal.Hypo.prepmissingbs<- function(YX.bs, nt.table.bs, meth
 									}, by=c('risk','factor')]	
 	if(grepl('y=median',method.missingy))
 		tmp			<- missing.bs[, {		
-										#z	<- YX.used[ which( grepl(factor2[1], YX.used[[risk]]) ), ]
-										z	<- subset(YX.used, grepl(factor2[1], YX.used[[risk]]), c('Patient','t.Patient','score.Y'))
+										#z	<- YX.used[ which( grepl(factor2[1], YX.used[[risk]], fixed=TRUE) ), ]
+										z	<- subset(YX.used, grepl(factor2[1], YX.used[[risk]], fixed=TRUE), c('Patient','t.Patient','score.Y'))
 										setkey(z, Patient, t.Patient)
-										z	<- unique(z)																																									
+										z	<- unique(z)
 										z	<- median( z[['score.Y']] )																						
 										list(Patient=Patient, yYXm.sum.e0=YXm.r.e0*z, yYXm.sum.e0cp=YXm.r.e0cp*z )
 									}, by=c('risk','factor')]
 	if(grepl('y=sample.i',method.missingy))
 		tmp			<- missing.bs[, {		
-										yYXm.sum.e0		<- sum(sample(YX.used[ which( grepl(factor2[1], YX.used[[risk]])), ][['score.Y']], YXm.r.e0, replace=TRUE))
-										yYXm.sum.e0cp	<- sum(sample(YX.used[ which( grepl(factor2[1], YX.used[[risk]])), ][['score.Y']], YXm.r.e0cp, replace=TRUE))
+										yYXm.sum.e0		<- sum(sample(YX.used[ which( grepl(factor2[1], YX.used[[risk]], fixed=TRUE)), ][['score.Y']], YXm.r.e0, replace=TRUE))
+										yYXm.sum.e0cp	<- sum(sample(YX.used[ which( grepl(factor2[1], YX.used[[risk]], fixed=TRUE)), ][['score.Y']], YXm.r.e0cp, replace=TRUE))
 										list( yYXm.sum.e0=yYXm.sum.e0, yYXm.sum.e0cp=yYXm.sum.e0cp )
 									}, by=c('risk','factor','Patient')]
 	if(grepl('y=sample.p',method.missingy))
 		tmp			<- missing.bs[, {		
-										z	<- subset(YX.used, grepl(factor2[1], YX.used[[risk]]), c('Patient','t.Patient','score.Y'))
+										z	<- subset(YX.used, grepl(factor2[1], YX.used[[risk]], fixed=TRUE), c('Patient','t.Patient','score.Y'))
 										setkey(z, Patient, t.Patient)
 										z	<- sample(unique(z)[['score.Y']], length(Patient), replace=TRUE)																															
 										list(Patient=Patient, yYXm.sum.e0=YXm.r.e0*z, yYXm.sum.e0cp=YXm.r.e0cp*z )
@@ -4745,7 +4749,8 @@ project.athena.Fisheretal.Hypo.ReallocHandler.cens<- function(method.realloc)
 		reallocate.handler.cens	<- function(ct.table)
 		{	
 			ct.table	<- merge(ct.table, df.trinfo, by=c('risk','factor'))			
-			set(ct.table, NULL, 'n.adj.med', ct.table[, round(n.adj.med*pt*Patient.nztr.h/Patient.nztr)])
+			#set(ct.table, NULL, 'n.adj.med', ct.table[, round(n.adj.med*pt*Patient.nztr.h/Patient.nztr)])
+			set(ct.table, NULL, 'n.adj.med', ct.table[, round(n.adj.med*pt*Patient.n.h/Patient.n)])
 			tmp			<- ct.table[, which(grepl('^ART|^D', factor))]
 			set(ct.table, tmp, 'n.adj.med', ct.table[tmp, X.msm.e0] )			
 			if( ct.table[ grepl('UA.', factor, fixed=TRUE), X.msm.e0>n.adj.med ] )
@@ -4764,7 +4769,8 @@ project.athena.Fisheretal.Hypo.ReallocHandler.cens<- function(method.realloc)
 			ct.table	<- merge(ct.table, df.uinfo, by=c('risk','factor'))
 			set( ct.table, NULL, 'n.adj.med', ct.table[, round(n.adj.med*(1-UPT))] )			
 			ct.table	<- merge(ct.table, df.trinfo, by=c('risk','factor'))			
-			set(ct.table, NULL, 'n.adj.med', ct.table[, round(n.adj.med*pt*Patient.nztr.h/Patient.nztr)])
+			#set(ct.table, NULL, 'n.adj.med', ct.table[, round(n.adj.med*pt*Patient.nztr.h/Patient.nztr)])
+			set(ct.table, NULL, 'n.adj.med', ct.table[, round(n.adj.med*pt*Patient.n.h/Patient.n)])
 			tmp			<- ct.table[, which(grepl('^ART|^D', factor))]
 			set(ct.table, tmp, 'n.adj.med', ct.table[tmp, X.msm.e0] )			
 			if( ct.table[ grepl('UA.', factor, fixed=TRUE), X.msm.e0>n.adj.med ] )
@@ -4952,7 +4958,7 @@ project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc<- function(YX, nt.table
 	list(YX.h=YX.h, nt.table.h=nt.table.h)	
 }
 ######################################################################################
-project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc<- function( YX, nt.table, method.risk, predict.t2inf, t2inf.args, df.all, YXf=NULL, th.starttime=2009.5, th.endtime=2011, t.period=0.125, method.minLowerUWithNegT=1, method.resolveUAna=1, method.realloc='TestCW', method.sample= 'stage=prop, y=mean', verbose=TRUE)
+project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc<- function( YX, nt.table, method.risk, predict.t2inf, t2inf.args, df.all, YXf=NULL, th.starttime=2008.5, th.endtime=2011, t.period=0.125, method.minLowerUWithNegT=1, method.resolveUAna=1, method.realloc='TestC18m', method.sample= 'stage=prop, y=median', verbose=TRUE)
 {
 	stopifnot(grepl('stage=sample|stage=prop',method.sample))
 	stopifnot(grepl('y=sample|y=median|y=mean',method.sample))
@@ -5059,7 +5065,7 @@ project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc<- function( YX, nt.table,
 		p.UAcond<- subset( tmp, grepl('UA.',stage, fixed=TRUE) | grepl('U.',stage, fixed=TRUE) )[, sum(grepl('UA.',stage, fixed=TRUE))/length(stage)]
 		#	of those with isAcute NA, set a proportion p.UAcond to Yes and the rest to No 
 		tmp		<- unique(subset(tmp, select=t.Patient))
-		tmp2	<- resolve.UAna(df.all, tmp, method.sample, p.UAcond, verbose=TRUE)
+		tmp2	<- resolve.UAna(df.all, tmp, method.sample, p.UAcond, verbose=verbose)
 		df.tr	<- project.athena.Fisheretal.Y.infectiontime(tmp, tmp2, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT, verbose=FALSE)
 	}
 	if(!method.resolveUAna)
@@ -5445,124 +5451,125 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 		options(show.error.messages = TRUE)		
 	}
 	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
-	{			
-#bbb<- sapply(1:100, function(bb)
-#{			
-		YXf						<- copy(YXe$YXf)
-		YX						<- copy(YXe$YX)	
-		YX.h					<- copy(YXe$YX)	
-		set( YX, NULL, 'stage', YX[, CD4c.tperiod] )
-		set( YX.h, NULL, 'stage', YX.h[, CD4c.tperiod] )
-		X.tables				<- copy(YXe$X.tables)	
-		nt.table				<- X.tables$nt.table
-		nt.table.h				<- copy(X.tables$nt.table)
-		cat(paste('\nusing method',method.realloc))
-		df.trinfo				<<- NULL 
-		df.uinfo				<<- NULL
-		if(grepl('Test',method.realloc))
-		{			
-			tmp					<- project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc( YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=prop, y=median')			
-			YX.h				<- copy(tmp$YX.h)
-			nt.table.h			<- copy(tmp$nt.table.h)
-			tmp					<- tmp$df.uinfo		#not NULL -- need this for reallocate.handler.cens
-			df.uinfo			<<- copy(tmp)
-		}
-		if(grepl('ART',method.realloc))
-		{
-			tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h, nt.table.h, method.risk, YXf=YXf, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='pair, stage=prop, y=median')
-			YX.h				<- copy(tmp$YX.h)
-			nt.table.h			<- copy(tmp$nt.table.h)				
-		}
-		if(grepl('PrEP',method.realloc))
-		{
-			p.reachable			<- as.numeric(substring( regmatches(method.realloc,regexpr('RPrEP[0-9]+', method.realloc)), 6))/100
-			cat(paste('\nsetting p.reachable=', p.reachable))
-			tmp					<- project.athena.Fisheretal.Hypo.ReallocUToNone.getYXetc(YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, p.reachable=p.reachable, th.starttime=2008.5, t.period=t.period, method.sample= 'stage=prop, y=median')
-			YX.h				<- copy(tmp$YX.h)
-			nt.table.h			<- copy(tmp$nt.table.h)
-			tmp					<- tmp$df.trinfo		#not NULL -- need this for reallocate.handler.cens
-			df.trinfo			<<- copy(tmp)
-		}
-		#
-		#	prepare nt.table for YX and YX.hypothetical
-		#	
-		risk.df					<- data.table(risk='stage',factor=YXe$YX[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',4,sep='.'))
-		set(risk.df, NULL, c('risk.ref','factor.ref','coef.ref'), 'None')
-		nt.table				<- project.athena.Fisheretal.Wallinga.prep.nttable(YX, nt.table, risk.df)
-		nt.table.h				<- project.athena.Fisheretal.Wallinga.prep.nttable(YX.h, nt.table.h, risk.df)
-		stopifnot(!nrow(subset(nt.table.h, X.msm.e0<X.seq)))
-		#	censoring adjustment for nt.table
-		tmp						<- copy(X.tables$cens.table)
-		setkey(tmp, stat, t.period, risk, factor)
-		ct						<- unique(tmp)
-		tmp2					<- copy(X.tables$cens.table.bs)
-		setkey(tmp2, stat, t.period, risk, factor)
-		ctb						<- unique(tmp2)
-		tmp						<- project.athena.Fisheretal.censoring.model(ct, ctb, plot.file=NA )
-		ct						<- copy(tmp$ctn)	
-		setkey(ct, t.period, risk, factor)
-		tmp						<- ct[, seq_len( length(n.adj)/length(unique(factor)) )]
-		ct[, bs:=rep(tmp, nrow(ct)/length(tmp))]		#subset this for BS run			
-		nt.table				<- project.athena.Fisheretal.Wallinga.censoring(ct, nt.table)
-		#	use same censoring adjustment for nt.table.h ( we only have cens.table for YX, so that s all we can do )
-		reallocate.handler.cens	<- project.athena.Fisheretal.Hypo.ReallocHandler.cens(method.realloc)
-		nt.table.h				<- project.athena.Fisheretal.Wallinga.censoring(ct, nt.table.h, reallocate.handler.cens=reallocate.handler.cens)
-		#	get censoring and sampling adjustments YX.hypothetical 
-		adj.h		<- nt.table.h[, list(YX=sum(YX), X.clu=sum(X.clu), X.seq=sum(X.seq), X.msm.e0=sum(X.msm.e0), X.msm.e0cp=sum(X.msm.e0cp), nRec=length(unique(Patient))), by=c('risk','factor')]
-		tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
-		adj.h[, PYs:= adj.h[[tmp]]]
-		adj.h[, PTx:= adj.h[, YX] / adj.h[[tmp]]]
-		adj.h[, Sx.e0:= PYs/X.msm.e0]					
-		adj.h[, Sx.e0cp:= PYs/X.msm.e0cp]
-		set(adj.h, adj.h[, which(!is.finite(Sx.e0))], 'Sx.e0', 1)
-		set(adj.h, adj.h[, which(!is.finite(Sx.e0cp))], 'Sx.e0cp', 1)
-		set(adj.h, adj.h[, which(!is.finite(PTx))], 'PTx', 1)
-		risk.df.h	<- merge(risk.df, subset(adj.h, select=c(risk, factor, PYs, PTx, X.msm.e0, X.msm.e0cp)), by=c('risk','factor'))
-		nt.table.h	<- merge(nt.table.h, subset(adj.h, select=c(risk, factor, Sx.e0, Sx.e0cp)), by=c('risk','factor'))
-		#	get censoring and sampling adjustments YX 
-		adj			<- nt.table[, list(YX=sum(YX), X.clu=sum(X.clu), X.seq=sum(X.seq), X.msm.e0=sum(X.msm.e0), X.msm.e0cp=sum(X.msm.e0cp), nRec=length(unique(Patient))), by=c('risk','factor')]
-		tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
-		adj[, PYs:= adj[[tmp]]]
-		adj[, PTx:= adj[, YX] / adj[[tmp]]]
-		adj[, Sx.e0:= PYs/X.msm.e0]					
-		adj[, Sx.e0cp:= PYs/X.msm.e0cp]
-		set(adj, adj[, which(!is.finite(Sx.e0))], 'Sx.e0', 1)
-		set(adj, adj[, which(!is.finite(Sx.e0cp))], 'Sx.e0cp', 1)
-		set(adj, adj[, which(!is.finite(PTx))], 'PTx', 1)
-		risk.df		<- merge(risk.df, subset(adj, select=c(risk, factor, PYs, PTx, X.msm.e0, X.msm.e0cp)), by=c('risk','factor'))
-		nt.table	<- merge(nt.table, subset(adj, select=c(risk, factor, Sx.e0, Sx.e0cp)), by=c('risk','factor'))	
-		#
-		set(risk.df, NULL, 'risk', risk.df[, as.character(risk)])
-		set(risk.df, NULL, 'factor', risk.df[, as.character(factor)])	
-		set(nt.table, NULL, 'risk', nt.table[, as.character(risk)])
-		set(nt.table, NULL, 'factor', nt.table[, as.character(factor)])
-		set(nt.table, NULL, 'Patient', nt.table[, as.character(Patient)])
-		set(nt.table, NULL, 'YX', NULL)
-		set(risk.df.h, NULL, 'risk', risk.df.h[, as.character(risk)])
-		set(risk.df.h, NULL, 'factor', risk.df.h[, as.character(factor)])	
-		set(nt.table.h, NULL, 'risk', nt.table.h[, as.character(risk)])
-		set(nt.table.h, NULL, 'factor', nt.table.h[, as.character(factor)])
-		set(nt.table.h, NULL, 'Patient', nt.table.h[, as.character(Patient)])
-		set(nt.table.h, NULL, 'YX', NULL)	
-		#				
-		missing		<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table, risk.df, YX, YXf, use.YXf=use.YXf, method.missingy='y=median')
-		missing.h	<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table.h, risk.df.h, YX.h, YXf, use.YXf=use.YXf, method.missingy='y=median')
-		#if(!is.na(method.reallocate))
-		#	stopifnot( !nrow(subset(missing.h, grepl(method.reallocate,factor) & (YX.n>0 | YXm.sum.e0>0 | YXm.sum.e0cp>0))) )	
-		#	calculate proportion of recipients averted
-		averted		<- missing[, 	list(	Pjx.e0cp.sum= sum((yYX.sum+YXm.sum.e0cp)*YX.w)), by=c('risk','Patient')]
-		tmp			<- missing.h[, 	list(	Pjx.e0cp.sum.h= sum((yYX.sum+YXm.sum.e0cp)*YX.w)), by=c('risk','Patient')]
-		averted		<- merge(averted, tmp, by=c('risk','Patient'), all.x=1)
-		set(averted, averted[, which(is.na(Pjx.e0cp.sum.h))], 'Pjx.e0cp.sum.h', 0)
-		tmp			<- averted[, which(Pjx.e0cp.sum<Pjx.e0cp.sum.h)]
-		tmp			<- averted[, which(round(Pjx.e0cp.sum,d=2)<round(Pjx.e0cp.sum.h,d=2))]
-		cat(paste('\nFound Patients with Pjx.e0cp.sum<Pjx.e0cp.sum.h, n=',length(tmp)))
-		set(averted, tmp, 'Pjx.e0cp.sum.h', averted[tmp, Pjx.e0cp.sum])
-		averted[, BS:=0]		
-		#	averted[, median(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)]
-		averted[, mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)]
-#})
-# quantile(bbb, p=c(0.025, 0.25, 0.5, 0.75, 0.975))
+	{	
+		averted	<- lapply(seq_len(bs.n), function(bs.i)
+				{
+					YXf						<- copy(YXe$YXf)
+					YX						<- copy(YXe$YX)	
+					YX.h					<- copy(YXe$YX)	
+					set( YX, NULL, 'stage', YX[, CD4c.tperiod] )
+					set( YX.h, NULL, 'stage', YX.h[, CD4c.tperiod] )
+					X.tables				<- copy(YXe$X.tables)	
+					nt.table				<- X.tables$nt.table
+					nt.table.h				<- copy(X.tables$nt.table)
+					cat(paste('\nusing method',method.realloc))
+					df.trinfo				<<- NULL 
+					df.uinfo				<<- NULL
+					if(grepl('Test',method.realloc))
+					{			
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc( YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=prop, y=sample')			
+						YX.h				<- copy(tmp$YX.h)
+						nt.table.h			<- copy(tmp$nt.table.h)
+						tmp					<- tmp$df.uinfo		#not NULL -- need this for reallocate.handler.cens
+						df.uinfo			<<- copy(tmp)
+					}
+					if(grepl('ART',method.realloc))
+					{
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h, nt.table.h, method.risk, YXf=YXf, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='pair, stage=prop, y=sample')
+						YX.h				<- copy(tmp$YX.h)
+						nt.table.h			<- copy(tmp$nt.table.h)				
+					}
+					if(grepl('PrEP',method.realloc))
+					{
+						p.reachable			<- as.numeric(substring( regmatches(method.realloc,regexpr('RPrEP[0-9]+', method.realloc)), 6))/100
+						cat(paste('\nsetting p.reachable=', p.reachable))
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocUToNone.getYXetc(YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, p.reachable=p.reachable, th.starttime=2008.5, t.period=t.period, method.sample= 'stage=prop, y=sample')
+						YX.h				<- copy(tmp$YX.h)
+						nt.table.h			<- copy(tmp$nt.table.h)
+						tmp					<- tmp$df.trinfo		#not NULL -- need this for reallocate.handler.cens
+						df.trinfo			<<- copy(tmp)
+					}
+					#
+					#	prepare nt.table for YX and YX.hypothetical
+					#	
+					risk.df					<- data.table(risk='stage',factor=YXe$YX[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',4,sep='.'))
+					set(risk.df, NULL, c('risk.ref','factor.ref','coef.ref'), 'None')
+					nt.table				<- project.athena.Fisheretal.Wallinga.prep.nttable(YX, nt.table, risk.df)
+					nt.table.h				<- project.athena.Fisheretal.Wallinga.prep.nttable(YX.h, nt.table.h, risk.df)
+					stopifnot(!nrow(subset(nt.table.h, X.msm.e0<X.seq)))
+					#	censoring adjustment for nt.table
+					tmp						<- copy(X.tables$cens.table)
+					setkey(tmp, stat, t.period, risk, factor)
+					ct						<- unique(tmp)
+					tmp2					<- copy(X.tables$cens.table.bs)
+					setkey(tmp2, stat, t.period, risk, factor)
+					ctb						<- unique(tmp2)
+					tmp						<- project.athena.Fisheretal.censoring.model(ct, ctb, plot.file=NA )
+					ct						<- copy(tmp$ctn)	
+					setkey(ct, t.period, risk, factor)
+					tmp						<- ct[, seq_len( length(n.adj)/length(unique(factor)) )]
+					ct[, bs:=rep(tmp, nrow(ct)/length(tmp))]		#subset this for BS run			
+					nt.table				<- project.athena.Fisheretal.Wallinga.censoring(ct, nt.table)
+					#	use same censoring adjustment for nt.table.h ( we only have cens.table for YX, so that s all we can do )
+					reallocate.handler.cens	<- project.athena.Fisheretal.Hypo.ReallocHandler.cens(method.realloc)
+					nt.table.h				<- project.athena.Fisheretal.Wallinga.censoring(ct, nt.table.h, reallocate.handler.cens=reallocate.handler.cens)
+					#	get censoring and sampling adjustments YX.hypothetical 
+					adj.h		<- nt.table.h[, list(YX=sum(YX), X.clu=sum(X.clu), X.seq=sum(X.seq), X.msm.e0=sum(X.msm.e0), X.msm.e0cp=sum(X.msm.e0cp), nRec=length(unique(Patient))), by=c('risk','factor')]
+					tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
+					adj.h[, PYs:= adj.h[[tmp]]]
+					adj.h[, PTx:= adj.h[, YX] / adj.h[[tmp]]]
+					adj.h[, Sx.e0:= PYs/X.msm.e0]					
+					adj.h[, Sx.e0cp:= PYs/X.msm.e0cp]
+					set(adj.h, adj.h[, which(!is.finite(Sx.e0))], 'Sx.e0', 1)
+					set(adj.h, adj.h[, which(!is.finite(Sx.e0cp))], 'Sx.e0cp', 1)
+					set(adj.h, adj.h[, which(!is.finite(PTx))], 'PTx', 1)
+					risk.df.h	<- merge(risk.df, subset(adj.h, select=c(risk, factor, PYs, PTx, X.msm.e0, X.msm.e0cp)), by=c('risk','factor'))
+					nt.table.h	<- merge(nt.table.h, subset(adj.h, select=c(risk, factor, Sx.e0, Sx.e0cp)), by=c('risk','factor'))
+					#	get censoring and sampling adjustments YX 
+					adj			<- nt.table[, list(YX=sum(YX), X.clu=sum(X.clu), X.seq=sum(X.seq), X.msm.e0=sum(X.msm.e0), X.msm.e0cp=sum(X.msm.e0cp), nRec=length(unique(Patient))), by=c('risk','factor')]
+					tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')
+					adj[, PYs:= adj[[tmp]]]
+					adj[, PTx:= adj[, YX] / adj[[tmp]]]
+					adj[, Sx.e0:= PYs/X.msm.e0]					
+					adj[, Sx.e0cp:= PYs/X.msm.e0cp]
+					set(adj, adj[, which(!is.finite(Sx.e0))], 'Sx.e0', 1)
+					set(adj, adj[, which(!is.finite(Sx.e0cp))], 'Sx.e0cp', 1)
+					set(adj, adj[, which(!is.finite(PTx))], 'PTx', 1)
+					risk.df		<- merge(risk.df, subset(adj, select=c(risk, factor, PYs, PTx, X.msm.e0, X.msm.e0cp)), by=c('risk','factor'))
+					nt.table	<- merge(nt.table, subset(adj, select=c(risk, factor, Sx.e0, Sx.e0cp)), by=c('risk','factor'))	
+					#
+					set(risk.df, NULL, 'risk', risk.df[, as.character(risk)])
+					set(risk.df, NULL, 'factor', risk.df[, as.character(factor)])	
+					set(nt.table, NULL, 'risk', nt.table[, as.character(risk)])
+					set(nt.table, NULL, 'factor', nt.table[, as.character(factor)])
+					set(nt.table, NULL, 'Patient', nt.table[, as.character(Patient)])
+					set(nt.table, NULL, 'YX', NULL)
+					set(risk.df.h, NULL, 'risk', risk.df.h[, as.character(risk)])
+					set(risk.df.h, NULL, 'factor', risk.df.h[, as.character(factor)])	
+					set(nt.table.h, NULL, 'risk', nt.table.h[, as.character(risk)])
+					set(nt.table.h, NULL, 'factor', nt.table.h[, as.character(factor)])
+					set(nt.table.h, NULL, 'Patient', nt.table.h[, as.character(Patient)])
+					set(nt.table.h, NULL, 'YX', NULL)	
+					#				
+					missing		<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table, risk.df, YX, YXf, use.YXf=use.YXf, method.missingy='y=median')
+					missing.h	<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table.h, risk.df.h, YX.h, YXf, use.YXf=use.YXf, method.missingy='y=median')
+					#if(!is.na(method.reallocate))
+					#	stopifnot( !nrow(subset(missing.h, grepl(method.reallocate,factor) & (YX.n>0 | YXm.sum.e0>0 | YXm.sum.e0cp>0))) )	
+					#	calculate proportion of recipients averted
+					averted		<- missing[, 	list(	Pjx.e0cp.sum= sum((yYX.sum+YXm.sum.e0cp)*YX.w)), by=c('risk','Patient')]
+					tmp			<- missing.h[, 	list(	Pjx.e0cp.sum.h= sum((yYX.sum+YXm.sum.e0cp)*YX.w)), by=c('risk','Patient')]
+					averted		<- merge(averted, tmp, by=c('risk','Patient'), all.x=1)
+					set(averted, averted[, which(is.na(Pjx.e0cp.sum.h))], 'Pjx.e0cp.sum.h', 0)
+					tmp			<- averted[, which(Pjx.e0cp.sum<Pjx.e0cp.sum.h)]
+					tmp			<- averted[, which(round(Pjx.e0cp.sum,d=2)<round(Pjx.e0cp.sum.h,d=2))]
+					cat(paste('\nFound Patients with Pjx.e0cp.sum<Pjx.e0cp.sum.h, n=',length(tmp)))
+					set(averted, tmp, 'Pjx.e0cp.sum.h', averted[tmp, Pjx.e0cp.sum])
+					averted[, BS:=bs.i/bs.n/10]
+					#	averted[, median(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)]
+					#	averted[, mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)]
+				})
+		averted		<- do.call('rbind',averted)
+		#	averted[, list(averted=mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by='BS'][, c(summary(averted), quantile(averted, p=c(0.025,0.5,0.975)))]
 		#	resample recipients
 		#	resample expected missing -> adjusted number of prob transmitters
 		cat(paste('\nbootstrap Hypo.run, bs.n=',bs.n))
@@ -5586,21 +5593,22 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 							#	bootstrap over reallocations	
 							if(grepl('Test',method.realloc))
 							{
-								tmp					<- project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc( YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2009.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=median', verbose=FALSE)			
+								tmp					<- project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc( YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=sample', verbose=1)			
 								YX.h.bs				<- copy(tmp$YX.h)
 								nt.table.h.bs		<- copy(tmp$nt.table.h)
 								tmp					<- copy(tmp$df.uinfo)
+#print(tmp)								
 								set(df.uinfo, NULL, 'UPT', tmp[, UPT])		#not NULL -- need this for reallocate.handler.cens	
 							}
 							if(grepl('ART',method.realloc))
 							{
-								tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h.bs, nt.table.h.bs, method.risk, YXf=YXf, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='pair, stage=sample, y=median', verbose=FALSE)
+								tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h.bs, nt.table.h.bs, method.risk, YXf=YXf, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='pair, stage=sample, y=sample', verbose=FALSE)
 								YX.h.bs				<- copy(tmp$YX.h)
 								nt.table.h.bs		<- copy(tmp$nt.table.h)									
 							}
 							if(grepl('PrEP',method.realloc))
 							{
-								tmp					<- project.athena.Fisheretal.Hypo.ReallocUToNone.getYXetc(YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, p.reachable=p.reachable, th.starttime=2008.5, t.period=t.period, method.sample= 'stage=sample, y=median', verbose=FALSE)
+								tmp					<- project.athena.Fisheretal.Hypo.ReallocUToNone.getYXetc(YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, p.reachable=p.reachable, th.starttime=2008.5, t.period=t.period, method.sample= 'stage=sample, y=sample', verbose=FALSE)
 								YX.h.bs				<- copy(tmp$YX.h)
 								nt.table.h.bs		<- copy(tmp$nt.table.h)
 								tmp					<- copy(tmp$df.trinfo)	
@@ -5642,9 +5650,8 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 		averted		<- rbind(averted, averted.bs)
 		tmp			<- averted[, list(averted=median(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by='BS']
 		tmp			<- averted[, list(averted=mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by='BS']		
-		print( subset(tmp, BS==0, averted) )
-		print( subset( tmp, BS>0 )[, summary(averted)] )
-		print( subset( tmp, BS>0 )[, quantile(averted, prob=c(0.025, 0.5, 0.975))] )
+		print( subset(tmp, BS<1)[, quantile(averted, prob=c(0.025, 0.5, 0.975))] )
+		print( subset( tmp, BS>1 )[, c(summary(averted), quantile(averted, prob=c(0.025, 0.5, 0.975)))] )
 		if(!is.na(save.file))
 		{
 			cat(paste('\nsave to file', save.file))
@@ -5660,7 +5667,7 @@ project.athena.Fisheretal.Wallinga.prep.expmissing<- function(nt.table, risk.df,
 	missing		<- merge(nt.table, unique( subset( risk.df, select=c(risk, factor, PTx) ) ), by=c('risk','factor'))
 	#	reduce to sampled recipients
 	tmp			<- unique(subset(YX, select=Patient))		
-	missing		<- merge(tmp, missing, by='Patient', allow.cartesian=TRUE)	
+	missing		<- merge(tmp, missing, by='Patient')	
 	#	compute the mean Y by stage for non-zero Y	
 	if(!use.YXf)
 	{
@@ -5715,7 +5722,8 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, X.tables, method.r
 	#
 	#	pre-processing
 	#	
-	nt.table				<- project.athena.Fisheretal.Wallinga.prep.nttable(YX.m3, X.tables$nt.table, risk.df)				
+	nt.table				<- X.tables$nt.table
+	nt.table				<- project.athena.Fisheretal.Wallinga.prep.nttable(YX.m3, nt.table, risk.df)				
 	#	prepare censoring table
 	tmp						<- copy(X.tables$cens.table)
 	setkey(tmp, stat, t.period, risk, factor)
@@ -5840,10 +5848,22 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, X.tables, method.r
 								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
 	tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")
 	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
-	#compute proportions from the various N.raw
-	tmp			<- tmp[, list(v= v/sum(v, na.rm=TRUE), risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef=coef, coef.ref='None') , by='stat']
-	set(tmp, NULL, 'stat', tmp[, gsub('N','P',stat)])
-	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))	
+	#	compute proportions from the various N.raw
+	tmp2		<- tmp[, list(v= v/sum(v, na.rm=TRUE), risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef=coef, coef.ref='None') , by='stat']
+	set(tmp2, NULL, 'stat', tmp2[, gsub('N','P',stat)])
+	risk.ans	<- rbind(risk.ans, subset(tmp2, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
+	#	compute conditional prob UA/(U+UA)
+	tmp			<- subset( tmp, grepl('^U\\.|^UA\\.', factor))
+	tp			<- substr( tmp[1,factor],nchar(tmp[1,factor]),nchar(tmp[1,factor]))	
+	set(tmp, NULL, 'factor', tmp[, substr(factor, 1, nchar(factor)-2)])
+	tmp	<- dcast.data.table(tmp, risk+risk.ref+stat ~ factor, value.var='v')	
+	tmp[, v:=UA/(U+UA)]
+	tmp[, factor:= paste('UA.',tp,sep='')]
+	tmp[, coef:= paste(risk,factor,sep='')]
+	tmp[, factor.ref:= "None"]
+	tmp[, coef.ref:= "None"]
+	set(tmp, NULL, 'stat', tmp[, gsub('N.','CUA.',stat)])
+	risk.ans	<- rbind(risk.ans, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))
 	#
 	#	relative transmissibilities
 	#	*** compare proportions transmitted among recipient with likely transmitter against population proportion among all recipient ***
@@ -5912,21 +5932,23 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, X.tables, method.r
 				#	bootstrap sample censoring probability
 				#
 				tmp					<- subset( ct, bs==sample(ct[, unique(bs)], 1) )
-				set(tmp, NULL, 'n.adj', tmp[, as.integer(round(n.adj))])	
+				set(tmp, NULL, 'n.adj', tmp[, as.integer(round(n.adj))])
 				setnames(tmp, 'n.adj', 'n.adj.bs' )
+#tmp					<- ct[, list(n.adj.bs=as.integer(round(median(n.adj)))), by=c('risk','factor')]
 				tmp					<- merge( nt.table[, list(X.msm.e0=sum(X.msm.e0)), by=c('risk','factor')], tmp, by=c('risk','factor'))
 				stopifnot( tmp[, all(X.msm.e0<=n.adj.bs)] )			 
 				tmp					<- tmp[, list( PYe0cpr=round(n.adj.bs-X.msm.e0)), by=c('risk','factor')]		
 				tmp					<- merge(tmp, nt.table[, list(X.msm.e0cp= length(unique(Patient))), by=c('risk','factor') ], by=c('risk','factor')) 
 				set(tmp, NULL, 'X.msm.e0cp', round( tmp[, PYe0cpr/X.msm.e0cp] ))				
 				nt.table.bs			<- merge(subset(nt.table, select=c(risk, factor, Patient, X.clu, X.msm.e0, X.seq, YX)), subset(tmp, select=c(risk, factor, X.msm.e0cp)), by=c('risk','factor'))
+				#	bootstrap sample X.msm.e0
+				tmp					<- nt.table.bs[, list(factor=factor, X.msm.e0=rbinom(length(X.msm.e0), sum(X.msm.e0), X.msm.e0/sum(X.msm.e0))), by=c('risk','Patient')]				
+				nt.table.bs			<- merge( subset(nt.table.bs, select=setdiff(colnames(nt.table.bs),'X.msm.e0')), tmp, by=c('risk','factor','Patient'))
 				set(nt.table.bs, NULL, 'X.msm.e0cp', nt.table.bs[, X.msm.e0+X.msm.e0cp])	
 				#	bootstrap sample number potential transmitters sampled
 				tmp					<- nt.table.bs[, list(YX=sum(YX), X.clu=sum(X.clu), X.seq=sum(X.seq), X.msm.e0=sum(X.msm.e0), X.msm.e0cp=sum(X.msm.e0cp), nRec=length(unique(Patient))), by=c('risk','factor')]
 				tmp					<- merge(tmp, subset(risk.ans.bs, stat=='PYs', c(risk, factor, v)), by=c('risk','factor'))
 				setnames(tmp, 'v', 'PYs')				
-				set(tmp, NULL, 'X.msm.e0', tmp[, rbinom(length(X.msm.e0), sum(X.msm.e0), X.msm.e0/sum(X.msm.e0))])
-				set(tmp, NULL, 'X.msm.e0cp', tmp[, rbinom(length(X.msm.e0cp), sum(X.msm.e0cp), X.msm.e0cp/sum(X.msm.e0cp))])
 				#	YX PYs already bs sampled, X.clu, X.seq not needed further
 				tmp[, Sx.e0:= PYs/X.msm.e0]					
 				tmp[, Sx.e0cp:= PYs/X.msm.e0cp]
@@ -5988,13 +6010,13 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, X.tables, method.r
 										}, by=c('risk','factor')]
 				#subset(tmp, factor=='UA.1')[, sum(YXm.r.e0cp)]
 				missing		<- merge(missing, tmp, by=c('risk','factor','Patient.bs'))
-				missing[, factor2:= substr(factor, 1, nchar(factor)-2)]
+				missing[, factor2:= substr(factor, 1, nchar(factor)-1)]
 				#	draw missing scores from all yijt in that stage	for number missing YXm.r.e0
 				tmp			<- missing[, {															
 												if(!use.YXf)
-													z	<- YX.m3[ which( grepl(factor2[1], YX.m3[[risk]]) ), ]														
+													z	<- YX.m3[ which( grepl(factor2[1], YX.m3[[risk]], fixed=TRUE)), ]														
 												if(use.YXf)
-													z	<- YXf[ which( grepl(factor2[1], YXf[[risk]]) ), ]
+													z	<- YXf[ which( grepl(factor2[1], YXf[[risk]], fixed=TRUE)), ]
 												z	<- median(z[['score.Y']]) 
 												#	TODO: if activate, double check sample -- these were integers !?
 												#list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(z, sum(YXm.r.e0), replace=TRUE)  )
@@ -6046,6 +6068,19 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, X.tables, method.r
 	tmp			<- tmp[, list(v= v/sum(v, na.rm=TRUE), risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef=coef, coef.ref='None') , by=c('stat','bs')]	
 	set(tmp, NULL, 'stat', tmp[, gsub('N','P',stat)])
 	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))
+	#
+	#	add UA/(U+UA)
+	#
+	tmp			<- subset(risk.ans.bs, grepl('^U\\.|^UA\\.', factor) & grepl('N',stat))	
+	set(tmp, NULL, 'factor', tmp[, substr(as.character(factor), 1, nchar(as.character(factor))-2)])
+	tmp			<- dcast.data.table(tmp, risk+risk.ref+stat+bs ~ factor, value.var='v')	
+	tmp[, v:=UA/(U+UA)]
+	tmp[, factor:= paste('UA.',tp,sep='')]
+	tmp[, coef:= paste(risk,factor,sep='')]
+	tmp[, factor.ref:= "None"]
+	tmp[, coef.ref:= "None"]
+	set(tmp, NULL, 'stat', tmp[, gsub('N.','CUA.',stat)])
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))	
 	#	set missing values in N P to zero
 	set(risk.ans.bs, risk.ans.bs[, which(is.na(v) & (grepl('P',stat) | grepl('PYs',stat) | grepl('N',stat)))], 'v', 0.)
 	#
@@ -16291,7 +16326,7 @@ hivc.prog.props_univariate<- function()
 		method.lRNA.supp		<- 100
 		method.thresh.pcoal		<- 0.3
 		method.minLowerUWithNegT<- 1
-		method.cut.brl			<- Inf		#does not make a difference because compatibility test kills these anyway
+		method.cut.brl			<- 0.08		#does not make a difference because compatibility test kills these anyway
 		method.tpcut			<- 7
 		method.PDT				<- 'SEQ'	# 'PDT'		
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -16583,7 +16618,7 @@ hivc.prog.props_univariate<- function()
 		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
 		save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'GroupsUDA.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')	
-		tmp			<- project.athena.Fisheretal.poolIntoGroups( YXe, save.file=save.file)		
+		tmp			<- project.athena.Fisheretal.poolIntoGroups( YXe, save.file=save.file)
 	}	
 	#	see if we can pool results for tperiod 4
 	if(method.tpcut%in%c(7))
@@ -16606,6 +16641,7 @@ hivc.prog.props_univariate<- function()
 			#
 			#	TP4 hypothetical scenarios
 			#
+stop()		
 			#	hypothetical: immediate ART
 			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
@@ -16625,7 +16661,7 @@ hivc.prog.props_univariate<- function()
 			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
 			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoRPrEP50.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-			tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='RPrEP50', t.period=t.period, t.firstsuppressed=0.3, use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
+			tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='RPrEP50', t.period=t.period, t.firstsuppressed=0.3, use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
 			#	hypothetical: TestC18m
 			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
