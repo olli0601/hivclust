@@ -5493,9 +5493,21 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 	}
 	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
 	{	
+		#	censoring adjustment for nt.table
+		YXf						<- copy(YXe$YXf)
+		tmp						<- copy(YXe$X.tables$cens.table)
+		setkey(tmp, stat, t.period, risk, factor)
+		ct						<- unique(tmp)
+		tmp2					<- copy(YXe$X.tables$cens.table.bs)
+		setkey(tmp2, stat, t.period, risk, factor)
+		ctb						<- unique(tmp2)
+		tmp						<- project.athena.Fisheretal.censoring.model(ct, ctb, plot.file=NA )
+		ct						<- copy(tmp$ctn)	
+		setkey(ct, t.period, risk, factor)
+		tmp						<- ct[, seq_len( length(n.adj)/length(unique(factor)) )]
+		ct[, bs:=rep(tmp, nrow(ct)/length(tmp))]		#subset this for BS run					
 		averted	<- lapply(seq_len(bs.n), function(bs.i)
-				{
-					YXf						<- copy(YXe$YXf)
+				{					
 					YX						<- copy(YXe$YX)	
 					YX.h					<- copy(YXe$YX)	
 					set( YX, NULL, 'stage', YX[, CD4c.tperiod] )
@@ -5538,18 +5550,6 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 					nt.table				<- project.athena.Fisheretal.Wallinga.prep.nttable(nt.table, YX=YX)
 					nt.table.h				<- project.athena.Fisheretal.Wallinga.prep.nttable(nt.table.h, YX=YX.h)
 					stopifnot(!nrow(subset(nt.table.h, X.msm.e0<X.seq)))
-					#	censoring adjustment for nt.table
-					tmp						<- copy(X.tables$cens.table)
-					setkey(tmp, stat, t.period, risk, factor)
-					ct						<- unique(tmp)
-					tmp2					<- copy(X.tables$cens.table.bs)
-					setkey(tmp2, stat, t.period, risk, factor)
-					ctb						<- unique(tmp2)
-					tmp						<- project.athena.Fisheretal.censoring.model(ct, ctb, plot.file=NA )
-					ct						<- copy(tmp$ctn)	
-					setkey(ct, t.period, risk, factor)
-					tmp						<- ct[, seq_len( length(n.adj)/length(unique(factor)) )]
-					ct[, bs:=rep(tmp, nrow(ct)/length(tmp))]		#subset this for BS run			
 					nt.table				<- project.athena.Fisheretal.Wallinga.censoring(ct, nt.table)
 					#	use same censoring adjustment for nt.table.h ( we only have cens.table for YX, so that s all we can do )
 					reallocate.handler.cens	<- project.athena.Fisheretal.Hypo.ReallocHandler.cens(method.realloc)
@@ -5612,8 +5612,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 		averted		<- do.call('rbind',averted)
 		#	averted[, list(averted=mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by='BS'][, c(summary(averted), quantile(averted, p=c(0.025,0.5,0.975)))]
 		#	
-		#	need nt.table of YX for censoring
-		YXf			<- copy(YXe$YXf)
+		#	need nt.table of YX for censoring		
 		nt.table	<- copy(YXe$X.tables$nt.table)	
 		nt.table	<- project.athena.Fisheretal.Wallinga.prep.nttable(nt.table)		
 		cat(paste('\nbootstrap Hypo.run, bs.n=',bs.n))
@@ -11961,6 +11960,16 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	setnames(tmp3, as.character(1:4), paste('u95.bs.',1:4,sep=''))	
 	tmp3[, factor:='']
 	tmp2	<- rbind(tmp3, tmp2, use.names=TRUE)
+	#	add CUA
+	tmp		<- unique(subset(df, stat=='CUA.raw.e0cp'))
+	tmp3	<- dcast.data.table(tmp, group+factor~t.period, value.var='v')
+	setnames(tmp3, as.character(1:4), paste('v.',1:4,sep=''))
+	tmp3	<- merge(tmp3, dcast.data.table(tmp, group+factor~t.period, value.var='l95.bs'), by=c('group','factor'))
+	setnames(tmp3, as.character(1:4), paste('l95.bs.',1:4,sep=''))
+	tmp3	<- merge(tmp3, dcast.data.table(tmp, group+factor~t.period, value.var='u95.bs'), by=c('group','factor'))
+	setnames(tmp3, as.character(1:4), paste('u95.bs.',1:4,sep=''))	
+	tmp3[, factor:='UA']
+	tmp2	<- rbind(tmp3, tmp2, use.names=TRUE)
 	#	prepare number of recipient with at least one prob transmitter
 	tmp3	<- unique(subset(df, stat=='nRecLkl', select=c(t.period, v)))
 	tmp3[, All:=sum(v)]
@@ -11989,9 +11998,6 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	ans		<- merge(subset(tmp, select=c(factor, group, All)), ans, by=c('group','factor'))
 	#	add number of recipient with at least one prob transmitter
 	ans		<- rbind(ans, tmp3, use.names=TRUE) 
-stop()	
-	tmp		<- unique(subset(df, stat=='CUA.raw.e0cp'))
-	tmp3	<- dcast.data.table(tmp, group+factor~t.period, value.var='v')
 	#	get factor names
 	ans		<- merge(ans, subset(factors, select=c(factor, factor.legend)), by='factor', all.x=1)		
 	set(ans, ans[, which(is.na(factor.legend))], 'factor.legend', '')
@@ -16673,7 +16679,7 @@ hivc.prog.props_univariate<- function()
 	#	see if we can pool results for tperiod 4
 	if(method.tpcut%in%c(7))
 	{
-		YXe			<- project.athena.Fisheretal.pool.TP4(outdir, outfile, insignat, method, method.PDT, method.risk, resume=0)
+		YXe			<- project.athena.Fisheretal.pool.TP4(outdir, outfile, insignat, method, method.PDT, method.risk, resume=1)
 		#	if success, 
 		if(!is.null(YXe))
 		{
