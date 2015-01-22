@@ -4983,37 +4983,37 @@ project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc<- function( YX, nt.table,
 	stopifnot(grepl('t=mean|t=sample',method.sample))
 	stopifnot(grepl('TestC18m|TestC1y|TestC6m|TestA18m|TestA1y|TestA6m',method.realloc))
 	method.reallocate	<- '^U'
-	if(method.realloc=='TestC18m')
+	if(grepl('TestC18m', method.realloc))
 	{		
 		test.repeat				<- 1.5	
 		test.delay				<- 1/12		
 		test.interval			<- 1.5
 	}
-	if(method.realloc=='TestC1y')
+	if(grepl('TestC1y', method.realloc))
 	{
 		test.repeat				<- 1
 		test.delay				<- 1/12		
 		test.interval			<- 1
 	}
-	if(method.realloc=='TestC6m')
+	if(grepl('TestC6m', method.realloc))
 	{
 		test.repeat				<- 0.5	
 		test.delay				<- 1/12		
 		test.interval			<- 0.5
 	}	
-	if(method.realloc=='TestA18m')
+	if(grepl('TestA18m', method.realloc))
 	{
 		test.repeat				<- 1.5
 		test.delay				<- 0
 		test.interval			<- 1.5	
 	}
-	if(method.realloc=='TestA1y')
+	if(grepl('TestA1y', method.realloc))
 	{
 		test.repeat				<- 1
 		test.delay				<- 0		 
 		test.interval			<- 1
 	}
-	if(method.realloc=='TestA6m')
+	if(grepl('TestA6m', method.realloc))
 	{
 		test.repeat				<- 0.5
 		test.delay				<- 0		 
@@ -11824,7 +11824,7 @@ project.athena.Fisheretal.composition.CD4model<- function()
 		#
 		file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_150105/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_method.risks.Rdata'
 		load(file)
-		df.Praw.e0cp	<- subset(runs.risk, method.nodectime=='any' & method.brl=='3pa1H1.35C3V100T7' & method.denom=='SEQ' & method.recentctime==2011 & method.dating=='sasky' & stat=='P.raw.e0cp' & grepl('stageDtl350', coef))
+		df.Praw.e0cp	<- subset(runs.risk, is.na(t.period) & method.nodectime=='any' & method.brl=='3pa1H1.35C3V100bInfT7' & method.denom=='SEQ' & method.recentctime==2011 & method.dating=='sasky' & stat=='P.raw.e0cp' & grepl('stageDtl350', coef))
 		set(df.Praw.e0cp, NULL, 't.period', df.Praw.e0cp[, as.character(factor)])
 		set(df.Praw.e0cp, NULL, 't.period', df.Praw.e0cp[, factor(substr(t.period, nchar(t.period), nchar(t.period)))])
 		#df.cd4cov	<- subset(df.cd4cov, select=c(t, N_CD4_350_NoART))
@@ -11846,38 +11846,38 @@ project.athena.Fisheretal.composition.CD4model<- function()
 		#lm(formula = M_CD4_350_NoART ~ v, data = df.cd4me)
 		#
 		#Coefficients:
-		#		Estimate Std. Error t value Pr(>|t|)  
-		#(Intercept)     9.495    104.149   0.091   0.9357  
-		#v           15532.351   2783.498   5.580   0.0306 *
+		#           Estimate Std. Error t value Pr(>|t|)  
+		#(Intercept)    52.22      92.16   0.567   0.6281  
+		#v           15590.55    2660.60   5.860   0.0279 *
 		summary(tmp)
 		#lm(formula = M_CD4_350_NoART ~ v - 1, data = df.cd4me)
 		#Coefficients:
 		#		Estimate Std. Error t value Pr(>|t|)    
-		#v  15777.8      577.2   27.33 0.000107 ***
+		#v  17040.5      640.1   26.62 0.000116 ***
 		
 		#
 		#	final plot
 		#
 		library(gtable)
 		library(grid)
-		p1	<- ggplot(df.cd4cov) + geom_bar(aes(x=t, y=N_CD4_350_NoART), stat='identity', fill="#41B6C4", width=1/12) + theme_bw() +
+		p1	<- ggplot(df.cd4cov) + geom_step(aes(x=t, y=N_CD4_350_NoART), stat='identity', colour="#41B6C4", width=1/12, alpha=0.4) + theme_bw() +
 					scale_x_continuous(breaks=seq(1997,2014,2), minor_breaks=NULL, expand=c(0,0)) + 
 					scale_y_continuous(breaks=seq(0,3000,250)) +
-					geom_segment(data=df.cd4me, aes(x=t.period.min, xend=t.period.max, y=M_CD4_350_NoART, yend=M_CD4_350_NoART), col='blue', linetype='longdash') +
-					geom_point(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2, y=tv), col='black') +				
-					geom_errorbar(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2, ymin=tl95.bs, ymax=tu95.bs), col='black', width=0.5) +
-					labs(x='', y='HIV infected MSM in cohort,\nnot on ART with CD4<350\n( number )') + 
+					geom_segment(data=df.cd4me, aes(x=t.period.min, xend=t.period.max, y=M_CD4_350_NoART, yend=M_CD4_350_NoART), col="#41B6C4", size=1.4) +
+					geom_point(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2, y=tv), col='black', shape=18, size=4) +				
+					geom_errorbar(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2, ymin=tl95.bs, ymax=tu95.bs), col='black', width=0.5, size=1) +
+					labs(x='', y='Untreated HIV infected MSM\nwith CD4<350\n( # )') + 
 					facet_grid(.~t.period, scales='free_x', space='free_x') +					
-					theme(strip.background = element_blank(), strip.text = element_blank(), panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank(), panel.grid.major.x=element_blank(), plot.margin=unit(c(0,2,0,0),"cm"))
-		p2	<- ggplot(df.cd4cov) + geom_bar(aes(x=t, y=N_CD4_350_NoART), stat='identity', fill="#41B6C4", width=1/12) + theme_bw() +
-					scale_x_continuous(breaks=seq(1997,2014,2), minor_breaks=NULL, expand=c(0,0)) +
+					theme(axis.title=element_text(size=18), axis.text.x=element_text(size=14), axis.text.y=element_text(colour="#41B6C4", size=14), strip.background = element_blank(), strip.text = element_blank(), panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank(), panel.grid.major.x=element_blank(), plot.margin=unit(c(0,2,0,0),"cm"))
+		p2	<- ggplot(df.cd4cov) + geom_step(aes(x=t, y=N_CD4_350_NoART), stat='identity', colour="#41B6C4", width=1/12, alpha=0.4) + theme_bw() +
+					scale_x_continuous(breaks=seq(1997,2014,2), minor_breaks=NULL, expand=c(0,0)) + 
 					scale_y_continuous(breaks=predict(tmp, data.frame(v= seq(0, 14, 2)/100)), label=seq(0, 14, 2)) +					
-					geom_segment(data=df.cd4me, aes(x=t.period.min, xend=t.period.max, y=M_CD4_350_NoART, yend=M_CD4_350_NoART), col='blue', linetype='longdash') +
-					geom_point(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2, y=tv), col='black') +				
-					geom_errorbar(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2, ymin=tl95.bs, ymax=tu95.bs), col='black', width=0.5) +
-					labs(x='', y='Proportion of transmissions\nfrom untreated men with CD4<350\n( % )') + 
-					facet_grid(.~t.period, scales='free_x', space='free_x') +					
-					theme(strip.background = element_blank(), strip.text = element_blank(), panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank(), panel.grid.major.x=element_blank(), plot.margin=unit(c(0,2,0,0),"cm"))
+					geom_segment(data=df.cd4me, aes(x=t.period.min, xend=t.period.max, y=M_CD4_350_NoART, yend=M_CD4_350_NoART), col="#41B6C4", size=1.4) +
+					geom_point(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2, y=tv), col='black', shape=18, size=4) +				
+					geom_errorbar(data=df.cd4me, aes(x=(t.period.min+t.period.max)/2, ymin=tl95.bs, ymax=tu95.bs), col='black', width=0.5, size=1) +
+					labs(x='', y='Transmissions from\nuntreated men with CD4<350\n( % )') + 
+					facet_grid(.~t.period, scales='free_x', space='free_x') +										
+					theme(axis.title=element_text(size=18), axis.text.x=element_text(size=14), axis.text.y=element_text(size=14), strip.background = element_blank(), strip.text = element_blank(), panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank(), panel.grid.major.x=element_blank(), plot.margin=unit(c(0,2,0,0),"cm"))
 		#	prepare y axis label 	
 		p2	<- p2 + theme(axis.text.y = element_text(hjust = 0), axis.title.y = element_text(angle = 270)) 
 		#extract gtable
@@ -13624,6 +13624,7 @@ project.athena.Fisheretal.sensitivity.getfigures.RR<- function(runs.risk, method
 			})
 	#
 	ylab		<- "Transmission risk ratio\nof stages after ART start\nversus Diagnosed, CD4>500"
+	ylab		<- "Transmission risk ratio"
 	run.tp		<- subset(runs.risk, (is.na(t.period) | t.period!=0) &  method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RR.',stat,fixed=1) | stat=='RR') & grepl('Dtg500',factor.ref)
 										& grepl('ART',factor)	)
 	run.tp		<- subset( run.tp, !grepl('GroupsUDA',method.risk) )						
@@ -13644,21 +13645,44 @@ project.athena.Fisheretal.sensitivity.getfigures.RR<- function(runs.risk, method
 	run.tp[, t.period.long:= paste(t.period.min, '-', t.period.max,sep='')]
 	set(run.tp, NULL, 't.period.long', run.tp[,factor(t.period.long, levels= tperiod.info[, paste(t.period.min, '-', t.period.max,sep='')])])		
 	color	<- run.tp[, unique(factor.color)]
-	dummy	<- lapply(seq_along(stat.select), function(i)
-			{
-				cat(paste('\nprocess', stat.select[i]))
-				file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',run.tp[1, method.recentctime],'_',run.tp[1, method.denom], '_',run.tp[1, method.dating], '_',run.tp[1, method.brl],'_',run.tp[1, method.risk],'_',stat.select[i],"ARTstarted.pdf", sep='')
-				cat(paste('\nsave to file',file))				
-				tmp		<- subset(run.tp, !is.na(v) & stat==stat.select[i])
-				ggplot(subset(run.tp, !is.na(v) & stat==stat.select[i]), aes(x=t.period.long, y=v, ymin=l95.bs, ymax=u95.bs, fill=factor.legend, colour=factor.legend, group=factor.legend)) + 
-						geom_hline(yintercept=1) + geom_point(position=position_dodge(.5) , shape=18, size=3) + geom_errorbar(position=position_dodge(.5), width=0.4) +
-						scale_y_continuous(breaks=seq(0,2,0.5), minor_breaks=seq(0,2,0.1)) + coord_trans(limy=c(0, 1.1))  +
-						scale_fill_manual(name='from cascade stage', values = color, guide=FALSE) + 
-						scale_colour_manual(name='from cascade stage', values = color, guide=FALSE) +
-						theme_bw() + theme(legend.key.size=unit(11,'mm'), panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_line(colour="grey70", size=0.4), panel.grid.major.x=element_blank(), panel.grid.major.y=element_line(colour="grey70", size=0.4)) +
-						labs(x="", y=ylab) + facet_grid( ~ group)
-				ggsave(file=file, w=7,h=4)
-			})	
+	if(1)
+	{
+		dummy	<- lapply(seq_along(stat.select), function(i)
+				{
+					cat(paste('\nprocess', stat.select[i]))
+					file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',run.tp[1, method.recentctime],'_',run.tp[1, method.denom], '_',run.tp[1, method.dating], '_',run.tp[1, method.brl],'_',run.tp[1, method.risk],'_',stat.select[i],"ARTstarted.pdf", sep='')
+					cat(paste('\nsave to file',file))				
+					tmp		<- subset(run.tp, !is.na(v) & stat==stat.select[i] & factor.legend!='ART initiated')
+					ggplot(tmp, aes(x=t.period.long, y=v, ymin=l95.bs, ymax=u95.bs, fill=factor.legend, colour=factor.legend, group=factor.legend)) + 
+							geom_hline(yintercept=1) + geom_point(position=position_dodge(.5) , shape=18, size=4.5) + geom_errorbar(position=position_dodge(.5), width=0.4, size=1) +
+							scale_x_discrete(expand=c(0.03,0.03)) +
+							scale_y_continuous(breaks=seq(0,2,0.5), minor_breaks=seq(0,2,0.1)) + coord_trans(limy=c(0, 1.1))  +
+							scale_fill_manual(name='from cascade stage', values = color, guide=FALSE) + 
+							scale_colour_manual(name='from cascade stage', values = color, guide=FALSE) +
+							theme_bw() + theme(axis.text=element_text(size=15), axis.title=element_text(size=18), legend.key.size=unit(11,'mm'), panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_line(colour="grey70", size=0.4), panel.grid.major.x=element_blank(), panel.grid.major.y=element_line(colour="grey70", size=0.4)) +
+							labs(x="", y=ylab) 
+					ggsave(file=file, w=5,h=4)
+				})	
+	}
+	if(0)
+	{
+		dummy	<- lapply(seq_along(stat.select), function(i)
+				{
+					cat(paste('\nprocess', stat.select[i]))
+					file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',run.tp[1, method.recentctime],'_',run.tp[1, method.denom], '_',run.tp[1, method.dating], '_',run.tp[1, method.brl],'_',run.tp[1, method.risk],'_',stat.select[i],"ARTstarted.pdf", sep='')
+					cat(paste('\nsave to file',file))				
+					tmp		<- subset(run.tp, !is.na(v) & stat==stat.select[i])
+					ggplot(subset(run.tp, !is.na(v) & stat==stat.select[i]), aes(x=t.period.long, y=v, ymin=l95.bs, ymax=u95.bs, fill=factor.legend, colour=factor.legend, group=factor.legend)) + 
+							geom_hline(yintercept=1) + geom_point(position=position_dodge(.5) , shape=18, size=3) + geom_errorbar(position=position_dodge(.5), width=0.4) +
+							scale_y_continuous(breaks=seq(0,2,0.5), minor_breaks=seq(0,2,0.1)) + coord_trans(limy=c(0, 1.1))  +
+							scale_fill_manual(name='from cascade stage', values = color, guide=FALSE) + 
+							scale_colour_manual(name='from cascade stage', values = color, guide=FALSE) +
+							theme_bw() + theme(legend.key.size=unit(11,'mm'), panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_line(colour="grey70", size=0.4), panel.grid.major.x=element_blank(), panel.grid.major.y=element_line(colour="grey70", size=0.4)) +
+							labs(x="", y=ylab) + facet_grid( ~ group)
+					ggsave(file=file, w=7,h=4)
+				})	
+	}
+	
 }
 ######################################################################################
 project.athena.Fisheretal.censoring.model<- function(ct, ctb, ctn=NULL, plot.file=NA, factors=NULL)
