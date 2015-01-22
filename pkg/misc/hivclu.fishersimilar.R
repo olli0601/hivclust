@@ -5205,10 +5205,26 @@ project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc<- function( YX, nt.table,
 	#
 	nt.table.h	<- rbind(nt.table.YX, nt.table.h, use.names=TRUE)
 	stopifnot( nrow(merge(nt.table.h, tmp, all.y=1, by=c('Patient','risk','factor')))==nrow(tmp)*4 )
-	tmp			<- dcast.data.table(nt.table.h, Patient+risk+factor~stat, value.var='nt')	
-	stopifnot( tmp[, all(YX<=X.clu)] )
-	stopifnot( tmp[, all(X.clu<=X.seq)] )
-	stopifnot( tmp[, all(X.seq<=X.msm)] )	
+	nt.table.h	<- dcast.data.table(nt.table.h, Patient+risk+factor~stat, value.var='nt')
+	tmp			<- nt.table.h[, which(YX>X.clu)]
+	if(length(tmp))
+	{
+		cat(paste('\nWARNING Found YX>X.clu, n=',length(tmp)))
+		set(nt.table.h, tmp, 'X.clu', nt.table.h[tmp, YX])
+	}
+	tmp			<- nt.table.h[, which(X.clu>X.seq)]	
+	if(length(tmp))
+	{
+		cat(paste('\nWARNING Found X.clu>X.seq, n=',length(tmp)))
+		set(nt.table.h, tmp, 'X.seq', nt.table.h[tmp, X.clu])
+	}
+	tmp			<- nt.table.h[, which(X.seq>X.msm)]	
+	if(length(tmp))
+	{
+		cat(paste('\nWARNING Found X.seq>X.msm, n=',length(tmp)))
+		set(nt.table.h, tmp, 'X.msm', nt.table.h[tmp, X.seq])
+	}
+	nt.table.h	<- melt(nt.table.h, measure.vars=c('X.clu','X.msm','X.seq','YX'), value.name='nt', variable.name='stat')
 	#df.rmp		<- merge( nt.table[, list(nt=sum(nt)), by=c('stat','factor')], nt.table.h[, list(REALLOC_NT=sum(nt)), by=c('stat','factor')], by=c('stat','factor') )
 	#df.rmp		<- merge(df.rmp, df.rmp[, list(factor=factor, PT= nt/sum(nt)), by='stat'], by=c('stat','factor'))
 	#df.rmp		<- merge(df.rmp, df.rmp[, list(factor=factor, REALLOC_PT= REALLOC_NT/sum(REALLOC_NT)), by='stat'], by=c('stat','factor'))
@@ -10870,7 +10886,7 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, Y.U, cluphy, clup
 		}
 		df.tpairs.mrca		<- merge(df.tpairs.mrca, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))
 		tmp					<- subset( df.tpairs.mrca, select=c(cluster, node, FASTASampleCode, t.FASTASampleCode, t.queryT) )
-		tmp					<- merge(tmp, subset(df.all, select=c(FASTASampleCode, AnyPos_T1)), by='FASTASampleCode')
+		tmp					<- merge(tmp, unique(subset(df.all, select=c(FASTASampleCode, AnyPos_T1))), by='FASTASampleCode')
 		set(tmp, NULL, 'AnyPos_T1', tmp[, AnyPos_T1+coal.within.inf.grace])
 		tmp					<- merge( cluphy.map.nodectime, tmp, by=c('cluster','node'), allow.cartesian=TRUE)	
 		coal				<- tmp[,  {
@@ -11916,7 +11932,8 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	if(method.WEIGHT!='')
 		df	<- subset(df, grepl(method.WEIGHT,method.risk) )
 	dfg		<- subset(df, grepl('GroupsUDA',method.risk))
-	df		<- subset(df, !grepl('ARTstarted',method.risk) & !grepl('GroupsUDA',method.risk))
+	dfa		<- subset(df, t.period==0)
+	df		<- subset(df, !grepl('ARTstarted',method.risk) & !grepl('GroupsUDA',method.risk) & (is.na(t.period) | t.period!=0))
 	#	time period	
 	set(df, NULL, 'factor', df[, as.character(factor)])
 	setkey(df, factor)
@@ -11951,11 +11968,12 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	setnames(tmp3, as.character(1:4), paste('l95.bs.',1:4,sep=''))
 	tmp3	<- merge(tmp3, dcast.data.table(tmp, group+factor~t.period, value.var='u95.bs'), by=c('group','factor'))
 	setnames(tmp3, as.character(1:4), paste('u95.bs.',1:4,sep=''))	
-	tmp3[, factor:='']
+	tmp3[, factor:= tmp3[, paste(factor,'_total',sep='')]]
 	tmp2	<- rbind(tmp3, tmp2, use.names=TRUE)
+	tmp2[, stat:='P.raw.e0cp']
 	#	add CUA
 	tmp		<- unique(subset(df, stat=='CUA.raw.e0cp'))
-	tmp3	<- dcast.data.table(tmp, group+factor~t.period, value.var='v')
+	tmp3	<- dcast.data.table(tmp, group+factor+stat~t.period, value.var='v')
 	setnames(tmp3, as.character(1:4), paste('v.',1:4,sep=''))
 	tmp3	<- merge(tmp3, dcast.data.table(tmp, group+factor~t.period, value.var='l95.bs'), by=c('group','factor'))
 	setnames(tmp3, as.character(1:4), paste('l95.bs.',1:4,sep=''))
@@ -11963,15 +11981,20 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	setnames(tmp3, as.character(1:4), paste('u95.bs.',1:4,sep=''))	
 	tmp3[, factor:='UA']
 	tmp2	<- rbind(tmp3, tmp2, use.names=TRUE)
+	#	prop infections overall
+	tmp		<- subset(dfa, stat%in%c('P.raw.e0cp','CUA.raw.e0cp'))
+	set( tmp, NULL, 'factor', tmp[, substr(factor,1,nchar(factor)-4)] )
+	set( tmp, NULL, 'group', tmp[, paste(substr(factor,1,1),'_total',sep='')])
+	tmp2	<- merge( subset(tmp, select=c(group, factor, stat, v, l95.bs, u95.bs)), tmp2, by=c('group','factor','stat'))
 	#	prepare number of recipient with at least one prob transmitter
 	tmp3	<- unique(subset(df, stat=='nRecLkl', select=c(t.period, v)))
 	tmp3[, All:=sum(v)]
 	set(tmp3, NULL, 'v', tmp3[, paste('=\"(n=', v, ')\"', sep='')])
 	set(tmp3, NULL, 'All', tmp3[, paste('=\"(n=', All, ')\"', sep='')])
 	tmp3	<- dcast.data.table(tmp3, All~t.period, value.var='v')
-	tmp3[, group:='']
-	tmp3[, factor:='']
+	set(tmp3, NULL, c('group','factor','stat'), '')
 	#	prepare Excel
+	set(tmp2, NULL, 'All', tmp2[, paste('=\"',round(v*100,d=1),' (',round(l95.bs*100,d=1),'-',round(u95.bs*100,d=1),')\"',sep='')])
 	set(tmp2, NULL, '1', tmp2[, paste('=\"',round(v.1*100,d=1),' (',round(l95.bs.1*100,d=1),'-',round(u95.bs.1*100,d=1),')\"',sep='')])
 	set(tmp2, NULL, '2', tmp2[, paste('=\"',round(v.2*100,d=1),' (',round(l95.bs.2*100,d=1),'-',round(u95.bs.2*100,d=1),')\"',sep='')])
 	set(tmp2, NULL, '3', tmp2[, paste('=\"',round(v.3*100,d=1),' (',round(l95.bs.3*100,d=1),'-',round(u95.bs.3*100,d=1),')\"',sep='')])
@@ -11979,21 +12002,16 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	set(tmp2, NULL, paste('v.',1:4,sep=''), NULL)
 	set(tmp2, NULL, paste('l95.bs.',1:4,sep=''), NULL)
 	set(tmp2, NULL, paste('u95.bs.',1:4,sep=''), NULL)
-	ans		<- copy(tmp2)
-	#	prop infections overall
-	tmp		<- subset(df, stat%in%c('N.raw.e0cp'))
-	tmp		<- tmp[, list(group=group[1], v=sum(v), l95.bs=sum(l95.bs), u95.bs=sum(u95.bs)), by='factor']	
-	tmp2	<- tmp[, lapply(.SD, sum ), by='group', .SDcol=c('v','l95.bs','u95.bs')]
-	tmp2[, factor:='']
-	tmp		<- rbind(tmp2, tmp, use.names=TRUE)	
-	tmp2	<- unique( subset(df, stat=='nRecLkl', select=c(t.period, v)) )[, sum(v)]
-	set(tmp, NULL, 'All', tmp[, paste('=\"',round(v/tmp2*100,d=1),' (',round(l95.bs/tmp2*100,d=1),'-',round(u95.bs/tmp2*100,d=1),')\"',sep='')])
-	ans		<- merge(subset(tmp, select=c(factor, group, All)), ans, by=c('group','factor'))
+	set(tmp2, NULL, c('v','l95.bs','u95.bs'), NULL)
+	ans		<- copy(tmp2)	
 	#	add number of recipient with at least one prob transmitter
 	ans		<- rbind(ans, tmp3, use.names=TRUE) 
+	#	get dummy to sort
+	set(ans, NULL, 'totalsort',  ans[, as.numeric(!grepl('total',factor))])
 	#	get factor names
 	ans		<- merge(ans, subset(factors, select=c(factor, factor.legend)), by='factor', all.x=1)		
 	set(ans, ans[, which(is.na(factor.legend))], 'factor.legend', '')
+	set(ans, ans[, which(grepl('total',factor))], 'factor', '')
 	#	get column names
 	tmp		<- copy(tperiod.info)
 	tmp[, window:= tmp[,paste(gsub('\n','',t.period.min),'-',gsub('\n','',t.period.max),sep='')]]
@@ -12001,12 +12019,13 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	setnames(ans, 'All', paste(tmp[1,t.period.min],'-',tmp[4,t.period.max],sep=''))
 	#	reorder	
 	set(ans, NULL, 'group', ans[, factor(group, levels=c('','U_total','D_total','A_total'), labels=c('','U_total','D_total','A_total'))])
-	setkey(ans, group, factor)
+	set(ans, NULL, 'stat', ans[, as.character(stat)])
+	setkey(ans, group, totalsort, factor, stat)
 	
 	#	write to file
 	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_',df[1, method.recentctime],'_',df[1, method.denom], '_',df[1, method.dating], '_',df[1, method.brl],'_',df[1, method.risk],'_table_PROP',".csv", sep='')
 	cat(paste('\nsave to file',file))
-	write.csv(subset(ans, select=c(8, 3, 4, 5, 6, 7)), file=file, eol="\r\n", row.names=FALSE)
+	write.csv(subset(ans, select=c(10, 4, 5, 6, 7, 8)), file=file, eol="\r\n", row.names=FALSE)
 	#in Excel replace COMMA with ,
 	#right click on table or Apple-1 and set wrap text
 }
@@ -13333,7 +13352,7 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 {
 	if(0)
 	{
-		run.tp			<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('P.',stat,fixed=1) | stat=='P') )
+		run.tp			<- subset(runs.risk, (is.na(t.period) | t.period!=0) & method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('P.',stat,fixed=1) | stat=='P') )
 		if(method.WEIGHT=='')
 			run.tp		<- subset(run.tp, !grepl('wstar',method.risk) & !grepl('now',method.risk))
 		if(method.WEIGHT!='')
@@ -13381,7 +13400,7 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 	#
 	#
 	#
-	run.tp			<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('P.',stat,fixed=1) | stat=='P' | grepl('N.',stat,fixed=1) | stat=='N') )
+	run.tp			<- subset(runs.risk, (is.na(t.period) | t.period!=0) & method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('P.',stat,fixed=1) | stat=='P' | grepl('N.',stat,fixed=1) | stat=='N') )
 	run.tp			<- subset(run.tp, !grepl('ARTstarted',method.risk) & !grepl('GroupsUDA',method.risk))
 	if(method.WEIGHT=='')
 		run.tp		<- subset(run.tp, !grepl('wstar',method.risk) & !grepl('now',method.risk))
@@ -13438,7 +13457,7 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 	
 	#
 	ylab		<- "Relative transmissibility"
-	run.tp		<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RI.',stat,fixed=1) | stat=='RI') )
+	run.tp		<- subset(runs.risk, (is.na(t.period) | t.period!=0) &  method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RI.',stat,fixed=1) | stat=='RI') )
 	run.tp		<- subset(run.tp, !grepl('ARTstarted',method.risk) & !grepl('GroupsUDA',method.risk))
 	stat.select	<- gsub('P','RI', stat.select)
 	setkey(run.tp, factor)
@@ -13490,7 +13509,7 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 			})
 	#
 	ylab		<- "Risk ratio relative to\nDiagnosed, CD4 progression to > 500"
-	run.tp		<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RR.',stat,fixed=1) | stat=='RR') & grepl('Dtg500',factor.ref))
+	run.tp		<- subset(runs.risk, (is.na(t.period) | t.period!=0) &  method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RR.',stat,fixed=1) | stat=='RR') & grepl('Dtg500',factor.ref))
 	run.tp		<- subset(run.tp, !grepl('ARTstarted',method.risk) & !grepl('GroupsUDA',method.risk))
 	stat.select	<- gsub('RI','RR', stat.select)
 	setkey(run.tp, factor)
@@ -13531,7 +13550,7 @@ project.athena.Fisheretal.sensitivity.getfigures.m2<- function(runs.risk, method
 	if(0)
 	{
 		ylab		<- "Number of transmissions"
-		run.tp		<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('N.',stat,fixed=1) | stat=='N' ) )
+		run.tp		<- subset(runs.risk, (is.na(t.period) | t.period!=0) &  method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('N.',stat,fixed=1) | stat=='N' ) )
 		stat.select	<- gsub('RI','N', stat.select)	
 		setkey(run.tp, factor)
 		run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
@@ -13570,7 +13589,7 @@ project.athena.Fisheretal.sensitivity.getfigures.RR<- function(runs.risk, method
 {
 	#
 	ylab		<- "Relative transmissibility"
-	run.tp		<- subset(runs.risk, 	method.denom==method.DENOM & method.nodectime=='any' & method.BRL==method.brl & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RI.',stat,fixed=1) | stat=='RI') 
+	run.tp		<- subset(runs.risk, 	(is.na(t.period) | t.period!=0) &  method.denom==method.DENOM & method.nodectime=='any' & method.BRL==method.brl & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RI.',stat,fixed=1) | stat=='RI') 
 										& grepl('ART',factor)	)
 	run.tp		<- subset( run.tp, !grepl('GroupsUDA',method.risk) )											
 	stat.select	<- gsub('P','RI', stat.select)
@@ -13605,7 +13624,7 @@ project.athena.Fisheretal.sensitivity.getfigures.RR<- function(runs.risk, method
 			})
 	#
 	ylab		<- "Transmission risk ratio\nof stages after ART start\nversus Diagnosed, CD4>500"
-	run.tp		<- subset(runs.risk, method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RR.',stat,fixed=1) | stat=='RR') & grepl('Dtg500',factor.ref)
+	run.tp		<- subset(runs.risk, (is.na(t.period) | t.period!=0) &  method.denom==method.DENOM & method.nodectime=='any' & method.brl==method.BRL & method.dating==method.DATING & grepl(method.RISK,method.risk)  & (grepl('RR.',stat,fixed=1) | stat=='RR') & grepl('Dtg500',factor.ref)
 										& grepl('ART',factor)	)
 	run.tp		<- subset( run.tp, !grepl('GroupsUDA',method.risk) )						
 	stat.select	<- gsub('RI','RR', stat.select)
@@ -14257,6 +14276,64 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	
 }
 ######################################################################################
+project.athena.Fisheretal.sensitivity.pool.TPALL<- function(df, df.bs)
+{
+	df		<- subset(df, grepl('^N\\.',stat))		
+	df.bs	<- subset(df.bs, grepl('^N\\.',stat))
+	df[, bs:=0]
+	set(df, NULL, c("l95.bs","u95.bs","m50.bs"), NULL)		
+	df		<- rbind(df, df.bs, use.names=TRUE)
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'method.risk', df[, substr(method.risk, 1, nchar(method.risk)-4)])
+	set(df, NULL, 'coef', df[, paste(risk,factor,sep='')])
+	method.risk			<- df[1, method.risk]
+	method.dating		<- df[1, method.dating]
+	method.nodectime	<- df[1, method.nodectime]
+	method.brl			<- df[1, method.brl]
+	method.denom		<- df[1, method.denom]
+	method.recentctime	<- df[1, method.recentctime]
+	#	pool N's
+	ans					<- dcast.data.table(df, coef+coef.ref+risk+risk.ref+factor+factor.ref+bs~stat, value.var='v', fun.aggregate=sum)
+	#	get P's
+	ans					<- melt(ans, measure.vars=c('N.raw','N.raw.e0','N.raw.e0cp'), value.name='v', variable.name='stat')
+	tmp					<- ans[, list(factor=factor, v=v/sum(v)), by=c('stat','bs','risk')]
+	ans					<- merge( unique(subset(ans, select=setdiff(names(ans),c('stat','bs','v')))), tmp, by=c('risk','factor') )
+	set(ans, NULL, 'stat', ans[,gsub('N\\.','P\\.',stat)])
+	#	UA/(U+UA)
+	tmp					<- subset(df, grepl('^U$|^UA$', factor))
+	tmp					<- dcast.data.table(tmp, risk+risk.ref+stat+bs ~ factor, value.var='v', fun.aggregate=sum)	
+	tmp[, v:=UA/(U+UA)]
+	tmp[, factor:= paste('UA', sep='')]
+	tmp[, coef:= paste(risk,factor,sep='')]
+	tmp[, factor.ref:= "None"]
+	tmp[, coef.ref:= "None"]
+	set(tmp, NULL, 'stat', tmp[, gsub('N.','CUA.',stat)])
+	ans					<- rbind(ans, subset(tmp, select=intersect(names(ans),names(tmp))))
+	#	groups of factors
+	set(df, NULL, 'factor', df[, paste(substr(factor, 1, 1), '_total', sep='')])
+	set(df, NULL, 'coef', df[, paste(risk,factor,sep='')])
+	df					<- dcast.data.table(df, coef+coef.ref+risk+risk.ref+factor+factor.ref+bs~stat, value.var='v', fun.aggregate=sum)
+	df					<- melt(df, measure.vars=c('N.raw','N.raw.e0','N.raw.e0cp'), value.name='v', variable.name='stat')
+	tmp					<- df[, list(factor=factor, v=v/sum(v)), by=c('stat','bs','risk')]
+	df					<- merge( unique(subset(df, select=setdiff(names(df),c('stat','bs','v')))), tmp, by=c('risk','factor') )
+	set(df, NULL, 'stat', df[,gsub('N\\.','P\\.',stat)])
+	ans					<- rbind(ans, subset(df, select=intersect(names(ans),names(df))))
+	#	return only 95% bootstrap quantiles + central estimate
+	tmp					<- subset(ans, bs>0)[,list(l95.bs=quantile(v,p=0.025), u95.bs=quantile(v,p=0.975), m50.bs=quantile(v,p=0.5)), by=c('risk','factor','stat')]		
+	ans					<- merge( subset(ans, bs==0), tmp, by=c('risk','factor','stat') )
+	ans[, method.risk:=method.risk]
+	ans[, method.dating:=method.dating]
+	ans[, method.nodectime:=method.nodectime]
+	ans[, method.brl:=method.brl ]
+	ans[, method.denom:=method.denom]
+	ans[, method.recentctime:=method.recentctime ]
+	ans[, t.period:=0]
+	set(ans, NULL, 'factor', ans[, paste(factor, '.tp0', sep='')])
+	set(ans, NULL, 'coef', ans[, paste(risk, factor, sep='')])
+	set(ans, NULL, 'method.risk', ans[, paste(method.risk, '.tp0', sep='')])
+	ans
+}
+######################################################################################
 project.athena.Fisheretal.sensitivity<- function()
 {
 	require(data.table)
@@ -14336,7 +14413,36 @@ project.athena.Fisheretal.sensitivity<- function()
 					ans[, method.recentctime:=runs.opt[i,method.recentctime ]]
 					ans
 				})
-		runs.risk	<- do.call('rbind', tmp)
+		runs.risk	<- do.call('rbind', tmp)		
+		#	load risk.bs estimates
+		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
+				{
+					tmp	<- paste(indir, runs.opt[i,file], sep='/')
+					cat(paste('\nprocess file=',runs.opt[i,file]))
+					tmp	<- load(tmp)
+					ans	<- ans$risk.bs
+					if(!any(colnames(ans)=='t.period'))
+						ans[, t.period:= NA_character_]										
+					set(ans, NULL, 'factor', ans[, as.character(factor)])											
+					ans[, method.risk:=runs.opt[i,method.risk]]
+					ans[, method.dating:=runs.opt[i,method.dating]]
+					ans[, method.nodectime:=runs.opt[i,method.nodectime]]
+					ans[, method.brl:=runs.opt[i,method.brl ]]
+					ans[, method.denom:=runs.opt[i,method.denom]]
+					ans[, method.recentctime:=runs.opt[i,method.recentctime ]]
+					ans
+				})
+		runs.riskbs	<- do.call('rbind', tmp)
+		#	get pooled proportions across all tp
+		tmp			<- lapply( runs.risk[, unique(method.brl)], function(METHOD.BRL)
+				{
+					df		<- subset( runs.risk, !grepl('ARTstarted|GroupsUDA|Hypo', method.risk) & method.brl==METHOD.BRL)
+					df.bs	<- subset( runs.riskbs, !grepl('ARTstarted|GroupsUDA|Hypo', method.risk) & method.brl==METHOD.BRL)
+					project.athena.Fisheretal.sensitivity.pool.TPALL(df, df.bs)			
+				})
+		tmp			<- do.call('rbind', tmp)
+		tmp[, bs:=NULL]
+		runs.risk	<- rbind( runs.risk, tmp, use.names=TRUE )
 		file			<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.risks.Rdata", sep='')
 		save(runs.risk, file=file)
 		#	reduce runs.opt to files for which we have a table
@@ -15904,7 +16010,9 @@ hivc.prog.props_univariate.F2Fincompatibilityprob<- function(	indir, indircov, i
 	tmp				<- unique(df.all)[, list(nF= length(which(Sex=='F'))), by='cluster']
 	df.FFinfo		<- merge( df.all, subset(tmp, nF>1, select=cluster), by='cluster' )
 	cat(paste('Found clusters with Female-Female patient pairs, n=', df.FFinfo[, length(unique(cluster))]))
+	#
 	#	extract F-F pairs
+	#
 	df.FFpairs		<- df.FFinfo[, {
 										tmp		<- which(Sex=='F')					
 										tmp2	<- combn(length(tmp),2)
@@ -15918,7 +16026,6 @@ hivc.prog.props_univariate.F2Fincompatibilityprob<- function(	indir, indircov, i
 	cat(paste('Found Female-Female sequence pairs, n=', nrow(df.FFpairs)))
 	cat(paste('Found Female-Female sequence pairs with at least one of the females acute, n=', nrow(subset(df.FFpairs, isAcute=='Yes' | t.isAcute=='Yes'))))
 	#	not enough FF where we know direction
-	
 	#	get coal distributions for FF pairs
 	clu.indir				<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp2"
 	tmp						<- project.athena.Fisheretal.get.dated.phylo.for.selection(df.FFpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, method.nodectime=method.nodectime)
@@ -15934,35 +16041,111 @@ hivc.prog.props_univariate.F2Fincompatibilityprob<- function(	indir, indircov, i
 														adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime )
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args
-	Y.U				<- project.athena.Fisheretal.Y.infectiontime(df.FFpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.infected', method.minLowerUWithNegT=method.minLowerUWithNegT)
-	setnames(Y.U, c('Patient','score.Inf'), c('t.Patient','U.score'))
-	Y.U.t			<- project.athena.Fisheretal.Y.infectiontime(df.FFpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT)
+	FF.U				<- project.athena.Fisheretal.Y.infectiontime(df.FFpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.infected', method.minLowerUWithNegT=method.minLowerUWithNegT)
+	setnames(FF.U, c('Patient','score.Inf'), c('t.Patient','U.score'))
+	FF.U.t			<- project.athena.Fisheretal.Y.infectiontime(df.FFpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT)
 	#	predict compatibility probabilities that t.Patient is direct transmitter (t.coal.comp)
-	Y.coal.t		<- project.athena.Fisheretal.Y.coal(df.FFpairs, df.all, Y.U.t, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, resume=FALSE, method.minLowerUWithNegT=method.minLowerUWithNegT )
-	Y.coal.t[, t.coal.comp:= coal.after.t.NegT-coal.after.i.AnyPos_T1]
-	set(Y.coal.t, NULL, c('coal.after.t.NegT','coal.after.i.AnyPos_T1','node'), NULL)
+	FF.coal.t		<- project.athena.Fisheretal.Y.coal(df.FFpairs, df.all, FF.U.t, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, resume=FALSE, method.minLowerUWithNegT=method.minLowerUWithNegT )
+	FF.coal.t[, t.coal.comp:= coal.after.t.NegT-coal.after.i.AnyPos_T1]
+	set(FF.coal.t, NULL, c('coal.after.t.NegT','coal.after.i.AnyPos_T1','node'), NULL)
 	#	predict compatibility probabilities that Patient is direct transmitter (coal.comp)
 	tmp				<- grepl('^t.',names(df.FFpairs))
 	setnames(df.FFpairs, which(tmp), substring(names(df.FFpairs)[tmp],3))
 	setnames(df.FFpairs, which(!tmp), paste('t.',names(df.FFpairs)[!tmp],sep=''))
 	setnames(df.FFpairs, 't.cluster', 'cluster')
-	Y.coal			<- project.athena.Fisheretal.Y.coal(df.FFpairs, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, resume=FALSE, method.minLowerUWithNegT=method.minLowerUWithNegT )
-	tmp				<- grepl('^t.',names(Y.coal))
-	setnames(Y.coal, which(tmp), substring(names(Y.coal)[tmp],3))
-	setnames(Y.coal, which(!tmp), paste('t.',names(Y.coal)[!tmp],sep=''))
-	Y.coal[, coal.comp:= t.coal.after.t.NegT-t.coal.after.i.AnyPos_T1]
-	set(Y.coal, NULL, c('t.coal.after.t.NegT','t.coal.after.i.AnyPos_T1','t.node'), NULL)
-	Y.coal.t		<- merge(Y.coal.t, Y.coal, by=c('FASTASampleCode','t.FASTASampleCode'))
+	FF.coal			<- project.athena.Fisheretal.Y.coal(df.FFpairs, df.all, FF.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, resume=FALSE, method.minLowerUWithNegT=method.minLowerUWithNegT )
+	tmp				<- grepl('^t.',names(FF.coal))
+	setnames(FF.coal, which(tmp), substring(names(FF.coal)[tmp],3))
+	setnames(FF.coal, which(!tmp), paste('t.',names(FF.coal)[!tmp],sep=''))
+	FF.coal[, coal.comp:= t.coal.after.t.NegT-t.coal.after.i.AnyPos_T1]
+	set(FF.coal, NULL, c('t.coal.after.t.NegT','t.coal.after.i.AnyPos_T1','t.node'), NULL)
+	FF.coal.t		<- merge(FF.coal.t, FF.coal, by=c('FASTASampleCode','t.FASTASampleCode'))
 	#	set p to largest compatibility probability
-	Y.coal.t		<- merge(Y.coal.t, Y.coal.t[, list(p= max(coal.comp, t.coal.comp)), by=c('FASTASampleCode','t.FASTASampleCode')], by=c('FASTASampleCode','t.FASTASampleCode'))
-	setkey(Y.coal.t, p)
-	Y.coal.t[, cp:= cumsum(rep(1/nrow(Y.coal.t), nrow(Y.coal.t)))]
+	FF.coal.t		<- merge(FF.coal.t, FF.coal.t[, list(p= max(coal.comp, t.coal.comp)), by=c('FASTASampleCode','t.FASTASampleCode')], by=c('FASTASampleCode','t.FASTASampleCode'))
+	setkey(FF.coal.t, p)
+	FF.coal.t[, cp:= cumsum(rep(1/nrow(FF.coal.t), nrow(FF.coal.t)))]
+		
 	
-	ggplot(Y.coal.t, aes(x=p)) + geom_histogram()
-	ggplot(Y.coal.t) + geom_line(aes(x=p, y=cp)) + geom_abline(intercept=0, slope=1, color='grey50') + theme_bw() + 
-			scale_y_continuous(breaks=seq(0,1,0.1))
+	#
+	#	extract sequence pairs from same host
+	#
+	df.WHinfo		<- merge(df.all, subset( df.all[, list(nD= any(duplicated(Patient))), by='cluster'], nD, select=cluster ), by='cluster')
+	df.WHpairs		<- df.WHinfo[,{
+				tmp		<- Patient[ duplicated(Patient) ][1]
+				tmp		<- which(Patient==tmp)
+				tmp2	<- combn(length(tmp),2)
+				list( t.FASTASampleCode= FASTASampleCode[tmp[tmp2[1,]]], FASTASampleCode=FASTASampleCode[tmp[tmp2[2,]]] )
+			}, by='cluster']	
+	tmp				<- subset(df.all, select=c(Patient, FASTASampleCode, PosSeqT, NegT))
+	df.WHpairs		<- merge( df.WHpairs, tmp, by='FASTASampleCode' )
+	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
+	df.WHpairs		<- merge( df.WHpairs, tmp, by='t.FASTASampleCode' )
+	#	get coal distributions for WH pairs
+	clu.indir				<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp2"
+	tmp						<- project.athena.Fisheretal.get.dated.phylo.for.selection(df.WHpairs, clu.indir, clu.infile, clu.insignat, clu.infilexml.opt, clu.infilexml.template, method.nodectime=method.nodectime)
+	cluphy.map.nodectime	<- tmp$clu$cluphy.map.nodectime
+	cluphy.subtrees			<- tmp$clu$cluphy.subtrees
+	cluphy.info				<- tmp$clu$cluphy.info
+	cluphy					<- tmp$clu$cluphy
+	stopifnot( length(intersect( df.WHpairs[, unique(FASTASampleCode)], cluphy$tip.label ))>0 )
+	stopifnot( length(intersect( df.WHpairs[, unique(t.FASTASampleCode)], cluphy$tip.label ))>0 )
+	#	predict infection times for Patient and t.Patient 	
+	WH.U					<- project.athena.Fisheretal.Y.infectiontime(df.WHpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.infected', method.minLowerUWithNegT=method.minLowerUWithNegT)
+	setnames(WH.U, c('Patient','score.Inf'), c('t.Patient','U.score'))
+	WH.U.t					<- project.athena.Fisheretal.Y.infectiontime(df.WHpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT)
+	#	set diag time of 'recipient'
+	df.all2					<- subset(df.WHpairs, select=c(FASTASampleCode, Patient, PosSeqT, NegT))
+	setnames(df.all2, 'PosSeqT','AnyPos_T1')
+	#	predict compatibility probabilities that t.Patient is direct transmitter (t.coal.comp)
+	WH.coal.t				<- project.athena.Fisheretal.Y.coal(subset(df.WHpairs, select=c(t.Patient, t.FASTASampleCode, Patient, FASTASampleCode, cluster)), df.all2, WH.U.t, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, resume=FALSE, method.minLowerUWithNegT=method.minLowerUWithNegT )
+	WH.coal.t[, t.coal.comp:= coal.after.t.NegT-coal.after.i.AnyPos_T1]
+	set(WH.coal.t, NULL, c('coal.after.t.NegT','coal.after.i.AnyPos_T1','node'), NULL)
+	#	predict compatibility probabilities that Patient is direct transmitter (coal.comp)
+	tmp						<- grepl('^t.',names(df.WHpairs))
+	setnames(df.WHpairs, which(tmp), substring(names(df.WHpairs)[tmp],3))
+	setnames(df.WHpairs, which(!tmp), paste('t.',names(df.WHpairs)[!tmp],sep=''))
+	setnames(df.WHpairs, 't.cluster', 'cluster')
+	#	set diag time of 'recipient'
+	df.all2			<- subset(df.WHpairs, select=c(FASTASampleCode, Patient, PosSeqT, NegT))
+	setnames(df.all2, 'PosSeqT','AnyPos_T1')
+	WH.coal			<- project.athena.Fisheretal.Y.coal(subset(df.WHpairs, select=c(t.Patient, t.FASTASampleCode, Patient, FASTASampleCode, cluster)), df.all2, WH.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, resume=FALSE, method.minLowerUWithNegT=method.minLowerUWithNegT )
+	tmp				<- grepl('^t.',names(WH.coal))
+	setnames(WH.coal, which(tmp), substring(names(WH.coal)[tmp],3))
+	setnames(WH.coal, which(!tmp), paste('t.',names(WH.coal)[!tmp],sep=''))
+	WH.coal[, coal.comp:= t.coal.after.t.NegT-t.coal.after.i.AnyPos_T1]
+	set(WH.coal, NULL, c('t.coal.after.t.NegT','t.coal.after.i.AnyPos_T1','t.node'), NULL)
+	WH.coal.t		<- merge(WH.coal.t, WH.coal, by=c('FASTASampleCode','t.FASTASampleCode'))
+	#	set p to largest compatibility probability
+	WH.coal.t		<- merge(WH.coal.t, WH.coal.t[, list(p= max(coal.comp, t.coal.comp)), by=c('FASTASampleCode','t.FASTASampleCode')], by=c('FASTASampleCode','t.FASTASampleCode'))
+	setkey(WH.coal.t, p)
+	WH.coal.t[, cp:= cumsum(rep(1/nrow(WH.coal.t), nrow(WH.coal.t)))]
 	
 	
+	ggplot(WH.coal.t) +    
+			scale_y_continuous(breaks=seq(0,1,0.2)*100, expand=c(0,0)) +
+			scale_x_continuous(breaks=seq(0,1,0.2), expand=c(0,0)) +			
+			geom_abline(intercept=0, slope=100, color='grey70') +
+			geom_ribbon(aes(x=p, ymax=cp*100, ymin=0), fill="#E41A1C", alpha=0.75) +
+			geom_hline(yintercept=5) +
+			labs(x='coalescent compatibility\nthreshold', y='sequence pairs from same host excluded\ntype-I error\n(%)') +
+			theme_bw() +
+		 	theme( panel.grid.major=element_line(colour="grey70", size=0.6) )
+	plot.dir	<- '/Users/Oliver/Dropbox\ (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303'
+	plot.file	<- paste(plot.dir,'150122_CoalTresh_TypeI.pdf',sep='/')
+	ggsave(file=plot.file, w=5, h=5)
+	
+	ggplot(FF.coal.t) +   
+			scale_y_continuous(breaks=seq(0,1,0.2)*100, expand=c(0,0)) +
+			scale_x_continuous(breaks=seq(0,1,0.2), expand=c(0,0)) +			
+			geom_abline(intercept=0, slope=100, color='grey70') +
+			geom_ribbon(aes(x=p, ymax=cp*100, ymin=0), fill="#4DAF4A", alpha=0.75) +
+			geom_hline(yintercept=80) +
+			labs(x='coalescent compatibility\nthreshold', y='sequence pairs from female-female pairs excluded\npower\n(%)') +
+			theme_bw() +
+			theme( panel.grid.major=element_line(colour="grey70", size=0.6) )
+	plot.dir	<- '/Users/Oliver/Dropbox\ (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303'
+	plot.file	<- paste(plot.dir,'150122_CoalTresh_Power.pdf',sep='/')
+	ggsave(file=plot.file, w=5, h=5)
 	
 }
 ######################################################################################
