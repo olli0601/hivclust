@@ -4601,6 +4601,7 @@ project.athena.Fisheretal.Wallinga.prep.nttable<- function(nt.table, YX=NULL, ve
 	set(nt.table, tmp, 'X.seq', nt.table[tmp, X.msm])	
 	tmp			<- nt.table[, which(X.clu>X.seq)]
 	if(length(tmp))	cat(paste('\nWARNING: X.clu>X.seq for entries n=',length(tmp)))
+print(nt.table[tmp,])	
 	stopifnot(length(tmp)==0)
 	set(nt.table, tmp, 'X.clu', nt.table[tmp, X.seq])
 	tmp			<- nt.table[, which(YX>X.clu)]
@@ -5192,7 +5193,7 @@ project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc<- function( YX, nt.table,
 									flow.in[ flow.in>0 ]	<- flow.in[ flow.in>0 ] + c( rep(-1, flow.d), rep(0, length(which(flow.in>0))-flow.d) )
 									stopifnot(sum(flow.out)==sum(flow.in))
 									list(factor=factor, nt= nt-flow.out+flow.in)					
-								}, by=c('Patient','risk','stat')]	
+								}, by=c('Patient','risk','stat')]					
 	#	for YX we know easily how many transmission intervals are removed
 	nt.table.YX	<- YX.h[, 	{
 						z				<- table(as.character(stage))
@@ -5209,22 +5210,22 @@ project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc<- function( YX, nt.table,
 	tmp			<- nt.table.h[, which(YX>X.clu)]
 	if(length(tmp))
 	{
-		cat(paste('\nWARNING Found YX>X.clu, n=',length(tmp)))
+		cat(paste('\nWARNING UtoD Found YX>X.clu, n=',length(tmp)))
 		set(nt.table.h, tmp, 'X.clu', nt.table.h[tmp, YX])
 	}
 	tmp			<- nt.table.h[, which(X.clu>X.seq)]	
 	if(length(tmp))
 	{
-		cat(paste('\nWARNING Found X.clu>X.seq, n=',length(tmp)))
+		cat(paste('\nWARNING UtoD Found X.clu>X.seq, n=',length(tmp)))	
 		set(nt.table.h, tmp, 'X.seq', nt.table.h[tmp, X.clu])
 	}
 	tmp			<- nt.table.h[, which(X.seq>X.msm)]	
 	if(length(tmp))
 	{
-		cat(paste('\nWARNING Found X.seq>X.msm, n=',length(tmp)))
+		cat(paste('\nWARNING UtoD Found X.seq>X.msm, n=',length(tmp)))
 		set(nt.table.h, tmp, 'X.msm', nt.table.h[tmp, X.seq])
 	}
-	nt.table.h	<- melt(nt.table.h, measure.vars=c('X.clu','X.msm','X.seq','YX'), value.name='nt', variable.name='stat')
+	nt.table.h	<- melt(nt.table.h, measure.vars=c('X.clu','X.msm','X.seq','YX'), value.name='nt', variable.name='stat')	
 	#df.rmp		<- merge( nt.table[, list(nt=sum(nt)), by=c('stat','factor')], nt.table.h[, list(REALLOC_NT=sum(nt)), by=c('stat','factor')], by=c('stat','factor') )
 	#df.rmp		<- merge(df.rmp, df.rmp[, list(factor=factor, PT= nt/sum(nt)), by='stat'], by=c('stat','factor'))
 	#df.rmp		<- merge(df.rmp, df.rmp[, list(factor=factor, REALLOC_PT= REALLOC_NT/sum(REALLOC_NT)), by='stat'], by=c('stat','factor'))
@@ -5382,7 +5383,26 @@ if(1)
 		
 	nt.table.h	<- rbind(nt.table.YX, nt.table.h, use.names=TRUE)	
 }
-	
+	nt.table.h	<- dcast.data.table(nt.table.h, Patient+risk+factor~stat, value.var='nt')
+	tmp			<- nt.table.h[, which(YX>X.clu)]
+	if(length(tmp))
+	{
+		cat(paste('\nWARNING UtoNone Found YX>X.clu, n=',length(tmp)))
+		set(nt.table.h, tmp, 'X.clu', nt.table.h[tmp, YX])
+	}
+	tmp			<- nt.table.h[, which(X.clu>X.seq)]	
+	if(length(tmp))
+	{
+		cat(paste('\nWARNING UtoNone Found X.clu>X.seq, n=',length(tmp)))			
+		set(nt.table.h, tmp, 'X.seq', nt.table.h[tmp, X.clu])
+	}
+	tmp			<- nt.table.h[, which(X.seq>X.msm)]	
+	if(length(tmp))
+	{
+		cat(paste('\nWARNING UtoNone Found X.seq>X.msm, n=',length(tmp)))
+		set(nt.table.h, tmp, 'X.msm', nt.table.h[tmp, X.seq])
+	}
+	nt.table.h	<- melt(nt.table.h, measure.vars=c('X.clu','X.msm','X.seq','YX'), value.name='nt', variable.name='stat')
 	list(YX.h=YX.h, nt.table.h=nt.table.h, df.trinfo=df.trinfo)
 }
 ######################################################################################
@@ -5640,7 +5660,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 							setnames(YX.bs, c('Patient','Patient.bs'), c('Patient.b4bs','Patient'))							
 							stopifnot( length(setdiff( YX.bs[, sort(unique(Patient))], subset( nt.table.bs, stat=='YX')[, sort(unique(Patient))] ))==0 )
 							YX.h.bs					<- copy(YX.bs)
-							nt.table.h.bs			<- copy(nt.table.bs)
+							nt.table.h.bs			<- copy(nt.table.bs)							
 							#	bootstrap over reallocations	
 							if(grepl('Test',method.realloc))
 							{
@@ -5650,7 +5670,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 								tmp					<- copy(tmp$df.uinfo)
 #print(tmp)								
 								set(df.uinfo, NULL, 'UPT', tmp[, UPT])		#not NULL -- need this for reallocate.handler.cens	
-							}
+							}					
 							if(grepl('ART',method.realloc))
 							{
 								tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h.bs, nt.table.h.bs, method.risk, YXf=YXf, t.firstsuppressed=t.firstsuppressed, method.realloc=method.realloc, method.sample='pair, stage=sample, y=sample', verbose=FALSE)
@@ -5670,7 +5690,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 							stopifnot( length(setdiff( nt.table.h.bs[, unique(Patient)], nt.table.bs[, unique(Patient)] ))==0 )
 							#	prepare nt.table for bs YX and YX.hypothetical
 							nt.table.bs				<- project.athena.Fisheretal.Wallinga.prep.nttable(nt.table.bs, YX=YX.bs)
-							nt.table.h.bs			<- project.athena.Fisheretal.Wallinga.prep.nttable(nt.table.h.bs, YX=YX.h.bs)
+							nt.table.h.bs			<- project.athena.Fisheretal.Wallinga.prep.nttable(nt.table.h.bs, YX=YX.h.bs)							
 							#	bs censoring probability				
 							ct.bs					<- subset( ct, bs==sample(ct[, unique(bs)], 1) )
 							#	bs censoring adjustment for nt.table
