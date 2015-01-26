@@ -4600,8 +4600,7 @@ project.athena.Fisheretal.Wallinga.prep.nttable<- function(nt.table, YX=NULL, ve
 	stopifnot(length(tmp)==0)
 	set(nt.table, tmp, 'X.seq', nt.table[tmp, X.msm])	
 	tmp			<- nt.table[, which(X.clu>X.seq)]
-	if(length(tmp))	cat(paste('\nWARNING: X.clu>X.seq for entries n=',length(tmp)))
-print(nt.table[tmp,])	
+	if(length(tmp))	cat(paste('\nWARNING: X.clu>X.seq for entries n=',length(tmp)))	
 	stopifnot(length(tmp)==0)
 	set(nt.table, tmp, 'X.clu', nt.table[tmp, X.seq])
 	tmp			<- nt.table[, which(YX>X.clu)]
@@ -5921,7 +5920,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 					}					
 					if(grepl('ART',method.realloc))
 					{
-						tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h.bs, nt.table.h.bs, method.risk, YXf=YXf,  t.firstsuppressed=0, t.delta=t.period,  method.realloc=method.realloc, method.sample='pair, stage=sample, y=sample', verbose=FALSE)
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h.bs, nt.table.h.bs, method.risk, t.firstsuppressed=0, t.delta=t.period,  method.realloc=method.realloc, method.sample='pair, stage=sample, y=sample', verbose=FALSE)
 						YX.h.bs				<- copy(tmp$YX.h)
 						nt.table.h.bs		<- copy(tmp$nt.table.h)									
 					}
