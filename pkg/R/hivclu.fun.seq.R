@@ -27,6 +27,21 @@ seq.write.dna.phylip<- function(seq.DNAbin.mat, file)
 	cat(tmp, file=file)
 }
 ######################################################################################
+seq.singleton2bifurcatingtree<- function(ph.s, dummy.label=NA)
+{	
+	if(!Nnode(ph.s))
+	{
+		stopifnot(!nrow(ph.s$edge))
+		if(is.na(dummy.label))
+			dummy.label		<- paste('DUMMY',ph.s$tip.label, sep='_')
+		ph.s$edge			<- matrix(c(3,1,3,2), nrow=2, ncol=2, byrow=TRUE) 	
+		ph.s$edge.length	<- c(0,0)
+		ph.s$tip.label		<- c(ph.s$tip.label, dummy.label)
+		ph.s$Nnode			<- 1
+	}
+	ph.s
+}
+######################################################################################
 seq.find<- function(seq, pos0= NA, from= c(), verbose=1)
 {
 	if(is.na(pos0)) 	stop("start position of token to be replaced is missing")

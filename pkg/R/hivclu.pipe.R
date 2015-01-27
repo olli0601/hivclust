@@ -490,7 +490,7 @@ hivc.pipeline.BEASTout.get.cluster.trees<- function()
 ######################################################################################
 hivc.pipeline.BEASTout<- function()
 {
-	if(1)
+	if(0)
 	{
 		#indircov			<- paste(DATA,"derived",sep='/')
 		#infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"
@@ -543,9 +543,9 @@ hivc.pipeline.BEASTout<- function()
 				})
 		stop()
 	}
-	if(0)
+	if(1)
 	{
-		indir				<- paste(DATA,"tmp2",sep='/')
+		indir				<- paste(DATA,"tmp85",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
 		outdir				<- indir
 		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"		
@@ -556,7 +556,7 @@ hivc.pipeline.BEASTout<- function()
 		#infilexml.opt		<- "alsu50"
 		infilexml.template	<- "sasky_sdr06fr"
 		#infilexml.opt		<- "alrh160"
-		infilexml.opt		<- "clrh80"
+		infilexml.opt		<- "clrh80_bs0.85_brl1000"
 		#infilexml.template	<- "um192rhU2080"
 		#infilexml.opt		<- "mph4clutx4tip"	
 		
@@ -850,7 +850,7 @@ hivc.pipeline.various<- function()
 		cmd			<- ''
 		cmd			<- paste(cmd,hivc.cmd.get.firstseq(indir, infile, signat.in, signat.out, outdir=outdir),sep='')
 	}
-	if(1)	#compute branch length distances between tips in phylogenetic trees
+	if(0)	#compute branch length distances between tips in phylogenetic trees
 	{
 		indir		<- paste(DATA,"ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout",sep='/')
 		infiles		<- list.files(indir)
@@ -922,7 +922,7 @@ hivc.pipeline.various<- function()
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
 	}
-	if(0)
+	if(1)
 	{
 		project.Gates()
 		quit("no")

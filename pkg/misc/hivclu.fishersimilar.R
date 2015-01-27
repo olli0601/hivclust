@@ -12852,6 +12852,32 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
 	#	WTN 3pa1 1.35 T7 BRL INF
 	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1.35C1V100bInfT7'
+	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
+	method.RISK		<- "m2Cwmx.wtn"
+	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	#	WTN 3pa1 1.35 T7 BRL INF
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1.35C2V100bInfT7'
+	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'
+	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
+	method.RISK		<- "m2Cwmx.wtn"
+	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)	
+	#	WTN 3pa1 1.35 T7 BRL INF
+	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3pa1H1.35C4V100bInfT7'
 	method.RISK		<- 'm2Cwmx.wtn.tp'
 	method.WEIGHT	<- ''
