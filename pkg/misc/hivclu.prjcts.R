@@ -551,7 +551,7 @@ project.Gates.test.runxml<- function()
 			infile		<- substr(infile, 1, nchar(infile)-4) 		
 			cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
 			cat(cmd)	
-			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=hpc.ncpu, hpc.walltime=24, hpc.mem="1800mb")		
+			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=hpc.ncpu, hpc.walltime=24, hpc.mem="1800mb")		
 			outdir		<- indir
 			outfile		<- paste("bpg.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
 			hivc.cmd.hpccaller(outdir, outfile, cmd)		
@@ -722,7 +722,7 @@ project.Gates.test.ExaMLrun<- function()
 			save(seq, file=file)
 			#	run ExaML
 			cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
-			cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+			cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= 'pqeelab', hpc.mem="450mb", hpc.nproc=1)
 			hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
 			Sys.sleep(1)						
 		}
@@ -739,7 +739,7 @@ project.Gates.test.ExaMLrun<- function()
 			save(seq, file=file)
 			#	run ExaML
 			cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
-			cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+			cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= 'pqeelab', hpc.mem="450mb", hpc.nproc=1)
 			hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
 			Sys.sleep(1)				
 		}
@@ -756,7 +756,7 @@ project.Gates.test.ExaMLrun<- function()
 			save(seq, file=file)
 			#	run ExaML
 			cmd				<- hivc.cmd.examl.bootstrap.on.one.machine(indir, infile.seq, infile.seq.sig, infile.seq.sig, bs.from=0, bs.to=0, verbose=1)
-			cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+			cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=21, hpc.q= 'pqeelab', hpc.mem="450mb", hpc.nproc=1)
 			hivc.cmd.hpccaller(outdir, paste("exa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.'), cmd)
 			Sys.sleep(1)						
 		}
