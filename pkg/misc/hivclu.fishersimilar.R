@@ -5505,27 +5505,25 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	tmp				<- runs.av.info[, which(grepl('ART', HYPO))]
 	set(runs.av.info, tmp, 'ART', runs.av.info[tmp, regmatches(HYPO,regexpr('ImmediateART|ARTat500', HYPO))] )
 	
-	tmp				<- data.table(	HYPO	= c('HypoARTat500','HypoImmediateART','HypoRPrEP33', 'HypoTestC18m', 'HypoTestC6m',
-												'HypoRPrEP33ImmediateART','HypoTestC18mImmediateART', 'HypoTestC18mRPrEP100'), 
-									legend	= c('universal ART, CD4<500', 'universal ART, immediate', 'oral PrEP', 'universal Testing, every 18 mo', 'universal Testing, every 6 mo',
-												'oral PrEP +\nuniversal ART, immediate','universal Testing, every 18 mo +\nuniversal ART, immediate', 'universal Testing, every 18 mo +\noral PrEP'	),
-								 	levels	= factor(c(0, 0, 0, 1, 1, 
-											   	0, 1, 1)))
+	tmp				<- data.table(	HYPO	= c('HypoARTat500','HypoImmediateART','HypoRPrEP33', 'HypoTestC18m', 'HypoTestA6m',
+												'HypoRPrEP33ARTat500','HypoRPrEP33ImmediateART','HypoTestC18mRPrEP100ImmediateART'), 
+									legend	= c('universal ART, CD4<500', 'universal ART, immediate', 'oral PrEP', 'universal Conventional Testing, every 18 mo', 'universal Acute Testing, every 6 mo',
+												'oral PrEP +\nuniversal ART, CD4<500','oral PrEP +\nuniversal ART, immediate','universal oral PrEP +\nuniversal Conventional Testing, every 18 mo +\nuniversal ART, immediate'),
+								 	levels	= factor(c(0, 0, 0, 1, 2, 
+											   			0, 0, 1)))
 	runs.av.plot	<- merge(runs.av.info, tmp, by='HYPO')
 	runs.av.plot[, DUMMY:= -Q50]
 	setkey(runs.av.plot, DUMMY)
 	set(runs.av.plot, NULL, 'legend', runs.av.plot[, factor(legend, levels=runs.av.plot$legend, labels=runs.av.plot$legend)])
 	ggplot( runs.av.plot, aes(x=legend, fill=levels) ) + 			
-			scale_fill_manual(values=c("#A6CEE3","#FDBF6F"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			scale_fill_manual(values=c("#A6CEE3","#FDBF6F","#E31A1C"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
 			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=4) +
 			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
-			labs(x='', y='Proportion of MSM infections averted\n(%)') + 
+			labs(x='', y='Proportion of MSM infections\nthat could have been averted\n(%)') + 
 			coord_flip() +			
 			theme_bw() + theme(legend.position='bottom', legend.title=element_text(size=12), legend.text=element_text(size=12), axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) 
-	
-	
 	file			<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.HypoAverted.pdf", sep='')
-	ggsave(file=file, w=8, h=3)
+	ggsave(file=file, w=8, h=6)
 }
 ######################################################################################
 project.athena.Fisheretal.Hypo.run.median<- function(YXe, method.risk, predict.t2inf=NULL, t2inf.args=NULL, df.all=NULL, method.realloc='ImmediateART',  t.firstsuppressed=0.3, use.YXf= 1, bs.n=1e3, t.period=0.125, save.file=NA, resume=FALSE)
@@ -5757,7 +5755,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 {
 	#	get prop in ART stages after first suppression	
 	#	method.realloc<- 'RPrEP100+TestA1y'
-	stopifnot(grepl('Test|ImmediateART|ARTat500|RPrEP|RPrEP+ImmediateART',method.realloc))	
+	stopifnot(grepl('Test|ImmediateART|ARTat500|RPrEP|RPrEP|Prest',method.realloc))	
 	options(warn=0)	
 	if(resume & !is.na(save.file))
 	{
@@ -5794,6 +5792,14 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 					df.trinfo				<<- NULL 
 					df.uinfo				<<- NULL
 					if(grepl('Test',method.realloc))
+					{			
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc( YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=prop, y=sample, t=sample')			
+						YX.h				<- copy(tmp$YX.h)
+						nt.table.h			<- copy(tmp$nt.table.h)
+						tmp					<- tmp$df.uinfo		#not NULL -- need this for reallocate.handler.cens
+						df.uinfo			<<- copy(tmp)
+					}
+					if(grepl('Prest',method.realloc))
 					{			
 						tmp					<- project.athena.Fisheretal.Hypo.ReallocUToDiag.getYXetc( YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=prop, y=sample, t=sample')			
 						YX.h				<- copy(tmp$YX.h)
@@ -17432,6 +17438,7 @@ hivc.prog.props_univariate<- function()
 			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA6m.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 			tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA6m', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
 			
+			#	test + treat
 			#	hypothetical: TestC18m+RPrEP100
 			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
@@ -17463,6 +17470,7 @@ hivc.prog.props_univariate<- function()
 			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA6mRPrEP100.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 			tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA6m+RPrEP100', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
 			
+			#	test + treat
 			#	hypothetical: TestC18m+ImmediateART
 			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
@@ -17494,26 +17502,29 @@ hivc.prog.props_univariate<- function()
 			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA6mImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 			tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA6m+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
 			
+			#	RPrEP33 + treat
 			#	hypothetical: RPrEP33+ImmediateART
 			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
 			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoRPrEP33ImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 			tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='RPrEP33+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-			#	hypothetical: RPrEP50+ImmediateART
-			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoRPrEP50ImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-			tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='RPrEP50+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
 			#	hypothetical: RPrEP33+ARTat500
 			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
 			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoRPrEP33ARTat500.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 			tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='RPrEP33+ARTat500', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
+			
+			#	RPrEP50 + treat
 			#	hypothetical: RPrEP50+ARTat500
 			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
 			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoRPrEP50ARTat500.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 			tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='RPrEP50+ARTat500', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
+			#	hypothetical: RPrEP50+ImmediateART
+			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
+			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
+			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoRPrEP50ImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
+			tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='RPrEP50+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
 			
 			#	hypothetical: TestC18m+RPrEP100+ARTat500
 			tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)

@@ -1711,10 +1711,10 @@ hivc.beast.get.taxonsets4tips	<- function(bxml, df)
 ######################################################################################
 # 	extract starting tree from 'ph' by tips in 'df'. Only keeps tree topology and resets branch lengths so that the maximum root distance is 'beast.rootHeight'
 #	beast.rootHeight= 35; beast.usingDates= "false"; beast.newickid= "startingTree"
-hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= 35, beast.usingDates="true", beast.newickid= "startingTree", beast.brlunits="years", verbose=1)
+hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= NA, beast.usingDates="true", beast.newickid= "startingTree", beast.brlunits="years", verbose=1)
 {
 	require(adephylo)
-	if(verbose) cat(paste("\ncreate startingTree with root height=",beast.rootHeight))
+	if(verbose) cat(paste("\ncreate startingTree"))
 	tmp					<- setdiff( ph$tip.label, df[,FASTASampleCode] )
 	tmp					<- match( tmp, ph$tip.label)
 	ph.start			<- drop.tip(ph, tmp)		
@@ -1723,8 +1723,12 @@ hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= 35, beast
 	ph.start$tip.label	<- df[ph.start$tip.label,][,BEASTlabel]
 	if(verbose) cat(paste("\nselected tips for startingTree, n=",Ntip(ph.start)))
 	#	adjust rootHeight to 'beast.rootHeight'
-	tmp					<- beast.rootHeight / max(distRoot(ph.start))
-	ph.start$edge.length<- ph.start$edge.length*tmp
+	if(!is.na(beast.rootHeight))
+	{
+		if(verbose) cat(paste("\nSet root height of starting tree=",beast.rootHeight))
+		tmp					<- beast.rootHeight / max(distRoot(ph.start))
+		ph.start$edge.length<- ph.start$edge.length*tmp		
+	}
 	#	compute adjusted branch lengths for each tip: midpoint within NegT and AnyPos_T1
 	if(0)
 	{

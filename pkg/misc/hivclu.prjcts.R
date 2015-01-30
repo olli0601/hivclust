@@ -541,17 +541,17 @@ project.Gates.test.runxml<- function()
 	#DATA		<<- '/Users/Oliver/duke/2014_Gates'		
 	if(1)
 	{			
-		indir		<- paste(DATA,'methods_comparison_pipeline/150127',sep='/')
+		indir		<- paste(DATA,'methods_comparison_pipeline/150130',sep='/')
 		#search for XML files in indir
 		infiles		<- list.files(indir, pattern=paste(".xml$",sep=''))
 		insignat	<- ''	
-		hpc.ncpu	<- 4		
+		hpc.ncpu	<- 8		
 		for(infile in infiles)
 		{
 			infile		<- substr(infile, 1, nchar(infile)-4) 		
 			cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
 			cat(cmd)	
-			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=hpc.ncpu, hpc.walltime=24, hpc.mem="1800mb")		
+			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=hpc.ncpu, hpc.walltime=71, hpc.mem="3600mb")		
 			outdir		<- indir
 			outfile		<- paste("bpg.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
 			hivc.cmd.hpccaller(outdir, outfile, cmd)		
@@ -682,7 +682,7 @@ project.Gates.test.ExaMLrun<- function()
 	tree.id.label.idx.ctime	<- 4 
 	DATA		<<- "/work/or105/Gates_2014"
 	#DATA		<<- "/Users/Oliver/duke/2014_Gates"
-	indir		<- paste(DATA,'methods_comparison_pipeline/150127',sep='/')	  
+	indir		<- paste(DATA,'methods_comparison_pipeline/150130',sep='/')	  
 	outdir		<- indir
 	infiles		<- list.files(indir, '.*INTERNAL.R$', full.names=FALSE)
 	#
