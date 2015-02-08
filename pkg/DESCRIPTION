@@ -11,11 +11,3 @@ Depends:
 Description: tools for HIV sequence analysis
 License: GPL (>=2)
 LazyLoad: yes
-Collate:
-    'hivclu.cmd.R'
-    'hivclu.fun.beast.R'
-    'hivclu.fun.clu.R'
-    'hivclu.fun.database.athena.R'
-    'hivclu.fun.seq.R'
-    'hivclu.pipe.R'
-    'hivclu.prog.R'

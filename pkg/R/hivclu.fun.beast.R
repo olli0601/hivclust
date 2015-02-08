@@ -1,6 +1,7 @@
 
 ######################################################################################
 #	get BEAST taxon labels:		cluster	FASTASampleCode	NegT	AnyPosT	SeqT  -> turn date into numerical format
+#' @export
 hivc.beast.addBEASTLabel<- function( df, df.resetTipDate=NA )
 {
 	if(is.na(df.resetTipDate))
@@ -26,6 +27,7 @@ hivc.beast.addBEASTLabel<- function( df, df.resetTipDate=NA )
 }
 ######################################################################################
 #	pool clusters into sets containing roughly 'pool.ntip' sequences
+#' @export
 hivc.beast.poolclusters<- function(cluphy.df, pool.ntip= 130, pool.includealwaysbeforeyear=NA, verbose=1)
 {	
 	df			<- cluphy.df[, list(clu.ntip=clu.ntip[1], clu.AnyPos_T1=clu.AnyPos_T1[1]), by="cluster"]	
@@ -51,10 +53,65 @@ hivc.beast.poolclusters<- function(cluphy.df, pool.ntip= 130, pool.includealways
 	if(verbose) cat(paste("\nnumber of pools is n=",pool.n))		
 	if(verbose) cat(paste("\nnumber of seq in pools is n=",paste( sapply(pool.df, nrow), sep='', collapse=', ' )))
 	list(pool.df=pool.df, pool.ntip=pool.ntip)
+}
+######################################################################################
+#	add taxa and alignment in bxml from BEASTlabels in df and alignment in seq.PROT.RT
+#	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; beast.alignment.dataType= "nucleotide"; xml.resetTipDate2LastDiag=1
+#' @export
+hivc.beast.add.taxa<- function(bxml, df, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", verbose=1)
+{			
+	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	#	check if any taxa to be added
+	bxml.beast.existing.taxa.id		<- unlist( xpathApply(bxml.beast, "taxa/taxon", xmlGetAttr, "id" ) )
+	tmp								<- subset( df, !BEASTlabel%in%bxml.beast.existing.taxa.id )
+	#	add taxa if needed
+	if(nrow(tmp))
+	{		
+		tmp.label	<- tmp[,BEASTlabel]	
+		if(verbose)	cat(paste("\nsetting tip date to time at pos x in label, x=", beast.label.datepos))
+		tmp.date	<- sapply( strsplit(tmp.label, beast.label.sep, fixed=1), function(x) x[beast.label.datepos] )		
+		dummy		<- newXMLCommentNode(text="The list of taxa to be analysed (can also include dates/ages).", parent=bxml.beast, doc=bxml, addFinalizer=T)
+		dummy		<- newXMLCommentNode(text=paste("ntax=",nrow(tmp),sep=''), parent=bxml.beast, doc=bxml, addFinalizer=T)	
+		seqtaxa		<- newXMLNode("taxa", attrs= list(id="taxa"), parent=bxml.beast, doc=bxml, addFinalizer=T)
+		dummy		<- lapply(seq_along(tmp.label), function(i)
+				{
+					taxon	<- newXMLNode("taxon", attrs= list(id=tmp.label[i]), parent=seqtaxa, doc=bxml, addFinalizer=T )
+					dummy	<- newXMLNode("date", attrs= list(value=tmp.date[i], direction=beast.date.direction, units=beast.date.units), parent=taxon, doc=bxml, addFinalizer=T )
+					taxon
+				})	
+		if(verbose)	cat(paste("\nadded new seq taxa, n=", xmlSize(seqtaxa)))		
+	}
+	bxml
 }	
 ######################################################################################
 #	add taxa and alignment in bxml from BEASTlabels in df and alignment in seq.PROT.RT
 #	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; beast.alignment.dataType= "nucleotide"; xml.resetTipDate2LastDiag=1
+#' @export
+hivc.beast.add.alignment<- function(bxml, seq.PROT.RT, beast.alignment.id="alignment", beast.alignment.dataType= "nucleotide", verbose=1)
+{			
+	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
+	df			<- data.table(FASTASampleCode=rownames(seq.PROT.RT), BEASTlabel=rownames(seq.PROT.RT))	
+	#	add alignment	
+	dummy		<- newXMLCommentNode(text="The sequence alignment (each sequence refers to a taxon above).", parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLCommentNode(text=paste("ntax=",nrow(df)," nchar=",ncol(seq.PROT.RT),sep=''), parent=bxml.beast, doc=bxml, addFinalizer=T)	
+	seqalign	<- newXMLNode("alignment", attrs= list(id=beast.alignment.id, dataType=beast.alignment.dataType), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- lapply( seq_len(nrow(df)), function(i)
+			{
+				seq		<- newXMLNode("sequence", parent=seqalign, doc=bxml, addFinalizer=T)
+				dummy	<- newXMLNode("taxon", attrs= list(idref= df[i, BEASTlabel]), parent=seq, doc=bxml, addFinalizer=T)
+				tmp		<- which( rownames(seq.PROT.RT)==df[i, FASTASampleCode] )
+				if(length(tmp)!=1)	stop("unexpected row in seq.PROT.RT selected")
+				tmp		<- paste(as.character(seq.PROT.RT[tmp,])[1,],collapse='',sep='')						
+				dummy	<- newXMLTextNode(text=tmp, parent=seq, doc=bxml,addFinalizer=T)
+				seq
+			})	
+	if(verbose)	cat(paste("\nadded new alignments, n=", xmlSize(seqalign)))	
+	bxml
+}	
+######################################################################################
+#	add taxa and alignment in bxml from BEASTlabels in df and alignment in seq.PROT.RT
+#	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; beast.alignment.dataType= "nucleotide"; xml.resetTipDate2LastDiag=1
+#' @export
 hivc.beast.add.seq<- function(bxml, seq.PROT.RT, df=NULL, beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.date.units= "years", beast.alignment.id="alignment", beast.alignment.dataType= "nucleotide", verbose=1)
 {			
 	bxml.beast	<- getNodeSet(bxml, "//beast")[[1]]
@@ -212,6 +269,7 @@ hivc.treeannotator.read<- function(file, add.to.tiplabel=NA, rate.multiplier=NA,
 }
 ######################################################################################
 #	write nexus file for all sequences specified in df. assumes df has BEASTlabel. assumes seq.DNAbin.matrix and ph contain FASTASampleCode in df.
+#' @export
 hivc.beast.writeNexus4Beauti<- function( seq.DNAbin.matrix, df, ph=NULL, file=NULL )
 {
 	# 	select sequences and relabel					
@@ -233,6 +291,7 @@ hivc.beast.writeNexus4Beauti<- function( seq.DNAbin.matrix, df, ph=NULL, file=NU
 }
 ######################################################################################
 #	read tip stem samples after burn in from log file and return upper left points of a histogram of the Monte Carlo sample
+#' @export
 hivc.beast.read.log2tstem<- function(file.log, file.xml, beastlabel.idx.samplecode=6, burn.in= 5e6, breaks.n= 30, verbose=0)
 {
 	require(data.table)
@@ -1090,6 +1149,7 @@ hivc.beast2.add.tiplogstem<- function(bxml, beast2.spec, verbose=0)
 	bxml.beast
 }
 ######################################################################################
+#' @export
 hivc.beast.add.taxonsets4clusters<- function(bxml, df, xml.monophyly4clusters=1, verbose=1)
 {
 	bxml.treeModel.id			<- unlist(xpathApply(bxml, "//treeModel[@id]", xmlGetAttr, "id"))
@@ -1133,6 +1193,7 @@ hivc.beast.add.taxonsets4clusters<- function(bxml, df, xml.monophyly4clusters=1,
 
 ######################################################################################
 #	get a list of monopylyStatistics. assumes each taxonset in 'btaxonsets' is monophyletic
+#' @export
 hivc.beast.get.monophylyStatistic<- function(bxml, btaxonsets, treeModel.id) 
 {		
 	btaxonset.id	<- sapply(btaxonsets, function(x)	xmlGetAttr(x,"id")	)
@@ -1148,6 +1209,7 @@ hivc.beast.get.monophylyStatistic<- function(bxml, btaxonsets, treeModel.id)
 }	
 ######################################################################################
 #	add a list of monopylyStatistics to the BEAST prior. assumes all monophylyStatistics are referenced in the list 'monophylyStatistics'
+#' @export
 hivc.beast.add.monophylylkl<- function(bxml, monophylyStatistics)
 {
 	bxml.prior				<- getNodeSet(bxml, "//*[@id='prior']")
@@ -1170,6 +1232,7 @@ hivc.beast.add.monophylylkl<- function(bxml, monophylyStatistics)
 }
 ######################################################################################
 #	For each taxonset, get a list of tmrcaStatistics. Assumes all tmrcaStatistics share a treeModel.id and the same includeStem attribute
+#' @export
 hivc.beast.get.tmrcaStatistic<- function(bxml, btaxonsets, treeModel.id, includeStem="false") 
 {		
 	btaxonset.id	<- sapply(btaxonsets, function(x)	xmlGetAttr(x,"id")	)
@@ -1185,6 +1248,7 @@ hivc.beast.get.tmrcaStatistic<- function(bxml, btaxonsets, treeModel.id, include
 	ans
 }	
 ######################################################################################
+#' @export
 hivc.beast.get.sequences<- function(bxml, verbose=1)
 {			
 	bxml.ali		<- getNodeSet(bxml, "//alignment[@id]")
@@ -1202,6 +1266,7 @@ hivc.beast.get.sequences<- function(bxml, verbose=1)
 }
 ######################################################################################
 #	For each tip: construct a prior for the corresponding tmrcaStatistics
+#' @export
 hivc.beast.get.tipPrior<- function(bxml, df, btmrcaStatistics.tips, xml.prior4stem="uniform", beast.label.negpos=2, beast.label.diagpos=3, beast.label.datepos=4, verbose=1)
 {
 	if(xml.prior4stem!="uniform")	stop("unexpected xml.tipprior")
@@ -1227,6 +1292,7 @@ hivc.beast.get.tipPrior<- function(bxml, df, btmrcaStatistics.tips, xml.prior4st
 ######################################################################################
 #	For each tip: add a taxonset, tmrcaStatistic, and potentially a reference to fileLog to 'bxml'
 #	The aim of this as standalone is to log the length of tip stems. 
+#' @export
 hivc.beast.add.taxonsets4tips<- function(bxml, df, log=1, verbose=1)
 {
 	bxml.treeModel.id			<- unlist(xpathApply(bxml, "//treeModel[@id]", xmlGetAttr, "id"))
@@ -1258,6 +1324,7 @@ hivc.beast.add.taxonsets4tips<- function(bxml, df, log=1, verbose=1)
 }
 ######################################################################################
 #	For each tip: add a taxonset, tmrcaStatistic, prior for the tmrcaStatistics and potentially a reference to fileLog to 'bxml'
+#' @export
 hivc.beast.add.prior4tips<- function(bxml, df, xml.prior4stem="uniform", beast.label.datepos=4, verbose=1)
 {
 	#find list of tmrcaStatistics with id containing 'tip'
@@ -1579,6 +1646,7 @@ hivc.beast2.get.xml<- function(	bxml.template, seq.PROT.RT, df, beast2.spec, ph=
 ######################################################################################
 #	create xml file from btemplate and seq.PROT.RT, using seq in df 
 # 	beast.label.datepos= 4; beast.label.sep= '_'; beast.date.direction= "forwards"; beast.date.units= "years"; verbose=1; xml.prior4tipstem="uniform"; xml.resetTipDate2LastDiag=1
+#' @export
 hivc.beast.get.xml<- function(	btemplate, seq.PROT.RT, df, file, ph=NULL, xml.monophyly4clusters=0, xml.taxon4tipstem=0, xml.prior4tipstem=NA, 
 		beast.label.datepos= 4, beast.label.sep= '_', beast.date.direction= "forwards", beast.usingDates="true", beast.date.units= "years", beast.mcmc.chainLength=50000000, verbose=1)
 {
@@ -1657,17 +1725,31 @@ hivc.beast.get.xml<- function(	btemplate, seq.PROT.RT, df, file, ph=NULL, xml.mo
 }	
 ######################################################################################
 #	adjust mcmc BEAST XML element
-hivc.beast.adjust.mcmc<- function(bxml, beast.mcmc.chainLength=50000000, verbose=1)
+#' @export
+hivc.beast.adjust.mcmc<- function(bxml, beast.mcmc.chainLength=NA, beast.mcmc.logEvery=NA, verbose=1)
 {
-	tmp			<- getNodeSet(bxml, "//*[@id='mcmc']")
-	if(length(tmp)!=1)	stop("unexpected number of *[@id='mcmc']")
-	tmp			<- tmp[[1]]
-	if(verbose)	cat(paste("\nSet MCMC chainLength to",beast.mcmc.chainLength))
-	xmlAttrs(tmp)["chainLength"]	<-	sprintf("%d",beast.mcmc.chainLength)
+	if(!is.na(beast.mcmc.chainLength))
+	{
+		tmp			<- getNodeSet(bxml, "//*[@id='mcmc']")
+		if(length(tmp)!=1)	stop("unexpected number of *[@id='mcmc']")
+		tmp			<- tmp[[1]]
+		if(verbose)	cat(paste("\nSet MCMC chainLength to",beast.mcmc.chainLength))
+		xmlAttrs(tmp)["chainLength"]	<-	sprintf("%d",beast.mcmc.chainLength)		
+	}
+	if(!is.na(beast.mcmc.logEvery))
+	{
+		bxml.logs	<- getNodeSet(bxml, "//*[@logEvery]")		
+		for(i in seq_along(bxml.logs))
+		{
+			if(verbose)	cat(paste("\nSet logEvery to",beast.mcmc.logEvery))
+			xmlAttrs(bxml.logs[[i]])["logEvery"]	<- sprintf("%d",beast.mcmc.logEvery)
+		}			
+	}
 	bxml
 }
 ######################################################################################
 #	if rootheight prior uniform, sets lower bound to earliest sampling time in data set
+#' @export
 hivc.beast.adjust.rootheightprior<- function(bxml, df, verbose=1)
 {
 	bxml.prior	<- getNodeSet(bxml, "//uniformPrior[descendant::parameter[@idref='treeModel.rootHeight']]")
@@ -1685,6 +1767,7 @@ hivc.beast.adjust.rootheightprior<- function(bxml, df, verbose=1)
 }
 ######################################################################################
 #	For each cluster, create a taxonset. Assumes df has BEASTlabel and cluster
+#' @export
 hivc.beast.get.taxonsets4clusters	<- function(bxml, df)
 {	
 	ans	<- lapply( unique( df[,cluster] ), function(clu)
@@ -1698,6 +1781,7 @@ hivc.beast.get.taxonsets4clusters	<- function(bxml, df)
 }
 ######################################################################################
 #	For each tip, create a taxonset. Assumes df has BEASTlabel
+#' @export
 hivc.beast.get.taxonsets4tips	<- function(bxml, df)
 {	
 	ans	<- lapply( seq_len(nrow(df)), function(i)
@@ -1709,38 +1793,362 @@ hivc.beast.get.taxonsets4tips	<- function(bxml, df)
 	ans		
 }
 ######################################################################################
+#' @export
+hivc.beast.add.variableDemographic<- function(bxml, demographic.id, treeModel.ids, coalescent.id, type='stepwise', useMidpoints='true', 
+												popSize.id='demographic.popSize', popSize.value='0.091', 
+												demographic.indicators.id='demographic.indicators', demographic.indicators.value='0.0',
+												demographic.popMeanDist.id='demographic.populationMeanDist', demographic.popMean.id='demographic.populationMean', demographic.popMean.value='1.0', 
+												sumStatistic.id='demographic.populationSizeChanges', sumStatistic.elementwise='true', 
+												verbose=1)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	if(verbose)
+		cat(paste('\nadd variableDemographic',demographic.id))
+	bxml.dem	<- newXMLNode("variableDemographic", attrs= list(id=demographic.id, type=type, useMidpoints=useMidpoints), parent= bxml.beast, doc=bxml, addFinalizer=T)
+	tmp			<- newXMLNode("populationSizes", parent=bxml.dem, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLNode("parameter", attrs= list(id=popSize.id, value=popSize.value ), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp			<- newXMLNode("indicators", parent=bxml.dem, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLNode("parameter", attrs= list(id=demographic.indicators.id, value=demographic.indicators.value ), parent=tmp, doc=bxml, addFinalizer=T)
+	bxml.trees	<- newXMLNode("trees", parent=bxml.dem, doc=bxml, addFinalizer=T)
+	for(x in treeModel.ids)
+	{
+		if(verbose)
+			cat(paste('\nadd treeModel',x))
+		tmp		<- newXMLNode("ptree", attrs= list(ploidy="2.0"), parent=bxml.trees, doc=bxml, addFinalizer=T)
+		dummy	<- newXMLNode("treeModel", attrs= list(idref=x ), parent=tmp, doc=bxml, addFinalizer=T)	
+	}
+	#	coalescent
+	bxml.coal	<- newXMLNode("coalescentLikelihood", attrs= list(id=coalescent.id), parent= bxml.beast, doc=bxml, addFinalizer=T)
+	tmp			<- newXMLNode("model", parent=bxml.coal, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLNode("variableDemographic", attrs= list(idref=demographic.id), parent=tmp, doc=bxml, addFinalizer=T)
+	#	sum statistic
+	tmp			<- newXMLNode("sumStatistic", attrs= list(id=sumStatistic.id, elementwise=sumStatistic.elementwise), parent= bxml.beast, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLNode("parameter", attrs= list(idref=demographic.indicators.id), parent=tmp, doc=bxml, addFinalizer=T)
+	#	demographic.populationMeanDist
+	dummy		<- hivc.beast.add.exponentialDistributionModel(bxml, bxml.beast, demographic.popMeanDist.id, demographic.popMean.id, demographic.popMean.value)
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.set.fileNameTrunk<- function(bxml, fileNameTrunk)
+{
+	bxml.onodes	<- getNodeSet(bxml, "//*[@fileName]")
+	tmp			<- sapply(bxml.onodes, function(x) xmlGetAttr(x,"fileName"))
+	tmp			<- gsub("(time).","time",tmp,fixed=1)
+	tmp			<- gsub("(subst).","subst",tmp,fixed=1)	
+	tmp			<- sapply(strsplit(tmp,'.',fixed=1), function(x)	paste(fileNameTrunk, '.', tail(x,1), sep=''))
+	dummy		<- sapply(seq_along(bxml.onodes), function(i){		xmlAttrs(bxml.onodes[[i]])["fileName"]<- tmp[i]		})	
+}
+######################################################################################
+#' @export
+hivc.beast.add.VDAnalysis<- function(bxml, VDAnalysis.id, logFileName, treeFileNames, csvfileName, populationModelType='stepwise', populationFirstColumn='demographic.popSize1', indicatorsFirstColumn='demographic.indicators1', burnIn="0.1", useMidpoints="true", verbose=1)
+{
+	if(verbose)
+		cat(paste('\nadd VDAnalysis',VDAnalysis.id))
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	bxml.vda		<- newXMLNode("VDAnalysis", attrs= list(id=VDAnalysis.id, burnIn=burnIn, useMidpoints=useMidpoints), parent=bxml.beast, doc=bxml, addFinalizer=T)	
+	tmp				<- newXMLNode("logFileName", parent=bxml.vda, doc=bxml, addFinalizer=T)	
+	dummy			<- newXMLTextNode(text=logFileName, parent=tmp, doc=bxml,addFinalizer=T)
+	tmp				<- newXMLNode("treeFileNames", parent=bxml.vda, doc=bxml, addFinalizer=T)
+	for(x in treeFileNames)
+	{
+		tmp2		<- newXMLNode("treeOfLoci", parent=tmp, doc=bxml, addFinalizer=T)
+		dummy		<- newXMLTextNode(text=x, parent=tmp2, doc=bxml, addFinalizer=T)
+	}
+	tmp				<- newXMLNode("populationModelType", parent=bxml.vda, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLTextNode(text=populationModelType, parent=tmp, doc=bxml, addFinalizer=T)	
+	tmp				<- newXMLNode("populationFirstColumn", parent=bxml.vda, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLTextNode(text=populationFirstColumn, parent=tmp, doc=bxml, addFinalizer=T)	
+	tmp				<- newXMLNode("indicatorsFirstColumn", parent=bxml.vda, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLTextNode(text=indicatorsFirstColumn, parent=tmp, doc=bxml, addFinalizer=T)
+	#	CSVexport
+	bxml.csv		<- newXMLNode("CSVexport", attrs= list(fileName=csvfileName, separator=","), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("columns", parent=bxml.csv, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("VDAnalysis", attrs= list(idref=VDAnalysis.id), parent=tmp, doc=bxml, addFinalizer=T)
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.logParameter<- function(bxml, logParameter.ids, verbose=1)
+{
+	tmp				<- getNodeSet(bxml, "//*[@id='fileLog']")[[1]]
+	if(verbose)
+		cat(paste('\nAdd log parameters, n=',length(logParameter.ids)))
+	for(x in logParameter.ids)
+		dummy		<- newXMLNode("parameter", attrs= list(idref=x), parent=tmp, doc=bxml, addFinalizer=T)
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.logTree<- function(bxml, logTree.id, treeModel.id, discretizedBranchRates.id, posterior.id, logEvery='1000', fileName='trees.trees', nexusFormat='true', sortTranslationTable='true', verbose=1)
+{
+	if(verbose)
+		cat(paste('\nadd logTree',logTree.id))
+	bxml.mcmc		<- getNodeSet(bxml, "//mcmc")[[1]]
+	bxml.lt			<- newXMLNode("logTree", attrs= list(id=logTree.id, logEvery=logEvery, fileName=fileName, nexusFormat=nexusFormat, sortTranslationTable=sortTranslationTable), parent=bxml.mcmc, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("treeModel", attrs= list(idref=treeModel.id), parent=bxml.lt, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("trait", attrs= list(name='rate', tag='rate'), parent=bxml.lt, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("discretizedBranchRates", attrs= list(idref=discretizedBranchRates.id), parent=tmp, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("posterior", attrs= list(idref=posterior.id), parent=bxml.lt, doc=bxml, addFinalizer=T)	
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.uniformIntegerOperator<- function(bxml, parameter.id, weight)
+{
+	bxml.beast		<- getNodeSet(bxml, "//operators")[[1]]
+	tmp				<- newXMLNode("uniformIntegerOperator", attrs= list(weight=weight), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(idref=parameter.id), parent=tmp, doc=bxml, addFinalizer=T)
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.swapOperator<- function(bxml, parameter.id, size, weight, autoOptimize)
+{
+	bxml.beast		<- getNodeSet(bxml, "//operators")[[1]]
+	tmp				<- newXMLNode("swapOperator", attrs= list(size=size, weight=weight, autoOptimize=autoOptimize), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(idref=parameter.id), parent=tmp, doc=bxml, addFinalizer=T)
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.likelihood<- function(bxml, id, likelihood.term.ids)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	tmp				<- newXMLNode("likelihood", attrs= list(id=id), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	for(x in likelihood.term.ids)
+		dummy		<- newXMLNode("treeLikelihood", attrs= list(idref=x), parent=tmp, doc=bxml, addFinalizer=T)	
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.rateStatistics<- function(bxml, prefix.id, treeModel.id, discretizedBranchRates.id)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	tmp				<- newXMLNode("rateStatistic", attrs= list(id=paste(prefix.id,'_meanRate',sep=''), name=paste(prefix.id,'_meanRate',sep=''), mode='mean', internal='true', external='true'), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("treeModel", attrs= list(idref=treeModel.id), parent=tmp, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("discretizedBranchRates", attrs= list(idref=discretizedBranchRates.id), parent=tmp, doc=bxml, addFinalizer=T)	
+	tmp				<- newXMLNode("rateStatistic", attrs= list(id=paste(prefix.id,'_coefficientOfVariation',sep=''), name=paste(prefix.id,'_coefficientOfVariation',sep=''), mode='coefficientOfVariation', internal='true', external='true'), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("treeModel", attrs= list(idref=treeModel.id), parent=tmp, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("discretizedBranchRates", attrs= list(idref=discretizedBranchRates.id), parent=tmp, doc=bxml, addFinalizer=T)	
+	tmp				<- newXMLNode("rateStatistic", attrs= list(id=paste(prefix.id,'_covariance',sep=''), name=paste(prefix.id,'_covariance',sep=''), mode='variance', internal='true', external='true' ), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("treeModel", attrs= list(idref=treeModel.id), parent=tmp, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("discretizedBranchRates", attrs= list(idref=discretizedBranchRates.id), parent=tmp, doc=bxml, addFinalizer=T)	
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.siteModel<- function(bxml, siteModel.id, gtrModel.id, 
+										relativeRate.id=NA, relativeRate.idref=NA, relativeRate.value=NA, relativeRate.lower=NA,
+										gamma.id=NA, gamma.idref=NA, gamma.value=NA, gamma.lower=NA,
+										gammaCategories=NA, verbose=1)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	if(verbose)
+		cat(paste('\nadd siteModel',siteModel.id))		
+	bxml.site		<- newXMLNode("siteModel", attrs= list(id=siteModel.id), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("substitutionModel", parent=bxml.site, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("gtrModel", attrs= list(idref=gtrModel.id), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("relativeRate", parent=bxml.site, doc=bxml, addFinalizer=T)
+	if(is.na(relativeRate.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(id=relativeRate.id, value=relativeRate.value, lower=relativeRate.lower), parent=tmp, doc=bxml, addFinalizer=T)
+	if(!is.na(relativeRate.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(idref=relativeRate.idref), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("gammaShape", attrs= list(gammaCategories=gammaCategories), parent=bxml.site, doc=bxml, addFinalizer=T)
+	if(is.na(gamma.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(id=gamma.id, value=gamma.value, lower=gamma.lower), parent=tmp, doc=bxml, addFinalizer=T)
+	if(!is.na(gamma.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(idref=gamma.idref), parent=tmp, doc=bxml, addFinalizer=T)
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.gtrModel<- function(bxml, gtrModel.id, patterns.id, frequencies.id,
+									rateAC.id=NA, rateAC.idref=NA, rateAC.value=NA, rateAC.lower=NA,
+									rateAG.id=NA, rateAG.idref=NA, rateAG.value=NA, rateAG.lower=NA,
+									rateAT.id=NA, rateAT.idref=NA, rateAT.value=NA, rateAT.lower=NA,
+									rateCG.id=NA, rateCG.idref=NA, rateCG.value=NA, rateCG.lower=NA,
+									rateGT.id=NA, rateGT.idref=NA, rateGT.value=NA, rateGT.lower=NA,
+									frequencies.dimension='4', frequencyModel.dataType='nucleotide', verbose=1)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	if(verbose)
+		cat(paste('\nadd gtrModel',gtrModel.id))	
+	bxml.gtr		<- newXMLNode("gtrModel", attrs= list(id=gtrModel.id), parent=bxml.beast, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("frequencies", parent=bxml.gtr, doc=bxml, addFinalizer=T)
+	tmp2			<- newXMLNode("frequencyModel", attrs= list(dataType=frequencyModel.dataType), parent=tmp, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("patterns", attrs= list(idref=patterns.id), parent=tmp2, doc=bxml, addFinalizer=T)
+	tmp3			<- newXMLNode("frequencies", parent=tmp2, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(id=frequencies.id, dimension=frequencies.dimension), parent=tmp3, doc=bxml, addFinalizer=T)
+	
+	tmp				<- newXMLNode("rateAC", parent=bxml.gtr, doc=bxml, addFinalizer=T)
+	if(is.na(rateAC.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(id=rateAC.id, value=rateAC.value, lower=rateAC.lower), parent=tmp, doc=bxml, addFinalizer=T)
+	if(!is.na(rateAC.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(idref=rateAC.idref), parent=tmp, doc=bxml, addFinalizer=T)	
+	tmp				<- newXMLNode("rateAG", parent=bxml.gtr, doc=bxml, addFinalizer=T)
+	if(is.na(rateAG.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(id=rateAG.id, value=rateAG.value, lower=rateAG.lower), parent=tmp, doc=bxml, addFinalizer=T)
+	if(!is.na(rateAG.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(idref=rateAG.idref), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("rateAT", parent=bxml.gtr, doc=bxml, addFinalizer=T)
+	if(is.na(rateAT.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(id=rateAT.id, value=rateAT.value, lower=rateAT.lower), parent=tmp, doc=bxml, addFinalizer=T)
+	if(!is.na(rateAT.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(idref=rateAT.idref), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("rateCG", parent=bxml.gtr, doc=bxml, addFinalizer=T)
+	if(is.na(rateCG.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(id=rateCG.id, value=rateCG.value, lower=rateCG.lower), parent=tmp, doc=bxml, addFinalizer=T)
+	if(!is.na(rateCG.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(idref=rateCG.idref), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("rateGT", parent=bxml.gtr, doc=bxml, addFinalizer=T)
+	if(is.na(rateGT.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(id=rateGT.id, value=rateGT.value, lower=rateGT.lower), parent=tmp, doc=bxml, addFinalizer=T)
+	if(!is.na(rateGT.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(idref=rateGT.idref), parent=tmp, doc=bxml, addFinalizer=T)	
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.exponentialDistributionModel<- function(bxml, parent, id, mean.id, mean.value)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	bxml.ln			<- newXMLNode("exponentialDistributionModel", attrs= list(id=id),parent=parent, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("mean", parent=bxml.ln, doc=bxml, addFinalizer=T)	
+	dummy			<- newXMLNode("parameter", attrs= list(id=mean.id, value=mean.value), parent=tmp, doc=bxml, addFinalizer=T)	
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.logNormalDistributionModel<- function(bxml, parent, mean.id, mean.idref, mean.value, mean.lower, sd.id, sd.idref, sd.value, sd.lower, meanInRealSpace="true")
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	bxml.ln			<- newXMLNode("logNormalDistributionModel", attrs= list(meanInRealSpace=meanInRealSpace), parent=parent, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("mean", parent=bxml.ln, doc=bxml, addFinalizer=T)
+	if(is.na(mean.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(id=mean.id, value=mean.value, lower=mean.lower ), parent=tmp, doc=bxml, addFinalizer=T)	
+	if(!is.na(mean.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(idref=mean.idref ), parent=tmp, doc=bxml, addFinalizer=T)		
+	tmp				<- newXMLNode("stdev", parent=bxml.ln, doc=bxml, addFinalizer=T)
+	if(is.na(sd.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(id=sd.id, value=sd.value, lower=sd.lower ), parent=tmp, doc=bxml, addFinalizer=T)	
+	if(!is.na(sd.idref))
+		dummy		<- newXMLNode("parameter", attrs= list(idref=sd.idref ), parent=tmp, doc=bxml, addFinalizer=T)		
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.gmrfskygrid<- function(bxml, gmrfSkyGridLikelihood.id, populationSizes.id, precisionParameter.id, numGridPoints.id, cutOff.id, treeModel.ids,  
+										populationSizes.dimension, populationSizes.value,
+										precisionParameter.value, precisionParameter.lower,
+										cutOff.value, numGridPoints.value=populationSizes.dimension-1, verbose=1)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	if(verbose)
+		cat(paste('\nadd gmrfSkyGridLikelihood',gmrfSkyGridLikelihood.id))
+	bxml.grid		<- newXMLNode("gmrfSkyGridLikelihood", attrs= list(id=gmrfSkyGridLikelihood.id), parent= bxml.beast, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("populationSizes", parent=bxml.grid, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(id=populationSizes.id, dimension=as.character(populationSizes.dimension), value=as.character(populationSizes.value) ), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("precisionParameter", parent=bxml.grid, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(id=precisionParameter.id, value=as.character(precisionParameter.value), lower=as.character(precisionParameter.lower) ), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("numGridPoints", parent=bxml.grid, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(id=numGridPoints.id, value=as.character(numGridPoints.value) ), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("cutOff", parent=bxml.grid, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(id=cutOff.id, value=as.character(cutOff.value) ), parent=tmp, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("populationTree", parent=bxml.grid, doc=bxml, addFinalizer=T)
+	for(x in treeModel.ids)
+	{
+		if(verbose)
+			cat(paste('\nadd treeModel to GMRF skygrid',x))		
+		dummy	<- newXMLNode("treeModel", attrs= list(idref=x ), parent=tmp, doc=bxml, addFinalizer=T)	
+	}
+	bxml	 
+}
+######################################################################################
+#' @export
+hivc.beast.add.discretizedBranchRates<- function(bxml, discretizedBranchRates.id, treeModel.id, rateCategories.id,
+													mean.id=NA, mean.idref=NA, mean.value=NA, mean.lower=NA, sd.id=NA, sd.idref=NA, sd.value=NA, sd.lower=NA, meanInRealSpace='true', rateCategories.dimension="NA", verbose=1)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	if(verbose)
+		cat(paste('\nadd discretizedBranchRates',discretizedBranchRates.id))
+	bxml.brr		<- newXMLNode("discretizedBranchRates", attrs= list(id=discretizedBranchRates.id), parent= bxml.beast, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("treeModel", attrs= list(idref=treeModel.id ), parent=bxml.brr, doc=bxml, addFinalizer=T)
+	tmp				<- newXMLNode("distribution", parent=bxml.brr, doc=bxml, addFinalizer=T)
+	dummy			<- hivc.beast.add.logNormalDistributionModel(bxml, tmp, mean.id, mean.idref, mean.value, mean.lower, sd.id, sd.idref, sd.value, sd.lower, meanInRealSpace=meanInRealSpace)
+	tmp				<- newXMLNode("rateCategories", parent=bxml.brr, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("parameter", attrs= list(id=rateCategories.id, dimension=as.character(rateCategories.dimension) ), parent=tmp, doc=bxml, addFinalizer=T)
+	bxml	 
+}
+######################################################################################
+#' @export
+hivc.beast.add.treeLikelihood<- function(bxml, treeLikelihood.id, patterns.id, treeModel.id, siteModel.id, discretizedBranchRates.id, useAmbiguities='false', verbose=1)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	if(verbose)
+		cat(paste('\nadd treeLikelihood',treeLikelihood.id))
+	bxml.treelkl	<- newXMLNode("treeLikelihood", attrs= list(id=treeLikelihood.id, useAmbiguities=useAmbiguities), parent= bxml.beast, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("patterns", attrs= list(idref=patterns.id ), parent=bxml.treelkl, doc=bxml, addFinalizer=T)	
+	dummy			<- newXMLNode("treeModel", attrs= list(idref=treeModel.id ), parent=bxml.treelkl, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("siteModel", attrs= list(idref=siteModel.id ), parent=bxml.treelkl, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("discretizedBranchRates", attrs= list(idref=discretizedBranchRates.id ), parent=bxml.treelkl, doc=bxml, addFinalizer=T)	
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.treemodel<- function(bxml, treemodel.id, rootHeight.id, internalNodeHeights.id, allInternalNodeHeights.id, newick.id=NA, internalNodes='true', rootNode='true', verbose=1)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	if(verbose)
+		cat(paste('\nadd treeModel',treemodel.id))
+	bxml.treemodel	<- newXMLNode("treeModel", attrs= list(id=treemodel.id), parent= bxml.beast, doc=bxml, addFinalizer=T)
+	if(!is.na(newick.id))
+		dummy		<- newXMLNode("newick", attrs= list(idref=newick.id ), parent=bxml.treemodel, doc=bxml, addFinalizer=T)
+	rootHeight	<- newXMLNode("rootHeight", parent=bxml.treemodel, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLNode("parameter", attrs= list(id=rootHeight.id ), parent=rootHeight, doc=bxml, addFinalizer=T)	
+	nodeHeights	<- newXMLNode("nodeHeights", attrs= list(internalNodes=internalNodes ),parent=bxml.treemodel, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLNode("parameter", attrs= list(id=internalNodeHeights.id ), parent=nodeHeights, doc=bxml, addFinalizer=T)	
+	nodeHeights2<- newXMLNode("nodeHeights", attrs= list(internalNodes=internalNodes, rootNode=rootNode),parent=bxml.treemodel, doc=bxml, addFinalizer=T)
+	dummy		<- newXMLNode("parameter", attrs= list(id=allInternalNodeHeights.id ), parent=nodeHeights2, doc=bxml, addFinalizer=T)	
+	bxml 
+}
+######################################################################################
+#' @export
+hivc.beast.add.patterns<- function(bxml, beast.patterns.id, alignment.id, beast.patterns.from, beast.patterns.every=3, beast.patterns.strip='false', verbose=1)
+{
+	bxml.beast		<- getNodeSet(bxml, "//beast")[[1]]
+	if(verbose)
+		cat(paste('\nadd pattern',beast.patterns.id,'for alignment',alignment.id))
+	bxml.pattern	<- newXMLNode("patterns", attrs= list(id=beast.patterns.id, from=as.character(beast.patterns.from), every=as.character(beast.patterns.every), strip=beast.patterns.strip), parent= bxml.beast, doc=bxml, addFinalizer=T)
+	dummy			<- newXMLNode("alignment", attrs= list(idref=alignment.id ), parent=bxml.pattern, doc=bxml, addFinalizer=T)
+	bxml 
+}
+######################################################################################
 # 	extract starting tree from 'ph' by tips in 'df'. Only keeps tree topology and resets branch lengths so that the maximum root distance is 'beast.rootHeight'
 #	beast.rootHeight= 35; beast.usingDates= "false"; beast.newickid= "startingTree"
-hivc.beast.add.startingtree<- function(bxml, ph, df, beast.rootHeight= NA, beast.usingDates="true", beast.newickid= "startingTree", beast.brlunits="years", verbose=1)
+#' @export
+hivc.beast.add.startingtree<- function(bxml, ph.start, df=NULL, beast.rootHeight= NA, beast.usingDates="true", beast.newickid= "startingTree", beast.brlunits="years", verbose=1)
 {
 	require(adephylo)
 	if(verbose) cat(paste("\ncreate startingTree"))
-	tmp					<- setdiff( ph$tip.label, df[,FASTASampleCode] )
-	tmp					<- match( tmp, ph$tip.label)
-	ph.start			<- drop.tip(ph, tmp)		
-	ph.start$node.label	<- NULL
-	setkey(df, FASTASampleCode)
-	ph.start$tip.label	<- df[ph.start$tip.label,][,BEASTlabel]
-	if(verbose) cat(paste("\nselected tips for startingTree, n=",Ntip(ph.start)))
+	if(!is.null(df))
+	{
+		tmp					<- setdiff( ph.start$tip.label, df[,FASTASampleCode] )
+		tmp					<- match( tmp, ph.start$tip.label)
+		ph.start			<- drop.tip(ph.start, tmp)		
+		ph.start$node.label	<- NULL
+		setkey(df, FASTASampleCode)
+		ph.start$tip.label	<- df[ph.start$tip.label,][,BEASTlabel]
+		if(verbose) cat(paste("\nselected tips for startingTree, n=",Ntip(ph.start)))		
+	}
+	if(is.null(df) & verbose)
+		cat(paste("\nuse tips for startingTree, n=",Ntip(ph.start)))
 	#	adjust rootHeight to 'beast.rootHeight'
 	if(!is.na(beast.rootHeight))
 	{
 		if(verbose) cat(paste("\nSet root height of starting tree=",beast.rootHeight))
 		tmp					<- beast.rootHeight / max(distRoot(ph.start))
 		ph.start$edge.length<- ph.start$edge.length*tmp		
-	}
-	#	compute adjusted branch lengths for each tip: midpoint within NegT and AnyPos_T1
-	if(0)
-	{
-		df.length			<- suppressWarnings( t( sapply( strsplit(df[,BEASTlabel],'_',fixed=1), function(x)  as.numeric( x[2:4]) ) ) )
-		df.length			<- data.table(BEASTlabel=df[,BEASTlabel], NegT=df.length[,1], AnyPos_T1=df.length[,2], PosSeqT=df.length[,3])
-		tmp					<- max( df.length[, PosSeqT])		#TODO should this be height or length ?
-		df.length			<- df.length[, list(BEASTlabel=BEASTlabel, brl=(AnyPos_T1-NegT)/2+PosSeqT-AnyPos_T1)]
-		setkey(df.length, BEASTlabel)
-		#	adjust stem of each tip to be within NegT and AnyPos_T1
-		tmp							<- sapply(seq_len(Ntip(ph.start)), function(x) which( ph.start$edge[,2]==x ) )
-		ph.start$edge.length[ tmp ]	<- df.length[ph.start$tip.label,][,brl]
-		if(verbose) cat(paste("\nadjusted branch lengths of tips to be within NegT and AnyPos_T1. New root height is",max(distRoot(ph.start))))
 	}
 	#	write ph.start as newick tree to bxml
 	tmp					<- write.tree( ph.start )	

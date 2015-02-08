@@ -572,16 +572,23 @@ hivc.pipeline.BEASTout<- function()
 		tmp			<- regmatches( files, regexpr('_clu_[0-9]+',files)) 
 		cluster		<- as.numeric( regmatches(tmp, regexpr('[0-9]+',tmp))	)
 		file.info	<- data.table(file=files, cluster=cluster)
-		setkey(file.info, cluster)
-		
-		#file.info	<- subset(file.info, cluster%in%c(23, 77, 126, 152, 315))
+		setkey(file.info, cluster)		
+		#80
+		#file.info	<- subset(file.info, cluster%in%c(23, 68, 77, 126, 152, 657, 1277, 1326, 1469))
+		#85
+		#file.info	<- subset(file.info, cluster%in%c(23, 65, 74, 122, 147, 221))
+		#90
+		#file.info	<- subset(file.info, cluster%in%c(64, 74, 122, 147))
+		#95
+		#file.info	<- subset(file.info, cluster%in%c(60, 72, 116, 140))
+	
 		#print(file.info)
 		
 		dummy		<- sapply( file.info[,unique(cluster)], function(clu)
 				{
 					cmd			<- hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, cluster=clu, verbose=1, resume=1)					
 					cat(cmd)
-					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=100, hpc.mem="1600mb")
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=100, hpc.mem="3800mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
 					outfile		<- paste("b2m.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
