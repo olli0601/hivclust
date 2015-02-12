@@ -5619,7 +5619,7 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	list(YX.h=YX.h, nt.table.h=nt.table.h)	 
 }
 ######################################################################################
-project.athena.Fisheretal.Hypo.ReallocPrEP.getYXetc<- function( YX, nt.table, method.risk, predict.t2inf, t2inf.args, df.all, th.starttime=2008.5, t.period=0.125, method.minLowerUWithNegT=1, method.sample= 'stage=prop, y=mean', verbose=FALSE)
+project.athena.Fisheretal.Hypo.ReallocPrEP.getYXetc<- function( YX, nt.table, method.risk, predict.t2inf, t2inf.args, df.all, th.starttime=2008.5, t.period=0.125, method.minLowerUWithNegT=1, method.realloc='PrEP33', method.sample= 'stage=prop, y=mean', verbose=FALSE)
 {
 	stopifnot(grepl('stage=sample|stage=prop',method.sample))
 	stopifnot(grepl('eff=sample|eff=median',method.sample))
@@ -6197,7 +6197,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 					}
 					if(grepl('PrEP',method.realloc))
 					{
-						tmp					<- project.athena.Fisheretal.Hypo.ReallocPrEP.getYXetc(YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, th.starttime=2008.5, t.period=t.period, method.sample= 'stage=sample, eff=median')
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocPrEP.getYXetc(YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, th.starttime=2008.5, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, eff=median')
 						YX.h				<- copy(tmp$YX.h)
 						nt.table.h			<- copy(tmp$nt.table.h)						
 					}
@@ -6312,7 +6312,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 					}
 					if(grepl('PrEP',method.realloc))
 					{						
-						tmp					<- project.athena.Fisheretal.Hypo.ReallocPrEP.getYXetc(YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, th.starttime=2008.5, t.period=t.period, method.sample= 'stage=sample, eff=sample', verbose=FALSE)
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocPrEP.getYXetc(YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, th.starttime=2008.5, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, eff=sample', verbose=FALSE)
 						YX.h.bs				<- copy(tmp$YX.h)
 						nt.table.h.bs		<- copy(tmp$nt.table.h)
 					}
