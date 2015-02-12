@@ -3162,6 +3162,7 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 					save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
 					options(show.error.messages = FALSE)		
 					readAttempt	<- try(suppressWarnings(load(save.file)))
+					options(show.error.messages = TRUE)
 					ans$X.tables
 				})
 		X.tables	<- tmp[[1]]
@@ -3204,6 +3205,7 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 					save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
 					options(show.error.messages = FALSE)		
 					readAttempt	<- try(suppressWarnings(load(save.file)))
+					options(show.error.messages = TRUE)
 					ans$YX
 				})
 		YX			<- do.call('rbind', tmp)
@@ -3229,6 +3231,7 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 					save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
 					options(show.error.messages = FALSE)		
 					readAttempt	<- try(suppressWarnings(load(save.file)))
+					options(show.error.messages = TRUE)
 					ans$YXf
 				})
 		YXf			<- tmp[[1]]
@@ -5150,19 +5153,15 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 		stopifnot(nrow(subset(YX.h, t.INFECTION_T>t))==0)	
 	if(verbose)
 		cat(paste('\ntransmission intervals, n=', nrow(YX.h)))
-options(warn=0)	
-print('OK4')	
 	#	realloc intervals from transmitters that tested positive
 	YX.h		<- merge(YX.h, YX.h[, list(t_min=min(t)), by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
 	YX.h[, t.grace:= YX.h[,t.INFECTION_T-t_min]]
 	set(YX.h, YX.h[, which(!grepl('UAna',stage) | t.grace<0 | is.na(t.grace)) ], 't.grace', 0)		
 	#	determine which intervals to re-alloc
 	YX.h[, TR_TEST:= 0]
-print('OK3')	
-	tmp			<- YX.h[, which( 	!is.na(REALLOC_T) & TESTED & t.INFECTION_T+prest.delay<=REALLOC_T & 
-							t_min+t.grace>REALLOC_T & grepl(method.reallocate, stage))]
+	tmp			<- YX.h[, which( 	!is.na(REALLOC_T) & TESTED & t.INFECTION_T+test.delay<=REALLOC_T & 
+									t_min+t.grace>REALLOC_T & grepl(method.reallocate, stage))]
 	set(YX.h, tmp, 'TR_TEST', 1)
-print('OK2')	
 	if(verbose)
 	{		
 		cat(paste('\nU transmission intervals, n=', YX.h[, length(which( grepl(method.reallocate, stage)))]	))
@@ -5174,7 +5173,6 @@ print('OK2')
 		cat(paste('\nreallocate entries, n=', length(tmp)))
 		cat(paste('\nsum of score.Y.raw before reallocate', YX.h[tmp, sum(score.Y.raw)]))		
 	}
-print('OK1')	
 	#	determine stages and scores to be re-alloced to
 	df.tr		<- unique(subset(YX.h, TR_TEST==1, select=c(Patient, t.Patient)))
 	df.tr		<- rTest.Realloc(df.tr, method.sample, df.dinfo)
@@ -5830,6 +5828,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 		options(show.error.messages = FALSE)		
 		file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.Hypo.R", sep='')		
 		readAttempt			<- try(suppressWarnings(load(file)))
+		options(show.error.messages = TRUE)
 		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))		
 	}
 	if(!resume)
