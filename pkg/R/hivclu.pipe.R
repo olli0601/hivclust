@@ -929,15 +929,21 @@ hivc.pipeline.various<- function()
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
 	}
-	if(1)
+	if(0)
 	{
 		project.Gates()
 		quit("no")
 	}
-	if(0)
+	if(1)
 	{
-		project.hivc.examl.median.brl()
-		quit("no")
+		#project.hivc.examl.median.brl()
+		cmd			<- hivc.cmd.various()
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q="pqeph", hpc.walltime=171, hpc.mem="7800mb")
+		cat(cmd)		
+		outdir		<- paste(DATA,"tmp",sep='/')
+		outfile		<- paste("vrs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		quit("no")		
 	}						
 }
 

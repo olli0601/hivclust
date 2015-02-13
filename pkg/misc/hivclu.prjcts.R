@@ -4531,23 +4531,87 @@ project.hivc.examl.median.brl<- function()
 {
 	require(reshape2)
 	require(data.table)
-	require(ape)
-	#stop()
-	indir					<- paste(DATA,"fisheretal_data",sep='/')
+	require(ape)	
+	
+	#given row, column, and n, return index
+	distd.idx	<-function(i,j,n)
+	{	
+		n*(i-1) - i*(i-1)/2 + j-i 
+	} 
+	#
+	#	get data relating to study population (subtype B sequ)
+	#	
+	indir					<- paste(DATA,"fisheretal_data",sep='/')		
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	outdir					<- paste(DATA,"fisheretal",sep='/')
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	infiletree				<- paste(infile,"examlbs500",sep="_")
-	insignat				<- "Wed_Dec_18_11:37:00_2013"
-	infilepairs				<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+	insignat				<- "Wed_Dec_18_11:37:00_2013"	
+	infile.cov.study		<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infile.viro.study		<- paste(indircov,"ATHENA_2013_03_Viro.R",sep='/')
+	infile.immu.study		<- paste(indircov,"ATHENA_2013_03_Immu.R",sep='/')
+	infile.treatment.study	<- paste(indircov,"ATHENA_2013_03_Regimens.R",sep='/')	
+	infile.cov.all			<- "ATHENA_2013_03_AllSeqPatientCovariates_AllMSM"
+	infile.viro.all			<- paste(indircov,"ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+	infile.immu.all			<- paste(indircov,"ATHENA_2013_03_Immu_AllMSM.R",sep='/')
+	infile.treatment.all	<- paste(indircov,"ATHENA_2013_03_Regimens_AllMSM.R",sep='/')	
+	infile.trm.model		<- NA
+	t.period				<- 1/8
+	t.recent.startctime		<- hivc.db.Date2numeric(as.Date("1996-07-15"))
+	t.recent.startctime		<- floor(t.recent.startctime) + floor( (t.recent.startctime%%1)*100 %/% (t.period*100) ) * t.period
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+	method.recentctime		<- '2011-01-01'
+	t.recent.endctime		<- hivc.db.Date2numeric(as.Date(method.recentctime))	
+	t.recent.endctime		<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period		
+	adjust.AcuteByNegT		<- 1
+	method.use.AcuteSpec	<- 1
+	tmp				<- project.athena.Fisheretal.select.denominator(	indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, 
+																		adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)																
+	df.all			<- tmp$df.all							#this is all men only
+	df.denom.CLU	<- tmp$df.select
+	df.denom.SEQ	<- tmp$df.select.SEQ	
+	ri.CLU			<- unique(subset(df.denom.CLU, select=Patient))
+	ri.SEQ			<- unique(subset(df.denom.SEQ, select=Patient))	
+	df.ris			<- merge(df.all, ri.SEQ, by='Patient')	#this is all recent
 	
-	file			<- paste(indir, '/', infilepairs, '_', gsub('/',':',insignat),"_tpairs.R",sep='')
-	load(file)	#expect df.tpairs
-	print(df.tpairs)
 	
-	indir.dtp		<- paste(DATA,"tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013",sep='/')
+	indir.dtp		<- paste(DATA,"ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout",sep='/')
 	infiles.dtp		<- list.files(indir.dtp)
 	infiles.dtp		<- infiles.dtp[ grepl('^ExaML_result.*finaltree.*distTips.R$',infiles.dtp)  ]	
 	if(!length(infiles.dtp))	stop('cannot find files matching criteria')
-			
+	for(i in seq_along(infiles.dtp))
+	{
+		infile.dtp	<- infiles.dtp[i]
+		cat(paste('\nprocess file',infile.dtp))
+		file	<- paste(indir.dtp, '/', infile.dtp, sep='')
+		load(file)	#expect brl	
+		#	get labels 
+		brl.info	<- data.table(FASTASampleCode=attr(brl, "Labels" ))
+		brl.info[, IDX:=seq_along(FASTASampleCode)]
+		brl.info	<- subset( brl.info, !grepl('PROT+P51',FASTASampleCode, fixed=T) )
+		#	get pairs of recent with men
+		tmp			<- merge(brl.info, subset(df.ris, select=FASTASampleCode), by='FASTASampleCode')				
+		tmp2		<- merge(brl.info, subset(df.all, select=c(FASTASampleCode)), by='FASTASampleCode')
+		set(tmp, NULL, 'FASTASampleCode', tmp[,factor(FASTASampleCode)])
+		set(tmp2, NULL, 'FASTASampleCode', tmp2[,factor(FASTASampleCode)])
+		setnames(tmp, c('FASTASampleCode','IDX'),c('FASTASampleCode_R','IDX_R'))
+		setnames(tmp2, c('FASTASampleCode','IDX'),c('FASTASampleCode_T','IDX_T'))
+		df.brl		<- as.data.table(expand.grid(IDX_R= tmp[,IDX_R], IDX_T=tmp2[,IDX_T]))
+		#	get brl on this tree
+		n			<- attr(brl, "Size")
+		df.brl		<- subset(df.brl, IDX_R!=IDX_T)
+		set(df.brl, NULL, 'BRL', df.brl[, distd.idx(IDX_R,IDX_T,n)])
+		set(df.brl, NULL, 'BRL', brl[df.brl[,BRL]])
+		df.brl		<- merge(df.brl, tmp, by='IDX_R')
+		df.brl		<- merge(df.brl, tmp2, by='IDX_T')
+		set(df.brl, NULL, c('IDX_T','IDX_R'), NULL)
+		file		<- gsub('distTips','distTipsToRec',file)
+		cat(paste('\nsave to file=',file))
+		save(df.brl,file=file,compress='xz')
+		#	
+	}
+stop()	
 	for(i in seq_along(infiles.dtp))
 	{
 		i	<- 1

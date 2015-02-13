@@ -17739,6 +17739,13 @@ hivc.prog.props_univariate<- function()
 	YX				<- copy(tmp$YX)
 	gc()
 	stopifnot(is.null(X.tables)==FALSE)
+	#	get branch lengths for all pairs in YX
+	df.pairs		<- subset(YX, select=c(FASTASampleCode, t.FASTASampleCode))
+	setkey(df.pairs, FASTASampleCode, t.FASTASampleCode)
+	df.pairs		<- unique(df.pairs)
+	indir.dtp		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout'
+	infiles			<- list.files(path=indir.dtp, pattern='*distTipsToRec*')
+	
 	#
 	#	for each time period, estimate N transmitted etc
 	#

@@ -98,6 +98,10 @@ PR.BEAST2CLUPOSTERIOR	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BE
 PR.BEAST2.PLOTCLUTREES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.PLOTCLUTREES",sep='/')
 
 #' @export
+PR.VARIOUS	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=VARIOUS",sep='/')
+
+
+#' @export
 PR.PH.DISTTIPS	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=PH.DISTTIPS",sep='/')
 
 #' @export
@@ -753,6 +757,19 @@ hivc.cmd.examl.bsstarttree<- function(indir, infile, signat.in, signat.out, bs.f
 				#stop()
 				#if [ $(find -E . -name 'ExaML_result*' | wc -l)==2 ]; then echo 'hello'; fi
 			})
+}
+######################################################################################
+#' @export
+hivc.cmd.various<- function(prog= PR.VARIOUS)
+{
+	cmd		<- "#######################################################
+# start: run VARIOUS
+#######################################################"
+	cmd		<- paste(cmd, '\n', prog, '\n', sep='')
+	cmd		<- paste(cmd,"#######################################################
+# end: run VARIOUS
+#######################################################\n",sep='')
+	cmd
 }
 ######################################################################################
 #' @export
