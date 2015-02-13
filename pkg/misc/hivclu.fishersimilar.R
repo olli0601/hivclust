@@ -4999,9 +4999,10 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 	stopifnot(grepl('t=mean|t=sample|t=start',method.sample))
 	stopifnot(grepl('Test',method.realloc))
 	method.reallocate	<- '^U'
-	test.repeat			<- as.numeric(substr(method.realloc,6,7)) / 12
-	test.pc				<- as.numeric(substr(method.realloc,9,nchar(method.realloc)-2)) / 100
-	test.delay			<- substr(method.realloc,5,5)
+	tmp					<- regmatches(method.realloc,regexpr('Test[[:alnum:]]+', method.realloc))
+	test.repeat			<- as.numeric(substr(tmp,6,7)) / 12
+	test.pc				<- as.numeric(substr(tmp,9,nchar(tmp)-2)) / 100
+	test.delay			<- substr(tmp,5,5)
 	stopifnot(test.delay%in%c('A','C'), is.finite(test.repeat), is.finite(test.pc))
 	test.delay			<- ifelse(test.delay=='A',0,1/12)
 	if(verbose)
@@ -5279,9 +5280,10 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	stopifnot(grepl('eff=sample|eff=median',method.sample))
 	stopifnot(grepl('Prest',method.realloc))
 	method.reallocate	<- '^U'
-	prest.repeat		<- as.numeric(substr(method.realloc,7,8)) / 12
-	prest.pc			<- as.numeric(substr(method.realloc,10,nchar(method.realloc)-2)) / 100
-	prest.delay			<- substr(method.realloc,6,6)
+	tmp					<- regmatches(method.realloc,regexpr('Prest[[:alnum:]]+', method.realloc))
+	prest.repeat		<- as.numeric(substr(tmp,7,8)) / 12
+	prest.pc			<- as.numeric(substr(tmp,10,nchar(tmp)-2)) / 100
+	prest.delay			<- substr(tmp,6,6)
 	stopifnot(prest.delay%in%c('A','C'), is.finite(prest.repeat), is.finite(prest.pc))
 	prest.delay			<- ifelse(prest.delay=='A',0,1/12)
 	if(verbose)
