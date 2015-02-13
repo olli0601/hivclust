@@ -5183,18 +5183,21 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 	#
 	#	add proportion of in and out reallocated stages to df.uinfo
 	#
-	df.uinfo	<- subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_IN= length(t)), by='REALLOC_STAGE']	
-	setnames(df.uinfo, 'REALLOC_STAGE', 'stage')	
-	df.uinfo	<- merge( df.uinfo, YX.h[, list(NT= length(t)), by='stage'], by='stage', all=1 )
-	df.uinfo	<- merge( df.uinfo, subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_OUT= length(t)), by='stage'], by='stage', all=1 )
-	set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_IN))], 'REALLOC_NT_IN', 0)
-	set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_OUT))], 'REALLOC_NT_OUT', 0)
-	df.uinfo[, U_OUT_AFTER_RM:= REALLOC_NT_OUT/NT]
-	df.uinfo[, D_IN_AFTER_RM:= REALLOC_NT_IN/sum(REALLOC_NT_IN)]		
-	setnames(df.uinfo, 'stage', 'factor')
-	set(df.uinfo, NULL, 'factor', df.uinfo[, as.character(factor)])
-	df.uinfo[, risk:='stage']
-	set(df.uinfo, NULL, c('REALLOC_NT_IN','REALLOC_NT_OUT','NT'), NULL)	
+	df.uinfo	<- subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_IN= length(t)), by='REALLOC_STAGE']
+	if(nrow(df.uinfo))
+	{
+		setnames(df.uinfo, 'REALLOC_STAGE', 'stage')	
+		df.uinfo	<- merge( df.uinfo, YX.h[, list(NT= length(t)), by='stage'], by='stage', all=1 )
+		df.uinfo	<- merge( df.uinfo, subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_OUT= length(t)), by='stage'], by='stage', all=1 )
+		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_IN))], 'REALLOC_NT_IN', 0)
+		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_OUT))], 'REALLOC_NT_OUT', 0)
+		df.uinfo[, U_OUT_AFTER_RM:= REALLOC_NT_OUT/NT]
+		df.uinfo[, D_IN_AFTER_RM:= REALLOC_NT_IN/sum(REALLOC_NT_IN)]		
+		setnames(df.uinfo, 'stage', 'factor')
+		set(df.uinfo, NULL, 'factor', df.uinfo[, as.character(factor)])
+		df.uinfo[, risk:='stage']
+		set(df.uinfo, NULL, c('REALLOC_NT_IN','REALLOC_NT_OUT','NT'), NULL)			
+	}
 	#
 	#	reallocate
 	#
@@ -5213,29 +5216,34 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 	#	prepare nt.table for hypothetical scenario
 	#			
 	#	for Xclu Xseq Xmsm, we don t have NegT etc unless we load the bigmem table X.msm 
-	#	avoid this by removing a fraction
-	setkey(df.uinfo, risk, factor)
+	#	avoid this by removing a fraction	
 	setkey(nt.table, Patient, stat, risk, factor)
-	#	move stages according to fractions UPT and DPT
-	#	subset(nt.table, Patient=='M41498' & stat=='X.msm')
-	if(grepl('stage=sample',method.sample))
-		nt.table.h	<- subset(nt.table, stat!='YX')[, {
-									flow.out	<- rbinom(length(nt), nt, df.uinfo$U_OUT_AFTER_RM) 
-									flow.in		<- as.numeric(rmultinom(1, sum(flow.out), df.uinfo$D_IN_AFTER_RM))
-									stopifnot(sum(flow.out)==sum(flow.in))
-									#print(nt); print(flow.out); print(flow.in)
-									list(factor=factor, nt= nt-flow.out+flow.in)
-								}, by=c('Patient','risk','stat')]
-	if(grepl('stage=prop',method.sample))
-		nt.table.h	<- subset(nt.table, stat!='YX')[, {
-									flow.out	<- round( nt * df.uinfo$U_OUT_AFTER_RM )
-									flow.in		<- ceiling( sum(flow.out) * df.uinfo$D_IN_AFTER_RM )
-									flow.d		<- sum(flow.in)-sum(flow.out)
-									stopifnot( flow.d>=0, flow.d<=length(flow.in>0) )
-									flow.in[ flow.in>0 ]	<- flow.in[ flow.in>0 ] + c( rep(-1, flow.d), rep(0, length(which(flow.in>0))-flow.d) )
-									stopifnot(sum(flow.out)==sum(flow.in))
-									list(factor=factor, nt= nt-flow.out+flow.in)					
-								}, by=c('Patient','risk','stat')]					
+	if(!nrow(df.uinfo))
+		nt.table.h		<- subset(nt.table, stat!='YX')
+	if(nrow(df.uinfo))
+	{
+		setkey(df.uinfo, risk, factor)
+		#	move stages according to fractions UPT and DPT
+		#	subset(nt.table, Patient=='M41498' & stat=='X.msm')
+		if(grepl('stage=sample',method.sample))
+			nt.table.h	<- subset(nt.table, stat!='YX')[, {
+						flow.out	<- rbinom(length(nt), nt, df.uinfo$U_OUT_AFTER_RM) 
+						flow.in		<- as.numeric(rmultinom(1, sum(flow.out), df.uinfo$D_IN_AFTER_RM))
+						stopifnot(sum(flow.out)==sum(flow.in))
+						#print(nt); print(flow.out); print(flow.in)
+						list(factor=factor, nt= nt-flow.out+flow.in)
+					}, by=c('Patient','risk','stat')]
+		if(grepl('stage=prop',method.sample))
+			nt.table.h	<- subset(nt.table, stat!='YX')[, {
+						flow.out	<- round( nt * df.uinfo$U_OUT_AFTER_RM )
+						flow.in		<- ceiling( sum(flow.out) * df.uinfo$D_IN_AFTER_RM )
+						flow.d		<- sum(flow.in)-sum(flow.out)
+						stopifnot( flow.d>=0, flow.d<=length(flow.in>0) )
+						flow.in[ flow.in>0 ]	<- flow.in[ flow.in>0 ] + c( rep(-1, flow.d), rep(0, length(which(flow.in>0))-flow.d) )
+						stopifnot(sum(flow.out)==sum(flow.in))
+						list(factor=factor, nt= nt-flow.out+flow.in)					
+					}, by=c('Patient','risk','stat')]
+	}						
 	#	for YX we know easily how many transmission intervals are removed
 	nt.table.YX	<- YX.h[, 	{
 						z				<- table(as.character(stage))
@@ -5524,21 +5532,22 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	#
 	tmp			<- subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_IN= length(t)), by='REALLOC_STAGE']	
 	setnames(tmp, 'REALLOC_STAGE', 'stage')
-	df.uinfo	<- merge(df.uinfo, tmp, by='stage', all.x=1)
-	df.uinfo	<- merge( df.uinfo, YX.h[, list(NT= length(t)), by='stage'], by='stage', all=1 )
-	df.uinfo	<- merge( df.uinfo, subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_OUT= length(t)), by='stage'], by='stage', all=1 )
-	set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_IN))], 'REALLOC_NT_IN', 0)
-	set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_OUT))], 'REALLOC_NT_OUT', 0)
-	df.uinfo[, U_OUT_AFTER_RM:= REALLOC_NT_OUT/NT]
-	df.uinfo[, D_IN_AFTER_RM:= REALLOC_NT_IN/sum(REALLOC_NT_IN)]		
+	if(!nrow(tmp))
+		set(df.uinfo,NULL, c('U_OUT_AFTER_RM','D_IN_AFTER_RM'),0)
+	if(nrow(tmp))
+	{
+		df.uinfo	<- merge(df.uinfo, tmp, by='stage', all.x=1)
+		df.uinfo	<- merge( df.uinfo, YX.h[, list(NT= length(t)), by='stage'], by='stage', all=1 )
+		df.uinfo	<- merge( df.uinfo, subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_OUT= length(t)), by='stage'], by='stage', all=1 )
+		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_IN))], 'REALLOC_NT_IN', 0)
+		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_OUT))], 'REALLOC_NT_OUT', 0)
+		df.uinfo[, U_OUT_AFTER_RM:= REALLOC_NT_OUT/NT]
+		df.uinfo[, D_IN_AFTER_RM:= REALLOC_NT_IN/sum(REALLOC_NT_IN)]		
+		set(df.uinfo, NULL, c('REALLOC_NT_IN','REALLOC_NT_OUT','NT'), NULL)
+	}
 	setnames(df.uinfo, 'stage', 'factor')
 	set(df.uinfo, NULL, 'factor', df.uinfo[, as.character(factor)])
-	df.uinfo[, risk:='stage']
-	df.uinfo[, Patient.nztr:= YX[, length(unique(Patient))]]
-	df.uinfo[, Patient.nztr.h:= YX.h[, length(unique(Patient))]]	
-	df.uinfo[, Patient.n:= nrow(df.rec)]	
-	df.uinfo[, Patient.n.h:= df.rec[, length(which(REC_PREP_ON==0))]]		
-	set(df.uinfo, NULL, c('REALLOC_NT_IN','REALLOC_NT_OUT','NT'), NULL)	
+	df.uinfo[, risk:='stage']		
 	#
 	#	reallocate
 	#
@@ -5567,26 +5576,36 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	#	remove transmitters that are on PrEP and thereafter, move stages according to fractions UPT and DPT
 	#
 	#	subset(nt.table, Patient=='M41498' & stat=='X.msm')
-	if(grepl('stage=sample',method.sample))
+	if(df.uinfo[, all(U_OUT_AFTER_RM==0)] & grepl('stage=sample',method.sample))
 		nt.table.h	<- subset(nt.table.h, stat!='YX')[, {
 									nt.nrm		<- rbinom(length(nt), nt, df.uinfo$TR_NRM)
-									flow.out	<- rbinom(length(nt.nrm), nt.nrm, df.uinfo$U_OUT_AFTER_RM) 
-									flow.in		<- as.numeric(rmultinom(1, sum(flow.out), df.uinfo$D_IN_AFTER_RM))
-									stopifnot(sum(flow.out)==sum(flow.in))
-									#print(nt); print(flow.out); print(flow.in)
-									list(factor=factor, nt= nt.nrm-flow.out+flow.in)
+									list(factor=factor, nt= nt.nrm)
 								}, by=c('Patient','risk','stat')]
-	if(grepl('stage=prop',method.sample))
+	if(df.uinfo[, all(U_OUT_AFTER_RM==0)] & grepl('stage=prop',method.sample))
 		nt.table.h	<- subset(nt.table.h, stat!='YX')[, {
 									nt.nrm		<- round( nt * df.uinfo$TR_NRM)
-									flow.out	<- round( nt.nrm * df.uinfo$U_OUT_AFTER_RM )
-									flow.in		<- ceiling( sum(flow.out) * df.uinfo$D_IN_AFTER_RM )
-									flow.d		<- sum(flow.in)-sum(flow.out)
-									stopifnot( flow.d>=0, flow.d<=length(flow.in>0) )
-									flow.in[ flow.in>0 ]	<- flow.in[ flow.in>0 ] + c( rep(-1, flow.d), rep(0, length(which(flow.in>0))-flow.d) )
-									stopifnot(sum(flow.out)==sum(flow.in))
-									list(factor=factor, nt= nt.nrm-flow.out+flow.in)					
+									list(factor=factor, nt= nt.nrm)					
 								}, by=c('Patient','risk','stat')]	
+	if(df.uinfo[, !all(U_OUT_AFTER_RM==0)] & grepl('stage=sample',method.sample))
+		nt.table.h	<- subset(nt.table.h, stat!='YX')[, {
+					nt.nrm		<- rbinom(length(nt), nt, df.uinfo$TR_NRM)
+					flow.out	<- rbinom(length(nt.nrm), nt.nrm, df.uinfo$U_OUT_AFTER_RM) 
+					flow.in		<- as.numeric(rmultinom(1, sum(flow.out), df.uinfo$D_IN_AFTER_RM))
+					stopifnot(sum(flow.out)==sum(flow.in))
+					#print(nt); print(flow.out); print(flow.in)
+					list(factor=factor, nt= nt.nrm-flow.out+flow.in)
+				}, by=c('Patient','risk','stat')]
+	if(df.uinfo[, !all(U_OUT_AFTER_RM==0)] & grepl('stage=prop',method.sample))
+		nt.table.h	<- subset(nt.table.h, stat!='YX')[, {
+					nt.nrm		<- round( nt * df.uinfo$TR_NRM)
+					flow.out	<- round( nt.nrm * df.uinfo$U_OUT_AFTER_RM )
+					flow.in		<- ceiling( sum(flow.out) * df.uinfo$D_IN_AFTER_RM )
+					flow.d		<- sum(flow.in)-sum(flow.out)
+					stopifnot( flow.d>=0, flow.d<=length(flow.in>0) )
+					flow.in[ flow.in>0 ]	<- flow.in[ flow.in>0 ] + c( rep(-1, flow.d), rep(0, length(which(flow.in>0))-flow.d) )
+					stopifnot(sum(flow.out)==sum(flow.in))
+					list(factor=factor, nt= nt.nrm-flow.out+flow.in)					
+				}, by=c('Patient','risk','stat')]		
 	#	
 	#	for YX, we know easily how many transmission intervals are removed / reallocated
 	nt.table.YX	<- YX.h[, 	{
