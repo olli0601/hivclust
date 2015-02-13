@@ -5276,7 +5276,7 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 		set(nt.table.h, tmp, 'X.msm', nt.table.h[tmp, X.seq])
 	}
 	nt.table.h	<- melt(nt.table.h, measure.vars=c('X.clu','X.msm','X.seq','YX'), value.name='nt', variable.name='stat')	
-	list(YX.h=YX.h, nt.table.h=nt.table.h, df.uinfo=df.uinfo)	
+	list(YX.h=YX.h, nt.table.h=nt.table.h)	
 }
 ######################################################################################
 #	method.sample<- 't=start, stage=prop, y=median, eff=median'; th.starttime=2008.5
@@ -6325,7 +6325,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 					if(grepl('Prest',method.realloc))
 					{			
 						#YX.h<- YX.h.bs; nt.table<- nt.table.h.bs
-						tmp					<- project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc( YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=sample, t=sample, eff=sample', verbose=FALSE)			
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc( YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=sample, t=sample, eff=sample', verbose=1)			
 						YX.h.bs				<- copy(tmp$YX.h)
 						nt.table.h.bs		<- copy(tmp$nt.table.h)						
 					}					
