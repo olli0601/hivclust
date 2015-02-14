@@ -88,7 +88,9 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	ggplot(runs.av.info, aes(x=HYPO))	+ geom_boxplot(aes(ymin=Q2.5, ymax=Q97.5, lower=Q25, middle=Q50, upper=Q75), stat="identity") + geom_point(aes(y=central), colour='red') +
 			coord_flip()
 	#	keep for figure
-	c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestA06m50pc', 'HypoTestC06m50pc', 'HypoRPrEP50' )
+	select			<- c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestA06m50pc', 'HypoTestC06m50pc', 'HypoRPrEP50', 'HypoPrestC18m50pcImmediateART', 'HypoPrestC18m60pcImmediateART', 'HypoPrestC18m60pcARTat500', 'HypoPrestC18m70pcARTat500', 'HypoTestC18m50pcARTat500', 'HypoTestC18m50pcImmediateART' )
+	ggplot(subset(runs.av.info, HYPO%in%select), aes(x=HYPO))	+ geom_boxplot(aes(ymin=Q2.5, ymax=Q97.5, lower=Q25, middle=Q50, upper=Q75), stat="identity") + geom_point(aes(y=central), colour='red') +
+			coord_flip()
 	
 	
 	set(runs.av.info, NULL, 'TestC', 'No')
