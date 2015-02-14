@@ -342,6 +342,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 	}
 	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
 	{		
+		stopifnot(substr(method,1,2)==c('3p'))
 		YX.tpairs	<- subset(YX.part1, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, class))
 		setkey(YX.tpairs, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode)
 		YX.tpairs	<- unique(YX.tpairs)
@@ -355,47 +356,13 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 		method.restrictTPtoRI	<- ifelse(substr(method,1,2)%in%c('3a','3b'),1,0)
 		#file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlraw',method,sep='')
 		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlrawmed',method,sep='')
-		tmp						<- project.athena.Fisheretal.Y.rawbrl(YX.tpairs, indir, insignat, indircov, infilecov, infiletree, df.tpairs.tptn=df.tpairs.4.rawbrl, save.file=paste(file, '.R', sep=''), resume=resume, plot.file=paste(file, '.pdf', sep=''), method.restrictTPtoRI=method.restrictTPtoRI)
-		Y.rawbrl				<- tmp$tpairs
-		Y.rawbrl.linked			<- tmp$linked
-		Y.rawbrl.unlinked		<- tmp$unlinked
-		#	BRL [0,1]: branch length weight between pot transmitter and infected
-		plot.file.score			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_score','.pdf',sep='')
-		plot.file.both			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_both','.pdf',sep='')
-		plot.file.one			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_one','.pdf',sep='')
-		#brl.linked.max.brlr= 0.02; brl.linked.min.brl= 1e-4; brl.linked.max.dt= 10; brl.linked.min.dt= 1; 
-		if(substr(method,1,2)=='3c')					
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.04, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
-		if(substr(method,1,2)=='3d')	#expect central brl	
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)		
-		if(substr(method,1,2)=='3j')	#expect central brl	
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)				
-		if(substr(method,1,2)=='3i')	#expect central brl	
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, brl.bwhost.multiplier=brl.bwhost.multiplier, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
-		if(substr(method,1,2)=='3k')	#expect central brl	
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.02, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= 1, brl.bwhost.multiplier=brl.bwhost.multiplier, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
-		if(substr(method,1,2)=='3l')	#expect central brl
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight.3l(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.viro, dur.Acute=dur.Acute, t.period=t.period, lRNA.supp=lRNA.supp, plot.file.score=plot.file.score)					
-		if(substr(method,1,2)=='3m')	#expect central brl
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight.3m(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.viro, dur.Acute=dur.Acute, t.period=t.period, lRNA.supp=lRNA.supp, plot.file.score=plot.file.score)							
-		if(substr(method,1,2)=='3n')	#expect central brl
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight.3n(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.viro, dur.Acute=dur.Acute, t.period=t.period, lRNA.supp=lRNA.supp, plot.file.score=plot.file.score)									
-		if(substr(method,1,2)=='3o')	#expect central brl
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight.3o(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.viro, dur.Acute=dur.Acute, t.period=t.period, lRNA.supp=lRNA.supp, plot.file.score=plot.file.score)											
-		if(substr(method,1,2)=='3p')	#expect central brl
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight.3p(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.viro, dur.Acute=dur.Acute, t.period=t.period, lRNA.supp=lRNA.supp, plot.file.score=plot.file.score)													
-		if(substr(method,1,2)=='3e')	#expect large brl				
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.0175, brl.linked.min.brl= 1e-4, brl.linked.max.dt= 10, brl.linked.min.dt= 1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)
-		if(substr(method,1,2)=='3f')	#expect small brl				
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.005, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= -1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)		
-		if(substr(method,1,2)=='3g')	#similar to central brl, use dependence on time between sampling dates				
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= -1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one)		
-		if(substr(method,1,2)=='3h')	#similar to central brl, use dependence on time between sampling dates
-		{
-			save.file.3ha		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'wbrl',method,'_convolution','.R',sep='')
-			Y.brl				<- project.athena.Fisheretal.Y.brlweight(Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.treatment, brl.linked.max.brlr= 0.01, brl.linked.min.brl= 1e-12, brl.linked.max.dt= 10, brl.linked.min.dt= -1, plot.file.score=plot.file.score, method=method, plot.file.both=plot.file.both, plot.file.one=plot.file.one, save.file.3ha=save.file.3ha)		
-		}
-		if(all(substr(method,1,2)!=c('3c','3d','3e','3f','3g','3i','3j','3k','3l','3m','3n','3o','3p')))	stop('brlweight: method not supported')		
+		Y.rawbrl				<- project.athena.Fisheretal.Y.rawbrl(YX.tpairs, indir, insignat, indircov, infilecov, infiletree, df.tpairs.tptn=df.tpairs.4.rawbrl, save.file=paste(file, '.R', sep=''), resume=resume, plot.file=paste(file, '.pdf', sep=''), method.restrictTPtoRI=method.restrictTPtoRI)
+		#	BRL [0,1]: branch length weight between pot transmitter and infected 		
+		tmp						<- project.athena.Fisheretal.Y.brlweight.3p(infile.trm.model, Y.rawbrl, df.all, df.viro, dur.Acute=dur.Acute, t.period=t.period, lRNA.supp=lRNA.supp)
+		Y.brl.m					<- copy(tmp$Y.brl.m)
+		Y.brl.bs				<- copy(tmp$Y.brl.bs)
+		Y.rawbrl				<- NULL
+		gc()
 		#	COAL [0,1]: prob that coalescence is within the transmitter
 		Y.coal					<- NULL
 		if(!is.null(cluphy) & !is.null(cluphy.info) & !is.null(cluphy.map.nodectime)  )
@@ -409,9 +376,11 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 		Y.U						<- project.athena.Fisheretal.Y.transmitterinfected(YX.part1)		
 		#	screen for likely missed intermediates/sources
 		plot.file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'missed_',method,'.pdf',sep='')		
-		YX.tpairs.select		<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=Y.coal, thresh.pcoal=thresh.pcoal, cut.brl=cut.brl, any.pos.grace.yr= any.pos.grace.yr, rm.zero.score=rm.zero.score, plot.file=plot.file, t.period=t.period)
+		YX.tpairs.select		<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl.m, Y.U, Y.coal=Y.coal, thresh.pcoal=thresh.pcoal, cut.brl=cut.brl, any.pos.grace.yr= any.pos.grace.yr, rm.zero.score=rm.zero.score, plot.file=plot.file, t.period=t.period)
 		#	take branch length weight ONLY to derive "score.Y"
-		Y.score					<- merge( YX.tpairs.select, subset(Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, telapsed, brl, score.brl.TPp, score.brl.TPd)), by=c('FASTASampleCode','t.FASTASampleCode'))
+		Y.score					<- merge( YX.tpairs.select, subset(Y.brl.m, select=c(FASTASampleCode, t.FASTASampleCode, telapsed, brl, lkl)), by=c('FASTASampleCode','t.FASTASampleCode'))
+		
+		
 		#	keep only one (Patient, t.Patient) pair if there are multiple sequences per individual. Take the one with largest brl score
 		tmp						<- Y.score[,	{	
 													z<- which.min(brl)
@@ -649,71 +618,58 @@ project.athena.Fisheretal.Y.brlweight.3p<- function(infile.trm.model, Y.rawbrl, 
 	require(reshape2)
 	require(ggplot2)
 	require(gamlss)		
-	#
-	#	compute cdf for pairs given they are unlinked
-	#
-	setkey(Y.rawbrl.unlinked, brl)
-	p.rawbrl.unlinked	<- Y.rawbrl.unlinked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]
-	setkey(Y.rawbrl.linked, brl)
-	p.rawbrl.linked		<- Y.rawbrl.linked[, approxfun(brl , seq_along(brl)/length(brl), yleft=0., yright=1., rule=2)]
-	#
+	#	calculate median brl
+	Y.brl.m		<- Y.rawbrl[, list(brl= median(BRL)), by=c('FASTASampleCode', 't.FASTASampleCode')]
 	#	add sequence sampling times	
-	#
-	Y.brl				<- copy(Y.rawbrl)
-	Y.brl				<- merge( Y.brl, unique(subset(df.all, select=c(FASTASampleCode, Patient, PosSeqT, AnyT_T1, isAcute))), by='FASTASampleCode' )	
-	tmp					<- merge( data.table(FASTASampleCode=Y.brl[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, Patient, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
+	Y.brl.m		<- merge( Y.brl.m, unique(subset(df.all, select=c(FASTASampleCode, Patient, PosSeqT, AnyT_T1, isAcute))), by='FASTASampleCode' )	
+	tmp			<- merge( data.table(FASTASampleCode=Y.brl.m[, unique(t.FASTASampleCode)]), unique(subset(df.all, select=c(FASTASampleCode, Patient, PosSeqT, AnyT_T1))), by='FASTASampleCode' )
 	setnames(tmp, colnames(tmp), paste('t.',colnames(tmp),sep=''))
-	Y.brl				<- merge( Y.brl, tmp, by='t.FASTASampleCode')
-	stopifnot( Y.brl[, all(isAcute%in%c('Yes','Maybe'))] )
+	Y.brl.m		<- merge( Y.brl.m, tmp, by='t.FASTASampleCode')
+	stopifnot( Y.brl.m[, all(isAcute%in%c('Yes','Maybe'))] )
 	#
 	#	calculate d_TSeqT
 	#
-	Y.brl				<- merge( Y.brl, data.table(isAcute=c('Yes', 'Maybe'), meanInfWindow= dur.Acute[c('Yes','Maybe')] ), by='isAcute' )		
-	Y.brl[, meanInfT:= PosSeqT-meanInfWindow/365.25]
-	Y.brl[, DUMMY:=seq_len(nrow(Y.brl))]
+	Y.brl.m		<- merge( Y.brl.m, data.table(isAcute=c('Yes', 'Maybe'), meanInfWindow= dur.Acute[c('Yes','Maybe')] ), by='isAcute' )		
+	Y.brl.m[, meanInfT:= PosSeqT-meanInfWindow/365.25]
+	Y.brl.m[, DUMMY:=seq_len(nrow(Y.brl.m))]
 	#	calculate time spent suppressed for transmitter
-	df.TS		<- subset(Y.brl, select=c(DUMMY, t.Patient, t.AnyT_T1, meanInfT, t.PosSeqT))
+	df.TS		<- subset(Y.brl.m, select=c(DUMMY, t.Patient, t.AnyT_T1, meanInfT, t.PosSeqT))
 	setnames(df.TS, colnames(df.TS), gsub('t.', '', colnames(df.TS), fixed=TRUE))	
 	df.TS		<- project.athena.Fisheretal.Y.TSupp(df.TS, df.viro, t.period=t.period, lRNA.supp=lRNA.supp)
 	setnames(df.TS, 'tsupp', 't.tsupp')
-	Y.brl		<- merge(Y.brl, df.TS, by='DUMMY', all.x=TRUE)
-	set(Y.brl, Y.brl[, which(is.na(t.tsupp))], 't.tsupp', 0.)
+	Y.brl.m		<- merge(Y.brl.m, df.TS, by='DUMMY', all.x=TRUE)
+	set(Y.brl.m, Y.brl.m[, which(is.na(t.tsupp))], 't.tsupp', 0.)
 	#	calculate time spent suppressed for infected
-	df.TS		<- subset(Y.brl, select=c(DUMMY, Patient, AnyT_T1, meanInfT, PosSeqT))	
+	df.TS		<- subset(Y.brl.m, select=c(DUMMY, Patient, AnyT_T1, meanInfT, PosSeqT))	
 	df.TS		<- project.athena.Fisheretal.Y.TSupp(df.TS, df.viro, t.period=t.period, lRNA.supp=lRNA.supp)
-	Y.brl		<- merge(Y.brl, df.TS, by='DUMMY', all.x=TRUE)
-	set(Y.brl, Y.brl[, which(is.na(tsupp))], 'tsupp', 0.)
-	cat(paste('\nFound person-years of suppressed evolution, ', Y.brl[, sum(t.tsupp)+sum(tsupp)]))
+	Y.brl.m		<- merge(Y.brl.m, df.TS, by='DUMMY', all.x=TRUE)
+	set(Y.brl.m, Y.brl.m[, which(is.na(tsupp))], 'tsupp', 0.)
+	cat(paste('\nFound person-years of suppressed evolution, ', Y.brl.m[, sum(t.tsupp)+sum(tsupp)]))
 	#	calculate time evolving in transmitter and  infected
-	Y.brl[, t.d_TSeqT:=  abs(t.PosSeqT-meanInfT)-t.tsupp ]
-	set(Y.brl, Y.brl[, which(t.d_TSeqT<0)], 't.d_TSeqT', 0.)	
-	Y.brl[, i.d_TSeqT:=  abs(PosSeqT-meanInfT)-tsupp ]
-	set(Y.brl, Y.brl[, which(i.d_TSeqT<0)], 'i.d_TSeqT', 0.)	
-	Y.brl[, d_TSeqT:=t.d_TSeqT+i.d_TSeqT]
-	cat(paste('\nFound person-years of unsuppressed evolution, ', Y.brl[, sum(d_TSeqT)]))
-	#
-	#	load Gamma model and compute likelihood
-	#
-	load(infile.trm.model)		#expect "trm.pol.GA" "trm.pol.nA"   
-	Y.brl[, mu:= predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(subset(Y.brl, select=d_TSeqT)), what='mu', type='link')]
-	Y.brl[, sigma:= predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(subset(Y.brl, select=d_TSeqT)), what='sigma', type='link')]	
-	Y.brl[, score.brl.TPd:= Y.brl[, dGA(brl, mu=mu, sigma=sigma)]]
-	Y.brl[, score.brl.TPp:= Y.brl[, score.brl.TPd]]
-	#
-	#	set branch length quantiles
-	#	
-	Y.brl[, score.brl.TN:= p.rawbrl.unlinked(brl)]
-	Y.brl[, score.brl.TP:= p.rawbrl.linked(brl)]
-	#	
-	if(!is.na(plot.file.score))
-	{
-		#ggplot(Y.brl, aes(x=score.brl.TPd)) + geom_histogram()		
-	}
-	#
-	Y.brl		<- subset( Y.brl, select=c(FASTASampleCode, t.FASTASampleCode, score.brl.TPd, score.brl.TPp, score.brl.TN, score.brl.TP, d_TSeqT, brl) )
-	setnames(Y.brl, 'd_TSeqT','telapsed')
-	cat(paste('\nReturn brl score for #t.Patient seqs=',Y.brl[, length(unique(t.FASTASampleCode))]))
-	Y.brl		
+	Y.brl.m[, t.d_TSeqT:=  abs(t.PosSeqT-meanInfT)-t.tsupp ]
+	set(Y.brl.m, Y.brl.m[, which(t.d_TSeqT<0)], 't.d_TSeqT', 0.)	
+	Y.brl.m[, i.d_TSeqT:=  abs(PosSeqT-meanInfT)-tsupp ]
+	set(Y.brl.m, Y.brl.m[, which(i.d_TSeqT<0)], 'i.d_TSeqT', 0.)	
+	Y.brl.m[, d_TSeqT:=t.d_TSeqT+i.d_TSeqT]
+	cat(paste('\nFound person-years of unsuppressed evolution, ', Y.brl.m[, sum(d_TSeqT)]))
+	#	load Gamma model
+	load(infile.trm.model)		#expect "trm.pol.GA" "trm.pol.nA"
+	#	compute likelihood on median branch length
+	Y.brl.m[, mu:= predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(subset(Y.brl.m, select=d_TSeqT)), what='mu', type='link')]
+	Y.brl.m[, sigma:= predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(subset(Y.brl.m, select=d_TSeqT)), what='sigma', type='link')]	
+	Y.brl.m[, lkl:= Y.brl.m[, dGA(brl, mu=mu, sigma=sigma)]]
+	Y.brl.m		<- subset( Y.brl.m, select=c(FASTASampleCode, t.FASTASampleCode, lkl, d_TSeqT, brl) )	
+	#	compute likelihood on bootstrap branch lengths
+	Y.rawbrl 	<- merge(Y.rawbrl, subset(Y.brl.m, select=c(FASTASampleCode, t.FASTASampleCode, d_TSeqT)), by=c('FASTASampleCode', 't.FASTASampleCode'))
+	Y.rawbrl[, mu:= predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(subset(Y.rawbrl, select=d_TSeqT)), what='mu', type='link')]
+	Y.rawbrl[, sigma:= predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(subset(Y.rawbrl, select=d_TSeqT)), what='sigma', type='link')]	
+	Y.rawbrl[, lkl:= Y.rawbrl[, dGA(BRL, mu=mu, sigma=sigma)]]
+	Y.rawbrl	<- subset( Y.rawbrl, select=c(FASTASampleCode, t.FASTASampleCode, lkl, d_TSeqT, BRL, BS) )
+	#	answer
+	setnames(Y.brl.m, 'd_TSeqT','telapsed')
+	setnames(Y.rawbrl, c('d_TSeqT','BRL'),c('telapsed','brl'))
+	cat(paste('\nReturn brl score for #t.Patient seqs=',Y.brl.m[, length(unique(t.FASTASampleCode))]))
+	list(Y.brl.m=Y.brl.m, Y.brl.bs=Y.rawbrl)	
 }
 ######################################################################################
 project.athena.Fisheretal.Y.brlweight.3n<- function(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.viro, dur.Acute=NULL, t.period=0.25, lRNA.supp=log10(51), plot.file.score=NA)
@@ -1577,23 +1533,20 @@ project.athena.Fisheretal.Y.brlweight<- function(Y.rawbrl, Y.rawbrl.linked, Y.ra
 	Y.brl		
 }
 ######################################################################################
-project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y.brl, Y.U, Y.coal=NULL, thresh.pcoal=0.5, cut.brl=0.08, any.pos.grace.yr= 3.5, rm.zero.score=FALSE, plot.file=NA, pyiw=NULL, t.period=0.25)
+project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y.brl.m, Y.U, Y.coal=NULL, thresh.pcoal=0.5, cut.brl=Inf, any.pos.grace.yr= NA, rm.zero.score=TRUE, plot.file=NA, pyiw=NULL, t.period=0.25)
 {
 	#thresh.pcoal=0.5; cut.brl=1e-3; any.pos.grace.yr= 3.5; rm.zero.score=FALSE
-	missed					<- merge(YX.tpairs, Y.brl, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE)
+	missed					<- merge(YX.tpairs, Y.brl.m, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE)
 	if(!is.null(Y.coal))
 		missed				<- merge(missed, Y.coal, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE)
 	missed					<- merge(missed, Y.U, by=c('Patient','t.Patient'), allow.cartesian=TRUE, all.x=TRUE)
 	if(!is.null(Y.coal))
-		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, score.brl.TN, score.brl.TP, score.brl.TPp, coal.after.i.AnyPos_T1, coal.after.t.NegT, score.Inf, score.t.inf, brl, class))
+		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, lkl, coal.after.i.AnyPos_T1, coal.after.t.NegT, score.Inf, brl, class))
 	if(is.null(Y.coal))
-		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, score.brl.TN, score.brl.TP, score.brl.TPp, score.Inf, score.t.inf, brl, class))
-	#
-	set(missed, missed[, which(is.na(brl))], 'score.brl.TN', missed[, max(score.brl.TN,na.rm=TRUE)])		#deselected short or recombinant seqs
-	set(missed, missed[, which(is.na(brl))], 'brl', missed[, max(brl,na.rm=TRUE)])							#deselected short or recombinant seqs
-	#if(any(is.na(missed)))	stop('unexpected NA entries in missed')
+		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, lkl, score.Inf, brl, class))
+	#	
+	stopifnot(nrow(subset(missed,is.na(brl)))==0)							
 	missed[, score.Y:=1.]
-	missed[, score.t.inf:=NULL]
 	#	exclude coalescence within infected
 	if(!is.null(Y.coal))
 	{
@@ -1683,18 +1636,27 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 	}	
 	if(!is.na(plot.file))
 	{
-		missed[, cutoff:= 'posterior probability\n > 0.5']
-		set(missed, missed[, which(coal.after.t.NegT<=thresh.pcoal)], 'cutoff', 'posterior probability\n <= 0.5')
+		labels	<- paste(c('posterior probability\n >', 'posterior probability\n <='), thresh.pcoal)
+		missed[, cutoff:= labels[1]]
+		set(missed, missed[, which(coal.after.t.NegT<=thresh.pcoal)], 'cutoff', labels[2])
 		#set(missed, missed[, which(score.brl.TN>=cut.brl)], 'cutoff', 'GD > GD(Unlinked-by-Death)')
 		tmp		<- missed[, list( FASTASampleCode=FASTASampleCode[which.min(brl)], t.FASTASampleCode=t.FASTASampleCode[which.min(brl)] ), by=c('Patient','t.Patient')]
 		tmp		<- merge(subset(tmp, select=c(FASTASampleCode, t.FASTASampleCode)), missed, by=c('FASTASampleCode','t.FASTASampleCode'))
 		setkey(tmp, Patient, t.Patient)
-		set(tmp, NULL, 'cutoff', tmp[, factor(cutoff, levels=c('posterior probability\n > 0.5', 'posterior probability\n <= 0.5'))])
-		ggplot(tmp, aes(x= brl, fill=cutoff)) + labs(x="Patristic distance", y='Number putative transmission pairs') +
-				scale_fill_brewer(name='coalesence compatible with\n direct HIV transmission', palette='Paired') + theme(legend.justification=c(1,1), legend.position=c(1,1)) +
-				geom_histogram(binwidth=0.002)	+ theme(legend.key.size=unit(8,'mm'))			
+		set(tmp, NULL, 'cutoff', tmp[, factor(cutoff, levels=labels)])
+		ggplot(tmp, aes(x= brl, fill=cutoff)) + labs(x="patristic distance\n(subst/site)", y='putative transmission pairs\n(number)') +
+				scale_fill_brewer(name='coalesence compatible with\n direct HIV transmission', palette='Paired') + 
+				geom_histogram(binwidth=0.002)	+ theme_bw() + theme(legend.key.size=unit(8,'mm'), legend.justification=c(1,1), legend.position=c(1,1))			
 		cat(paste('\nsave to file',plot.file))
 		ggsave(file=plot.file, w=5,h=5)			
+		
+		ggplot(subset(tmp, brl<.1), aes(x=brl, y=log(lkl), colour=cutoff)) + geom_point() +
+				scale_colour_brewer(name='coalesence compatible with\n direct HIV transmission', palette='Paired') +
+				labs(x="patristic distance\n(subst/site)", y='log likelihood of direct HIV transmission') +
+				theme_bw() + theme(legend.key.size=unit(8,'mm'), legend.justification=c(0,0), legend.position=c(0,0))
+		cat(paste('\nsave to file',gsub('missed','missedBRLLKL',plot.file)))
+		ggsave(file=gsub('missed','missedBRLLKL',plot.file), w=5,h=5)			
+		
 	}
 	missed		<- subset(missed, !is.na(score.Y))				
 	#	not any longer needed because zero score.brl.TPp is now always NA or ZERO
@@ -1825,67 +1787,23 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 				labs(	x='sequence pairs\nfirst sequence from recipient MSM and second sequence from potential transmitter',
 						y='patristic distance\n(subst/site)')		
 		ggsave(file=paste(plot.file,'_brlrandomsample.pdf',sep=''), h=6, w=12)
-		
-		tmp			<- merge(subset(tmp, select=c(FASTASampleCode, t.FASTASampleCode)), brl.tpairs, by=c('FASTASampleCode','t.FASTASampleCode'))
-		tmp[, interaction:= tmp[, paste(FASTASampleCode, t.FASTASampleCode, sep='::')]]
-		
-		tmp[, variable:='from bootstrap\nreplicate\nof data']
-		tmp			<- rbind(tmp, tmp[, list(FASTASampleCode=FASTASampleCode[1], t.FASTASampleCode=t.FASTASampleCode[1], brl=median(brl), BS=NA_real_, variable='median\npatristic distance'), by='interaction'], use.names=TRUE)
-		set(tmp, tmp[, which(BS==0)], 'variable', 'from data')
-		#set(tmp, tmp[, which(BS==409)], 'variable', 'maximum\nlikelihood\tree')
-		set(tmp, tmp[, which(BS==288)], 'variable', 'with largest\nmaximum likelihood\nacross bootstrap replicates')		#second best tree
-		set(tmp, NULL, 'variable', tmp[, factor(variable, levels=c('from data','from bootstrap\nreplicate\nof data','with largest\nmaximum likelihood\nacross bootstrap replicates','median\npatristic distance'))])
-		
-		ggplot(tmp, aes(x=interaction, y=brl, colour=variable)) + geom_point(size=1) + 
-				geom_point(data=subset(tmp, variable=='from data'), size=2) + geom_point(data=subset(tmp, variable=='with largest\nmaximum likelihood\nacross bootstrap replicates'), size=2) +
-				geom_point(data=subset(tmp, variable=='median\npatristic distance'), size=2) +
-				scale_y_continuous(expand = c(0.01, 0.001)) +
-				scale_colour_manual(values=c("#7FC97F",'black', "#BEAED4", "#FDC086")) +
-				labs(colour='maximum\nlikelihood\ntree', y='estimated patristic distance', x='sequence pairs,\nfirst sequence from recipient MSM and second sequence from potential transmitter') +
+		#	plot for 100 with small brl in data tree
+		tmp			<- subset(df.tpairs.brl, BS==0 & BRL<0.02)
+		tmp			<- tmp[sample(nrow(tmp),1e2),]
+		tmp[, PAIR:= seq_len(nrow(tmp))]
+		tmp			<- merge( df.tpairs.brl, subset(tmp, select=c(FASTASampleCode, t.FASTASampleCode, PAIR)), by=c('FASTASampleCode','t.FASTASampleCode')) 
+		setkey(tmp, PAIR)
+		ggplot(tmp, aes(x=factor(PAIR), y=BRL)) + geom_boxplot(data=subset(tmp,BS>0), outlier.shape = NA) + 
+				geom_point(data=subset(tmp,BS==0), colour="#7FC97F") +
+				geom_point(data=subset(tmp,BS==288), colour="#BEAED4") +
+				scale_y_continuous(expand=c(0,0)) +
 				theme_bw() +
-				theme(axis.text.x=element_blank(), axis.ticks=element_blank(),legend.key.size=unit(11,'mm'))
-		file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013_distPairs.pdf'
-		ggsave(file=file, h=8, w=16)
-		
-		require(grid)
-		require(ggplot2)
-		tmp		<- do.call('rbind', list(	data.table(brl= msm.linked[,brl], group='Sequence pairs\nfrom same host'), data.table(brl= msm.unlinked.bytime[,brl], group='Sequence pairs\nfrom patients unlinked by death'),
-											data.table(brl= df.tpairs.brl[,brl], group='Clustering sequence pairs\nwith at least one sequence\nfrom a recently infected MSM')		))
-		set(tmp, NULL, 'group', tmp[, factor(group, levels=c('Clustering sequence pairs\nwith at least one sequence\nfrom a recently infected MSM', 'Sequence pairs\nfrom same host', 'Sequence pairs\nfrom patients unlinked by death'))])
-				
-		ggplot(tmp, aes(x= brl, fill=group)) + labs(x="Substitutions / site", y='Sequence pairs') +
-				scale_fill_brewer(palette='Set1') + theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(13,'mm')) +
-				geom_histogram(binwidth=0.002)		
-		cat(paste('\nsave to file',plot.file))
-		ggsave(file=plot.file, w=6,h=6)		
-		#tmp2	<- data.table( x= msm.unlinked.bytime[, rep(quantile(brl, p=c(1e-3, 1e-2)),2,each=TRUE)], y=rep(c(0,2e3),2), quantile= factor(rep(c(0.001, 0.01),2))) 	
-		ggplot() + labs(x="Substitutions / site", y='Sequence pairs') + xlim(0, 0.15) +
-				scale_fill_brewer(palette='Set1') + theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(13,'mm')) +			 
-				geom_histogram(data=tmp, aes(x= brl, fill=group), binwidth=0.002)	
-		ggsave(file=paste( substr(plot.file,1,nchar(plot.file)-3),'inset.pdf',sep='' ), w=6,h=6)
-		
-		#ggplot(tmp, aes(x= brl, fill=group)) + labs(x="Genetic distance", y='Sequence pairs') + xlim(0, 0.15) +
-		#		scale_fill_brewer(palette='Set1') + theme(legend.justification=c(1,1), legend.position=c(1,1), legend.key.size=unit(13,'mm')) +
-		#		geom_histogram(aes(y=..density..), colour="black", binwidth=0.002, position="identity", alpha=0.7)				
-		#pdf(plot.file, w=5, h=5)
-		#cat(paste('\nplot to file',plot.file))
-		#require(RColorBrewer)
-		#par(mar=c(4,4,0.5,0.5))
-		#cols		<- brewer.pal(3, 'Set1')
-		#legend.txt	<- c('same host', 'Died < last HIV- test', 'potential transmission pairs')	
-		#xlim		<- c(0, max( msm.linked[, max(brl)], msm.unlinked.bytime[, max(brl)], df.tpairs.brl[, max(brl)])*1.1 )
-		#tmp			<- seq(from=xlim[1], to=xlim[2], by=diff(xlim)/200)
-		#hist( msm.linked[, brl], breaks=tmp , col=my.fade.col(cols[1],0.5), add=0, freq=0, xlab='branch length', main='' )
-		#hist( msm.unlinked.bytime[, brl], breaks=tmp, col=my.fade.col(cols[2],0.5), freq=0, add=1 )
-		#hist( df.tpairs.brl[, brl], breaks=tmp, col=my.fade.col(cols[3],0.5), freq=0, add=1 )
-		#legend('topright', bty='n', fill= cols, border=NA, legend=legend.txt)		
-		#tmp			<- msm.unlinked.bytime[, quantile(brl, p=c(1e-5, 1e-4, 5e-4, 0.001, 0.01))]
-		#ltys		<- seq_along(tmp)+1
-		#abline(v=tmp, col=cols[2], lty=ltys)
-		#legend('bottomright', bty='n', lty= c(ltys,NA), col=cols[2], border=NA, legend=c('1e-5', '1e-4', '5e-4', '1e-3', '1e-2',''))
-		#dev.off()
+				theme(axis.text.x=element_blank(), axis.ticks=element_blank() ) +
+				labs(	x='sequence pairs\nfirst sequence from recipient MSM and second sequence from potential transmitter',
+						y='patristic distance\n(subst/site)')		
+		ggsave(file=paste(plot.file,'_brlInDataTreeSmall.pdf',sep=''), h=6, w=12)		
 	}	
-	list(tpairs=df.tpairs.brl, linked=msm.linked, unlinked=msm.unlinked.bytime)	
+	df.tpairs.brl	
 }
 ######################################################################################
 #infilecov<- infile.cov.study; infile.viro<- infile.viro.study; infile.immu<- infile.immu.study; infile.treatment<- infile.treatment.study; adjust.AcuteByNegT=adjust.AcuteByNegT; adjust.NegT4Acute=NA; adjust.NegTByDetectability=0.25; adjust.minSCwindow=0.25; adjust.AcuteSelect=c('Yes','Maybe'); use.Acute_Spec=0; t.recent.endctime=t.recent.endctime; t.recent.startctime=t.recent.startctime; df.viro.part=NULL; df.immu.part=NULL; df.treatment.part=NULL; df.all.part=NULL

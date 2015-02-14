@@ -4532,12 +4532,6 @@ project.hivc.examl.median.brl<- function()
 	require(reshape2)
 	require(data.table)
 	require(ape)	
-	
-	#given row, column, and n, return index
-	distd.idx	<-function(i,j,n)
-	{	
-		n*(i-1) - i*(i-1)/2 + j-i 
-	} 
 	#
 	#	get data relating to study population (subtype B sequ)
 	#	
@@ -4600,9 +4594,13 @@ project.hivc.examl.median.brl<- function()
 		df.brl		<- as.data.table(expand.grid(IDX_R= tmp[,IDX_R], IDX_T=tmp2[,IDX_T]))
 		#	get brl on this tree
 		n			<- attr(brl, "Size")
-		df.brl		<- subset(df.brl, IDX_R!=IDX_T)
-		set(df.brl, NULL, 'BRL', df.brl[, distd.idx(IDX_R,IDX_T,n)])
-		set(df.brl, NULL, 'BRL', brl[df.brl[,BRL]])
+		df.brl		<- subset(df.brl, IDX_R!=IDX_T)	
+		#	key: need to make sure we have indices on lower triangle
+		tmp			<- df.brl[, which(IDX_T<IDX_R)]
+		tmp2		<- df.brl[tmp, IDX_T]
+		set(df.brl, tmp, 'IDX_T', df.brl[tmp,IDX_R])
+		set(df.brl, tmp, 'IDX_R', tmp2)
+		set(df.brl, NULL, 'BRL', df.brl[, brl[my.lower.tri.index(n, IDX_T, IDX_R)]])
 		df.brl		<- merge(df.brl, tmp, by='IDX_R')
 		df.brl		<- merge(df.brl, tmp2, by='IDX_T')
 		set(df.brl, NULL, c('IDX_T','IDX_R'), NULL)
@@ -4612,6 +4610,7 @@ project.hivc.examl.median.brl<- function()
 		#	
 	}
 stop()	
+	load("/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_Wed_Dec_18_11:37:00_2013_tpairs.R")
 	for(i in seq_along(infiles.dtp))
 	{
 		i	<- 1
@@ -4628,7 +4627,7 @@ stop()
 		#
 		#	compute branch lengths between infected and all potential transmitters
 		#
-		df.tpairs.brl		<- df.tpairs
+		df.tpairs.brl		<- copy(df.tpairs)
 		tmp					<- unique( subset(df.tpairs.brl, select=FASTASampleCode) )	
 		tmp					<- tmp[, list(sc.i=match(FASTASampleCode, ph$tip.label)), by='FASTASampleCode']
 		df.tpairs.brl		<- merge(df.tpairs.brl, tmp, by='FASTASampleCode')
@@ -4673,6 +4672,8 @@ stop()
 	setkey(brl.tpairs, FASTASampleCode, t.FASTASampleCode)
 	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tmp/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013_distPairs.R'
 	save(brl.tpairs, file=file)
+	
+	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlout_Wed_Dec_18_11:37:00_2013_distPairs.R'
 	#
 	#	plot random sample
 	#
