@@ -775,7 +775,7 @@ hivc.pipeline.props_univariate<- function()
 	#!##method.risk				<- c('m3.ind','m3.indNo','m3.indmx','m3.indmxNo','m3.n3mx','m3.indMV','m3.indNoMV','m3.indmxMV','m3.indmxNoMV','m3.n3mxMV',
 	#!##							 'm3.ind.wstar','m3.indNo.wstar','m3.indmx.wstar','m3.indmxNo.wstar','m3.n3mx.wstar','m3.indMV.wstar','m3.indNoMV.wstar','m3.indmxMV.wstar','m3.indmxNoMV.wstar','m3.n3mxMV.wstar')	
 	#	basic m2Bwmx runs	mem=1800
-	method.risk		<- c(	'm2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4')
+	#method.risk		<- c(	'm2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4')
 	method.risk		<- c(	'm2Cwmx.wtn.tp1','m2Cwmx.wtn.tp2','m2Cwmx.wtn.tp3','m2Cwmx.wtn.tp4','m2Cwmx.wtn.tp5','m2Cwmx.wtn.tp6')
 	#method.risk		<- c(	'm2CwmxMv.wtn.tp1','m2CwmxMv.wtn.tp2','m2CwmxMv.wtn.tp3','m2CwmxMv.wtn.tp4')
 	#method.risk		<- c(	'm2BwmxMv.tp1' )
@@ -814,7 +814,7 @@ hivc.pipeline.props_univariate<- function()
 	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Cwmx.tp1.clu.adj' )
 	#method.risk				<- c( 	'm2Cwmx.tp1.clu.adj','m2Cwmx.tp2.clu.adj','m2Cwmx.tp3.clu.adj','m2Cwmx.tp4.clu.adj','m2Cwmx.tp5.clu.adj','m2Cwmx.tp6.clu.adj' )
 	#method.risk				<- c( 	'm2Cwmx.tp1.clu.adj' )	
-	method.risk				<- 'm2Cwmx.wtn.tp4'
+	#method.risk				<- 'm2Cwmx.wtn.tp4'
 	dummy	<- sapply(method.risk, function(x)
 			{
 				cmd	<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, outdir=outdir, outfile=outfile, resume=1, verbose=1)
@@ -822,7 +822,7 @@ hivc.pipeline.props_univariate<- function()
 				#stop()
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=3, hpc.mem="1800mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=20, hpc.mem="1900mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="1800mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="64000mb")

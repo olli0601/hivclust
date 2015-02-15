@@ -4527,7 +4527,7 @@ project.athena.Fisheretal.Wallinga.prep.expmissing<- function(nt.table, risk.df,
 	missing
 }
 ######################################################################################
-project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, X.tables, method.risk, risk.df, bs.n=1e3, use.YXf=TRUE )
+project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables, method.risk, risk.df, bs.n=1e3, use.YXf=TRUE )
 {
 	options(warn=0)
 	#
@@ -4792,6 +4792,19 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, X.tables, method.r
 				tmp			<- subset(YX.m3.bs, select=c(Patient, Patient.bs))		
 				setkey(tmp, Patient, Patient.bs)
 				missing		<- merge(unique(tmp), nt.table.bs, by='Patient', allow.cartesian=TRUE)
+				#	bootstrap sample branch length / likelihood score in YX and YXf				
+				tmp2		<- sample(Y.brl.bs[, unique(BS)], 1)
+				tmp			<- merge(unique(subset(YX.m3.bs, select=c(FASTASampleCode, t.FASTASampleCode))), subset(Y.brl.bs, BS==tmp2, c(FASTASampleCode, t.FASTASampleCode, score.Y)), by=c('FASTASampleCode','t.FASTASampleCode'))												
+				YX.m3.bs	<- merge(subset(YX.m3.bs, select=setdiff(names(YX.m3.bs), c('score.Y','score.Y.raw','brl'))), tmp, by=c('FASTASampleCode','t.FASTASampleCode'))				
+				tmp			<- merge(unique(subset(YXf, select=c(FASTASampleCode, t.FASTASampleCode))), subset(Y.brl.bs, BS==tmp2, c(FASTASampleCode, t.FASTASampleCode, score.Y)), by=c('FASTASampleCode','t.FASTASampleCode'))
+				YXf.bs		<- merge(subset(YXf, select=setdiff(names(YXf), c('score.Y','score.Y.raw','brl'))), tmp, by=c('FASTASampleCode','t.FASTASampleCode'))
+				if(grepl('wtn',method.risk))
+				{					
+					set(YX.m3.bs, NULL, 'score.Y.raw', YX.m3.bs[, score.Y])
+					set(YX.m3.bs, NULL, 'score.Y', YX.m3.bs[, score.Y*w.tn])
+					set(YXf.bs, NULL, 'score.Y.raw', YXf.bs[, score.Y])									
+					set(YXf.bs, NULL, 'score.Y', YXf.bs[, score.Y*w.tn])
+				}				
 				#	compute the sum of observed Y's by risk factor for each recipient
 				tmp			<- YX.m3.bs[, list(Patient=Patient[1], yYX.sum= sum(score.Y), YX.bs=length(score.Y), YX.w=w.t[1]), by=c('stage','Patient.bs')]
 				setnames(tmp, 'stage','factor')
@@ -4825,12 +4838,10 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, X.tables, method.r
 				#	draw missing scores from all yijt in that stage	for number missing YXm.r.e0
 				tmp			<- missing[, {															
 												if(!use.YXf)
-													z	<- YX.m3[ which( grepl(factor2[1], YX.m3[[risk]], fixed=TRUE)), ]														
+													z	<- YX.m3.bs[ which( grepl(factor2[1], YX.m3.bs[[risk]], fixed=TRUE)), ]														
 												if(use.YXf)
-													z	<- YXf[ which( grepl(factor2[1], YXf[[risk]], fixed=TRUE)), ]
+													z	<- YXf.bs[ which( grepl(factor2[1], YXf.bs[[risk]], fixed=TRUE)), ]
 												z	<- median(z[['score.Y']]) 
-												#	TODO: if activate, double check sample -- these were integers !?
-												#list(Patient.bs=rep(Patient.bs, YXm.r.e0), yYXm.r.e0=sample(z, sum(YXm.r.e0), replace=TRUE)  )
 												list(Patient.bs=Patient.bs, yYXm.sum.e0=YXm.r.e0*z, yYXm.sum.e0cp=YXm.r.e0cp*z )
 										}, by=c('risk','factor')]									
 				#tmp[, list(CHECK=sum(yYXm.sum.e0cp)), by=c('risk','factor')]								
@@ -5360,7 +5371,7 @@ project.athena.Fisheretal.estimate.risk.wrap.add2riskdf<- function(method.risk, 
 	risk.df
 }
 ######################################################################################
-project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.info, plot.file.or=NA, bs.n=1e3, resume=TRUE, save.file=NA, method.risk=NA)
+project.athena.Fisheretal.estimate.risk.wrap<- function(YX, Y.brl.bs, X.tables, tperiod.info, plot.file.or=NA, bs.n=1e3, resume=TRUE, save.file=NA, method.risk=NA)
 {	
 	if(resume & !is.na(save.file))
 	{
@@ -5714,7 +5725,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, X.tables, tperiod.in
 			#risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
 			#risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
 			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
-			ans			<- project.athena.Fisheretal.Wallinga.run(YX, YXf, X.tables, method.risk, risk.df, bs.n=bs.n, use.YXf=1 )
+			ans			<- project.athena.Fisheretal.Wallinga.run(YX, YXf, Y.brl.bs, X.tables, method.risk, risk.df, bs.n=bs.n, use.YXf=1 )
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
 		}
@@ -12928,15 +12939,8 @@ hivc.prog.props_univariate<- function()
 	YX				<- copy(tmp$YX)
 	Y.brl.bs		<- copy(tmp$Y.brl.bs)
 	gc()
-stop()	
+#stop()	
 	stopifnot(is.null(X.tables)==FALSE)
-	#	get branch lengths for all pairs in YX
-	df.pairs		<- subset(YX, select=c(FASTASampleCode, t.FASTASampleCode))
-	setkey(df.pairs, FASTASampleCode, t.FASTASampleCode)
-	df.pairs		<- unique(df.pairs)
-	df.brl			<- project.athena.Fisheretal.brl.read.distTipsToRec(indir, df.pairs)
-
-	
 	#
 	#	for each time period, estimate N transmitted etc
 	#
@@ -12949,7 +12953,7 @@ stop()
 		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 		save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
 		#	estimate as stratified
-		YXe			<- project.athena.Fisheretal.estimate.risk.wrap(YX, X.tables, tperiod.info, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method.risk=method.risk)
+		YXe			<- project.athena.Fisheretal.estimate.risk.wrap(YX, Y.brl.bs, X.tables, tperiod.info, plot.file.or=NA, bs.n=bs.n, resume=resume, save.file=save.file, method.risk=method.risk)
 		if( as.numeric(substring(regmatches(method.risk,regexpr('tp[0-9]', method.risk)),3))<4 )
 		{
 			#	pool ART stages, re-estimate
