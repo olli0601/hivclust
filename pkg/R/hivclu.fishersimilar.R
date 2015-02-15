@@ -12576,7 +12576,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			X.seq			<- project.athena.Fisheretal.YX.model5.stratify(X.seq)
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
 		}					
-stop()
+#stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
@@ -12926,7 +12926,9 @@ hivc.prog.props_univariate<- function()
 	t2inf.args		<- tmp$t2inf.args
 	df.all			<- copy(tmp$df.all)
 	YX				<- copy(tmp$YX)
+	Y.brl.bs		<- copy(tmp$Y.brl.bs)
 	gc()
+stop()	
 	stopifnot(is.null(X.tables)==FALSE)
 	#	get branch lengths for all pairs in YX
 	df.pairs		<- subset(YX, select=c(FASTASampleCode, t.FASTASampleCode))
