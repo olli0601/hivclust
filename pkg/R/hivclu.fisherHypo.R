@@ -88,43 +88,67 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	ggplot(runs.av.info, aes(x=HYPO))	+ geom_boxplot(aes(ymin=Q2.5, ymax=Q97.5, lower=Q25, middle=Q50, upper=Q75), stat="identity") + geom_point(aes(y=central), colour='red') +
 			coord_flip()
 	#	keep for figure
-	select			<- c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestA06m50pc', 'HypoTestC06m50pc', 'HypoRPrEP50', 'HypoPrestC18m50pcImmediateART', 'HypoPrestC18m60pcImmediateART', 'HypoPrestC18m60pcARTat500', 'HypoPrestC18m70pcARTat500', 'HypoTestC18m50pcARTat500', 'HypoTestC18m50pcImmediateART' )
+	select			<- c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestC06m50pc', 'HypoTestA06m50pc', 'HypoTestC18m50pcARTat500', 'HypoTestC18m50pcImmediateART', 'HypoPrestC18m50pc', 'HypoPrestC18m50pcImmediateART', 'HypoPrestC18m60pcImmediateART', 'HypoPrestC18m60pcARTat500', 'HypoPrestC18m70pcARTat500')
 	ggplot(subset(runs.av.info, HYPO%in%select), aes(x=HYPO))	+ geom_boxplot(aes(ymin=Q2.5, ymax=Q97.5, lower=Q25, middle=Q50, upper=Q75), stat="identity") + geom_point(aes(y=central), colour='red') +
 			coord_flip()
 	
 	
-	set(runs.av.info, NULL, 'TestC', 'No')
-	set(runs.av.info, NULL, 'TestA', 'No')
-	set(runs.av.info, NULL, 'PREP', 'No')
-	set(runs.av.info, NULL, 'ART', 'No')
-	tmp				<- runs.av.info[, which(grepl('TestC', HYPO))]
-	set(runs.av.info, tmp, 'TestC', runs.av.info[tmp, regmatches(HYPO,regexpr('TestC18m|TestC1y|TestC6m', HYPO))] )
-	tmp				<- runs.av.info[, which(grepl('TestA', HYPO))]
-	set(runs.av.info, tmp, 'TestA', runs.av.info[tmp, regmatches(HYPO,regexpr('TestA18m|TestA1y|TestA6m', HYPO))] )
-	tmp				<- runs.av.info[, which(grepl('PrEP', HYPO))]
-	set(runs.av.info, tmp, 'PREP', runs.av.info[tmp, regmatches(HYPO,regexpr('PrEP100|PrEP33|PrEP50', HYPO))] )
-	tmp				<- runs.av.info[, which(grepl('ART', HYPO))]
-	set(runs.av.info, tmp, 'ART', runs.av.info[tmp, regmatches(HYPO,regexpr('ImmediateART|ARTat500', HYPO))] )
+	if(0)
+	{
+		tmp				<- data.table(	HYPO	= rev(select), 
+				legend	= rev(c(	'ART at CD4<500', 'immediate ART', 'testing for HIV every 6 mo by 50%', 'testing for acute HIV every 6 mo by 50%',													
+								'testing for HIV every 18 mo by 50% + ART at 500', 'testing for HIV every 18 mo by 50% + immediate ART',
+								'testing for HIV every 18 mo + oral PrEP by 50%', 
+								'testing for HIV every 18 mo + oral PrEP by 60% + ART at 500', 'testing for HIV every 18 mo + oral PrEP by 70% + ART at 500',
+								'testing for HIV every 18 mo + oral PrEP by 50% + immediate ART', 'testing for HIV every 18 mo + oral PrEP by 60% + immediate ART'
+						)),
+				levels	= rev(factor(c( 0, 0, 0, 0,
+										1, 2, 
+										0, 
+										3, 3, 
+										4, 4))))
+		set(tmp, NULL, 'legend', tmp[, factor(legend, levels=tmp$legend, labels=tmp$legend)])						
+		runs.av.plot	<- merge(runs.av.info, tmp, by='HYPO')
+		setkey(runs.av.plot, legend)
+		ggplot( runs.av.plot, aes(x=legend, fill=levels) ) +
+				geom_hline(yintercept=50, colour="grey70", size=2) +
+				scale_fill_manual(values=c("white","#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+				geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=4) +
+				scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+				labs(x='', y='HIV infections among MSM\nthat could have been averted 09/07 - 10/12\n(%)') + 
+				coord_flip() +			
+				theme_bw() + theme(legend.position='bottom', legend.title=element_text(size=12), legend.text=element_text(size=12), axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) 		
+	}
+	if(1)
+	{
+		tmp				<- data.table(	HYPO	= rev(select), 
+				legend	= rev(c(	'ART at CD4<500', 'immediate ART', 'testing for HIV every 6 mo by 50%', 'testing for acute HIV every 6 mo by 50%',													
+								'testing for HIV every 18 mo by 50% + ART at 500', 'testing for HIV every 18 mo by 50% + immediate ART',
+								'testing for HIV every 18 mo + oral PrEP by 50%',
+								'testing for HIV every 18 mo + oral PrEP by 60% + ART at 500', 'testing for HIV every 18 mo + oral PrEP by 70% + ART at 500',
+								'testing for HIV every 18 mo + oral PrEP by 50% + immediate ART', 'testing for HIV every 18 mo + oral PrEP by 60% + immediate ART'
+						)),
+				levels	= rev(factor(c( 0, 0, 0, 0,
+										0, 0, 
+										0, 
+										0, 0, 
+										0, 0))))
+		set(tmp, NULL, 'legend', tmp[, factor(legend, levels=tmp$legend, labels=tmp$legend)])						
+		runs.av.plot	<- merge(runs.av.info, tmp, by='HYPO')
+		setkey(runs.av.plot, legend)
+		ggplot( runs.av.plot, aes(x=legend, fill=levels) ) +
+				geom_hline(yintercept=50, colour="grey70", size=2) +
+				scale_fill_manual(values=c("black"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+				geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
+				geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color="#FF7F00", width=0.9, size=0.7) +
+				scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+				labs(x='', y='\nHIV infections among MSM\nthat could have been averted 09/07 - 10/12\n(%)') + 
+				coord_flip() +			
+				theme_bw() + theme(legend.position='bottom', axis.text.x=element_text(size=14), axis.text.y=element_text(size=4), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) 
+		file			<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.HypoAverted.pdf", sep='')
+		ggsave(file=file, w=6, h=6)
+	}
 	
-	tmp				<- data.table(	HYPO	= c('HypoARTat500','HypoImmediateART','HypoRPrEP33', 'HypoTestC18m', 'HypoTestA6m',
-					'HypoRPrEP33ARTat500','HypoRPrEP33ImmediateART','HypoTestC18mRPrEP100ImmediateART'), 
-			legend	= c('universal ART, CD4<500', 'universal ART, immediate', 'oral PrEP', 'universal Conventional Testing, every 18 mo', 'universal Acute Testing, every 6 mo',
-					'oral PrEP +\nuniversal ART, CD4<500','oral PrEP +\nuniversal ART, immediate','universal oral PrEP +\nuniversal Conventional Testing, every 18 mo +\nuniversal ART, immediate'),
-			levels	= factor(c(0, 0, 0, 1, 2, 
-							0, 0, 1)))
-	runs.av.plot	<- merge(runs.av.info, tmp, by='HYPO')
-	runs.av.plot[, DUMMY:= -Q50]
-	setkey(runs.av.plot, DUMMY)
-	set(runs.av.plot, NULL, 'legend', runs.av.plot[, factor(legend, levels=runs.av.plot$legend, labels=runs.av.plot$legend)])
-	ggplot( runs.av.plot, aes(x=legend, fill=levels) ) + 			
-			scale_fill_manual(values=c("#A6CEE3","#FDBF6F","#E31A1C"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
-			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=4) +
-			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
-			labs(x='', y='Proportion of MSM infections\nthat could have been averted\n(%)') + 
-			coord_flip() +			
-			theme_bw() + theme(legend.position='bottom', legend.title=element_text(size=12), legend.text=element_text(size=12), axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) 
-	file			<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.HypoAverted.pdf", sep='')
-	ggsave(file=file, w=8, h=6)
 }
 ######################################################################################
 project.athena.Fisheretal.Hypo.run.median<- function(YXe, method.risk, predict.t2inf=NULL, t2inf.args=NULL, df.all=NULL, method.realloc='ImmediateART',  t.firstsuppressed=0.3, use.YXf= 1, bs.n=1e3, t.period=0.125, save.file=NA, resume=FALSE)

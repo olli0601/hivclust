@@ -387,13 +387,13 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 													list(FASTASampleCode=FASTASampleCode[z], t.FASTASampleCode=t.FASTASampleCode[z])
 												},by=c('Patient', 't.Patient')]	
 		Y.score					<- merge( Y.score, subset(tmp, select=c(FASTASampleCode=FASTASampleCode, t.FASTASampleCode)), by=c('FASTASampleCode', 't.FASTASampleCode') )
-		set(Y.score, NULL, 'score.Y', Y.score[, score.Y*score.brl.TPp])
-		Y.score[, score.brl.TPp:=NULL]
+		set(Y.score, NULL, 'score.Y', Y.score[, score.Y*lkl])
+		Y.score[, lkl:=NULL]
 		#
 		tmp						<- Y.score[, list(n= length(FASTASampleCode)), by=c('Patient', 't.Patient')]
 		if(tmp[,any(n!=1)])	stop('unexpected multiple entries per Patient, t.Patient')
 		#	merge over time periods t
-		YX						<- merge( YX.part1, subset(Y.score, select=c(FASTASampleCode, t.FASTASampleCode, score.Y, telapsed, brl, score.brl.TPd)), by=c('FASTASampleCode', 't.FASTASampleCode'))
+		YX						<- merge( YX.part1, subset(Y.score, select=c(FASTASampleCode, t.FASTASampleCode, score.Y, telapsed, brl)), by=c('FASTASampleCode', 't.FASTASampleCode'))
 		#	only triplets currently lost because of missing BEAST2 dated clusters
 		YX.part1				<- NULL
 		print(YX[, table(score.Y>0, class)])
@@ -416,19 +416,23 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 															t.AnyPos_T1,  AnyPos_T1, t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, t.Trm, Trm,												#other 
 															FASTASampleCode, t.FASTASampleCode, w, w.i, w.in, w.t, w.tn, class										#other							
 															))
-		setkey(YX, t, t.Patient, Patient)		
+		setkey(YX, t, t.Patient, Patient)	
+		#	select from Y.brl.bs
+		Y.brl.bs				<- merge(Y.brl.bs, unique(subset(YX, select=c(FASTASampleCode, t.FASTASampleCode))), by=c('FASTASampleCode', 't.FASTASampleCode'))
+		set(Y.brl.bs, NULL, c('telapsed','brl'), NULL)
+		setnames(Y.brl.bs, 'lkl','score.Y')
 		#
 		if(!is.na(save.file))
 		{
 			cat(paste('\nsave YX to file', save.file))
 			if(!save.all)
-				save(YX, file=save.file)
+				save(YX, Y.brl.bs, file=save.file)
 			if(save.all)
-				save(YX, YX.tpairs, df.all, Y.brl, Y.U, Y.coal, file=save.file)
+				save(YX, Y.brl.bs, YX.tpairs, df.all, Y.brl, Y.U, Y.coal, file=save.file)
 		}
 	}
 	if(!save.all)
-		return( YX )
+		return( list(YX=YX, Y.brl.bs=Y.brl.bs ) )
 	if(save.all)
 		return( list(YX=YX, YX.tpairs=YX.tpairs, df.all=df.all, Y.brl=Y.brl, Y.U=Y.U, Y.coal=Y.coal) )
 }
@@ -613,7 +617,7 @@ project.athena.Fisheretal.Y.brlweight.3o<- function(infile.trm.model, Y.rawbrl, 
 	Y.brl		
 }
 ######################################################################################
-project.athena.Fisheretal.Y.brlweight.3p<- function(infile.trm.model, Y.rawbrl, Y.rawbrl.linked, Y.rawbrl.unlinked, df.all, df.viro, dur.Acute=NULL, t.period=0.25, lRNA.supp=log10(51), plot.file.score=NA)
+project.athena.Fisheretal.Y.brlweight.3p<- function(infile.trm.model, Y.rawbrl, df.all, df.viro, dur.Acute=NULL, t.period=0.25, lRNA.supp=log10(51), plot.file.score=NA)
 {
 	require(reshape2)
 	require(ggplot2)
@@ -1697,10 +1701,10 @@ project.athena.Fisheretal.YX.weight<- function(YX)
 	print( YX[, table(w.tn)] )
 	stopifnot( nrow(subset(YX, w.tn<=0))==0 )
 	#	add infected weight: every infected can only be infected by one transmitter
-	tmp		<- subset(YX, score.Y>0., select=c(Patient, t.Patient, score.brl.TPd))
+	tmp		<- subset(YX, score.Y>0., select=c(Patient, t.Patient, score.Y))
 	setkey(tmp, Patient, t.Patient)
 	tmp		<- unique(tmp)	
-	tmp		<- tmp[,	list(w.i=score.brl.TPd/sum(score.brl.TPd), w.in=1/length(t.Patient), t.Patient=t.Patient), by='Patient']
+	tmp		<- tmp[,	list(w.i=score.Y/sum(score.Y), w.in=1/length(t.Patient), t.Patient=t.Patient), by='Patient']
 	if( tmp[,sum(w.i)]!=tmp[, length(unique(Patient))] )	stop('unexpected weight')	
 	YX		<- merge(YX, tmp, by=c('Patient','t.Patient'), all.x=TRUE)
 	set(YX, YX[, which(is.na(w.i))], c('w.i','w.in'), 0.)
@@ -1727,7 +1731,6 @@ project.athena.Fisheretal.YX.weight<- function(YX)
 	YX		<- merge(YX, subset(triplet.weight, select=c(Patient, t.Patient, w.t)), by=c('Patient','t.Patient'), all.x=TRUE)
 	set(YX, YX[, which(is.na(w.t))], 'w.t', 1.)
 	set(YX, NULL, 'w', YX[, w*w.t])
-	YX[,score.brl.TPd:=NULL]
 	#	
 	YX	
 }
@@ -1778,9 +1781,9 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 		tmp			<- merge( df.tpairs.brl, tmp, by=c('FASTASampleCode','t.FASTASampleCode')) 
 		set(tmp, NULL, c('FASTASampleCode','t.FASTASampleCode','Patient','t.Patient','cluster','class'), NULL)
 		setkey(tmp, PAIR)
-		ggplot(tmp, aes(x=factor(PAIR), y=BRL)) + geom_boxplot(data=subset(tmp,BS>0), outlier.shape = NA) + 
-				geom_point(data=subset(tmp,BS==0), colour="#7FC97F") +
-				geom_point(data=subset(tmp,BS==288), colour="#BEAED4") +
+		ggplot(tmp, aes(x=factor(PAIR), y=BRL)) + geom_boxplot(data=subset(tmp,BS>0), outlier.size = 0.4) + 
+				geom_point(data=subset(tmp,BS==0), size=1.2, colour="#E41A1C") +
+				geom_point(data=subset(tmp,BS==288), size=1.2, colour="#377EB8") +
 				scale_y_continuous(expand=c(0,0)) +
 				theme_bw() +
 				theme(axis.text.x=element_blank(), axis.ticks=element_blank() ) +
@@ -1793,10 +1796,10 @@ project.athena.Fisheretal.Y.rawbrl<- function(YX.tpairs, indir, insignat, indirc
 		tmp[, PAIR:= seq_len(nrow(tmp))]
 		tmp			<- merge( df.tpairs.brl, subset(tmp, select=c(FASTASampleCode, t.FASTASampleCode, PAIR)), by=c('FASTASampleCode','t.FASTASampleCode')) 
 		setkey(tmp, PAIR)
-		ggplot(tmp, aes(x=factor(PAIR), y=BRL)) + geom_boxplot(data=subset(tmp,BS>0), outlier.shape = NA) + 
-				geom_point(data=subset(tmp,BS==0), colour="#7FC97F") +
-				geom_point(data=subset(tmp,BS==288), colour="#BEAED4") +
-				scale_y_continuous(expand=c(0,0)) +
+		ggplot(tmp, aes(x=factor(PAIR), y=BRL)) + geom_boxplot(data=subset(tmp,BS>0), outlier.size = 0.4) + 
+				geom_point(data=subset(tmp,BS==0), size=1.2, colour="#E41A1C") +
+				geom_point(data=subset(tmp,BS==288), size=1.2, colour="#377EB8") +
+				scale_y_continuous(expand=c(0,0), limits=c(0,0.08)) +
 				theme_bw() +
 				theme(axis.text.x=element_blank(), axis.ticks=element_blank() ) +
 				labs(	x='sequence pairs\nfirst sequence from recipient MSM and second sequence from potential transmitter',
@@ -10992,6 +10995,7 @@ project.athena.Fisheretal.brl.read.distTipsToRec<- function(indir, df.pairs, ver
 	df.brl			<- lapply(seq_along(infiles), function(i)
 			{
 				file	<- paste(indir, infiles[i], sep='/')
+				cat(paste('\nprocess file',file))
 				load(file)
 				set(df.brl, NULL, 'FASTASampleCode_R', df.brl[, as.character(FASTASampleCode_R)])
 				set(df.brl, NULL, 'FASTASampleCode_T', df.brl[, as.character(FASTASampleCode_T)])
@@ -12381,9 +12385,12 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 	#save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX',method.PDT,method,'_all.R',sep='')
 	#save.all		<- TRUE
 	# df.tpairs.4.rawbrl=df.tpairs; thresh.pcoal=method.thresh.pcoal; brl.bwhost.multiplier=method.brl.bwhost; method.minLowerUWithNegT=method.minLowerUWithNegT; lRNA.supp=method.lRNA.supp; infilecov= infile.cov.study
-	YX				<- project.athena.Fisheretal.YX.part2(	YX.part1, df.all, df.treatment, df.viro, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, dur.Acute=dur.Acute,
-			rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=method.thresh.pcoal, cut.brl=method.cut.brl, brl.bwhost.multiplier=method.brl.bwhost, method.minLowerUWithNegT=method.minLowerUWithNegT, lRNA.supp=method.lRNA.supp, tp.cut=tp.cut,
-			t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
+	tmp				<- project.athena.Fisheretal.YX.part2(	YX.part1, df.all, df.treatment, df.viro, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, dur.Acute=dur.Acute,
+								rm.zero.score=rm.zero.score, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=method.thresh.pcoal, cut.brl=method.cut.brl, brl.bwhost.multiplier=method.brl.bwhost, method.minLowerUWithNegT=method.minLowerUWithNegT, lRNA.supp=method.lRNA.supp, tp.cut=tp.cut,
+								t.period=t.period, save.file=save.file, resume=resume, method=method, save.all=save.all)
+	YX				<- copy(tmp$YX)
+	Y.brl.bs		<- copy(tmp$Y.brl.bs)
+	tmp				<- NULL
 	gc()
 	tperiod.info	<- merge(df.all, unique( subset(YX, select=c(Patient, t.period)) ), by='Patient')
 	tperiod.info	<- tperiod.info[, list(t.period.min=min(AnyPos_T1)), by='t.period']
@@ -12569,7 +12576,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			X.seq			<- project.athena.Fisheretal.YX.model5.stratify(X.seq)
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
 		}					
-#stop()
+stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
@@ -12606,7 +12613,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 		gc()
 		stop()
 	}
-	ans		<- list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, YX=YX)
+	ans		<- list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, YX=YX, Y.brl.bs=Y.brl.bs)
 	ans
 }
 ######################################################################################
