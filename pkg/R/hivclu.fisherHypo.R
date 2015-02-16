@@ -11,6 +11,9 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	outdir					<- paste(DATA,"fisheretal_141221",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150105",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150105",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150216",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150216",sep='/')		
+	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -24,7 +27,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	if(resume)
 	{
 		options(show.error.messages = FALSE)		
-		file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.Hypo.R", sep='')		
+		file			<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.Hypo.Rdata", sep='')		
 		readAttempt			<- try(suppressWarnings(load(file)))
 		options(show.error.messages = TRUE)
 		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",file))		
@@ -52,6 +55,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 		runs.opt	<- do.call('rbind', runs.opt)
 		setkey(runs.opt, method.dating, method.brl)	
 		print(runs.opt)
+		#subset(runs.opt, grepl('C3V100',method.brl))
 		#	load risk estimates
 		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
 				{
@@ -88,7 +92,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	ggplot(runs.av.info, aes(x=HYPO))	+ geom_boxplot(aes(ymin=Q2.5, ymax=Q97.5, lower=Q25, middle=Q50, upper=Q75), stat="identity") + geom_point(aes(y=central), colour='red') +
 			coord_flip()
 	#	keep for figure
-	select			<- c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestC06m50pc', 'HypoTestA06m50pc', 'HypoTestC18m50pcARTat500', 'HypoTestC18m50pcImmediateART', 'HypoPrestC18m50pc', 'HypoPrestC18m50pcImmediateART', 'HypoPrestC18m60pcImmediateART', 'HypoPrestC18m60pcARTat500', 'HypoPrestC18m70pcARTat500')
+	select			<- c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestC06m100pc', 'HypoTestA06m100pc', 'HypoTestC18m100pcARTat500', 'HypoTestC18m100pcImmediateART', 'HypoPrestC18m50pc', 'HypoPrestC18m50pcImmediateART', 'HypoPrestC18m60pcImmediateART', 'HypoPrestC18m60pcARTat500', 'HypoPrestC18m70pcARTat500')
 	ggplot(subset(runs.av.info, HYPO%in%select), aes(x=HYPO))	+ geom_boxplot(aes(ymin=Q2.5, ymax=Q97.5, lower=Q25, middle=Q50, upper=Q75), stat="identity") + geom_point(aes(y=central), colour='red') +
 			coord_flip()
 	
@@ -96,7 +100,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	if(0)
 	{
 		tmp				<- data.table(	HYPO	= rev(select), 
-				legend	= rev(c(	'ART at CD4<500', 'immediate ART', 'testing for HIV every 6 mo by 50%', 'testing for acute HIV every 6 mo by 50%',													
+				legend	= rev(c(	'ART at CD4<500', 'immediate ART', 'testing for HIV every 6 mo by 100%', 'testing for acute HIV every 6 mo by 100%',													
 								'testing for HIV every 18 mo by 50% + ART at 500', 'testing for HIV every 18 mo by 50% + immediate ART',
 								'testing for HIV every 18 mo + oral PrEP by 50%', 
 								'testing for HIV every 18 mo + oral PrEP by 60% + ART at 500', 'testing for HIV every 18 mo + oral PrEP by 70% + ART at 500',
