@@ -4792,8 +4792,12 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 				tmp			<- subset(YX.m3.bs, select=c(Patient, Patient.bs))		
 				setkey(tmp, Patient, Patient.bs)
 				missing		<- merge(unique(tmp), nt.table.bs, by='Patient', allow.cartesian=TRUE)
-				#	bootstrap sample branch length / likelihood score in YX and YXf				
+				#	bootstrap sample branch length / likelihood score in YX and YXf	
+#YXf.bs<- copy(YXf)
+#if(0)
+#{
 				tmp2		<- sample(Y.brl.bs[, unique(BS)], 1)
+#				cat(paste('\nbootstrap id for score.Y= ',tmp2))
 				tmp			<- merge(unique(subset(YX.m3.bs, select=c(FASTASampleCode, t.FASTASampleCode))), subset(Y.brl.bs, BS==tmp2, c(FASTASampleCode, t.FASTASampleCode, score.Y)), by=c('FASTASampleCode','t.FASTASampleCode'))												
 				YX.m3.bs	<- merge(subset(YX.m3.bs, select=setdiff(names(YX.m3.bs), c('score.Y','score.Y.raw','brl'))), tmp, by=c('FASTASampleCode','t.FASTASampleCode'))				
 				tmp			<- merge(unique(subset(YXf, select=c(FASTASampleCode, t.FASTASampleCode))), subset(Y.brl.bs, BS==tmp2, c(FASTASampleCode, t.FASTASampleCode, score.Y)), by=c('FASTASampleCode','t.FASTASampleCode'))
@@ -4804,7 +4808,10 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 					set(YX.m3.bs, NULL, 'score.Y', YX.m3.bs[, score.Y*w.tn])
 					set(YXf.bs, NULL, 'score.Y.raw', YXf.bs[, score.Y])									
 					set(YXf.bs, NULL, 'score.Y', YXf.bs[, score.Y*w.tn])
-				}				
+				}	
+#}
+#print( YX.m3.bs[, list(ym=median(score.Y)), by='stage'] )				
+				
 				#	compute the sum of observed Y's by risk factor for each recipient
 				tmp			<- YX.m3.bs[, list(Patient=Patient[1], yYX.sum= sum(score.Y), YX.bs=length(score.Y), YX.w=w.t[1]), by=c('stage','Patient.bs')]
 				setnames(tmp, 'stage','factor')
@@ -4836,14 +4843,23 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 				missing		<- merge(missing, tmp, by=c('risk','factor','Patient.bs'))
 				missing[, factor2:= substr(factor, 1, nchar(factor)-1)]
 				#	draw missing scores from all yijt in that stage	for number missing YXm.r.e0
+				#tmp			<- missing[, {															
+				#			if(!use.YXf)
+				#				z			<- YX.m3.bs[ which( grepl(factor2[1], YX.m3.bs[[risk]], fixed=TRUE)), ]														
+				#			if(use.YXf)
+				#				z			<- YXf.bs[ which( grepl(factor2[1], YXf.bs[[risk]], fixed=TRUE)), ]							 
+				#			yYXm.sum.e0		<- sapply(YXm.r.e0, function(x) sum(sample(z[['score.Y']], ceiling(x), replace=FALSE))/ceiling(x)*x )
+				#			yYXm.sum.e0cp	<- sapply(YXm.r.e0cp, function(x) sum(sample(z[['score.Y']], ceiling(x), replace=FALSE))/ceiling(x)*x )
+				#			list(Patient.bs=Patient.bs, yYXm.sum.e0=yYXm.sum.e0, yYXm.sum.e0cp=yYXm.sum.e0cp )
+				#		}, by=c('risk','factor')]
 				tmp			<- missing[, {															
-												if(!use.YXf)
-													z	<- YX.m3.bs[ which( grepl(factor2[1], YX.m3.bs[[risk]], fixed=TRUE)), ]														
-												if(use.YXf)
-													z	<- YXf.bs[ which( grepl(factor2[1], YXf.bs[[risk]], fixed=TRUE)), ]
-												z	<- median(z[['score.Y']]) 
-												list(Patient.bs=Patient.bs, yYXm.sum.e0=YXm.r.e0*z, yYXm.sum.e0cp=YXm.r.e0cp*z )
-										}, by=c('risk','factor')]									
+							if(!use.YXf)
+								z	<- YX.m3.bs[ which( grepl(factor2[1], YX.m3.bs[[risk]], fixed=TRUE)), ]														
+							if(use.YXf)
+								z	<- YXf.bs[ which( grepl(factor2[1], YXf.bs[[risk]], fixed=TRUE)), ]
+							z	<- median(z[['score.Y']]) 
+							list(Patient.bs=Patient.bs, yYXm.sum.e0=YXm.r.e0*z, yYXm.sum.e0cp=YXm.r.e0cp*z )
+						}, by=c('risk','factor')]									
 				#tmp[, list(CHECK=sum(yYXm.sum.e0cp)), by=c('risk','factor')]								
 				missing		<- merge(missing, tmp, by=c('Patient.bs','risk','factor'), all.x=TRUE)
 				#	calculate prob Pj(x) that recipient j got infected from x  - with and without adjustment				
@@ -4854,11 +4870,11 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 													coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient.bs')]
 				#subset(tmp, factor=='UA.1')[, hist(Pjx.e0cp, breaks=100)]					
 				#	exclude recipients with no evidence for direct transmission
-				tmp			<- subset(tmp, !is.nan(Pjx))					
+				tmp			<- subset(tmp, !is.nan(Pjx))	
 				#various N.raw									
 				tmp			<- tmp[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
 								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
-				tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")
+				tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")				
 				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))				
 				#
 				risk.ans.bs[, bs:=bs.i]
@@ -4888,8 +4904,8 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 	#
 	tmp			<- subset(risk.ans.bs, grepl('N',stat))	
 	tmp			<- tmp[, list(v= v/sum(v, na.rm=TRUE), risk=risk, factor=factor, risk.ref='None', factor.ref='None', coef=coef, coef.ref='None') , by=c('stat','bs')]	
-	set(tmp, NULL, 'stat', tmp[, gsub('N','P',stat)])
-	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))
+	set(tmp, NULL, 'stat', tmp[, gsub('N','P',stat)])	
+	risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v, bs)))		
 	#
 	#	add UA/(U+UA)
 	#
@@ -12661,7 +12677,7 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Cwmx.wtn.tp4'
+		method.risk				<- 'm2Cwmx.wtn.tp3'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.135
 		method.use.AcuteSpec	<- 1
@@ -12939,7 +12955,7 @@ hivc.prog.props_univariate<- function()
 	YX				<- copy(tmp$YX)
 	Y.brl.bs		<- copy(tmp$Y.brl.bs)
 	gc()
-#stop()	
+stop()	
 	stopifnot(is.null(X.tables)==FALSE)
 	#
 	#	for each time period, estimate N transmitted etc

@@ -11,6 +11,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_141221",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150105",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150105",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150216",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150216",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -840,6 +842,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outdir					<- paste(DATA,"fisheretal_141221",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150105",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150105",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150216",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150216",sep='/')		
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -1032,7 +1036,7 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)	
 	#	WTN 3pa1 1.35 T7 BRL INF
 	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1.35C4V100bInfT7'
+	method.BRL		<- '3pa1H1.35C3V100bInfT7'
 	method.RISK		<- 'm2Cwmx.wtn.tp'
 	method.WEIGHT	<- ''
 	method.DATING	<- 'sasky'

@@ -748,7 +748,7 @@ hivc.pipeline.props_univariate<- function()
 	#method.Acute				<- 'lower'
 	#method.Acute				<- 'central'
 	method.minLowerUWithNegT	<- 1
-	method.cut.brl				<- Inf
+	method.cut.brl				<- 0.02
 	#method.risk	<- c('m3.nicv','m3.nicv.clu','m3.tnicv','m3.tnicv.clu','m21st.cas.clu','m2wmx.cas.clu','m2t.cas.clu','m2wmx.tp.clu','m3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tnic.clu','m3.tniv.clu','m3.tnicvNo.clu','m21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
 	#method.risk	<- c('m3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj')
 	#method.risk	<- c('m21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp1.adj', 'm2wmx.tp2.adj', 'm2wmx.tp3.adj', 'm2wmx.tp4.adj','m3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj')
@@ -812,7 +812,7 @@ hivc.pipeline.props_univariate<- function()
 	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tA.tp1.clu.adj','m5.tiA.tp1.clu.adj','m5.tA.tp2.clu.adj','m5.tiA.tp2.clu.adj','m5.tA.tp3.clu.adj','m5.tiA.tp3.clu.adj','m5.tA.tp4.clu.adj','m5.tiA.tp4.clu.adj')
 	#method.risk			<- c( 	'm5.tAc.clu.adj','m5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj')
 	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Cwmx.tp1.clu.adj' )
-	#method.risk				<- c( 	'm2Cwmx.tp1.clu.adj','m2Cwmx.tp2.clu.adj','m2Cwmx.tp3.clu.adj','m2Cwmx.tp4.clu.adj','m2Cwmx.tp5.clu.adj','m2Cwmx.tp6.clu.adj' )
+	method.risk				<- c( 	'm2Cwmx.tp1.clu.adj','m2Cwmx.tp2.clu.adj','m2Cwmx.tp3.clu.adj','m2Cwmx.tp4.clu.adj','m2Cwmx.tp5.clu.adj','m2Cwmx.tp6.clu.adj' )
 	#method.risk				<- c( 	'm2Cwmx.tp1.clu.adj' )	
 	#method.risk				<- 'm2Cwmx.wtn.tp4'
 	dummy	<- sapply(method.risk, function(x)
@@ -822,10 +822,10 @@ hivc.pipeline.props_univariate<- function()
 				#stop()
 				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=3, hpc.mem="1800mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=20, hpc.mem="1900mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
+				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
-				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="64000mb")
+				cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
 				outdir		<- paste(DATA,"tmp",sep='/')
 				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
