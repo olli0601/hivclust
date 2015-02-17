@@ -13114,7 +13114,7 @@ hivc.prog.props_univariate<- function()
 				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA06m100pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA06m100pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
 			}
-			if(1)
+			if(1) 
 			{
 				#	hypothetical: TestC12m59pc
 				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
