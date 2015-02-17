@@ -13114,13 +13114,18 @@ hivc.prog.props_univariate<- function()
 				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA06m100pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA06m100pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
 			}
-			if(0)
+			if(1)
 			{
 				#	hypothetical: TestC12m59pc
 				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
 				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m59pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m59pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
+				#	hypothetical: TestA12m59pc
+				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
+				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
+				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTest12m59pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
+				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='Test12m59pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)				
 				#	hypothetical: TestC06m65pc
 				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
@@ -13137,7 +13142,12 @@ hivc.prog.props_univariate<- function()
 				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
 				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m32pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m32pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
+				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m32pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
+				#	hypothetical: TestA12m32pc
+				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
+				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
+				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA12m32pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
+				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA12m32pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
 				#	hypothetical: TestC06m42pc
 				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
@@ -13149,7 +13159,7 @@ hivc.prog.props_univariate<- function()
 				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA06m42pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA06m42pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
 			}
-			if(1)
+			if(0)
 			{
 				#	Test and PrEP at 40%, 50%, 60%, 70%				
 				#	hypothetical: PrestC12m18pc40pc

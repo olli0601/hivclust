@@ -125,13 +125,15 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	}
 	if(1)
 	{
-		select			<- c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestC06m100pc', 'HypoTestA06m100pc', 'HypoTestC12m100pcARTat500', 'HypoTestC12m100pcImmediateART', 'HypoPrestC12m50pc', 'HypoPrestC12m50pcImmediateART', 'HypoPrestC12m60pcImmediateART', 'HypoPrestC12m60pcARTat500', 'HypoPrestC12m70pcARTat500')
+		select			<- c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestC12m59pc', 'HypoTestC06m65pc', 'HypoTestC12m59pcARTat500', 'HypoTestC12m59pcImmediateART', 
+								'HypoRPrEP33', 'HypoPrestC12m32pc50pcARTat500', 'HypoPrestC12m32pc50pcImmediateART', 
+								'HypoPrestC12m46pc60pcARTat500', 'HypoPrestC12m46pc60pcImmediateART')
 		tmp				<- data.table(	HYPO	= rev(select), 
-				legend	= rev(c(	'ART at CD4<500', 'immediate ART', 'testing for HIV every 6 mo by 100%', 'testing for acute HIV every 6 mo by 100%',													
-								'testing for HIV every 12 mo by 50% + ART at 500', 'testing for HIV every 12 mo by 50% + immediate ART',
-								'testing for HIV every 12 mo + oral PrEP by 50%',
-								'testing for HIV every 12 mo + oral PrEP by 60% + ART at 500', 'testing for HIV every 12 mo + oral PrEP by 70% + ART at 500',
-								'testing for HIV every 12 mo + oral PrEP by 50% + immediate ART', 'testing for HIV every 12 mo + oral PrEP by 60% + immediate ART'
+				legend	= rev(c(	'ART at CD4<500', 'immediate ART', 'testing for HIV every 12 mo by 70%', 'testing for acute HIV every 6 mo by 70%',													
+								'testing for HIV every 12 mo by 70% + ART at 500', 'testing for HIV every 12 mo by 70% + immediate ART',
+								'xxtesting for HIV every 12 mo + oral PrEP by 50%',
+								'testing for HIV every 12 mo + oral PrEP by 50% + ART at 500', 'testing for HIV every 12 mo + oral PrEP by 50% + immediate ART',
+								'testing for HIV every 12 mo + oral PrEP by 60% + ART at 500', 'testing for HIV every 12 mo + oral PrEP by 60% + immediate ART'
 						)),
 				levels	= rev(factor(c( 0, 0, 0, 0,
 										0, 0, 
