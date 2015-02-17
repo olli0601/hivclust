@@ -1453,10 +1453,10 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	tmp			<- unique(subset(df.tr, select=c(t.Patient, PRESTED, PREP_EFF, PREP_EFF_PAR)))
 	setnames(tmp, 't.Patient','Patient')
 	df.rec		<- merge(df.rec, tmp, by='Patient', all.x=1)
-	if(df.rec[,all(is.na(PREP_EFF_PAR))])
-		set(df.rec, NULL, 'PREP_EFF_PAR', NULL)
 	if(df.rec[,!all(is.na(PREP_EFF_PAR))])
 		set(df.rec, df.rec[, which(is.na(PREP_EFF_PAR))], 'PREP_EFF_PAR', df.rec[which(!is.na(PREP_EFF_PAR))[1],PREP_EFF_PAR])
+	if(df.rec[,all(is.na(PREP_EFF_PAR))])
+		set(df.rec, NULL, 'PREP_EFF_PAR', NULL)	
 	#	for those that are no transmitter, allocate if Prested and if PREP efficacious
 	df.rec		<- rPrEP(df.rec, method.sample, prep.pc)
 	df.rec[, REC_PREP_ON:= as.numeric(PRESTED & PREP_EFF)]
