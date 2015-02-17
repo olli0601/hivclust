@@ -125,12 +125,13 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	}
 	if(1)
 	{
+		select			<- c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestC06m100pc', 'HypoTestA06m100pc', 'HypoTestC12m100pcARTat500', 'HypoTestC12m100pcImmediateART', 'HypoPrestC12m50pc', 'HypoPrestC12m50pcImmediateART', 'HypoPrestC12m60pcImmediateART', 'HypoPrestC12m60pcARTat500', 'HypoPrestC12m70pcARTat500')
 		tmp				<- data.table(	HYPO	= rev(select), 
-				legend	= rev(c(	'ART at CD4<500', 'immediate ART', 'testing for HIV every 6 mo by 50%', 'testing for acute HIV every 6 mo by 50%',													
-								'testing for HIV every 18 mo by 50% + ART at 500', 'testing for HIV every 18 mo by 50% + immediate ART',
-								'testing for HIV every 18 mo + oral PrEP by 50%',
-								'testing for HIV every 18 mo + oral PrEP by 60% + ART at 500', 'testing for HIV every 18 mo + oral PrEP by 70% + ART at 500',
-								'testing for HIV every 18 mo + oral PrEP by 50% + immediate ART', 'testing for HIV every 18 mo + oral PrEP by 60% + immediate ART'
+				legend	= rev(c(	'ART at CD4<500', 'immediate ART', 'testing for HIV every 6 mo by 100%', 'testing for acute HIV every 6 mo by 100%',													
+								'testing for HIV every 12 mo by 50% + ART at 500', 'testing for HIV every 12 mo by 50% + immediate ART',
+								'testing for HIV every 12 mo + oral PrEP by 50%',
+								'testing for HIV every 12 mo + oral PrEP by 60% + ART at 500', 'testing for HIV every 12 mo + oral PrEP by 70% + ART at 500',
+								'testing for HIV every 12 mo + oral PrEP by 50% + immediate ART', 'testing for HIV every 12 mo + oral PrEP by 60% + immediate ART'
 						)),
 				levels	= rev(factor(c( 0, 0, 0, 0,
 										0, 0, 
@@ -1265,14 +1266,18 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	method.reallocate	<- '^U'
 	tmp					<- regmatches(method.realloc,regexpr('Prest[[:alnum:]]+', method.realloc))
 	prest.repeat		<- as.numeric(substr(tmp,7,8)) / 12
-	prest.pc			<- as.numeric(substr(tmp,10,nchar(tmp)-2)) / 100
-	prest.delay			<- substr(tmp,6,6)
-	stopifnot(prest.delay%in%c('A','C'), is.finite(prest.repeat), is.finite(prest.pc))
+	prest.delay			<- substr(tmp,6,6)	
+	test.pc				<- regmatches(method.realloc,regexpr('m[0-9]+pc', tmp))
+	test.pc				<- as.numeric(substr(test.pc, 2, nchar(test.pc)-2)) / 100
+	prep.pc				<- regmatches(method.realloc,regexpr('c[0-9]+pc', tmp))
+	prep.pc				<- as.numeric(substr(prep.pc, 2, nchar(prep.pc)-2)) / 100
+	stopifnot(prest.delay%in%c('A','C'), is.finite(prest.repeat), is.finite(test.pc), is.finite(prep.pc))
 	prest.delay			<- ifelse(prest.delay=='A',0,1/12)
 	if(verbose)
 	{
 		cat(paste('\nprest.repeat=',prest.repeat))
-		cat(paste('\nprest.pc=',prest.pc))
+		cat(paste('\ntest.pc=',test.pc))
+		cat(paste('\nprep.pc=',prep.pc))
 		cat(paste('\nprest.delay=',prest.delay))
 	}
 	#
@@ -1301,12 +1306,12 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 		setnames(tmp, 'stage', 'REALLOC_STAGE')
 		tmp
 	}	
-	rPrEP<- function(df.rec, method.sample, prest.pc, prep.eff=0.44)
+	rPrEP<- function(df.rec, method.sample, prep.pc, prep.eff.mean=0.44)
 	{		
 		if(grepl('stage=prop',method.sample))	 
 		{
 			tmp		<- df.rec[, which(is.na(PRESTED))]
-			z		<- c( rep(0, ceiling(length(tmp)*(1-prest.pc))), rep(1, ceiling(length(tmp)*prest.pc)) )
+			z		<- c( rep(0, ceiling(length(tmp)*(1-prep.pc))), rep(1, ceiling(length(tmp)*prep.pc)) )
 			if(length(z)%%2)
 				z	<- c(z, NA)
 			z		<- na.omit(as.vector(t(matrix(z, ncol=2))))
@@ -1315,28 +1320,28 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 		if(grepl('stage=sample',method.sample))
 		{
 			tmp		<- df.rec[, which(is.na(PRESTED))]
-			set( df.rec, tmp, 'PRESTED', sample(c(0,1), length(tmp), replace=TRUE, prob=c(1-prest.pc, prest.pc)) )							
-		}
+			set( df.rec, tmp, 'PRESTED', sample(c(0,1), length(tmp), replace=TRUE, prob=c(1-prep.pc, prep.pc)) )							
+		}		
 		if(!any('PREP_EFF'==names(df.rec)))
 			df.rec[, PREP_EFF:=NA_real_]
 		if(grepl('eff=median', method.sample))
 		{
+			if(!any('PREP_EFF_PAR'==names(df.rec)))
+				df.rec[, PREP_EFF_PAR:=prep.eff.mean]
 			tmp		<- df.rec[, which(is.na(PREP_EFF))]				
-			z		<- c( rep(0, ceiling(length(tmp)*(1-prep.eff))), rep(1, ceiling(length(tmp)*prep.eff)) )
-			#if(length(z)%%2)
-			#	z	<- c(z, NA)
-			#z		<- na.omit(as.vector(t(matrix(z, ncol=2))))
-			set(df.rec, tmp, 'PREP_EFF', z[seq_along(tmp)])
+			z		<- c( rep(0, ceiling(length(tmp)*(1-df.rec[1, PREP_EFF_PAR]))), rep(1, ceiling(length(tmp)*df.rec[1, PREP_EFF_PAR])) )
+			set(df.rec, tmp, 'PREP_EFF', z[seq_along(tmp)])			
 		}
 		if(grepl('eff=sample', method.sample))
-		{
+		{			
+			if(!any('PREP_EFF_PAR'==names(df.rec)))
+				df.rec[, PREP_EFF_PAR:=rbeta(1, 6, (1-prep.eff.mean)/prep.eff.mean*6 )]
 			tmp		<- df.rec[, which(is.na(PREP_EFF))]
-			tmp2	<- rbeta(1, 6, (1-prep.eff)/prep.eff*6 )	#PrEP efficacious
-			set(df.rec, tmp, 'PREP_EFF', sample(c(0,1), length(tmp), prob=c(1-tmp2, tmp2), replace=TRUE) )
+			set(df.rec, tmp, 'PREP_EFF', sample(c(0,1), length(tmp), prob=c(1-df.rec[1, PREP_EFF_PAR], df.rec[1, PREP_EFF_PAR]), replace=TRUE) )
 		}
 		df.rec
 	}	
-	rTest.Time<- function(df.tr, method.sample, prest.pc=0.5, prest.repeat=1, th.starttime=2008.5, th.endtime=2013.5)
+	rTest.Time<- function(df.tr, method.sample, test.pc=0.5, prest.repeat=1, th.starttime=2008.5, th.endtime=2013.5)
 	{		
 		ans		<- unique(subset( df.tr, select=c(t.Patient, t.INFECTION_T) ))
 		#	first test for every t.Patient after th.starttime
@@ -1356,10 +1361,10 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 		ans[, REALLOC_Tc:= floor(REALLOC_T)]
 		setkey(ans, t.Patient)
 		if(grepl('stage=sample',method.sample))
-			tmp	<- unique(ans)[, list(t.Patient=t.Patient, PRESTED= sample(c(0,1), length(t.Patient), replace=TRUE, prob=c(1-prest.pc, prest.pc))), by='REALLOC_Tc']
+			tmp	<- unique(ans)[, list(t.Patient=t.Patient, PRESTED= sample(c(0,1), length(t.Patient), replace=TRUE, prob=c(1-test.pc, test.pc))), by='REALLOC_Tc']
 		if(grepl('stage=prop',method.sample))
 			tmp	<- unique(ans)[, {
-						z		<- c(rep(0,ceiling(length(t.Patient)*(1-prest.pc))), rep(1,ceiling(length(t.Patient)*prest.pc)))
+						z		<- c(rep(0,ceiling(length(t.Patient)*(1-test.pc))), rep(1,ceiling(length(t.Patient)*test.pc)))
 						if(length(z)%%2)
 							z	<- c(z, NA)
 						z		<- na.omit(as.vector(t(matrix(z, ncol=2))))
@@ -1423,17 +1428,17 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	df.tr		<- df.tr[, list(t=tail(t,1)), by='t.Patient']
 	setnames(df.tr, 't','t.INFECTION_T')
 	#	sample test times of transmitters	
-	df.tr		<- rTest.Time(df.tr, method.sample, prest.pc=prest.pc, prest.repeat=prest.repeat, th.starttime=th.starttime, th.endtime=2013.5)
+	df.tr		<- rTest.Time(df.tr, method.sample, test.pc=test.pc, prest.repeat=prest.repeat, th.starttime=th.starttime, th.endtime=2013.5)
 	#
 	#	those tested are offered PrEP, which may be efficacious from the first test time onwards
 	#	so PrEP improves on testing
 	#
 	tmp			<- subset(df.tr, select=c(t.Patient, PRESTED))
 	setnames(tmp, 't.Patient', 'Patient')
-	tmp			<- rPrEP(tmp, method.sample, prest.pc, prep.eff=0.44)
+	tmp			<- rPrEP(tmp, method.sample, prep.pc, prep.eff=0.44)		#prep.pc does not do anything here because all transmitters have !NA PRESTED
 	setnames(tmp, 'Patient', 't.Patient')
 	tmp[, TR_PREP_ON:= as.numeric(PRESTED & PREP_EFF)]
-	df.tr		<- merge(df.tr, unique(subset(tmp, select=c(t.Patient, PREP_EFF, TR_PREP_ON))), by='t.Patient')
+	df.tr		<- merge(df.tr, unique(subset(tmp, select=c(t.Patient, PREP_EFF, PREP_EFF_PAR, TR_PREP_ON))), by='t.Patient')
 	if(verbose)
 	{
 		cat(paste('\nFound transmitters that are tested at baseline and at repeat points, n=', df.tr[, round(length(which(PRESTED==1))/length(PRESTED),d=3) ]))
@@ -1445,15 +1450,19 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	#
 #tmp	<- sapply(1:1000, function(j){
 	df.rec		<- unique(subset(nt.table, select=Patient))
-	tmp			<- unique(subset(df.tr, select=c(t.Patient, PRESTED, PREP_EFF)))
+	tmp			<- unique(subset(df.tr, select=c(t.Patient, PRESTED, PREP_EFF, PREP_EFF_PAR)))
 	setnames(tmp, 't.Patient','Patient')
 	df.rec		<- merge(df.rec, tmp, by='Patient', all.x=1)
+	if(df.rec[,all(is.na(PREP_EFF_PAR))])
+		set(df.rec, NULL, 'PREP_EFF_PAR', NULL)
+	if(df.rec[,!all(is.na(PREP_EFF_PAR))])
+		set(df.rec, df.rec[, which(is.na(PREP_EFF_PAR))], 'PREP_EFF_PAR', df.rec[which(!is.na(PREP_EFF_PAR))[1],PREP_EFF_PAR])
 	#	for those that are no transmitter, allocate if Prested and if PREP efficacious
-	df.rec		<- rPrEP(df.rec, method.sample, prest.pc)
+	df.rec		<- rPrEP(df.rec, method.sample, prep.pc)
 	df.rec[, REC_PREP_ON:= as.numeric(PRESTED & PREP_EFF)]
 	if(verbose)
 	{
-		cat(paste('\nFound recipients that are tested at baseline, n=', df.rec[, round(length(which(PRESTED==1))/length(PRESTED),d=3) ]))
+		cat(paste('\nFound recipients that are offered PrEP at baseline, n=', df.rec[, round(length(which(PRESTED==1))/length(PRESTED),d=3) ]))
 		cat(paste('\nFound recipients with hyp effective PrEP, n=', df.rec[, round(length(which(PREP_EFF==1))/length(PRESTED),d=3) ]))
 		cat(paste('\nFound recipients that are on PrEP, n=', df.rec[, round(length(which(REC_PREP_ON==1))/length(PRESTED),d=3) ]))
 	}
