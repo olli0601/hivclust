@@ -2419,7 +2419,7 @@ project.athena.Fisheretal.t2inf<- function(df.all.allmsm, method.Acute='empirica
 		subset( ans, !is.na(score) )	
 	}
 	
-	if(!is.null(plot.file))
+	if(0 && !is.null(plot.file))
 	{		
 		t.period	<- 1/64
 		b4care		<- do.call('rbind', list(	subset(df.sc.negT.cd4yes, AnyPos_a>25.0 & AnyPos_a<25.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
