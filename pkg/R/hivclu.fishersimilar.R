@@ -368,9 +368,9 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 		if(!is.null(cluphy) & !is.null(cluphy.info) & !is.null(cluphy.map.nodectime)  )
 		{
 			#	U [0,1]: prob that pot transmitter is still infected at time t. Needed to determine time of infection for transmitter (as quantile of the surival distribution)
-			Y.U					<- project.athena.Fisheretal.Y.infectiontime(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT)			
+			Y.U					<- project.athena.Fisheretal.Y.infectiontime(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT)			
 			file				<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'coalraw',method,'.R',sep='')		
-			Y.coal				<- project.athena.Fisheretal.Y.coal(YX.tpairs, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, t.period=t.period, save.file=file, resume=resume, method.minLowerUWithNegT=method.minLowerUWithNegT )			
+			Y.coal				<- project.athena.Fisheretal.Y.coal(YX.tpairs, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.within.inf.grace= 0.25, t.period=t.period, save.file=file, resume=resume, method.minLowerUWithNegT=method.minLowerUWithNegT )			
 		}
 		#	U [0,1]: prob that pot transmitter is still infected during infection window
 		Y.U						<- project.athena.Fisheretal.Y.transmitterinfected(YX.part1)		
@@ -411,7 +411,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 		}		
 		#	re-arrange a little
 		YX						<- subset(YX, select=	c(	t, t.Patient, Patient, cluster, score.Y, telapsed, brl, 																	#triplets identifiers and Y score
-															t.period, stage, U.score, contact, CDCC, lRNA, nlRNA.supp, nlRNA.nsupp, lRNA_T1.supp, CD4, 														#main covariates							
+															t.period, stage, contact, CDCC, lRNA, nlRNA.supp, nlRNA.nsupp, lRNA_T1.supp, CD4, 														#main covariates							
 															t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.T, ART.pulse, ART.nDrug, ART.nNRT, ART.nNNRT, ART.nPI, ART.nBoost, ART.TDF.EFV.FTC, fw.up.mx, fw.up.med, t2.care.t1, t2.vl.supp, 		#secondary covariates
 															t.AnyPos_T1,  AnyPos_T1, t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, t.Trm, Trm,												#other 
 															FASTASampleCode, t.FASTASampleCode, w, w.i, w.in, w.t, w.tn, class										#other							
@@ -1545,9 +1545,9 @@ project.athena.Fisheretal.Y.rm.missedtransmitter<- function(YX.tpairs, df.all, Y
 		missed				<- merge(missed, Y.coal, by=c('FASTASampleCode','t.FASTASampleCode'), all.x=TRUE)
 	missed					<- merge(missed, Y.U, by=c('Patient','t.Patient'), allow.cartesian=TRUE, all.x=TRUE)
 	if(!is.null(Y.coal))
-		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, lkl, coal.after.i.AnyPos_T1, coal.after.t.NegT, score.Inf, brl, class))
+		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, lkl, coal.after.i.AnyPos_T1, coal.after.t.NegT, brl, class))
 	if(is.null(Y.coal))
-		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, lkl, score.Inf, brl, class))
+		missed				<- subset(missed, select=c(cluster, Patient, t.Patient, FASTASampleCode, t.FASTASampleCode, t, lkl, brl, class))
 	#	
 	stopifnot(nrow(subset(missed,is.na(brl)))==0)							
 	missed[, score.Y:=1.]
@@ -1737,11 +1737,9 @@ project.athena.Fisheretal.YX.weight<- function(YX)
 ######################################################################################
 project.athena.Fisheretal.Y.transmitterinfected<- function(YX.part1)
 {
-	Y.U			<- subset(YX.part1, select=c(Patient, t.Patient, t, U.score, score.Inf) )
+	Y.U			<- subset(YX.part1, select=c(Patient, t.Patient, t) )
 	setkey(Y.U, Patient, t.Patient, t)
 	Y.U			<- unique(Y.U)
-	set(Y.U, Y.U[, which(is.na(U.score))], 'U.score', 1)
-	setnames(Y.U, 'U.score', 'score.t.inf')
 	Y.U
 }
 ######################################################################################
@@ -2169,8 +2167,75 @@ gamlss.centiles.get<- function(obj, xvar, cent = c(2.5, 97.5), with.ordering=TRU
 	ans
 }
 ######################################################################################
-#infilecov=infile.cov.study; method.Acute=method.Acute; method.minQLowerU=method.minQLowerU; adjust.AcuteByNegT=0.75; adjust.dt.CD4=1; adjust.AnyPos_y=2003; adjust.NegT=2; dur.AcuteYes=dur.Acute['Yes']; dur.AcuteMaybe=dur.Acute['Maybe']; use.AcuteSpec=method.use.AcuteSpec; t.recent.endctime=t.recent.endctime
-project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='empirical', method.minQLowerU=0.01, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes= 365/2, dur.AcuteMaybe=320, use.AcuteSpec=0, t.recent.endctime=2011, plot.file=NULL)
+project.athena.Fisheretal.t2inf.estimate.quantileparameter<- function(df.all.allmsm, predict.t2inf, t2inf.args, t.recent.endctime, plot.file=NA)
+{
+	tmp						<- subset( df.all.allmsm, Sex=='M' & Trm%in%c('MSM','BI') & AnyPos_T1<t.recent.endctime, select=c(Patient, isAcute, AnyPos_T1, DateBorn, NegT, PosCD4_T1, CD4_T1, AnyT_T1) )
+	setkey(tmp, Patient)
+	tmp						<- unique(tmp)	
+	tmp2					<- predict.t2inf(tmp, t2inf.args, p=seq(0.01,0.99,0.001))	
+	tmp						<- merge(subset(tmp, select=c(Patient, isAcute, NegT, AnyPos_T1)), tmp2, by='Patient')
+	df.cali					<- subset(tmp, AnyPos_T1-score>=1996 & AnyPos_T1-score<2000)
+	setkey(df.cali, Patient, p)
+	#	for Acute=Yes, always use 12 mo	
+	df.calia				<- subset(df.cali, isAcute=='Yes')
+	setkey(df.calia, Patient)
+	df.calia				<- unique(df.calia)
+	tmp2					<- df.calia[, which(!is.na(NegT) & AnyPos_T1-NegT<score)]
+	set(df.calia, tmp2, 'score', df.calia[tmp2, AnyPos_T1-NegT])
+	#	for each quantile, compute mean time to diagnosis when infected in 1996-1999
+	df.calic				<- subset(df.cali, isAcute!='Yes')
+	tmp2					<- df.calic[, which(!is.na(NegT) & AnyPos_T1-NegT<score)]
+	set(df.calic, tmp2, 'score', df.calic[tmp2, AnyPos_T1-NegT])
+	df.calim				<- df.calic[, 	list(InfT.mean=mean(c(score, df.calia$score)), InfT.median=median(c(score, df.calia$score))), by='p']
+	df.calim				<- melt(df.calim, id.vars='p')
+	set(df.calim, df.calim[, which(variable=='InfT.mean')], 'variable', 'mean among infected MSM')
+	set(df.calim, df.calim[, which(variable=='InfT.median')], 'variable', 'median among infected MSM')
+	if(!is.na(plot.file))
+	{
+		ggplot(df.calim, aes(x=p, y=value, group=variable, colour=variable)) + geom_line() + theme_bw() +
+				geom_hline(yintercept=3.16) + geom_ribbon(ymin=3.0, ymax=3.41, fill='black', alpha=0.25, colour='transparent') +
+				scale_x_continuous(limits=c(0.01,0.99), expand=c(0,0)) +
+				scale_y_continuous(breaks=seq(0,10,1)) +
+				scale_colour_brewer(name='', palette='Set1') +
+				labs(x='quantile parameter', y='time to diagnosis\nif diagnosed in 1996-1999\n(years)') +
+				theme(legend.position=c(1,1), legend.justification=c(1,1))
+		file				<- paste(plot.file, '_q.pdf', sep='')
+		ggsave(file=file, w=4, h=6)
+	}
+	#	get quantiles that correspond to estimate from math modelling
+	df.calim				<- subset(df.calim, variable=='mean among infected MSM')
+	df.calim.p				<- df.calim[c(which.min(abs(value-3.0)),which.min(abs(value-3.16)),which.min(abs(value-3.41))), p]
+	#	plot mean time to diagnosis for all individuals over calendar time
+	if(!is.na(plot.file))
+	{
+		tmp						<- subset( df.all.allmsm, Sex=='M' & Trm%in%c('MSM','BI') & AnyPos_T1<t.recent.endctime, select=c(Patient, isAcute, AnyPos_T1, DateBorn, NegT, PosCD4_T1, CD4_T1, AnyT_T1) )
+		setkey(tmp, Patient)
+		tmp						<- unique(tmp)	
+		tmp2					<- predict.t2inf(tmp, t2inf.args, p=df.calim.p)	
+		tmp						<- merge(subset(tmp, select=c(Patient, isAcute, NegT, AnyPos_T1)), tmp2, by='Patient')
+		tmp2					<- tmp[, which(!is.na(NegT) & AnyPos_T1-NegT<score)]
+		set(tmp, tmp2, 'score', tmp[tmp2, AnyPos_T1-NegT])
+		tmp[, InfTy:= floor(AnyPos_T1-score)]
+		tmp2					<- tmp[, list(score.me=mean(score)), by=c('p','InfTy')]
+		set(tmp, tmp[, which(isAcute=='Yes')],'isAcute', 'Recent HIV infection')
+		set(tmp, tmp[, which(isAcute=='No')],'isAcute', 'Chronic HIV infection')
+		
+		ggplot(tmp) + geom_point(aes(x=AnyPos_T1-score, y=score, colour=isAcute), position=position_jitter(w = 0.1, h=0), alpha=0.65, size=1.2) + 
+				geom_step(data=tmp2, aes(x=InfTy, score.me), colour='black') +			
+				#geom_smooth(data=subset(tmp, AnyPos_T1-score<2010), aes(x=AnyPos_T1-score, y=score), colour='black', fill='transparent') +
+				scale_colour_brewer(name='Infection status at diagnosis', palette='Set1') +
+				scale_y_continuous(breaks=seq(0,20,1), limits=c(0,7), expand=c(0,0)) + scale_x_continuous(breaks=seq(1980,2020,4), limits=c(1990, 2011), expand=c(0,0)) +
+				labs(y='time to diagnosis\n(years)', x='time of infection', colour='quantile\nparameter') +
+				facet_grid(.~p) +
+				theme_bw() + theme(legend.position='bottom') + guides(colour=guide_legend(nrow=3))
+		file				<- paste(plot.file, '_pred.pdf', sep='')
+		ggsave(file=file, w=10, h=6)
+	}
+	df.calim.p[1]	
+}
+######################################################################################
+#df.all.allmsm; method.Acute=method.Acute; method.minQLowerU=method.minQLowerU; adjust.AcuteByNegT=0.75; adjust.dt.CD4=1; adjust.AnyPos_y=2003; adjust.NegT=2; dur.AcuteYes=dur.Acute['Yes']; dur.AcuteMaybe=dur.Acute['Maybe']; use.AcuteSpec=method.use.AcuteSpec; t.recent.endctime=t.recent.endctime
+project.athena.Fisheretal.t2inf<- function(df.all.allmsm, method.Acute='empirical', method.minQLowerU=0.01, adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes= 365/2, dur.AcuteMaybe=320, use.AcuteSpec=0, t.recent.endctime=2011, plot.file=NULL)
 {
 	require(MASS)
 	require(grid)
@@ -2178,325 +2243,182 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 	require(ggplot2)
 	require(gamlss)	
 	
-	load(paste(indircov,'/',infilecov,'.R',sep=''))	
-	#	adjust Acute=='Maybe' by NegT 
-	if(!is.na(adjust.AcuteByNegT))
-	{
-		tmp		<- which( df.all[, (is.na(isAcute) | isAcute=='No') & !is.na(NegT) & AnyPos_T1<=NegT+adjust.AcuteByNegT*365])
-		cat(paste('\nset Acute==Maybe when NegT is close to AnyPos_T1, n=',length(tmp)))
-		set(df.all, tmp, 'isAcute', 'Maybe')
-	}
-	if(use.AcuteSpec)
-	{
-		cat(paste('\nUsing use.Acute_Spec=',use.AcuteSpec))
-		setnames(df.all, c('isAcute','isAcuteNew'), c('isAcuteOld','isAcute'))
-	}	
-	tmp				<- subset(df.all, Sex=='M' & !Trm%in%c('OTH','IDU','HET','BLOOD','PREG','HETfa','NEEACC','SXCH') )
-	df.sc.negT		<- subset(tmp, !is.na(NegT))
+		
+	df.sc.negT		<- subset(df.all.allmsm, Sex=='M' & Trm%in%c('MSM','BI') & !is.na(NegT) & AnyPos_T1>adjust.AnyPos_y & AnyPos_T1<t.recent.endctime)
 	setkey(df.sc.negT, Patient)
 	df.sc.negT		<- unique(df.sc.negT)
 	cat(paste('\nnumber of seroconverters with !is.na(NegT), n=',nrow(df.sc.negT)))
+	df.sc.negT[, dt.NegT:= AnyPos_T1-NegT]
+	df.sc.negT[, mp.NegT:= (AnyPos_T1-NegT)/adjust.NegT*365.25]
+	df.sc.negT[, mpy.NegT:= mp.NegT/365.25]
+	df.sc.negT[, dt.CD4:= PosCD4_T1-AnyPos_T1]
+	df.sc.negT[, AnyPos_a:= AnyPos_T1-DateBorn]
+	df.sc.negT[, t.period:=  cut(AnyPos_T1, breaks=c(-Inf,2006.5,2008,2009.5,Inf))]		
+	df.sc.negT[, AnyPos_ac:= cut(AnyPos_a, breaks=c(-Inf,25,35,45,55,Inf))]
+	set(df.sc.negT, df.sc.negT[, which(PosCD4_T1>AnyT_T1)], 'CD4_T1c', 'CD4aT1')
+	set(df.sc.negT, df.sc.negT[, which(dt.CD4>adjust.dt.CD4)], 'CD4_T1c', 'CD4aY1')
+	stopifnot(nrow(subset(df.sc.negT, mp.NegT<=0))==0)
+	#
+	#	by infection status, CD4 known
+	#
+	if(0 & !is.null(plot.file))
+		project.athena.Fisheretal.composition.t2inf.cd4.850etc(df.sc.negT, adjust.dt.CD4, plot.file)
+	if(0 & !is.null(plot.file))
+		project.athena.Fisheretal.composition.t2inf.cd4.350etc(df.sc.negT, adjust.dt.CD4, plot.file)
+	#df.sc.negT[, table(t.period, useNA='if')]
+	#df.sc.negT[, table(isAcute, useNA='if')]
+	#df.sc.negT[, table(CD4_T1c, useNA='if')]
+	#df.sc.negT[, table(AnyPos_ac, useNA='if')]
+	#
+	#	final model when CD4 known
+	#
+	df.sc.negT[, CD4_T1c:=  cut(CD4_T1, breaks=c(-Inf,250,850,Inf))]
+	df.sc.negT.cd4yes	<- subset( df.sc.negT, dt.CD4<=adjust.dt.CD4 & PosCD4_T1<=AnyT_T1, select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute) )
+	set(df.sc.negT.cd4yes, df.sc.negT.cd4yes[, which(is.na(isAcute))],'isAcute', 'Unconfirmed')
+	df.sc.negT.cd4yes[, Age_c:= AnyPos_a]
+	set(df.sc.negT.cd4yes, df.sc.negT.cd4yes[, which(Age_c>45)], 'Age_c', 45)
+	df.sc.negT.cd4yes[, CD4iAcute:= as.character(interaction(as.character(isAcute), as.character(CD4_T1c)))]
+	setkey(df.sc.negT.cd4yes, CD4iAcute, AnyPos_a)
+	df.sc.negT.cd4yes	<- subset(df.sc.negT.cd4yes, select=c(Patient, mpy.NegT, Age_c, CD4iAcute))
+	model.sc.negT.cd4yes<- gamlss(as.formula('mpy.NegT ~ Age_c:CD4iAcute'), sigma.formula=as.formula('~ Age_c:CD4iAcute'), data=as.data.frame(df.sc.negT.cd4yes), family=GA)
+	ans					<- copy(df.sc.negT.cd4yes)
+	ans[, y.b:= predict(model.sc.negT.cd4yes, type='response', se.fit=FALSE)]
+	tmp		<- gamlss.centiles.get(model.sc.negT.cd4yes, df.sc.negT.cd4yes$Age_c, cent = c(2.5, 97.5), with.ordering=FALSE )
+	ans		<- cbind(ans, tmp)		
 	
-	tmp				<- df.sc.negT[, list(	dt.NegT=as.numeric(difftime(AnyPos_T1, NegT, units='days'))/365,
-											mp.NegT=round(as.numeric(difftime(AnyPos_T1, NegT, units='days'))/adjust.NegT),
-											dt.CD4=as.numeric(difftime(PosCD4_T1, AnyPos_T1, units='days'))/365,
-											AnyPos_a=as.numeric(difftime(AnyPos_T1, DateBorn, units='days'))/365,
-											AnyPos_y=hivc.db.Date2numeric(AnyPos_T1)), by='Patient']
-	#	seroconverters
-	df.sc.negT		<- merge(df.sc.negT, tmp, by='Patient')
-	#	seroconverters with acute infection at diagnosis
-	df.scay.cd4		<- subset( df.sc.negT, isAcute=='Yes' & mp.NegT>0 & AnyPos_y>adjust.AnyPos_y & AnyPos_y<t.recent.endctime & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
-	#	seroconverters with acute infection at diagnosis
-	df.scaym.cd4	<- subset( df.sc.negT, ( isAcute=='Maybe' ) & mp.NegT>0 & AnyPos_y>adjust.AnyPos_y & AnyPos_y<t.recent.endctime & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)	
-	#	seroconverters with chronic infection at diagnosis
-	df.scchr.negT	<- subset( df.sc.negT, isAcute=='No' & AnyPos_y>adjust.AnyPos_y & AnyPos_y<t.recent.endctime)
-	df.scana.negT	<- subset( df.sc.negT, is.na(isAcute) & AnyPos_y>adjust.AnyPos_y & AnyPos_y<t.recent.endctime)
-	#	seroconverters with chronic infection at diagnosis and 1st CD4 count within 1 year after diagnosis and before ART
-	df.scchr.cd4	<- subset( df.scchr.negT, dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
-	df.scana.cd4	<- subset( df.scana.negT, dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
-	#	no evidence from midpoints that calendar time matters
-	#ggplot(subset(df.scchr.cd4, CD4_T1<250), aes(x=AnyPos_y, y=mp.NegT)) + geom_point() + geom_smooth()
-	#ggplot(subset(df.scchr.cd4, CD4_T1>250 & CD4_T1<850), aes(x=AnyPos_y, y=mp.NegT)) + geom_point() + geom_smooth()	
-	m4a	<- glm.nb(mp.NegT ~  1, data=subset(df.scchr.cd4, CD4_T1>850 & dt.NegT<4), link=identity, trace= 1, maxit= 50)	
-	m4d	<- glm.nb(mp.NegT ~  AnyPos_a, data=subset(df.scchr.negT, AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
-	m4e	<- glm.nb(mp.NegT ~  AnyPos_a, data=subset(df.scana.negT, AnyPos_a<=45), link=identity, trace= 1, maxit= 50)	
-	m4b	<- glm.nb(mp.NegT ~  AnyPos_a+0+offset(rep(m4d$coefficients["(Intercept)"],length(mp.NegT))), data=subset(df.scchr.cd4, CD4_T1<=850 & CD4_T1>250 & AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
-	m4c	<- glm.nb(mp.NegT ~  AnyPos_a+0+offset(rep(m4d$coefficients["(Intercept)"],length(mp.NegT))), data=subset(df.scchr.cd4, CD4_T1<250 & AnyPos_a<=45), link=identity, trace= 1, maxit= 50)
-	#plots
 	if(0 & !is.null(plot.file))
 	{
-		tmp	<- subset(df.sc.negT, AnyPos_y>1996 & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
-		set(tmp, tmp[, which(is.na(isAcute))],'isAcute','not reported')
-		set(tmp, tmp[, which(isAcute=='No')],'isAcute','Chronic')
-		set(tmp, tmp[, which(isAcute=='Maybe')],'isAcute','Recent')
-		set(tmp, tmp[, which(isAcute=='Yes')],'isAcute','Recent')
-		set(tmp, NULL, 'isAcute', tmp[, factor(isAcute, levels=c('Recent','Chronic','not reported'))] )
-		set(tmp, NULL, 'AnyPos_y', factor(tmp[, round(AnyPos_y, d=0)]))
-		ggplot(tmp, aes(x=AnyPos_y, fill=isAcute)) + geom_bar(binwidth=1.5, position='dodge') +
-				scale_y_continuous(breaks=seq(0,500,20)) +
-				labs(x="year of diagnosis", y='HIV seroconverters among MSM\nwith first CD4 count within 12 mo of diagnosis\nand before ART start\n(total)') +
-				scale_fill_brewer(palette='Set2',name='Stage of HIV infection\n at diagnosis')
-		ggsave(paste(plot.file,'sc_numbers.pdf'), w=15, h=6)		
-				
-	}
-	if(0 & !is.null(plot.file))
-	{
-		tmp	<- rbind(df.scay.cd4, df.scaym.cd4)
-		tmp[, mpy.NegT:= mp.NegT/365.25]
-		set(tmp, NULL, 'CD4_T1c', tmp[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
-		setkey(tmp, CD4_T1c, AnyPos_a)
-		tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
-		tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
-		tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
-		tmp		<- cbind(tmp, tmp3)
-		ggplot(tmp, aes(x=AnyPos_a, y=mpy.NegT)) + 
-				geom_point(size=0.85) + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
+		set(ans, ans[, which(isAcute=='No')],'isAcute', 'Chronic HIV infection')		
+		set(ans, ans[, which(is.na(isAcute))],'isAcute', 'Unconfirmed infection status')
+		
+		ggplot(subset(ans, isAcute!='Yes'), aes(x=AnyPos_a, y=mpy.NegT)) + 
+				geom_point(size=0.85) + scale_y_continuous(limits=c(0,13), breaks=seq(0,20,2)) + xlim(18, 61) +			
 				geom_line(aes(y=y.b), colour='blue') +
-				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
+				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2, fill='blue', alpha=0.5) +
 				labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
-				facet_grid(. ~ CD4_T1c) + theme_bw()
-		ggsave(paste(plot.file,'scay_cd4_age.pdf'), w=15, h=6)
+				facet_grid(isAcute ~ CD4_T1c) + theme_bw()
+		ggsave(paste(plot.file,'sc_finalcd4.pdf'), w=8, h=8*2/3)		
+		#Rsq(model.sc.negT.cd4yes)
 	}
+	#
+	#	final model when CD4 is not known
+	#
+	df.sc.negT.cd4no	<- subset( df.sc.negT, select=c(Patient, mpy.NegT, AnyPos_a, isAcute) )
+	set(df.sc.negT.cd4no, df.sc.negT.cd4no[, which(is.na(isAcute))],'isAcute', 'Unconfirmed')
+	set(df.sc.negT.cd4no, NULL, 'isAcute', df.sc.negT.cd4no[, as.character(isAcute)])
+	df.sc.negT.cd4no[, Age_c:= AnyPos_a]
+	set(df.sc.negT.cd4no, df.sc.negT.cd4no[, which(Age_c>45)], 'Age_c', 45)
+	setkey(df.sc.negT.cd4no, isAcute, AnyPos_a)
+	df.sc.negT.cd4no	<- subset(df.sc.negT.cd4no, select=c(Patient, mpy.NegT, Age_c, isAcute))
+	model.sc.negT.cd4no	<- gamlss(as.formula('mpy.NegT ~ Age_c:isAcute'), sigma.formula=as.formula('~ Age_c:isAcute'), data=as.data.frame(df.sc.negT.cd4no), family=GA)
+	ans					<- copy(df.sc.negT.cd4no)
+	ans[, y.b:= predict(model.sc.negT.cd4no, type='response', se.fit=FALSE)]
+	tmp		<- gamlss.centiles.get(model.sc.negT.cd4no, df.sc.negT.cd4no$Age_c, cent = c(2.5, 97.5), with.ordering=FALSE )
+	ans		<- cbind(ans, tmp)		
 	if(0 & !is.null(plot.file))
 	{
-		df.scaym.cd4[, mpy.NegT:= mp.NegT/365.25]
-		set(df.scaym.cd4, NULL, 'CD4_T1c', df.scaym.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
-		setkey(df.scaym.cd4, CD4_T1c, AnyPos_a)
-		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(df.scaym.cd4, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
-		df.scaym.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
-		tmp	<- gamlss.centiles.get(tmp, df.scaym.cd4$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
-		df.scaym.cd4	<- cbind(df.scaym.cd4, tmp)
-		ggplot(df.scaym.cd4, aes(x=AnyPos_a, y=mpy.NegT)) + 
-				geom_point() + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
+		set(ans, ans[, which(isAcute=='No')],'isAcute', 'Chronic HIV infection')		
+		set(ans, ans[, which(is.na(isAcute))],'isAcute', 'Unconfirmed infection status')
+		
+		ggplot(subset(ans, isAcute!='Yes'), aes(x=AnyPos_a, y=mpy.NegT)) + 
+				geom_point(size=0.85) + scale_y_continuous(limits=c(0,13), breaks=seq(0,20,2)) + xlim(18, 61) +			
 				geom_line(aes(y=y.b), colour='blue') +
-				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
-				labs(x="age at diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)') +
-				facet_grid(. ~ CD4_T1c) 
-		ggsave(paste(plot.file,'scam_cd4_age.pdf'), w=10, h=6)
+				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2, fill='blue', alpha=0.5) +
+				labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
+				facet_grid(isAcute ~ .) + theme_bw()
+		ggsave(paste(plot.file,'sc_finalnocd4.pdf'), w=8*1/3, h=8*2/3)		
+		#Rsq(model.sc.negT.cd4no)
 	}	
-	if(0 & !is.null(plot.file))
-	{
-		df.scchr.cd4[, mpy.NegT:= mp.NegT/365.25]
-		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(CD4_T1, degree=7)'), sigma.formula=as.formula('~ bs(CD4_T1, degree=3)'), data=as.data.frame(subset(df.scchr.cd4, select=c(mpy.NegT, CD4_T1))), family=GA)		
-		df.scchr.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
-		tmp	<- gamlss.centiles.get(tmp, df.scchr.cd4$CD4_T1, cent = c(2.5, 97.5) )
-		df.scchr.cd4	<- cbind(df.scchr.cd4, tmp)
-		ggplot(df.scchr.cd4, aes(x=CD4_T1, y=mpy.NegT)) + 
-				geom_point() + scale_y_continuous(limits=c(0,11), breaks=seq(0,10,2)) +			
-				geom_line(aes(y=y.b), colour='blue') + theme_bw() +
-				#geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) + 
-				labs(x="1st CD4 count after diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)')		
-		ggsave(paste(plot.file,'scchr_cd4.pdf'), w=5, h=5)
-		df.scchr.cd4[, y.b:=NULL]
-		df.scchr.cd4[, x:=NULL]
-		df.scchr.cd4[, q2.5:=NULL]
-		df.scchr.cd4[, q97.5:=NULL]
-	}
-	if(0)
-	{
-		df.scana.cd4[, mpy.NegT:= mp.NegT/365.25]
-		set(df.scana.cd4, NULL, 'CD4_T1c', df.scana.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
-		setkey(df.scana.cd4, CD4_T1c, AnyPos_a)		
-		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=3)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(df.scana.cd4, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)
-		#Rsq(tmp)	20.17%
-		df.scana.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]
-		tmp	<- gamlss.centiles.get(tmp, df.scana.cd4$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
-		df.scana.cd4	<- cbind(df.scana.cd4, tmp)
-		ggplot(df.scana.cd4, aes(x=AnyPos_a, y=mpy.NegT)) + 
-				geom_point(size=1) + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
-				geom_line(aes(y=y.b), colour='blue') + theme_bw() +
-				#geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) + 
-				labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
-				facet_grid(. ~ CD4_T1c)
-		ggsave(paste(plot.file,'scana_cd4_age.pdf'), w=15, h=6)		
-		df.scana.cd4[, y.b:=NULL]
-		df.scana.cd4[, x:=NULL]
-		df.scana.cd4[, q2.5:=NULL]
-		df.scana.cd4[, q97.5:=NULL]		
-	}
-	if(!is.null(plot.file))
-	{	
-		df.scchr.cd4[, mpy.NegT:= mp.NegT/365.25]
-		set(df.scchr.cd4, NULL, 'CD4_T1c', df.scchr.cd4[, factor(cut(CD4_T1, breaks=c(-Inf, 250, 850, Inf), labels=c('1st CD4 count\nwithin 12 months after diagnosis\n< 250','1st CD4 count\nwithin 12 months after diagnosis\nin [250-850]','1st CD4 count\nwithin 12 months after diagnosis\n> 850')))])
-		setkey(df.scchr.cd4, CD4_T1c, AnyPos_a)
-		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)+CD4_T1c'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)+CD4_T1c'), data=as.data.frame(subset(df.scchr.cd4, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)
-		#Rsq(tmp)	20.10%
-		df.scchr.cd4[, y.b:= predict(tmp, type='response', se.fit=FALSE)]	
-		tmp	<- gamlss.centiles.get(tmp, df.scchr.cd4$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )		
-		df.scchr.cd4	<- cbind(df.scchr.cd4, tmp)
-		ggplot(df.scchr.cd4, aes(x=AnyPos_a, y=mpy.NegT)) + 
-				geom_point(size=1) + scale_y_continuous(limits=c(0,11.4), breaks=seq(0,14,2)) + xlim(18, 61) +			
-				geom_line(aes(y=y.b), colour='blue') + theme_bw() +
-				#geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) + 
-				labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
-				facet_grid(. ~ CD4_T1c)
-		ggsave(paste(plot.file,'scchr_cd4_age.pdf'), w=15, h=6)
-		df.scchr.cd4[, y.b:=NULL]
-		df.scchr.cd4[, x:=NULL]
-		df.scchr.cd4[, q2.5:=NULL]
-		df.scchr.cd4[, q97.5:=NULL]	
-	}
-	if(!is.null(plot.file))
-	{
-		df.scchr.negT[, mpy.NegT:= mp.NegT/365.25]
-		tmp	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=7)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(df.scchr.negT, select=c(mpy.NegT, AnyPos_a))), family=GA)		 
-		df.scchr.negT[, y.b:= predict(tmp, type='response', se.fit=FALSE)]
-		tmp	<- gamlss.centiles.get(tmp, df.scchr.negT$AnyPos_a, cent = c(2.5, 97.5) )
-		df.scchr.negT	<- cbind(df.scchr.negT, tmp)
-		ggplot(df.scchr.negT, aes(x=AnyPos_a, y=mpy.NegT)) + xlim(18, 61) + scale_y_continuous(limits=c(0,11), breaks=seq(0,10,2)) + 
-				geom_point() + geom_line(aes(y=y.b), colour='blue') + geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2) +
-				labs(x="Age at diagnosis", y='Midpoint of seroconversion interval\n(years from diagnosis)')
-		ggsave(paste(plot.file,'scchr_age.pdf'), w=5, h=5)
-		df.scchr.negT[, y.b:=NULL]
-		df.scchr.negT[, x:=NULL]
-		df.scchr.negT[, q2.5:=NULL]
-		df.scchr.negT[, q97.5:=NULL]
-	}
 	#		
-	cat(paste('\navg time of acute.Yes phase=',dur.AcuteYes))
-	cat(paste('\navg time of acute.Maybe phase=',dur.AcuteMaybe))	
+	cat(paste('\navg time of acute.Yes phase=',dur.AcuteYes))		
 	#
-	t2inf.args						<- list()
-	t2inf.args$cd4g850.intercept	<- m4a$coefficients["(Intercept)"]
-	t2inf.args$cd4g850.theta		<- m4a$theta
-	t2inf.args$cd4l850.intercept	<- m4d$coefficients["(Intercept)"]
-	t2inf.args$cd4l850.coef			<- m4b$coefficients["AnyPos_a"]
-	t2inf.args$cd4l850.theta		<- m4b$theta
-	t2inf.args$cd4l250.intercept	<- m4d$coefficients["(Intercept)"]
-	t2inf.args$cd4l250.coef			<- m4c$coefficients["AnyPos_a"]
-	t2inf.args$cd4l250.theta		<- m4c$theta
-	t2inf.args$cd4other.intercept	<- m4d$coefficients["(Intercept)"]
-	t2inf.args$cd4other.coef		<- m4d$coefficients["AnyPos_a"]
-	t2inf.args$cd4other.theta		<- m4d$theta	
-	t2inf.args$method.minQLowerU	<- method.minQLowerU
-	t2inf.args$dur.AcuteYes			<- dur.AcuteYes
-	t2inf.args$dur.AcuteMaybe		<- dur.AcuteMaybe
+	t2inf.args		<- list(	model.sc.negT.cd4no=model.sc.negT.cd4no, df.sc.negT.cd4no=df.sc.negT.cd4no, 
+								model.sc.negT.cd4yes=model.sc.negT.cd4yes, df.sc.negT.cd4yes=df.sc.negT.cd4yes, 
+								method.minQLowerU=method.minQLowerU, dur.AcuteYes=dur.AcuteYes)
 	#
-	if(method.Acute%in%c('lower','central','higher') && t2inf.args$method.minQLowerU==0.)
-	{
-		#recent stages are calibrated to 90% quantile, so assign NA afterwards
-		#assign NA based on quantile 'method.minQLowerU' only to non-recent
-		#if method.minQLowerU is set to 0, cut undiagnosed window at MEAN
-		predict.t2inf	<- function(q, df, t2inf.args)
-		{				
-			df[, {
-						print(Patient)
-						print(CD4_T1)
-						print(AnyPos_a)
-						print(isAcute)
-						if(!is.na(isAcute) & isAcute=='Yes') 
-						{
-							ans				<- pexp(q, 1/t2inf.args$dur.AcuteYes, lower.tail=FALSE)
-							ans[ans<0.1]	<- NA_real_		
-						}
-						else if(!is.na(isAcute) & isAcute=='Maybe')
-						{
-							ans				<- pexp(q, 1/t2inf.args$dur.AcuteMaybe, lower.tail=FALSE)
-							ans[ans<0.1]	<- NA_real_	
-						}
-						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1>AnyPos_T1+1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
-						{
-							ans				<- pnbinom(q, mu= t2inf.args$cd4other.intercept+t2inf.args$cd4other.coef*min(AnyPos_a,45), size=t2inf.args$cd4other.theta, lower.tail=FALSE)
-							ans[ q>t2inf.args$cd4other.intercept+t2inf.args$cd4other.coef*min(AnyPos_a,45) ]<- NA_real_
-						}
-						else if(CD4_T1<250)		#chronic or missing isAcute, first CD4 before ART start
-						{
-							ans				<- pnbinom(q, mu= t2inf.args$cd4l250.intercept+t2inf.args$cd4l250.coef*min(AnyPos_a,45), size=t2inf.args$cd4l250.theta, lower.tail=FALSE)
-							print(CD4_T1)
-							print(AnyPos_a)
-							print( t2inf.args$cd4l250.intercept+t2inf.args$cd4l250.coef*min(AnyPos_a,45) )
-							ans[ q>t2inf.args$cd4l250.intercept+t2inf.args$cd4l250.coef*min(AnyPos_a,45) ]<- NA_real_
-						}
-						else if(CD4_T1<850)		#chronic or missing isAcute, first CD4 before ART start
-						{
-							ans				<- pnbinom(q, mu= t2inf.args$cd4l850.intercept+t2inf.args$cd4l850.coef*min(AnyPos_a,45), size=t2inf.args$cd4l850.theta, lower.tail=FALSE)
-							ans[ q>t2inf.args$cd4l850.intercept+t2inf.args$cd4l850.coef*min(AnyPos_a,45) ]<- NA_real_
-						}
-						else					#chronic or missing isAcute, first CD4 before ART start
-						{
-							ans				<- pnbinom(q, mu= t2inf.args$cd4g850.intercept, size=t2inf.args$cd4g850.theta, lower.tail=FALSE)
-							ans[ q>t2inf.args$cd4g850.intercept ]<- NA_real_							
-						}		
-						list(q=q, score=ans)
-					}, by='Patient']			
+	stopifnot(method.Acute=='higher')
+	
+	#recent stages are calibrated to 90% quantile, so assign NA afterwards
+	#assign NA based on quantile 'method.minQLowerU' only to non-recent
+	predict.t2inf	<- function(df, t2inf.args, p=NULL, q=NULL)
+	{					
+		stopifnot(!is.null(p) | !is.null(q))
+		#	prepare df for predict
+		set(df, df[, which(is.na(isAcute))],'isAcute', 'Unconfirmed')
+		if(!'AnyPos_a'%in%names(df))
+			df[, AnyPos_a:= AnyPos_T1-DateBorn]
+		if(!'CD4_T1c'%in%names(df))
+			df[, CD4_T1c:=  cut(CD4_T1, breaks=c(-Inf,250,850,Inf))]
+		df[, Age_c:= AnyPos_a]
+		set(df, df[, which(Age_c>45)], 'Age_c', 45)
+		df[, CD4iAcute:= interaction(as.character(isAcute), as.character(CD4_T1c))]		
+		df[, isAcute2:= isAcute]
+		set(df, df[, which(isAcute=='Yes')], 'isAcute', 'Unconfirmed')	
+		#	predict mu and sigma in chunks of 100
+		df[, mu.cd4yes:=NA_real_]
+		df[, sigma.cd4yes:=NA_real_]
+		df[, mu.cd4no:=NA_real_]
+		df[, sigma.cd4no:=NA_real_]
+		tmp		<- df[, which(!is.na(CD4_T1c))]
+		set(df, tmp, 'mu.cd4yes', exp(predict(t2inf.args$model.sc.negT.cd4yes, data=t2inf.args$df.sc.negT.cd4yes, newdata=subset(df[tmp,], select=c(Age_c, CD4iAcute)), what='mu', type='link')) 	)		
+		set(df, tmp, 'sigma.cd4yes', exp(predict(t2inf.args$model.sc.negT.cd4yes, data=t2inf.args$df.sc.negT.cd4yes, newdata=subset(df[tmp,], select=c(Age_c, CD4iAcute)), what='sigma', type='link'))	)
+		set(df, NULL, 'mu.cd4no', exp(predict(t2inf.args$model.sc.negT.cd4no, data=t2inf.args$df.sc.negT.cd4no, newdata=subset(df, select=c(Age_c, isAcute)), what='mu', type='link'))		)
+		set(df, NULL, 'sigma.cd4no', exp(predict(t2inf.args$model.sc.negT.cd4no, data=t2inf.args$df.sc.negT.cd4no, newdata=subset(df, select=c(Age_c, isAcute)), what='sigma', type='link'))		)
+		#	clean up
+		set(df, NULL, 'isAcute', df[, isAcute2])
+		set(df, NULL, c('isAcute2','CD4iAcute','Age_c'), NULL)
+		#	
+		if(!is.null(q))
+		{
+			cat(paste('\ncalculate gamma prob for given upper quantile q'))
+			ans		<- df[, {
+							if(isAcute=='Yes') 
+							{
+								#cat(paste('\n',Patient,'\tisAcute=Yes'))
+								ans				<- rep(NA_real_, length(q))
+								ans[q<=1]		<- 1									
+							}
+							else if(is.na(PosCD4_T1) | PosCD4_T1>AnyPos_T1+1 | (!is.na(AnyT_T1) & AnyT_T1<PosCD4_T1))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
+							{
+								#cat(paste('\n',Patient,'\tCD4no'))
+								ans				<- pGA(q, mu=mu.cd4no, sigma=sigma.cd4no, lower.tail=FALSE)						
+								ans[ans<t2inf.args$method.minQLowerU]	<- NA_real_
+							}
+							else
+							{
+								#cat(paste('\n',Patient,'\tCD4yes'))
+								ans				<- pGA(q, mu=mu.cd4yes, sigma=sigma.cd4yes, lower.tail=FALSE)
+								ans[ans<t2inf.args$method.minQLowerU]	<- NA_real_
+							}
+							list(q=q, score=ans)
+						}, by='Patient']
 		}
-	}
-	if(method.Acute%in%c('lower','central','higher') && t2inf.args$method.minQLowerU>0.)
-	{
-		#recent stages are calibrated to 90% quantile, so assign NA afterwards
-		#assign NA based on quantile 'method.minQLowerU' only to non-recent
-		predict.t2inf	<- function(q, df, t2inf.args)
-		{				
-			df[, {
-						if(!is.na(isAcute) & isAcute=='Yes') 
+		#		
+		if(is.null(q))
+		{
+			cat(paste('\ncalculate gamma quantile for given upper tail prob'))
+			ans		<- df[, {
+						if(isAcute=='Yes') 
 						{
-							ans				<- pexp(q, 1/t2inf.args$dur.AcuteYes, lower.tail=FALSE)
-							ans[ans<0.1]	<- NA_real_		
+							#cat(paste('\n',Patient,'\tisAcute=Yes'))
+							ans				<- rep(1, length(p))								
 						}
-						else if(!is.na(isAcute) & isAcute=='Maybe')
+						else if(is.na(PosCD4_T1) | PosCD4_T1>AnyPos_T1+1 | (!is.na(AnyT_T1) & AnyT_T1<PosCD4_T1))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
 						{
-							ans				<- pexp(q, 1/t2inf.args$dur.AcuteMaybe, lower.tail=FALSE)
-							ans[ans<0.1]	<- NA_real_	
+							#cat(paste('\n',Patient,'\tCD4no'))
+							ans				<- qGA(p, mu=mu.cd4no, sigma=sigma.cd4no, lower.tail=FALSE)													
 						}
-						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1>AnyPos_T1+1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
+						else
 						{
-							ans				<- pnbinom(q, mu= t2inf.args$cd4other.intercept+t2inf.args$cd4other.coef*min(AnyPos_a,45), size=t2inf.args$cd4other.theta, lower.tail=FALSE)
-							ans[ans<t2inf.args$method.minQLowerU]	<- NA_real_
+							#cat(paste('\n',Patient,'\tCD4yes'))
+							ans				<- qGA(p, mu=mu.cd4yes, sigma=sigma.cd4yes, lower.tail=FALSE)
 						}
-						else if(CD4_T1<250)		#chronic or missing isAcute, first CD4 before ART start
-						{
-							ans				<- pnbinom(q, mu= t2inf.args$cd4l250.intercept+t2inf.args$cd4l250.coef*min(AnyPos_a,45), size=t2inf.args$cd4l250.theta, lower.tail=FALSE)
-							ans[ans<t2inf.args$method.minQLowerU]	<- NA_real_
-						}
-						else if(CD4_T1<850)		#chronic or missing isAcute, first CD4 before ART start
-						{
-							ans				<- pnbinom(q, mu= t2inf.args$cd4l850.intercept+t2inf.args$cd4l850.coef*min(AnyPos_a,45), size=t2inf.args$cd4l850.theta, lower.tail=FALSE)
-							ans[ans<t2inf.args$method.minQLowerU]	<- NA_real_
-						}
-						else					#chronic or missing isAcute, first CD4 before ART start
-						{
-							ans				<- pnbinom(q, mu= t2inf.args$cd4g850.intercept, size=t2inf.args$cd4g850.theta, lower.tail=FALSE)
-							ans[ans<t2inf.args$method.minQLowerU]	<- NA_real_
-						}		
-						list(q=q, score=ans)
-					}, by='Patient']			
+						list(p=p, score=ans)
+					}, by='Patient']
 		}
+		subset( ans, !is.na(score) )	
 	}
-	if(!method.Acute%in%c('lower','central','higher') )
-	{
-		#assign NA based on quantile 'method.minQLowerU' to all
-		predict.t2inf	<- function(q, df, t2inf.args)
-		{				
-			df[, {
-						if(!is.na(isAcute) & isAcute=='Yes') 
-						{
-							ans	<- pexp(q, 1/t2inf.args$dur.AcuteYes, lower.tail=FALSE)
-						}
-						else if(!is.na(isAcute) & isAcute=='Maybe')
-						{
-							ans	<- pexp(q, 1/t2inf.args$dur.AcuteMaybe, lower.tail=FALSE)
-						}
-						else if(is.na(PosCD4_T1) | (!is.na(AnyT_T1) & (AnyT_T1<PosCD4_T1 | PosCD4_T1>AnyPos_T1+1)))		#chronic or missing isAcute, first CD4 after ART start or first CD4 too far from PosDiag
-						{
-							ans	<- pnbinom(q, mu= t2inf.args$cd4other.intercept+t2inf.args$cd4other.coef*min(AnyPos_a,45), size=t2inf.args$cd4other.theta, lower.tail=FALSE)
-						}
-						else if(CD4_T1<250)		#chronic or missing isAcute, first CD4 before ART start
-						{
-							ans	<- pnbinom(q, mu= t2inf.args$cd4l250.intercept+t2inf.args$cd4l250.coef*min(AnyPos_a,45), size=t2inf.args$cd4l250.theta, lower.tail=FALSE)
-						}
-						else if(CD4_T1<850)		#chronic or missing isAcute, first CD4 before ART start
-						{
-							ans	<- pnbinom(q, mu= t2inf.args$cd4l850.intercept+t2inf.args$cd4l850.coef*min(AnyPos_a,45), size=t2inf.args$cd4l850.theta, lower.tail=FALSE)
-						}
-						else					#chronic or missing isAcute, first CD4 before ART start
-						{
-							ans	<- pnbinom(q, mu= t2inf.args$cd4g850.intercept, size=t2inf.args$cd4g850.theta, lower.tail=FALSE)
-						}		
-						ans[ans<t2inf.args$method.minQLowerU]	<- NA_real_
-						list(q=q, score=ans)
-					}, by='Patient']			
-		}
-	}
+	
 	if(!is.null(plot.file))
 	{		
 		t.period	<- 1/64
@@ -2505,34 +2427,27 @@ project.athena.Fisheretal.t2inf<- function(indircov, infilecov, method.Acute='em
 												subset(df.scchr.cd4, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1>250 & CD4_T1<850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
 												subset(df.scchr.cd4, AnyPos_a>34.5 & AnyPos_a<35.99 & CD4_T1>850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,]												
 												))
-		set(b4care, NULL, 'DateBorn', hivc.db.Date2numeric(b4care[,DateBorn]))
-		set(b4care, NULL, 'AnyPos_T1', hivc.db.Date2numeric(b4care[,AnyPos_T1]))
-		set(b4care, NULL, 'NegT', NA_real_)
-		set(b4care, NULL, 'PosCD4_T1', hivc.db.Date2numeric(b4care[,PosCD4_T1]))
-		set(b4care, NULL, 'AnyT_T1', hivc.db.Date2numeric(b4care[,AnyT_T1]))
+		b4care[, label:= c(	'chronic HIV infection at diagnosis,\n CD4 < 250,\n 25 years at diagnosis',
+								'chronic HIV infection at diagnosis,\n CD4 < 250,\n 35 years at diagnosis',
+								'chronic HIV infection at diagnosis,\n CD4 in [250-850],\n 35 years at diagnosis',
+								'chronic HIV infection at diagnosis,\n CD4 > 850,\n 35 years at diagnosis')]
+		set(b4care, NULL, 'NegT', NA_real_)	
 		tmp			<- b4care[, list(AnyPos_a=AnyPos_T1-DateBorn, ts=ifelse(is.na(NegT), AnyPos_T1-10, NegT), te=AnyPos_T1), by='Patient']
 		b4care		<- merge(b4care, tmp, by='Patient')
 		set(b4care, NULL, 'ts', b4care[, floor(ts) + round( (ts%%1)*100 %/% (t.period*100) ) * t.period ] )
-		set(b4care, NULL, 'te', b4care[, floor(te) + round( (te%%1)*100 %/% (t.period*100) ) * t.period - t.period] )	#last time undiagnosed is just before first time period diagnosed		
-		tmp			<- predict.t2inf(seq(0,10,t.period)*365, b4care, t2inf.args)	
-		tmp			<- merge( subset( tmp, !is.na(score) ), subset(b4care, select=c(Patient,isAcute,ts,te)), by='Patient' )
-		set(tmp, NULL, 'q', tmp[,q/365])
-		tmp[, label:='']
-		labels		<- c(	'chronic HIV infection at diagnosis,\n CD4 < 250,\n 25 years at diagnosis',
-							'chronic HIV infection at diagnosis,\n CD4 < 250,\n 35 years at diagnosis',
-							'chronic HIV infection at diagnosis,\n CD4 in [250-850],\n 35 years at diagnosis',
-							'chronic HIV infection at diagnosis,\n CD4 > 850,\n 35 years at diagnosis')
-		set(tmp, tmp[, which(Patient=='M31752')], 'label', labels[2])
-		set(tmp, tmp[, which(Patient=='M32501')], 'label', labels[3])
-		set(tmp, tmp[, which(Patient=='M34515')], 'label', labels[1])
-		set(tmp, tmp[, which(Patient=='M39133')], 'label', labels[4])
+		set(b4care, NULL, 'te', b4care[, floor(te) + round( (te%%1)*100 %/% (t.period*100) ) * t.period - t.period] )	#last time undiagnosed is just before first time period diagnosed
+		tmp2		<- copy(t2inf.args)
+		tmp2$method.minQLowerU<- 0.01
+		tmp			<- predict.t2inf(b4care, tmp2, q=seq(0,10,t.period) )
+		tmp			<- merge( tmp, subset(b4care, select=c(Patient,isAcute,ts,te,label)), by='Patient' )		
 		set(tmp, NULL, 'label', tmp[, factor(label, levels=labels)] )
 		setkey(tmp, label)
 		ggplot(tmp, aes(x=q, y=score, group=label, colour=label)) + geom_line() + theme_bw() + theme(legend.key.size=unit(13,'mm'))  +
 				scale_x_continuous(breaks=seq(0,10,1)) +
-				labs(x="t\n(years)", y='Probability that\nsurrogate time between HIV infection and diagnosis is > t') + 
-				scale_colour_brewer(palette='Set2',name='Individual with')
-		ggsave(paste(plot.file,'sc_predict.pdf'), w=15, h=7)
+				labs(x="t\n(years)", y='Probability that relative time\nto diagnosis is > t') + 
+				scale_colour_brewer(palette='Set2',name='Individual with') +
+				theme(legend.position=c(1,1), legend.justification=c(1,1))
+		ggsave(paste(plot.file,'sc_predict.pdf'), w=8, h=4)
 	}
 	#
 	list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args)
@@ -3243,19 +3158,24 @@ project.athena.Fisheretal.X.b4care<- function(df.tpairs, df.all, predict.t2inf, 
 		tmp		<- b4care[, list(AnyPos_a=AnyPos_T1-DateBorn, ts=AnyPos_T1-10, te=AnyPos_T1), by='Patient']	
 	}	
 	b4care	<- merge(b4care, tmp, by='Patient')
-	#check if ts before 1980 and if so clip
+	#	check if ts before 1980 and if so clip
 	set(b4care, b4care[,which(ts<ts.min)], 'ts', ts.min )	
 	set(b4care, NULL, 'ts', b4care[, floor(ts) + round( (ts%%1)*100 %/% (t.period*100) ) * t.period ] )
 	set(b4care, NULL, 'te', b4care[, floor(te) + round( (te%%1)*100 %/% (t.period*100) ) * t.period - t.period] )	#last time undiagnosed is just before first time period diagnosed
-	#apply predict.t2inf	
-	t2inf	<- predict.t2inf(seq(0,10,t.period)*365, b4care, t2inf.args)
-	t2inf	<- merge( subset( t2inf, !is.na(score) ), subset(b4care, select=c(Patient,ts,te)), by='Patient' )
-	set(t2inf, NULL, 'q', t2inf[,te-q/365])
-	t2inf	<- subset(t2inf, ts<=q, c(Patient, q, score))
-	b4care	<- merge(t2inf, subset(b4care, select=c(Patient, AnyPos_T1, AnyPos_a, isAcute)), by='Patient')	
-	set(b4care, NULL, 'score', b4care[, round(score, d=3)])
-	setnames(b4care, c('Patient','q','score'), c('t.Patient','t','U.score'))	
-	cat(paste('\nReturn X for #t.Patients=',b4care[, length(unique(t.Patient))]))
+	#	apply predict.t2inf	
+	tmp2	<- copy(b4care)
+	tmp		<- predict.t2inf(tmp2, t2inf.args, p=t2inf.args$method.minQLowerU)
+	b4care	<- merge( tmp, subset(b4care, select=c(Patient, AnyPos_T1, AnyPos_a, isAcute, ts, te)), by='Patient' )
+	set(b4care, NULL, 't', b4care[,te-score])
+	tmp		<- b4care[, which(t<ts)]
+	set(b4care, tmp, 't', b4care[tmp, ts])	
+	#	expand to intervals
+	set(b4care, NULL, 't', b4care[, floor(t) + round( (t%%1)*100 %/% (t.period*100) ) * t.period ] )
+	stopifnot(nrow(subset(b4care, t<ts))==0)
+	tmp		<- b4care[, list(t=seq(t,te,by=t.period)), by='Patient']
+	b4care	<- merge( tmp, subset(b4care, select=c(Patient, AnyPos_T1, AnyPos_a, isAcute)), by='Patient' )
+	setnames(b4care, c('Patient'), c('t.Patient'))
+	cat(paste('\nReturn X for #t.Patients=',b4care[, length(unique(t.Patient))]))	
 	b4care
 }
 ######################################################################################
@@ -9559,7 +9479,7 @@ project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, l
 	viro
 }
 ######################################################################################
-project.athena.Fisheretal.Y.infectiontime<- function(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=0.25, ts.min=1980, score.set.value=1, method.infectiontime='for.infected', method.minLowerUWithNegT=TRUE, verbose=TRUE)
+project.athena.Fisheretal.Y.infectiontime<- function(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=0.25, ts.min=1980, method.infectiontime='for.infected', method.minLowerUWithNegT=TRUE, verbose=TRUE)
 {
 	#ts.min=1980; score.min=0.01; score.set.value=1
 	stopifnot(method.infectiontime%in%c('for.infected','for.transmitter'))
@@ -9587,32 +9507,31 @@ project.athena.Fisheretal.Y.infectiontime<- function(YX.tpairs, df.all, predict.
 	set(b4care, b4care[,which(ts<ts.min)], 'ts', ts.min )	
 	set(b4care, NULL, 'ts', b4care[, floor(ts) + round( (ts%%1)*100 %/% (t.period*100) ) * t.period ] )
 	set(b4care, NULL, 'te', b4care[, floor(te) + round( (te%%1)*100 %/% (t.period*100) ) * t.period - t.period] )	#last time undiagnosed is just before first time period diagnosed
-	#apply predict.t2inf	
-	t2inf	<- predict.t2inf(seq(0,10,t.period)*365, b4care, t2inf.args)
-	t2inf	<- merge( subset( t2inf, !is.na(score)), subset(b4care, select=c(Patient,ts,te)), by='Patient' )
-	set(t2inf, NULL, 'q', t2inf[,te-q/365])
-	t2inf	<- subset(t2inf, ts<=q, c(Patient, q, score))
-	b4care	<- merge(t2inf, subset(b4care, select=c(Patient, AnyPos_T1, AnyPos_a, isAcute)), by='Patient')
-	if(!is.na(score.set.value))
-		set(b4care, NULL, 'score', score.set.value)
-	set(b4care, NULL, 'score', b4care[, round(score, d=3)])
+	#apply predict.t2inf
+	tmp2	<- copy(b4care)
+	tmp		<- predict.t2inf(tmp2, t2inf.args, p=t2inf.args$method.minQLowerU)
+	b4care	<- merge( tmp, subset(b4care, select=c(Patient, AnyPos_T1, AnyPos_a, isAcute, ts,te)), by='Patient' )
+	set(b4care, NULL, 't', b4care[,te-score])
+	tmp		<- b4care[, which(t<ts)]
+	set(b4care, tmp, 't', b4care[tmp, ts])	
+	#	expand to intervals
+	set(b4care, NULL, 't', b4care[, floor(t) + round( (t%%1)*100 %/% (t.period*100) ) * t.period ] )
+	stopifnot(nrow(subset(b4care, t<ts))==0)
+	tmp		<- b4care[, list(t=seq(t,te,by=t.period)), by='Patient']
+	b4care	<- merge( tmp, subset(b4care, select=c(Patient, AnyPos_T1, AnyPos_a, isAcute)), by='Patient' )
 	#
-	if(method.infectiontime=='for.infected')
-	{
-		setnames(b4care, c('q','score'), c('t','score.Inf'))
-		if(verbose)
-			cat(paste('\nReturn infection times for #infected patients=',b4care[, length(unique(Patient))]))
-	}			
+	if(method.infectiontime=='for.infected' & verbose)
+		cat(paste('\nReturn infection times for #infected patients=',b4care[, length(unique(Patient))]))		
 	if(method.infectiontime=='for.transmitter')
 	{
-		setnames(b4care, c('Patient','q','score'), c('t.Patient','t','U.score'))
+		setnames(b4care, c('Patient'), c('t.Patient'))
 		if(verbose)
 			cat(paste('\nReturn infection times for #transmitting patients=',b4care[, length(unique(t.Patient))]))
 	}
 	b4care			
 }
 ######################################################################################
-project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.t.Uscore.min=0.01, coal.within.inf.grace= 0.25, method.minLowerUWithNegT=TRUE, t.period= 0.25, save.file=NA, resume=0 )
+project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, Y.U, cluphy, cluphy.info, cluphy.map.nodectime, coal.within.inf.grace= 0.25, method.minLowerUWithNegT=TRUE, t.period= 0.25, save.file=NA, resume=0 )
 {
 	#coal.t.Uscore.min=0.01; coal.within.inf.grace= 0.25
 	#YX.tpairs	<- subset(X.pt, select=c(t.Patient, Patient, cluster, FASTASampleCode, t.FASTASampleCode))
@@ -9654,11 +9573,8 @@ project.athena.Fisheretal.Y.coal<- function(YX.tpairs, df.all, Y.U, cluphy, clup
 		if(!setequal( df.tpairs.mrca[, unique(t.Patient)], Y.U[, unique(t.Patient)]))
 		{
 			Y.U				<- merge(Y.U, 	unique(subset(df.tpairs.mrca, select=t.Patient)), by='t.Patient')
-		}
-		tmp	<- subset(Y.U, U.score>coal.t.Uscore.min, c(t.Patient, t, U.score))		
-		stopifnot(tmp[, any(is.na(U.score))]==FALSE)
-		setkey(tmp, t.Patient, t)		
-		tmp					<- tmp[, list(t.UT= t[1]), by='t.Patient']		
+		}		
+		tmp					<- Y.U[, list(t.UT=min(t)), by='t.Patient']		
 		df.tpairs.mrca		<- merge(df.tpairs.mrca, tmp, by='t.Patient')
 		stopifnot(df.tpairs.mrca[, any(is.na(t.UT))]==FALSE)
 		if(method.minLowerUWithNegT)
@@ -9982,6 +9898,34 @@ project.athena.Fisheretal.characteristics<- function()
 	setkey(tmp, Patient, t.Patient)	
 	tmp	<- unique(tmp)
 	hist(tmp[, score.Y], breaks=100)
+}
+######################################################################################
+project.athena.Fisheretal.composition.totalmissing<- function()	
+{
+	require(data.table)
+	require(ape)
+	require(RColorBrewer)
+	#stop()
+	resume					<- 1 
+	indir					<- paste(DATA,"fisheretal_150216",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_150216",sep='/')	
+	#
+	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	insignat				<- "Wed_Dec_18_11:37:00_2013"	
+	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
+	file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.table.Rdata", sep='')		
+	readAttempt			<- try(suppressWarnings(load(file)))	
+	
+	
+	method.DENOM	<- 'SEQ'
+	method.BRL		<- '3pa1H1.35C3V100bInfT7'
+	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.WEIGHT	<- ''	
+	
+	df		<- subset(runs.table, method.denom==method.DENOM & method.BRL==method.brl & grepl(method.RISK,method.risk), c(stat, method.risk, factor, n, p, l95.bs, u95.bs))
+	tmp		<- subset(df, stat%in%c('Sx.e0cp'))	
+	tmp[, list(n=sum(n), py=sum(n/8), l95.bs=sum(l95.bs/8), u95.bs=sum(u95.bs/8))]
 }
 ######################################################################################
 project.athena.Fisheretal.composition.age<- function()
@@ -10718,7 +10662,7 @@ project.athena.Fisheretal.composition.CD4model<- function()
 			ggsave(file=file, w=6, h=4)			
 		}
 		#	load estimated prop and Nt
-		file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_150105/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_method.risks.Rdata'
+		file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_150216/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_method.risks.Rdata'
 		load(file)
 		#
 		#	< 350
@@ -10745,7 +10689,7 @@ project.athena.Fisheretal.composition.CD4model<- function()
 			#Coefficients:
 			#           Estimate Std. Error t value Pr(>|t|)  
 			#(Intercept)    64.55     105.74   0.610    0.604  
-v           #	16389.67    3052.63   5.369    0.033 *
+	           #	16389.67    3052.63   5.369    0.033 *
 			summary(tmp)
 			#lm(formula = M_CD4_350_NoART ~ v - 1, data = df.cd4me)
 			#Coefficients:
@@ -10795,7 +10739,7 @@ v           #	16389.67    3052.63   5.369    0.033 *
 			#extract left axis label		
 			g 	<- gtable_add_grob(g, g2$grobs[[which(g2$layout$name == "ylab")]], pp$t, length(g$widths), pp$b)
 			#draw the whole thing		
-			file<- paste(DATA, '/fisheretal_150105/', 'ATHENA_2014_06_Patient_AllMSM_ARTno_CD4350.pdf',sep='')
+			file<- paste(DATA, '/fisheretal_150216/', 'ATHENA_2014_06_Patient_AllMSM_ARTno_CD4350.pdf',sep='')
 			pdf(file=file, w=6, h=4) # plot saved by default to Rplots.pdf
 			grid.newpage()
 			grid.draw(g)
@@ -10958,13 +10902,266 @@ v           #	16389.67    3052.63   5.369    0.033 *
 	}
 }
 ######################################################################################
+project.athena.Fisheretal.composition.putativeinfectionwindow<- function()
+{
+	tmp		<- df.all.allmsm
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)
+	tmp		<- subset(tmp, AnyPos_T1>=1996.6 & AnyPos_T1<2011 & Trm%in%c('MSM','BI'), select=c(Patient, isAcute, Acute_Spec, AnyPos_T1, NegT, Trm))
+	
+	tmp[, IPWd:= 1]
+	tmp2	<- tmp[,which(!is.na(NegT) & AnyPos_T1-NegT<11/12)]
+	set(tmp, tmp2, 'IPWd', tmp[tmp2, AnyPos_T1-NegT+1/12])
+	tmp[, t.period:= tmp[, cut(AnyPos_T1, breaks=c(-Inf, 2006.5, 2008, 2009.5, 2011), labels=c('96/07-06/06','06/07-07/12','08/01-09/06','09/07-10/12'))]]
+	
+	ggplot(tmp, aes(x=IPWd*12)) + geom_histogram(binwidth=0.5) + facet_grid(.~t.period, scales='free', space='free') +
+			scale_x_continuous(breaks=seq(4.25,12.25,2), labels=seq(4,12,2), lim=c(4,12.5)) +
+			scale_y_log10(breaks=c(10,100,1000,5000))+
+			labs(x='duration of putative infection window\n(months)', y='') +
+			theme_bw()
+	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150223_PutInfWindow_Duration.pdf'
+	ggsave(file=file, w=10, h=4)
+	#
+	nrow(subset(tmp, IPWd<1)) / nrow(tmp)
+	
+}
+######################################################################################
+project.athena.Fisheretal.composition.t2inf.cd4.350etc<- function(df.sc.negT, adjust.dt.CD4, plot.file)
+{
+	df.sc.negT[, CD4_T1c:=  cut(CD4_T1, breaks=c(-Inf,250,350,500,850,Inf))]
+	df.scay.cd4		<- subset( df.sc.negT, isAcute=='Yes' & dt.CD4<=adjust.dt.CD4 & PosCD4_T1<=AnyT_T1)	
+	df.scaym.cd4	<- subset( df.sc.negT, is.na(isAcute) & Acute_Spec=='SYM' & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+	df.scana.cd4	<- subset( df.sc.negT, is.na(isAcute) & is.na(Acute_Spec) & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+	df.scchr.cd4	<- subset( df.sc.negT, isAcute=='No' & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+	#	loess fit
+	tmp<- subset(df.sc.negT, dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+	set(tmp, tmp[, which(is.na(isAcute))], 'isAcute','Unconfirmed infection status')
+	set(tmp, tmp[, which(isAcute=='No')],'isAcute', 'Chronic HIV infection')
+	set(tmp, tmp[, which(isAcute=='Yes')],'isAcute', 'Confirmed recent HIV infection')
+	ggplot(tmp, aes(x=AnyPos_a, y=mpy.NegT)) + 
+			geom_point(size=0.85) + scale_y_continuous(limits=c(0,13), breaks=seq(0,20,2)) + xlim(18, 61) +
+			geom_smooth(fill='blue', alpha=0.2) +
+			labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
+			facet_grid(isAcute ~ CD4_T1c) + theme_bw()
+	ggsave(paste(plot.file,'sc_exploreloess.pdf'), w=8, h=8)
+	#	Gamma fit
+	#	confirmed recent
+	tmp	<- subset(df.scay.cd4, CD4_T1c=='(-Inf,250]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- copy(tmp)
+	tmp	<- subset(df.scay.cd4, CD4_T1c=='(250,350]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(df.scay.cd4, CD4_T1c=='(350,500]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)		
+	tmp	<- subset(df.scay.cd4, CD4_T1c=='(500,850]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(df.scay.cd4, CD4_T1c=='(850, Inf]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=3)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	# 	unknown status / symptomatic
+	tmp	<- subset(rbind(df.scana.cd4,df.scaym.cd4), CD4_T1c=='(-Inf,250]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(df.scana.cd4, CD4_T1c=='(250,350]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(df.scana.cd4, CD4_T1c=='(350,500]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)		
+	tmp	<- subset(df.scana.cd4, CD4_T1c=='(500,850]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(rbind(df.scana.cd4,df.scaym.cd4), CD4_T1c=='(850, Inf]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=3)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	# 	chronic
+	tmp	<- subset(df.scchr.cd4, CD4_T1c=='(-Inf,250]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(df.scchr.cd4, CD4_T1c=='(250,350]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(df.scchr.cd4, CD4_T1c=='(350,500]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)		
+	tmp	<- subset(df.scchr.cd4, CD4_T1c=='(500,850]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(df.scchr.cd4, CD4_T1c=='(850, Inf]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=3)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)		
+	ans		<- rbind(ans,tmp)
+	#
+	set(ans, ans[, which(isAcute=='No')],'isAcute', 'Chronic HIV infection')
+	set(ans, ans[, which(isAcute=='Yes')],'isAcute', 'Confirmed recent HIV infection')
+	set(ans, ans[, which(is.na(isAcute))],'isAcute', 'Unconfirmed infection status')
+	#		
+	ggplot(ans, aes(x=AnyPos_a, y=mpy.NegT)) + 
+			geom_point(size=0.85) + scale_y_continuous(limits=c(0,13), breaks=seq(0,20,2)) + xlim(18, 61) +			
+			geom_line(aes(y=y.b), colour='blue') +
+			geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2, fill='blue', alpha=0.5) +
+			labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
+			facet_grid(isAcute ~ CD4_T1c) + theme_bw()
+	ggsave(paste(plot.file,'sc_explore.pdf'), w=8, h=8)
+}
+######################################################################################
+project.athena.Fisheretal.composition.t2inf.cd4.850etc<- function(df.sc.negT, adjust.dt.CD4, plot.file)
+{
+	df.sc.negT[, CD4_T1c:=  cut(CD4_T1, breaks=c(-Inf,250,850,Inf))]
+	df.scay.cd4		<- subset( df.sc.negT, isAcute=='Yes' & dt.CD4<=adjust.dt.CD4 & PosCD4_T1<=AnyT_T1)	
+	df.scaym.cd4	<- subset( df.sc.negT, is.na(isAcute) & Acute_Spec=='SYM' & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+	df.scana.cd4	<- subset( df.sc.negT, is.na(isAcute) & is.na(Acute_Spec) & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)
+	df.scchr.cd4	<- subset( df.sc.negT, isAcute=='No' & dt.CD4<adjust.dt.CD4 & PosCD4_T1<AnyT_T1)		
+	#	confirmed recent
+	tmp	<- subset(df.scay.cd4, CD4_T1c=='(-Inf,250]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- copy(tmp)
+	tmp	<- subset(df.scay.cd4, CD4_T1c=='(250,850]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(df.scay.cd4, CD4_T1c=='(850, Inf]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=3)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	# 	unknown status / symptomatic
+	tmp	<- subset(rbind(df.scana.cd4,df.scaym.cd4), CD4_T1c=='(-Inf,250]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(rbind(df.scana.cd4,df.scaym.cd4), CD4_T1c=='(250,850]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(rbind(df.scana.cd4,df.scaym.cd4), CD4_T1c=='(850, Inf]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=3)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	# 	chronic
+	tmp	<- subset(df.scchr.cd4, CD4_T1c=='(-Inf,250]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]	
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(df.scchr.cd4, CD4_T1c=='(250,850]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=5)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)		
+	ans		<- rbind(ans,tmp)
+	tmp	<- subset(df.scchr.cd4, CD4_T1c=='(850, Inf]', select=c(Patient, mpy.NegT, AnyPos_a, CD4_T1c, isAcute, Acute_Spec))		
+	setkey(tmp, AnyPos_a)
+	tmp2	<- gamlss(as.formula('mpy.NegT ~ bs(AnyPos_a, degree=3)'), sigma.formula=as.formula('~ bs(AnyPos_a, degree=3)'), data=as.data.frame(subset(tmp, select=c(mpy.NegT, AnyPos_a,CD4_T1c))), family=GA)				 
+	tmp[, y.b:= predict(tmp2, type='response', se.fit=FALSE)]
+	tmp3	<- gamlss.centiles.get(tmp2, tmp$AnyPos_a, cent = c(2.5, 97.5), with.ordering=FALSE )
+	tmp		<- cbind(tmp, tmp3)		
+	ans		<- rbind(ans,tmp)
+	#
+	set(ans, ans[, which(isAcute=='No')],'isAcute', 'Chronic HIV infection')
+	set(ans, ans[, which(isAcute=='Yes')],'isAcute', 'Confirmed recent HIV infection')
+	set(ans, ans[, which(is.na(isAcute))],'isAcute', 'Unconfirmed infection status')
+	
+	
+	ggplot(ans, aes(x=AnyPos_a, y=mpy.NegT)) + 
+			geom_point(size=0.85) + scale_y_continuous(limits=c(0,13), breaks=seq(0,20,2)) + xlim(18, 61) +			
+			geom_line(aes(y=y.b), colour='blue') +
+			geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2, fill='blue', alpha=0.5) +
+			labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
+			facet_grid(isAcute ~ CD4_T1c) + theme_bw()
+	ggsave(paste(plot.file,'sc_explore.pdf'), w=8, h=8)
+}
+######################################################################################
 project.athena.Fisheretal.composition.acute<- function()
 {
 	tmp<- df.all
 	tmp<- df.all.allmsm
 	setkey(tmp, Patient)
 	tmp<- unique(tmp)
-	tmp<- subset(tmp, AnyPos_T1>1996.6 & AnyPos_T1<2011, select=c(Patient, isAcute, AnyPos_T1))
+	tmp<- subset(tmp, AnyPos_T1>=1996.6 & AnyPos_T1<2011 & Trm%in%c('MSM','BI'), select=c(Patient, isAcute, AnyPos_T1))
 	set(tmp, tmp[, which(is.na(isAcute))],'isAcute', 'Missing')
 	
 	ggplot(tmp, aes(x=AnyPos_T1, fill=isAcute, colour=isAcute)) + geom_bar(aes(y=..count../sum(..count..)), binwidth=1, position='dodge')
@@ -10974,9 +11171,36 @@ project.athena.Fisheretal.composition.acute<- function()
 	tmp<- subset(YX, select=c(Patient, t.Patient, w.i, score.Y))
 	setkey(tmp, Patient, t.Patient)
 	tmp<- unique(tmp)
+	
+	#
+	tmp	<- df.all.allmsm
+	setkey(tmp, Patient)
+	tmp	<- unique(tmp)
+	tmp	<- subset(tmp, AnyPos_T1>=1996.6 & AnyPos_T1<2011 & Trm%in%c('MSM','BI'), select=c(Patient, isAcute, Acute_Spec, AnyPos_T1, Trm))
+	set(tmp, tmp[, which(is.na(Acute_Spec))],'Acute_Spec', 'Unknown')
+	set(tmp, tmp[, which(isAcute=='No')],'Acute_Spec', 'Chronic HIV infection')
+	set(tmp, tmp[, which(isAcute=='Yes')],'Acute_Spec', 'Confirmed recent HIV infection')
+	set(tmp, tmp[, which(Acute_Spec=='CLIN')],'Acute_Spec','Confirmed recent HIV infection')
+	set(tmp, tmp[, which(Acute_Spec=='SYM')],'Acute_Spec','Symptomatic recent HIV infection')
+	set(tmp, NULL, 'Acute_Spec', tmp[,factor(Acute_Spec)])
+	tmp[, t.period:= tmp[, cut(AnyPos_T1, breaks=c(-Inf, 2006.5, 2008, 2009.5, 2011))]]
+	#
+	ggplot(tmp, aes(x=AnyPos_T1, fill=Acute_Spec)) + 
+			geom_bar(binwidth=0.25, position='fill',alpha=0.8) +
+			scale_y_continuous(breaks=seq(0,1,0.2),labels=seq(0,1,0.2)*100) +
+			scale_x_continuous(breaks=seq(1997,2014,2), minor_breaks=NULL, expand=c(0,0)) +
+			scale_fill_brewer(name='', palette='YlGnBu') +
+			labs(x='', y='Infection status at diagnosis\n( % )') + 
+			facet_grid(.~t.period, scales='free_x', space='free_x') +					
+			theme_bw() +
+			theme(legend.position='bottom', legend.text=element_text(size=14), legend.key.size=unit(7,'mm'), axis.title=element_text(size=14), axis.text.x=element_text(size=14), axis.text.y=element_text(size=14), strip.background = element_blank(), strip.text = element_blank(), panel.grid.major.y = element_line(colour="black", size=0.4), panel.grid.minor.y = element_line(colour="black", size=0.4), panel.grid.major.x=element_blank(), panel.grid.minor.x=element_blank(), plot.margin=unit(c(0,2,0,0),"cm")) +	
+			guides(fill=guide_legend(ncol=2))
+	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150223_AcuteSpec_Time.pdf'
+	ggsave(file=file, w=10, h=4)
+	#
+	tmp[, table(t.period, Acute_Spec)]
+	
 }
-
-
 ######################################################################################
 project.athena.Fisheretal.censoring.model<- function(ct, ctb, ctn=NULL, plot.file=NA, factors=NULL)
 {
@@ -11583,29 +11807,8 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		tmp						<- project.athena.Fisheretal.X.time.diag2firstVLandCD4(df.tpairs, df.all, df.viro, df.immu, t2.care.t1.q=c(0.25,0.5))	
 		X.pt					<- merge( X.pt, tmp, by='t.Patient', all.x=1 )		
 		#	compute infection window of recipient for direct potential transmitters ri	
-		Y.infwindow				<- project.athena.Fisheretal.Y.infectiontime( ri, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=1, method='for.infected', method.minLowerUWithNegT=TRUE)
+		Y.infwindow				<- project.athena.Fisheretal.Y.infectiontime( ri, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, method.infectiontime='for.infected', method.minLowerUWithNegT=TRUE)
 		Y.infwindow[, AnyPos_a:=NULL]
-		#	some plots
-		if(0)
-		{
-			#tmp	<- c(0.03, 0.05, 0.1, 0.2)
-			#tmp	<- c(0.135, 0.18, 0.23, 0.32)
-			tmp	<- c(0.135, 0.18, 0.23)
-			tmp	<- X.b4care[,  {
-						z<- sapply(tmp, function(x) max(which(U.score>=x)) )								
-						list(U=t[z], Q=tmp, AnyPos_T1=AnyPos_T1[1], AnyPos_a=AnyPos_a[1], isAcute=isAcute[1])	
-					}, by='t.Patient']
-			tmp[, t2D:= tmp[, AnyPos_T1-U]]
-			set(tmp,NULL,'Q',tmp[,factor(Q)]) 
-			tmp	<- subset(tmp, U>1996.5 & U<2011)
-			ggplot(tmp, aes(x=U, y=t2D, colour=Q)) + geom_point(data=subset(tmp, Q==0.23), position=position_jitter(w = 0.1, h=0), alpha=0.65, color='black', size=1.2) + geom_smooth() +
-					scale_y_continuous(breaks=seq(0,20,1)) + scale_x_continuous(breaks=seq(1996,2020,2)) + 
-					labs(y='time to diagnosis\n(years)', x='time of HIV infection', colour='quantile\nparameter') +
-					guides(color=guide_legend(override.aes=list(fill=NA))) +
-					scale_colour_brewer(palette='Set2') + theme_bw() + theme(legend.position='bottom',panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey60", size=0.2)) 
-			file	<- '/Users/Oliver/duke/2014_HIVMSMbyProp/fig/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_2011_Time2Diag_3pa1.pdf'
-			ggsave(file=file, w=6, h=6)			
-		}
 		if('FASTASampleCode'%in%colnames(df.tpairs))		#mode 1
 		{			
 			tmp						<- subset(df.tpairs, select=c(t.Patient, t.FASTASampleCode, FASTASampleCode))
@@ -12361,19 +12564,9 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 													)
 {
 	#
-	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
-	#
-	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 't2inf',method.PDT,method,sep='')
-	tmp				<- project.athena.Fisheretal.t2inf(	indircov, infile.cov.study,
-														method.Acute=method.Acute, method.minQLowerU=method.minQLowerU,
-														adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, 
-														plot.file=plot.file)
-	predict.t2inf	<- tmp$predict.t2inf
-	t2inf.args		<- tmp$t2inf.args
-	#
 	#	get data relating to study population (subtype B sequ)
 	#
-	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=1/12, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
 	df.all			<- tmp$df.all	
 	df.denom.CLU	<- tmp$df.select
 	df.denom.SEQ	<- tmp$df.select.SEQ	
@@ -12390,7 +12583,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 	#	get data relating to full population (MSM including those without seq)
 	#	this merges the patients with HIV 1 B sequences and the MSM patients without a sequence 
 	tmp					<- project.athena.Fisheretal.select.denominator(	indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, 
-																			infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=0.25, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec,
+																			infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=1/12, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec,
 																			t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime,
 																			df.viro.part=df.viro, df.immu.part=df.immu, df.treatment.part=df.treatment, df.all.part=df.all)	
 	df.all.allmsm		<- tmp$df.all
@@ -12399,7 +12592,23 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 	df.treatment.allmsm	<- tmp$df.treatment
 	tmp					<- tmp$df.select.SEQ	
 	setkey(tmp, Patient)
-	ri.ALLMSM			<- unique(tmp)	
+	ri.ALLMSM			<- unique(tmp)
+	#
+	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
+	#
+	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 't2inf',method.PDT,method,sep='')
+	tmp				<- project.athena.Fisheretal.t2inf(	df.all.allmsm,
+			method.Acute=method.Acute, method.minQLowerU=method.minQLowerU,
+			adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, 
+			plot.file=plot.file)
+	predict.t2inf	<- tmp$predict.t2inf
+	t2inf.args		<- tmp$t2inf.args	
+	#	determine best quantile parameter
+	if(is.na(method.minQLowerU))
+	{
+		plot.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 't2infq_',method.PDT,method,sep='')
+		method.minQLowerU	<- project.athena.Fisheretal.t2inf.estimate.quantileparameter(df.all.allmsm, predict.t2inf, t2inf.args, t.recent.endctime, plot.file=plot.file)		
+	}
 	#
 	if(0)
 	{
@@ -12588,7 +12797,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 	#
 	#	characteristics of RI(with potential direct transmitter) and RI(in all.msm)
 	#	
-	if(0)
+	if(1)
 	{
 		ri.PT.su				<- project.athena.Fisheretal.RI.summarize(ri.PT, df.all, tperiod.info, info=clumsm.info, with.seq=TRUE, with.cluster=TRUE, cols=c('lRNA_T1','CD4_T1','AnyPos_A','SC_dt','PosCD4_dt','PoslRNA_dt'))
 		#unique(subset(ri.ALLMSM, select=Patient)) 
@@ -12678,7 +12887,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			X.seq			<- project.athena.Fisheretal.YX.model5.stratify(X.seq)
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
 		}					
-#stop()
+stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
@@ -12754,7 +12963,7 @@ hivc.prog.props_univariate<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm2Cwmx.wtn.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.135
+		method.minQLowerU		<- 0.194
 		method.use.AcuteSpec	<- 1
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 100

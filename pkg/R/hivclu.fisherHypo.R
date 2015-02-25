@@ -55,6 +55,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 		runs.opt	<- do.call('rbind', runs.opt)
 		setkey(runs.opt, method.dating, method.brl)	
 		print(runs.opt)
+		
 		#subset(runs.opt, grepl('C3V100',method.brl))
 		#	load risk estimates
 		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
@@ -84,9 +85,9 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	runs.av.info	<- subset(runs.av.info, BS>=1)[, list(EST=paste('Q',100*c(0.025,0.25,0.5,0.75,0.975),sep=''), AV=quantile(AV, probs=c(0.025,0.25,0.5,0.75,0.975))), by=c('method.risk','method.dating','method.nodectime','method.brl','method.denom','method.recentctime')]
 	runs.av.info	<- rbind(tmp, runs.av.info)
 	set(runs.av.info, NULL, 'HYPO', runs.av.info[, regmatches(method.risk,regexpr('Hypo[[:alnum:]]+', method.risk))])	
+	#runs.av.info[,list(n=length(EST), method.risk=unique(method.risk)),by='HYPO']	
 	runs.av.info	<- dcast.data.table(runs.av.info, HYPO~EST, value.var='AV')
-	#	delete Test PrEP
-	runs.av.info	<- subset(runs.av.info, !(grepl('Test',HYPO) & grepl('PrEP',HYPO)))
+	
 	
 	#	quick test plot
 	ggplot(runs.av.info, aes(x=HYPO))	+ geom_boxplot(aes(ymin=Q2.5, ymax=Q97.5, lower=Q25, middle=Q50, upper=Q75), stat="identity") + geom_point(aes(y=central), colour='red') +
@@ -123,15 +124,47 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 				coord_flip() +			
 				theme_bw() + theme(legend.position='bottom', legend.title=element_text(size=12), legend.text=element_text(size=12), axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) 		
 	}
-	if(1)
+	if(0)	#CROI poster: no acute testing for simplicity
 	{
 		select			<- c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestC12m59pc', 'HypoTestC06m65pc', 'HypoTestC12m59pcARTat500', 'HypoTestC12m59pcImmediateART', 
-								'HypoRPrEP33', 'HypoPrestC12m32pc50pcARTat500', 'HypoPrestC12m32pc50pcImmediateART', 
+								'HypoPrestC12m32pc50pc', 'HypoPrestC12m32pc50pcARTat500', 'HypoPrestC12m32pc50pcImmediateART', 
 								'HypoPrestC12m46pc60pcARTat500', 'HypoPrestC12m46pc60pcImmediateART')
+		tmp				<- data.table(	HYPO	= rev(select), 
+				legend	= rev(c(	'ART at CD4<500', 'immediate ART', 'testing for HIV every 12 mo by 70%', 'testing for HIV every 6 mo by 70%',													
+								'testing for HIV every 12 mo by 70% + ART at 500', 'testing for HIV every 12 mo by 70% + immediate ART',
+								'testing for HIV every 12 mo + oral PrEP by 50%',
+								'testing for HIV every 12 mo + oral PrEP by 50% + ART at 500', 'testing for HIV every 12 mo + oral PrEP by 50% + immediate ART',
+								'testing for HIV every 12 mo + oral PrEP by 60% + ART at 500', 'testing for HIV every 12 mo + oral PrEP by 60% + immediate ART'
+						)),
+				levels	= rev(factor(c( 0, 0, 0, 0,
+										0, 0, 
+										0, 
+										0, 0, 
+										0, 0))))
+		set(tmp, NULL, 'legend', tmp[, factor(legend, levels=tmp$legend, labels=tmp$legend)])						
+		runs.av.plot	<- merge(runs.av.info, tmp, by='HYPO')
+		setkey(runs.av.plot, legend)
+		ggplot( runs.av.plot, aes(x=legend, fill=levels) ) +
+				geom_hline(yintercept=50, colour="grey70", size=2) +
+				scale_fill_manual(values=c("black"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+				geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
+				geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color="#FF7F00", width=0.9, size=0.7) +
+				scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+				labs(x='', y='\nHIV infections among MSM\nthat could have been averted 09/07 - 10/12\n(%)') + 
+				coord_flip() +			
+				theme_bw() + theme(legend.position='bottom', axis.text.x=element_text(size=14), axis.text.y=element_text(size=4), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) 
+		file			<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.HypoAverted.pdf", sep='')
+		ggsave(file=file, w=6, h=6)
+	}
+	if(1)	#CROI poster: no acute testing for simplicity
+	{
+		select			<- c(	'HypoARTat500', 'HypoImmediateART', 'HypoTestC12m59pc', 'HypoTestA06m65pc', 'HypoTestC12m59pcARTat500', 'HypoTestC12m59pcImmediateART', 
+				'HypoPrestC12m32pc50pc', 'HypoPrestC12m32pc50pcARTat500', 'HypoPrestC12m32pc50pcImmediateART', 
+				'HypoPrestC12m46pc60pcARTat500', 'HypoPrestC12m46pc60pcImmediateART')
 		tmp				<- data.table(	HYPO	= rev(select), 
 				legend	= rev(c(	'ART at CD4<500', 'immediate ART', 'testing for HIV every 12 mo by 70%', 'testing for acute HIV every 6 mo by 70%',													
 								'testing for HIV every 12 mo by 70% + ART at 500', 'testing for HIV every 12 mo by 70% + immediate ART',
-								'xxtesting for HIV every 12 mo + oral PrEP by 50%',
+								'testing for HIV every 12 mo + oral PrEP by 50%',
 								'testing for HIV every 12 mo + oral PrEP by 50% + ART at 500', 'testing for HIV every 12 mo + oral PrEP by 50% + immediate ART',
 								'testing for HIV every 12 mo + oral PrEP by 60% + ART at 500', 'testing for HIV every 12 mo + oral PrEP by 60% + immediate ART'
 						)),
