@@ -2422,10 +2422,10 @@ project.athena.Fisheretal.t2inf<- function(df.all.allmsm, method.Acute='empirica
 	if(!is.null(plot.file))
 	{		
 		t.period	<- 1/64
-		b4care		<- do.call('rbind', list(	subset(df.scchr.cd4, AnyPos_a>25.0 & AnyPos_a<25.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
-												subset(df.scchr.cd4, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
-												subset(df.scchr.cd4, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1>250 & CD4_T1<850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
-												subset(df.scchr.cd4, AnyPos_a>34.5 & AnyPos_a<35.99 & CD4_T1>850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,]												
+		b4care		<- do.call('rbind', list(	subset(df.sc.negT.cd4yes, AnyPos_a>25.0 & AnyPos_a<25.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(df.sc.negT.cd4yes, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(df.sc.negT.cd4yes, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1>250 & CD4_T1<850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(df.sc.negT.cd4yes, AnyPos_a>34.5 & AnyPos_a<35.99 & CD4_T1>850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,]												
 												))
 		b4care[, label:= c(	'chronic HIV infection at diagnosis,\n CD4 < 250,\n 25 years at diagnosis',
 								'chronic HIV infection at diagnosis,\n CD4 < 250,\n 35 years at diagnosis',
