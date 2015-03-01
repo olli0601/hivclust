@@ -5392,6 +5392,84 @@ project.hivc.bezemer<- function()
 	write.csv(tmp, file=file)
 }
 ######################################################################################
+project.hivc.clustering.plottree<- function()
+{
+	#
+	#	plot ExaML tree with 80% BS clusters
+	#	
+	require(ape)
+	require(adephylo)
+	require(phytools)
+	indir				<- paste(DATA,"tmp",sep='/')
+	infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	infiletree			<- paste(infile,"examlbs500",sep="_")
+	indircov			<- paste(DATA,"derived",sep='/')
+	infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"	
+	insignat			<- "Wed_Dec_18_11:37:00_2013"		
+	file				<- paste(indir,'/',infiletree,'_',gsub('/',':',insignat),".R",sep='')
+	load(file)
+	#	visual inspection: H0576-19 is 'outgoup' to Dutch seqs (and not in the Dutch database)
+	tmp					<- which(ph$tip.label=="H0576-19")
+	ph					<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
+	ph					<- ladderize(ph)	
+	#	produce clustering
+	ph.node.bs			<- as.numeric( ph$node.label )
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	dist.brl			<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)	 
+	thresh.bs	<- 0.8
+	thresh.brl	<- 0.09
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.brl=thresh.brl, dist.brl=dist.brl, thresh.nodesupport=thresh.bs, nodesupport=ph.node.bs, retval="all")	
+	#print(clustering)	
+	#	produce tip labels
+	df.seqinfo	<- merge(data.table(FASTASampleCode=ph$tip.label, TIPID=seq_along(ph$tip.label), FRGN='No'), subset(df.all, select=c(FASTASampleCode, Patient, isAcute)), by='FASTASampleCode', all.x=1)
+	set(df.seqinfo, df.seqinfo[, which(grepl('PROT+P51',FASTASampleCode,fixed=1))], 'FRGN', 'Yes')
+	set(df.seqinfo, df.seqinfo[, which(is.na(isAcute) & !is.na(Patient))], 'isAcute', 'Unconfirmed')
+	df.seqinfo[, COL:= 'transparent']		
+	set(df.seqinfo, df.seqinfo[, which(isAcute=='No')], 'COL', "#EF6548")
+	set(df.seqinfo, df.seqinfo[, which(isAcute=='Yes')], 'COL', "#990000")
+	set(df.seqinfo, df.seqinfo[, which(isAcute=='Unconfirmed')], 'COL', "#FDBB84")
+	set(df.seqinfo, df.seqinfo[, which(FRGN=='Yes')], 'COL', 'grey50')
+	df.seqinfo[, TXT:= '']
+	set(df.seqinfo, df.seqinfo[, which(isAcute=='No')], 'TXT', 'Chr')
+	set(df.seqinfo, df.seqinfo[, which(isAcute=='Yes')], 'TXT', 'Rec')
+	set(df.seqinfo, df.seqinfo[, which(isAcute=='Unconfirmed')], 'TXT', '?')
+	set(df.seqinfo, df.seqinfo[, which(FRGN=='Yes')], 'TXT', 'FOREIGN')
+	setkey(df.seqinfo, TIPID)
+	file	<- paste( indir, '/', infiletree, '_', insignat,'_ExaMLCluTree.pdf', sep='' )
+	hivc.clu.plot(ph, clustering[["clu.mem"]], file=file, pdf.off=0, pdf.width=10, pdf.height=170, show.node.label= F,  cex.edge.incluster=1 )
+	hivc.clu.plot.tiplabels( seq_len(Ntip(ph)), matrix(df.seqinfo[,TXT], nrow=1,ncol=nrow(df.seqinfo)), matrix(df.seqinfo[,COL], nrow=1,ncol=nrow(df.seqinfo)), cex=0.05, adj=c(-2,0.5) )
+	dev.off()
+	#	
+	
+	ph	<- "(Wulfeniopsis:0.196108,(((TN_alpinus:0.459325,TN_grandiflora:0.259364)1.00:0.313204,uniflora:1.155678)1.00:0.160549,(((TP_angustibracteata:0.054609,(TN_brevituba:0.085086,TP_stolonifera:0.086001)0.76:0.035958)1.00:0.231339,(((axillare:0.017540,liukiuense:0.018503)0.96:0.038019,stenostachyum:0.049803)1.00:0.083104,virginicum:0.073686)1.00:0.103843)1.00:0.086965,(carinthiaca:0.018150,orientalis:0.019697)1.00:0.194784)1.00:0.077110)1.00:0.199516,(((((abyssinica:0.077714,glandulosa:0.063758)1.00:0.152861,((((allionii:0.067154,(morrisonicola:0.033595,officinalis:0.067266)1.00:0.055175)1.00:0.090694,(alpina:0.051894,baumgartenii:0.024152,(bellidioides:0.016996,nutans:0.063292)0.68:0.031661,urticifolia:0.032044)0.96:0.036973,aphylla:0.117223)0.67:0.033757,(((japonensis:0.018053,miqueliana:0.033676)1.00:0.160576,vandellioides:0.099761)0.69:0.036188,montana:0.050690)1.00:0.058380)1.00:0.115874,scutellata:0.232093)0.99:0.055014)1.00:0.209754,((((((acinifolia:0.112279,reuterana:0.108698)0.94:0.055829,pusilla:0.110550)1.00:0.230282,((davisii:0.053261,serpyllifolia:0.087290)0.89:0.036820,(gentianoides:0.035798,schistosa:0.038522)0.95:0.039292)1.00:0.092830)1.00:0.169662,(((anagalloides:0.018007,scardica:0.017167)1.00:0.135357,peregrina:0.120179)1.00:0.098045,beccabunga:0.069515)1.00:0.103473)1.00:0.287909,(((((((((((agrestis:0.017079,filiformis:0.018923)0.94:0.041802,ceratocarpa:0.111521)1.00:0.072991,amoena:0.229452,(((argute_serrata:0.017952,campylopoda:0.075210)0.64:0.034411,capillipes:0.022412)0.59:0.034547,biloba:0.037143)1.00:0.141513,intercedens:0.339760,((opaca:0.019779,persica:0.035744)0.94:0.038558,polita:0.036762)1.00:0.108620,rubrifolia:0.186799)1.00:0.144789,(((bombycina_11:0.033926,bombycina_bol:0.035290,cuneifolia:0.017300,jacquinii:0.054249,oltensis:0.045755,paederotae:0.051579,turrilliana:0.017117)0.85:0.049052,czerniakowskiana:0.089983)0.93:0.051111,farinosa:0.138075)1.00:0.080565)1.00:0.104525,((albiflora:0.017984,ciliata_Anna:0.032685,vandewateri:0.017610)0.97:0.045649,arguta:0.063057,(catarractae:0.022789,decora:0.049785)0.96:0.048220,((cheesemanii:0.040125,cupressoides:0.146538)1.00:0.067761,macrantha:0.038130)1.00:0.088158,(densifolia:0.090044,formosa:0.116180)0.71:0.046353,(elliptica:0.038650,(odora:0.019325,salicornioides:0.021228)0.94:0.042950,salicifolia:0.020829)0.92:0.043978,(nivea:0.070429,(papuana:0.035003,tubata:0.031140)0.98:0.064379)0.93:0.065336,raoulii:0.109101)0.97:0.076607)0.93:0.085835,chamaepithyoides:0.485601)0.57:0.072713,(ciliata_157:0.069943,lanuginosa:0.052833)1.00:0.098638,(densiflora:0.069429,macrostemon:0.118926)0.92:0.124911,(fruticulosa:0.086891,saturejoides:0.041181)0.94:0.086148,kellererii:0.083762,lanosa:0.263033,mampodrensis:0.103384,nummularia:0.191180,pontica:0.128944,thessalica:0.129197)0.65:0.031006,(arvensis:0.342138,(((((chamaedrys:0.043720,micans:0.032021,vindobonensis:0.033309)0.51:0.034053,micrantha:0.019084)0.64:0.037906,krumovii:0.020175)1.00:0.103875,verna:0.254017)0.81:0.057105,magna:0.112657)1.00:0.104070)1.00:0.101845)1.00:0.149208,(((aznavourii:0.664103,glauca:0.405588)0.85:0.209945,praecox:0.447238)1.00:0.185614,(donii:0.260827,triphyllos:0.176032)1.00:0.194928)1.00:0.611079)0.74:0.055152,((crista:0.591702,(((cymbalaria_Avlan:0.017401,panormitana:0.017609)1.00:0.229508,((cymbalaria_Istanbul:0.028379,trichadena_332:0.016891,trichadena_Mugla:0.019131)1.00:0.196417,lycica_333:0.146772)1.00:0.097646,lycica_192:0.154877)1.00:0.234748,(((hederifolia:0.018068,triloba:0.075784)1.00:0.084865,(sibthorpioides:0.122542,sublobata:0.136951)1.00:0.074683)0.89:0.043623,stewartii:0.040679)1.00:0.596859)1.00:0.237324)0.58:0.057120,javanica:0.133802)1.00:0.137214)1.00:0.269201,(missurica:0.016685,rubra:0.019696)1.00:0.351184)0.54:0.058275)0.52:0.062485,((dahurica:0.023542,longifolia:0.016484,spicata:0.018125)0.95:0.042294,(nakaiana:0.016270,schmidtiana:0.058451)0.88:0.037207)1.00:0.261643)0.55:0.056458)1.00:0.229509,kurrooa:0.100611)0.74:0.068198,(bonarota:0.040842,lutea:0.115316)1.00:0.241657)0.99:0.085772);"
+	ph <- ladderize( read.tree(text = ph) )				
+	#read bootstrap support values
+	thresh.bs						<- 0.9
+	ph.node.bs						<- as.numeric( ph$node.label )		
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph.node.bs[c(13,15,27,41,43)]	<- thresh.bs-0.05*seq(0.01,length.out=5)
+	ph.node.bs[ph.node.bs==1]		<- seq_along(which(ph.node.bs==1))*0.005 + 0.7
+	ph$node.label					<- ph.node.bs
+	#read patristic distances
+	stat.fun						<- hivc.clu.min.transmission.cascade
+	#stat.fun						<- max
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)
+	print(dist.brl)
+	thresh.brl						<- quantile(dist.brl,seq(0.1,1,by=0.05))["100%"]
+	print(quantile(dist.brl,seq(0.1,0.5,by=0.05)))
+	print(thresh.brl)
+	#produce clustering 
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+	print(clustering)		
+	hivc.clu.plot(ph, clustering[["clu.mem"]] )
+	#produce some tip states
+	ph.tip.state<- rep(1:20, each=ceiling( length( ph$tip.label )/20 ))[seq_len(Ntip(ph))]
+	states		<- data.table(state.text=1:20, state.col=rainbow(20))
+	states		<- states[ph.tip.state,]
+	hivc.clu.plot.tiplabels( seq_len(Ntip(ph)), matrix(states[,state.text], nrow=1,ncol=nrow(states)), matrix(states[,state.col], nrow=1,ncol=nrow(states)), cex=0.4, adj=c(-1,0.5) )
+	
+}
+######################################################################################
 project.hivc.examl<- function()
 {
 	require(ape)
@@ -6542,7 +6620,18 @@ project.Tchain.Belgium.sensecheck.explore<- function()
 		infile	<- '140921_set7_INFO_TRM.R'
 		file	<- paste(indir, '/',infile, sep='')
 		load(file)
+		#	exclude B->A, same as A->B
+		trm.pol	<- subset( trm.pol, !(FROM=='B' & TO=='A') )		
 		
+		if(0)
+		{
+			length(union(brl.pol[, FROM], brl.pol[, TO]))
+			unique(subset(trm.pol, select=c(FROM,TO)))
+			#	numbers before A removed
+			trm.pol.nA		<- subset(trm.pol, withA==FALSE)
+			unique(subset(trm.pol.nA, select=c(FROM,TO)))
+			length(union(trm.pol.nA[, TIP1], trm.pol.nA[, TIP2]))
+		}
 		if(0)
 		{
 			#
@@ -6665,16 +6754,20 @@ project.Tchain.Belgium.sensecheck.explore<- function()
 		{
 			#	stratify by patients
 			tmp		<- melt(trm.pol, measure.vars=c('withA','withB','withC','withD','withE','withF','withH','withI','withK','withL'))
-			set(tmp, NULL, 'variable', tmp[, gsub('with','Patient ',variable)])
-			ggplot(tmp, aes(x=d_TSeqT)) + geom_jitter(aes(y=BRL, colour=value), size=1.2, alpha=0.5, position = position_jitter(width = .1)) + 
-					labs(x='time elapsed\n(years)', y='evolutionary divergence\nbetween confirmed transmission pairs\n(nucleotide substitutions / site)') +
+			set(tmp, NULL, 'variable', tmp[, gsub('with','pairs including\npatient ',variable)])
+			ggplot(tmp, aes(x=d_TSeqT)) +
+					geom_ribbon(aes(x=c(10.17,30), ymin=0, ymax=1), fill='grey30', alpha=0.2) +
+					geom_ribbon(aes(x=c(0,10.17), ymin=0, ymax=1), fill='red', alpha=0.2) +
+					geom_jitter(aes(y=BRL, colour=value), size=0.7, alpha=0.5, position = position_jitter(width = .1)) + 
+					labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
 					coord_cartesian(xlim=c(0,22), ylim=c(0,0.125)) +
-					scale_colour_brewer(name='pairs with sequences\nfrom selected patient', palette='Set1') +
-					scale_y_continuous(breaks=seq(0, 0.2, 0.01)) +
-					scale_x_continuous(breaks=seq(0,30,2)) + theme_bw() + theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75")) +
-					facet_wrap( ~ variable, ncol=3)
+					scale_colour_manual(values=c('black',"#F0027F"), name='pairs with sequences\nfrom selected patient', guide = FALSE) +
+					scale_y_continuous(breaks=seq(0, 0.2, 0.02)) +
+					scale_x_continuous(breaks=seq(0,30,4), minor_breaks=seq(0,30,1)) + theme_bw() + 
+					theme(panel.grid.minor=element_line(colour="grey75", size=0.2), panel.grid.major=element_line(colour="grey75")) +
+					facet_wrap( ~ variable, ncol=3, scales = "free_x")
 			file	<- paste(indir, '/',"140921_set7_pol_patristic_dTS_all_GAfit_byPatient.pdf", sep='')
-			ggsave(file=file, w=15, h=15)		
+			ggsave(file=file, w=10, h=10)	
 		}		
 		if(1)
 		{
@@ -6851,17 +6944,17 @@ project.Tchain.Belgium.sensecheck.explore<- function()
 			load(file)
 			
 			ggplot(trm.pol, aes(x=d_TSeqT)) +
-					geom_point(aes(y=BRL, colour="MTC cohort,\nAmsterdam"), size=2, data=trm.pol.mtc) +
-					geom_point(aes(y=BRL, colour="Confirmed pairs,\nSweden (gag)"), size=2, data=trm.gag) +					
+					#geom_point(aes(y=BRL, colour="MTC cohort,\nAmsterdam"), size=2, data=trm.pol.mtc) +
+					geom_point(aes(y=BRL, colour="Confirmed pairs,\nSweden"), size=3, alpha=1, data=trm.gag) +					
 					geom_jitter(aes(y=BRL, colour="Confirmed pairs,\nBelgium"), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol, withA==FALSE & BRL>0.003)) +										
 					geom_line(data=trm.pol.p2, aes(y=BRL_p)) +
-					geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dotted') + geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dotted') +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dotted', size=0.8) + geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dotted', size=0.8) +
 					#geom_line(data=trm.pol.p3, aes(x=x, y=q1), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q99), lty='twodash') +
 					#geom_line(data=trm.pol.p3, aes(x=x, y=q25), lty='dashed') + geom_line(data=trm.pol.p3, aes(x=x, y=q75), lty='dashed') +
-					geom_line(data=trm.pol.p3, aes(x=x, y=q10), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q90), lty='twodash') +
+					geom_line(data=trm.pol.p3, aes(x=x, y=q10), lty='twodash', size=0.8) + geom_line(data=trm.pol.p3, aes(x=x, y=q90), lty='twodash', size=0.8) +
 					labs(x='time elapsed\n(years)', y='evolutionary divergence\n(nucleotide substitutions / site)') +
 					coord_cartesian(xlim=c(0,13), ylim=c(0,0.1)) +
-					scale_colour_brewer(name='data set', palette='Set1') +
+					scale_colour_manual(name='Data set', values=c('grey50',"#F0027F")) +
 					scale_y_continuous(breaks=seq(0, 0.2, 0.02)) + scale_x_continuous(breaks=seq(0,30,2)) + 
 					theme_bw() + theme(legend.key = element_blank(), legend.key.height=unit(2.5,"line"), legend.background = element_rect(fill="gray90", size=.5, linetype="dotted"), legend.justification=c(0,1), legend.position=c(0,1), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.2)) +
 					guides(colour=guide_legend(override.aes = list(size=4)))

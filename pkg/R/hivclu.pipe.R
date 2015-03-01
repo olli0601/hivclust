@@ -576,11 +576,11 @@ hivc.pipeline.BEASTout<- function()
 		#80
 		#file.info	<- subset(file.info, cluster%in%c(23, 77, 126, 152))
 		#85
-		file.info	<- subset(file.info, cluster%in%c(23, 65, 74, 122, 147))
+		file.info	<- subset(file.info, cluster%in%c(462, 567, 1462))
 		#90
-		#file.info	<- subset(file.info, cluster%in%c(147))
+		#file.info	<- subset(file.info, cluster%in%c(74,  221,  457, 1445))
 		#95
-		#file.info	<- subset(file.info, cluster%in%c(60, 72, 116, 140))
+		#file.info	<- subset(file.info, cluster%in%c(143,  210,  256,  330,  357,  365,  438,  444,  525,  721,  727,  734,  764,  768, 1146, 1190, 1194, 1211, 1371, 1393))
 	
 		#print(file.info)
 		
@@ -588,7 +588,7 @@ hivc.pipeline.BEASTout<- function()
 				{
 					cmd			<- hivc.cmd.beast2.processclustertrees(indir, infile, insignat, infilexml.opt, infilexml.template, cluster=clu, verbose=1, resume=1)					
 					cat(cmd)
-					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=300, hpc.mem="7800mb")
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeelab", hpc.nproc=1, hpc.walltime=300, hpc.mem="32000mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
 					outfile		<- paste("b2m.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			

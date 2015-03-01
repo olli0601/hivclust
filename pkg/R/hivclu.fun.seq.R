@@ -56,7 +56,7 @@ seq.find<- function(seq, pos0= NA, from= c(), verbose=1)
 ######################################################################################
 seq.length<- function(seq.DNAbin.mat, exclude=c('-','?'))
 {
-	counts	<- apply(seq.DNAbin.mat,1,function(x) base.freq(x, freq=1, all=1))
+	counts	<- sapply(seq_len(nrow(seq.DNAbin.mat)), function(i) base.freq(seq.DNAbin.mat[i,], freq=1, all=1))
 	apply(counts[ !rownames(counts)%in%exclude, ],2,sum)
 }
 ######################################################################################
