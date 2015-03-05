@@ -10261,7 +10261,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		if(is.null(ri))
 			ri			<- unique(subset(df.tpairs, select=Patient))
 		X.incare				<- project.athena.Fisheretal.X.incare(df.tpairs, df.all, df.viro, df.immu, df.treatment, indircov=indircov, lRNA.supp=lRNA.supp, t.period=t.period, t.endctime=t.endctime)				
-		X.incare				<- project.athena.Fisheretal.X.nocontact(X.incare, df.viro, df.immu, df.tpairs, df.all, contact.grace=0.5, t.period=t.period, t.endctime= t.endctime)		
+		X.incare				<- project.athena.Fisheretal.X.nocontact(X.incare, df.viro, df.immu, df.tpairs, df.all, contact.grace=1.5, t.period=t.period, t.endctime= t.endctime)		
 		X.incare				<- project.athena.Fisheretal.X.CDCC(X.incare, df.tpairs, df.all, t.period=t.period, t.endctime=t.endctime)
 		X.incare				<- project.athena.Fisheretal.X.followup(X.incare, df.all, df.immu, t.period=t.period, t.endctime=t.endctime)
 		X.b4care				<- project.athena.Fisheretal.X.b4care(df.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, method.minLowerUWithNegT=method.minLowerUWithNegT)
