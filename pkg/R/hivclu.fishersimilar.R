@@ -201,6 +201,8 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 	#
 	#	for each time t, check if there is at least 1 VL or CD4 measurement in the last year/2 or next year/2
 	#
+	set(df.immu, NULL, 'PosCD4', hivc.db.Date2numeric(df.immu[,PosCD4]))
+	set(df.viro, NULL, 'PosRNA', hivc.db.Date2numeric(df.viro[,PosRNA]))
 	tmp			<- X.incare[, {
 									cntct	<- rep(0, length(t))
 									z		<- df.immu$PosCD4[ which(df.immu$Patient==t.Patient) ]		
