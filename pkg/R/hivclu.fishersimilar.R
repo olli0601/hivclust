@@ -11693,7 +11693,7 @@ hivc.prog.props_univariate<- function()
 	tmp	<- hivc.prog.props_univariate.precompute(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,
 													clu.indir, clu.insignat, clu.infile,
 													infile, infiletree, insignat, clu.infilexml.opt, clu.infilexml.template,
-													method, method.recentctime, method.nodectime, method.risk, method.Acute, method.minQLowerU, method.use.AcuteSpec, method.brl.bwhost, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.tpcut, method.PDT, method.cut.brl, tp.cut, adjust.AcuteByNegT, any.pos.grace.yr, dur.Acute, thresh.bs, 
+													method, method.recentctime, method.nodectime, method.risk, method.Acute, method.minQLowerU, method.use.AcuteSpec, method.brl.bwhost, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.tpcut, method.PDT, method.cut.brl, tp.cut, adjust.AcuteByNegT, any.pos.grace.yr, dur.Acute, method.thresh.bs, 
 													outdir, outfile,
 													t.period, t.recent.startctime, t.endctime, t.recent.endctime,
 													X.tables, resume, verbose
