@@ -13,6 +13,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_150105",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150216",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150216",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150303",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150303",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -1785,7 +1787,7 @@ project.athena.Fisheretal.sensitivity.getfigures.npotentialtransmissionintervals
 	}
 }
 ######################################################################################
-project.athena.Fisheretal.sensitivity.getfigures.pseq<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, group)
+project.athena.Fisheretal.sensitivity.getfigures.pseq<- function(runs.table, file, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, tperiod.info, group)
 {	
 	require(Hmisc)
 	
@@ -1808,46 +1810,11 @@ project.athena.Fisheretal.sensitivity.getfigures.pseq<- function(runs.table, met
 	tmp		<- merge(tmp, df[, list( factor=factor[stat=='X.msm'], pp.coh=n[stat=='X.msm']/sum(n[stat=='X.msm']), pp.pos=n[stat=='YX']/sum(n[stat=='YX']) ), by='t.period'], by=c('factor','t.period'))
 	ans		<- tmp
 	set(ans, NULL, 'p.seq', ans[, round(p.seq, d=3)]*100)		
-	# group
-	if(group=='cascade')
-	{
-		scale.name	<- 'from cascade stage'
-		ans[, group:=ans[, substr(factor, 1, 1)]]
-		set(ans, ans[,which(group=='A')], 'group', 'cART initiated')
-		set(ans, ans[,which(group=='U')], 'group', 'Undiagnosed')
-		set(ans, ans[,which(group=='D')], 'group', 'Diagnosed')
-		set(ans, NULL, 'group', ans[, factor(group, levels=c('Undiagnosed','Diagnosed','cART initiated'))])
-		theme.cascade <- function (base_size = 12, base_family = "") 
-		{
-			theme_grey(base_size = base_size, base_family = base_family) %+replace% 
-					theme(	legend.key.size=unit(11,'mm'), 
-							axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5))
-		}		
-		theme_set(theme.cascade())	
-	}
-	if(group=='age')
-	{		
-		scale.name	<- 'from age group'
-		ans[, group:=NA_character_ ]
-		set(ans, ans[,which(factor%in%c('t<=20','t<=25'))], 'group', '<30')
-		set(ans, ans[,which(factor%in%c('t<=30','t<=35'))], 'group', '30-39')
-		set(ans, ans[,which(factor%in%c('t<=40','t<=45','t<=100'))], 'group', '40-')
-		set(ans, NULL, 'group', ans[, factor(group, levels=c('<30','30-39','40-'))])
-		theme.age <- function (base_size = 12, base_family = "") 
-		{
-			theme_grey(base_size = base_size, base_family = base_family) %+replace% 
-					theme(	legend.key.size=unit(11,'mm'), 
-							axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5), 
-							panel.background = element_rect(fill = 'grey60'),
-							panel.grid.minor.y = element_line(colour='grey70'),
-							panel.grid.major = element_line(colour='grey70'),
-							legend.key=element_rect(fill='grey60'))
-		}
-		theme_set(theme.age())
-	}
 	#tperiod.long
 	ans	<- merge(ans, tperiod.info, by='t.period')
-	ans[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]		
+	ans[, t.period.long:= gsub('\n','',paste(t.period.min, '-', t.period.max,sep=''))]
+	tmp		<- c("96/07-06/06", "06/07-07/12", "08/01-09/06", "09/07-10/12")
+	set(ans, NULL, 't.period.long', ans[, factor(t.period.long, levels=tmp, labels=tmp)])	
 	#factor.long	
 	ans	<- merge(ans, factors, by='factor')	
 	#	plot p.seq	
@@ -1858,19 +1825,20 @@ project.athena.Fisheretal.sensitivity.getfigures.pseq<- function(runs.table, met
 				scale_fill_manual(name=scale.name, values=ans[, unique(factor.color)]) + 
 				geom_bar(stat='identity',binwidth=1, position='dodge', show_guide=FALSE) +
 				theme(plot.margin=unit(c(0,5,0,0),"mm")) + #coord_flip() +
-				facet_grid(. ~ t.period.long, scales='free', margins=FALSE)
-		file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqsampling',".pdf", sep='')	
+				facet_grid(. ~ t.period.long, scales='free', margins=FALSE)			
 		ggsave(file=file, w=25, h=8)		
 	}
 	if(1)
 	{
-		ggplot(ans, aes(x=factor.legend, y=p.seq, pch=t.period.long)) + geom_point() +
-				theme_bw() + theme(legend.position='bottom', axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5)) + 
-				scale_y_continuous(breaks=seq(0,100,10)) +
-				labs(x='', y='proportion of\npotentialtransmission intervals\nwith a sequence\n(%)',pch='observation\nperiod')
-		file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','seqsampling',".pdf", sep='')
+		ggplot(ans, aes(x=p.seq, y=factor.legend, pch=t.period.long, colour=factor.legend)) + geom_point(size=3) +
+				scale_x_continuous(breaks=seq(0,100,10), limit=c(0,100), expand=c(0,0)) +
+				scale_colour_manual(values=ans[, unique(factor.color)], guide=FALSE) +
+				theme_bw() +				
+				theme(axis.text.x=element_text(size=10), axis.text.y=element_text(size=7), axis.title=element_text(size=10), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.4), panel.grid.minor.x=element_line(colour="grey70", size=0.4), panel.grid.minor.y=element_blank(), panel.grid.major.y=element_blank()) + 				
+				labs(y='', x='potential transmission intervals\nof a potential transmitter with a sequence\n(%)',pch='time of diagnosis\nof recipient MSM') +
+				guides(pch=guide_legend(ncol=2))
 		cat(paste('plot to',file))
-		ggsave(file=file, w=9, h=6)
+		ggsave(file=file, w=7, h=7)
 	}	
 }
 ######################################################################################
@@ -2343,6 +2311,8 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	outdir					<- paste(DATA,"fisheretal_141108",sep='/')	
 	indir					<- paste(DATA,"fisheretal_150216",sep='/')	
 	outdir					<- paste(DATA,"fisheretal_150216",sep='/')	
+	indir					<- paste(DATA,"fisheretal_150303",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_150303",sep='/')	
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -2383,58 +2353,21 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 			'ART initiated,\n After first viral suppression\n Viral suppression, >1 observations')
 	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2")
 	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Cwmx')	
-	
-	#
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1.35C3V100bInfT7'
-	method.RISK		<- 'm2Cwmx.wtn.tp'
-	method.WEIGHT	<- ''	
 	factors			<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	outfile			<- infile	
 	runs.table		<- subset(runs.table, !grepl('ARTstarted|GroupsUDA',method.risk))
-	project.athena.Fisheretal.sensitivity.getfigures.npotentialtransmissionintervals.adjusted(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
-	project.athena.Fisheretal.sensitivity.getfigures.nlikelytransmissionintervals(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
-	project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals.notime(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
 	#
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1C3V100'
-	method.RISK		<- 'm2CwmxMv.wtn.tp'
-	method.WEIGHT	<- ''	
-	factors			<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
 	outfile			<- infile	
-	project.athena.Fisheretal.sensitivity.getfigures.npotentialtransmissionintervals.adjusted(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
-	project.athena.Fisheretal.sensitivity.getfigures.nlikelytransmissionintervals(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
-	project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
-	
-	#	set up factor legends
-	factor.color	<- c(	"#990000","#EF6548","#FDBB84",
-			"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
-			"#7A0177","#F768A1","#FCC5C0",
-			"#1A9850","#A6D96A")
-	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
-			'Undiagnosed,\n Chronic infection\n at diagnosis',
-			'Undiagnosed,\n Unknown if recent',
-			'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
-			'Diagnosed,\n CD4 progression\n to >500',
-			'Diagnosed,\n CD4 progression\n to [350-500]',
-			'Diagnosed,\n CD4 progression\n to <350',			
-			'Diagnosed,\n No CD4 measured',
-			'ART initiated,\n No viral suppression,\n >1 observations',
-			'ART initiated,\n No viral suppression,\n 1 observation',
-			'ART initiated,\n No viral load measured',			
-			'ART initiated,\n Viral suppression,\n 1 observation',
-			'ART initiated,\n Viral suppression,\n >1 observations')
-	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.suA.N2","ART.suA.N1","ART.vlNA","ART.suA.Y1","ART.suA.Y2")
-	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Cwmx')		
-	project.athena.Fisheretal.sensitivity.getfigures.pseq(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
-	
-	
+	method.DENOM	<- 'SEQ'	
+	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.WEIGHT	<- ''			
+	method.BRLs		<- c('3pa1H1.94C2V100bInfT7','3pa1H1.62C2V100bInfT7','3pa1H2.16C2V100bInfT7')
+	dummy			<- lapply(method.BRLs, function(method.BRL)
+			{
+				project.athena.Fisheretal.sensitivity.getfigures.npotentialtransmissionintervals.adjusted(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
+				project.athena.Fisheretal.sensitivity.getfigures.nlikelytransmissionintervals(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
+				project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals.notime(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')				
+			})
 	project.athena.Fisheretal.sensitivity.getfigures.counts(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
-	
-	
-	
-	
-	
 	
 	#
 	#	get table summing over time

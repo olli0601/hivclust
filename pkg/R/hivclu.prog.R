@@ -1053,8 +1053,8 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 	indircov	<- paste(DATA,"derived",sep='/')
 	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
 	opt.brl		<- "dist.brl.casc" 
-	thresh.brl	<- 0.096
-	thresh.bs	<- 0.8
+	thresh.brl	<- 1000
+	thresh.bs	<- 0.7
 	
 	if(exists("argv"))
 	{
