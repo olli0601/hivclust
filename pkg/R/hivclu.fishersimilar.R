@@ -11368,7 +11368,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			X.seq			<- project.athena.Fisheretal.YX.model5.stratify(X.seq)
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
 		}					
-stop()
+#stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
@@ -11453,7 +11453,7 @@ hivc.prog.props_univariate<- function()
 		method.cut.brl			<- Inf		#does not make a difference because compatibility test kills these anyway
 		method.tpcut			<- 7
 		method.PDT				<- 'SEQ'	# 'PDT'	
-		method.thresh.bs		<- 0.8
+		method.thresh.bs		<- 0.85
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
@@ -11556,16 +11556,15 @@ hivc.prog.props_univariate<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,15),
 									method.cut.brl= return(as.numeric(substr(arg,17,nchar(arg)))),NA)	}))
-		if(length(tmp)>0) method.cut.brl<- tmp[1]		
-		
-		
-		
+		if(length(tmp)>0) method.cut.brl<- tmp[1]				
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,17),
+									method.thresh.bs= return(as.numeric(substr(arg,19,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) method.thresh.bs<- tmp[1]			
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,25),
 									method.minLowerUWithNegT= return(as.numeric(substr(arg,27,nchar(arg)))),NA)	}))
 		if(length(tmp)>0) method.minLowerUWithNegT<- tmp[1]		
-		
-		
 	}	
 	clu.infile			<- infile
 	clu.indir			<- indir
@@ -11790,7 +11789,7 @@ hivc.prog.props_univariate<- function()
 				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA06m100pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
 				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA06m100pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
 			}
-			if(1) 
+			if(0) 
 			{
 				#	hypothetical: TestC12m59pc
 				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
