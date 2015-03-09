@@ -15,6 +15,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_150216",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150303",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150303",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150308",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150308",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -846,6 +848,10 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outdir					<- paste(DATA,"fisheretal_150105",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150216",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150216",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150303",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150303",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150308",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150308",sep='/')		
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -869,7 +875,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	factor.color	<- c(	"#990000","#EF6548","#FDBB84",
 			"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
 			"#FCC5C0","#F768A1","#7A0177",
-			"#1A9850","#A6D96A")
+			"#1A9850","#A6D96A","grey70"
+			)
 	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
 			'Undiagnosed,\n Chronic infection\n at diagnosis',
 			'Undiagnosed,\n Unknown if recent',
@@ -882,186 +889,32 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 			'ART initiated,\n After first viral suppression\nNo viral load measured',		
 			'ART initiated,\n After first viral suppression\nNo viral suppression',	
 			'ART initiated,\n After first viral suppression\nViral suppression, 1 observation',
-			'ART initiated,\n After first viral suppression\nViral suppression, >1 observations')
-	levels			<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2")
+			'ART initiated,\n After first viral suppression\nViral suppression, >1 observations','Not in contact'
+			)
+	levels			<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")
+	#levels			<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2")
 	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(levels, levels=levels), factor.color=factor.color, method.risk='m2Cwmx')	
-	
+	factors			<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
 	#
 	#	WTN 3ma 	m2Cwmx
 	#
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3ma2H1C3V100'
-	method.RISK		<- 'm2CwmxMv.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
-	#
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3ma1H1C3V100'
-	method.RISK		<- 'm2CwmxMv.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
-	#
-	#	WTN 3na 	m2Cwmx
-	#
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3na2H1C3V100'
-	method.RISK		<- 'm2CwmxMv.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
-	#
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3na1H1C3V100'
-	method.RISK		<- 'm2CwmxMv.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
-	#
-	#	WTN 3oa 	m2Cwmx
-	#
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3oa2H1C3V100'
-	method.RISK		<- 'm2CwmxMv.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
-	#
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3oa1H1C3V100'
-	method.RISK		<- 'm2CwmxMv.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
-	#
-	#	WTN 3pa 	m2Cwmx
-	#
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa2H1C3V100'
-	method.RISK		<- 'm2CwmxMv.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
-	#
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1C3V100'
-	method.RISK		<- 'm2CwmxMv.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)	
-	#	WTN 3pa1 1.35 
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1.35C3V100'
-	method.RISK		<- 'm2CwmxMv.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)			
-	#	WTN 3pa1 1.35 T7
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1.35C3V100T7'
-	method.RISK		<- 'm2Cwmx.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
-	method.RISK		<- "m2Cwmx.wtn"
-	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
 	#	WTN 3pa1 1.35 T7 BRL INF
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1.35C3V100bInfT7'
-	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.DENOM	<- 'SEQ'	
+	
 	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	method.DATING	<- 'sasky'	
 	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
-	method.RISK		<- "m2Cwmx.wtn"
-	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	#	WTN 3pa1 1.35 T7 BRL INF
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1.35C1V100bInfT7'
-	method.RISK		<- 'm2Cwmx.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
-	method.RISK		<- "m2Cwmx.wtn"
-	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	#	WTN 3pa1 1.35 T7 BRL INF
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1.35C2V100bInfT7'
-	method.RISK		<- 'm2Cwmx.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
-	method.RISK		<- "m2Cwmx.wtn"
-	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)	
-	#	WTN 3pa1 1.35 T7 BRL INF
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1.35C3V100bInfT7'
-	method.RISK		<- 'm2Cwmx.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
-	method.RISK		<- "m2Cwmx.wtn"
-	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	#	WTN 3pa1 1.35 T7 BRL INF
-	method.DENOM	<- 'SEQ'
-	method.BRL		<- '3pa1H1.35V100bInfT7'
-	method.RISK		<- 'm2Cwmx.wtn.tp'
-	method.WEIGHT	<- ''
-	method.DATING	<- 'sasky'
-	tmp				<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
-	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
-	outfile			<- infile
-	project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)		
-	method.RISK		<- "m2Cwmx.wtn"
-	project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  tmp, stat.select, outfile, tperiod.info=tperiod.info)
-	project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, tmp, stat.select, outfile, tperiod.info=tperiod.info)
+	method.BRLs		<- c('3pa1H1.48C2V100bInfT7', '3pa1H1.94C2V100bInfT7', '3pa1H1.09C2V100bInfT7','3pa1H1.48C1V100bInfT7','3pa1H1.48C3V100bInfT7')
+	method.BRLs		<- c('3pa1H1.09C2V100bInfT7')
+	dummy			<- sapply(method.BRLs, function(method.BRL)
+			{				
+				method.RISK		<- 'm2Cwmx.wtn.tp'
+				project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  factors, stat.select, outfile, tperiod.info=tperiod.info)		
+				method.RISK		<- "m2Cwmx.wtn"
+				project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  factors, stat.select, outfile, tperiod.info=tperiod.info)
+				project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, factors, stat.select, outfile, tperiod.info=tperiod.info)				
+			})
 	
 	
 }

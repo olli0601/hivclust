@@ -2234,8 +2234,12 @@ project.athena.Fisheretal.t2inf.estimate.quantileparameter<- function(df.all.all
 	set(df.calim, df.calim[, which(variable=='InfT.median')], 'variable', 'median among infected MSM')
 	if(!is.na(plot.file))
 	{
-		ggplot(df.calim, aes(x=p, y=value, group=variable, colour=variable)) + geom_line() + theme_bw() +
-				geom_hline(yintercept=3.16) + geom_ribbon(ymin=3.0, ymax=3.41, fill='black', alpha=0.25, colour='transparent') +
+		ggplot(df.calim, aes(x=p, y=value, group=variable, colour=variable)) + 
+				geom_ribbon(ymin=3.0, ymax=3.41, fill='grey50', alpha=0.25, colour='transparent') +
+				geom_ribbon(ymin=3.5, ymax=4.8, fill='grey50', alpha=0.25, colour='transparent') +
+				geom_hline(yintercept=3.16, linetype='dotted') +
+				geom_hline(yintercept=3.9, linetype='dashed') +				
+				geom_line() + theme_bw() +
 				scale_x_continuous(limits=c(0.01,0.99), expand=c(0,0)) +
 				scale_y_continuous(breaks=seq(0,10,1)) +
 				scale_colour_brewer(name='', palette='Set1') +
@@ -2246,7 +2250,8 @@ project.athena.Fisheretal.t2inf.estimate.quantileparameter<- function(df.all.all
 	}
 	#	get quantiles that correspond to estimate from math modelling
 	df.calim				<- subset(df.calim, variable=='mean among infected MSM')
-	df.calim.p				<- df.calim[c(which.min(abs(value-3.0)),which.min(abs(value-3.16)),which.min(abs(value-3.41))), p]
+	#df.calim.p				<- df.calim[c(which.min(abs(value-3.0)),which.min(abs(value-3.16)),which.min(abs(value-3.41))), p]
+	df.calim.p				<- df.calim[c(which.min(abs(value-3.16)),which.min(abs(value-3.53)),which.min(abs(value-3.9))), p]
 	#	plot mean time to diagnosis for all individuals over calendar time
 	if(!is.na(plot.file))
 	{
@@ -2266,7 +2271,7 @@ project.athena.Fisheretal.t2inf.estimate.quantileparameter<- function(df.all.all
 				geom_step(data=tmp2, aes(x=InfTy, score.me), colour='black') +			
 				#geom_smooth(data=subset(tmp, AnyPos_T1-score<2010), aes(x=AnyPos_T1-score, y=score), colour='black', fill='transparent') +
 				scale_colour_brewer(name='Infection status at diagnosis', palette='Set1') +
-				scale_y_continuous(breaks=seq(0,20,1), limits=c(0,7), expand=c(0,0)) + scale_x_continuous(breaks=seq(1980,2020,4), limits=c(1990, 2011), expand=c(0,0)) +
+				scale_y_continuous(breaks=seq(0,20,1), limits=c(0,8), expand=c(0,0)) + scale_x_continuous(breaks=seq(1980,2020,4), limits=c(1990, 2011), expand=c(0,0)) +
 				labs(y='time to diagnosis\n(years)', x='time of infection', colour='quantile\nparameter') +
 				facet_grid(.~p) +
 				theme_bw() + theme(legend.position='bottom') + guides(colour=guide_legend(nrow=3))
@@ -11442,9 +11447,9 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Cwmx.wtn.tp1'
+		method.risk				<- 'm2Cwmx.wtn.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.194
+		method.minQLowerU		<- 0.109
 		method.use.AcuteSpec	<- 1
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 100
@@ -11453,7 +11458,7 @@ hivc.prog.props_univariate<- function()
 		method.cut.brl			<- Inf		#does not make a difference because compatibility test kills these anyway
 		method.tpcut			<- 7
 		method.PDT				<- 'SEQ'	# 'PDT'	
-		method.thresh.bs		<- 0.85
+		method.thresh.bs		<- 0.8
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
@@ -11735,7 +11740,7 @@ hivc.prog.props_univariate<- function()
 		}		
 	}	
 	#	see if we can pool results for tperiod 4
-	if(method.tpcut%in%c(7))
+	if(method.tpcut%in%c(7) & as.numeric(substring(regmatches(method.risk,regexpr('tp[0-9]', method.risk)),3))>=4)
 	{
 		YXe			<- project.athena.Fisheretal.pool.TP4(outdir, outfile, insignat, method, method.PDT, method.risk, resume=1)
 		#	if success, 

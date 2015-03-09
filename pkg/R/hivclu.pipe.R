@@ -502,7 +502,7 @@ hivc.pipeline.BEASTout<- function()
 		#infilexml.opt		<- "mph4clutx4tip"
 		#burnin				<- 2e7
 		#
-		indir				<- paste(DATA,"tmp90",sep='/')
+		indir				<- paste(DATA,"tmp70",sep='/')
 		#indir				<- paste(DATA,"zip",sep='/')		
 		infile				<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"		
 		insignat			<- "Wed_Dec_18_11:37:00_2013"		
@@ -536,7 +536,7 @@ hivc.pipeline.BEASTout<- function()
 					#argv			<<- unlist(strsplit(cmd,' '))
 					#hivc.prog.BEAST2.get.cluster.trees()
 					#stop()
-					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeph", hpc.nproc=1, hpc.walltime=31, hpc.mem="3800mb")
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q="pqeelab", hpc.nproc=1, hpc.walltime=31, hpc.mem="6200mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
 					outfile		<- paste("b2p.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
@@ -545,7 +545,7 @@ hivc.pipeline.BEASTout<- function()
 	}
 	if(1)
 	{
-		indir				<- paste(DATA,"tmp85",sep='/')
+		indir				<- paste(DATA,"tmp70",sep='/')
 		indircov			<- paste(DATA,"derived",sep='/')
 		outdir				<- indir
 		infilecov			<- "ATHENA_2013_03_AllSeqPatientCovariates"		
@@ -556,7 +556,7 @@ hivc.pipeline.BEASTout<- function()
 		#infilexml.opt		<- "alsu50"
 		infilexml.template	<- "sasky_sdr06fr"
 		#infilexml.opt		<- "alrh160"
-		infilexml.opt		<- "clrh80_bs0.85_brl1000"
+		infilexml.opt		<- "clrh80_bs0.7_brl1000"
 		#infilexml.template	<- "um192rhU2080"
 		#infilexml.opt		<- "mph4clutx4tip"	
 		
@@ -576,7 +576,7 @@ hivc.pipeline.BEASTout<- function()
 		#80
 		#file.info	<- subset(file.info, cluster%in%c(23, 77, 126, 152))
 		#85
-		file.info	<- subset(file.info, cluster%in%c(462, 567, 1462))
+		#file.info	<- subset(file.info, cluster%in%c(462, 567, 1462))
 		#90
 		#file.info	<- subset(file.info, cluster%in%c(74,  221,  457, 1445))
 		#95
@@ -740,7 +740,7 @@ hivc.pipeline.props_univariate<- function()
 	}
 	method.lRNA.supp			<- 100
 	method.use.AcuteSpec		<- 1
-	method.minQLowerU			<- 0.194	#0.216 0.162
+	method.minQLowerU			<- 0.194	#0.194 0.148 0.109
 	method.thresh.pcoal			<- 0.2
 	method.PDT					<- 'SEQ'
 	#method.Acute				<- 'empirical'
@@ -821,9 +821,9 @@ hivc.pipeline.props_univariate<- function()
 				cmd	<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 				cat(cmd)
 				#stop()
-				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=3, hpc.mem="1800mb")
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=3, hpc.mem="1800mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=20, hpc.mem="1900mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
+				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
 				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
