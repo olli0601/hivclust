@@ -118,6 +118,23 @@ project.athena.Fisheretal.sensitivity<- function()
 		save(runs.risk, file=file)
 		#	reduce runs.opt to files for which we have a table
 		runs.opt	<- subset(runs.opt, !grepl('ARTstarted', method.risk) & !grepl('GroupsUDA', method.risk) )
+		#	collect transmission probs
+		tmp			<- subset(runs.opt, grepl('H1.48C2V100bInfT7', method.brl))
+		tmp			<- lapply(seq_len(nrow(tmp)), function(i)
+				{					 
+					cat(paste('\nprocess file=',tmp[i,file]))
+					load(paste(indir, tmp[i,file], sep='/'))					
+					ans	<- ans$trm.p
+					ans[, method.risk:=tmp[i,method.risk]]
+					ans[, method.dating:=tmp[i,method.dating]]
+					ans[, method.nodectime:=tmp[i,method.nodectime]]
+					ans[, method.brl:=tmp[i,method.brl ]]
+					ans[, method.denom:=tmp[i,method.denom]]
+					ans[, method.recentctime:=tmp[i,method.recentctime ]]
+					ans
+				})
+		trm.p		<- do.call('rbind', tmp)
+
 		#	load risk tables
 		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
 				{

@@ -3050,10 +3050,29 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 			set(YXf, NULL, x, as.factor(YXf[[x]]))
 		}			
 		YXf[, stage:=CD4c.tperiod]
+		#
+		#	reset trm.p to tperiod==4
+		#
+		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
+		tmp2		<- regmatches(method.risk,regexpr('.*tp[0-9]', method.risk))
+		tmp2		<- substr(tmp2, 1, nchar(tmp2)-1)
+		tmp			<- lapply(4:6, function(i)
+				{
+					method.risk <- paste(tmp2, i, sep='')
+					save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',method.risk,'.R',sep='')
+					options(show.error.messages = FALSE)		
+					readAttempt	<- try(suppressWarnings(load(save.file)))
+					options(show.error.messages = TRUE)
+					ans$trm.p
+				})
+		trm.p		<- do.call('rbind', tmp)
+		set( trm.p, NULL, 'factor', trm.p[, as.character(factor)])
+		set( trm.p, NULL, 'factor', trm.p[, paste(substr(factor,1,nchar(factor)-1),4,sep='')] )
+		set( trm.p, NULL, 'coef', trm.p[, paste(risk, factor, sep='')])
 		
 		stopifnot( setequal( subset(YXf, t.period==4)[, sort(unique(Patient))], subset(YX, t.period==4)[, sort(unique(Patient))] ) )		
 		#	save			
-		ans			<- list(risk=risk.ans, risk.bs=risk.ans.bs, X.tables=X.tables, YX=YX, YXf=YXf)		
+		ans			<- list(risk=risk.ans, risk.bs=risk.ans.bs, trm.p=trm.p, X.tables=X.tables, YX=YX, YXf=YXf)		
 		tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 		tmp2		<- regmatches(method.risk,regexpr('.*tp[0-9]', method.risk))
 		tmp2		<- substr(tmp2, 1, nchar(tmp2)-1)		
@@ -4833,26 +4852,28 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 				#tmp[, list(CHECK=sum(yYXm.sum.e0cp)), by=c('risk','factor')]								
 				missing		<- merge(missing, tmp, by=c('Patient.bs','risk','factor'), all.x=TRUE)
 				#	calculate prob Pj(x) that recipient j got infected from x  - with and without adjustment				
-				tmp			<- missing[, 	list(	factor=factor, 	
+				trm.p.bs	<- missing[, 	list(	factor=factor, 	
 													Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
 													Pjx.e0= (yYX.sum+yYXm.sum.e0)*YX.w/sum((yYX.sum+yYXm.sum.e0)*YX.w),
 													Pjx.e0cp= (yYX.sum+yYXm.sum.e0cp)*YX.w/sum((yYX.sum+yYXm.sum.e0cp)*YX.w),
 													coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient.bs')]
-				tmp[, BS:=bs.i]	
-				setnames(tmp, 'Patient.bs', 'Patient')
-				tmp			<- subset(tmp, !is.nan(Pjx))	
-				trm.p		<- rbind(trm.p, tmp)
+				trm.p.bs[, BS:=bs.i]	
+				setnames(trm.p.bs, 'Patient.bs', 'Patient')
+				trm.p.bs	<- subset(trm.p.bs, !is.nan(Pjx))					
 				#subset(tmp, factor=='UA.1')[, hist(Pjx.e0cp, breaks=100)]					
 				#	exclude recipients with no evidence for direct transmission				
 				#various N.raw									
-				tmp			<- tmp[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
+				tmp			<- trm.p.bs[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
 								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
 				tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")				
 				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))				
 				#
 				risk.ans.bs[, bs:=bs.i]
+				list(trm.p.bs=trm.p.bs, risk.ans.bs=risk.ans.bs)
 			})
-	risk.ans.bs	<- do.call('rbind',tmp)
+	trm.p.bs	<- do.call('rbind', lapply(tmp, '[[', 'trm.p.bs'))
+	trm.p		<- rbind(trm.p, trm.p.bs)
+	risk.ans.bs	<- do.call('rbind', lapply(tmp, '[[', 'risk.ans.bs'))
 	#
 	#	compute adjustments for each bootstrap sample: collect PYe0 etc to compute sampling proportion relative to bootstrap PYs
 	#
