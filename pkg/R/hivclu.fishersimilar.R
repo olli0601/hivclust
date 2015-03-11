@@ -4456,8 +4456,6 @@ project.athena.Fisheretal.Wallinga.prep.nttable<- function(nt.table, YX=NULL, ve
 	setnames(nt.table, 'X.msm', 'X.msm.e0')		
 	nt.table		
 }
-
-
 ######################################################################################
 project.athena.Fisheretal.Wallinga.prep.expmissing<- function(nt.table, risk.df, YX, YXf, use.YXf=1, method.missingy='y=median', verbose=1)
 {
@@ -4491,15 +4489,17 @@ project.athena.Fisheretal.Wallinga.prep.expmissing<- function(nt.table, risk.df,
 	missing		<- merge(missing, tmp, by=c('risk','factor','Patient'), all.x=TRUE)
 	set(missing, missing[, which(is.na(YX.n))], 'YX.w', 1.) 
 	set(missing, missing[, which(is.na(YX.n))], c('yYX.sum','YX.n'), 0.)
-	#	calculate number expected missing potential transmission intervals for recipient j and factor x
-	tmp			<- melt( subset(missing, select=c(Patient, risk, factor, X.seq, Sx.e0, Sx.e0cp, PTx)), measure.vars=c('Sx.e0','Sx.e0cp'), variable.name='Sx.method', value.name='Sx' )
-	set( tmp, tmp[, which(X.seq==0)], 'X.seq', 1)	#mean of sampling for no observed intervals coincides with sampling model for 1 observed interval 
-	#tmp[, YXm.e:= tmp[, as.integer(round( X.seq*(1-Sx)/Sx*PTx )) ]]
-	tmp[, YXm.e:= tmp[, X.seq*(1-Sx)/Sx*PTx ]]
-	#subset(tmp, factor=='UA.1')[, sum(X.seq+YXm.e)]
-	#subset(tmp, factor=='UA.1')[, sum(YXm.e)]
-	set(tmp, NULL, 'Sx.method', tmp[, gsub('Sx','YXm.e',Sx.method)])
-	missing		<- merge(missing, dcast.data.table(tmp, Patient + risk + factor ~ Sx.method, value.var="YXm.e"), by=c('Patient','risk','factor'))
+	#	calculate total number expected missing potential transmission intervals for factor x
+	tmp			<- missing[, list(YX=sum(YX), X.seq=sum(X.seq), PTx=PTx[1], Sx.e0=Sx.e0[1], Sx.e0cp=Sx.e0cp[1]), by=c('risk','factor')]
+	#tmp[, YXm.e.e0:= tmp[, X.seq*(1-Sx.e0)/Sx.e0*PTx ]]
+	#tmp[, YXm.e.e0cp:= tmp[, X.seq*(1-Sx.e0cp)/Sx.e0cp*PTx ]]
+	tmp[, YXm.e.e0:= tmp[, YX*(1-Sx.e0)/Sx.e0 ]]
+	tmp[, YXm.e.e0cp:= tmp[, YX*(1-Sx.e0cp)/Sx.e0cp ]]	
+	missing		<- merge(missing, subset(tmp, select=c(risk, factor, YXm.e.e0, YXm.e.e0cp)), by=c('risk','factor'))
+	#	calculate expected number expected missing potential transmission intervals for recipient j and factor x
+	set(missing, NULL, 'YXm.e.e0', missing[, YXm.e.e0/length(unique(Patient))])
+	set(missing, NULL, 'YXm.e.e0cp', missing[, YXm.e.e0cp/length(unique(Patient))])
+	#	multiply either by median or mean
 	if(grepl('y=mean',method.missingy))
 	{
 		missing[, YXm.sum.e0:=YXm.e.e0*yYX.mean]
@@ -4634,16 +4634,20 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 	#
 	missing		<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table, risk.df, YX.m3, YXf, use.YXf=use.YXf, method.missingy='y=median')	
 	#	calculate prob Pj(x) that recipient j got infected from x  - with and without adjustment	
-	trm.p		<- missing[, 	list(	factor=factor, 	
+	trm.p		<- subset(missing, select=c(Patient, risk, factor, yYX.sum, YXm.sum.e0, YXm.sum.e0cp, YX.w, YX.n, YXm.e.e0, YXm.e.e0cp))
+	trm.p[, BS:=0]	
+	setnames(trm.p, c('yYX.sum','YXm.sum.e0','YXm.sum.e0cp','YX.w','YX.n','YXm.e.e0','YXm.e.e0cp'), c('ys', 'ys.e0', 'ys.e0cp','yw','yn','ym.e0','ym.e0cp'))
+	#ggplot(trm.p, aes(x=yn, y=ym.e0cp)) + geom_point() + facet_wrap(~factor)
+	tmp			<- missing[, 	list(	factor=factor, 	
 										Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
 										Pjx.e0= (yYX.sum+YXm.sum.e0)*YX.w/sum((yYX.sum+YXm.sum.e0)*YX.w),					
 										Pjx.e0cp= (yYX.sum+YXm.sum.e0cp)*YX.w/sum((yYX.sum+YXm.sum.e0cp)*YX.w),
 										coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient')]
-	trm.p[, BS:=0]					
+					
 	#subset(tmp, factor=='UA.1')[, hist(Pjx.e0cp, breaks=100)]
 	#subset(tmp, factor=='UA.1' & Pjx.e0cp<=0)
 	#	compute N.raw etc	
-	tmp			<- trm.p[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
+	tmp			<- tmp[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
 								#n=length(Pjx), PJx.raw.mea= mean(Pjx), PJx.raw= median(Pjx), PJx.raw.e0cp.mea= mean(Pjx.e0cp), PJx.raw.e0cp= median(Pjx.e0cp),  
 								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
 	tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")
@@ -4812,58 +4816,69 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 				#	to avoid rounding issues, sample total and then re-allocate to individual recipient MSM
 				tmp			<- missing[, {
 												#	total missed through sampling
-												YXm.r.e0	<- rznbinom( 1, sum(X.seq), Sx.e0[1] )
-												YXm.r.e0cp	<- rznbinom( 1, sum(X.seq), Sx.e0cp[1] )
+												YXm.r.e0	<- rznbinom( 1, sum(YX), Sx.e0[1] )
+												YXm.r.e0cp	<- rznbinom( 1, sum(YX), Sx.e0cp[1] )
 												#YXm.r.e0	<- as.integer(round(  (1-Sx.e0[1])*sum(X.seq)/Sx.e0[1]  		))
 												#YXm.r.e0cp	<- as.integer(round(  (1-Sx.e0cp[1])*sum(X.seq)/Sx.e0cp[1]  	))
 												#	total missed with nonzero score
-												YXm.r.e0	<- rbinom(1, YXm.r.e0, PTx[1])
-												YXm.r.e0cp	<- rbinom(1, YXm.r.e0cp, PTx[1])
+												#YXm.r.e0	<- rbinom(1, YXm.r.e0, PTx[1])
+												#YXm.r.e0cp	<- rbinom(1, YXm.r.e0cp, PTx[1])
 												#YXm.r.e0	<- as.integer(round(YXm.r.e0*PTx[1]))
 												#YXm.r.e0cp	<- as.integer(round(YXm.r.e0cp*PTx[1]))
 												#	distribute among all recipients as fraction
-												#YXm.r.e0	<- as.vector(rmultinom(1, YXm.r.e0, rep( 1/length(X.seq), length(X.seq))))
-												#YXm.r.e0cp	<- as.vector(rmultinom(1, YXm.r.e0cp, rep( 1/length(X.seq), length(X.seq))))
-												YXm.r.e0	<- YXm.r.e0 / length(X.seq)
-												YXm.r.e0cp	<- YXm.r.e0cp / length(X.seq)
+												YXm.r.e0	<- as.vector(rmultinom(1, YXm.r.e0, rep( 1/length(YX), length(YX))))
+												YXm.r.e0cp	<- as.vector(rmultinom(1, YXm.r.e0cp, rep( 1/length(YX), length(YX))))
+												#YXm.r.e0	<- YXm.r.e0 / length(YX)
+												#YXm.r.e0cp	<- YXm.r.e0cp / length(YX)
 												list(Patient.bs=Patient.bs, YXm.r.e0=YXm.r.e0, YXm.r.e0cp=YXm.r.e0cp)
 										}, by=c('risk','factor')]
 				#subset(tmp, factor=='UA.1')[, sum(YXm.r.e0cp)]
 				missing		<- merge(missing, tmp, by=c('risk','factor','Patient.bs'))
 				missing[, factor2:= substr(factor, 1, nchar(factor)-1)]
 				#	draw missing scores from all yijt in that stage	for number missing YXm.r.e0
-				#tmp			<- missing[, {															
-				#			if(!use.YXf)
-				#				z			<- YX.m3.bs[ which( grepl(factor2[1], YX.m3.bs[[risk]], fixed=TRUE)), ]														
-				#			if(use.YXf)
-				#				z			<- YXf.bs[ which( grepl(factor2[1], YXf.bs[[risk]], fixed=TRUE)), ]							 
-				#			yYXm.sum.e0		<- sapply(YXm.r.e0, function(x) sum(sample(z[['score.Y']], ceiling(x), replace=FALSE))/ceiling(x)*x )
-				#			yYXm.sum.e0cp	<- sapply(YXm.r.e0cp, function(x) sum(sample(z[['score.Y']], ceiling(x), replace=FALSE))/ceiling(x)*x )
-				#			list(Patient.bs=Patient.bs, yYXm.sum.e0=yYXm.sum.e0, yYXm.sum.e0cp=yYXm.sum.e0cp )
-				#		}, by=c('risk','factor')]
-				tmp			<- missing[, {															
-							if(!use.YXf)
-								z	<- YX.m3.bs[ which( grepl(factor2[1], YX.m3.bs[[risk]], fixed=TRUE)), ]														
-							if(use.YXf)
-								z	<- YXf.bs[ which( grepl(factor2[1], YXf.bs[[risk]], fixed=TRUE)), ]
-							z	<- median(z[['score.Y']]) 
-							list(Patient.bs=Patient.bs, yYXm.sum.e0=YXm.r.e0*z, yYXm.sum.e0cp=YXm.r.e0cp*z )
-						}, by=c('risk','factor')]									
+				if(0)
+				{
+					tmp			<- missing[, {															
+								if(!use.YXf)
+									z			<- YX.m3.bs[ which( grepl(factor2[1], YX.m3.bs[[risk]], fixed=TRUE)), ]														
+								if(use.YXf)
+									z			<- YXf.bs[ which( grepl(factor2[1], YXf.bs[[risk]], fixed=TRUE)), ]
+								print(z)
+								yYXm.sum.e0		<- sapply(YXm.r.e0, function(x) sum(sample(z[['score.Y']], ceiling(x), replace=FALSE))/ceiling(x)*x )
+								yYXm.sum.e0cp	<- sapply(YXm.r.e0cp, function(x) sum(sample(z[['score.Y']], ceiling(x), replace=FALSE))/ceiling(x)*x )
+								list(Patient.bs=Patient.bs, yYXm.sum.e0=yYXm.sum.e0, yYXm.sum.e0cp=yYXm.sum.e0cp )
+							}, by=c('risk','factor')]
+					set(tmp, tmp[, which(is.nan(yYXm.sum.e0))], 'yYXm.sum.e0', 0)
+					set(tmp, tmp[, which(is.nan(yYXm.sum.e0cp))], 'yYXm.sum.e0cp', 0)
+				}
+				if(1)
+				{
+					tmp			<- missing[, {															
+								if(!use.YXf)
+									z	<- YX.m3.bs[ which( grepl(factor2[1], YX.m3.bs[[risk]], fixed=TRUE)), ]														
+								if(use.YXf)
+									z	<- YXf.bs[ which( grepl(factor2[1], YXf.bs[[risk]], fixed=TRUE)), ]
+								z	<- median(z[['score.Y']]) 
+								list(Patient.bs=Patient.bs, yYXm.sum.e0=YXm.r.e0*z, yYXm.sum.e0cp=YXm.r.e0cp*z )
+							}, by=c('risk','factor')]														
+				}
 				#tmp[, list(CHECK=sum(yYXm.sum.e0cp)), by=c('risk','factor')]								
 				missing		<- merge(missing, tmp, by=c('Patient.bs','risk','factor'), all.x=TRUE)
+				trm.p.bs	<- subset(missing, select=c(Patient.bs, risk, factor, yYX.sum, yYXm.sum.e0, yYXm.sum.e0cp, YX.w, YX.bs, YXm.r.e0, YXm.r.e0cp))
+				trm.p.bs[, BS:=bs.i]	
+				setnames(trm.p.bs, c('Patient.bs','yYX.sum','yYXm.sum.e0','yYXm.sum.e0cp','YX.w','YX.bs','YXm.r.e0','YXm.r.e0cp'), c('Patient', 'ys', 'ys.e0', 'ys.e0cp','yw','yn','ym.e0','ym.e0cp'))
 				#	calculate prob Pj(x) that recipient j got infected from x  - with and without adjustment				
-				trm.p.bs	<- missing[, 	list(	factor=factor, 	
+				tmp			<- missing[, 	list(	factor=factor, 	
 													Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
 													Pjx.e0= (yYX.sum+yYXm.sum.e0)*YX.w/sum((yYX.sum+yYXm.sum.e0)*YX.w),
 													Pjx.e0cp= (yYX.sum+yYXm.sum.e0cp)*YX.w/sum((yYX.sum+yYXm.sum.e0cp)*YX.w),
-													coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient.bs')]
-				trm.p.bs[, BS:=bs.i]	
-				setnames(trm.p.bs, 'Patient.bs', 'Patient')
-				trm.p.bs	<- subset(trm.p.bs, !is.nan(Pjx))					
+													coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient.bs')]					
+				
+				tmp			<- subset(tmp, !is.nan(Pjx))					
 				#subset(tmp, factor=='UA.1')[, hist(Pjx.e0cp, breaks=100)]					
 				#	exclude recipients with no evidence for direct transmission				
 				#various N.raw									
-				tmp			<- trm.p.bs[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
+				tmp			<- tmp[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
 								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
 				tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")				
 				risk.ans.bs	<- rbind(risk.ans.bs, subset(tmp, select=c(coef, coef.ref, stat, risk, factor, risk.ref, factor.ref, v)))				
