@@ -4615,15 +4615,16 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 	#
 	missing		<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table, risk.df, YX.m3, YXf, use.YXf=use.YXf, method.missingy='y=median')	
 	#	calculate prob Pj(x) that recipient j got infected from x  - with and without adjustment	
-	tmp			<- missing[, 	list(	factor=factor, 	
+	trm.p		<- missing[, 	list(	factor=factor, 	
 										Pjx= yYX.sum*YX.w/sum(yYX.sum*YX.w), 
 										Pjx.e0= (yYX.sum+YXm.sum.e0)*YX.w/sum((yYX.sum+YXm.sum.e0)*YX.w),					
 										Pjx.e0cp= (yYX.sum+YXm.sum.e0cp)*YX.w/sum((yYX.sum+YXm.sum.e0cp)*YX.w),
 										coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient')]
+	trm.p[, BS:=0]					
 	#subset(tmp, factor=='UA.1')[, hist(Pjx.e0cp, breaks=100)]
 	#subset(tmp, factor=='UA.1' & Pjx.e0cp<=0)
 	#	compute N.raw etc	
-	tmp			<- tmp[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
+	tmp			<- trm.p[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
 								#n=length(Pjx), PJx.raw.mea= mean(Pjx), PJx.raw= median(Pjx), PJx.raw.e0cp.mea= mean(Pjx.e0cp), PJx.raw.e0cp= median(Pjx.e0cp),  
 								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
 	tmp			<- melt(tmp, id.vars=c('coef','risk','factor','coef.ref','risk.ref','factor.ref'), variable.name='stat', value.name = "v")
@@ -4837,9 +4838,12 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 													Pjx.e0= (yYX.sum+yYXm.sum.e0)*YX.w/sum((yYX.sum+yYXm.sum.e0)*YX.w),
 													Pjx.e0cp= (yYX.sum+yYXm.sum.e0cp)*YX.w/sum((yYX.sum+yYXm.sum.e0cp)*YX.w),
 													coef=paste(risk,as.character(factor), sep='')), by=c('risk','Patient.bs')]
-				#subset(tmp, factor=='UA.1')[, hist(Pjx.e0cp, breaks=100)]					
-				#	exclude recipients with no evidence for direct transmission
+				tmp[, BS:=bs.i]	
+				setnames(tmp, 'Patient.bs', 'Patient')
 				tmp			<- subset(tmp, !is.nan(Pjx))	
+				trm.p		<- rbind(trm.p, tmp)
+				#subset(tmp, factor=='UA.1')[, hist(Pjx.e0cp, breaks=100)]					
+				#	exclude recipients with no evidence for direct transmission				
 				#various N.raw									
 				tmp			<- tmp[, list(	N.raw= sum(Pjx), N.raw.e0= sum(Pjx.e0), N.raw.e0cp=sum(Pjx.e0cp), 
 								risk.ref='None', factor.ref='None', coef.ref='None', coef=coef[1]), by=c('risk','factor')]		
@@ -4918,7 +4922,7 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 	risk.ans	<- merge(risk.ans, tmp, by=c('coef','coef.ref','stat'), all.x=TRUE)
 	#	
 	setkey(risk.ans, stat, coef.ref, coef)
-	list(risk=risk.ans, risk.bs=risk.ans.bs)
+	list(risk=risk.ans, risk.bs=risk.ans.bs, trm.p=trm.p)
 }
 ######################################################################################
 project.athena.Fisheretal.estimate.risk.core<- function(YX.m3, X.seq, formula, predict.df, risk.df, include.colnames, bs.n=1e3, gamlss.BE.required.limit=0.99, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0) )
@@ -11447,9 +11451,9 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Cwmx.wtn.tp4'
+		method.risk				<- 'm2Cwmx.wtn.tp3'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.109
+		method.minQLowerU		<- 0.148
 		method.use.AcuteSpec	<- 1
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 100

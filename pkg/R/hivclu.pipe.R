@@ -740,7 +740,7 @@ hivc.pipeline.props_univariate<- function()
 	}
 	method.lRNA.supp			<- 100
 	method.use.AcuteSpec		<- 1
-	method.minQLowerU			<- 0.194	#0.194 0.148 0.109
+	method.minQLowerU			<- 0.148	#0.194 0.148 0.109
 	method.thresh.pcoal			<- 0.2
 	method.PDT					<- 'SEQ'
 	#method.Acute				<- 'empirical'
@@ -750,70 +750,16 @@ hivc.pipeline.props_univariate<- function()
 	method.minLowerUWithNegT	<- 1
 	method.cut.brl				<- Inf
 	method.thresh.bs			<- 0.8
-	#method.risk	<- c('m3.nicv','m3.nicv.clu','m3.tnicv','m3.tnicv.clu','m21st.cas.clu','m2wmx.cas.clu','m2t.cas.clu','m2wmx.tp.clu','m3.i.clu','m3.ni.clu','m3.nic.clu','m3.tni.clu','m3.tnic.clu','m3.tniv.clu','m3.tnicvNo.clu','m21st.cas','m2wmx.cas','m2t.cas','m2wmx.tp','m3.i','m3.ni','m3.nic','m3.tni','m3.tnic','m3.tniv','m3.tnicvNo')
-	#method.risk	<- c('m3.nic.clu.adj','m3.tnic.clu.adj','m3.tnicvNo.clu.adj','m21st.cas.clu.adj','m2t.cas.clu.adj','m2wmx.cas.clu.adj','m2wmx.tp.clu.adj','m3.nicv.clu.adj','m3.tnicv.clu.adj')
-	#method.risk	<- c('m21st.cas.adj','m2t.cas.adj','m2wmx.cas.adj','m2wmx.tp1.adj', 'm2wmx.tp2.adj', 'm2wmx.tp3.adj', 'm2wmx.tp4.adj','m3.nic.adj','m3.nicv.adj','m3.tnic.adj','m3.tnicv.adj','m3.tnicvNo.adj')
-	method.risk	<- c(	'm2B1st.cas','m2Bwmx.cas','m2Bt.cas','m2Bwmx.tp1', 'm2Bwmx.tp2', 'm2Bwmx.tp3', 'm2Bwmx.tp4',
-						'm2B1st.cas.adj','m2Bwmx.cas.adj','m2Bt.cas.adj','m2Bwmx.tp1.adj', 'm2Bwmx.tp2.adj', 'm2Bwmx.tp3.adj', 'm2Bwmx.tp4.adj',
-						'm2B1st.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj')
-	method.risk	<- c(	'm2Bwmx.tp1', 'm2Bwmx.tp2', 'm2Bwmx.tp3', 'm2Bwmx.tp4',
-						'm2Bwmx.tp1.adj', 'm2Bwmx.tp2.adj', 'm2Bwmx.tp3.adj', 'm2Bwmx.tp4.adj',
-						'm2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj')
-	method.risk	<- c(	'm2Bwmx.tp1.cens','m2Bwmx.tp2.cens','m2Bwmx.tp3.cens','m2Bwmx.tp4.cens','m2Bwmx.tp1.clu.cens','m2Bwmx.tp2.clu.cens','m2Bwmx.tp3.clu.cens','m2Bwmx.tp4.clu.cens')	
-	method.risk	<- c(	'm3.nicv','m3.tnicv','m3.tnicvNo','m3.nicv.adj','m3.tnicv.adj','m3.tnicvNo.adj','m3.nicv.clu','m3.tnicv.clu','m3.tnicvNo.clu','m2Bwmx.tp1.cens')	
-	method.risk	<- c(	'm2B1st.cas.cens','m2B1st.cas.clu.cens','m2B1st.cas.censp','m2B1st.cas.clu.censp','m2Bt.cas.cens','m2Bt.cas.clu.cens','m2Bt.cas.censp','m2Bt.cas.clu.censp'		)
-	#	basic model 3 runs 	mem=1800
-	#method.risk	<- c(	'm3.tnic','m3.tnic.clu','m3.tnic.censp','m3.tnic.clu.censp','m3.tnicv.censp','m3.tnicv.clu.censp' )
-	#	basic model 3 runs, mem=3800 				
-	#method.risk	<- c(	'm3.tnicMV.censp','m3.tnicMV.clu.censp','m3.tnicNo.censp','m3.tnicNo.clu.censp' )
-	#method.risk	<- c(	'm3.tnicNo.censp','m3.tnicNo.clu.censp' )
-	#method.risk		<- c(	'm3.tnicMV','m3.tnicMV.adj','m3.tnicMV.clu.adj'	)#,'m3.tnicMV.clu.censp','m3.tnicMv','m3.tnicMv.adj','m3.tnicMv.censp','m3.tnicMv.clu.censp' )
-	#method.risk		<- c(	'm3.tnicNoMV','m3.tnicNoMV.adj','m3.tnicNoMV.clu.adj' )
-	##method.risk		<- c(	'm3.tnicMV.adj','m3.tnicMV.clu.adj','m3.tnicNoMV.adj','m3.tnicNoMV.clu.adj' )
-	##method.risk		<- c(	'm3.tnicMV','m3.tnicMV.clu','m3.tnicNoMV','m3.tnicNoMV.clu' )
-	#method.risk		<- c(	'm3.atnicMV','m3.atnicMV.clu','m3.atnicNoMV','m3.atnicNoMV.clu' )
-	#method.risk			<- c('m3.btnicMV.clu','m3.btnicNoMV.clu','m3.btnicMV.clu.wstar','m3.btnicNoMV.clu.wstar')
-	#!##method.risk				<- c('m3.ind','m3.indNo','m3.indmx','m3.indmxNo','m3.n3mx','m3.indMV','m3.indNoMV','m3.indmxMV','m3.indmxNoMV','m3.n3mxMV',
-	#!##							 'm3.ind.wstar','m3.indNo.wstar','m3.indmx.wstar','m3.indmxNo.wstar','m3.n3mx.wstar','m3.indMV.wstar','m3.indNoMV.wstar','m3.indmxMV.wstar','m3.indmxNoMV.wstar','m3.n3mxMV.wstar')	
-	#	basic m2Bwmx runs	mem=1800
-	#method.risk		<- c(	'm2Bwmx.tp1','m2Bwmx.tp2','m2Bwmx.tp3','m2Bwmx.tp4')
+	
+	#	basic m2Bwmx runs	mem=1800 MB	
 	method.risk		<- c(	'm2Cwmx.wtn.tp1','m2Cwmx.wtn.tp2','m2Cwmx.wtn.tp3','m2Cwmx.wtn.tp4','m2Cwmx.wtn.tp5','m2Cwmx.wtn.tp6')
-	#method.risk		<- c(	'm2CwmxMv.wtn.tp1','m2CwmxMv.wtn.tp2','m2CwmxMv.wtn.tp3','m2CwmxMv.wtn.tp4')
-	#method.risk		<- c(	'm2BwmxMv.tp1' )
-	#!##method.risk		<- c(	'm2BtMv.tp1','m2BtMv.tp2','m2BtMv.tp3','m2BtMv.tp4','m2BtMv.tp1.wstar','m2BtMv.tp2.wstar','m2BtMv.tp3.wstar','m2BtMv.tp4.wstar')
-	#	basic m2Bwmx runs	mem=3800
-	#method.risk	<- c(	'm2Bwmx.cas','m2Bwmx.cas.clu','m2Bwmx.cas.censp')
-	#	basic m2BXXXMv runs	mem=7800
-	#method.risk	<- c(	'm2BwmxMv.cas','m2BwmxMv.cas.adj','m2BwmxMv.cas.censp','m2BwmxMv.cas.clu.censp', 
-	#		 			'm2B1stMv.cas', 'm2B1stMv.cas.adj', 'm2B1stMv.cas.censp', 'm2B1stMv.cas.clu.censp', 
-	#					'm2BtMv.cas', 'm2BtMv.cas.adj', 'm2BtMv.cas.censp', 'm2BtMv.cas.clu.censp' )
-	##method.risk	<- c(	'm2BwmxMv.cas.clu.censp', 'm2B1stMv.cas.clu.censp', 'm2BtMv.cas.clu.censp' )
-	##method.risk	<- c(	'm2BwmxMv.cas.clu', 'm2B1stMv.cas.clu', 'm2BtMv.cas.clu','m2BwmxMv.cas', 'm2B1stMv.cas', 'm2BtMv.cas' )
-	#	basic m2B1st runs	mem=3800
-	#method.risk	<- c(	'm2B1st.cas','m2B1st.cas.clu','m2B1st.cas.censp')
-	#	basic m2Bt runs	mem=3800
-	#method.risk	<- c(	'm2Bt.cas','m2Bt.cas.clu','m2Bt.cas.censp')
+	#method.risk		<- c(	'm2Cwmx.tp1','m2Cwmx.tp2','m2Cwmx.tp3','m2Cwmx.tp4','m2Cwmx.tp5','m2Cwmx.tp6')
 	#	m5 runs
 	#method.risk		<- c(	'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu','m5.tA.tp1.clu.wstar','m5.tA.tp2.clu.wstar','m5.tA.tp3.clu.wstar','m5.tA.tp4.clu.wstar')
 	#!##method.risk		<- c(	'm5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4','m5.tAc.tp1.wstar','m5.tAc.tp2.wstar','m5.tAc.tp3.wstar','m5.tAc.tp4.wstar')
-	#	Acute higher than VL, which we can check after diagnosis
-	#method.risk	<- c( 'm4.Bwmxv','m4.Bwmxv.adj','m4.Bwmxv.censp','m4.Bwmxv.clu.censp','m4.BwmxvNo','m4.BwmxvNo.adj','m4.BwmxvNo.censp','m4.BwmxvNo.clu.censp','m4.BwmxvMv','m4.BwmxvMv.adj','m4.BwmxvMv.censp','m4.BwmxvMv.clu.censp' )
-	#	NRTI+NNRTI puzzle
-	#method.risk	<- c( 	'm3.tnicMv', 'm3.tnicMv.adj','m3.tnicMv.clu.adj', 'm3.tnicMv.censp','m3.tnicMv.clu.censp'	)
-	#	all runs combined
-	#method.risk		<- c(	'm2BwmxMv.tp1','m2BwmxMv.tp2','m2BwmxMv.tp3','m2BwmxMv.tp4','m2BtMv.tp1','m2BtMv.tp2','m2BtMv.tp3','m2BtMv.tp4','m3.n3mx','m3.n3mxMV','m5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4')
-	#method.risk			<- c('m5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4')
-	# use to pre-compute tables
-	#method.risk		<- c( 	'm2B1st.cas.clu.adj','m2Bt.cas.clu.adj','m2Bwmx.cas.clu.adj','m2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj', 'm4.Bwmxv.clu.adj')	
-	#method.risk				<- c('m3.ind.clu.adj','m3.indNo.clu.adj','m3.indmx.clu.adj','m3.indmxNo.clu.adj','m3.n3mx.clu.adj')
-	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj','m2Cwmx.tp1.clu.adj', 'm2Cwmx.tp2.clu.adj', 'm2Cwmx.tp3.clu.adj', 'm2Cwmx.tp4.clu.adj')
-	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Bwmx.tp2.clu.adj', 'm2Bwmx.tp3.clu.adj', 'm2Bwmx.tp4.clu.adj','m2Bt.tp1.clu.adj', 'm2Bt.tp2.clu.adj', 'm2Bt.tp3.clu.adj', 'm2Bt.tp4.clu.adj','m3.n3mx.clu.adj','m3.indmx.clu.adj','m3.indmxNo.clu.adj','m5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj'	)
-	#method.risk			<- c( 	'm5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj'	)
-	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tAb.clu.adj','m5.tAc.clu.adj','m5.tiA.clu.adj','m5.tiAb.clu.adj','m5.tiAc.clu.adj')
-	#method.risk			<- c( 	'm5.tA.clu.adj','m5.tA.tp1.clu.adj','m5.tiA.tp1.clu.adj','m5.tA.tp2.clu.adj','m5.tiA.tp2.clu.adj','m5.tA.tp3.clu.adj','m5.tiA.tp3.clu.adj','m5.tA.tp4.clu.adj','m5.tiA.tp4.clu.adj')
-	#method.risk			<- c( 	'm5.tAc.clu.adj','m5.tAc.tp1.clu.adj','m5.tAc.tp2.clu.adj','m5.tAc.tp3.clu.adj','m5.tAc.tp4.clu.adj')
-	#method.risk			<- c( 	'm2Bwmx.tp1.clu.adj', 'm2Cwmx.tp1.clu.adj' )
+	# use to pre-compute tables mem 95 GB
 	#method.risk			<- c( 	'm2Cwmx.tp1.clu.adj','m2Cwmx.tp2.clu.adj','m2Cwmx.tp3.clu.adj','m2Cwmx.tp4.clu.adj','m2Cwmx.tp5.clu.adj','m2Cwmx.tp6.clu.adj' )
+	# use to pre-compute tables mem 130 GB
 	#method.risk				<- c( 	'm2Cwmx.tp1.clu.adj' )	
 	#method.risk				<- 'm2Cwmx.wtn.tp4'
 	dummy	<- sapply(method.risk, function(x)
