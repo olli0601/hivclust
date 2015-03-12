@@ -4802,6 +4802,22 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 					set(YXf.bs, NULL, 'score.Y.raw', YXf.bs[, score.Y])									
 					set(YXf.bs, NULL, 'score.Y', YXf.bs[, score.Y*w.tn])
 				}	
+				if(grepl('noscore',method.risk))
+				{
+					cat(paste('\nsetting likelihood to 1'))
+					set(YX.m3.bs, NULL, 'score.Y.raw', YX.m3.bs[, score.Y])					
+					set(YX.m3.bs, NULL, 'score.Y', YX.m3.bs[, 1])			
+					set(YXf.bs, NULL, 'score.Y.raw', YXf.bs[, score.Y])
+					set(YXf.bs, NULL, 'score.Y', YXf.bs[, 1])
+				}
+				if(grepl('nophyloscore',method.risk))
+				{
+					cat(paste('\nsetting likelihood to wtn'))
+					set(YX.m3.bs, NULL, 'score.Y.raw', YX.m3.bs[, score.Y])					
+					set(YX.m3.bs, NULL, 'score.Y', YX.m3.bs[, w.tn])		
+					set(YXf.bs, NULL, 'score.Y.raw', YXf.bs[, score.Y])
+					set(YXf.bs, NULL, 'score.Y', YXf.bs[, w.tn])
+				}				
 #}
 #print( YX.m3.bs[, list(ym=median(score.Y)), by='stage'] )				
 				
@@ -5727,7 +5743,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, Y.brl.bs, X.tables, 
 				tmp			<- c("CD4c.tperiod","CD4c")	
 			set(YX, NULL, 'stage', factor(as.character(YX[[tmp[1]]])))
 			set(YXf, NULL, 'stage', factor(paste(as.character(YXf[[tmp[2]]]),'.',tp,sep='')))			
-			#	use cluster weights?			
+			#				
 			if(grepl('wtn',method.risk))
 			{
 				cat(paste('\nsetting likelihood to likelihood of pair / number transmission intervals'))
@@ -5736,12 +5752,22 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, Y.brl.bs, X.tables, 
 				set(YX, NULL, 'score.Y', YX[, score.Y*w.tn])				
 				set(YXf, NULL, 'score.Y', YXf[, score.Y*w.tn])
 			}								
-			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i*w.in])	
-			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])				
-			if(!grepl('wstar',method.risk) & !grepl('now',method.risk) & !grepl('wtn',method.risk))
-				set(YX, NULL, 'w', 1.)				
+			if(grepl('noscore',method.risk))
+			{
+				cat(paste('\nsetting likelihood to 1'))
+				set(YX, NULL, 'score.Y.raw', YX[, score.Y])
+				set(YXf, NULL, 'score.Y.raw', YXf[, score.Y])
+				set(YX, NULL, 'score.Y', YX[, 1])				
+				set(YXf, NULL, 'score.Y', YXf[, 1])
+			}
+			if(grepl('nophyloscore',method.risk))
+			{
+				cat(paste('\nsetting likelihood to wtn'))
+				set(YX, NULL, 'score.Y.raw', YX[, score.Y])
+				set(YXf, NULL, 'score.Y.raw', YXf[, score.Y])
+				set(YX, NULL, 'score.Y', YX[, w.tn])				
+				set(YXf, NULL, 'score.Y', YXf[, w.tn])
+			}
 			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.suA.Y',tp,sep='.'))
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
 			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste("Dtg500",tp,sep='.')) )			
@@ -11487,7 +11513,7 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Cwmx.wtn.tp3'
+		method.risk				<- 'm2Cwmx.wtn.tp1'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.148
 		method.use.AcuteSpec	<- 1
