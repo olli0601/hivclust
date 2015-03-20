@@ -222,8 +222,21 @@ project.athena.Fisheretal.Hypo.run.median<- function(YXe, method.risk, predict.t
 		
 		YX						<- copy(YXe$YX)	
 		YX.h					<- copy(YXe$YX)	
-		set( YX, NULL, 'stage', YX[, CD4c.tperiod] )
-		set( YX.h, NULL, 'stage', YX.h[, CD4c.tperiod] )
+		if(grepl('m2Awmx',method.risk))
+		{
+			set( YX, NULL, 'stage', YX[, CD4a.tperiod] )
+			set( YX.h, NULL, 'stage', YX.h[, CD4a.tperiod] )			
+		}
+		if(grepl('m2Bwmx',method.risk))
+		{
+			set( YX, NULL, 'stage', YX[, CD4b.tperiod] )
+			set( YX.h, NULL, 'stage', YX.h[, CD4b.tperiod] )			
+		}
+		if(grepl('m2Cwmx',method.risk))
+		{
+			set( YX, NULL, 'stage', YX[, CD4c.tperiod] )
+			set( YX.h, NULL, 'stage', YX.h[, CD4c.tperiod] )			
+		}
 		X.tables				<- copy(YXe$X.tables)	
 		nt.table				<- X.tables$nt.table
 		nt.table.h				<- copy(X.tables$nt.table)
@@ -448,8 +461,21 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 				{					
 					YX						<- copy(YXe$YX)	
 					YX.h					<- copy(YXe$YX)	
-					set( YX, NULL, 'stage', YX[, CD4c.tperiod] )
-					set( YX.h, NULL, 'stage', YX.h[, CD4c.tperiod] )
+					if(grepl('mACwmx',method.risk))
+					{
+						set( YX, NULL, 'stage', YX[, CD4a.tperiod] )
+						set( YX.h, NULL, 'stage', YX.h[, CD4a.tperiod] )						
+					}
+					if(grepl('m2Bwmx',method.risk))
+					{
+						set( YX, NULL, 'stage', YX[, CD4b.tperiod] )
+						set( YX.h, NULL, 'stage', YX.h[, CD4b.tperiod] )						
+					}
+					if(grepl('m2Cwmx',method.risk))
+					{
+						set( YX, NULL, 'stage', YX[, CD4c.tperiod] )
+						set( YX.h, NULL, 'stage', YX.h[, CD4c.tperiod] )						
+					}
 					X.tables				<- copy(YXe$X.tables)	
 					nt.table				<- X.tables$nt.table
 					nt.table.h				<- copy(X.tables$nt.table)

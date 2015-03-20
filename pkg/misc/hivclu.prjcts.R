@@ -2709,7 +2709,7 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	set(df, NULL, "isDead", factor(df[,isDead], levels=c(0,1), labels=c("No","Yes")))
 	set(df, NULL, "Trm", factor(df[, Trm], levels=c(100, 101,  102,  202, 103,  104,  105,  106,  107, 108,  110), labels= c("MSM","BI","HET","HETfa","IDU","BLOOD","NEEACC", "PREG", "BREAST", "OTH", "SXCH")) )
 	set(df, NULL, "RegionHospital", factor(df[,RegionHospital], levels=c(1,2,3,4,5,6), labels=c("Amst","N","E","S","W","Curu")))
-		
+	set(df, NULL, "ReasonStopRegistration", factor(df[,ReasonStopRegistration], levels=c(0,1,2,3,4), labels=c("OptOut","Died","Moved","Lost","PrntsOptOut")))	
 	tmp	<- df[, {
 				tmp		<- NA_character_
 				z		<- Acute_Spec_1%in%c(1L,2L) | Acute_Spec_2%in%c(1L,2L) | Acute_Spec_3%in%c(1L,2L) | Acute_Spec_4%in%c(1L,2L)

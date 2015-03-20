@@ -17,6 +17,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_150303",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150308",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150308",sep='/')		
+	#indir					<- paste(DATA,"fisheretal_150312",sep='/')
+	#outdir					<- paste(DATA,"fisheretal_150312",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -118,25 +120,6 @@ project.athena.Fisheretal.sensitivity<- function()
 		save(runs.risk, file=file)
 		#	reduce runs.opt to files for which we have a table
 		runs.opt	<- subset(runs.opt, !grepl('ARTstarted', method.risk) & !grepl('GroupsUDA', method.risk) )
-		#	collect transmission probs		
-		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
-				{					 
-					cat(paste('\nprocess file=',runs.opt[i,file]))
-					load(paste(indir, runs.opt[i,file], sep='/'))					
-					ans	<- copy(ans$trm.p)
-					if(any(names(ans)=='coef'))
-						ans[, coef:=NULL]
-					ans[, method.risk:=runs.opt[i,method.risk]]
-					ans[, method.dating:=runs.opt[i,method.dating]]
-					ans[, method.nodectime:=runs.opt[i,method.nodectime]]
-					ans[, method.brl:=runs.opt[i,method.brl ]]
-					ans[, method.denom:=runs.opt[i,method.denom]]
-					ans[, method.recentctime:=runs.opt[i,method.recentctime ]]
-					ans
-				})
-		trm.p		<- do.call('rbind', tmp)
-		file		<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.trmp.Rdata", sep='')
-		save(trm.p, file=file)		
 		#	load risk tables
 		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
 				{
@@ -189,7 +172,26 @@ project.athena.Fisheretal.sensitivity<- function()
 		tmp			<- do.call('rbind', tmp)
 		runs.table	<- rbind(runs.table, tmp, fill=TRUE)
 		file			<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.table.Rdata", sep='')
-		save(runs.table, file=file)				
+		save(runs.table, file=file)	
+		#	collect transmission probs for BS==0	-	
+		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
+				{					 
+					cat(paste('\nprocess file=',runs.opt[i,file]))
+					load(paste(indir, runs.opt[i,file], sep='/'))					
+					ans	<- subset(ans$trm.p, BS==0)
+					if(any(names(ans)=='coef'))
+						ans[, coef:=NULL]
+					ans[, method.risk:=runs.opt[i,method.risk]]
+					ans[, method.dating:=runs.opt[i,method.dating]]
+					ans[, method.nodectime:=runs.opt[i,method.nodectime]]
+					ans[, method.brl:=runs.opt[i,method.brl ]]
+					ans[, method.denom:=runs.opt[i,method.denom]]
+					ans[, method.recentctime:=runs.opt[i,method.recentctime ]]
+					ans
+				})
+		trm.p		<- do.call('rbind', tmp)
+		file		<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.trmp.BS0.Rdata", sep='')
+		save(trm.p, file=file)				
 	}
 	
 	file<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_Wed_Dec_18_11:37:00_2013_Yscore3da_model2_m2Bwmx.tp1.cens.R"
@@ -926,6 +928,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outfile			<- infile
 	method.BRLs		<- c(	'3pa1H1.48C2V100bInfT7', '3pa1H1.94C2V100bInfT7', '3pa1H1.09C2V100bInfT7',
 							'3pa1H1.48C1V100bInfT7','3pa1H1.48C3V100bInfT7',
+							'3pa1H1.48C1V100bInfs0.7T7','3pa1H1.48C2V100bInfs0.7T7', '3pa1H1.48C3V100bInfs0.7T7',
+							'3pa1H1.48C1V100bInfs0.85T7','3pa1H1.48C2V100bInfs0.85T7', '3pa1H1.48C3V100bInfs0.85T7',
 							'3pa1H1.48C2V100b0.02T7','3pa1H1.48C2V100b0.04T7')
 	dummy			<- sapply(method.BRLs, function(method.BRL)
 			{				

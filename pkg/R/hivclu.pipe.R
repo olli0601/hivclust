@@ -604,128 +604,6 @@ hivc.pipeline.props_univariate<- function()
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
 	outdir					<- paste(DATA,"fisheretal",sep='/')
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
-	
-	if(0)
-	{
-		method					<- '3d'
-		method.recentctime		<- '2011-01-01'
-		#method.recentctime		<- '2013-03-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"					
-		infilexml.opt			<- "mph4clutx4tip"
-		infilexml.template		<- "um192rhU2080"	
-		outfile					<- paste(infile,'Ac=MY_D=35_gmrf',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3d'
-		method.recentctime		<- '2013-03-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3d'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3i'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3j'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3k'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3l'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3m'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3n'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
-	if(0)
-	{
-		method					<- '3o'
-		method.recentctime		<- '2011-01-01'
-		method.nodectime		<- 'any'
-		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
-		infiletree				<- paste(infile,"examlbs500",sep="_")
-		insignat				<- "Wed_Dec_18_11:37:00_2013"							
-		infilexml.opt			<- "clrh80"
-		infilexml.template		<- "sasky_sdr06fr"	
-		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
-	}
 	if(1)
 	{
 		method					<- '3p'
@@ -738,48 +616,177 @@ hivc.pipeline.props_univariate<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	method.lRNA.supp			<- 100
-	method.use.AcuteSpec		<- 1
-	method.minQLowerU			<- 0.148	#0.194 0.148 0.109
-	method.thresh.pcoal			<- 0.2
-	method.PDT					<- 'SEQ'
-	#method.Acute				<- 'empirical'
-	method.Acute				<- 'higher'
-	#method.Acute				<- 'lower'
-	#method.Acute				<- 'central'
-	method.minLowerUWithNegT	<- 1
-	method.cut.brl				<- Inf
-	method.thresh.bs			<- 0.8
-	
-	#	basic m2Bwmx runs	mem=1800 MB	
-	#method.risk		<- c(	'm2Cwmx.wtn.tp1','m2Cwmx.wtn.tp2','m2Cwmx.wtn.tp3','m2Cwmx.wtn.tp4','m2Cwmx.wtn.tp5','m2Cwmx.wtn.tp6')
-	method.risk		<- c(	'm2Cwmx.tp1','m2Cwmx.tp2','m2Cwmx.tp3','m2Cwmx.tp4','m2Cwmx.tp5','m2Cwmx.tp6',
-							'm2Cwmx.nophyloscore.tp1','m2Cwmx.nophyloscore.tp2','m2Cwmx.nophyloscore.tp3','m2Cwmx.nophyloscore.tp4','m2Cwmx.nophyloscore.tp5','m2Cwmx.nophyloscore.tp6',
-							'm2Cwmx.noscore.tp1','m2Cwmx.noscore.tp2','m2Cwmx.noscore.tp3','m2Cwmx.noscore.tp4','m2Cwmx.noscore.tp5','m2Cwmx.noscore.tp6')
-	#	m5 runs
-	#method.risk		<- c(	'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu','m5.tA.tp1.clu.wstar','m5.tA.tp2.clu.wstar','m5.tA.tp3.clu.wstar','m5.tA.tp4.clu.wstar')
-	#!##method.risk		<- c(	'm5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4','m5.tAc.tp1.wstar','m5.tAc.tp2.wstar','m5.tAc.tp3.wstar','m5.tAc.tp4.wstar')
-	# use to pre-compute tables mem 95 GB
-	#method.risk			<- c( 	'm2Cwmx.tp1.clu.adj','m2Cwmx.tp2.clu.adj','m2Cwmx.tp3.clu.adj','m2Cwmx.tp4.clu.adj','m2Cwmx.tp5.clu.adj','m2Cwmx.tp6.clu.adj' )
-	# use to pre-compute tables mem 130 GB
-	#method.risk				<- c( 	'm2Cwmx.tp1.clu.adj' )	
-	#method.risk				<- 'm2Cwmx.wtn.tp4'
-	dummy	<- sapply(method.risk, function(x)
-			{
-				cmd	<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
-				cat(cmd)
-				#stop()
-				#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=3, hpc.mem="1800mb")
-				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=20, hpc.mem="1900mb")
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
-				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
-				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
-				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
-				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
-				outdir		<- paste(DATA,"tmp",sep='/')
-				outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
-				hivc.cmd.hpccaller(outdir, outfile, cmd)			
-			})	
+	if(0)	#	iterate over first large run
+	{
+		df.method				<- list(
+						#	infection times
+						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.148, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
+						#	phylo exclusion criteria
+						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
+						#	branch lengths
+						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
+						)
+		df.method				<- do.call('rbind', df.method)				
+		tmp						<- data.table(DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
+		df.method				<- merge(df.method, tmp, by='DUMMY')
+		df.method[, method.risk:='m2Cwmx.tp1.clu.adj']
+		df.method[, DUMMY:=seq_len(nrow(df.method))]
+		
+		df.method[,{
+						cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
+						cat(cmd)	
+						cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
+						outdir		<- paste(DATA,"tmp",sep='/')
+						outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+						hivc.cmd.hpccaller(outdir, outfile, cmd)
+					}, by='DUMMY']		
+	}
+	if(0)	#	iterate over second large run: bootstrap censoring
+	{
+		df.method				<- list(
+						#	infection times
+						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.148, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
+						#	phylo exclusion criteria
+						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
+						#	branch lengths
+						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
+						)
+		df.method				<- do.call('rbind', df.method)				
+		tmp						<- data.table(method.risk=paste('m2Cwmx.tp',1:6,'.clu.adj', sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
+		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
+		df.method[, DUMMY:=seq_len(nrow(df.method))]
+		
+		df.method[,{
+					cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
+					cat(cmd)	
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
+					outdir		<- paste(DATA,"tmp",sep='/')
+					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+					hivc.cmd.hpccaller(outdir, outfile, cmd)
+				}, by='DUMMY']		
+	}
+	if(0)	#	iterate over short runs: prop estimates
+	{
+		df.method				<- list(
+				#	infection times
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.148, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
+				#	phylo exclusion criteria
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
+				#	branch lengths
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
+		)
+		df.method				<- do.call('rbind', df.method)		
+		df.method[, DUMMY2:=seq_len(nrow(df.method))]
+		tmp						<- data.table(method.risk=paste('m2Cwmx.wtn.tp',1:6, sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
+		#tmp						<- data.table(method.risk=paste('m2Cwmx.tp',1:6, sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
+		#tmp						<- data.table(method.risk=paste('m2Cwmx.nophyloscore.tp',1:6, sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
+		#tmp						<- data.table(method.risk=paste('m2Cwmx.noscore.tp',1:6, sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)		
+		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
+		df.method				<- df.method[,{
+							cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
+							list(CMD=cmd)
+						}, by=c('DUMMY','DUMMY2')]	
+		df.method[,{
+					cmd			<- paste(CMD, collapse='', sep='')
+					cat(cmd)	
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
+					outdir		<- paste(DATA,"tmp",sep='/')
+					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+					hivc.cmd.hpccaller(outdir, outfile, cmd)
+				}, by=c('DUMMY2')]	
+	}
+	if(0)	#	iterate over short runs: method.realloc
+	{
+		df.method				<- list(
+				#	infection times
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.148, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
+				#	phylo exclusion criteria
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
+				#	branch lengths
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
+		)
+		df.method				<- do.call('rbind', df.method)				
+		df.method				<- df.method[2,]
+		tmp						<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,
+												method.risk='m2Cwmx.wtn.tp4',
+												method.realloc=  c(	'ImmediateART','ARTat500',	
+																	#	hypothetical: RPrEP33
+																	'RPrEP33',
+																	#	testing
+																	'TestC12m100pc','TestC06m100pc','TestA06m100pc','TestC12m59pc','TestA12m59pc','TestC06m65pc','TestA06m65pc','TestC12m32pc','TestA12m32pc','TestC06m42pc','TestA06m42pc',
+																	#	test + PrEP
+																	'PrestC12m18pc40pc','PrestC12m32pc50pc','PrestC12m32pc50pc','PrestC12m46pc60pc','PrestC12m59pc70pc',
+																	#	Test and PrEP at 40%, 50%, 60%, 70% + Immediate ART
+																	'PrestC12m18pc40pc+ImmediateART','PrestC12m32pc50pc+ImmediateART','PrestC12m46pc60pc+ImmediateART','PrestC12m59pc70pc+ImmediateART',
+																	#	Test and PrEP at 40%, 50%, 60%, 70% + ARTat500
+																	'PrestC12m18pc40pc+ARTat500','PrestC12m32pc50pc+ARTat500','PrestC12m46pc60pc+ARTat500','PrestC12m59pc70pc+ARTat500',
+																	#	test + treat 12MO/100%, 70%, 50%
+																	'TestC12m100pc+ImmediateART', 'TestC12m59pc+ImmediateART','TestC12m32pc+ImmediateART','TestC12m100pc+ARTat500','TestC12m59pc+ARTat500','TestC12m32pc+ARTat500')
+												)
+		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
+		df.method[, DUMMY:=seq_len(nrow(df.method))]
+		df.method[, DUMMY2:=rep(1:(nrow(df.method)%/%5+1), each=5)[seq_len(nrow(df.method))]]
+		df.method				<- df.method[,{
+					cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, method.realloc=method.realloc, outdir=outdir, outfile=outfile, resume=1, verbose=1)
+					list(CMD=cmd)
+				}, by=c('DUMMY','DUMMY2')]	
+		df.method[,{
+					cmd			<- paste(CMD, collapse='', sep='')
+					cat(cmd)	
+					stop()
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
+					outdir		<- paste(DATA,"tmp",sep='/')
+					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+					hivc.cmd.hpccaller(outdir, outfile, cmd)
+				}, by=c('DUMMY2')]	
+	}
+	if(1)	#custom
+	{
+		method.lRNA.supp			<- 100
+		method.use.AcuteSpec		<- 1
+		method.minQLowerU			<- 0.148	#0.194 0.148 0.109
+		method.thresh.pcoal			<- 0.2
+		method.PDT					<- 'SEQ'
+		#method.Acute				<- 'empirical'
+		method.Acute				<- 'higher'
+		#method.Acute				<- 'lower'
+		#method.Acute				<- 'central'
+		method.minLowerUWithNegT	<- 1
+		method.cut.brl				<- Inf
+		method.thresh.bs			<- 0.8
+		
+		#	basic m2Bwmx runs	mem=1800 MB	
+		#method.risk		<- c(	'm2Cwmx.wtn.tp1','m2Cwmx.wtn.tp2','m2Cwmx.wtn.tp3','m2Cwmx.wtn.tp4','m2Cwmx.wtn.tp5','m2Cwmx.wtn.tp6')
+		method.risk		<- c(	'm2Cwmx.tp1','m2Cwmx.tp2','m2Cwmx.tp3','m2Cwmx.tp4','m2Cwmx.tp5','m2Cwmx.tp6',
+				'm2Cwmx.nophyloscore.tp1','m2Cwmx.nophyloscore.tp2','m2Cwmx.nophyloscore.tp3','m2Cwmx.nophyloscore.tp4','m2Cwmx.nophyloscore.tp5','m2Cwmx.nophyloscore.tp6',
+				'm2Cwmx.noscore.tp1','m2Cwmx.noscore.tp2','m2Cwmx.noscore.tp3','m2Cwmx.noscore.tp4','m2Cwmx.noscore.tp5','m2Cwmx.noscore.tp6')
+		#	m5 runs
+		#method.risk		<- c(	'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu','m5.tA.tp1.clu.wstar','m5.tA.tp2.clu.wstar','m5.tA.tp3.clu.wstar','m5.tA.tp4.clu.wstar')
+		#!##method.risk		<- c(	'm5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4','m5.tAc.tp1.wstar','m5.tAc.tp2.wstar','m5.tAc.tp3.wstar','m5.tAc.tp4.wstar')
+		# use to pre-compute tables mem 95 GB
+		method.risk			<- c( 	'm2Awmx.tp1.clu.adj','m2Awmx.tp2.clu.adj','m2Awmx.tp3.clu.adj','m2Awmx.tp4.clu.adj','m2Awmx.tp5.clu.adj','m2Awmx.tp6.clu.adj',
+				'm2Bwmx.tp1.clu.adj','m2Bwmx.tp2.clu.adj','m2Bwmx.tp3.clu.adj','m2Bwmx.tp4.clu.adj','m2Bwmx.tp5.clu.adj','m2Bwmx.tp6.clu.adj',
+				'm2Cwmx.tp1.clu.adj','m2Cwmx.tp2.clu.adj','m2Cwmx.tp3.clu.adj','m2Cwmx.tp4.clu.adj','m2Cwmx.tp5.clu.adj','m2Cwmx.tp6.clu.adj')
+		# use to pre-compute tables mem 130 GB
+		method.risk				<- c( 	'm2Cwmx.tp1.clu.adj' )	
+		#method.risk				<- 'm2Cwmx.wtn.tp4'
+		dummy	<- sapply(method.risk, function(x)
+				{
+					cmd	<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
+					cat(cmd)
+					#stop()
+					#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=3, hpc.mem="1800mb")
+					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=20, hpc.mem="1900mb")
+					#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
+					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
+					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
+					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
+					cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
+					outdir		<- paste(DATA,"tmp",sep='/')
+					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+					hivc.cmd.hpccaller(outdir, outfile, cmd)			
+				})	
+	}
 }
 ######################################################################################
 hivc.pipeline.various<- function()

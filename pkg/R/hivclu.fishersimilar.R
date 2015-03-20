@@ -154,15 +154,28 @@ project.athena.Fisheretal.X.followup<- function(X.incare, clumsm.info, df.immu, 
 	X.incare
 }
 ######################################################################################
-project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.tpairs, clumsm.info, contact.grace=1.5, t.period=0.25, t.endctime= 2013.)
+project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.treatment, df.tpairs, df.all, contact.grace=1.5, t.period=0.25, t.endctime= 2013.)
 {	
-	contact		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique(subset(clumsm.info,select=c(Patient, DateLastContact, DateDied))), by='Patient')
-	#
-	#	set last contact
-	#
+	contact		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique(subset(df.all,select=c(Patient, DateLastContact, DateDied, ReasonStopRegistration))), by='Patient')
+	#	set last contact for NA last contact
 	set(contact, contact[, which(is.na(DateDied) | DateDied>t.endctime)], 'DateDied', t.endctime)
 	tmp			<- contact[, which(DateLastContact>=DateDied)]
 	set(contact, tmp, 'DateLastContact', contact[tmp, DateDied])
+	#	set DateDied for those that moved
+	tmp			<- contact[, which(!is.na(DateLastContact) & ReasonStopRegistration=='Moved')]
+	set(contact, tmp, 'DateDied', contact[tmp, DateLastContact])
+	#
+	set(df.treatment, NULL, 'StopTime', hivc.db.Date2numeric(df.treatment[,StopTime]))
+	set(df.treatment, NULL, 'StartTime', hivc.db.Date2numeric(df.treatment[,StartTime]))
+	df.treat	<- melt( df.treatment, id.vars=c('Patient'), measure.vars=c('StartTime','StopTime'), value.name='AnyT_T' )
+	setkey(df.treat, Patient, AnyT_T)
+	df.treat	<- unique(df.treat)
+	df.treat	<- merge( df.treat, subset(contact, select=c(Patient, DateDied)),  by='Patient', all.x=1 )
+	#	keep only last AnyT_T before death. If not, adjusting DateLastContact precisely removes all not in contact periods
+	df.treat	<- subset(df.treat, AnyT_T<DateDied, c(Patient, AnyT_T))
+	tmp			<- merge(data.table(Patient=df.tpairs[, unique(t.Patient)]), subset(df.treat, select=c(Patient, AnyT_T)), by='Patient')
+	tmp			<- tmp[, list(AnyT_TL=max(AnyT_T)), by='Patient']	
+	contact		<- merge(contact, tmp, by='Patient', all.x=1)	
 	tmp			<- merge(data.table(Patient=df.tpairs[, unique(t.Patient)]), subset(df.viro, select=c(Patient, PosRNA)), by='Patient')
 	set(tmp, NULL, 'PosRNA', hivc.db.Date2numeric(tmp[,PosRNA]))
 	tmp			<- tmp[, list(PosRNA_TL=max(PosRNA)), by='Patient']	
@@ -170,7 +183,7 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 	tmp			<- merge(data.table(Patient=df.tpairs[, unique(t.Patient)]), subset(df.immu, select=c(Patient, PosCD4)), by='Patient')
 	set(tmp, NULL, 'PosCD4', hivc.db.Date2numeric(tmp[,PosCD4]))
 	tmp			<- tmp[, list(PosCD4_TL=max(PosCD4)), by='Patient']	
-	contact		<- merge(contact, tmp, by='Patient', all.x=1)	
+	contact		<- merge(contact, tmp, by='Patient', all.x=1)		
 	tmp			<- contact[, which(DateLastContact<PosRNA_TL & PosRNA_TL<t.endctime)]
 	if(length(tmp))
 	{
@@ -183,11 +196,17 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 		cat(paste('\nsetting relaxed DateLastContact because PosCD4_TL for n=',length(tmp)))
 		set(contact, tmp, 'DateLastContact', contact[tmp,PosCD4_TL])
 	}
-	#	grace: last year
+	tmp			<- contact[, which(DateLastContact<AnyT_TL & AnyT_TL<t.endctime)]	
+	if(length(tmp))
+	{
+		cat(paste('\nsetting relaxed DateLastContact because AnyT_TL for n=',length(tmp)))
+		set(contact, tmp, 'DateLastContact', contact[tmp,AnyT_TL])
+	}	
+	#	allow for grace at end
 	tmp			<- contact[, which(DateLastContact<t.endctime & DateLastContact+contact.grace>=t.endctime)]
 	if(length(tmp))
 	{
-		cat(paste('\nsetting relaxed DateLastContact because DateLastContact+1<t.endctime for n=',length(tmp)))
+		cat(paste('\nsetting relaxed DateLastContact because DateLastContact+contact.grace<t.endctime for n=',length(tmp)))
 		set(contact, tmp, 'DateLastContact', contact[tmp, t.endctime])
 	}
 	#	set No contact at end
@@ -199,31 +218,38 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 	X.incare	<- merge(X.incare, tmp, by=c('t.Patient','t'), all.x=1)
 	set(X.incare, X.incare[,which(is.na(contact))],'contact','Yes')
 	#
-	#	for each time t, check if there is at least 1 VL or CD4 measurement in the last year/2 or next year/2
+	#	for each time t, check if there is at least 1 VL or CD4 measurement or Treatment visit in the last year/2 or next year/2
 	#
 	set(df.immu, NULL, 'PosCD4', hivc.db.Date2numeric(df.immu[,PosCD4]))
 	set(df.viro, NULL, 'PosRNA', hivc.db.Date2numeric(df.viro[,PosRNA]))
 	tmp			<- X.incare[, {
-									cntct	<- rep(0, length(t))
-									z		<- df.immu$PosCD4[ which(df.immu$Patient==t.Patient) ]		
-									endgrace<- max(0, max(t)+contact.grace/2-t.endctime)
+									cntct					<- rep(0, length(t))
+									endgrace				<- t+contact.grace/2-t.endctime
+									endgrace[endgrace<0]	<- 0									
+									z						<- df.immu$PosCD4[ which(df.immu$Patient==t.Patient) ]
 									if(length(z))
 									{
-										tmp			<- sapply(t, 	function(z2) min(abs(z2-z))<=(contact.grace/2+endgrace)		)
+										tmp			<- sapply(seq_along(t), 	function(i) min(abs(t[i]-z))<=(contact.grace/2+endgrace[i])		)
 										cntct[tmp]	<- 1
 									}									
 									z		<- df.viro$PosRNA[ which(df.viro$Patient==t.Patient) ]
 									if(!all(cntct==1) & length(z))
 									{
-										tmp			<- sapply(t, 	function(z2) min(abs(z2-z))<=(contact.grace/2+endgrace)		)
+										tmp			<- sapply(seq_along(t), 	function(i) min(abs(t[i]-z))<=(contact.grace/2+endgrace[i])		)
 										cntct[tmp]	<- 1
 									}
+									z						<- df.treat$AnyT_T[ which(df.treat$Patient==t.Patient) ]
+									if(length(z))
+									{
+										tmp			<- sapply(seq_along(t), 	function(i) min(abs(t[i]-z))<=(contact.grace/2+endgrace[i])		)
+										cntct[tmp]	<- 1
+									}																		
 									list(t=t, incontact=cntct)
 								}, by=c('t.Patient')]	
 	X.incare	<- merge(X.incare, tmp, by=c('t.Patient','t'))
 	#set(X.incare, X.incare[, which(!incontact & t+contact.grace>t.endctime)], 'incontact', 1)
-	set(X.incare, X.incare[, which(!incontact & contact=='Yes')], 'contact', 'No')
-	#ggplot(subset(X.incare, contact=='No'), aes(x=t)) + geom_histogram(binwidth=0.125)
+	#ggplot(subset(X.incare, contact=='No' | incontact==0), aes(x=t, fill=incontact==0)) + geom_histogram(binwidth=0.125) + scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1))
+	set(X.incare, X.incare[, which(!incontact & contact=='Yes')], 'contact', 'No')	
 	set(X.incare, NULL, 'incontact', NULL )
 	if(X.incare[, length(which(is.na(stage)))])	stop('unexpected NA stage')
 	X.incare
@@ -394,7 +420,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 		method.restrictTPtoRI	<- ifelse(substr(method,1,2)%in%c('3a','3b'),1,0)
 		#file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlraw',method,sep='')
 		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlrawmed',method,sep='')
-		Y.rawbrl				<- project.athena.Fisheretal.Y.rawbrl(YX.tpairs, indir, insignat, indircov, infilecov, infiletree, df.tpairs.tptn=df.tpairs.4.rawbrl, save.file=paste(file, '.R', sep=''), resume=resume, plot.file=paste(file, '.pdf', sep=''), method.restrictTPtoRI=method.restrictTPtoRI)
+		Y.rawbrl				<- project.athena.Fisheretal.Y.rawbrl(YX.tpairs, indir, insignat, indircov, infilecov, infiletree, df.tpairs.tptn=df.tpairs.4.rawbrl, save.file=paste(file, '.R', sep=''), resume=1, plot.file=paste(file, '.pdf', sep=''), method.restrictTPtoRI=method.restrictTPtoRI)
 		#	BRL [0,1]: branch length weight between pot transmitter and infected 		
 		tmp						<- project.athena.Fisheretal.Y.brlweight.3p(infile.trm.model, Y.rawbrl, df.all, df.viro, dur.Acute=dur.Acute, t.period=t.period, lRNA.supp=lRNA.supp)
 		Y.brl.m					<- copy(tmp$Y.brl.m)
@@ -417,8 +443,6 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 		YX.tpairs.select		<- project.athena.Fisheretal.Y.rm.missedtransmitter(YX.tpairs, df.all, Y.brl.m, Y.U, Y.coal=Y.coal, thresh.pcoal=thresh.pcoal, cut.brl=cut.brl, any.pos.grace.yr= any.pos.grace.yr, rm.zero.score=rm.zero.score, plot.file=plot.file, t.period=t.period)
 		#	take branch length weight ONLY to derive "score.Y"
 		Y.score					<- merge( YX.tpairs.select, subset(Y.brl.m, select=c(FASTASampleCode, t.FASTASampleCode, telapsed, brl, lkl)), by=c('FASTASampleCode','t.FASTASampleCode'))
-		
-		
 		#	keep only one (Patient, t.Patient) pair if there are multiple sequences per individual. Take the one with largest brl score
 		tmp						<- Y.score[,	{	
 													z<- which.min(brl)
@@ -451,7 +475,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 		YX						<- subset(YX, select=	c(	t, t.Patient, Patient, cluster, score.Y, telapsed, brl, 																	#triplets identifiers and Y score
 															t.period, stage, contact, CDCC, lRNA, nlRNA.supp, nlRNA.nsupp, lRNA_T1.supp, CD4, 														#main covariates							
 															t.Age, Age, t.RegionHospital, RegionHospital, ART.I, ART.F, ART.A, ART.P, ART.T, ART.pulse, ART.nDrug, ART.nNRT, ART.nNNRT, ART.nPI, ART.nBoost, ART.TDF.EFV.FTC, fw.up.mx, fw.up.med, t2.care.t1, t2.vl.supp, 		#secondary covariates
-															t.AnyPos_T1,  AnyPos_T1, t.AnyT_T1, StartTime, StopTime, lRNAc, t.isAcute, t.Trm, Trm,												#other 
+															t.AnyPos_T1,  AnyPos_T1, t.AnyT_T1, t.InfT, StartTime, StopTime, lRNAc, t.isAcute, t.Trm, Trm,												#other 
 															FASTASampleCode, t.FASTASampleCode, w, w.i, w.in, w.t, w.tn, class										#other							
 															))
 		setkey(YX, t, t.Patient, Patient)	
@@ -1967,11 +1991,11 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 	if(!is.null(infiletree))
 	{
 		tmp				<- 1000
-		if(thresh.bs==0.8)
-		{
-			tmp			<- 0.096
-			cat(paste('\nWARNING: still using brl=',tmp))
-		}		
+		#if(thresh.bs==0.8)
+		#{
+		#	tmp			<- 0.096
+		#	cat(paste('\nWARNING: still using brl=',tmp))
+		#}		
 		argv			<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, tmp, thresh.bs, resume=1)
 		argv			<<- unlist(strsplit(argv,' '))		
 		msm				<- hivc.prog.get.clustering.MSM()
@@ -2264,13 +2288,17 @@ project.athena.Fisheretal.t2inf.estimate.quantileparameter<- function(df.all.all
 		set(tmp, tmp2, 'score', tmp[tmp2, AnyPos_T1-NegT])
 		tmp[, InfTy:= floor(AnyPos_T1-score)]
 		tmp2					<- tmp[, list(score.me=mean(score)), by=c('p','InfTy')]
-		set(tmp, tmp[, which(isAcute=='Yes')],'isAcute', 'Recent HIV infection')
-		set(tmp, tmp[, which(isAcute=='No')],'isAcute', 'Chronic HIV infection')
-		
-		ggplot(tmp) + geom_point(aes(x=AnyPos_T1-score, y=score, colour=isAcute), position=position_jitter(w = 0.1, h=0), alpha=0.65, size=1.2) + 
+		set(tmp, tmp[, which(isAcute=='Yes')],'isAcute', 'Confirmed recent HIV infection')
+		set(tmp, tmp[, which(isAcute=='No')],'isAcute', 'Recent HIV infection not indicated')
+		set(tmp, tmp[, which(isAcute=='Unconfirmed')],'isAcute', 'Missing')
+		tmp	<- merge(tmp, data.table(isAcute=c('Confirmed recent HIV infection', 'Recent HIV infection not indicated', 'Missing' ), Acute.col=c("#FF7F00","#FDBF6F",'grey70')), by='isAcute')
+		set(tmp, NULL, 'isAcute', tmp[,factor(as.character(isAcute), levels=c('Confirmed recent HIV infection', 'Recent HIV infection not indicated', 'Missing' ), labels=c('Confirmed recent HIV infection', 'Recent HIV infection not indicated', 'Missing' ))])
+		setkey(tmp, isAcute)
+		ggplot(tmp) + geom_point(aes(x=AnyPos_T1-score, y=score, colour=isAcute), position=position_jitter(w = 0.1, h=0), alpha=0.95, size=1.2) + 
 				geom_step(data=tmp2, aes(x=InfTy, score.me), colour='black') +			
 				#geom_smooth(data=subset(tmp, AnyPos_T1-score<2010), aes(x=AnyPos_T1-score, y=score), colour='black', fill='transparent') +
-				scale_colour_brewer(name='Infection status at diagnosis', palette='Set1') +
+				scale_colour_manual(name='Infection status at diagnosis', values=tmp[, unique(Acute.col)]) +
+				#scale_colour_brewer(name='Infection status at diagnosis', palette='Set1') +
 				scale_y_continuous(breaks=seq(0,20,1), limits=c(0,8), expand=c(0,0)) + scale_x_continuous(breaks=seq(1980,2020,4), limits=c(1990, 2011), expand=c(0,0)) +
 				labs(y='time to diagnosis\n(years)', x='time of infection', colour='quantile\nparameter') +
 				facet_grid(.~p) +
@@ -2289,8 +2317,6 @@ project.athena.Fisheretal.t2inf<- function(df.all.allmsm, method.Acute='empirica
 	require(reshape2)
 	require(ggplot2)
 	require(gamlss)	
-	
-		
 	df.sc.negT		<- subset(df.all.allmsm, Sex=='M' & Trm%in%c('MSM','BI') & !is.na(NegT) & AnyPos_T1>adjust.AnyPos_y & AnyPos_T1<t.recent.endctime)
 	setkey(df.sc.negT, Patient)
 	df.sc.negT		<- unique(df.sc.negT)
@@ -2335,13 +2361,15 @@ project.athena.Fisheretal.t2inf<- function(df.all.allmsm, method.Acute='empirica
 	
 	if(0 & !is.null(plot.file))
 	{
-		set(ans, ans[, which(isAcute=='No')],'isAcute', 'Chronic HIV infection')		
-		set(ans, ans[, which(is.na(isAcute))],'isAcute', 'Unconfirmed infection status')
-		
-		ggplot(subset(ans, isAcute!='Yes'), aes(x=AnyPos_a, y=mpy.NegT)) + 
-				geom_point(size=0.85) + scale_y_continuous(limits=c(0,13), breaks=seq(0,20,2)) + xlim(18, 61) +			
+		ans	<- merge(ans, subset(df.sc.negT, select=c(Patient, isAcute, CD4_T1c, AnyPos_a)), by='Patient')
+		set(ans, ans[, which(isAcute=='No')],'isAcute', 'Recent HIV infection\nnot indicated')		
+		set(ans, ans[, which(is.na(isAcute))],'isAcute', 'Missing infection status')
+		setkey(ans, isAcute, CD4_T1c, AnyPos_a)
+		ggplot(subset(ans, isAcute!='Yes'), aes(x=AnyPos_a, y=mpy.NegT, ymin=q2.5, ymax=q97.5)) + 
+				geom_point(size=0.85) + #scale_y_continuous(limits=c(0,13), breaks=seq(0,20,2)) + 
+				xlim(18, 65) +			
 				geom_line(aes(y=y.b), colour='blue') +
-				geom_ribbon(aes(x=x, ymin=q2.5, ymax=q97.5), alpha=0.2, fill='blue', alpha=0.5) +
+				geom_ribbon( alpha=0.2, fill='blue', alpha=0.5) +
 				labs(x="age at diagnosis", y='time between midpoint of\nseroconversion interval and diagnosis\n(years)') +
 				facet_grid(isAcute ~ CD4_T1c) + theme_bw()
 		ggsave(paste(plot.file,'sc_finalcd4.pdf'), w=8, h=8*2/3)		
@@ -2468,16 +2496,18 @@ project.athena.Fisheretal.t2inf<- function(df.all.allmsm, method.Acute='empirica
 	
 	if(0 && !is.null(plot.file))
 	{		
-		t.period	<- 1/64
-		b4care		<- do.call('rbind', list(	subset(df.sc.negT.cd4yes, AnyPos_a>25.0 & AnyPos_a<25.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
-												subset(df.sc.negT.cd4yes, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
-												subset(df.sc.negT.cd4yes, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1>250 & CD4_T1<850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
-												subset(df.sc.negT.cd4yes, AnyPos_a>34.5 & AnyPos_a<35.99 & CD4_T1>850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,]												
+		t.period	<- 1/64		
+		tmp			<- merge(df.sc.negT.cd4yes, subset(df.sc.negT, select=c(Patient, DateBorn, AnyPos_T1, isAcute, CD4_T1c, NegT, PosCD4_T1, CD4_T1,  AnyT_T1, AnyPos_a)), by='Patient')
+		setkey(tmp, CD4iAcute, AnyPos_a)
+		b4care		<- do.call('rbind', list(	subset(tmp, AnyPos_a>25.0 & AnyPos_a<25.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(tmp, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1<250, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(tmp, AnyPos_a>35.0 & AnyPos_a<35.99 & CD4_T1>250 & CD4_T1<850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,],
+												subset(tmp, AnyPos_a>34.5 & AnyPos_a<35.99 & CD4_T1>850, select=c(Patient, DateBorn, AnyPos_T1, isAcute, NegT, PosCD4_T1, CD4_T1,  AnyT_T1))[1,]												
 												))
-		b4care[, label:= c(	'chronic HIV infection at diagnosis,\n CD4 < 250,\n 25 years at diagnosis',
-								'chronic HIV infection at diagnosis,\n CD4 < 250,\n 35 years at diagnosis',
-								'chronic HIV infection at diagnosis,\n CD4 in [250-850],\n 35 years at diagnosis',
-								'chronic HIV infection at diagnosis,\n CD4 > 850,\n 35 years at diagnosis')]
+		b4care[, label:= c(		'CD4 < 250,\n 25 years at diagnosis',
+								'CD4 < 250,\n 35 years at diagnosis',
+								'CD4 in [250-850],\n 35 years at diagnosis',
+								'CD4 > 850,\n 35 years at diagnosis')]
 		set(b4care, NULL, 'NegT', NA_real_)	
 		tmp			<- b4care[, list(AnyPos_a=AnyPos_T1-DateBorn, ts=ifelse(is.na(NegT), AnyPos_T1-10, NegT), te=AnyPos_T1), by='Patient']
 		b4care		<- merge(b4care, tmp, by='Patient')
@@ -2490,9 +2520,9 @@ project.athena.Fisheretal.t2inf<- function(df.all.allmsm, method.Acute='empirica
 		set(tmp, NULL, 'label', tmp[, factor(label, levels=labels)] )
 		setkey(tmp, label)
 		ggplot(tmp, aes(x=q, y=score, group=label, colour=label)) + geom_line() + theme_bw() + theme(legend.key.size=unit(13,'mm'))  +
-				scale_x_continuous(breaks=seq(0,10,1)) +
-				labs(x="t\n(years)", y='Probability that relative time\nto diagnosis is > t') + 
-				scale_colour_brewer(palette='Set2',name='Individual with') +
+				scale_x_continuous(breaks=seq(0,10,1), expand=c(0,0)) +
+				labs(x="t\n(years)", y='Probability that\ntime between midpoint of seroconversion\ninterval and diagnosis is > t') + 
+				scale_colour_brewer(palette='Set2',name='Seroconverting MSM for whom\nrecent HIV infection\nwas not indicated at diagnosis\nand') +
 				theme(legend.position=c(1,1), legend.justification=c(1,1))
 		ggsave(paste(plot.file,'sc_predict.pdf'), w=8, h=4)
 	}
@@ -3023,7 +3053,12 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 			set(YX, NULL, x, paste(substr(YX[[x]],1,nchar(YX[[x]])-1),4,sep=''))
 			set(YX, NULL, x, as.factor(YX[[x]]))
 		}		
-		YX[, stage:=CD4c.tperiod]
+		if(grepl('m2Awmx',method.risk))		
+			YX[, stage:=CD4a.tperiod]
+		if(grepl('m2Bwmx',method.risk))		
+			YX[, stage:=CD4b.tperiod]
+		if(grepl('m2Cwmx',method.risk))		
+			YX[, stage:=CD4c.tperiod]
 		#
 		#	reset YXf to tperiod==4
 		#
@@ -3048,8 +3083,13 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 			set(YXf, NULL, x, as.character(YXf[[x]]))
 			set(YXf, tmp2, x, paste(substr(YXf[[x]],1,nchar(YXf[[x]])-1),4,sep='')[tmp2])
 			set(YXf, NULL, x, as.factor(YXf[[x]]))
-		}			
-		YXf[, stage:=CD4c.tperiod]
+		}		
+		if(grepl('m2Awmx',method.risk))
+			YXf[, stage:=CD4a.tperiod]
+		if(grepl('m2Bwmx',method.risk))
+			YXf[, stage:=CD4b.tperiod]
+		if(grepl('m2Cwmx',method.risk))
+			YXf[, stage:=CD4c.tperiod]		
 		#
 		#	reset trm.p to tperiod==4
 		#
@@ -3236,10 +3276,11 @@ project.athena.Fisheretal.X.b4care<- function(df.tpairs, df.all, predict.t2inf, 
 	tmp		<- b4care[, which(t<ts)]
 	set(b4care, tmp, 't', b4care[tmp, ts])	
 	#	expand to intervals
+	b4care[, t.InfT:=t]
 	set(b4care, NULL, 't', b4care[, floor(t) + round( (t%%1)*100 %/% (t.period*100) ) * t.period ] )
 	stopifnot(nrow(subset(b4care, t<ts))==0)
 	tmp		<- b4care[, list(t=seq(t,te,by=t.period)), by='Patient']
-	b4care	<- merge( tmp, subset(b4care, select=c(Patient, AnyPos_T1, AnyPos_a, isAcute)), by='Patient' )
+	b4care	<- merge( tmp, subset(b4care, select=c(Patient, AnyPos_T1, AnyPos_a, isAcute, t.InfT)), by='Patient' )
 	setnames(b4care, c('Patient'), c('t.Patient'))
 	cat(paste('\nReturn X for #t.Patients=',b4care[, length(unique(t.Patient))]))	
 	b4care
@@ -4812,7 +4853,7 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 				}
 				if(grepl('nophyloscore',method.risk))
 				{
-					cat(paste('\nsetting likelihood to wtn'))
+					cat(paste('\nsetting likelihood to nophyloscore'))
 					set(YX.m3.bs, NULL, 'score.Y.raw', YX.m3.bs[, score.Y])					
 					set(YX.m3.bs, NULL, 'score.Y', YX.m3.bs[, w.tn])		
 					set(YXf.bs, NULL, 'score.Y.raw', YXf.bs[, score.Y])
@@ -5423,82 +5464,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, Y.brl.bs, X.tables, 
 	}
 	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
 	{
-		cat(paste('\nregression on data set by method', method.risk))
-		if(grepl('m21st.cas',method.risk) | grepl('m2B1st.cas',method.risk) | grepl('m21stMv.cas',method.risk) | grepl('m2B1stMv.cas',method.risk))
-		{  
-			#	use weights?
-			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i*w.in])
-			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])	
-			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
-				set(YX, NULL, 'w', 1.)
-			#	censoring adjustment
-			if(grepl('cens', method.risk))
-			{
-				tmp			<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4b.tperiod")	
-				set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
-				tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')	
-				if(grepl('censp', method.risk))
-					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
-				else
-					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
-				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )				
-				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
-				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
-			}
-			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st","CD4b")
-			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
-			#	sequence adjustment (not censoring)
-			if(grepl('adj', method.risk))
-			{
-				tmp			<- subset( X.tables$risk.table, factor%in%YX[, levels(stage)] )
-				tmp			<- tmp[,  list(risk=risk, factor=factor, n=n, p=n/sum(n)), by='stat']
-				if(!grepl('clu', method.risk))
-					tmp		<- tmp[, list(w.b= p[stat=='X.msm']/p[stat=='X.seq']),by=c('risk','factor')]
-				if(grepl('clu', method.risk))
-					tmp		<- tmp[, list(w.b= p[stat=='X.msm']/p[stat=='X.clu']),by=c('risk','factor')]
-				tmp			<- data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] )
-				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
-				YX			<- merge( YX, tmp, by='stage' )
-				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
-			}		
-			if(grepl('Mv', method.risk))	
-			{
-				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
-				formula			<- 'score.Y ~ bs(t.Age, knots=c(30,45), degree=1)+bs(t, knots=c(2007,2010), degree=2)+stage+t.RegionHospital-1'
-				predict.df		<- data.table(	stage=factor('ART1.su.Y', levels=YX[, levels(stage)]), 												
-									t.Age=subset(YX, stage=='ART1.su.Y')[, mean(t.Age, na.rm=TRUE)], t=subset(YX, stage=='ART1.su.Y')[, mean(t, na.rm=TRUE)],
-									t.RegionHospital=factor('Amst', levels=YX[, levels(t.RegionHospital)]),	w=1.)										
-			}
-			if(!grepl('Mv', method.risk))
-			{
-				formula			<- 'score.Y ~ stage-1'
-				include.colnames<- c('score.Y','w','stage')						
-				predict.df		<- data.table(stage=factor('ART1.su.Y', levels=YX[, levels(stage)]), w=1.)				
-			}						
-			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref='ART1.su.Y')
-			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='D' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
-			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='A' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
-			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
-			if(grepl('Mv', method.risk))
-			{
-				setkey(risk.df, risk, factor)
-				risk.df		<- merge(risk.df, unique(risk.df)[, {
-									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
-									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
-									t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
-									t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
-									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
-								}, by=c('risk','factor')], by=c('risk','factor'))						
-			}	
-			#risk.df	<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )	
-			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
-		}	
+		cat(paste('\nregression on data set by method', method.risk))			
 		if(grepl('m2t.cas',method.risk) | grepl('m2Bt.cas',method.risk) | grepl('m2tMv.cas',method.risk) | grepl('m2BtMv.cas',method.risk) )
 		{  
 			#	use cluster weights?
@@ -5575,168 +5541,15 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, Y.brl.bs, X.tables, 
 			#ans		<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 			ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
 		}		
-		if(grepl('m2Bwmx.cas', method.risk) | grepl('m2BwmxMv.cas', method.risk) | grepl('m2wmx.cas', method.risk) | grepl('m2wmxMv.cas', method.risk))
-		{  
-			#	use cluster weights?
-			if(grepl('now',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i*w.in])
-			if(grepl('wstar',method.risk))
-				set(YX, NULL, 'w', YX[, w/w.i])	
-			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
-				set(YX, NULL, 'w', 1.)
-			#	censoring adjustment
-			if(grepl('cens', method.risk))
-			{
-				tmp			<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4b.tperiod")	
-				set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
-				tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')	
-				if(grepl('censp', method.risk))
-					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyPU[stat=='X.msm']/p.adjbyPU[stat==tmp]),by=c('risk','factor')]
-				if(!grepl('censp', method.risk))
-					tmp		<- X.tables$cens.table[, list(w.b= p.adjbyNU[stat=='X.msm']/p.adjbyNU[stat==tmp]),by=c('risk','factor')]
-				tmp			<- subset( tmp, factor%in%YX[, levels(stage)] )	
-				YX			<- merge( YX, data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] ), by='stage' )
-				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
-				tmp			<- ifelse(grepl('clu',method.risk), 'X.clu', 'X.seq')			
-				#adjust		<- X.tables$cens.table[, list(n.adjbyPU= sum(n.adjbyPU), factor=factor2), by=c('risk','factor2','stat')]				
-				#tmp			<- tmp[, list(factor=factor[stat=='X.msm'], n.adjbyPU.Top= n.adjbyPU[stat=='X.msm'], n.adjbyPU.Bottom= n.adjbyPU[stat=='X.seq'], n.adjbyPU.BottomS= sum(n.adjbyPU[stat=='X.seq']), n.adjbyPU.TopS= sum(n.adjbyPU[stat=='X.msm'])  ), by= 'risk']				
-				#tmp[, w.b:= (n.adjbyPU.Top / n.adjbyPU.TopS) / (n.adjbyPU.Bottom / n.adjbyPU.BottomS) ]		
-				#adjust		<- adjust[, list(factor=factor[stat=='X.msm'], w.b= n.adjbyPU[stat=='X.msm'] / n.adjbyPU[stat==tmp] * sum(n.adjbyPU[stat==tmp]) / sum(n.adjbyPU[stat=='X.msm'])  ), by= 'risk']				
-			}
-			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st","CD4b")
-			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
-			#	sequence adjustment (not censoring)
-			if(grepl('adj', method.risk))
-			{
-				tmp			<- subset( X.tables$risk.table, factor%in%YX[, levels(stage)] )
-				tmp			<- tmp[,  list(risk=risk, factor=factor, n=n, p=n/sum(n)), by='stat']
-				if(!grepl('clu', method.risk))
-					tmp		<- tmp[, list(w.b= p[stat=='X.msm']/p[stat=='X.seq']),by=c('risk','factor')]
-				if(grepl('clu', method.risk))
-					tmp		<- tmp[, list(w.b= p[stat=='X.msm']/p[stat=='X.clu']),by=c('risk','factor')]
-				tmp			<- data.table( stage=factor( tmp[, factor], levels=YX[, levels(stage)] ), w.b=tmp[, w.b] )
-				set(tmp, tmp[, which(w.b>8.)], 'w.b', 8.)
-				YX			<- merge( YX, tmp, by='stage' )
-				set(YX, NULL, 'w', YX[, w*w.b*sum(w)/sum(w*w.b) ] )
-			}					
-			if(grepl('Mv', method.risk))	
-			{
-				#ggplot(YX, aes(x = t, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method.risk = "loess") + facet_grid(. ~ stage, margins=TRUE)	#d=2, 2007,2010
-				#ggplot(YX, aes(x = t.Age, y = score.Y)) + geom_point(size=0.4) + stat_smooth(method.risk = "loess") + facet_grid(. ~ stage, margins=TRUE)#d=1, 30,45				
-				include.colnames<- c('score.Y','w','stage','t','t.Age','t.RegionHospital')
-				formula			<- 'score.Y ~ bs(t.Age, knots=c(30,45), degree=1)+bs(t, knots=c(2007,2010), degree=2)+stage+t.RegionHospital-1'
-				predict.df		<- data.table(	stage=factor('ART.suA.Y', levels=YX[, levels(stage)]), 												
-												t.Age=subset(YX, stage=='ART.suA.Y')[, mean(t.Age, na.rm=TRUE)], t=subset(YX, stage=='ART.suA.Y')[, mean(t, na.rm=TRUE)],
-												t.RegionHospital=factor('Amst', levels=YX[, levels(t.RegionHospital)]),	w=1.)										
-			}
-			if(!grepl('Mv', method.risk))
-			{
-				formula			<- 'score.Y ~ stage-1'
-				include.colnames<- c('score.Y','w','stage')						
-				predict.df		<- data.table(stage=factor('ART.suA.Y', levels=YX[, levels(stage)]), w=1.)				
-			}			
-			#
-			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref='ART.suA.Y')
-			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='D' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref='stage', factor.ref='U') )
-			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='A' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
-			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
-			if(grepl('Mv', method.risk))
-			{
-				setkey(risk.df, risk, factor)
-				risk.df		<- merge(risk.df, unique(risk.df)[, {
-									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
-									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
-									t			<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t, na.rm=TRUE )]
-									t			<- ifelse(is.nan(t), YX[, mean( t, na.rm=TRUE )], t)
-									list(t.Age=t.Age, t=t, t.RegionHospital='Amst')
-								}, by=c('risk','factor')], by=c('risk','factor'))						
-			}			
-			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n )			
-		}	
-		if(grepl('m2Bt.tp', method.risk) | grepl('m2BtMv.tp', method.risk))
-		{
-			YXf				<- copy(YX)
-			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
-			cat(paste('\nprocess time period',tp))
-			tp				<- substr(tp, 3, 3)			
-			YX				<- subset(YX, t.period==tp)						
-			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st.tperiod","CD4b.tperiod")
-			set(YX, NULL, 'stage', factor(as.character(YX[[tmp]])))
-			tmp				<- ifelse(grepl('m2wmx',method.risk),"CD41st","CD4b")
-			set(YXf, NULL, 'stage', factor(as.character(YXf[[tmp]])))
-			#YX.wz			<- copy(YX)
-			#YX				<- subset(YX, score.Y>0.)
-			#	use cluster weights?
-			if(grepl('now',method.risk))
-			{
-				set(YX, NULL, 'w', YX[, w/w.i*w.in])
-				set(YXf, NULL, 'w', YXf[, w/w.i*w.in])
-			}					
-			if(grepl('wstar',method.risk))
-			{
-				set(YX, NULL, 'w', YX[, w/w.i])
-				set(YXf, NULL, 'w', YXf[, w/w.i])
-			}						
-			if(!grepl('wstar',method.risk) & !grepl('now',method.risk))
-			{
-				set(YX, NULL, 'w', 1.)
-				set(YXf, NULL, 'w', 1.)
-			}					
-			if(grepl('Mv', method.risk))	
-			{
-				include.colnames<- c('score.Y','w','stage','t.Age')
-				formula			<- 'score.Y ~ bs(t.Age, knots=c(30,45), degree=1)+stage-1'				
-				predict.df		<- data.table(	stage=factor(paste('ART.su.Y',tp,sep='.'), levels=YX[, levels(stage)]), 												
-												t.Age=subset(YX, stage==paste('ART.su.Y',tp,sep='.'))[, mean(t.Age, na.rm=TRUE)], w=1.)										
-			}
-			if(!grepl('Mv', method.risk))
-			{				
-				formula			<- 'score.Y ~ stage-1'
-				include.colnames<- c('score.Y','w','stage')						
-				predict.df		<- data.table(stage=factor(paste('ART.su.Y',tp,sep='.'), levels=YX[, levels(stage)]), w=1.)
-			}
-			risk.df			<- data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('ART.su.Y',tp,sep='.'))
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=YX[, levels(stage)], risk.ref='stage', factor.ref=paste('U',tp,sep='.')) )
-			tmp				<- YX[, levels(stage)][ substr(YX[, levels(stage)],1,1)=='A' ]
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l350', levels(stage))] ] )	)
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('l500', levels(stage))] ] )	)
-			risk.df			<- rbind(risk.df, data.table(risk='stage',factor=tmp, risk.ref= 'stage', factor.ref= YX[, levels(stage)][ YX[, substr(levels(stage),1,1)=='D' & grepl('g500', levels(stage))] ] )	)
-			risk.df			<- risk.df[, list(coef=paste(risk, factor,sep=''), coef.ref=paste(risk.ref,factor.ref,sep='') ), by=c('risk','factor','risk.ref','factor.ref')]
-			if(grepl('Mv', method.risk))
-			{
-				setkey(risk.df, risk, factor)
-				risk.df		<- merge(risk.df, unique(risk.df)[, {
-									t.Age		<- YX[ which(unclass(YX[, risk, with=FALSE])[[1]]==factor), mean( t.Age, na.rm=TRUE )]
-									t.Age		<- ifelse(is.nan(t.Age), YX[, mean( t.Age, na.rm=TRUE )], t.Age)
-									list(t.Age=t.Age)
-								}, by=c('risk','factor')], by=c('risk','factor'))						
-			}			
-			#risk.df		<- project.athena.Fisheretal.estimate.risk.wrap.add2riskdf(method.risk, risk.df, X.tables)
-			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0, 0) )
-			#ans			<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, NULL, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c(0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0) )
-			ans				<- project.athena.Fisheretal.estimate.risk.core.noWadj(YX, X.tables, tperiod.info, method.risk, formula, predict.df, risk.df, include.colnames, bs.n=bs.n, gamlss.BE.limit.u=c( 0.8, 0.9, 0.95, 0.975, 0.99, 0.993, 0.996, 0.998, 0.999, 1), gamlss.BE.limit.l= c(0.2, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 0)  )
-		}
-		if(	grepl('tp', method.risk) & 
-			(	grepl('m2wmx', method.risk) | grepl('m2wmxMv', method.risk) |
-				grepl('m2wmx.wtn', method.risk) | grepl('m2wmxMv.wtn', method.risk) |
-				grepl('m2Bwmx', method.risk) | grepl('m2BwmxMv', method.risk) |
-				grepl('m2Bwmx.wtn', method.risk) | grepl('m2BwmxMv.wtn', method.risk) |
-				grepl('m2Cwmx', method.risk) | grepl('m2CwmxMv', method.risk) |
-				grepl('m2Cwmx.wtn', method.risk) | grepl('m2CwmxMv.wtn', method.risk) 
-			)	
-		  )
+		if(	grepl('tp', method.risk) & grepl('m2A|B|Cwmx', method.risk) )
 		{			
 			YXf				<- copy(YX)
 			tp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))
 			cat(paste('\nprocess time period',tp))
 			tp				<- substr(tp, 3, 3)
 			YX				<- subset(YX, t.period==tp)						
-			if( grepl('m2wmx',method.risk) )
-				tmp			<- c("CD41st.tperiod","CD41st")
+			if( grepl('m2Awmx',method.risk) )
+				tmp			<- c("CD4a.tperiod","CD4a")
 			if( grepl('m2Bwmx',method.risk) )
 				tmp			<- c("CD4b.tperiod", "CD4b")	
 			if( grepl('m2Cwmx',method.risk) )
@@ -5762,7 +5575,7 @@ project.athena.Fisheretal.estimate.risk.wrap<- function(YX, Y.brl.bs, X.tables, 
 			}
 			if(grepl('nophyloscore',method.risk))
 			{
-				cat(paste('\nsetting likelihood to wtn'))
+				cat(paste('\nsetting likelihood to nophyloscore'))
 				set(YX, NULL, 'score.Y.raw', YX[, score.Y])
 				set(YXf, NULL, 'score.Y.raw', YXf[, score.Y])
 				set(YX, NULL, 'score.Y', YX[, w.tn])				
@@ -6377,42 +6190,16 @@ project.athena.Fisheretal.estimate.risk.table<- function(YX=NULL, X.den=NULL, X.
 		{
 			
 			tp				<- regmatches(method, regexpr('tp[0-9]', method))
-			tp				<- ifelse(length(tp), paste('.',substr(tp, 3, 3),sep=''), '')
-			if(grepl('m21st',method))
+			tp				<- ifelse(length(tp), paste('.',substr(tp, 3, 3),sep=''), '')			
+			if(grepl('m2Awmx',method))
 			{
-				factor.ref.v	<- paste('ART1.su.Y',tp,sep='')
-				risktp.col		<- 'CD41st.tperiod'
-				risk.col		<- 'CD41st'
-			}
-			if(grepl('m2B1st',method))
-			{
-				factor.ref.v	<- paste('ART1.su.Y',tp,sep='')
-				#risktp.col		<- 'CD4t.tperiod'
-				#risk.col		<- 'CD4t'
-				risktp.col		<- 'CD4b.tperiod'
-				risk.col		<- 'CD4b'
-			}
-			if(grepl('m2t',method))
-			{
-				factor.ref.v	<- paste('ART.su.Y',tp,sep='')
-				risktp.col		<- 'CD41st.tperiod'
-				risk.col		<- 'CD41st'
-			}
-			if(grepl('m2Bt',method))
-			{
-				factor.ref.v	<- paste('ART.su.Y',tp,sep='')
-				risktp.col		<- 'CD4b.tperiod'
-				risk.col		<- 'CD4b'
-			}
-			if(grepl('m2wmx',method))
-			{
-				factor.ref.v	<- paste('ART.suA.Y',tp,sep='')
-				risktp.col		<- 'CD41st.tperiod'
-				risk.col		<- 'CD41st'
+				factor.ref.v	<- paste('ART.suA.Y2',tp,sep='')
+				risktp.col		<- 'CD4a.tperiod'
+				risk.col		<- 'CD4a'
 			}
 			if(grepl('m2Bwmx',method))
 			{
-				factor.ref.v	<- paste('ART.suA.Y',tp,sep='')
+				factor.ref.v	<- paste('ART.suA.Y2',tp,sep='')
 				risktp.col		<- 'CD4b.tperiod'
 				risk.col		<- 'CD4b'
 			}			
@@ -8811,23 +8598,24 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		#	
 		#	set Diagt		stage by time since diagnosis
 		#
-		cat(paste('\nsetting Diagt\n'))
-		cd4.label	<- c('b4d','l3m','l6m','l1y','l3y','g3y')
-		cd4.cut		<- c(-Inf, 0, 0.25, 0.5, 1, 3, Inf)		
-		YX.m2[, Diagt:= cut(t+t.delta/2-t.AnyPos_T1, breaks=cd4.cut, labels=cd4.label, right=0)]
-		set(YX.m2, YX.m2[, which(stage=='U' & (t.isAcute=='Yes' | t.isAcute=='Maybe'))], 'Diagt', 'UA')
-		set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='No')], 'Diagt', 'U')
-		set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'Diagt', 'UAna')
-		set(YX.m2, YX.m2[, which((t.isAcute=='Yes' | t.isAcute=='Maybe') & Diagt=='l3m')], 'Diagt', 'DA' )
-		set(YX.m2, YX.m2[, which(stage=='ART.started')], 'Diagt', 'ART.started' )		
-		stopifnot(length(YX.m2[, which(Diagt=='b4d')])==0)
+		#cat(paste('\nsetting Diagt\n'))
+		#cd4.label	<- c('b4d','l3m','l6m','l1y','l3y','g3y')
+		#cd4.cut		<- c(-Inf, 0, 0.25, 0.5, 1, 3, Inf)		
+		#YX.m2[, Diagt:= cut(t+t.delta/2-t.AnyPos_T1, breaks=cd4.cut, labels=cd4.label, right=0)]
+		#set(YX.m2, YX.m2[, which(stage=='U' & (t.isAcute=='Yes' | t.isAcute=='Maybe'))], 'Diagt', 'UA')
+		#set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='No')], 'Diagt', 'U')
+		#set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'Diagt', 'UAna')
+		#set(YX.m2, YX.m2[, which((t.isAcute=='Yes' | t.isAcute=='Maybe') & Diagt=='l3m')], 'Diagt', 'DA' )
+		#set(YX.m2, YX.m2[, which(stage=='ART.started')], 'Diagt', 'ART.started' )		
+		#stopifnot(length(YX.m2[, which(Diagt=='b4d')])==0)
 		#
 		#	use smoothed immu to define Diag stages
 		#
 		file		<- paste(indircov, "ATHENA_2014_06_Patient_AllMSM_CD4.R",sep='/')
 		cat(paste('\nLoad precomputed CD4 models per patient', file))
-		load( file )
+		load( file )		
 		immu.sm		<- subset(immu.sm, !is.na(t))
+		set(immu.sm, immu.sm[, which(CD4<5)], 'CD4', 5)
 		setnames(immu.sm, 'Patient','t.Patient')
 		#	make sure we have all prob transmitters in immu.sm for whom we have at least one CD4 measurement
 		tmp			<- setdiff( YX.m2[, unique(t.Patient)], immu.sm[, unique(t.Patient)] )
@@ -8844,25 +8632,25 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		#
 		#	set CD4 at diagnosis (CD41st)
 		#
-		cat(paste('\nsetting CD4 1st\n'))
-		cd4.label	<- c('D1l350','D1l500','D1g500')
-		cd4.cut		<- c(-1, 350, 500, 5000)
-		setkey(immu.sm, t.Patient, t)
-		tmp			<- immu.sm[, 	{
-										z<- which(!is.na(CD4))
-										list(PosCD4_T1=ifelse(length(z), t[z][1], NA_real_),  CD4_T1=ifelse(length(z), CD4[z][1], NA_real_ ))
-									}, by='t.Patient']
-		tmp[, CD41st:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
-		set(tmp, tmp[, which(is.na(CD41st))], 'CD41st', 'D1.NA')
-		gc()
-		YX.m2	<- merge(YX.m2, subset(tmp, select=c(t.Patient, PosCD4_T1, CD41st)), by='t.Patient', all.x=TRUE)
-		set(YX.m2, YX.m2[, which(t<PosCD4_T1)], 'CD41st', 'D1.NA')
-		set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Yes')], 'CD41st', 'UAy')
-		set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'CD41st', 'UAm')
-		set(YX.m2, YX.m2[, which(stage=='U' & (t.isAcute=='No' | is.na(t.isAcute)))], 'CD41st', 'U')
-		set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'CD41st', 'DAy' )
-		set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'CD41st', 'DAm' )
-		set(YX.m2, YX.m2[, which(stage=='ART.started')], 'CD41st', 'ART.started' )	
+		#cat(paste('\nsetting CD4 1st\n'))
+		#cd4.label	<- c('D1l350','D1l500','D1g500')
+		#cd4.cut		<- c(-1, 350, 500, 5000)
+		#setkey(immu.sm, t.Patient, t)
+		#tmp			<- immu.sm[, 	{
+		#								z<- which(!is.na(CD4))
+		#								list(PosCD4_T1=ifelse(length(z), t[z][1], NA_real_),  CD4_T1=ifelse(length(z), CD4[z][1], NA_real_ ))
+		#							}, by='t.Patient']
+		#tmp[, CD41st:=cut(tmp[,CD4_T1], breaks=cd4.cut, labels=cd4.label, right=1)]
+		#set(tmp, tmp[, which(is.na(CD41st))], 'CD41st', 'D1.NA')
+		#gc()
+		#YX.m2	<- merge(YX.m2, subset(tmp, select=c(t.Patient, PosCD4_T1, CD41st)), by='t.Patient', all.x=TRUE)
+		#set(YX.m2, YX.m2[, which(t<PosCD4_T1)], 'CD41st', 'D1.NA')
+		#set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Yes')], 'CD41st', 'UAy')
+		#set(YX.m2, YX.m2[, which(stage=='U' & t.isAcute=='Maybe')], 'CD41st', 'UAm')
+		#set(YX.m2, YX.m2[, which(stage=='U' & (t.isAcute=='No' | is.na(t.isAcute)))], 'CD41st', 'U')
+		#set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'CD41st', 'DAy' )
+		#set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'CD41st', 'DAm' )
+		#set(YX.m2, YX.m2[, which(stage=='ART.started')], 'CD41st', 'ART.started' )	
 		#	
 		#	set CD4 progression (CD4t)
 		#	
@@ -8888,23 +8676,38 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		set(YX.m2, YX.m2[, which(stage=='U' & (t.isAcute=='No' | is.na(t.isAcute)))], 'CD4t', 'U')
 		set(YX.m2, YX.m2[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'CD4t', 'DAy' )
 		set(YX.m2, YX.m2[, which(t.isAcute=='Maybe' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'CD4t', 'DAm' )		
-		set(YX.m2, YX.m2[, which(stage=='ART.started')], 'CD4t', 'ART.started' )	
-		#	combine acute
+		set(YX.m2, YX.m2[, which(stage=='ART.started')], 'CD4t', 'ART.started' )
+		#
+		#	grouping	CD4c
+		#	combine acute; treat missing acute separately
+		#
+		YX.m2[, CD4c:=CD4t]
+		set(YX.m2, YX.m2[, which(CD4t=='UAy' | CD4t=='UAm')], 'CD4c', 'UA')
+		set(YX.m2, YX.m2[, which(CD4t=='DAy' | CD4t=='DAm')], 'CD4c', 'DA')
+		set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4c', 'UAna')
+		#
+		#	grouping	CD4b
+		#	combine acute, combine not recent, consider unconfirmed recent [6-12mo] and unconfirmed recent in six months
+		#
+		YX.m2[, CD4b:=CD4t]
+		set(YX.m2, YX.m2[, which(CD4t=='UAy' | CD4t=='UAm')], 'CD4b', 'UA')
+		set(YX.m2, YX.m2[, which(CD4t=='DAy' | CD4t=='DAm')], 'CD4b', 'DA')
+		set(YX.m2, YX.m2[, which(stage=='U' & (t-t.InfT)<1 & (t.isAcute!='Yes' | is.na(t.isAcute)))], 'CD4b', 'UAna')
+		set(YX.m2, YX.m2[, which(stage=='U' & (t-t.InfT)<0.5 & (t.isAcute!='Yes' | is.na(t.isAcute)))], 'CD4b', 'UAnsx')
+		#
+		#	grouping	CD4a
+		#	combine acute, combine not recent, consider unconfirmed recent 
+		#
 		YX.m2[, CD4a:=CD4t]
 		set(YX.m2, YX.m2[, which(CD4t=='UAy' | CD4t=='UAm')], 'CD4a', 'UA')
 		set(YX.m2, YX.m2[, which(CD4t=='DAy' | CD4t=='DAm')], 'CD4a', 'DA')
-		#	treat missing acute separately
-		YX.m2[, CD4b:=CD4a]
-		set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4b', 'UAna')	
-		#	set UAna for CD4t
-		set(YX.m2, YX.m2[, which(stage=='U' & is.na(t.isAcute))], 'CD4t', 'UAna')
-		YX.m2[, CD4c:=CD4b]
+		set(YX.m2, YX.m2[, which(stage=='U' & (t-t.InfT)<1 & (t.isAcute!='Yes' | is.na(t.isAcute)))], 'CD4a', 'UAna')
 		#
 		cat(paste('\nsubset\n'))
 		if('score.Y'%in%colnames(YX.m2))
-			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, telapsed, brl, stage, CDCC, lRNA, t.isAcute, nlRNA.supp, nlRNA.nsupp, t.AnyT_T1, lRNA_T1.supp, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, w.tn, CD41st, CD4t, Diagt, CD4b,  CD4c, t.Age, t.RegionHospital, CD4  ))	
+			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, telapsed, brl, stage, CDCC, lRNA, t.isAcute, nlRNA.supp, nlRNA.nsupp, t.AnyT_T1, lRNA_T1.supp, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, w, w.i, w.in, w.t, w.tn, CD4a, CD4b,  CD4c, t.Age, t.RegionHospital, CD4  ))	
 		if(!'score.Y'%in%colnames(YX.m2))
-			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, nlRNA.supp, nlRNA.nsupp, t.isAcute, t.AnyT_T1, lRNA_T1.supp, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, CD41st, CD4t, Diagt, CD4b,  CD4c, CD4  ))
+			YX.m2	<- subset(YX.m2, select=c(t, t.Patient, Patient, stage, CDCC, lRNA, nlRNA.supp, nlRNA.nsupp, t.isAcute, t.AnyT_T1, lRNA_T1.supp, AnyPos_T1, t.AnyPos_T1, contact, fw.up.med, t.period, CD4a, CD4b,  CD4c, CD4  ))
 		
 		gc()
 		#
@@ -9107,24 +8910,20 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		gc()	
 		#	set CD41st and CD4t
 		tmp		<- YX.m2[, which(stage.orig=='ART.started')]
-		set(YX.m2, tmp, 'CD41st', YX.m2[tmp, lRNA.c])		
-		set(YX.m2, tmp, 'CD4t', YX.m2[tmp, lRNA.c])								
-		set(YX.m2, tmp, 'CD4b', YX.m2[tmp, lRNA.c])		
-		set(YX.m2, tmp, 'CD4c', YX.m2[tmp, lRNA.c3])
-		set(YX.m2, tmp, 'Diagt', YX.m2[tmp, lRNA.c3])
+		set(YX.m2, tmp, 'CD4a', YX.m2[tmp, lRNA.c3])								
+		set(YX.m2, tmp, 'CD4b', YX.m2[tmp, lRNA.c3])		
+		set(YX.m2, tmp, 'CD4c', YX.m2[tmp, lRNA.c3])		
 		YX.m2[, lRNA.c:=NULL]
 		YX.m2[, lRNA.c2:=NULL]
 		YX.m2[, lRNA.c3:=NULL]
 		#	set Lost
 		stopifnot( nrow(subset(YX.m2, stage.orig!='U' & is.na(contact)))==0 )
 		tmp		<- YX.m2[, which(stage.orig!='U' & contact!='Yes')]
-		set(YX.m2, tmp, c('CD41st','CD4t','CD4a','CD4b','CD4c'), 'Lost')
+		set(YX.m2, tmp, c('CD4a','CD4b','CD4c'), 'Lost')
 		#
-		set(YX.m2, NULL, 'CD41st', YX.m2[, factor(as.character(CD41st))])
-		set(YX.m2, NULL, 'CD4t', YX.m2[, factor(as.character(CD4t))])		
+		set(YX.m2, NULL, 'CD4a', YX.m2[, factor(as.character(CD4a))])		
 		set(YX.m2, NULL, 'CD4b', YX.m2[, factor(as.character(CD4b))])
-		set(YX.m2, NULL, 'CD4c', YX.m2[, factor(as.character(CD4c))])
-		set(YX.m2, NULL, 'Diagt', YX.m2[, factor(as.character(Diagt))])
+		set(YX.m2, NULL, 'CD4c', YX.m2[, factor(as.character(CD4c))])		
 		YX.m2[, stage.orig:=NULL]		
 		#
 		#	add tperiod
@@ -9132,12 +8931,8 @@ project.athena.Fisheretal.YX.model2.stratify.VLmxwindow<- function(YX.m2, df.all
 		if('t.period'%in%colnames(YX.m2))
 		{
 			cat(paste('\nadding CD4t.tperiod\n'))	
-			YX.m2[, CD41st.tperiod:= paste(CD41st, t.period,sep='.')]
-			set(YX.m2, NULL, 'CD41st.tperiod', YX.m2[, factor(as.character(CD41st.tperiod))])
-			YX.m2[, CD4t.tperiod:= paste(CD4t, t.period,sep='.')]
-			set(YX.m2, NULL, 'CD4t.tperiod', YX.m2[, factor(as.character(CD4t.tperiod))])
-			YX.m2[, Diagt.tperiod:= paste(Diagt, t.period,sep='.')]
-			set(YX.m2, NULL, 'Diagt.tperiod', YX.m2[, factor(as.character(Diagt.tperiod))])
+			YX.m2[, CD4a.tperiod:= paste(CD4a, t.period,sep='.')]
+			set(YX.m2, NULL, 'CD4a.tperiod', YX.m2[, factor(as.character(CD4a.tperiod))])
 			YX.m2[, CD4b.tperiod:= paste(CD4b, t.period,sep='.')]
 			set(YX.m2, NULL, 'CD4b.tperiod', YX.m2[, factor(as.character(CD4b.tperiod))])
 			YX.m2[, CD4c.tperiod:= paste(CD4c, t.period,sep='.')]
@@ -9388,7 +9183,7 @@ project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.all, df.immu, indircov=
 		cat(paste('\nLoad precomputed CD4 models per patient', file))
 		load( file )
 		immu.sm		<- subset(immu.sm, !is.na(t))
-		
+		set(immu.sm, immu.sm[, which(CD4<5)], 'CD4', 5)
 		stopifnot(class(df.tpairs$t.Patient)=='character')		
 		setnames(immu.sm, 'Patient','t.Patient')
 		tmp			<- sort(setdiff( df.tpairs[, unique(t.Patient)], immu.sm[, unique(t.Patient)] ))
@@ -9539,7 +9334,8 @@ project.athena.Fisheretal.X.cd4<- function(df.tpairs, df.all, df.immu, indircov=
 					#save(file=paste(outdir,'/','ATHENA_composition_CD4_batch',b,'.R',sep=''),immu.sm)
 					immu.sm				
 				})
-		immu.sm	<- do.call('rbind',immu.sm)		
+		immu.sm	<- do.call('rbind',immu.sm)
+		set(immu.sm, immu.sm[, which(CD4<5)], 'CD4', 5)
 	}	
 	set(immu.sm, NULL, 'CD4', immu.sm[, as.integer(round(CD4))])
 	immu.sm		
@@ -10334,18 +10130,21 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		if(is.null(ri))
 			ri			<- unique(subset(df.tpairs, select=Patient))
 		X.incare				<- project.athena.Fisheretal.X.incare(df.tpairs, df.all, df.viro, df.immu, df.treatment, indircov=indircov, lRNA.supp=lRNA.supp, t.period=t.period, t.endctime=t.endctime)				
-		X.incare				<- project.athena.Fisheretal.X.nocontact(X.incare, df.viro, df.immu, df.tpairs, df.all, contact.grace=1.5, t.period=t.period, t.endctime= t.endctime)		
+		X.incare				<- project.athena.Fisheretal.X.nocontact(X.incare, df.viro, df.immu, df.treatment, df.tpairs, df.all, contact.grace=1.5, t.period=t.period, t.endctime= t.endctime)		
 		X.incare				<- project.athena.Fisheretal.X.CDCC(X.incare, df.tpairs, df.all, t.period=t.period, t.endctime=t.endctime)
 		X.incare				<- project.athena.Fisheretal.X.followup(X.incare, df.all, df.immu, t.period=t.period, t.endctime=t.endctime)
 		X.b4care				<- project.athena.Fisheretal.X.b4care(df.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, method.minLowerUWithNegT=method.minLowerUWithNegT)
+		tmp						<- unique(subset(X.b4care, select=c(t.Patient, t.InfT)))
+		X.incare				<- merge(X.incare, tmp, by='t.Patient', all.x=1)		
 		tmp						<- merge(X.incare, X.b4care, by=c('t.Patient','t'))
 		cat(paste('\nnumber entries (Patient,t) that overlap in and before care [should be zero], n=',nrow(tmp)))		
 		X.pt					<- merge(X.incare, X.b4care, by=c('t.Patient','t'), all.x=1, all.y=1)
-		set(X.pt, X.pt[,which(is.na(stage))], 'stage', 'U')							
-		X.pt[, AnyT_T1:=NULL]
-		X.pt[, AnyPos_T1:=NULL]
-		X.pt[, AnyPos_a:=NULL]
-		X.pt[, isAcute:=NULL]
+		set(X.pt, X.pt[,which(is.na(stage))], 'stage', 'U')
+		tmp						<- X.pt[,which(is.na(t.InfT.x))]
+		set(X.pt, tmp, 't.InfT.x', X.pt[tmp, t.InfT.y])
+		set(X.pt, NULL, c('AnyT_T1','AnyPos_T1','AnyPos_a','isAcute','t.InfT.y'), NULL)
+		setnames(X.pt, 't.InfT.x', 't.InfT')
+		stopifnot(nrow(subset(X.pt, is.na(t.InfT)))==0)
 		tmp						<- unique(subset( df.all, select=c(Patient, DateBorn, AnyPos_T1, AnyT_T1, isAcute) ))
 		set(tmp, NULL, 'DateBorn', tmp[, AnyPos_T1-DateBorn])
 		setnames( tmp, 'DateBorn', 'AnyPos_a')
@@ -10865,7 +10664,7 @@ hivc.prog.props_univariate.Xtables<- function(method, method.PDT, method.risk, o
 		if(grepl('m2B1st',method.risk))		save.file	<- 'm2B1st'
 		if(grepl('m2t',method.risk))		save.file	<- 'm2t'
 		if(grepl('m2Bt',method.risk))		save.file	<- 'm2Bt'
-		if(grepl('m2wmx',method.risk))		save.file	<- 'm2wmx'
+		if(grepl('m2Awmx',method.risk))		save.file	<- 'm2Awmx'
 		if(grepl('m2Bwmx',method.risk))		save.file	<- 'm2Bwmx'
 		if(grepl('m2Cwmx',method.risk))		save.file	<- 'm2Cwmx'
 		if(grepl('m3.n3mx',method.risk) & !grepl('No',method.risk))								save.file	<- 'm3.n3mx'
@@ -11151,9 +10950,9 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 	#
 	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 't2inf',method.PDT,method,sep='')
 	tmp				<- project.athena.Fisheretal.t2inf(	df.all.allmsm,
-			method.Acute=method.Acute, method.minQLowerU=method.minQLowerU,
-			adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, 
-			plot.file=plot.file)
+														method.Acute=method.Acute, method.minQLowerU=method.minQLowerU,
+														adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, 
+														plot.file=plot.file)
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args	
 	#	determine best quantile parameter
@@ -11360,7 +11159,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 		save(ri.PT.su, ri.allmsm.su, ri.allmsm.resolution, ri.allmsm.l2c, file=save.file)	
 	}	
 	#	stratify YX
-	if(any(sapply(c('m2wmx','m2Bwmx','m2Cwmx'), grepl, x=method.risk)))
+	if(any(sapply(c('m2Awmx','m2Bwmx','m2Cwmx'), grepl, x=method.risk)))
 	{
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YXm2_',method.PDT,'_',method,'.R',sep='')
 		YX					<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(YX, df.all, df.viro, df.immu, indircov, lRNA.supp=method.lRNA.supp, plot.file.or=NA, resume=1, save.file=save.file ) 
@@ -11385,22 +11184,22 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 		cat(paste('\nstratify by', method))
 		if(substr(method.risk,1,2)=='m2')
 		{
-			if(any(sapply(c('m2wmx','m2Bwmx','m2Cwmx'), grepl, x=method.risk)))
+			if(any(sapply(c('m2Awmx','m2Bwmx','m2Cwmx'), grepl, x=method.risk)))
 			{
 				save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YXm2_',method.PDT,'_',method,'.R',sep='')				
-				YX					<- subset(YX, select=c(t, Patient, t.Patient, t.period, AnyPos_T1, t.AnyPos_T1, CD4b, CD4c, CD4b.tperiod, CD4c.tperiod))
+				YX					<- subset(YX, select=c(t, Patient, t.Patient, t.period, AnyPos_T1, t.AnyPos_T1, CD4a, CD4a.tperiod, CD4b, CD4c, CD4b.tperiod, CD4c.tperiod))
 				gc()
 				save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Xclum2_',method.PDT,'_',method,'.R',sep='')
 				X.clu				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.clu, df.all, df.viro, df.immu, indircov, lRNA.supp=method.lRNA.supp, plot.file.or=NA, resume=1, save.file=save.file )
-				X.clu				<- subset(X.clu, select=c(t, Patient, t.Patient, t.period, AnyPos_T1, t.AnyPos_T1, CD4b, CD4c, CD4b.tperiod, CD4c.tperiod))
+				X.clu				<- subset(X.clu, select=c(t, Patient, t.Patient, t.period, AnyPos_T1, t.AnyPos_T1, CD4a, CD4a.tperiod, CD4b, CD4c, CD4b.tperiod, CD4c.tperiod))
 				gc()
 				save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Xseqm2_',method.PDT,'_',method,'.R',sep='')
 				X.seq				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.seq, df.all, df.viro, df.immu, indircov, lRNA.supp=method.lRNA.supp, plot.file.or=NA, resume=1, save.file=save.file )
-				X.seq				<- subset(X.seq, select=c(t, Patient, t.Patient, t.period, AnyPos_T1, t.AnyPos_T1, CD4b, CD4c, CD4b.tperiod, CD4c.tperiod))
+				X.seq				<- subset(X.seq, select=c(t, Patient, t.Patient, t.period, AnyPos_T1, t.AnyPos_T1, CD4a, CD4a.tperiod, CD4b, CD4c, CD4b.tperiod, CD4c.tperiod))
 				gc()
 				save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Xmsmm2_',method.PDT,'_',method,'.R',sep='')
 				X.msm				<- project.athena.Fisheretal.YX.model2.stratify.VLmxwindow(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, indircov, lRNA.supp=method.lRNA.supp, plot.file.or=NA, resume=1, save.file=save.file )
-				X.msm				<- subset(X.msm, select=c(t, Patient, t.Patient, t.period, AnyPos_T1, t.AnyPos_T1, CD4b, CD4c, CD4b.tperiod, CD4c.tperiod))
+				X.msm				<- subset(X.msm, select=c(t, Patient, t.Patient, t.period, AnyPos_T1, t.AnyPos_T1, CD4a, CD4a.tperiod, CD4b, CD4c, CD4b.tperiod, CD4c.tperiod))
 				gc()
 			}
 			if(any(sapply(c('m21st','m2B1st'), grepl, x=method.risk)))
@@ -11438,7 +11237,8 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			X.clu			<- project.athena.Fisheretal.YX.model5.stratify(X.clu)
 			X.seq			<- project.athena.Fisheretal.YX.model5.stratify(X.seq)
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
-		}					
+		}	
+#STOP1		
 #stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
@@ -11449,7 +11249,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			if(grepl('m2B1st',method.risk))		save.file	<- 'm2B1st'
 			if(grepl('m2t',method.risk))		save.file	<- 'm2t'
 			if(grepl('m2Bt',method.risk))		save.file	<- 'm2Bt'
-			if(grepl('m2wmx',method.risk))		save.file	<- 'm2wmx'
+			if(grepl('m2Awmx',method.risk))		save.file	<- 'm2Awmx'
 			if(grepl('m2Bwmx',method.risk))		save.file	<- 'm2Bwmx'
 			if(grepl('m2Cwmx',method.risk))		save.file	<- 'm2Cwmx'
 			if(grepl('m3.n3mx',method.risk) & !grepl('No',method.risk))								save.file	<- 'm3.n3mx'
@@ -11513,7 +11313,7 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Cwmx.wtn.tp1'
+		method.risk				<- 'm2Cwmx.wtn.tp3'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.148
 		method.use.AcuteSpec	<- 1
@@ -11525,6 +11325,7 @@ hivc.prog.props_univariate<- function()
 		method.tpcut			<- 7
 		method.PDT				<- 'SEQ'	# 'PDT'	
 		method.thresh.bs		<- 0.8
+		method.realloc			<- NA
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
 		insignat				<- "Wed_Dec_18_11:37:00_2013"							
@@ -11635,7 +11436,11 @@ hivc.prog.props_univariate<- function()
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,25),
 									method.minLowerUWithNegT= return(as.numeric(substr(arg,27,nchar(arg)))),NA)	}))
-		if(length(tmp)>0) method.minLowerUWithNegT<- tmp[1]		
+		if(length(tmp)>0) method.minLowerUWithNegT<- tmp[1]
+		tmp<- na.omit(sapply(argv,function(arg)
+						{	switch(substr(arg,2,15),
+									method.realloc= return(as.numeric(substr(arg,17,nchar(arg)))),NA)	}))
+		if(length(tmp)>0) method.realloc<- tmp[1]
 	}	
 	clu.infile			<- infile
 	clu.indir			<- indir
@@ -11643,11 +11448,11 @@ hivc.prog.props_univariate<- function()
 	t.recent.endctime	<- hivc.db.Date2numeric(as.Date(method.recentctime))	
 	t.recent.endctime	<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period	
 	outfile				<- paste( outfile, ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')), sep='')	
-	if(method.thresh.bs!=0.8)
-	{		
-		clu.infilexml.opt	<- paste(clu.infilexml.opt,'_bs',method.thresh.bs,'_brl1000',sep='')
-		cat(paste('\nusing file', clu.infilexml.opt))
-	}	
+	#if(method.thresh.bs!=0.8)
+	#{		
+	clu.infilexml.opt	<- paste(clu.infilexml.opt,'_bs',method.thresh.bs,'_brl1000',sep='')
+	cat(paste('\nusing file', clu.infilexml.opt))
+	#}	
 	if(verbose)
 	{
 		print(indir)
@@ -11671,6 +11476,7 @@ hivc.prog.props_univariate<- function()
 		print(method.thresh.pcoal)
 		print(method.minLowerUWithNegT)
 		print(method.cut.brl)
+		print(method.realloc)
 	}	
 	if(method=='3l')
 	{
@@ -11776,6 +11582,7 @@ hivc.prog.props_univariate<- function()
 	YX				<- copy(tmp$YX)
 	Y.brl.bs		<- copy(tmp$Y.brl.bs)
 	gc()
+#STOP2
 #stop()	
 	stopifnot(is.null(X.tables)==FALSE)
 	#
@@ -11804,7 +11611,9 @@ hivc.prog.props_univariate<- function()
 			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'GroupsUDA.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')	
 			tmp			<- project.athena.Fisheretal.poolIntoGroups( YXe, save.file=save.file)	
 		}		
-	}	
+	}
+#STOP3
+#stop()		
 	#	see if we can pool results for tperiod 4
 	if(method.tpcut%in%c(7) & as.numeric(substring(regmatches(method.risk,regexpr('tp[0-9]', method.risk)),3))>=4)
 	{
@@ -11826,189 +11635,13 @@ hivc.prog.props_univariate<- function()
 			#
 			#	TP4 hypothetical scenarios
 			#
-			if(0)
+			if(!is.na(method.realloc))
 			{
-				#	hypothetical: immediate ART
 				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
 				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, method.realloc='ImmediateART', t.period=t.period, use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-				#	hypothetical: ART at 500
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoARTat500.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, method.realloc='ARTat500', t.period=t.period, use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)		
-				#	hypothetical: RPrEP33
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoRPrEP33.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='RPrEP33', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-				
-				#	hypothetical: TestC12m100pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m100pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m100pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
-				#	hypothetical: TestC06m100pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC06m100pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC06m100pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-				#	hypothetical: TestA06m100pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA06m100pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA06m100pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-			}
-			if(0) 
-			{
-				#	hypothetical: TestC12m59pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m59pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m59pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
-				#	hypothetical: TestA12m59pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA12m59pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA12m59pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)				
-				#	hypothetical: TestC06m65pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC06m65pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC06m65pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-				#	hypothetical: TestA06m65pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA06m65pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA06m65pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-				
-				
-				#	hypothetical: TestC12m32pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m32pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m32pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-				#	hypothetical: TestA12m32pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA12m32pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA12m32pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-				#	hypothetical: TestC06m42pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC06m42pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC06m42pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-				#	hypothetical: TestA06m42pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestA06m42pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestA06m42pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-			}
-			if(0)
-			{
-				#	Test and PrEP at 40%, 50%, 60%, 70%				
-				#	hypothetical: PrestC12m18pc40pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m18pc40pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m18pc40pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)							
-				#	hypothetical: PrestC12m32pc50pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m32pc50pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m32pc50pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
-				#	hypothetical: PrestC12m46pc60pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m46pc60pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m46pc60pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
-				#	hypothetical: PrestC12m59pc70pc
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m59pc70pc.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m59pc70pc', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
-				
-				#	Test and PrEP at 40%, 50%, 60%, 70% + Immediate ART
-				#	hypothetical: PrestC12m18pc40pc + Immediate ART
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m18pc40pcImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m18pc40pc+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
-				#	hypothetical: PrestC12m32pc50pc + Immediate ART
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m32pc50pcImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m32pc50pc+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)							
-				#	hypothetical: PrestC12m46pc60pc + Immediate ART
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m46pc60pcImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m46pc60pc+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)						
-				#	hypothetical: PrestC12m59pc70pc + Immediate ART
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m59pc70pcImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m59pc70pc+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)													
-			}
-			if(0)
-			{
-				#	Test and PrEP at 40%, 50%, 60%, 70% + ARTat500
-				#	hypothetical: PrestC12m18pc40pc + ARTat500
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m18pc40pcARTat500.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m18pc40pc+ARTat500', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
-				#	hypothetical: PrestC12m32pc50pc + ARTat500
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m32pc50pcARTat500.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m32pc50pc+ARTat500', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
-				#	hypothetical: PrestC12m46pc60pc + ARTat500
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m46pc60pcARTat500.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m46pc60pc+ARTat500', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
-				#	hypothetical: PrestC12m59pc70pc + ARTat500
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoPrestC12m59pc70pcARTat500.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='PrestC12m59pc70pc+ARTat500', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)							
-			}
-			if(0)
-			{
-				#	test + treat 12MO/100%, 70%, 50%
-				#	hypothetical: TestC12m100pc+ImmediateART
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m100pcImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m100pc+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)						
-				#	hypothetical: TestC12m59pc+ImmediateART
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m59pcImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m59pc+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)									
-				#	hypothetical: TestC12m32pc+ImmediateART
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m32pcImmediateART.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m32pc+ImmediateART', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)						
-				#	hypothetical: TestC12m100pc+ARTat500
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m100pcARTat500.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m100pc+ARTat500', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)			
-				#	hypothetical: TestC12m59pc+ARTat500
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m59pcARTat500.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m59pc+ARTat500', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-				#	hypothetical: TestC12m32pc+ARTat500
-				tmp			<- substr(regmatches(method.risk,regexpr('m[0-9]', method.risk)),2,2)
-				save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
-				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'HypoTestC12m32pcARTat500.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
-				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc='TestC12m32pc+ARTat500', t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
-			}
+				save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'Hypo', gsub('+','',method.realloc), '.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')		
+				tmp			<- project.athena.Fisheretal.Hypo.run(YXe, method.risk, predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, method.realloc=method.realloc, t.period=t.period,  use.YXf= 1, bs.n=1e3, save.file=save.file, resume=resume)
+			}														
 		}		
 	}
 	
