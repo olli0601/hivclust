@@ -432,7 +432,8 @@ project.athena.Fisheretal.Hypo.run.median<- function(YXe, method.risk, predict.t
 project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NULL, t2inf.args=NULL, df.all=NULL, method.realloc='ImmediateART',  use.YXf= 1, bs.n=1e3, t.period=0.125, save.file=NA, resume=FALSE)
 {
 	#	get prop in ART stages after first suppression	
-	#	method.realloc<- 'PrestC18m50pc'
+	#	method.realloc<- 'PrestIPrEXC12m18pc40pc+ImmediateART'
+	#	method.realloc<- 'PrestPROUDC12m18pc40pc+ImmediateART'
 	stopifnot(grepl('Test|ImmediateART|ARTat500|RPrEP|RPrEP|Prest',method.realloc))	
 	options(warn=0)	
 	if(resume & !is.na(save.file))
@@ -1316,7 +1317,7 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 	list(YX.h=YX.h, nt.table.h=nt.table.h)	
 }
 ######################################################################################
-#	method.sample<- 't=start, stage=prop, y=median, eff=median'; th.starttime=2008.5
+#	method.sample<- 't=start, stage=prop, y=median, eff=median'; th.starttime=2008.5; th.endtime=2011;  t.period=0.125; method.minLowerUWithNegT=1; method.resolveUAna=1
 project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.table, method.risk, predict.t2inf, t2inf.args, df.all, YXf=NULL, th.starttime=2008.5, th.endtime=2011, t.period=0.125, method.minLowerUWithNegT=1, method.resolveUAna=1, method.realloc='PrestC18m50pc', method.sample= "t=start, stage=prop, y=median, eff=median", verbose=TRUE)
 {
 	stopifnot(grepl('stage=sample|stage=prop',method.sample))
@@ -1326,20 +1327,22 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	stopifnot(grepl('Prest',method.realloc))
 	method.reallocate	<- '^U'
 	tmp					<- regmatches(method.realloc,regexpr('Prest[[:alnum:]]+', method.realloc))
-	prest.repeat		<- as.numeric(substr(tmp,7,8)) / 12
-	prest.delay			<- substr(tmp,6,6)	
+	prep.eff			<- substr(tmp,6,10)
+	prest.delay			<- substr(tmp,11,11)
+	prest.repeat		<- as.numeric(substr(tmp,12,13)) / 12
 	test.pc				<- regmatches(method.realloc,regexpr('m[0-9]+pc', tmp))
 	test.pc				<- as.numeric(substr(test.pc, 2, nchar(test.pc)-2)) / 100
 	prep.pc				<- regmatches(method.realloc,regexpr('c[0-9]+pc', tmp))
 	prep.pc				<- as.numeric(substr(prep.pc, 2, nchar(prep.pc)-2)) / 100
-	stopifnot(prest.delay%in%c('A','C'), is.finite(prest.repeat), is.finite(test.pc), is.finite(prep.pc))
-	prest.delay			<- ifelse(prest.delay=='A',0,1/12)
+	stopifnot(prep.eff%in%c('PROUD','IPrEX'), prest.delay%in%c('A','C'), is.finite(prest.repeat), is.finite(test.pc), is.finite(prep.pc))
+	prest.delay			<- ifelse(prest.delay=='A',0,1/12)	
 	if(verbose)
 	{
 		cat(paste('\nprest.repeat=',prest.repeat))
 		cat(paste('\ntest.pc=',test.pc))
 		cat(paste('\nprep.pc=',prep.pc))
 		cat(paste('\nprest.delay=',prest.delay))
+		cat(paste('\nprep.eff=',prep.eff))
 	}
 	#
 	rTest.Realloc<- function(df.tr, method.sample, df.dinfo)
@@ -1367,7 +1370,7 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 		setnames(tmp, 'stage', 'REALLOC_STAGE')
 		tmp
 	}	
-	rPrEP<- function(df.rec, method.sample, prep.pc, prep.eff.mean=0.44)
+	rPrEP<- function(df.rec, method.sample, prep.pc, prep.eff='IPrEX')
 	{		
 		if(grepl('stage=prop',method.sample))	 
 		{
@@ -1387,16 +1390,20 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 			df.rec[, PREP_EFF:=NA_real_]
 		if(grepl('eff=median', method.sample))
 		{
-			if(!any('PREP_EFF_PAR'==names(df.rec)))
-				df.rec[, PREP_EFF_PAR:=prep.eff.mean]
+			if(!any('PREP_EFF_PAR'==names(df.rec)) & prep.eff=='IPrEX' )
+				df.rec[, PREP_EFF_PAR:=0.44]
+			if(!any('PREP_EFF_PAR'==names(df.rec)) & prep.eff=='PROUD' )
+				df.rec[, PREP_EFF_PAR:=0.86]			
 			tmp		<- df.rec[, which(is.na(PREP_EFF))]				
 			z		<- c( rep(0, ceiling(length(tmp)*(1-df.rec[1, PREP_EFF_PAR]))), rep(1, ceiling(length(tmp)*df.rec[1, PREP_EFF_PAR])) )
 			set(df.rec, tmp, 'PREP_EFF', z[seq_along(tmp)])			
 		}
 		if(grepl('eff=sample', method.sample))
 		{			
-			if(!any('PREP_EFF_PAR'==names(df.rec)))
-				df.rec[, PREP_EFF_PAR:=rbeta(1, 6, (1-prep.eff.mean)/prep.eff.mean*6 )]
+			if(!any('PREP_EFF_PAR'==names(df.rec)) & prep.eff=='IPrEX' )
+				df.rec[, PREP_EFF_PAR:=rbeta(1, 6, (1-0.44)/0.44*6 )]
+			if(!any('PREP_EFF_PAR'==names(df.rec)) & prep.eff=='PROUD' )
+				df.rec[, PREP_EFF_PAR:=rbeta(1, 2.9, (1-0.86)/0.86*2.9 )]			
 			tmp		<- df.rec[, which(is.na(PREP_EFF))]
 			set(df.rec, tmp, 'PREP_EFF', sample(c(0,1), length(tmp), prob=c(1-df.rec[1, PREP_EFF_PAR], df.rec[1, PREP_EFF_PAR]), replace=TRUE) )
 		}
@@ -1479,12 +1486,12 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 		#	of those with isAcute NA, set a proportion p.UAcond to Yes and the rest to No 
 		tmp		<- unique(subset(tmp, select=t.Patient))
 		tmp2	<- resolve.UAna(df.all, tmp, method.sample, p.UAcond, verbose=verbose)
-		df.tr	<- project.athena.Fisheretal.Y.infectiontime(tmp, tmp2, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT, verbose=FALSE)
+		df.tr	<- project.athena.Fisheretal.Y.infectiontime(tmp, tmp2, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT, verbose=FALSE)
 	}
 	if(!method.resolveUAna)
 	{
 		tmp			<- unique(subset(YX, grepl(method.reallocate, stage), select=t.Patient))
-		df.tr		<- project.athena.Fisheretal.Y.infectiontime(tmp, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, score.set.value=NA, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT, verbose=FALSE)		
+		df.tr		<- project.athena.Fisheretal.Y.infectiontime(tmp, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT, verbose=FALSE)		
 	}	
 	df.tr		<- df.tr[, list(t=tail(t,1)), by='t.Patient']
 	setnames(df.tr, 't','t.INFECTION_T')
@@ -1496,7 +1503,7 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	#
 	tmp			<- subset(df.tr, select=c(t.Patient, PRESTED))
 	setnames(tmp, 't.Patient', 'Patient')
-	tmp			<- rPrEP(tmp, method.sample, prep.pc, prep.eff=0.44)		#prep.pc does not do anything here because all transmitters have !NA PRESTED
+	tmp			<- rPrEP(tmp, method.sample, prep.pc, prep.eff=prep.eff)		#prep.pc does not do anything here because all transmitters have !NA PRESTED
 	setnames(tmp, 'Patient', 't.Patient')
 	tmp[, TR_PREP_ON:= as.numeric(PRESTED & PREP_EFF)]
 	df.tr		<- merge(df.tr, unique(subset(tmp, select=c(t.Patient, PREP_EFF, PREP_EFF_PAR, TR_PREP_ON))), by='t.Patient')
@@ -1519,7 +1526,7 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	if(df.rec[,all(is.na(PREP_EFF_PAR))])
 		set(df.rec, NULL, 'PREP_EFF_PAR', NULL)	
 	#	for those that are no transmitter, allocate if Prested and if PREP efficacious
-	df.rec		<- rPrEP(df.rec, method.sample, prep.pc)
+	df.rec		<- rPrEP(df.rec, method.sample, prep.pc, prep.eff=prep.eff)
 	df.rec[, REC_PREP_ON:= as.numeric(PRESTED & PREP_EFF)]
 	if(verbose)
 	{

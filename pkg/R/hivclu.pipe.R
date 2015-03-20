@@ -715,11 +715,11 @@ hivc.pipeline.props_univariate<- function()
 																	#	testing
 																	'TestC12m100pc','TestC06m100pc','TestA06m100pc','TestC12m59pc','TestA12m59pc','TestC06m65pc','TestA06m65pc','TestC12m32pc','TestA12m32pc','TestC06m42pc','TestA06m42pc',
 																	#	test + PrEP
-																	'PrestC12m18pc40pc','PrestC12m32pc50pc','PrestC12m32pc50pc','PrestC12m46pc60pc','PrestC12m59pc70pc',
+																	'PrestIPrEXC12m18pc40pc','PrestIPrEXC12m32pc50pc','PrestIPrEXC12m32pc50pc','PrestIPrEXC12m46pc60pc','PrestIPrEXC12m59pc70pc',
 																	#	Test and PrEP at 40%, 50%, 60%, 70% + Immediate ART
-																	'PrestC12m18pc40pc+ImmediateART','PrestC12m32pc50pc+ImmediateART','PrestC12m46pc60pc+ImmediateART','PrestC12m59pc70pc+ImmediateART',
+																	'PrestIPrEXC12m18pc40pc+ImmediateART','PrestIPrEXC12m32pc50pc+ImmediateART','PrestIPrEXC12m46pc60pc+ImmediateART','PrestIPrEXC12m59pc70pc+ImmediateART',
 																	#	Test and PrEP at 40%, 50%, 60%, 70% + ARTat500
-																	'PrestC12m18pc40pc+ARTat500','PrestC12m32pc50pc+ARTat500','PrestC12m46pc60pc+ARTat500','PrestC12m59pc70pc+ARTat500',
+																	'PrestIPrEXC12m18pc40pc+ARTat500','PrestIPrEXC12m32pc50pc+ARTat500','PrestIPrEXC12m46pc60pc+ARTat500','PrestIPrEXC12m59pc70pc+ARTat500',
 																	#	test + treat 12MO/100%, 70%, 50%
 																	'TestC12m100pc+ImmediateART', 'TestC12m59pc+ImmediateART','TestC12m32pc+ImmediateART','TestC12m100pc+ARTat500','TestC12m59pc+ARTat500','TestC12m32pc+ARTat500')
 												)
