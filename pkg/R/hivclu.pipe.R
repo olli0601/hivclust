@@ -757,9 +757,12 @@ hivc.pipeline.props_univariate<- function()
 		
 		#	basic m2Bwmx runs	mem=1800 MB	
 		#method.risk		<- c(	'm2Cwmx.wtn.tp1','m2Cwmx.wtn.tp2','m2Cwmx.wtn.tp3','m2Cwmx.wtn.tp4','m2Cwmx.wtn.tp5','m2Cwmx.wtn.tp6')
-		method.risk		<- c(	'm2Cwmx.tp1','m2Cwmx.tp2','m2Cwmx.tp3','m2Cwmx.tp4','m2Cwmx.tp5','m2Cwmx.tp6',
-				'm2Cwmx.nophyloscore.tp1','m2Cwmx.nophyloscore.tp2','m2Cwmx.nophyloscore.tp3','m2Cwmx.nophyloscore.tp4','m2Cwmx.nophyloscore.tp5','m2Cwmx.nophyloscore.tp6',
-				'm2Cwmx.noscore.tp1','m2Cwmx.noscore.tp2','m2Cwmx.noscore.tp3','m2Cwmx.noscore.tp4','m2Cwmx.noscore.tp5','m2Cwmx.noscore.tp6')
+		method.risk		<- c(	'm2Awmx.wtn.tp1','m2Awmx.wtn.tp2','m2Awmx.wtn.tp3','m2Awmx.wtn.tp4','m2Awmx.wtn.tp5','m2Awmx.wtn.tp6',
+								'm2Bwmx.wtn.tp1','m2Bwmx.wtn.tp2','m2Bwmx.wtn.tp3','m2Bwmx.wtn.tp4','m2Bwmx.wtn.tp5','m2Bwmx.wtn.tp6',
+								'm2Cwmx.wtn.tp1','m2Cwmx.wtn.tp2','m2Cwmx.wtn.tp3','m2Cwmx.wtn.tp4','m2Cwmx.wtn.tp5','m2Cwmx.wtn.tp6')
+		#method.risk		<- c(	'm2Cwmx.tp1','m2Cwmx.tp2','m2Cwmx.tp3','m2Cwmx.tp4','m2Cwmx.tp5','m2Cwmx.tp6',
+		#		'm2Cwmx.nophyloscore.tp1','m2Cwmx.nophyloscore.tp2','m2Cwmx.nophyloscore.tp3','m2Cwmx.nophyloscore.tp4','m2Cwmx.nophyloscore.tp5','m2Cwmx.nophyloscore.tp6',
+		#		'm2Cwmx.noscore.tp1','m2Cwmx.noscore.tp2','m2Cwmx.noscore.tp3','m2Cwmx.noscore.tp4','m2Cwmx.noscore.tp5','m2Cwmx.noscore.tp6')
 		#	m5 runs
 		#method.risk		<- c(	'm5.tA.tp1.clu','m5.tA.tp2.clu','m5.tA.tp3.clu','m5.tA.tp4.clu','m5.tA.tp1.clu.wstar','m5.tA.tp2.clu.wstar','m5.tA.tp3.clu.wstar','m5.tA.tp4.clu.wstar')
 		#!##method.risk		<- c(	'm5.tAc.tp1','m5.tAc.tp2','m5.tAc.tp3','m5.tAc.tp4','m5.tAc.tp1.wstar','m5.tAc.tp2.wstar','m5.tAc.tp3.wstar','m5.tAc.tp4.wstar')
@@ -777,11 +780,11 @@ hivc.pipeline.props_univariate<- function()
 					#stop()
 					#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=3, hpc.mem="1800mb")
 					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=20, hpc.mem="1900mb")
-					#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
 					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
 					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
-					cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
+					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
 					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
