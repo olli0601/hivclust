@@ -616,7 +616,7 @@ hivc.pipeline.props_univariate<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(0)	#	iterate over first large run
+	if(1)	#	iterate over first large run
 	{
 		df.method				<- list(
 						#	infection times
@@ -626,19 +626,18 @@ hivc.pipeline.props_univariate<- function()
 						#	branch lengths
 						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
 						)
-		df.method				<- do.call('rbind', df.method)				
+		df.method				<- do.call('rbind', df.method)
+		df.method				<- df.method[-c(1,2,3,13,14,11,12),]
 		tmp						<- data.table(DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
 		df.method				<- merge(df.method, tmp, by='DUMMY')
-		df.method[, method.risk:='m2Cwmx.tp1.clu.adj']
+		df.method[, method.risk:='m2Awmx.tp1.clu.adj']
 		df.method[, DUMMY:=seq_len(nrow(df.method))]
 		
 		df.method[,{
 						cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 						cat(cmd)	
 						cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
-						outdir		<- paste(DATA,"tmp",sep='/')
-						outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
-						hivc.cmd.hpccaller(outdir, outfile, cmd)
+						hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
 					}, by='DUMMY']		
 	}
 	if(0)	#	iterate over second large run: bootstrap censoring
@@ -660,9 +659,7 @@ hivc.pipeline.props_univariate<- function()
 					cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 					cat(cmd)	
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
-					outdir		<- paste(DATA,"tmp",sep='/')
-					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
-					hivc.cmd.hpccaller(outdir, outfile, cmd)
+					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
 				}, by='DUMMY']		
 	}
 	if(0)	#	iterate over short runs: prop estimates
@@ -690,9 +687,7 @@ hivc.pipeline.props_univariate<- function()
 					cmd			<- paste(CMD, collapse='', sep='')
 					cat(cmd)	
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
-					outdir		<- paste(DATA,"tmp",sep='/')
-					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
-					hivc.cmd.hpccaller(outdir, outfile, cmd)
+					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)					
 				}, by=c('DUMMY2')]	
 	}
 	if(0)	#	iterate over short runs: method.realloc
@@ -735,12 +730,10 @@ hivc.pipeline.props_univariate<- function()
 					cat(cmd)	
 					stop()
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
-					outdir		<- paste(DATA,"tmp",sep='/')
-					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
-					hivc.cmd.hpccaller(outdir, outfile, cmd)
+					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
 				}, by=c('DUMMY2')]	
 	}
-	if(1)	#custom
+	if(0)	#custom
 	{
 		method.lRNA.supp			<- 100
 		method.use.AcuteSpec		<- 1

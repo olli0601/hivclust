@@ -1037,30 +1037,10 @@ project.athena.Fisheretal.composition.transprob<- function()
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[, factor(t.period.min, levels=c('1996-7','2006-5','2008-1','2009-7'), labels=c('96/07','\n\n06/05','08/01','\n\n09/07'))])
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[, factor(t.period.max, levels=c('2006-4','2007-12','2009-6','2010-12'), labels=c('06/04','07/12','09/06','10/12'))])		
-	#	set up factor legends
-	factor.color	<- c(	"#990000","#EF6548","#FDBB84",
-			"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
-			"#FCC5C0","#F768A1","#7A0177",
-			"#1A9850","#A6D96A","grey70")
-	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
-			'Undiagnosed,\n Chronic infection\n at diagnosis',
-			'Undiagnosed,\n Unknown if recent',
-			'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
-			'Diagnosed,\n CD4 progression to >500',
-			'Diagnosed,\n CD4 progression to [350-500]',
-			'Diagnosed,\n CD4 progression to <350',			
-			'Diagnosed,\n No CD4 measured',
-			'ART initiated,\n Before first viral suppression',													
-			'ART initiated,\n After first viral suppression\nNo viral load measured',		
-			'ART initiated,\n After first viral suppression\nNo viral suppression',	
-			'ART initiated,\n After first viral suppression\nViral suppression, 1 observation',
-			'ART initiated,\n After first viral suppression\nViral suppression, >1 observations',
-			'Not in contact')
-	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")
-	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='CD4c')
 	#	load YX
-	indir			<- paste(DATA,"fisheretal_150308",sep='/')
-	infile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3pa1H1.48C2V100bInfT7_denomSEQ_model2_m2Cwmx.wtn.tp1.R'
+	method.RISK		<- 'm2Awmx.wtn'
+	indir			<- paste(DATA,"fisheretal_150319",sep='/')
+	infile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3pa1H1.48C2V100bInfT7_denomSEQ_model2_m2Awmx.wtn.tp1.R'
 	#outfile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_YXm2_SEQ_3la2H1C2V100_lkl.pdf'	
 	file			<- paste(indir, '/', infile, sep='')
 	load(file)
@@ -1070,9 +1050,9 @@ project.athena.Fisheretal.composition.transprob<- function()
 	setnames( YX, 'CD4c', 'factor')	
 	set(YX, YX[, which(as.numeric(t.period)>4)],'t.period','4')
 	#	get trm.p for data
-	file			<- paste(indir,'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_method.trmp.Rdata',sep='/')
+	file			<- paste(indir,'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013_method.trmp.BS0.Rdata',sep='/')
 	load(file)	
-	trm.p			<- subset(trm.p, BS==0 & grepl('m2Cwmx.wtn',method.risk) & grepl('3pa1H1.48C2V100bInfT7',method.brl))
+	trm.p			<- subset(trm.p, BS==0 & grepl(method.RISK,method.risk) & grepl('3pa1H1.48C2V100bInfT7',method.brl))
 	trm.p[, t.period:= trm.p[, substring(factor, nchar(factor))]]
 	set(trm.p, NULL, 'factor', trm.p[, substr(factor, 1, nchar(factor)-2)])
 	#	get denominator for every patient
@@ -1088,6 +1068,7 @@ project.athena.Fisheretal.composition.transprob<- function()
 	YX		<- merge(YX, tperiod.info, by='t.period')
 	YX[, t.period.long:= paste(t.period.min, '-', t.period.max,sep='')]
 	#	merge legends
+	factors	<- project.athena.Fisheretal.sensitivity.factor.legend(method.RISK)
 	YX		<- merge(YX, factors, by='factor')
 	setkey(YX, factor)
 	#	overall
@@ -1104,11 +1085,12 @@ project.athena.Fisheretal.composition.transprob<- function()
 	#
 	#	boxplot of transmission prob (observed only)
 	#
+	setkey(YX, factor.legend)
 	ggplot(YX, aes(x=factor.legend, y=tp*100, colour=factor.legend, fill=factor.legend))  + 
 			labs(x='', y='phylogenetic transmission probability\nper interval\n(%)') +
 			geom_boxplot(outlier.shape = NA) +
-			scale_colour_manual(name='', values=trmpd[, unique(factor.color)], guide=FALSE) +
-			scale_fill_manual(name='', values=trmpd[, unique(factor.color)], guide=FALSE) +
+			scale_colour_manual(name='', values=YX[, unique(factor.color)], guide=FALSE) +
+			scale_fill_manual(name='', values=YX[, unique(factor.color)], guide=FALSE) +
 			scale_y_continuous(breaks=seq(0, 50, 5), minor_breaks=seq(0, 50, 1)) +
 			scale_x_discrete(breaks=NULL) +	
 			#coord_trans(ytrans="log10", limy=c(0.001, 0.3)) +
@@ -1116,7 +1098,9 @@ project.athena.Fisheretal.composition.transprob<- function()
 			stat_summary(geom= "crossbar", width=0.65, fatten=0, color="white", fun.data = function(x){ return(c(y=median(x), ymin=median(x), ymax=median(x))) }) +		
 			theme_bw() + theme(axis.title=element_text(size=14), axis.text=element_text(size=14), legend.key.size=unit(11,'mm'), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7))	
 	file			<- paste(indir, '/', gsub('tp1.R','tprob.pdf',infile), sep='')
-	ggsave(file=file, w=6, h=3)		
+	ggsave(file=file, w=6, h=3)	
+	
+	YX[, mean(tp), by='factor']
 }
 ######################################################################################
 project.athena.Fisheretal.composition.problintervals.table.generate<- function(dft, file)
@@ -1995,26 +1979,99 @@ project.athena.Fisheretal.composition.probtranspairs.Ard<- function()
 	write.csv(df.nc, file=file, eol='\r\n')	
 }
 ######################################################################################
+project.athena.Fisheretal.composition.conftranspairs.divergence<- function()
+{	
+	indir	<- '/Users/Oliver/duke/2014_HIV_TChainBelgium'
+	infile	<- '140921_set7_INFO_TRM.R'
+	file	<- paste(indir, '/',infile, sep='')
+	load(file)
+	#	exclude B->A, same as A->B
+	trm.pol.nA		<- subset(trm.pol, withA==FALSE, select=c(d_SeqT, d_TSeqT, BRL))			
+	trm.pol.nA		<- rbind(trm.pol.nA, data.table(BRL=0.0025, d_SeqT=seq(2,4,len=200), d_TSeqT=seq(2,8,len=200)), fill=TRUE)
+	#trm.pol.nA		<- rbind(trm.pol.nA, data.table(BRL=0.001, d_SeqT=rep(0.1,40), d_TSeqT=rep(0.1,40)), fill=TRUE)			
+	#trm.pol.GA32	<- gamlss(as.formula('BRL ~ bs(d_TSeqT, degree=4)'), sigma.formula=as.formula('~ bs(d_TSeqT, degree=2)'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
+	trm.pol.GA11e	<- gamlss(as.formula('BRL ~ d_TSeqT-1'), sigma.formula=as.formula('~ d_TSeqT'), data=as.data.frame(trm.pol.nA), family=GA(mu.link='identity',sigma.link='identity'), n.cyc = 40)			
+	trm.pol.GA		<- trm.pol.GA11e
+	trm.pol.p2		<- data.table(d_TSeqT=seq(0,18,0.1))
+	trm.pol.p2		<- data.table(d_TSeqT=seq(0.1,18,0.1))	
+	trm.pol.p2[, BRL_p:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(trm.pol.p2), type='response', se.fit=FALSE)]
+	trm.pol.p2[, mu:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(subset(trm.pol.p2, select=d_TSeqT)), type='link', what='mu',se.fit=FALSE)]
+	trm.pol.p2[, sig:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(subset(trm.pol.p2, select=d_TSeqT)), type='link', what='sigma',se.fit=FALSE)]	
+	trm.pol.p2		<- merge(trm.pol.p2, as.data.table(expand.grid(d_TSeqT=trm.pol.p2[, d_TSeqT], p=c(1, 2.5, 10, 25, 75, 90, 97.5, 99)/100 )), by='d_TSeqT')
+	trm.pol.p2[, q:=trm.pol.p2[, qGA(p, mu=mu, sigma=sig)]]	
+	trm.pol.p3		<- copy(trm.pol.p2)
+	set(trm.pol.p3, NULL, 'p', trm.pol.p3[, paste('q',100*p,sep='')])
+	trm.pol.p3		<- dcast.data.table(trm.pol.p3, d_TSeqT~p, value.var='q' )
+		
+	ggplot(trm.pol, aes(x=d_TSeqT)) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q10, ymax=q90), fill="#E41A1C", alpha=0.5) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q2.5, ymax=q10), fill="#E41A1C", alpha=0.3) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q90, ymax=q97.5), fill="#E41A1C", alpha=0.3) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q1, ymax=q2.5), fill="#E41A1C", alpha=0.1) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q97.5, ymax=q99), fill="#E41A1C", alpha=0.1) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q99, ymax=0.15), fill="#377EB8", alpha=0.3) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=0, ymax=q1), fill="#377EB8", alpha=0.3) +
+			geom_jitter(aes(y=BRL), size=1.2, alpha=0.5, position = position_jitter(width = .1), data=subset(trm.pol, withA==FALSE & BRL>0.003)) +									
+			geom_line(data=trm.pol.p2, aes(y=BRL_p)) +
+			#geom_line(data=trm.pol.p3, aes(x=x, y=q2.5), lty='dotted', color=colors[1], size=line.size) + geom_line(data=trm.pol.p3, aes(x=x, y=q97.5), lty='dotted', color=colors[1], size=line.size) +
+			#geom_line(data=trm.pol.p3, aes(x=x, y=q1), lty='twodash') + geom_line(data=trm.pol.p3, aes(x=x, y=q99), lty='twodash') +
+			#geom_line(data=trm.pol.p3, aes(x=x, y=q25), lty='dashed') + geom_line(data=trm.pol.p3, aes(x=x, y=q75), lty='dashed') +
+			#geom_line(data=trm.pol.p3, aes(x=x, y=q10), lty='twodash', color=colors[1], size=line.size) + geom_line(data=trm.pol.p3, aes(x=x, y=q90), lty='twodash', color=colors[1], size=line.size) +
+			#geom_vline(xintercept=10.17, color=colors[2] ) +					
+			scale_x_continuous(breaks=seq(0,20,2), expand=c(0,0)) +
+			scale_y_continuous(breaks=seq(0,0.2,0.02), expand=c(0,0)) +
+			coord_trans(limy=c(0,0.1), limx=c(0,13) ) +
+			theme_bw() + 
+			#labs(x='time elapsed\n(years)', y='genetic distance\n(subst/site)', title='sequence pairs\nbetween transmitters and recipients\nin epidemiologically confirmed pairs\n') +
+			labs(x='time elapsed\n(years)', y='genetic distance\n(subst/site)', title='epidemiologically confirmed\ntransmission pairs\n') +
+			theme(panel.grid.major=element_line(colour="grey70", size=0.4), panel.grid.minor=element_line(colour="grey70", size=0.2))
+	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150320_ConfPairsBrl2.pdf'
+	ggsave(file=file, w=5, h=5)	
+}
+######################################################################################
 project.athena.Fisheretal.composition.probtranspairs.divergence<- function()
 {	
 	indir	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal'
 	files	<- data.table(	file.MSM=list.files(indir, pattern='*tATHENAmsm.R$'),
 			file.SEQ=list.files(indir, pattern='*tATHENAseq.R$'),
 			file.YX=list.files(indir, pattern='*YXSEQ*'))
-	file	<- paste(indir, '/', files[6,file.YX], sep='')
+	file	<- paste(indir, '/', files[3,file.YX], sep='')
 	load(file)
 	tmp		<- unique(subset(YX, select=c(Patient, t.Patient, cluster, score.Y,  telapsed, brl, t.period)))
 	
 	file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/TchainBelgium_set7_pol_GA11emodel_nA_INFO.R'
 	load(file)
-	trm.pol.p2		<- data.table(d_TSeqT=seq(0,18,0.1))	
+	trm.pol.p2		<- data.table(d_TSeqT=seq(0.1,18,0.1))	
 	trm.pol.p2[, BRL_p:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(trm.pol.p2), type='response', se.fit=FALSE)]
-	trm.pol.p3		<- gamlss.centiles.get(trm.pol.GA, trm.pol.nA$d_TSeqT, cent = c(1, 2.5, 10, 25, 75, 90, 97.5, 99) )		
-	setkey(trm.pol.p3, x)
-	trm.pol.p3		<- unique(trm.pol.p3)	
+	trm.pol.p2[, mu:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(subset(trm.pol.p2, select=d_TSeqT)), type='link', what='mu',se.fit=FALSE)]
+	trm.pol.p2[, sig:=predict(trm.pol.GA, data=trm.pol.nA, newdata=as.data.frame(subset(trm.pol.p2, select=d_TSeqT)), type='link', what='sigma',se.fit=FALSE)]	
+	trm.pol.p2		<- merge(trm.pol.p2, as.data.table(expand.grid(d_TSeqT=trm.pol.p2[, d_TSeqT], p=c(1, 2.5, 10, 25, 75, 90, 97.5, 99)/100 )), by='d_TSeqT')
+	trm.pol.p2[, q:=trm.pol.p2[, qGA(p, mu=mu, sigma=sig)]]
 	
-	colors			<- c("#377EB8","#E41A1C")
-	line.size		<- 0.8
+	trm.pol.p3		<- copy(trm.pol.p2)
+	set(trm.pol.p3, NULL, 'p', trm.pol.p3[, paste('q',100*p,sep='')])
+	trm.pol.p3		<- dcast.data.table(trm.pol.p3, d_TSeqT~p, value.var='q' )
+	
+	ggplot(tmp) + 
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q10, ymax=q90), fill="#E41A1C", alpha=0.5) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q2.5, ymax=q10), fill="#E41A1C", alpha=0.3) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q90, ymax=q97.5), fill="#E41A1C", alpha=0.3) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q1, ymax=q2.5), fill="#E41A1C", alpha=0.1) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q97.5, ymax=q99), fill="#E41A1C", alpha=0.1) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=q99, ymax=0.15), fill="#377EB8", alpha=0.3) +
+			geom_ribbon(data=trm.pol.p3, aes(x=d_TSeqT, ymin=0, ymax=q1), fill="#377EB8", alpha=0.3) +
+			geom_point(size=1.2, alpha=0.75, aes(x=telapsed, y=brl)) +
+			#geom_hline(yintercept=c(0.02, 0.04), colour="#E41A1C") +
+			scale_x_continuous(breaks=seq(0,20,2), expand=c(0,0)) +
+			scale_y_continuous(breaks=seq(0,0.2,0.02), expand=c(0,0)) +
+			coord_trans(limy=c(0,0.1), limx=c(0,13) ) +
+			theme_bw() + 
+			#labs(x='time elapsed\n(years)', y='genetic distance\n(subst/site)', title='sequence pairs\nbetween transmitters and recipients\nin phylogenetically probable pairs\n') +
+			labs(x='time elapsed\n(years)', y='genetic distance\n(subst/site)', title='phylogenetically probable\ntransmission pairs\n') +
+			theme(panel.grid.major=element_line(colour="grey70", size=0.4), panel.grid.minor=element_line(colour="grey70", size=0.2))
+	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150320_ProbPairsBrl2.pdf'
+	ggsave(file=file, w=5, h=5)
+	
 	
 	ggplot(tmp) + 
 			geom_ribbon(data=trm.pol.p3, aes(x=x, ymin=q10, ymax=q90), fill="#377EB8") +

@@ -420,7 +420,7 @@ project.athena.Fisheretal.YX.part2<- function(YX.part1, df.all, df.treatment, df
 		method.restrictTPtoRI	<- ifelse(substr(method,1,2)%in%c('3a','3b'),1,0)
 		#file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlraw',method,sep='')
 		file					<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'nbrlrawmed',method,sep='')
-		Y.rawbrl				<- project.athena.Fisheretal.Y.rawbrl(YX.tpairs, indir, insignat, indircov, infilecov, infiletree, df.tpairs.tptn=df.tpairs.4.rawbrl, save.file=paste(file, '.R', sep=''), resume=1, plot.file=paste(file, '.pdf', sep=''), method.restrictTPtoRI=method.restrictTPtoRI)
+		Y.rawbrl				<- project.athena.Fisheretal.Y.rawbrl(YX.tpairs, indir, insignat, indircov, infilecov, infiletree, df.tpairs.tptn=df.tpairs.4.rawbrl, save.file=paste(file, '.R', sep=''), resume=resume, plot.file=paste(file, '.pdf', sep=''), method.restrictTPtoRI=method.restrictTPtoRI)
 		#	BRL [0,1]: branch length weight between pot transmitter and infected 		
 		tmp						<- project.athena.Fisheretal.Y.brlweight.3p(infile.trm.model, Y.rawbrl, df.all, df.viro, dur.Acute=dur.Acute, t.period=t.period, lRNA.supp=lRNA.supp)
 		Y.brl.m					<- copy(tmp$Y.brl.m)
@@ -11239,7 +11239,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
 		}	
 #STOP1		
-#stop()
+stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{

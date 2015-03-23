@@ -17,8 +17,10 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_150303",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150308",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150308",sep='/')		
-	#indir					<- paste(DATA,"fisheretal_150312",sep='/')
-	#outdir					<- paste(DATA,"fisheretal_150312",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150312",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150312",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150319",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -854,6 +856,84 @@ project.athena.Fisheretal.sensitivity<- function()
 	
 }
 ######################################################################################
+project.athena.Fisheretal.sensitivity.factor.legend<- function(method.risk)
+{
+	if(grepl('m2A', method.risk))
+	{
+		factor.color	<- c(	"#990000","#EF6548","#FDBB84",
+				"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
+				"#FCC5C0","#F768A1","#7A0177",
+				"#1A9850","#A6D96A","grey70"
+		)
+		factor.long		<- c(	'Undiagnosed,\n Confirmed recent infection',					
+				'Undiagnosed,\n Unconfired recent infection',
+				'Undiagnosed,\n Unconfirmed chronic infection',
+				'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+				'Diagnosed,\n CD4 progression to >500',
+				'Diagnosed,\n CD4 progression to [350-500]',
+				'Diagnosed,\n CD4 progression to <350',			
+				'Diagnosed,\n No CD4 measured',
+				'ART initiated,\n Before first viral suppression',													
+				'ART initiated,\n After first viral suppression\nNo viral load measured',		
+				'ART initiated,\n After first viral suppression\nNo viral suppression',	
+				'ART initiated,\n After first viral suppression\nViral suppression, 1 observation',
+				'ART initiated,\n After first viral suppression\nViral suppression, >1 observations','Not in contact'
+		)
+		levels			<- c("UA","UAna","U","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")		
+		factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(levels, levels=levels), factor.color=factor.color)			
+	}
+	if(grepl('m2B', method.risk))
+	{
+		factor.color	<- c(	"#990000","#EF6548","#FDBB84","yellow",
+				"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
+				"#FCC5C0","#F768A1","#7A0177",
+				"#1A9850","#A6D96A","grey70"
+		)
+		factor.long		<- c(	'Undiagnosed,\n Confirmed recent infection',					
+				'Undiagnosed,\n Unconfired recent infection 6mo',
+				'Undiagnosed,\n Unconfired recent infection 12mo',
+				'Undiagnosed,\n Unconfirmed chronic infection',
+				'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+				'Diagnosed,\n CD4 progression to >500',
+				'Diagnosed,\n CD4 progression to [350-500]',
+				'Diagnosed,\n CD4 progression to <350',			
+				'Diagnosed,\n No CD4 measured',
+				'ART initiated,\n Before first viral suppression',													
+				'ART initiated,\n After first viral suppression\nNo viral load measured',		
+				'ART initiated,\n After first viral suppression\nNo viral suppression',	
+				'ART initiated,\n After first viral suppression\nViral suppression, 1 observation',
+				'ART initiated,\n After first viral suppression\nViral suppression, >1 observations','Not in contact'
+		)
+		levels			<- c("UA","UAna","UAnsx","U","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")		
+		factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(levels, levels=levels), factor.color=factor.color)			
+	}
+	if(grepl('m2C', method.risk))
+	{
+		factor.color	<- c(	"#990000","#EF6548","#FDBB84",
+									"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
+									"#FCC5C0","#F768A1","#7A0177",
+									"#1A9850","#A6D96A","grey70"
+							)
+		factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
+				'Undiagnosed,\n Chronic infection\n at diagnosis',
+				'Undiagnosed,\n Unknown if recent',
+				'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
+				'Diagnosed,\n CD4 progression to >500',
+				'Diagnosed,\n CD4 progression to [350-500]',
+				'Diagnosed,\n CD4 progression to <350',			
+				'Diagnosed,\n No CD4 measured',
+				'ART initiated,\n Before first viral suppression',													
+				'ART initiated,\n After first viral suppression\nNo viral load measured',		
+				'ART initiated,\n After first viral suppression\nNo viral suppression',	
+				'ART initiated,\n After first viral suppression\nViral suppression, 1 observation',
+				'ART initiated,\n After first viral suppression\nViral suppression, >1 observations','Not in contact'
+		)
+		levels			<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")		
+		factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(levels, levels=levels), factor.color=factor.color)			
+	}
+	factors
+}
+######################################################################################
 project.athena.Fisheretal.sensitivity.getfigures<- function()
 {	
 	require(data.table)
@@ -873,6 +953,8 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	outdir					<- paste(DATA,"fisheretal_150303",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150308",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150308",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150319",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -880,8 +962,7 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
 	t.period				<- 1/8
 	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
-	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
-	
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period	
 	file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.risks.Rdata", sep='')		
 	readAttempt			<- try(suppressWarnings(load(file)))	
 	#
@@ -889,33 +970,39 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )	
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[, factor(t.period.min, levels=c('1996-7','2006-7','2008-1','2009-7'), labels=c('96/07','\n\n06/07','08/01','\n\n09/07'))])
-	set(tperiod.info, NULL, 't.period.max', tperiod.info[, factor(t.period.max, levels=c('2006-6','2007-12','2009-6','2010-12'), labels=c('06/06','07/12','09/06','10/12'))])
-	
-	#	updated stages
-	#	set up factor legends
-	factor.color	<- c(	"#990000","#EF6548","#FDBB84",
-			"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
-			"#FCC5C0","#F768A1","#7A0177",
-			"#1A9850","#A6D96A","grey70"
-			)
-	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
-			'Undiagnosed,\n Chronic infection\n at diagnosis',
-			'Undiagnosed,\n Unknown if recent',
-			'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
-			'Diagnosed,\n CD4 progression to >500',
-			'Diagnosed,\n CD4 progression to [350-500]',
-			'Diagnosed,\n CD4 progression to <350',			
-			'Diagnosed,\n No CD4 measured',
-			'ART initiated,\n Before first viral suppression',													
-			'ART initiated,\n After first viral suppression\nNo viral load measured',		
-			'ART initiated,\n After first viral suppression\nNo viral suppression',	
-			'ART initiated,\n After first viral suppression\nViral suppression, 1 observation',
-			'ART initiated,\n After first viral suppression\nViral suppression, >1 observations','Not in contact'
-			)
-	levels			<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")
-	#levels			<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2")
-	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(levels, levels=levels), factor.color=factor.color, method.risk='m2Cwmx')	
-	factors			<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	set(tperiod.info, NULL, 't.period.max', tperiod.info[, factor(t.period.max, levels=c('2006-6','2007-12','2009-6','2010-12'), labels=c('06/06','07/12','09/06','10/12'))])	
+	#
+	#	WTN 3ma 	m2Cwmx
+	#
+	#	WTN 3pa1 1.35 T7 BRL INF
+	method.DENOM	<- 'SEQ'		
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'	
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	method.BRLs		<- c('3pa1H1.48C2V100bInfT7','3pa1H1.94C2V100bInfT7','3pa1H1.09C2V100bInfT7') 
+	method.RISK		<- 'm2Awmx.wtn.tp'
+	factors			<- project.athena.Fisheretal.sensitivity.factor.legend(method.RISK)			
+	dummy			<- sapply(method.BRLs, function(method.BRL)
+			{								
+				project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  factors, stat.select, outfile, tperiod.info=tperiod.info)										
+			})
+	#
+	#	WTN 3ma 	m2Cwmx
+	#
+	#	WTN 3pa1 1.35 T7 BRL INF
+	method.DENOM	<- 'SEQ'		
+	method.WEIGHT	<- ''
+	method.DATING	<- 'sasky'	
+	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
+	outfile			<- infile
+	method.BRLs		<- c('3pa1H1.48C2V100bInfT7') 
+	method.RISK		<- 'm2Bwmx.wtn.tp'
+	factors			<- project.athena.Fisheretal.sensitivity.factor.legend(method.RISK)			
+	dummy			<- sapply(method.BRLs, function(method.BRL)
+			{								
+				project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  factors, stat.select, outfile, tperiod.info=tperiod.info)										
+			})		
 	#
 	#	WTN 3ma 	m2Cwmx
 	#
@@ -1964,6 +2051,8 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	outdir					<- paste(DATA,"fisheretal_150216",sep='/')	
 	indir					<- paste(DATA,"fisheretal_150308",sep='/')	
 	outdir					<- paste(DATA,"fisheretal_150308",sep='/')	
+	indir					<- paste(DATA,"fisheretal_150319",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_150319",sep='/')	
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -1982,36 +2071,17 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )	
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[, factor(t.period.min, levels=c('1996-7','2006-7','2008-1','2009-7'), labels=c('96/07','\n\n06/07','08/01','\n\n09/07'))])
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[, factor(t.period.max, levels=c('2006-6','2007-12','2009-6','2010-12'), labels=c('06/06','07/12','09/06','10/12'))])
-	#	
-	#	updated stages
-	#	set up factor legends
-	factor.color	<- c(	"#990000","#EF6548","#FDBB84",
-			"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
-			"#FCC5C0","#F768A1","#7A0177",
-			"#1A9850","#A6D96A","grey70")
-	factor.long		<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
-			'Undiagnosed,\n Chronic infection\n at diagnosis',
-			'Undiagnosed,\n Unknown if recent',
-			'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
-			'Diagnosed,\n CD4 progression to >500',
-			'Diagnosed,\n CD4 progression to [350-500]',
-			'Diagnosed,\n CD4 progression to <350',			
-			'Diagnosed,\n No CD4 measured',
-			'ART initiated,\n Before first viral suppression',													
-			'ART initiated,\n After first viral suppression\n No viral load measured',		
-			'ART initiated,\n After first viral suppression\n No viral suppression',	
-			'ART initiated,\n After first viral suppression\n Viral suppression, 1 observation',
-			'ART initiated,\n After first viral suppression\n Viral suppression, >1 observations','Not in contact')
-	tmp				<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")
-	factors			<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='m2Cwmx')	
-	factors			<- subset(factors, grepl('m2Cwmx',method.risk), select=c(factor, factor.legend, factor.color))
+	#		
 	runs.table		<- subset(runs.table, !grepl('ARTstarted|GroupsUDA',method.risk))
 	#
 	outfile			<- infile	
 	method.DENOM	<- 'SEQ'	
 	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.RISK		<- 'm2Awmx.wtn.tp'
+	factors			<- project.athena.Fisheretal.sensitivity.factor.legend(method.RISK)
 	method.WEIGHT	<- ''			
 	method.BRLs		<- c('3pa1H1.48C2V100bInfT7','3pa1H1.09C2V100bInfT7','3pa1H1.94C2V100bInfT7')
+	method.BRLs		<- c('3pa1H1.48C2V100bInfT7' )
 	dummy			<- lapply(method.BRLs, function(method.BRL)
 			{
 				project.athena.Fisheretal.sensitivity.getfigures.npotentialtransmissionintervals.adjusted(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, 'cascade')
