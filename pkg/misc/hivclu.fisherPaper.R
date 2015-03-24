@@ -1836,6 +1836,11 @@ project.athena.Fisheretal.composition.recipients.repr.info<- function(df.ar, qua
 	tmp2		<- df.ar[, list( t.period='Overall', STAT= c('mean', quantiles), NegT12P= round(100*c(mean(!is.na(NegT) & (AnyPos_T1-NegT)<1), quantile(!is.na(NegT) & (AnyPos_T1-NegT)<1, prob=quantiles)), d=1) )]
 	tmp			<- rbind(tmp, tmp2)
 	df.ari		<- merge(df.ari, tmp, by=c('t.period','STAT'))
+	#	% from Amsterdam
+	tmp			<- df.ar[, list( STAT= c('mean', quantiles), HAmst= round(100*c(mean(!is.na(RegionHospital) & RegionHospital=='Amst'), quantile(!is.na(RegionHospital) & RegionHospital=='Amst', prob=quantiles)), d=1) ), by='t.period']
+	tmp2		<- df.ar[, list( t.period='Overall', STAT= c('mean', quantiles), HAmst= round(100*c(mean(!is.na(RegionHospital) & RegionHospital=='Amst'), quantile(!is.na(RegionHospital) & RegionHospital=='Amst', prob=quantiles)), d=1) )]
+	tmp			<- rbind(tmp, tmp2)
+	df.ari		<- merge(df.ari, tmp, by=c('t.period','STAT'))		
 	#	% country infection NL
 	tmp			<- df.ar[, {
 								z	<- CountryInfection[!is.na(CountryInfection)]
@@ -1870,7 +1875,7 @@ project.athena.Fisheretal.composition.recipients.repr<- function()
 	files	<- data.table(	file.MSM=list.files(indir, pattern='*tATHENAmsm.R$'),
 			file.SEQ=list.files(indir, pattern='*tATHENAseq.R$'),
 			file.YX=list.files(indir, pattern='*YXSEQ*'))
-	file	<- paste(indir, '/', files[6,file.YX], sep='')
+	file	<- paste(indir, '/', files[3,file.YX], sep='')
 	load(file)
 	df.rr	<- merge(df.ar, unique(subset(YX, select=Patient)), by='Patient')
 	
@@ -1896,7 +1901,11 @@ project.athena.Fisheretal.composition.recipients.repr<- function()
 	tmp			<- dcast.data.table(df.ari, t.period~STAT, value.var='INFNL')
 	tmp[, STAT:='INFNL']
 	tmp[, DATA:='All']
-	ans			<- rbind(ans, tmp)	
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.ari, t.period~STAT, value.var='HAmst')
+	tmp[, STAT:='HAMST']
+	tmp[, DATA:='All']
+	ans			<- rbind(ans, tmp)		
 	#	re-format those with prob transm
 	tmp			<- dcast.data.table(df.rri, t.period~STAT, value.var='AgeT')
 	tmp[, STAT:='AgeT']
@@ -1918,6 +1927,10 @@ project.athena.Fisheretal.composition.recipients.repr<- function()
 	tmp[, STAT:='INFNL']
 	tmp[, DATA:='wProb']
 	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.rri, t.period~STAT, value.var='HAmst')
+	tmp[, STAT:='HAMST']
+	tmp[, DATA:='wProb']
+	ans			<- rbind(ans, tmp)		
 	#	re-format diagnosed
 	tmp			<- dcast.data.table(df.adi, t.period~STAT, value.var='AgeT')
 	tmp[, STAT:='AgeT']
@@ -1938,7 +1951,10 @@ project.athena.Fisheretal.composition.recipients.repr<- function()
 	tmp			<- dcast.data.table(df.adi, t.period~STAT, value.var='INFNL')
 	tmp[, STAT:='INFNL']
 	tmp[, DATA:='Diag']
-	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.adi, t.period~STAT, value.var='HAmst')
+	tmp[, STAT:='HAMST']
+	tmp[, DATA:='Diag']
+	ans			<- rbind(ans, tmp)	
 	#levels(ans$t.period)
 	tmp			<- c("Overall","(1996,2006]","(2006,2008]","(2008,2010]","(2010,2011]")
 	set(ans, NULL, 't.period', ans[, factor(as.character(t.period), levels=tmp, labels=tmp)])

@@ -320,9 +320,9 @@ hivc.pipeline.BEAST<- function()
 		#thresh.brl			<- 0.096
 		thresh.brl			<- 1000
 		thresh.bs			<- 0.8
-		thresh.bs			<- 0.85
-		thresh.bs			<- 0.9
-		thresh.bs			<- 0.95
+		#thresh.bs			<- 0.85
+		#thresh.bs			<- 0.9
+		#thresh.bs			<- 0.95
 		pool.ntip			<- NA		
 		resume				<- 1
 		verbose				<- 1
@@ -640,7 +640,7 @@ hivc.pipeline.props_univariate<- function()
 						hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
 					}, by='DUMMY']		
 	}
-	if(1)	#	iterate over second large run: bootstrap censoring
+	if(0)	#	iterate over second large run: bootstrap censoring
 	{
 		df.method				<- list(
 						#	infection times
@@ -661,7 +661,7 @@ hivc.pipeline.props_univariate<- function()
 					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
 				}, by='DUMMY']		
 	}
-	if(0)	#	iterate over short runs: prop estimates
+	if(1)	#	iterate over short runs: prop estimates
 	{
 		df.method				<- list(
 				#	infection times
@@ -671,20 +671,21 @@ hivc.pipeline.props_univariate<- function()
 				#	branch lengths
 				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
 		)
-		df.method				<- do.call('rbind', df.method)		
+		df.method				<- do.call('rbind', df.method)
+		df.method				<- df.method[-9,]
 		df.method[, DUMMY2:=seq_len(nrow(df.method))]
-		tmp						<- data.table(method.risk=paste('m2Cwmx.wtn.tp',1:6, sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
+		tmp						<- data.table(method.risk=paste('m2Awmx.wtn.tp',1:6, sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
 		#tmp						<- data.table(method.risk=paste('m2Cwmx.tp',1:6, sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
 		#tmp						<- data.table(method.risk=paste('m2Cwmx.nophyloscore.tp',1:6, sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
 		#tmp						<- data.table(method.risk=paste('m2Cwmx.noscore.tp',1:6, sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)		
-		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
+		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)		
 		df.method				<- df.method[,{
 							cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 							list(CMD=cmd)
 						}, by=c('DUMMY','DUMMY2')]	
 		df.method[,{
 					cmd			<- paste(CMD, collapse='', sep='')
-					cat(cmd)	
+					cat(cmd)
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
 					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)					
 				}, by=c('DUMMY2')]	
