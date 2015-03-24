@@ -11239,7 +11239,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 			X.msm			<- project.athena.Fisheretal.YX.model5.stratify(X.msm)
 		}	
 #STOP1		
-stop()
+#stop()
 		#	compute tables
 		if(grepl('adj',method.risk) & grepl('clu',method.risk))
 		{
@@ -11583,7 +11583,7 @@ hivc.prog.props_univariate<- function()
 	Y.brl.bs		<- copy(tmp$Y.brl.bs)
 	gc()
 #STOP2
-#stop()	
+stop()	
 	stopifnot(is.null(X.tables)==FALSE)
 	#
 	#	for each time period, estimate N transmitted etc
@@ -11611,9 +11611,7 @@ hivc.prog.props_univariate<- function()
 			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'GroupsUDA.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')	
 			tmp			<- project.athena.Fisheretal.poolIntoGroups( YXe, save.file=save.file)	
 		}		
-	}
-#STOP3
-#stop()		
+	}		
 	#	see if we can pool results for tperiod 4
 	if(method.tpcut%in%c(7) & as.numeric(substring(regmatches(method.risk,regexpr('tp[0-9]', method.risk)),3))>=4)
 	{
@@ -11632,6 +11630,8 @@ hivc.prog.props_univariate<- function()
 			save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_denom',method.PDT,'_model',tmp,'_',sep='')
 			save.file	<- paste(save.file, substr(method.risk, 1, regexpr('tp[0-9]', method.risk)-1), 'GroupsUDA.', regmatches(method.risk,regexpr('tp[0-9]', method.risk)), '.R', sep='')	
 			tmp			<- project.athena.Fisheretal.poolIntoGroups( YXe, save.file=save.file)
+#STOP3
+#stop()
 			#
 			#	TP4 hypothetical scenarios
 			#

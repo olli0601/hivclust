@@ -616,7 +616,7 @@ hivc.pipeline.props_univariate<- function()
 		infilexml.template		<- "sasky_sdr06fr"	
 		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
 	}
-	if(1)	#	iterate over first large run
+	if(0)	#	iterate over first large run
 	{
 		df.method				<- list(
 						#	infection times
@@ -640,21 +640,20 @@ hivc.pipeline.props_univariate<- function()
 						hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
 					}, by='DUMMY']		
 	}
-	if(0)	#	iterate over second large run: bootstrap censoring
+	if(1)	#	iterate over second large run: bootstrap censoring
 	{
 		df.method				<- list(
 						#	infection times
-						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.148, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
+						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
 						#	phylo exclusion criteria
 						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
 						#	branch lengths
 						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
 						)
 		df.method				<- do.call('rbind', df.method)				
-		tmp						<- data.table(method.risk=paste('m2Cwmx.tp',1:6,'.clu.adj', sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
+		tmp						<- data.table(method.risk=paste('m2Awmx.tp',1:6,'.clu.adj', sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
 		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
-		df.method[, DUMMY:=seq_len(nrow(df.method))]
-		
+		df.method[, DUMMY:=seq_len(nrow(df.method))]		
 		df.method[,{
 					cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 					cat(cmd)	
@@ -666,7 +665,7 @@ hivc.pipeline.props_univariate<- function()
 	{
 		df.method				<- list(
 				#	infection times
-				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.148, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
 				#	phylo exclusion criteria
 				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
 				#	branch lengths
@@ -694,7 +693,7 @@ hivc.pipeline.props_univariate<- function()
 	{
 		df.method				<- list(
 				#	infection times
-				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.148, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
 				#	phylo exclusion criteria
 				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
 				#	branch lengths
