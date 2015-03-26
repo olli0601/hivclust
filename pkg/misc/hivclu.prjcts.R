@@ -1169,16 +1169,13 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		
 		#	reset Acute field		
 		df.all[, DUMMY:= df.all[, as.numeric(difftime(AnyPos_T1, NegT, units="days"))/365]]		
-		tmp	<- df.all[, which(!is.na(DUMMY) & DUMMY<=1)]
+		tmp	<- df.all[, which(!is.na(DUMMY) & DUMMY<=1 & (Acute_Spec=='CLIN' | Acute_Spec=='SYM' | is.na(Acute_Spec)))]
 		cat(paste('\nFound patients with NegT<1yr, n=', length(tmp)))
-		set( df.all, tmp, 'Acute_Spec', 'CLIN' )
-		#
+		set( df.all, tmp, 'Acute_Spec', 'NEGTEST' )
+		# df.all[, table(!is.na(DUMMY) & DUMMY<=1, Acute_Spec, useNA='if')]
 		df.all[, isAcuteNew:= NA_character_]
-		set(df.all, df.all[, which(Acute_Spec=='CLIN')], 'isAcuteNew', 'Yes')
-		set(df.all, df.all[, which(Acute_Spec=='SYM')], 'isAcuteNew', 'Maybe')
-		set(df.all, df.all[, which(isAcute=='Yes')], 'isAcuteNew', 'Yes')		
-		set(df.all, df.all[, which(isAcute=='No' & (is.na(Acute_Spec) | Acute_Spec!='CLIN'))], 'isAcuteNew', 'No')			
-		set(df.all, df.all[, which(isAcuteNew=='Maybe')], 'isAcuteNew', NA_character_)
+		set(df.all, df.all[, which(Acute_Spec%in%c('CLIN','LAB','NEGTEST'))], 'isAcuteNew', 'Yes')		
+		set(df.all, df.all[, which(isAcute=='No' & is.na(Acute_Spec))], 'isAcuteNew', 'No')			
 		#df.all[, table(isAcuteNew, Acute_Spec, useNA='if')]
 		#df.all[, table(isAcuteNew, isAcute, useNA='if')]
 		set(df.all, NULL, 'isAcuteNew', df.all[, factor(isAcuteNew)])
@@ -2714,7 +2711,7 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 				tmp		<- NA_character_
 				z		<- Acute_Spec_1%in%c(1L,2L) | Acute_Spec_2%in%c(1L,2L) | Acute_Spec_3%in%c(1L,2L) | Acute_Spec_4%in%c(1L,2L)
 				if(!is.na(z) & z)
-					tmp	<- 'CLIN'
+					tmp	<- 'LAB'
 				z		<- Acute_Spec_1%in%c(3L,4L,8L,9L) | Acute_Spec_2%in%c(3L,4L,8L,9L) | Acute_Spec_3%in%c(3L,4L,8L,9L) | Acute_Spec_4%in%c(3L,4L,8L,9L)
 				if(is.na(tmp) & !is.na(z) & z)
 					tmp	<- 'SYM'
@@ -2753,18 +2750,22 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	tmp	<- df[, which(Acute_Spec=='SYM' & is.na(isAcute))]
 	cat(paste('\nFound entries with AcuteSpec and is.na(isAcute), n=', length(tmp)))
 	set(df, tmp, 'isAcute', 'Maybe') 
-	tmp	<- df[, which(Acute_Spec=='CLIN' & is.na(isAcute))]
+	tmp	<- df[, which(Acute_Spec=='LAB' & is.na(isAcute))]
 	cat(paste('\nFound entries with AcuteSpec and is.na(isAcute), n=', length(tmp)))
 	set(df, tmp, 'isAcute', 'Yes') 	
-	tmp	<- df[, which(Acute_Spec=='CLIN' & isAcute=='No')]
+	tmp	<- df[, which(Acute_Spec=='LAB' & isAcute=='No')]
 	cat(paste('\nFound entries with AcuteSpec and isAcute==No, n=', length(tmp)))
 	set(df, tmp, 'isAcute', 'Yes') 
 	tmp	<- df[, which(Acute_Spec=='SYM' & isAcute=='No')]
 	cat(paste('\nFound entries with AcuteSpec and isAcute==No, n=', length(tmp)))
 	set(df, tmp, 'isAcute', 'Maybe') 
+	#reset AcuteSpec
 	tmp	<- df[, which(is.na(Acute_Spec) & isAcute=='Yes')]
 	cat(paste('\nFound entries with is.na(Acute_Spec) and isAcute==Yes, n=', length(tmp)))
-	set(df, tmp, 'Acute_Spec', 'CLIN') 
+	set(df, tmp, 'Acute_Spec', 'CLIN')
+	tmp	<- df[, which(Acute_Spec=='SYM' & isAcute=='Yes')]
+	cat(paste('\nFound entries with Acute_Spec==SYM and isAcute==Yes, n=', length(tmp)))
+	set(df, tmp, 'Acute_Spec', 'CLIN') 	
 	tmp	<- df[, which(is.na(Acute_Spec) & isAcute=='Maybe')]
 	cat(paste('\nFound entries with is.na(Acute_Spec) and isAcute==Maybe, n=', length(tmp)))
 	set(df, tmp, 'Acute_Spec', 'SYM') 

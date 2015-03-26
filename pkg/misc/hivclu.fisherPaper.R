@@ -1055,11 +1055,14 @@ project.athena.Fisheretal.composition.acute<- function()
 	tmp	<- df.all.allmsm
 	setkey(tmp, Patient)
 	tmp	<- unique(tmp)
-	tmp	<- subset(tmp, AnyPos_T1>=1996.6 & AnyPos_T1<2011 & Trm%in%c('MSM','BI'), select=c(Patient, isAcute, Acute_Spec, AnyPos_T1, Trm))
+	tmp	<- subset(tmp, AnyPos_T1>=1996.5 & AnyPos_T1<2011 & Trm%in%c('MSM','BI'), select=c(Patient, isAcute, Acute_Spec, AnyPos_T1, Trm))
+	#
+	subset(tmp, isAcute=='Yes')[, table(Acute_Spec, useNA='if')/length(Acute_Spec)]
+	#
 	set(tmp, tmp[, which(is.na(Acute_Spec))],'Acute_Spec', 'Missing')
 	set(tmp, tmp[, which(isAcute=='No')],'Acute_Spec', 'Recent HIV infection not indicated')
 	set(tmp, tmp[, which(isAcute=='Yes')],'Acute_Spec', 'Confirmed recent HIV infection')
-	set(tmp, tmp[, which(Acute_Spec=='CLIN')],'Acute_Spec','Confirmed recent HIV infection')
+	set(tmp, tmp[, which(Acute_Spec%in%c('CLIN','LAB','NEGTEST'))],'Acute_Spec','Confirmed recent HIV infection')
 	set(tmp, tmp[, which(Acute_Spec=='SYM')],'Acute_Spec','Recent HIV infection not indicated')
 	tmp	<- merge(tmp, data.table(Acute_Spec=c('Confirmed recent HIV infection', 'Recent HIV infection not indicated', 'Missing' ), Acute.col=c("#FF7F00","#FDBF6F",'grey70')), by='Acute_Spec')
 	set(tmp, NULL, 'Acute_Spec', tmp[,factor(Acute_Spec, levels=c('Confirmed recent HIV infection', 'Recent HIV infection not indicated', 'Missing' ), labels=c('Confirmed recent HIV infection', 'Recent HIV infection not indicated', 'Missing' ))])

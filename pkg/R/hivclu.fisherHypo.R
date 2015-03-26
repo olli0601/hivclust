@@ -434,6 +434,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 	#	get prop in ART stages after first suppression	
 	#	method.realloc<- 'PrestIPrEXC12m50pc50pc+ImmediateART'
 	#	method.realloc<- 'PrestPROUDC12m50pc50pc'
+	#	method.realloc<- 'TestC12m70pc+ImmediateART'
 	stopifnot(grepl('Test|ImmediateART|ARTat500|RPrEP|RPrEP|Prest',method.realloc))	
 	options(warn=0)	
 	if(resume & !is.na(save.file))
@@ -904,6 +905,7 @@ project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc<- function(YX, nt.table
 	#ggplot(subset(YX, grepl('Dt|DA',stage))[, list(n=length(unique(as.character(stage)))), by=c('Patient','t.Patient')], aes(x=n)) + geom_histogram()
 	tmp			<- subset(YX, grepl('ART',stage) & !grepl('ART.NotYetFirstSu',stage))[, table(stage)]
 	df.artinfo	<- subset( data.table(stage=names(tmp), nt=tmp, pt=tmp/sum(tmp)), nt>0 )
+#print(df.artinfo)	
 	#	change to YX raw
 	tmp			<- subset(YX, select=c(stage, Patient, t.Patient, score.Y.raw))	
 	setkey(tmp, Patient, t.Patient, stage)

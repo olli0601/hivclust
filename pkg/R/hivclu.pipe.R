@@ -661,7 +661,7 @@ hivc.pipeline.props_univariate<- function()
 					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
 				}, by='DUMMY']		
 	}
-	if(1)	#	iterate over short runs: prop estimates
+	if(0)	#	iterate over short runs: prop estimates
 	{
 		df.method				<- list(
 				#	infection times
@@ -690,7 +690,7 @@ hivc.pipeline.props_univariate<- function()
 					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)					
 				}, by=c('DUMMY2')]	
 	}
-	if(0)	#	iterate over short runs: method.realloc
+	if(1)	#	iterate over short runs: method.realloc
 	{
 		df.method				<- list(
 				#	infection times
@@ -722,6 +722,7 @@ hivc.pipeline.props_univariate<- function()
 		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
 		df.method[, DUMMY:=seq_len(nrow(df.method))]
 		df.method[, DUMMY2:=rep(1:(nrow(df.method)%/%6+1), each=6)[seq_len(nrow(df.method))]]
+		df.method[, DUMMY2:=seq_len(nrow(df.method))]
 		df.method				<- df.method[,{
 					cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, method.realloc=method.realloc, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 					list(CMD=cmd)

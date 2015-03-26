@@ -2445,7 +2445,7 @@ project.athena.Fisheretal.t2inf<- function(df.all.allmsm, method.Acute='empirica
 		#	
 		if(!is.null(q))
 		{
-			cat(paste('\ncalculate gamma prob for given upper quantile q'))
+			#cat(paste('\ncalculate gamma prob for given upper quantile q'))
 			ans		<- df[, {
 							if(isAcute=='Yes') 
 							{
@@ -2471,7 +2471,7 @@ project.athena.Fisheretal.t2inf<- function(df.all.allmsm, method.Acute='empirica
 		#		
 		if(is.null(q))
 		{
-			cat(paste('\ncalculate gamma quantile for given upper tail prob'))
+			#cat(paste('\ncalculate gamma quantile for given upper tail prob'))
 			ans		<- df[, {
 						if(isAcute=='Yes') 
 						{
