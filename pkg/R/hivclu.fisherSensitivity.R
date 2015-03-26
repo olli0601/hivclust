@@ -70,6 +70,7 @@ project.athena.Fisheretal.sensitivity<- function()
 		runs.opt	<- subset(runs.opt, !is.na(file))
 		runs.opt	<- subset(runs.opt, !grepl('beforepool',file) & !grepl('Hypo',file))
 		print(runs.opt)
+		#runs.opt	<- subset(runs.opt, method.brl=='3pa1H1.48C2V100bInfT7')
 		#	load risk estimates
 		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
 				{
@@ -108,6 +109,17 @@ project.athena.Fisheretal.sensitivity<- function()
 					ans
 				})
 		runs.riskbs	<- do.call('rbind', tmp)
+		#	get recent proportions		
+		runs.UA		<- lapply( runs.risk[, unique(method.brl)], function(METHOD.BRL)
+				{
+					df		<- subset( runs.risk, !grepl('ARTstarted|GroupsUDA|Hypo', method.risk) & method.brl==METHOD.BRL)
+					df.bs	<- subset( runs.riskbs, !grepl('ARTstarted|GroupsUDA|Hypo', method.risk) & method.brl==METHOD.BRL)
+					project.athena.Fisheretal.sensitivity.m2A.recent(df, df.bs)			
+				})
+		runs.UA		<- do.call('rbind', runs.UA)
+		runs.UA[, bs:=NULL]		
+		file			<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.recent.Rdata", sep='')
+		save(runs.UA, file=file)
 		#	get pooled proportions across all tp
 		tmp			<- lapply( runs.risk[, unique(method.brl)], function(METHOD.BRL)
 				{
@@ -193,6 +205,26 @@ project.athena.Fisheretal.sensitivity<- function()
 				})
 		trm.p		<- do.call('rbind', tmp)
 		file		<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.trmp.BS0.Rdata", sep='')
+		save(trm.p, file=file)		
+		#	collect all transmission probs for central run
+		runs.opt	<- subset(runs.opt, method.brl=='3pa1H1.48C2V100bInfT7')
+		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
+				{					 
+					cat(paste('\nprocess file=',runs.opt[i,file]))
+					load(paste(indir, runs.opt[i,file], sep='/'))					
+					ans	<- copy(ans$trm.p)
+					if(any(names(ans)=='coef'))
+						ans[, coef:=NULL]
+					ans[, method.risk:=runs.opt[i,method.risk]]
+					ans[, method.dating:=runs.opt[i,method.dating]]
+					ans[, method.nodectime:=runs.opt[i,method.nodectime]]
+					ans[, method.brl:=runs.opt[i,method.brl ]]
+					ans[, method.denom:=runs.opt[i,method.denom]]
+					ans[, method.recentctime:=runs.opt[i,method.recentctime ]]
+					ans
+				})
+		trm.p		<- do.call('rbind', tmp)
+		file		<- paste(indir, '/', infile, '_', gsub('/',':',insignat), '_', "method.trmp.BS.Rdata", sep='')
 		save(trm.p, file=file)				
 	}
 	
@@ -865,8 +897,8 @@ project.athena.Fisheretal.sensitivity.factor.legend<- function(method.risk)
 				"#FCC5C0","#F768A1","#7A0177",
 				"#1A9850","#A6D96A","grey70"
 		)
-		factor.long		<- c(	'Undiagnosed,\n Confirmed recent infection',					
-				'Undiagnosed,\n Unconfired recent infection',
+		factor.long		<- c(	'Undiagnosed,\n Confirmed recent infection\n at diagnosis',					
+				'Undiagnosed,\n Unconfirmed recent infection',
 				'Undiagnosed,\n Unconfirmed chronic infection',
 				'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
 				'Diagnosed,\n CD4 progression to >500',
@@ -972,7 +1004,7 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[, factor(t.period.min, levels=c('1996-7','2006-7','2008-1','2009-7'), labels=c('96/07','\n\n06/07','08/01','\n\n09/07'))])
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[, factor(t.period.max, levels=c('2006-6','2007-12','2009-6','2010-12'), labels=c('06/06','07/12','09/06','10/12'))])	
 	#
-	#	WTN 3ma 	m2Cwmx
+	#	WTN 3ma 	m2Awmx
 	#
 	#	WTN 3pa1 1.35 T7 BRL INF
 	method.DENOM	<- 'SEQ'		
@@ -980,12 +1012,15 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 	method.DATING	<- 'sasky'	
 	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
 	outfile			<- infile
-	method.BRLs		<- c('3pa1H1.48C2V100bInfT7','3pa1H1.94C2V100bInfT7','3pa1H1.09C2V100bInfT7') 
-	method.RISK		<- 'm2Awmx.wtn.tp'
-	factors			<- project.athena.Fisheretal.sensitivity.factor.legend(method.RISK)			
+	method.BRLs		<- c('3pa1H1.48C2V100bInfT7','3pa1H1.94C2V100bInfT7','3pa1H1.09C2V100bInfT7') 	
+	factors			<- project.athena.Fisheretal.sensitivity.factor.legend('m2Awmx.wtn.tp')			
 	dummy			<- sapply(method.BRLs, function(method.BRL)
 			{								
-				project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  factors, stat.select, outfile, tperiod.info=tperiod.info)										
+				method.RISK		<- 'm2Awmx.wtn.tp'
+				project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  factors, stat.select, outfile, tperiod.info=tperiod.info)
+				method.RISK		<- "m2Awmx.wtn"
+				project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  factors, stat.select, outfile, tperiod.info=tperiod.info)
+				project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, factors, stat.select, outfile, tperiod.info=tperiod.info)
 			})
 	#
 	#	WTN 3ma 	m2Cwmx
@@ -1004,11 +1039,9 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 				project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  factors, stat.select, outfile, tperiod.info=tperiod.info)										
 			})		
 	#
-	#	WTN 3ma 	m2Cwmx
+	#	WTN 3ma 	m2Awmx
 	#
-	#	WTN 3pa1 1.35 T7 BRL INF
-	method.DENOM	<- 'SEQ'	
-	
+	method.DENOM	<- 'SEQ'		
 	method.WEIGHT	<- ''
 	method.DATING	<- 'sasky'	
 	stat.select		<- c(	'P.raw','P.raw.e0','P.raw.e0cp'	)
@@ -1018,11 +1051,12 @@ project.athena.Fisheretal.sensitivity.getfigures<- function()
 							'3pa1H1.48C1V100bInfs0.7T7','3pa1H1.48C2V100bInfs0.7T7', '3pa1H1.48C3V100bInfs0.7T7',
 							'3pa1H1.48C1V100bInfs0.85T7','3pa1H1.48C2V100bInfs0.85T7', '3pa1H1.48C3V100bInfs0.85T7',
 							'3pa1H1.48C2V100b0.02T7','3pa1H1.48C2V100b0.04T7')
+	factors			<- project.athena.Fisheretal.sensitivity.factor.legend('m2Awmx.wtn.tp')
 	dummy			<- sapply(method.BRLs, function(method.BRL)
 			{				
-				method.RISK		<- 'm2Cwmx.wtn.tp'
+				method.RISK		<- 'm2Awmx.wtn.tp'
 				project.athena.Fisheretal.sensitivity.getfigures.m2(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  factors, stat.select, outfile, tperiod.info=tperiod.info)		
-				method.RISK		<- "m2Cwmx.wtn"
+				method.RISK		<- "m2Awmx.wtn"
 				project.athena.Fisheretal.sensitivity.getfigures.RR(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING,  factors, stat.select, outfile, tperiod.info=tperiod.info)
 				project.athena.Fisheretal.sensitivity.tables.m2.prop(runs.risk, method.DENOM, method.BRL, method.RISK, method.WEIGHT, method.DATING, factors, stat.select, outfile, tperiod.info=tperiod.info)				
 			})
@@ -1304,7 +1338,7 @@ project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals.no
 			scale_y_continuous(breaks=seq(0,50,10), minor_breaks=seq(0,50,2)) +
 			theme_bw() + 
 			geom_text(aes(x=seq_along(interaction(variable, factor)), y=-2, label='*'), size=7) +
-			geom_text(aes(x=14, y=26, label='* phylogenetically probable transmitters'), size=3) +
+			#geom_text(aes(x=14, y=26, label='* phylogenetically probable transmitters'), size=3) +
 			labs(x='', y='Transmission intervals\n(%)') +
 			theme(axis.text=element_text(size=14), axis.title=element_text(size=14), legend.key.size=unit(11,'mm'), legend.position = "bottom", legend.box = "vertical", axis.ticks.x=element_blank(), axis.text.x=element_blank(), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7)) 
 	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','enrich',".pdf", sep='')	
@@ -1432,7 +1466,7 @@ project.athena.Fisheretal.sensitivity.getfigures.nlikelytransmissionintervals<- 
 	ggplot(ans, aes(x=t.period.long, y=n, ymin=l95.bs, ymax=u95.bs, group=group, fill=factor.legend))  + 
 			labs(x='', y='probable transmission intervals\nper 100 recipient MSM\n(person-years)') +				
 			scale_fill_manual(name=scale.name, values=ans[, unique(factor.color)], guide=FALSE) +
-			scale_y_continuous(breaks=seq(0,1000,100), minor_breaks=seq(0,1000,20)) +
+			scale_y_continuous(breaks=seq(0,1000,200), minor_breaks=seq(0,1000,50)) +
 			geom_bar(stat='identity') + geom_errorbar(stat='identity',width=.2) +  				
 			theme_bw() + theme(strip.text= element_text(size=14), axis.text.x=element_text(size=14),  axis.text.y=element_text(size=14), axis.title.y=element_text(size=14), legend.key.size=unit(12,'mm'), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7)) +
 			facet_grid(. ~ group, scales='free_y', margins=FALSE)	
@@ -2141,6 +2175,54 @@ project.athena.Fisheretal.sensitivity.gettables<- function()
 	
 }
 ######################################################################################
+project.athena.Fisheretal.sensitivity.m2A.recent<- function(df, df.bs)
+{
+	df		<- subset(df, grepl('^N\\.',stat) )		
+	df.bs	<- subset(df.bs, grepl('^N\\.',stat) )
+	df[, bs:=0]
+	set(df, NULL, c("l95.bs","u95.bs","m50.bs"), NULL)		
+	df		<- rbind(df, df.bs, use.names=TRUE)
+	set(df, NULL, 't.period', df[, substr(factor, nchar(factor), nchar(factor))])
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'method.risk', df[, substr(method.risk, 1, nchar(method.risk)-4)])	
+	set(df, df[, which(grepl('^UA',factor) | grepl('^DA',factor))], 'factor', 'UA') 
+	set(df, NULL, 'coef', df[, paste(risk,factor,sep='')])
+	method.risk			<- df[1, method.risk]
+	method.dating		<- df[1, method.dating]
+	method.nodectime	<- df[1, method.nodectime]
+	method.brl			<- df[1, method.brl]
+	method.denom		<- df[1, method.denom]
+	method.recentctime	<- df[1, method.recentctime]
+	#	pool recents by time period
+	ans					<- dcast.data.table(df, coef+coef.ref+risk+risk.ref+factor+factor.ref+bs+t.period~stat, value.var='v', fun.aggregate=sum)
+	#	get P's by time period
+	ans					<- melt(ans, measure.vars=c('N.raw','N.raw.e0','N.raw.e0cp'), value.name='v', variable.name='stat')
+	tmp					<- ans[, list(factor=factor, v=v/sum(v)), by=c('stat','bs','risk','t.period')]
+	ans					<- merge( unique(subset(ans, select=setdiff(names(ans),c('stat','bs','v')))), tmp, by=c('risk','factor','t.period') )
+	set(ans, NULL, 'stat', ans[,gsub('N\\.','P\\.',stat)])
+	#	pool recents across time period
+	ans0				<- dcast.data.table(df, coef+coef.ref+risk+risk.ref+factor+factor.ref+bs~stat, value.var='v', fun.aggregate=sum)
+	#	get P's 
+	ans0				<- melt(ans0, measure.vars=c('N.raw','N.raw.e0','N.raw.e0cp'), value.name='v', variable.name='stat')
+	tmp					<- ans0[, list(factor=factor, v=v/sum(v)), by=c('stat','bs','risk')]
+	ans0				<- merge( unique(subset(ans0, select=setdiff(names(ans0),c('stat','bs','v')))), tmp, by=c('risk','factor') )
+	set(ans0, NULL, 'stat', ans0[,gsub('N\\.','P\\.',stat)])
+	ans0[, t.period:='0']
+	#	rbind
+	ans					<- rbind(ans, ans0, use.names=1)
+	#	return only 95% bootstrap quantiles + central estimate for recent
+	tmp					<- subset(ans, bs>0)[,list(l95.bs=quantile(v,p=0.025), u95.bs=quantile(v,p=0.975), m50.bs=quantile(v,p=0.5)), by=c('risk','factor','stat','t.period')]		
+	ans					<- merge( subset(ans, bs==0), tmp, by=c('risk','factor','stat','t.period') )
+	ans					<- subset(ans, factor=='UA')
+	ans[, method.risk:=method.risk]
+	ans[, method.dating:=method.dating]
+	ans[, method.nodectime:=method.nodectime]
+	ans[, method.brl:=method.brl ]
+	ans[, method.denom:=method.denom]
+	ans[, method.recentctime:=method.recentctime ]
+	ans
+}
+######################################################################################
 project.athena.Fisheretal.sensitivity.pool.TPALL<- function(df, df.bs)
 {
 	df		<- subset(df, grepl('^N\\.',stat))		
@@ -2406,7 +2488,7 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	set(df, NULL, 'group', df[, paste(substr(factor, 1, 1),'total',sep='_')])
 	set(dfg, NULL, 'group', dfg[, paste(substr(factor, 1, 1),'total',sep='_')])
 	#	reset factor order
-	set(df, NULL, 'factor', df[, factor(factor, levels=levels, labels=levels)])
+	set(df, NULL, 'factor', df[, factor(factor, levels=levels(factors$factor), labels=levels(factors$factor))])
 	setkey(df, stat, t.period, factor)
 	#set(dfg, NULL, 'factor', dfg[, factor(factor, levels=levels, labels=levels)])
 	setkey(dfg, stat, t.period, factor)	
@@ -2431,15 +2513,6 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	tmp2	<- rbind(tmp3, tmp2, use.names=TRUE)
 	tmp2[, stat:='P.raw.e0cp']
 	#	add CUA
-	tmp		<- unique(subset(df, stat=='CUA.raw.e0cp'))
-	tmp3	<- dcast.data.table(tmp, group+factor+stat~t.period, value.var='v')
-	setnames(tmp3, as.character(1:4), paste('v.',1:4,sep=''))
-	tmp3	<- merge(tmp3, dcast.data.table(tmp, group+factor~t.period, value.var='l95.bs'), by=c('group','factor'))
-	setnames(tmp3, as.character(1:4), paste('l95.bs.',1:4,sep=''))
-	tmp3	<- merge(tmp3, dcast.data.table(tmp, group+factor~t.period, value.var='u95.bs'), by=c('group','factor'))
-	setnames(tmp3, as.character(1:4), paste('u95.bs.',1:4,sep=''))	
-	tmp3[, factor:='UA']
-	tmp2	<- rbind(tmp3, tmp2, use.names=TRUE)
 	#	prop infections overall
 	tmp		<- subset(dfa, stat%in%c('P.raw.e0cp','CUA.raw.e0cp'))
 	set( tmp, NULL, 'factor', tmp[, substr(factor,1,nchar(factor)-4)] )
@@ -2464,7 +2537,8 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	set(tmp2, NULL, c('v','l95.bs','u95.bs'), NULL)
 	ans		<- copy(tmp2)	
 	#	add number of recipient with at least one prob transmitter
-	ans		<- rbind(ans, tmp3, use.names=TRUE) 
+	ans		<- rbind(ans, tmp3, use.names=TRUE)
+	ans		<- subset(ans, factor!='L_total')
 	#	get dummy to sort
 	set(ans, NULL, 'totalsort',  ans[, as.numeric(!grepl('total',factor))])
 	#	get factor names
@@ -2477,7 +2551,7 @@ project.athena.Fisheretal.sensitivity.tables.m2.prop<- function(runs.risk, metho
 	setnames(ans, tmp[, as.character(t.period)], tmp[, window])
 	setnames(ans, 'All', paste(tmp[1,t.period.min],'-',tmp[4,t.period.max],sep=''))
 	#	reorder	
-	set(ans, NULL, 'group', ans[, factor(group, levels=c('','U_total','D_total','A_total'), labels=c('','U_total','D_total','A_total'))])
+	set(ans, NULL, 'group', ans[, factor(group, levels=c('','U_total','D_total','A_total','L_total'), labels=c('','U_total','D_total','A_total','L_total'))])
 	set(ans, NULL, 'stat', ans[, as.character(stat)])
 	setkey(ans, group, totalsort, factor, stat)
 	

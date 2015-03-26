@@ -9382,7 +9382,7 @@ project.athena.Fisheretal.X.viro<- function(df.tpairs, df.viro, t.period=0.25, l
 	viro
 }
 ######################################################################################
-project.athena.Fisheretal.Y.infectiontime<- function(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=0.25, ts.min=1980, method.infectiontime='for.infected', method.minLowerUWithNegT=TRUE, verbose=TRUE)
+project.athena.Fisheretal.Y.infectiontime<- function(YX.tpairs, df.all, predict.t2inf, t2inf.args, t.period=0.125, ts.min=1980, method.infectiontime='for.infected', method.minLowerUWithNegT=TRUE, verbose=TRUE)
 {
 	#ts.min=1980; score.min=0.01; score.set.value=1
 	stopifnot(method.infectiontime%in%c('for.infected','for.transmitter'))
@@ -9806,7 +9806,7 @@ project.athena.Fisheretal.characteristics<- function()
 project.athena.Fisheretal.censoring.model<- function(ct, ctb, ctn=NULL, plot.file=NA, factors=NULL)
 {
 	method.group	<- ifelse( ct[, any(grepl('<=100',factor2))], 'age', ifelse(ct[, any(grepl('UA',factor2))], 'cascade', 'art'))
-	if(!is.null(factors))
+	if(!is.null(factors) & 'factor'%in%names(factors))
 		setnames(factors, 'factor', 'factor2')		 
 	if(!is.na(plot.file))
 	{		
@@ -9844,10 +9844,11 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctb, ctn=NULL, plot.fil
 		if(method.group=='cascade')
 			ct.plot	<- subset(ct.plot, grepl('U',factor2))
 		set(ct.plot, NULL, 't2cf', ct.plot[, factor(round(t2c,d=2))])
+		setkey(ct.plot, factor.legend)
 		ggplot(ct.plot, aes(x=2011-t2c, y=100*c, colour=factor.legend)) + geom_boxplot(aes(position=factor(t2c)), outlier.shape = NA) +
 				labs(x=expression('end time of observation period ('*t[2]^k*' )'), y='fraction of non-censored\npotential transmission intervals\n( % )') +
 				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +						
-				scale_y_continuous(breaks=seq(0,100,20), lim=c(0,100) ) + theme_bw() +
+				scale_y_continuous(breaks=seq(0,100,20), lim=c(0,100), expand=c(0,1) ) + theme_bw() +
 				theme(panel.grid.major=element_line(colour="grey70", size=0.4), legend.position = "bottom") + 
 				facet_grid(. ~ factor.legend, margins=FALSE)
 		file		<- paste(plot.file,'_censoringfraction.pdf',sep='')
@@ -11313,7 +11314,7 @@ hivc.prog.props_univariate<- function()
 		#method					<- '3m'
 		method.recentctime		<- '2011-01-01'
 		method.nodectime		<- 'any'
-		method.risk				<- 'm2Awmx.tp1'
+		method.risk				<- 'm2Awmx.tp4.wtn'
 		method.Acute			<- 'higher'	#'central'#'empirical'
 		method.minQLowerU		<- 0.148
 		method.use.AcuteSpec	<- 1
@@ -11583,7 +11584,7 @@ hivc.prog.props_univariate<- function()
 	Y.brl.bs		<- copy(tmp$Y.brl.bs)
 	gc()
 #STOP2
-stop()	
+#stop()	
 	stopifnot(is.null(X.tables)==FALSE)
 	#
 	#	for each time period, estimate N transmitted etc

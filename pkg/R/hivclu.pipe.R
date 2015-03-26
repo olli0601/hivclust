@@ -661,7 +661,7 @@ hivc.pipeline.props_univariate<- function()
 					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
 				}, by='DUMMY']		
 	}
-	if(1)	#	iterate over short runs: prop estimates
+	if(0)	#	iterate over short runs: prop estimates
 	{
 		df.method				<- list(
 				#	infection times
@@ -685,12 +685,12 @@ hivc.pipeline.props_univariate<- function()
 						}, by=c('DUMMY','DUMMY2')]	
 		df.method[,{
 					cmd			<- paste(CMD, collapse='', sep='')
-					cat(cmd)
-					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
+					cat(cmd)					
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=10, hpc.mem="4000mb")
 					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)					
 				}, by=c('DUMMY2')]	
 	}
-	if(0)	#	iterate over short runs: method.realloc
+	if(1)	#	iterate over short runs: method.realloc
 	{
 		df.method				<- list(
 				#	infection times
@@ -701,26 +701,27 @@ hivc.pipeline.props_univariate<- function()
 				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
 		)
 		df.method				<- do.call('rbind', df.method)				
-		df.method				<- df.method[2,]
+		df.method				<- df.method[7,]
 		tmp						<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,
-												method.risk='m2Cwmx.wtn.tp4',
+												method.risk='m2Awmx.wtn.tp4',
 												method.realloc=  c(	'ImmediateART','ARTat500',	
-																	#	hypothetical: RPrEP33
-																	'RPrEP33',
-																	#	testing
-																	'TestC12m100pc','TestC06m100pc','TestA06m100pc','TestC12m59pc','TestA12m59pc','TestC06m65pc','TestA06m65pc','TestC12m32pc','TestA12m32pc','TestC06m42pc','TestA06m42pc',
-																	#	test + PrEP
-																	'PrestIPrEXC12m18pc40pc','PrestIPrEXC12m32pc50pc','PrestIPrEXC12m32pc50pc','PrestIPrEXC12m46pc60pc','PrestIPrEXC12m59pc70pc',
-																	#	Test and PrEP at 40%, 50%, 60%, 70% + Immediate ART
-																	'PrestIPrEXC12m18pc40pc+ImmediateART','PrestIPrEXC12m32pc50pc+ImmediateART','PrestIPrEXC12m46pc60pc+ImmediateART','PrestIPrEXC12m59pc70pc+ImmediateART',
-																	#	Test and PrEP at 40%, 50%, 60%, 70% + ARTat500
-																	'PrestIPrEXC12m18pc40pc+ARTat500','PrestIPrEXC12m32pc50pc+ARTat500','PrestIPrEXC12m46pc60pc+ARTat500','PrestIPrEXC12m59pc70pc+ARTat500',
-																	#	test + treat 12MO/100%, 70%, 50%
-																	'TestC12m100pc+ImmediateART', 'TestC12m59pc+ImmediateART','TestC12m32pc+ImmediateART','TestC12m100pc+ARTat500','TestC12m59pc+ARTat500','TestC12m32pc+ARTat500')
+																	#	testing 12m
+																	paste('TestC12m',seq(30,70,10),'pc',sep=''), paste('TestA12m',seq(30,70,10),'pc',sep=''),
+																	#	testing 6m
+																	paste('TestC6m',seq(30,70,10),'pc',sep=''), paste('TestA6m',seq(30,70,10),'pc',sep=''),																	
+																	#	test + PrEP 
+																	paste('PrestIPrEXC12m',seq(30,70,10),'pc',seq(30,70,10),'pc',sep=''), paste('PrestPROUDC12m',seq(30,70,10),'pc',seq(30,70,10),'pc',sep=''),																	
+																	#	Test + PrEP + Immediate ART
+																	paste('PrestIPrEXC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ImmediateART',sep=''), paste('PrestPROUDC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ImmediateART',sep=''),																	
+																	#	Test + PrEP + ARTat500
+																	paste('PrestIPrEXC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ARTat500',sep=''), paste('PrestPROUDC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ARTat500',sep=''),
+																	#	test + treat
+																	paste('TestC12m',seq(30,70,10),'pc+ImmediateART',sep=''), paste('TestC12m',seq(30,70,10),'pc+ARTat500',sep='')
+																	)
 												)
 		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
 		df.method[, DUMMY:=seq_len(nrow(df.method))]
-		df.method[, DUMMY2:=rep(1:(nrow(df.method)%/%5+1), each=5)[seq_len(nrow(df.method))]]
+		df.method[, DUMMY2:=rep(1:(nrow(df.method)%/%6+1), each=6)[seq_len(nrow(df.method))]]
 		df.method				<- df.method[,{
 					cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, method.realloc=method.realloc, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 					list(CMD=cmd)
@@ -728,8 +729,8 @@ hivc.pipeline.props_univariate<- function()
 		df.method[,{
 					cmd			<- paste(CMD, collapse='', sep='')
 					cat(cmd)	
-					stop()
-					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
+					#stop()
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=10, hpc.mem="4000mb")
 					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
 				}, by=c('DUMMY2')]	
 	}
