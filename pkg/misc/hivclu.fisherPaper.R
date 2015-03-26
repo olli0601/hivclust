@@ -1725,7 +1725,65 @@ project.athena.Fisheretal.composition.recipients.repr.info<- function(df.ar, qua
 project.athena.Fisheretal.composition.recipients.repr<- function()
 {	
 	quantiles	<- c(0,0.025,0.25,0.5,0.75,0.975,1)
+	#
+	#	 I re-set inaccurate testing dates -- get df.all.allmsm with original testing dates first
+	#
+	indir					<- paste(DATA,"fisheretal_data",sep='/')		
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	outdir					<- paste(DATA,"fisheretal",sep='/')
+	infile.cov.study		<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	infile.viro.study		<- paste(indircov,"ATHENA_2013_03_Viro.R",sep='/')
+	infile.immu.study		<- paste(indircov,"ATHENA_2013_03_Immu.R",sep='/')
+	infile.treatment.study	<- paste(indircov,"ATHENA_2013_03_Regimens.R",sep='/')	
+	infile.cov.all			<- "ATHENA_2013_03_AllSeqPatientCovariates_AllMSM"
+	infile.viro.all			<- paste(indircov,"ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+	infile.immu.all			<- paste(indircov,"ATHENA_2013_03_Immu_AllMSM.R",sep='/')
+	infile.treatment.all	<- paste(indircov,"ATHENA_2013_03_Regimens_AllMSM.R",sep='/')	
+	infile.trm.model		<- NA
+	t.period				<- 1/8
+	t.recent.startctime		<- hivc.db.Date2numeric(as.Date("1996-07-15"))
+	t.recent.startctime		<- floor(t.recent.startctime) + floor( (t.recent.startctime%%1)*100 %/% (t.period*100) ) * t.period
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+	resume					<- 1
+	verbose					<- 1
+	method.recentctime		<- '2011-01-01'
+	method.Acute			<- 'higher'	#'central'#'empirical'
+	method.minQLowerU		<- 0.135
+	method.use.AcuteSpec	<- 1
+	#
+	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	infiletree				<- paste(infile,"examlbs500",sep="_")
+	insignat				<- "Wed_Dec_18_11:37:00_2013"							
+	t.recent.endctime	<- hivc.db.Date2numeric(as.Date(method.recentctime))	
+	t.recent.endctime	<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period	
+	
+	adjust.AcuteByNegT			<- 1
+	any.pos.grace.yr			<- Inf	
+	adjust.minSCwindow			<- NA		#differs from main study
+	adjust.NegTByDetectability	<- NA		#differs from main study
+	
+	tmp				<- project.athena.Fisheretal.select.denominator(indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, 
+			infiletree=infiletree, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=adjust.NegTByDetectability, adjust.minSCwindow=adjust.minSCwindow, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec, 
+			t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
+	df.all			<- tmp$df.all	
+	df.denom.CLU	<- tmp$df.select
+	df.denom.SEQ	<- tmp$df.select.SEQ	
+	ri.CLU			<- unique(subset(df.denom.CLU, select=Patient))
+	ri.SEQ			<- unique(subset(df.denom.SEQ, select=Patient))
+	df.viro			<- tmp$df.viro
+	df.immu			<- tmp$df.immu
+	df.treatment	<- tmp$df.treatment	
+	#
+	tmp					<- project.athena.Fisheretal.select.denominator(	indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, 
+			infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=adjust.NegTByDetectability, adjust.minSCwindow=adjust.minSCwindow, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec,
+			t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime,
+			df.viro.part=df.viro, df.immu.part=df.immu, df.treatment.part=df.treatment, df.all.part=df.all)	
+	df.all.allmsm		<- tmp$df.all
+	setkey(df.all.allmsm, Patient)
+	#
 	#	all diag
+	#
 	df.ad	<- subset(df.all.allmsm, AnyPos_T1<2011 & AnyPos_T1>=1996.6 & Trm%in%c('MSM','BI')) 
 	setkey(df.ad, Patient)
 	df.ad	<- unique(df.ad)	
@@ -1742,7 +1800,7 @@ project.athena.Fisheretal.composition.recipients.repr<- function()
 	files	<- data.table(	file.MSM=list.files(indir, pattern='*tATHENAmsm.R$'),
 			file.SEQ=list.files(indir, pattern='*tATHENAseq.R$'),
 			file.YX=list.files(indir, pattern='*YXSEQ*'))
-	file	<- paste(indir, '/', files[3,file.YX], sep='')
+	file	<- paste(indir, '/', files[9,file.YX], sep='')
 	load(file)
 	df.rr	<- merge(df.ar, unique(subset(YX, select=Patient)), by='Patient')
 	
