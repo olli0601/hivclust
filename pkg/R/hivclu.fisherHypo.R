@@ -742,7 +742,7 @@ project.athena.Fisheretal.Hypo.prepmissingbs<- function(YX.bs, nt.table.bs, meth
 		tmp			<- missing.bs[, {		
 					z	<- subset(YX.used, grepl(factor2[1], YX.used[[risk]], fixed=TRUE), c('Patient','t.Patient','score.Y'))
 					setkey(z, Patient, t.Patient)
-					z	<- sample(unique(z)[['score.Y']], length(Patient), replace=TRUE)																															
+					z	<- my.sample(unique(z)[['score.Y']], length(Patient), replace=TRUE)																															
 					list(Patient=Patient, yYXm.sum.e0=YXm.r.e0*z, yYXm.sum.e0cp=YXm.r.e0cp*z )
 				}, by=c('risk','factor')]						
 	missing.bs[, factor2:=NULL]				
@@ -874,7 +874,7 @@ project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc<- function(YX, nt.table
 			tmp		<- merge(tmp, data.table(stage=cut(runif(n), breaks=c(-Inf,cumsum(tmp$pt)), labels=tmp$stage)), by='stage')	
 		set(tmp, NULL, 'stage', tmp[, as.character(stage)])
 		if(grepl('y=sample',method.sample))
-			ans	<- tmp[ ,	list(score.Y= sample(df.artinfo[['score.Y.raw']][ df.artinfo[['stage']]==stage ], length(nt), replace=TRUE)), by='stage']
+			ans	<- tmp[ ,	list(score.Y= my.sample(df.artinfo[['score.Y.raw']][ df.artinfo[['stage']]==stage ], length(nt), replace=TRUE)), by='stage']
 		if(grepl('y=median',method.sample))
 			ans	<- tmp[ ,	list(score.Y= rep(median(df.artinfo[['score.Y.raw']][ df.artinfo[['stage']]==stage ]), length(nt))), by='stage']
 		if(grepl('y=mean',method.sample))
@@ -886,7 +886,7 @@ project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc<- function(YX, nt.table
 		tmp	<- subset( YXf, grepl('ART.NotYetFirstSu',stage))$score.Y.raw
 		ans	<- data.table(stage=rep(paste('ART.NotYetFirstSu.',tp,sep=''),n))
 		if(grepl('y=sample',method.sample))
-			ans[, score.Y:= sample( tmp, n, replace=TRUE)]
+			ans[, score.Y:= my.sample( tmp, n, replace=TRUE)]
 		if(grepl('y=median',method.sample))
 			ans[, score.Y:= rep(median(tmp), n)]
 		set(YX.h, ARTs.i, 'score.Y.raw', rep(median(subset( YXf, grepl('ART.NotYetFirstSu',stage))$score.Y.raw), length(ARTs.i)))	
@@ -1070,7 +1070,7 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 		#	allocate score by stage
 		set(tmp, NULL, 'stage', tmp[, as.character(stage)])
 		if(grepl('y=sample',method.sample))
-			tmp	<- tmp[ ,	list(Patient=Patient, t.Patient=t.Patient, REALLOC_SCORE_Y_RAW= sample(df.dinfo[['score.Y.raw']][ df.dinfo[['stage']]==stage ], length(pt), replace=TRUE)), by='stage']
+			tmp	<- tmp[ ,	list(Patient=Patient, t.Patient=t.Patient, REALLOC_SCORE_Y_RAW= my.sample(df.dinfo[['score.Y.raw']][ df.dinfo[['stage']]==stage ], length(pt), replace=TRUE)), by='stage']
 		if(grepl('y=median',method.sample))
 			tmp	<- tmp[ ,	list(Patient=Patient, t.Patient=t.Patient,  REALLOC_SCORE_Y_RAW= rep(median(df.dinfo[['score.Y.raw']][ df.dinfo[['stage']]==stage ]), length(pt))), by='stage']
 		if(grepl('y=mean',method.sample))
@@ -1376,7 +1376,7 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 		#	allocate score by stage
 		set(tmp, NULL, 'stage', tmp[, as.character(stage)])
 		if(grepl('y=sample',method.sample))
-			tmp	<- tmp[ ,	list(Patient=Patient, t.Patient=t.Patient, REALLOC_SCORE_Y_RAW= sample(df.dinfo[['score.Y.raw']][ df.dinfo[['stage']]==stage ], length(pt), replace=TRUE)), by='stage']
+			tmp	<- tmp[ ,	list(Patient=Patient, t.Patient=t.Patient, REALLOC_SCORE_Y_RAW= my.sample(df.dinfo[['score.Y.raw']][ df.dinfo[['stage']]==stage ], length(pt), replace=TRUE)), by='stage']
 		if(grepl('y=median',method.sample))
 			tmp	<- tmp[ ,	list(Patient=Patient, t.Patient=t.Patient,  REALLOC_SCORE_Y_RAW= rep(median(df.dinfo[['score.Y.raw']][ df.dinfo[['stage']]==stage ]), length(pt))), by='stage']
 		if(grepl('y=mean',method.sample))

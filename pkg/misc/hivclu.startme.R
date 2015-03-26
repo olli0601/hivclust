@@ -156,6 +156,11 @@ my.fade.col<-function(col,alpha=0.5)
 	return(rgb(col2rgb(col)[1]/255,col2rgb(col)[2]/255,col2rgb(col)[3]/255,alpha))
 }
 
+my.sample <- function(x, ...)
+{
+	x[sample.int(length(x), ...)]	
+} 
+
 my.dumpframes<- function()
 {
 	geterrmessage()
