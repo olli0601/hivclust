@@ -11440,7 +11440,7 @@ hivc.prog.props_univariate<- function()
 		if(length(tmp)>0) method.minLowerUWithNegT<- tmp[1]
 		tmp<- na.omit(sapply(argv,function(arg)
 						{	switch(substr(arg,2,15),
-									method.realloc= return(as.numeric(substr(arg,17,nchar(arg)))),NA)	}))
+									method.realloc= return(substr(arg,17,nchar(arg))),NA)	}))
 		if(length(tmp)>0) method.realloc<- tmp[1]
 	}	
 	clu.infile			<- infile

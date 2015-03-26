@@ -729,9 +729,10 @@ hivc.pipeline.props_univariate<- function()
 		df.method[,{
 					cmd			<- paste(CMD, collapse='', sep='')
 					cat(cmd)	
-					#stop()
+					
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=10, hpc.mem="4000mb")
 					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
+					stop()
 				}, by=c('DUMMY2')]	
 	}
 	if(0)	#custom

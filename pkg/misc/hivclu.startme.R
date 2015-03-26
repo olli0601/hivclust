@@ -398,7 +398,7 @@ if(length(args))
 	argv<<- args
 }
 ###############################################################################
-stop()
+#stop()
 if(HIVC.DEBUG)	options(error= my.dumpframes)	
 cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	

@@ -616,22 +616,22 @@ project.athena.Fisheretal.composition.riskratio.exclusioncriteria<- function()
 												'phylogenetic exclusion criteria\ncoalescent compatibility < 20%\nclade frequency < 70%',
 												'phylogenetic exclusion criteria\ncoalescent compatibility < 10%\nclade frequency < 70%'))
 	set(tmp, NULL, 'method.legend', tmp[, factor(method.legend, levels=method.legend, labels=method.legend)])							
-	run.tp				<- merge(run.tp, tmp, by='method.brl')	
+	run.tp				<- merge(run.tp, tmp, by='method.brl')
 	#	prepare
 	run.tp[, m50.bs:=NULL]
 	setkey(run.tp, factor)
 	run.tp[, t.period:=run.tp[, substr(factor, nchar(factor), nchar(factor))]]
-	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])
-	set(run.tp, NULL, 'factor', run.tp[, factor(factor, levels=factors[, levels(factor)])])	
-	#	merge t.period
-	run.tp				<- merge(run.tp, tperiod.info, by='t.period')
+	set(run.tp, NULL, 'factor', run.tp[, substr(factor, 1, nchar(factor)-2)])	
 	#	merge factors
 	factors				<- project.athena.Fisheretal.sensitivity.factor.legend(method.RISK)
-	run.tp				<- merge(run.tp, subset(factors, select=factors[, which(colnames(factors)!='method.risk')]), by='factor')	
-	setkey(run.tp, method.legend, factor.legend, t.period.long)
+	run.tp				<- merge(run.tp, subset(factors, select=factors[, which(colnames(factors)!='method.risk')]), by='factor')			
+	set(run.tp, NULL, 'factor', run.tp[, factor(factor, levels=factors[, levels(factor)])])	
+	#	merge t.period
+	run.tp				<- merge(run.tp, tperiod.info, by='t.period')	
 	#
 	#	plot
 	#	
+	setkey(run.tp, method.legend, factor.legend, t.period.long)
 	ggplot(run.tp, aes(x=t.period.long, y=100*v, ymin=100*l95.bs, ymax=100*u95.bs, fill=factor.legend, colour=factor.legend, group=factor.legend)) + 
 			geom_hline(yintercept=100) + 
 			geom_point(position=position_dodge(.5) , shape=18) + 
@@ -645,7 +645,9 @@ project.athena.Fisheretal.composition.riskratio.exclusioncriteria<- function()
 			facet_wrap(~method.legend, ncol=3, scales='free')
 	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150316_RRByExclusionCriteria.pdf'
 	ggsave(file=file, w=10, h=10)
+	#
 	
+
 }
 ######################################################################################
 project.athena.Fisheretal.composition.prop.exclusioncriteria<- function()	
@@ -1089,8 +1091,8 @@ project.athena.Fisheretal.composition.totalmissing<- function()
 	require(RColorBrewer)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_150308",sep='/')	
-	outdir					<- paste(DATA,"fisheretal_150308",sep='/')	
+	indir					<- paste(DATA,"fisheretal_150319",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_150319",sep='/')	
 	#
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -1102,12 +1104,12 @@ project.athena.Fisheretal.composition.totalmissing<- function()
 	
 	method.DENOM	<- 'SEQ'
 	method.BRL		<- '3pa1H1.48C2V100bInfT7'
-	method.RISK		<- 'm2Cwmx.wtn.tp'
+	method.RISK		<- 'm2Awmx.wtn.tp'
 	method.WEIGHT	<- ''	
 	
 	df		<- subset(runs.table, method.denom==method.DENOM & method.BRL==method.brl & grepl(method.RISK,method.risk), c(stat, method.risk, factor, n, p, l95.bs, u95.bs))
 	tmp		<- subset(df, stat%in%c('Sx.e0cp'))	
-	tmp[, list(n=sum(n), py=sum(n/8), l95.bs=sum(l95.bs/8), u95.bs=sum(u95.bs/8))]
+	tmp[, list(n=sum(n), py=sum(n/8), l95.bs=sum(l95.bs), u95.bs=sum(u95.bs), pyl95.bs=sum(l95.bs/8), pyu95.bs=sum(u95.bs/8))]
 }
 ######################################################################################
 project.athena.Fisheretal.composition.contact<- function()
