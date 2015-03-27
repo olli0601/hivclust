@@ -678,9 +678,12 @@ project.athena.Fisheretal.Hypo.prepmissingbs<- function(YX.bs, nt.table.bs, meth
 	missing.bs[, PTx.bs:= YX.bs/PYs]
 	# 	boostrap sample X.msm.e0 and X.msm.e0cp
 	set(missing.bs, NULL, 'X.msm.e0.bs', missing.bs[, rbinom(length(X.msm.e0), sum(X.msm.e0), X.msm.e0/sum(X.msm.e0))])
-	set(missing.bs, NULL, 'X.msm.e0cp.bs', missing.bs[, rbinom(length(X.msm.e0cp), sum(X.msm.e0cp), X.msm.e0cp/sum(X.msm.e0cp))])				
+	set(missing.bs, NULL, 'X.msm.e0cp.bs', missing.bs[, rbinom(length(X.msm.e0cp), sum(X.msm.e0cp), X.msm.e0cp/sum(X.msm.e0cp))])	
 	missing.bs[, Sx.e0.bs:= PYs/X.msm.e0.bs]					
 	missing.bs[, Sx.e0cp.bs:= PYs/X.msm.e0cp.bs]
+	#	can be >1 due to bootstrapping
+	set(missing.bs, missing.bs[, which(Sx.e0.bs>1)], 'Sx.e0.bs', 1)
+	set(missing.bs, missing.bs[, which(Sx.e0cp.bs>1)], 'Sx.e0cp.bs', 1)
 	#	zero denominator means missing YX.bs, PTx.bs and NaN Sx.e0.bs, Sx.e0cp.bs
 	tmp					<- missing.bs[, which(X.msm.e0==0)]
 	set(missing.bs, tmp, c('YX.bs'), 0)
