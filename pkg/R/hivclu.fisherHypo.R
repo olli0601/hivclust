@@ -1240,6 +1240,7 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_IN))], 'REALLOC_NT_IN', 0)
 		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_OUT))], 'REALLOC_NT_OUT', 0)
 		df.uinfo[, U_OUT_AFTER_RM:= REALLOC_NT_OUT/NT]
+		set(df.uinfo, df.uinfo[, which(is.na(NT))], c('NT','U_OUT_AFTER_RM'), 0)
 		df.uinfo[, D_IN_AFTER_RM:= REALLOC_NT_IN/sum(REALLOC_NT_IN)]		
 		setnames(df.uinfo, 'stage', 'factor')
 		set(df.uinfo, NULL, 'factor', df.uinfo[, as.character(factor)])
@@ -1582,7 +1583,7 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 		cat(paste('\ntransmission intervals from transmitters not on eff PrEP, n=', nrow(YX.h)))
 	#	realloc intervals from transmitters that tested positive
 	YX.h		<- merge(YX.h, YX.h[, list(t_min=min(t)), by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
-	YX.h[, t.grace:= YX.h[,t.INFECTION_T-t_min]]
+	set(YX.h, NULL, 't.grace', YX.h[,t.INFECTION_T-t_min])
 	set(YX.h, YX.h[, which(!grepl('UAna',stage) | t.grace<0 | is.na(t.grace)) ], 't.grace', 0)
 	if(verbose)
 		cat(paste('\ntransmission intervals with t.grace>0, n=', YX.h[, length(which(t.grace>0))]))	
@@ -1615,6 +1616,7 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_IN))], 'REALLOC_NT_IN', 0)
 		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_OUT))], 'REALLOC_NT_OUT', 0)
 		df.uinfo[, U_OUT_AFTER_RM:= REALLOC_NT_OUT/NT]
+		set(df.uinfo, df.uinfo[, which(is.na(NT))], c('NT','U_OUT_AFTER_RM'), 0)
 		df.uinfo[, D_IN_AFTER_RM:= REALLOC_NT_IN/sum(REALLOC_NT_IN)]		
 		set(df.uinfo, NULL, c('REALLOC_NT_IN','REALLOC_NT_OUT','NT'), NULL)
 	}
