@@ -1234,7 +1234,7 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 	df.uinfo	<- subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_IN= length(t)), by='REALLOC_STAGE']
 	if(nrow(df.uinfo))
 	{
-		setnames(df.uinfo, 'REALLOC_STAGE', 'stage')	
+		setnames(df.uinfo, 'REALLOC_STAGE', 'stage')	 
 		df.uinfo	<- merge( df.uinfo, YX.h[, list(NT= length(t)), by='stage'], by='stage', all=1 )
 		df.uinfo	<- merge( df.uinfo, subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_OUT= length(t)), by='stage'], by='stage', all=1 )
 		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_IN))], 'REALLOC_NT_IN', 0)
