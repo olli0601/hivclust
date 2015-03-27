@@ -11649,8 +11649,8 @@ hivc.prog.props_univariate<- function()
 		
 #SSS	
 
-
-	stop()
+	quit('no')
+	
 	tmp		<- subset(YX, select=c(Patient, t.Patient, score.Y))	
 	setkey(tmp, Patient, t.Patient)
 	tmp		<- unique(tmp)

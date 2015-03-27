@@ -721,6 +721,7 @@ hivc.pipeline.props_univariate<- function()
 												)
 		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
 		df.method[, DUMMY:=seq_len(nrow(df.method))]
+		df.method				<- df.method[c(13:22,30:32,40:42,50:52),]
 		df.method[, DUMMY2:=rep(1:(nrow(df.method)%/%6+1), each=6)[seq_len(nrow(df.method))]]
 		df.method[, DUMMY2:=seq_len(nrow(df.method))]
 		df.method				<- df.method[,{

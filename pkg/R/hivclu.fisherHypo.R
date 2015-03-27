@@ -1037,9 +1037,9 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 	stopifnot(grepl('t=mean|t=sample|t=start',method.sample))
 	stopifnot(grepl('Test',method.realloc))
 	method.reallocate	<- '^U'
-	tmp					<- regmatches(method.realloc,regexpr('Test[[:alnum:]]+', method.realloc))
-	test.repeat			<- as.numeric(substr(tmp,6,7)) / 12
-	test.pc.target		<- as.numeric(substr(tmp,9,nchar(tmp)-2)) / 100
+	tmp					<- regmatches(method.realloc,regexpr('Test[[:alnum:]]+', method.realloc))	
+	test.repeat			<- as.numeric(regmatches(substring(tmp,6),regexpr('[^m]+', substring(tmp,6)))) / 12	
+	test.pc.target		<- as.numeric(substring(regmatches(substring(tmp,6),regexpr('m[0-9]+', substring(tmp,6))),2)) / 100
 	test.delay			<- substr(tmp,5,5)
 	stopifnot(test.delay%in%c('A','C'), is.finite(test.repeat), is.finite(test.pc.target))
 	test.delay			<- ifelse(test.delay=='A',0,1/12)
@@ -1595,9 +1595,9 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	set(YX.h, tmp, 'TR_TEST', 1)		
 	if(verbose)
 		cat(paste('\nrealloc transmission intervals from transmitters that got tested pos, n=', length(tmp)))
-	df.tr		<- unique(subset(YX.h, TR_TEST==1, select=c(Patient, t.Patient)))
-	df.tr		<- rTest.Realloc(df.tr, method.sample, df.dinfo)
-	YX.h		<- merge( YX.h, df.tr, by=c('Patient','t.Patient'), all.x=1 )
+	tmp			<- unique(subset(YX.h, TR_TEST==1, select=c(Patient, t.Patient)))
+	tmp			<- rTest.Realloc(tmp, method.sample, df.dinfo)
+	YX.h		<- merge( YX.h, tmp, by=c('Patient','t.Patient'), all.x=1 )
 	set(YX.h, YX.h[, which(TR_TEST==0)], 'REALLOC_STAGE', NA_character_)
 	set(YX.h, YX.h[, which(TR_TEST==0)], 'REALLOC_SCORE_Y_RAW', NA_real_)
 	#
