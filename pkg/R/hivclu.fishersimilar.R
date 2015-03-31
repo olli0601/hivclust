@@ -217,6 +217,7 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 	setnames(tmp, 'Patient','t.Patient')
 	X.incare	<- merge(X.incare, tmp, by=c('t.Patient','t'), all.x=1)
 	set(X.incare, X.incare[,which(is.na(contact))],'contact','Yes')
+	set(X.incare, X.incare[, which(contact=='No' & t+contact.grace>t.endctime)], 'contact', 'Yes')
 	#
 	#	for each time t, check if there is at least 1 VL or CD4 measurement or Treatment visit in the last year/2 or next year/2
 	#
@@ -224,7 +225,7 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 	set(df.viro, NULL, 'PosRNA', hivc.db.Date2numeric(df.viro[,PosRNA]))
 	tmp			<- X.incare[, {
 									cntct					<- rep(0, length(t))
-									endgrace				<- t+contact.grace/2-t.endctime
+									endgrace				<- t+contact.grace-t.endctime
 									endgrace[endgrace<0]	<- 0									
 									z						<- df.immu$PosCD4[ which(df.immu$Patient==t.Patient) ]
 									if(length(z))
@@ -246,9 +247,53 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 									}																		
 									list(t=t, incontact=cntct)
 								}, by=c('t.Patient')]	
-	X.incare	<- merge(X.incare, tmp, by=c('t.Patient','t'))
-	#set(X.incare, X.incare[, which(!incontact & t+contact.grace>t.endctime)], 'incontact', 1)
-	#ggplot(subset(X.incare, contact=='No' | incontact==0), aes(x=t, fill=incontact==0)) + geom_histogram(binwidth=0.125) + scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1))
+	X.incare	<- merge(X.incare, tmp, by=c('t.Patient','t'))	
+	if(!is.na(plot.file))
+	{
+		tmp			<- subset(X.incare, t>1996.5 & t<2011 & (contact=='No' | incontact==0))[, list(FIR=t[1], DUR=length(t)*t.period), by=c('t.Patient')]
+		ggplot(tmp, aes(x=FIR, y=DUR)) + geom_point(size=1) +
+				scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1)) +
+				scale_y_continuous(breaks=seq(0, 20, 4), minor_breaks=seq(0, 20, 1), expand=c(0.01,0.01)) +
+				labs(x='first time not in contact', y='duration of loss to contact\n(years)') +
+				theme(panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.4), axis.text.x=element_text(angle=0, vjust=0, hjust=0)) +
+				theme_bw()
+		file		<- paste(plot.file, '_contactDur.pdf',sep='')
+		ggsave(file=file, h=6, w=6)
+		#
+		setnames(tmp, 't.Patient', 'Patient')
+		tmp			<- merge(tmp, unique(subset(df.all, select=c(Patient, PosSeqT))), by='Patient')
+		tmp			<- subset(tmp, !is.na(PosSeqT))
+		set(tmp, NULL, 'PosSeqT', tmp[, floor(PosSeqT) + round( (PosSeqT%%1)*100 %/% (t.period*100) ) * t.period] )
+		tmp[, COL:=tmp[, factor(as.numeric(FIR<=PosSeqT), levels=c(0,1), labels=c('before loss of contact', 'after loss of contact'))]]		
+		ggplot(tmp, aes(x=FIR, y=PosSeqT, colour=COL)) + geom_point() + geom_abline() +
+				labs(colour='sequenced', x='first time not in contact', y='sequence sampling time') +
+				theme_bw() +
+				theme(legend.position='bottom')
+		file		<- paste(plot.file, '_contactBySeq.pdf',sep='')
+		ggsave(file=file, h=6, w=6)		
+		#ggplot(subset(X.incare, contact=='No' | incontact==0), aes(x=t, fill=incontact==0)) + geom_histogram(binwidth=0.125) + scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1)) + coord_trans(limx=c(1996.5, 2011))
+		ggplot(subset(X.incare, contact=='No' | incontact==0), aes(x=t)) + geom_histogram(binwidth=0.125) + 
+				scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1)) + 
+				scale_y_continuous(expand=c(0,0)) +
+				coord_trans(limx=c(1996.5, 2011)) +
+				theme(panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.4), axis.text.x=element_text(angle=0, vjust=0, hjust=0)) +
+				labs(x='', y='potential transmitters with no contact\n(#)') +
+				theme_bw()
+		file		<- paste(plot.file, '_contactHist.pdf',sep='')
+		ggsave(file=file, h=6, w=6)		
+		tmp			<- subset(X.incare, t>1996 & t<2011.5)[, list(NOCON= mean(contact=='No' | incontact==0)), by='t']
+		ggplot(tmp, aes(x=t, ymax=100*NOCON, ymin=0)) + geom_ribbon() + 
+				scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1)) + 
+				scale_y_continuous(expand=c(0,0), limits=c(0,100)) +
+				coord_trans(limx=c(1996.5, 2011)) +
+				theme(panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.4), axis.text.x=element_text(angle=0, vjust=0, hjust=0)) +
+				labs(x='', y='potential transmitters with no contact\n(%)') +
+				theme_bw()
+		file		<- paste(plot.file, '_contactProp.pdf',sep='')
+		ggsave(file=file, h=6, w=6)
+		
+	}
+	#
 	set(X.incare, X.incare[, which(!incontact & contact=='Yes')], 'contact', 'No')	
 	set(X.incare, NULL, 'incontact', NULL )
 	if(X.incare[, length(which(is.na(stage)))])	stop('unexpected NA stage')
@@ -2885,7 +2930,8 @@ project.athena.Fisheretal.pool.TP4<- function(outdir, outfile, insignat, method,
 	files		<- list.files(path=outdir, pattern='R$')
 	files		<- files[  grepl(method, files) & grepl(method.PDT,files) & grepl(substr(tmp2, 1, nchar(tmp2)-3), files) ]
 	ans			<- NULL
-	if( resume & length(which(grepl('wtn.beforepool', files)))>0  & any(grepl(method.risk, files)) )
+	tmp			<- paste( substr(method.risk, 1, nchar(method.risk)-3),'beforepool', sep='' )	
+	if( resume & length(which(grepl(tmp, files)))==3)
 	{
 		files		<- files[ grepl(method.risk, files)]
 		files		<- paste(outdir, files, sep='/')
@@ -10131,7 +10177,7 @@ project.athena.Fisheretal.YX.part1<- function(df.all, df.immu, df.viro, df.treat
 		if(is.null(ri))
 			ri			<- unique(subset(df.tpairs, select=Patient))
 		X.incare				<- project.athena.Fisheretal.X.incare(df.tpairs, df.all, df.viro, df.immu, df.treatment, indircov=indircov, lRNA.supp=lRNA.supp, t.period=t.period, t.endctime=t.endctime)				
-		X.incare				<- project.athena.Fisheretal.X.nocontact(X.incare, df.viro, df.immu, df.treatment, df.tpairs, df.all, contact.grace=1.5, t.period=t.period, t.endctime= t.endctime)		
+		X.incare				<- project.athena.Fisheretal.X.nocontact(X.incare, df.viro, df.immu, df.treatment, df.tpairs, df.all, contact.grace=1.5, t.period=t.period, t.endctime= t.endctime, plot.file=gsub('.R','',save.file))		
 		X.incare				<- project.athena.Fisheretal.X.CDCC(X.incare, df.tpairs, df.all, t.period=t.period, t.endctime=t.endctime)
 		X.incare				<- project.athena.Fisheretal.X.followup(X.incare, df.all, df.immu, t.period=t.period, t.endctime=t.endctime)
 		X.b4care				<- project.athena.Fisheretal.X.b4care(df.tpairs, df.all, predict.t2inf, t2inf.args, t.period=t.period, method.minLowerUWithNegT=method.minLowerUWithNegT)

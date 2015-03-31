@@ -4,17 +4,11 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	require(data.table)
 	require(ape)
 	#stop()
-	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_141108",sep='/')
-	outdir					<- paste(DATA,"fisheretal_141108",sep='/')		
-	indir					<- paste(DATA,"fisheretal_141221",sep='/')
-	outdir					<- paste(DATA,"fisheretal_141221",sep='/')		
-	indir					<- paste(DATA,"fisheretal_150105",sep='/')
-	outdir					<- paste(DATA,"fisheretal_150105",sep='/')		
-	indir					<- paste(DATA,"fisheretal_150216",sep='/')
-	outdir					<- paste(DATA,"fisheretal_150216",sep='/')		
-	indir					<- paste(DATA,"fisheretal_150319",sep='/')
-	outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
+	resume					<- 1 	
+	indir					<- paste(DATA,"fisheretal_150312",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150312",sep='/')		
+	#indir					<- paste(DATA,"fisheretal_150319",sep='/')
+	#outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
