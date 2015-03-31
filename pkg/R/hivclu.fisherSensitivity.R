@@ -19,8 +19,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_150308",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150312",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150312",sep='/')		
-	indir					<- paste(DATA,"fisheretal_150319",sep='/')
-	outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
+	#indir					<- paste(DATA,"fisheretal_150319",sep='/')
+	#outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -1607,7 +1607,7 @@ project.athena.Fisheretal.sensitivity.getfigures.pseq<- function(runs.table, fil
 				scale_colour_manual(values=ans[, unique(factor.color)], guide=FALSE) +
 				theme_bw() +				
 				theme(axis.text.x=element_text(size=10), axis.text.y=element_text(size=7), axis.title=element_text(size=10), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.4), panel.grid.minor.x=element_line(colour="grey70", size=0.4), panel.grid.minor.y=element_blank(), panel.grid.major.y=element_blank()) + 				
-				labs(y='', x='potential transmission intervals\nof a potential transmitter with a sequence\n(%)',pch='time of diagnosis\nof recipient MSM') +
+				labs(y='', x='overlap intervals\nof a potential transmitter with a sequence\n(%)',pch='time of diagnosis\nof recipient MSM') +
 				guides(pch=guide_legend(ncol=2))
 		cat(paste('plot to',file))
 		ggsave(file=file, w=7, h=7)

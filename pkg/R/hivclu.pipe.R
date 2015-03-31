@@ -702,8 +702,11 @@ hivc.pipeline.props_univariate<- function()
 		)
 		df.method				<- do.call('rbind', df.method)				
 		df.method				<- df.method[7,]
-		tmp						<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,
-												method.risk='m2Awmx.wtn.tp4',
+		if(0)
+			df.method[, method.risk:='m2Awmx.wtn.tp4']
+		if(1)
+			df.method			<- merge(df.method, data.table(DUMMY=1, method.risk=c('m2Awmx.tp4','m2Awmx.wtn.tp4','m2Awmx.noscore.tp4','m2Awmx.nophyloscore.tp4')), by='DUMMY')
+		tmp						<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,												
 												method.realloc=  c(	'ImmediateART','ARTat500',	
 																	#	testing 12m
 																	paste('TestC12m',seq(30,70,10),'pc',sep=''), paste('TestA12m',seq(30,70,10),'pc',sep=''),
@@ -721,9 +724,9 @@ hivc.pipeline.props_univariate<- function()
 												)
 		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
 		df.method[, DUMMY:=seq_len(nrow(df.method))]
-		df.method				<- df.method[c(13:22,30:32,40:42,50:52),]
-		df.method[, DUMMY2:=rep(1:(nrow(df.method)%/%6+1), each=6)[seq_len(nrow(df.method))]]
-		df.method[, DUMMY2:=seq_len(nrow(df.method))]
+		#df.method				<- df.method[c(13:22,30:32,40:42,50:52),]
+		df.method[, DUMMY2:=rep(1:(nrow(df.method)%/%3+1), each=3)[seq_len(nrow(df.method))]]
+		#df.method[, DUMMY2:=seq_len(nrow(df.method))]
 		df.method				<- df.method[,{
 					cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, method.realloc=method.realloc, outdir=outdir, outfile=outfile, resume=1, verbose=1)
 					list(CMD=cmd)

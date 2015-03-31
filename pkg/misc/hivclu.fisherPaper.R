@@ -370,7 +370,7 @@ project.athena.Fisheretal.composition.problintervals.withmissing.table.generate<
 	tmp					<- dfb[, which(stat=='p')]
 	set(dfb, tmp, 'char', dfb[tmp, as.character(central)])
 	#	put everything together
-	tmp					<- c("","UA","U","UAna","DA","Dt.NA","Dtg500","Dtl500","Dtl350","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")
+	tmp					<- c("","UA","UAna","U","DA","Dt.NA","Dtg500","Dtl500","Dtl350","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")
 	set( dfb, NULL, 'factor', dfb[, factor(factor, levels=tmp, labels=tmp)] )
 	setkey(dfb, method.brl, factor)
 	
@@ -382,6 +382,80 @@ project.athena.Fisheretal.composition.problintervals.withmissing.table.generate<
 	write.csv(ans, file=file, eol='\r\n')
 }
 ######################################################################################
+project.athena.Fisheretal.composition.potentialintervals.withmissing.table.generate<- function(runs.table, file)
+{
+	#	central
+	dft					<- subset(runs.table, stat%in%c('X.msm.e0cp','nRec'))
+	dft					<- dcast.data.table(dft, t.period+factor+method.risk+method.brl~stat, value.var='n')
+	set(dft, NULL, 'X.msm.e0cp', dft[, X.msm.e0cp/8/nRec])
+	#	lower
+	tmp					<- subset(runs.table, stat=='X.msm.e0cp')
+	tmp					<- dcast.data.table(tmp, t.period+factor+method.risk+method.brl~stat, value.var='l95.bs')
+	setnames(tmp, 'X.msm.e0cp', 'l95.bs')
+	dft					<- merge(dft, tmp, by=c('t.period','factor','method.risk','method.brl'))
+	set(dft, NULL, 'l95.bs', dft[, l95.bs/8/nRec])
+	#	upper
+	tmp					<- subset(runs.table, stat=='X.msm.e0cp')
+	tmp					<- dcast.data.table(tmp, t.period+factor+method.risk+method.brl~stat, value.var='u95.bs')
+	setnames(tmp, 'X.msm.e0cp', 'u95.bs')
+	dft					<- merge(dft, tmp, by=c('t.period','factor','method.risk','method.brl'))
+	set(dft, NULL, 'u95.bs', dft[, u95.bs/8/nRec])
+	#	proportions per time period			
+	tmp					<- dft[, list(factor=factor, stat='p', central= round(100*X.msm.e0cp/sum(X.msm.e0cp),d=1)), by=c('t.period','method.risk','method.brl')]
+	#	total per recipient MSM
+	dft					<- dft[, list(factor='', stat='n', central=round(sum(X.msm.e0cp),d=0), l95.bs=round(sum(l95.bs),d=0), u95.bs=round(sum(u95.bs),d=0)), by=c('t.period','method.risk','method.brl')]
+	dft					<- rbind(dft, tmp, use.names=TRUE, fill=TRUE)
+	dft[, char:= paste(central,' (',l95.bs,'-',u95.bs,')',sep='')]
+	tmp					<- dft[, which(stat=='p')]
+	set(dft, tmp, 'char', dft[tmp, as.character(central)])
+	#	put everything together
+	tmp					<- c("","UA","UAna","U","DA","Dt.NA","Dtg500","Dtl500","Dtl350","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")
+	set( dft, NULL, 'factor', dft[, factor(factor, levels=tmp, labels=tmp)] )
+	setkey(dft, method.brl, factor)
+	
+	ans	<- rbind(	dcast.data.table( subset(dft, t.period==1, select=c('method.brl', 'factor', 'char')), factor~method.brl, value.var='char'),
+			dcast.data.table( subset(dft, t.period==2, select=c('method.brl', 'factor', 'char')), factor~method.brl, value.var='char'),	
+			dcast.data.table( subset(dft, t.period==3, select=c('method.brl', 'factor', 'char')), factor~method.brl, value.var='char'),
+			dcast.data.table( subset(dft, t.period==4, select=c('method.brl', 'factor', 'char')), factor~method.brl, value.var='char')	)
+	ans	<- subset(ans, select=c(1,3,4,2))	
+	write.csv(ans, file=file, eol='\r\n')
+}
+######################################################################################
+project.athena.Fisheretal.composition.potentialintervals.withmissing.table<- function()
+{
+	require(data.table)
+	require(ape)
+	require(RColorBrewer)
+	#stop()
+	resume					<- 1 
+	indir					<- paste(DATA,"fisheretal_150319",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_150319",sep='/')	
+	
+	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	insignat				<- "Wed_Dec_18_11:37:00_2013"	
+	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"	
+	t.period				<- 1/8
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+	
+	file				<- paste(outdir, '/', infile, '_', gsub('/',':',insignat), '_', "method.table.Rdata", sep='')		
+	readAttempt			<- try(suppressWarnings(load(file)))		
+	runs.table[, t.period:= runs.table[, as.character(factor)]]	
+	set(runs.table, NULL, 't.period', runs.table[, substring(t.period, nchar(t.period))] )
+	set(runs.table, NULL, 'factor', runs.table[, as.character(factor)] )
+	set(runs.table, NULL, 'factor', runs.table[, substr(factor, 1, nchar(factor)-2)] )
+	set(runs.table, NULL, 'p', runs.table[, round(100*p,d=1)])
+	#
+	#	first table
+	#
+	runs.table			<- subset(runs.table, !grepl('ARTstarted|GroupsUDA',method.risk))
+	tmp					<- subset(runs.table, grepl('bInfT7', method.brl) & grepl('C2', method.brl))	
+	file				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PotAdjIntervalsByCoalComp.csv'
+	project.athena.Fisheretal.composition.potentialintervals.withmissing.table.generate(tmp, file)
+	
+}
+######################################################################################
 project.athena.Fisheretal.composition.problintervals.withmissing.table<- function()
 {
 	require(data.table)
@@ -389,8 +463,8 @@ project.athena.Fisheretal.composition.problintervals.withmissing.table<- functio
 	require(RColorBrewer)
 	#stop()
 	resume					<- 1 
-	indir					<- paste(DATA,"fisheretal_150308",sep='/')	
-	outdir					<- paste(DATA,"fisheretal_150308",sep='/')	
+	indir					<- paste(DATA,"fisheretal_150319",sep='/')	
+	outdir					<- paste(DATA,"fisheretal_150319",sep='/')	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')
@@ -758,27 +832,6 @@ project.athena.Fisheretal.composition.prop.phylolikelihoods<- function()
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )
 	set(tperiod.info, NULL, 't.period.min', tperiod.info[, factor(t.period.min, levels=c('1996-7','2006-5','2008-1','2009-7'), labels=c('96/07','\n\n06/05','08/01','\n\n09/07'))])
 	set(tperiod.info, NULL, 't.period.max', tperiod.info[, factor(t.period.max, levels=c('2006-4','2007-12','2009-6','2010-12'), labels=c('06/04','07/12','09/06','10/12'))])		
-	#	set up factor legends
-	factor.color		<- c(	"#990000","#EF6548","#FDBB84",
-			"#0C2C84","#0570B0","#74A9CF","#41B6C4","#35978F",  
-			"#FCC5C0","#F768A1","#7A0177",
-			"#1A9850","#A6D96A","grey70")
-	factor.long			<- c(	'Undiagnosed,\n Recent infection\n at diagnosis',	
-			'Undiagnosed,\n Chronic infection\n at diagnosis',
-			'Undiagnosed,\n Unknown if recent',
-			'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
-			'Diagnosed,\n CD4 progression to >500',
-			'Diagnosed,\n CD4 progression to [350-500]',
-			'Diagnosed,\n CD4 progression to <350',			
-			'Diagnosed,\n No CD4 measured',
-			'ART initiated,\n Before first viral suppression',													
-			'ART initiated,\n After first viral suppression\nNo viral load measured',		
-			'ART initiated,\n After first viral suppression\nNo viral suppression',	
-			'ART initiated,\n After first viral suppression\nViral suppression, 1 observation',
-			'ART initiated,\n After first viral suppression\nViral suppression, >1 observations',
-			'Not in contact')
-	tmp					<- c("UA","U","UAna","DA","Dtg500","Dtl500","Dtl350","Dt.NA","ART.NotYetFirstSu","ART.vlNA","ART.suA.N","ART.suA.Y1","ART.suA.Y2","Lost")
-	factors				<- data.table( factor.legend= factor(factor.long, levels=factor.long), factor=factor(tmp, levels=tmp), factor.color=factor.color, method.risk='CD4c')
 	#	load risk tables
 	indir				<- paste(DATA,"fisheretal_150312",sep='/')
 	outdir				<- paste(DATA,"fisheretal_150312",sep='/')			
@@ -790,7 +843,7 @@ project.athena.Fisheretal.composition.prop.phylolikelihoods<- function()
 	runs.risk			<- subset(runs.risk, !grepl('ARTstarted',method.risk) & !grepl('GroupsUDA',method.risk))
 	method.DENOM		<- 'SEQ'		
 	method.WEIGHT		<- ''
-	method.RISK			<- c("m2Cwmx.nophyloscore.tp","m2Cwmx.noscore.tp","m2Cwmx.wtn.tp","m2Cwmx.tp")
+	method.RISK			<- c("m2Awmx.nophyloscore.tp","m2Awmx.noscore.tp","m2Awmx.wtn.tp","m2Awmx.tp")
 	method.DATING		<- 'sasky'	
 	stat.select			<- 'P.raw.e0cp'
 	outfile				<- infile
@@ -802,6 +855,8 @@ project.athena.Fisheretal.composition.prop.phylolikelihoods<- function()
 	set(run.tp, NULL, 'method.risk', run.tp[, substr(method.risk, 1, nchar(method.risk)-1)])
 	run.tp				<- subset(run.tp, method.risk%in%method.RISK)
 	run.tp				<- subset(run.tp, !is.na(v) & stat%in%stat.select )
+	#	set up factor legends
+	factors				<- project.athena.Fisheretal.sensitivity.factor.legend("m2Awmx")	
 	#	prepare
 	run.tp[, m50.bs:=NULL]
 	setkey(run.tp, factor)
@@ -815,7 +870,7 @@ project.athena.Fisheretal.composition.prop.phylolikelihoods<- function()
 	#	merge factors
 	run.tp				<- merge(run.tp, subset(factors, select=factors[, which(colnames(factors)!='method.risk')]), by='factor')	
 	#	merge methods legend
-	tmp		<- data.table(	method.risk=c("m2Cwmx.wtn.tp","m2Cwmx.tp","m2Cwmx.noscore.tp","m2Cwmx.nophyloscore.tp"), 
+	tmp		<- data.table(	method.risk=c("m2Awmx.wtn.tp","m2Awmx.tp","m2Awmx.noscore.tp","m2Awmx.nophyloscore.tp"), 
 							method.legend=c(	'with phylogenetic transmission\nprobability per interval',
 											'with phylogenetic transmission\nprobability per probable transmitter',
 											'every interval\nequally likely',
@@ -826,7 +881,7 @@ project.athena.Fisheretal.composition.prop.phylolikelihoods<- function()
 	setkey(run.tp, factor.legend, t.period.long)
 	ggplot(run.tp, aes(x=factor, y=v*100, fill=factor.legend, colour=factor.legend)) + 
 			labs(x="stage in HIV infection and care continuum", y="Proportion of transmissions\n(%)") + 
-			scale_y_continuous(breaks=seq(0,90,10), minor_breaks=seq(0,90,2), limit=c(0,42), expand=c(0,0)) + 
+			scale_y_continuous(breaks=seq(0,90,10), minor_breaks=seq(0,90,2), limit=c(0,100*run.tp[, round(max(u95.bs), d=2)]), expand=c(0,0)) + 
 			scale_x_discrete(breaks=NULL, limits=run.tp[, intersect(levels(factor), as.character(factor))]) +
 			scale_fill_manual(name='from cascade stage', values=run.tp[, unique(factor.color)], guide=FALSE) + 
 			scale_colour_manual(name='from cascade stage', values = rep('black',run.tp[, length(unique(factor))]), guide=FALSE) +
@@ -942,7 +997,7 @@ project.athena.Fisheretal.composition.transprob<- function()
 	#	overall
 	ggplot(YX, aes(x=tp*100)) + geom_histogram(binwidth=0.5) + theme_bw() +
 			scale_x_continuous(breaks=seq(0,100,10), minor_breaks=seq(0,100,5), expand=c(0,0)) +
-			labs(x='phylogenetic transmission probability\nduring observed, phylogenetically probable transmission intervals\n(%)')
+			labs(x='phylogenetically derived transmission probability\nper observed transmission interval\n(%)')
 			#theme(panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey60", size=0.4))
 	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150311_TrProbHist.pdf'
 	ggsave(file=file, w=10, h=3)
@@ -970,6 +1025,7 @@ project.athena.Fisheretal.composition.transprob<- function()
 	
 	YX[, mean(tp), by='factor']
 }
+
 ######################################################################################
 project.athena.Fisheretal.composition.problintervals.table.generate<- function(dft, file)
 {
@@ -1548,7 +1604,7 @@ project.athena.Fisheretal.composition.intervals.data<- function()
 	files	<- data.table(	file.MSM=list.files(indir, pattern='*tATHENAmsm.R$'),
 			file.SEQ=list.files(indir, pattern='*tATHENAseq.R$'),
 			file.YX=list.files(indir, pattern='*YXSEQ*'))
-	files	<- files[5,]				
+	files	<- files[9,]				
 	files[, method:= files[,regmatches(file.MSM,regexpr('3pa[^_]+', file.MSM))]]
 	
 	file	<- paste(indir, '/', files[i,file.MSM], sep='')
@@ -3321,10 +3377,7 @@ project.athena.Fisheretal.composition.CD4model<- function()
 ######################################################################################
 project.athena.Fisheretal.composition.putativeinfectionwindow<- function()
 {
-	tmp		<- df.all.allmsm
-	setkey(tmp, Patient)
-	tmp		<- unique(tmp)
-	tmp		<- subset(tmp, AnyPos_T1>=1996.6 & AnyPos_T1<2011 & Trm%in%c('MSM','BI'), select=c(Patient, isAcute, Acute_Spec, AnyPos_T1, NegT, Trm))
+	tmp		<- subset(ri.ALLMSM, AnyPos_T1>=1996.5 & AnyPos_T1<2011 & isAcute=='Yes' & Trm%in%c('MSM','BI'), select=c(Patient, isAcute, Acute_Spec, AnyPos_T1, NegT, Trm))
 	
 	tmp[, IPWd:= 1]
 	tmp2	<- tmp[,which(!is.na(NegT) & AnyPos_T1-NegT<11/12)]
@@ -3333,7 +3386,7 @@ project.athena.Fisheretal.composition.putativeinfectionwindow<- function()
 	
 	ggplot(tmp, aes(x=IPWd*12)) + geom_histogram(binwidth=0.5) + facet_grid(.~t.period, scales='free', space='free') +
 			scale_x_continuous(breaks=seq(4.25,12.25,2), labels=seq(4,12,2), lim=c(4,12.5)) +
-			scale_y_log10(breaks=c(10,100,1000,5000))+
+			scale_y_log10(breaks=c(10, seq(20,100,20), 200))+
 			labs(x='duration of putative infection window\n(months)', y='') +
 			theme_bw()
 	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150223_PutInfWindow_Duration.pdf'

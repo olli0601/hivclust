@@ -13,6 +13,8 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	outdir					<- paste(DATA,"fisheretal_150105",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150216",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150216",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150319",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -60,11 +62,12 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 		#	load risk estimates
 		tmp			<- lapply(seq_len(nrow(runs.opt)), function(i)
 				{
-					tmp	<- paste(indir, runs.opt[i,file], sep='/')
+					tmp		<- paste(indir, runs.opt[i,file], sep='/')
 					cat(paste('\nprocess file=',runs.opt[i,file]))
-					tmp	<- load(tmp)					
+					tmp		<- load(tmp)					
 					if(!any(colnames(averted)=='t.period'))
-						averted[, t.period:= 4]																									
+						averted[, t.period:= 4]		
+					averted	<- averted[, list(AV=mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by='BS']
 					averted[, method.risk:=runs.opt[i,method.risk]]
 					averted[, method.dating:=runs.opt[i,method.dating]]
 					averted[, method.nodectime:=runs.opt[i,method.nodectime]]
@@ -78,16 +81,110 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 		save(runs.av, file=file)
 	}
 	
-	runs.av.info	<- runs.av[, list(AV=mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by=c('method.risk','method.dating','method.nodectime','method.brl','method.denom','method.recentctime','BS')]
+	runs.av.info	<- copy(runs.av)
 	#	get central estimate
 	tmp				<- subset(runs.av.info, BS<1)[, list(EST='central', AV=median(AV)), by=c('method.risk','method.dating','method.nodectime','method.brl','method.denom','method.recentctime')]
 	#	get quantile bootstrap estimates
 	runs.av.info	<- subset(runs.av.info, BS>=1)[, list(EST=paste('Q',100*c(0.025,0.25,0.5,0.75,0.975),sep=''), AV=quantile(AV, probs=c(0.025,0.25,0.5,0.75,0.975))), by=c('method.risk','method.dating','method.nodectime','method.brl','method.denom','method.recentctime')]
-	runs.av.info	<- rbind(tmp, runs.av.info)
-	set(runs.av.info, NULL, 'HYPO', runs.av.info[, regmatches(method.risk,regexpr('Hypo[[:alnum:]]+', method.risk))])	
+	runs.av.info	<- rbind(tmp, runs.av.info)	
+	set(runs.av.info, NULL, 'HYPO', runs.av.info[, gsub('m2Awmx.wtn.','',method.risk)])
+	set(runs.av.info, NULL, 'HYPO', runs.av.info[, gsub('.tp4','',HYPO)])	
 	#runs.av.info[,list(n=length(EST), method.risk=unique(method.risk)),by='HYPO']	
-	runs.av.info	<- dcast.data.table(runs.av.info, HYPO~EST, value.var='AV')
+	runs.av.info	<- dcast.data.table(runs.av.info, method.brl+HYPO~EST, value.var='AV')
+	runs.av.info[, TEST_TYPE:= 'NONE']
+	set(runs.av.info, runs.av.info[, which(grepl('TestC|PROUDC|IPrEXC', HYPO))], 'TEST_TYPE', 'ELISA' )
+	set(runs.av.info, runs.av.info[, which(grepl('TestA', HYPO))], 'TEST_TYPE', 'Acute' )
+	runs.av.info[, TEST_FREQ:= 'NONE']
+	tmp				<- runs.av.info[, which(grepl('A[0-9]+', HYPO))]
+	set(runs.av.info, tmp, 'TEST_FREQ', substring(runs.av.info[tmp, regmatches(HYPO, regexpr('A[0-9]+', HYPO))],2) )
+	tmp				<- runs.av.info[, which(grepl('C[0-9]+', HYPO))]
+	set(runs.av.info, tmp, 'TEST_FREQ', substring(runs.av.info[tmp, regmatches(HYPO, regexpr('C[0-9]+', HYPO))],2) )
+	runs.av.info[, TEST_COV:= 'NONE']
+	tmp				<- runs.av.info[, which(grepl('m[0-9]+pc', HYPO))]
+	set(runs.av.info, tmp, 'TEST_COV', substring(runs.av.info[tmp, regmatches(HYPO, regexpr('m[0-9]+pc', HYPO))],2) )
+	set(runs.av.info, tmp, 'TEST_COV', runs.av.info[tmp, substr(TEST_COV, 1, nchar(TEST_COV)-2)] )
+	runs.av.info[, PREV:= 'NONE']
+	set(runs.av.info, runs.av.info[, which(!grepl('Test', HYPO) & !grepl('Prest', HYPO) & grepl('ART', HYPO))], 'PREV', 'TasP')
+	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & grepl('ART', HYPO))], 'PREV', 'test-treat') 
+	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & !grepl('ART', HYPO) & TEST_TYPE!='Acute')], 'PREV', 'test')
+	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & !grepl('ART', HYPO) & TEST_TYPE=='Acute')], 'PREV', 'test (Acute)')
+	set(runs.av.info, runs.av.info[, which(grepl('Prest', HYPO) )], 'PREV', 'test-PrEP')
+	tmp				<- runs.av.info[, which(grepl('Prest', HYPO) & grepl('PROUD', HYPO))]
+	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(86%)')])
+	tmp				<- runs.av.info[, which(grepl('Prest', HYPO) & grepl('IPrEX', HYPO))]
+	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(44%)')])
+	tmp				<- runs.av.info[, which(grepl('Prest', HYPO) & grepl('ART', HYPO))]	
+	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '-treat',sep='')])	
+	tmp				<- runs.av.info[, which(grepl('ARTat500', HYPO))]
+	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(CD4<500)')])
+	tmp				<- runs.av.info[, which(grepl('ImmediateART', HYPO))]
+	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(Immediate)')])	
+	tmp				<- c(	"TasP (CD4<500)", "TasP (Immediate)", "test", "test (Acute)",                                               
+			"test-treat (CD4<500)", "test-treat (Immediate)", 
+			"test-PrEP (44%)", "test-PrEP (44%)-treat (CD4<500)", "test-PrEP (44%)-treat (Immediate)",   
+			"test-PrEP (86%)", "test-PrEP (86%)-treat (CD4<500)", "test-PrEP (86%)-treat (Immediate)" )
+	set( runs.av.info, NULL, 'PREV', runs.av.info[, factor(PREV, levels=rev(tmp), labels=rev(tmp))] )	
+	#
+	#	plot 
+	#
+	tmp				<- subset( runs.av.info, grepl('TasP', PREV), select=which(!grepl('TEST_',names(runs.av.info))) )
+	tmp				<- merge(tmp, as.data.table(expand.grid(PREV=unique(tmp$PREV), TEST_COV=seq(30,70,20), TEST_FREQ=12, TEST_TYPE='ELISA')), by='PREV', allow.cartesian=TRUE)	
+	runs.av.plot	<- subset( runs.av.info, !TEST_FREQ%in%c('NONE','6') & !TEST_COV%in%c('NONE', '40','60')  )
+	runs.av.plot	<- rbind(runs.av.plot, tmp, use.names=TRUE)	
+	set(runs.av.plot, NULL, 'LEGEND', runs.av.plot[, paste('annual testing coverage\nof probable transmitters\n',TEST_COV,'%',sep='')])
+	#
+	#	plot for main text ie 3pa1H1.48C2V100bInfT7
+	#
+	setkey(runs.av.plot, PREV)
+	ggplot( subset(runs.av.plot, method.brl=='3pa1H1.48C2V100bInfT7'), aes(x=PREV, fill=factor( grepl('PrEP', PREV) + grepl('86%', PREV)) ) ) +
+			geom_hline(yintercept=50, colour="grey70", size=2) +
+			scale_fill_manual(values=c("#FED9A6", "#FFFFCC", "#E5D8BD"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
+			geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color='black', width=0.9, size=0.7) +
+			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+			labs(x='', y='\nHIV infections amongst MSM\nthat could have been averted in 09/07 - 10/12\n(%)') + 
+			coord_flip() +			
+			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
+			facet_grid(~LEGEND)
+	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_Prevention.pdf'
+	ggsave(file=file, w=14, h=6)
+	#
+	#	plot for SOM
+	#
+	tmp				<- data.table(	method.brl=c(	"3pa1H1.48C2V100bInfT7", "3pa1H1.94C2V100bInfT7", "3pa1H1.09C2V100bInfT7",					
+											"3pa1H1.48C3V100bInfT7", "3pa1H1.48C1V100bInfT7", 
+											"3pa1H1.48C3V100bInfs0.85T7", "3pa1H1.48C2V100bInfs0.85T7", "3pa1H1.48C1V100bInfs0.85T7",
+											"3pa1H1.48C3V100bInfs0.7T7", "3pa1H1.48C2V100bInfs0.7T7", "3pa1H1.48C1V100bInfs0.7T7"), 
+						 			method.legend=c( 'central estimate of HIV infection times\ncentral phylogenetic exclusion criteria',
+											'lower estimate of HIV infection times',
+											'upper estimate of HIV infection times',
+											'phylogenetic exclusion criteria\ncoalescent compatibility < 30%\nclade frequency < 80%',
+											'phylogenetic exclusion criteria\ncoalescent compatibility < 10%\nclade frequency < 80%',
+											'phylogenetic exclusion criteria\ncoalescent compatibility < 30%\nclade frequency < 85%',
+											'phylogenetic exclusion criteria\ncoalescent compatibility < 20%\nclade frequency < 85%',
+											'phylogenetic exclusion criteria\ncoalescent compatibility < 10%\nclade frequency < 85%',
+											'phylogenetic exclusion criteria\ncoalescent compatibility < 30%\nclade frequency < 70%',
+											'phylogenetic exclusion criteria\ncoalescent compatibility < 20%\nclade frequency < 70%',
+											'phylogenetic exclusion criteria\ncoalescent compatibility < 10%\nclade frequency < 70%'))										 
+	set(tmp, NULL, 'method.legend', tmp[, factor(method.legend, levels=method.legend, labels=method.legend)])
+	runs.av.plot	<- merge(runs.av.plot, tmp, by='method.brl')
+	setkey(runs.av.plot, PREV)
+	ggplot( runs.av.plot, aes(x=PREV, fill=factor( grepl('PrEP', PREV) + grepl('86%', PREV)) ) ) +
+			geom_hline(yintercept=50, colour="grey70", size=2) +
+			scale_fill_manual(values=c("#FED9A6", "#FFFFCC", "#E5D8BD"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
+			geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color='black', width=0.9, size=0.7) +
+			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+			labs(x='', y='\nHIV infections amongst MSM\nthat could have been averted in 09/07 - 10/12\n(%)') + 
+			coord_flip() +			
+			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
+			facet_grid(method.legend~LEGEND)
+	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionByExclusionCriteria.pdf'
+	ggsave(file=file, w=14, h=40)
 	
+	#
+	#
+	subset(runs.av.plot, TEST_COV=='50')
 	
 	#	quick test plot
 	ggplot(runs.av.info, aes(x=HYPO))	+ geom_boxplot(aes(ymin=Q2.5, ymax=Q97.5, lower=Q25, middle=Q50, upper=Q75), stat="identity") + geom_point(aes(y=central), colour='red') +
@@ -482,6 +579,10 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 					nt.table				<- X.tables$nt.table
 					nt.table.h				<- copy(X.tables$nt.table)
 					cat(paste('\nusing method',method.realloc))
+					#
+					#	we reallocate raw scores in this step. this means we also need to adjust the score.Y field that stores how the transmission probs were derived from the relative probs
+					#	this is not necessary for YXf because there is no reallocation. so can just use score.Y
+					#
 					if(grepl('Test',method.realloc))
 					{			
 						tmp					<- project.athena.Fisheretal.Hypo.ReallocTest.getYXetc( YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=sample, t=sample')			
@@ -557,14 +658,21 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 					#if(!is.na(method.reallocate))
 					#	stopifnot( !nrow(subset(missing.h, grepl(method.reallocate,factor) & (YX.n>0 | YXm.sum.e0>0 | YXm.sum.e0cp>0))) )	
 					#	calculate proportion of recipients averted
-					averted		<- missing[, 	list(	Pjx.e0cp.sum= sum((yYX.sum+YXm.sum.e0cp)*YX.w)), by=c('risk','Patient')]
-					tmp			<- missing.h[, 	list(	Pjx.e0cp.sum.h= sum((yYX.sum+YXm.sum.e0cp)*YX.w)), by=c('risk','Patient')]
-					averted		<- merge(averted, tmp, by=c('risk','Patient'), all.x=1)
-					set(averted, averted[, which(is.na(Pjx.e0cp.sum.h))], 'Pjx.e0cp.sum.h', 0)
-					tmp			<- averted[, which(Pjx.e0cp.sum<Pjx.e0cp.sum.h)]
-					tmp			<- averted[, which(round(Pjx.e0cp.sum,d=2)<round(Pjx.e0cp.sum.h,d=2))]
-					cat(paste('\nFound Patients with Pjx.e0cp.sum<Pjx.e0cp.sum.h, n=',length(tmp)))
-					set(averted, tmp, 'Pjx.e0cp.sum.h', averted[tmp, Pjx.e0cp.sum])
+					averted		<- missing[, 	list(	Pjx= sum(yYX.sum*YX.w),
+														Pjx.e0= sum((yYX.sum+YXm.sum.e0)*YX.w),
+														Pjx.e0cp= sum((yYX.sum+YXm.sum.e0cp)*YX.w),
+														TYPE='H0'), by=c('risk','Patient')]
+					tmp			<- missing.h[, 	list(	Pjx= sum(yYX.sum*YX.w),
+														Pjx.e0= sum((yYX.sum+YXm.sum.e0)*YX.w),									
+														Pjx.e0cp= sum((yYX.sum+YXm.sum.e0cp)*YX.w),
+														TYPE='H1'), by=c('risk','Patient')]
+					averted		<- melt(averted, id.vars=c('risk','Patient','TYPE'), value.name='SUM', variable.name='STAT')
+					tmp			<- melt(tmp, id.vars=c('risk','Patient','TYPE'), value.name='SUM', variable.name='STAT')
+					averted		<- merge( dcast.data.table(averted, risk+Patient+STAT~TYPE, value.var='SUM'), dcast.data.table(tmp, risk+Patient+STAT~TYPE, value.var='SUM'), by=c('risk','Patient','STAT'), all.x=1)					
+					set(averted, averted[, which(is.na(H1))], 'H1', 0)					
+					tmp			<- averted[, which(round(H0,d=2)<round(H1,d=2))]
+					cat(paste('\nFound Patients with H0.sum<H1.sum, n=',length(tmp)))
+					set(averted, tmp, 'H0', averted[tmp, H1])
 					averted[, BS:=bs.i/bs.n/10]
 					#	averted[, median(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)]
 					#	averted[, mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)]
@@ -637,23 +745,30 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 					missing.h.bs			<- project.athena.Fisheretal.Hypo.prepmissingbs(YX.h.bs, nt.table.h.bs, method.risk, YXf=YXf, method.missingy='y=median')							
 					stopifnot(length(setdiff( missing.h.bs[, sort(unique(Patient))], missing.bs[, sort(unique(Patient))]))==0)							
 					#	calculate proportion of recipients averted	
-					averted.bs			<- missing.bs[, 	list(	Pjx.e0cp.sum= sum((yYX.sum+yYXm.sum.e0cp)*YX.w)), by=c('risk','Patient')]
-					tmp					<- missing.h.bs[, 	list(	Pjx.e0cp.sum.h= sum((yYX.sum+yYXm.sum.e0cp)*YX.w)), by=c('risk','Patient')]
-					averted.bs			<- merge(averted.bs, tmp, by=c('risk','Patient'), all.x=TRUE)
-					set(averted.bs, averted.bs[, which(is.na(Pjx.e0cp.sum.h))], 'Pjx.e0cp.sum.h', 0)
-					tmp					<- averted.bs[, which(Pjx.e0cp.sum<Pjx.e0cp.sum.h)]
-					#cat(paste('\nFound Patients with Pjx.e0cp.sum<Pjx.e0cp.sum.h, n=',length(tmp)))
-					set(averted.bs, tmp, 'Pjx.e0cp.sum.h', averted.bs[tmp, Pjx.e0cp.sum])
+					averted.bs				<- missing.bs[, 	list(	Pjx= sum(yYX.sum*YX.w),
+																		Pjx.e0= sum((yYX.sum+yYXm.sum.e0)*YX.w),
+																		Pjx.e0cp= sum((yYX.sum+yYXm.sum.e0cp)*YX.w),
+																		TYPE='H0'), by=c('risk','Patient')]
+					tmp						<- missing.h.bs[, 	list(	Pjx= sum(yYX.sum*YX.w),
+																	Pjx.e0= sum((yYX.sum+yYXm.sum.e0)*YX.w),									
+																	Pjx.e0cp= sum((yYX.sum+yYXm.sum.e0cp)*YX.w),
+																	TYPE='H1'), by=c('risk','Patient')]
+					averted.bs				<- melt(averted.bs, id.vars=c('risk','Patient','TYPE'), value.name='SUM', variable.name='STAT')
+					tmp						<- melt(tmp, id.vars=c('risk','Patient','TYPE'), value.name='SUM', variable.name='STAT')
+					averted.bs				<- merge( dcast.data.table(averted.bs, risk+Patient+STAT~TYPE, value.var='SUM'), dcast.data.table(tmp, risk+Patient+STAT~TYPE, value.var='SUM'), by=c('risk','Patient','STAT'), all.x=1)					
+					set(averted.bs, averted.bs[, which(is.na(H1))], 'H1', 0)					
+					tmp						<- averted.bs[, which(round(H0,d=2)<round(H1,d=2))]
+					#cat(paste('\nFound Patients with H0.sum<H1.sum, n=',length(tmp)))
+					set(averted.bs, tmp, 'H0', averted.bs[tmp, H1])
 					averted.bs[, BS:=bs.i]
-					#averted.bs[, mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)]
+					#averted.bs[, list(AV=mean(1-H1/H0)), by='STAT']
 					averted.bs
 				})
 		averted.bs	<- do.call('rbind',averted.bs)
 		averted		<- rbind(averted, averted.bs)
-		tmp			<- averted[, list(averted=median(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by='BS']
-		tmp			<- averted[, list(averted=mean(1-Pjx.e0cp.sum.h/Pjx.e0cp.sum)), by='BS']		
-		print( subset(tmp, BS<1)[, quantile(averted, prob=c(0.025, 0.5, 0.975))] )
-		print( subset( tmp, BS>1 )[, c(summary(averted), quantile(averted, prob=c(0.025, 0.5, 0.975)))] )
+		tmp			<- averted[, list(AV=mean(1-H1/H0)), by=c('STAT','BS')]			
+		print( subset(tmp, BS<1)[, list(P=c(0.025, 0.5, 0.975), AV=quantile(AV, prob=c(0.025, 0.5, 0.975))), by='STAT'] )
+		print( subset( tmp, BS>1 )[, list(P=c(0.025, 0.5, 0.975), AV=quantile(AV, prob=c(0.025, 0.5, 0.975))), by='STAT'] )
 		if(!is.na(save.file))
 		{
 			cat(paste('\nsave to file', save.file))
@@ -682,8 +797,8 @@ project.athena.Fisheretal.Hypo.prepmissingbs<- function(YX.bs, nt.table.bs, meth
 	missing.bs[, Sx.e0.bs:= PYs/X.msm.e0.bs]					
 	missing.bs[, Sx.e0cp.bs:= PYs/X.msm.e0cp.bs]
 	#	can be >1 due to bootstrapping
-	set(missing.bs, missing.bs[, which(Sx.e0.bs>1)], 'Sx.e0.bs', 1)
-	set(missing.bs, missing.bs[, which(Sx.e0cp.bs>1)], 'Sx.e0cp.bs', 1)
+	set(missing.bs, missing.bs[, which(Sx.e0.bs>1 | !is.finite(Sx.e0.bs))], 'Sx.e0.bs', 1)
+	set(missing.bs, missing.bs[, which(Sx.e0cp.bs>1 | !is.finite(Sx.e0cp.bs))], 'Sx.e0cp.bs', 1)
 	#	zero denominator means missing YX.bs, PTx.bs and NaN Sx.e0.bs, Sx.e0cp.bs
 	tmp					<- missing.bs[, which(X.msm.e0==0)]
 	set(missing.bs, tmp, c('YX.bs'), 0)
@@ -975,9 +1090,20 @@ project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc<- function(YX, nt.table
 	{
 		if(verbose)
 			cat(paste('\nsetting likelihood to likelihood of pair / number transmission intervals'))
-		set(YX.h, NULL, 'score.Y.raw', YX.h[, score.Y])		
 		set(YX.h, NULL, 'score.Y', YX.h[, score.Y*w.tn])				
 	}								
+	if(grepl('noscore',method.risk))
+	{
+		if(verbose)
+			cat(paste('\nsetting likelihood to 1'))
+		set(YX.h, NULL, 'score.Y', YX.h[, 1])						
+	}
+	if(grepl('nophyloscore',method.risk))
+	{
+		if(verbose)
+			cat(paste('\nsetting likelihood to nophyloscore'))
+		set(YX.h, NULL, 'score.Y', YX.h[, w.tn])						
+	}
 	#	don t have t.AnyPos for pot tr. allocate by proportion 
 	df.artinfo	<- unique(df.artinfo)		 	
 	set(df.artinfo, NULL, 'pt', df.artinfo[, pt] * length(ARTns.i) / (length(ARTns.i)+length(ARTs.i)))
@@ -1263,7 +1389,19 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 		if(verbose)
 			cat(paste('\nsetting likelihood to likelihood of pair / number transmission intervals'))
 		set(YX.h, NULL, 'score.Y', YX.h[, score.Y.raw*w.tn])				
-	}				
+	}	
+	if(grepl('noscore',method.risk))
+	{
+		if(verbose)
+			cat(paste('\nsetting likelihood to 1'))
+		set(YX.h, NULL, 'score.Y', YX.h[, 1])						
+	}
+	if(grepl('nophyloscore',method.risk))
+	{
+		if(verbose)
+			cat(paste('\nsetting likelihood to nophyloscore'))
+		set(YX.h, NULL, 'score.Y', YX.h[, w.tn])						
+	}
 	#
 	#	prepare nt.table for hypothetical scenario
 	#			
@@ -1271,7 +1409,7 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 	#	avoid this by removing a fraction	
 	setkey(nt.table, Patient, stat, risk, factor)
 	if(!nrow(df.uinfo))
-		nt.table.h		<- subset(nt.table, stat!='YX')
+		nt.table.h		<- subset(nt.table, stat!='YX', select=c(Patient, risk, factor, stat, nt))
 	if(nrow(df.uinfo))
 	{
 		setkey(df.uinfo, risk, factor)
@@ -1639,7 +1777,19 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 		if(verbose)
 			cat(paste('\nsetting likelihood to likelihood of pair / number transmission intervals'))
 		set(YX.h, NULL, 'score.Y', YX.h[, score.Y.raw*w.tn])				
-	}				
+	}									
+	if(grepl('noscore',method.risk))
+	{
+		if(verbose)
+			cat(paste('\nsetting likelihood to 1'))
+		set(YX.h, NULL, 'score.Y', YX.h[, 1])						
+	}
+	if(grepl('nophyloscore',method.risk))
+	{
+		if(verbose)
+			cat(paste('\nsetting likelihood to nophyloscore'))
+		set(YX.h, NULL, 'score.Y', YX.h[, w.tn])						
+	}
 	#
 	#	prepare nt.table for hypothetical scenario
 	#			
@@ -1830,10 +1980,19 @@ project.athena.Fisheretal.Hypo.ReallocPrEP.getYXetc<- function( YX, nt.table, me
 	set(YX.h, NULL, 'score.Y.raw', NULL)
 	set(YX.h, NULL, 'stage', YX.h[, factor(as.character(stage))])	
 	if(grepl('wtn',method.risk))
-	{
-		set(YX.h, NULL, 'score.Y.raw', YX.h[, score.Y])		
+	{				
 		set(YX.h, NULL, 'score.Y', YX.h[, score.Y*w.tn])				
 	}									
+	if(grepl('noscore',method.risk))
+	{
+		if(verbose) cat(paste('\nsetting likelihood to 1'))
+		set(YX.h, NULL, 'score.Y', YX.h[, 1])						
+	}
+	if(grepl('nophyloscore',method.risk))
+	{
+		if(verbose) cat(paste('\nsetting likelihood to nophyloscore'))
+		set(YX.h, NULL, 'score.Y', YX.h[, w.tn])						
+	}	
 	if(verbose)
 	{
 		cat(paste('\nBefore PrEP, nRec=',YX[, length(unique(Patient))],' nTrans=', YX[, length(unique(t.Patient))], ' nInt=', nrow(YX)))
