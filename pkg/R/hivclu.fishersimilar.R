@@ -154,7 +154,7 @@ project.athena.Fisheretal.X.followup<- function(X.incare, clumsm.info, df.immu, 
 	X.incare
 }
 ######################################################################################
-project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.treatment, df.tpairs, df.all, contact.grace=1.5, t.period=0.25, t.endctime= 2013.)
+project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.treatment, df.tpairs, df.all, contact.grace=1.5, t.period=0.25, t.endctime= 2013., plot.file=NULL)
 {	
 	contact		<- merge( data.table(Patient=df.tpairs[, unique(t.Patient)]), unique(subset(df.all,select=c(Patient, DateLastContact, DateDied, ReasonStopRegistration))), by='Patient')
 	#	set last contact for NA last contact
@@ -248,10 +248,14 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 									list(t=t, incontact=cntct)
 								}, by=c('t.Patient')]	
 	X.incare	<- merge(X.incare, tmp, by=c('t.Patient','t'))	
-	if(!is.na(plot.file))
+	if(!is.null(plot.file))
 	{
 		tmp			<- subset(X.incare, t>1996.5 & t<2011 & (contact=='No' | incontact==0))[, list(FIR=t[1], DUR=length(t)*t.period), by=c('t.Patient')]
-		ggplot(tmp, aes(x=FIR, y=DUR)) + geom_point(size=1) +
+		setnames(tmp, 't.Patient', 'Patient')
+		tmp2		<- subset(df.all, select=c(Patient, PosSeqT))
+		setkey(tmp2, Patient)
+		tmp			<- merge(tmp, unique(tmp2), by='Patient', all.x=1)
+		ggplot(tmp, aes(x=FIR, y=DUR)) + geom_jitter(size=1) +
 				scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1)) +
 				scale_y_continuous(breaks=seq(0, 20, 4), minor_breaks=seq(0, 20, 1), expand=c(0.01,0.01)) +
 				labs(x='first time not in contact', y='duration of loss to contact\n(years)') +
@@ -260,8 +264,6 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 		file		<- paste(plot.file, '_contactDur.pdf',sep='')
 		ggsave(file=file, h=6, w=6)
 		#
-		setnames(tmp, 't.Patient', 'Patient')
-		tmp			<- merge(tmp, unique(subset(df.all, select=c(Patient, PosSeqT))), by='Patient')
 		tmp			<- subset(tmp, !is.na(PosSeqT))
 		set(tmp, NULL, 'PosSeqT', tmp[, floor(PosSeqT) + round( (PosSeqT%%1)*100 %/% (t.period*100) ) * t.period] )
 		tmp[, COL:=tmp[, factor(as.numeric(FIR<=PosSeqT), levels=c(0,1), labels=c('before loss of contact', 'after loss of contact'))]]		
@@ -272,13 +274,16 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 		file		<- paste(plot.file, '_contactBySeq.pdf',sep='')
 		ggsave(file=file, h=6, w=6)		
 		#ggplot(subset(X.incare, contact=='No' | incontact==0), aes(x=t, fill=incontact==0)) + geom_histogram(binwidth=0.125) + scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1)) + coord_trans(limx=c(1996.5, 2011))
-		ggplot(subset(X.incare, contact=='No' | incontact==0), aes(x=t)) + geom_histogram(binwidth=0.125) + 
+		tmp			<- subset(X.incare, contact=='No' | incontact==0)
+		setnames(tmp, 't.Patient', 'Patient')
+		tmp			<- merge(tmp, unique(tmp2), by='Patient', all.x=1)
+		ggplot(tmp, aes(x=t, fill=factor(as.numeric(!is.na(PosSeqT)), levels=c(0,1),labels=c("No","Yes")))) + geom_histogram(binwidth=0.125) + 
 				scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1)) + 
 				scale_y_continuous(expand=c(0,0)) +
 				coord_trans(limx=c(1996.5, 2011)) +
-				theme(panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.4), axis.text.x=element_text(angle=0, vjust=0, hjust=0)) +
-				labs(x='', y='potential transmitters with no contact\n(#)') +
-				theme_bw()
+				labs(x='', y='potential transmitters with no contact\n(#)', fill='with a sequence') +
+				theme_bw() +
+				theme(panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.4), axis.text.x=element_text(angle=0, vjust=0, hjust=0), legend.position='bottom')
 		file		<- paste(plot.file, '_contactHist.pdf',sep='')
 		ggsave(file=file, h=6, w=6)		
 		tmp			<- subset(X.incare, t>1996 & t<2011.5)[, list(NOCON= mean(contact=='No' | incontact==0)), by='t']

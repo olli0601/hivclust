@@ -701,12 +701,13 @@ hivc.pipeline.props_univariate<- function()
 				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
 		)
 		df.method				<- do.call('rbind', df.method)				
-		df.method				<- df.method[7,]
-		if(0)
-			df.method[, method.risk:='m2Awmx.wtn.tp4']
+		#df.method				<- df.method[7,]
 		if(1)
-			df.method			<- merge(df.method, data.table(DUMMY=1, method.risk=c('m2Awmx.tp4','m2Awmx.wtn.tp4','m2Awmx.noscore.tp4','m2Awmx.nophyloscore.tp4')), by='DUMMY')
-		tmp						<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,												
+			df.method[, method.risk:='m2Awmx.wtn.tp4']
+		if(0)
+			df.method			<- merge(df.method, data.table(DUMMY=1, method.risk=c('m2Awmx.wtn.tp4','m2Awmx.noscore.tp4','m2Awmx.nophyloscore.tp4')), by='DUMMY')
+		if(0)
+			tmp					<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,												
 												method.realloc=  c(	'ImmediateART','ARTat500',	
 																	#	testing 12m
 																	paste('TestC12m',seq(30,70,10),'pc',sep=''), paste('TestA12m',seq(30,70,10),'pc',sep=''),
@@ -722,6 +723,12 @@ hivc.pipeline.props_univariate<- function()
 																	paste('TestC12m',seq(30,70,10),'pc+ImmediateART',sep=''), paste('TestC12m',seq(30,70,10),'pc+ARTat500',sep='')
 																	)
 												)
+		if(1)
+			tmp					<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,												
+					method.realloc=  c(	#	test (Acute)  + treat		
+							paste('TestA12m',seq(30,70,10),'pc+ImmediateART',sep=''), paste('TestA12m',seq(30,70,10),'pc+ARTat500',sep='')
+					)
+			)		
 		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
 		df.method[, DUMMY:=seq_len(nrow(df.method))]
 		#df.method				<- df.method[c(13:22,30:32,40:42,50:52),]
