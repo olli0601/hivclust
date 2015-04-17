@@ -7,8 +7,8 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	resume					<- 1 	
 	indir					<- paste(DATA,"fisheretal_150312",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150312",sep='/')		
-	#indir					<- paste(DATA,"fisheretal_150319",sep='/')
-	#outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150319",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -60,7 +60,12 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 					cat(paste('\nprocess file=',runs.opt[i,file]))
 					tmp		<- load(tmp)					
 					if(!any(colnames(averted)=='t.period'))
-						averted[, t.period:= 4]		
+						averted[, t.period:= 4]
+					if(!any(colnames(averted)=='STAT'))
+					{
+						averted[, STAT:= 'Pjx.e0cp']
+						setnames(averted, c('Pjx.e0cp.sum', 'Pjx.e0cp.sum.h'), c('H0', 'H1'))
+					}
 					averted	<- averted[, list(AV=mean(1-H1/H0)), by=c('BS','STAT')]
 					averted[, method.risk:=runs.opt[i,method.risk]]
 					averted[, method.dating:=runs.opt[i,method.dating]]
@@ -102,10 +107,11 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	set(runs.av.info, tmp, 'TEST_COV', substring(runs.av.info[tmp, regmatches(HYPO, regexpr('m[0-9]+pc', HYPO))],2) )
 	set(runs.av.info, tmp, 'TEST_COV', runs.av.info[tmp, substr(TEST_COV, 1, nchar(TEST_COV)-2)] )
 	runs.av.info[, PREV:= 'NONE']
-	set(runs.av.info, runs.av.info[, which(!grepl('Test', HYPO) & !grepl('Prest', HYPO) & grepl('ART', HYPO))], 'PREV', 'TasP')
-	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & grepl('ART', HYPO))], 'PREV', 'test-treat') 
-	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & !grepl('ART', HYPO) & TEST_TYPE!='Acute')], 'PREV', 'test')
-	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & !grepl('ART', HYPO) & TEST_TYPE=='Acute')], 'PREV', 'test (Acute)')
+	set(runs.av.info, runs.av.info[, which(!grepl('Test', HYPO) & !grepl('Prest', HYPO) & grepl('ART', HYPO))], 'PREV', 'TasP')	
+	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & TEST_TYPE!='Acute')], 'PREV', 'test')
+	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & TEST_TYPE=='Acute')], 'PREV', 'test (RNA)')
+	tmp				<- runs.av.info[, which(grepl('Test', HYPO) & grepl('ART', HYPO))]
+	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '-treat',sep='')]) 	
 	set(runs.av.info, runs.av.info[, which(grepl('Prest', HYPO) )], 'PREV', 'test-PrEP')
 	tmp				<- runs.av.info[, which(grepl('Prest', HYPO) & grepl('PROUD', HYPO))]
 	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(86%)')])
@@ -117,11 +123,12 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(CD4<500)')])
 	tmp				<- runs.av.info[, which(grepl('ImmediateART', HYPO))]
 	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(Immediate)')])	
-	tmp				<- c(	"TasP (CD4<500)", "TasP (Immediate)", "test", "test (Acute)",                                               
-			"test-treat (CD4<500)", "test-treat (Immediate)", 
-			"test-PrEP (44%)", "test-PrEP (44%)-treat (CD4<500)", "test-PrEP (44%)-treat (Immediate)",   
-			"test-PrEP (86%)", "test-PrEP (86%)-treat (CD4<500)", "test-PrEP (86%)-treat (Immediate)" )
+	tmp				<- c(	"TasP (CD4<500)", "TasP (Immediate)", "test", "test (RNA)",                                               
+							"test-treat (CD4<500)", "test-treat (Immediate)", "test (RNA)-treat (Immediate)", 
+							"test-PrEP (44%)", "test-PrEP (44%)-treat (CD4<500)", "test-PrEP (44%)-treat (Immediate)",   
+							"test-PrEP (86%)", "test-PrEP (86%)-treat (CD4<500)", "test-PrEP (86%)-treat (Immediate)" )
 	set( runs.av.info, NULL, 'PREV', runs.av.info[, factor(PREV, levels=rev(tmp), labels=rev(tmp))] )	
+	runs.av.info	<- subset(runs.av.info, !is.na(PREV))
 	#
 	#	plot 
 	#
@@ -145,7 +152,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(~LEGEND)
 	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_Prevention.pdf'
-	ggsave(file=file, w=14, h=6)	
+	ggsave(file=file, w=16, h=6)	
 	#
 	#	plot for SOM: across censoring adjustments etc
 	#
@@ -163,8 +170,8 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(stat.legend~LEGEND)
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionByPhyloLkl.pdf'
-	ggsave(file=file, w=14, h=14)
+	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionBySamplingAdj.pdf'
+	ggsave(file=file, w=16, h=14)
 	#
 	#	plot for SOM: across likelihood methods
 	#
@@ -186,7 +193,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(method.legend~LEGEND)
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionBySamplingAdj.pdf'
+	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionByPhyloLkl.pdf'
 	ggsave(file=file, w=14, h=14)	
 	#
 	#	plot for SOM: across exclusion criteria
@@ -220,7 +227,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(method.legend~LEGEND)
 	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionByExclusionCriteria.pdf'
-	ggsave(file=file, w=14, h=40)
+	ggsave(file=file, w=14, h=45)
 	
 	#
 	#

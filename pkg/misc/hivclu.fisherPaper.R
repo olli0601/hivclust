@@ -1173,6 +1173,167 @@ project.athena.Fisheretal.composition.totalmissing<- function()
 ######################################################################################
 project.athena.Fisheretal.composition.contact<- function()
 {
+	t.endctime		<- 2013.3
+	contact.grace	<- 1.5
+	t.period		<- 0.125
+	
+	contact		<- subset(df.all.allmsm, Trm%in%c('MSM','BI'), select=c(Patient, AnyPos_T1, DateLastContact, DateDied, ReasonStopRegistration))
+	setkey(contact, Patient)
+	contact		<- unique(contact)
+	#	set last contact for NA last contact
+	set(contact, contact[, which(is.na(DateDied) | DateDied>t.endctime)], 'DateDied', t.endctime)
+	tmp			<- contact[, which(DateLastContact>=DateDied)]
+	set(contact, tmp, 'DateLastContact', contact[tmp, DateDied])
+	#	set DateDied for those that moved
+	tmp			<- contact[, which(!is.na(DateLastContact) & ReasonStopRegistration=='Moved')]
+	set(contact, tmp, 'DateDied', contact[tmp, DateLastContact])
+	#
+	set(df.treatment.allmsm, NULL, 'StopTime', hivc.db.Date2numeric(df.treatment.allmsm[,StopTime]))
+	set(df.treatment.allmsm, NULL, 'StartTime', hivc.db.Date2numeric(df.treatment.allmsm[,StartTime]))
+	df.treat	<- melt( df.treatment.allmsm, id.vars=c('Patient'), measure.vars=c('StartTime','StopTime'), value.name='AnyT_T' )
+	setkey(df.treat, Patient, AnyT_T)
+	df.treat	<- unique(df.treat)
+	df.treat	<- merge( df.treat, subset(contact, select=c(Patient, DateDied)),  by='Patient', all.x=1 )
+	#	keep only last AnyT_T before death. If not, adjusting DateLastContact precisely removes all not in contact periods
+	df.treat	<- subset(df.treat, AnyT_T<DateDied, c(Patient, AnyT_T))
+	tmp			<- merge( unique(subset(contact, select=Patient)), subset(df.treat, select=c(Patient, AnyT_T)), by='Patient')
+	tmp			<- tmp[, list(AnyT_TL=max(AnyT_T)), by='Patient']	
+	contact		<- merge(contact, tmp, by='Patient', all.x=1)	
+	tmp			<- merge(unique(subset(contact, select=Patient)), subset(df.viro.allmsm, select=c(Patient, PosRNA)), by='Patient')
+	set(tmp, NULL, 'PosRNA', hivc.db.Date2numeric(tmp[,PosRNA]))
+	tmp			<- tmp[, list(PosRNA_TL=max(PosRNA)), by='Patient']	
+	contact		<- merge(contact, tmp, by='Patient', all.x=1)
+	tmp			<- merge(unique(subset(contact, select=Patient)), subset(df.immu.allmsm, select=c(Patient, PosCD4)), by='Patient')
+	set(tmp, NULL, 'PosCD4', hivc.db.Date2numeric(tmp[,PosCD4]))
+	tmp			<- tmp[, list(PosCD4_TL=max(PosCD4)), by='Patient']	
+	contact		<- merge(contact, tmp, by='Patient', all.x=1)		
+	tmp			<- contact[, which(DateLastContact<PosRNA_TL & PosRNA_TL<t.endctime)]
+	if(length(tmp))
+	{
+		cat(paste('\nsetting relaxed DateLastContact because PosRNA_TL for n=',length(tmp)))
+		set(contact, tmp, 'DateLastContact', contact[tmp,PosRNA_TL])
+	}
+	tmp			<- contact[, which(DateLastContact<PosCD4_TL & PosCD4_TL<t.endctime)]
+	if(length(tmp))
+	{
+		cat(paste('\nsetting relaxed DateLastContact because PosCD4_TL for n=',length(tmp)))
+		set(contact, tmp, 'DateLastContact', contact[tmp,PosCD4_TL])
+	}
+	tmp			<- contact[, which(DateLastContact<AnyT_TL & AnyT_TL<t.endctime)]	
+	if(length(tmp))
+	{
+		cat(paste('\nsetting relaxed DateLastContact because AnyT_TL for n=',length(tmp)))
+		set(contact, tmp, 'DateLastContact', contact[tmp,AnyT_TL])
+	}	
+	#	allow for grace at end
+	tmp			<- contact[, which(DateLastContact<t.endctime & DateLastContact+contact.grace>=t.endctime)]
+	if(length(tmp))
+	{
+		cat(paste('\nsetting relaxed DateLastContact because DateLastContact+contact.grace<t.endctime for n=',length(tmp)))
+		set(contact, tmp, 'DateLastContact', contact[tmp, t.endctime])
+	}
+	#	discretize
+	set(contact, NULL, 'DateLastContact', contact[, floor(DateLastContact) + ceiling( (DateLastContact%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(contact, NULL, 'DateDied', contact[, ceiling(DateDied) + round( (DateDied%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(contact, NULL, 'AnyPos_T1', contact[, floor(AnyPos_T1) + round( (AnyPos_T1%%1)*100 %/% (t.period*100) ) * t.period] )
+	#	set up patient timelines
+	X.incare	<- contact[, list(t=seq(AnyPos_T1, DateDied-t.period, by=t.period)), by='Patient']
+	tmp			<- subset(contact, DateLastContact<DateDied)	
+	tmp			<- tmp[, list(t= seq(DateLastContact, DateDied-t.period, by=t.period), contact='No'),by='Patient']	
+	setnames(tmp, 'Patient','t.Patient')
+	setnames(X.incare, 'Patient','t.Patient')	
+	X.incare	<- merge(X.incare, tmp, by=c('t.Patient','t'), all.x=1)
+	set(X.incare, X.incare[,which(is.na(contact))],'contact','Yes')
+	set(X.incare, X.incare[, which(contact=='No' & t+contact.grace>t.endctime)], 'contact', 'Yes')
+	#
+	#	for each time t, check if there is at least 1 VL or CD4 measurement or Treatment visit in the last year/2 or next year/2
+	#
+	set(df.immu.allmsm, NULL, 'PosCD4', hivc.db.Date2numeric(df.immu.allmsm[,PosCD4]))
+	set(df.viro.allmsm, NULL, 'PosRNA', hivc.db.Date2numeric(df.viro.allmsm[,PosRNA]))
+	tmp			<- X.incare[, {
+				cntct					<- rep(0, length(t))
+				endgrace				<- t+contact.grace-t.endctime
+				endgrace[endgrace<0]	<- 0									
+				z						<- df.immu.allmsm$PosCD4[ which(df.immu.allmsm$Patient==t.Patient) ]
+				if(length(z))
+				{
+					tmp			<- sapply(seq_along(t), 	function(i) min(abs(t[i]-z))<=(contact.grace/2+endgrace[i])		)
+					cntct[tmp]	<- 1
+				}									
+				z		<- df.viro.allmsm$PosRNA[ which(df.viro.allmsm$Patient==t.Patient) ]
+				if(!all(cntct==1) & length(z))
+				{
+					tmp			<- sapply(seq_along(t), 	function(i) min(abs(t[i]-z))<=(contact.grace/2+endgrace[i])		)
+					cntct[tmp]	<- 1
+				}
+				z						<- df.treat$AnyT_T[ which(df.treat$Patient==t.Patient) ]
+				if(length(z))
+				{
+					tmp			<- sapply(seq_along(t), 	function(i) min(abs(t[i]-z))<=(contact.grace/2+endgrace[i])		)
+					cntct[tmp]	<- 1
+				}																		
+				list(t=t, incontact=cntct)
+			}, by=c('t.Patient')]	
+	X.incare	<- merge(X.incare, tmp, by=c('t.Patient','t'))	
+	#	proportion of MSM with no contact
+	tmp			<- subset(X.incare, t>=1996 & t<2011.5)[, list(NOCON= mean(contact=='No' | incontact==0)), by='t']
+	subset(X.incare, t>=1996.5 & t<2011)[, list(NOCON= mean(contact=='No' | incontact==0))]
+	#	0.0818766
+	ggplot(tmp, aes(x=t, ymax=100*NOCON, ymin=0)) + geom_ribbon() + 
+			scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1)) + 
+			scale_y_continuous(expand=c(0,0), limits=c(0,25), breaks=seq(0,100,5)) +
+			coord_trans(limx=c(1996.5, 2011)) +
+			theme(panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.4), axis.text.x=element_text(angle=0, vjust=0, hjust=0)) +
+			labs(x='', y='MSM with no contact to care\nfor at least 18 months\n(%)') +
+			theme_bw()
+	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150413_ClusterProp.pdf'	
+	ggsave(file=file, h=6, w=6)
+	#	proportion that re-enter care within 5 years	
+	tmp			<- subset(X.incare, t>1996.5 & (contact=='No' | incontact==0))[, list(FIR=t[1], DUR=length(t)*t.period), by=c('t.Patient')]
+	setnames(tmp, 't.Patient', 'Patient')
+	ggplot(tmp, aes(x=FIR, y=DUR, colour=DUR<5)) + geom_jitter(size=1) +
+			scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1)) +
+			scale_y_continuous(breaks=seq(0, 20, 4), minor_breaks=seq(0, 20, 1), expand=c(0.01,0.01)) +
+			labs(x='first time not in contact', y='duration of loss to contact\n(years)') +
+			geom_abline(intercept=2011, slope=-1, colour='red') + 
+			theme(panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.4), axis.text.x=element_text(angle=0, vjust=0, hjust=0)) +
+			theme_bw()
+	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150413_ContactDur.pdf'	
+	ggsave(file=file, h=6, w=6)
+	#
+	subset(tmp, FIR<2011-5)[, mean(DUR<(5-1.5))]
+	#	0.6925676
+	#
+	tmp			<- subset(tmp, !is.na(PosSeqT))
+	set(tmp, NULL, 'PosSeqT', tmp[, floor(PosSeqT) + round( (PosSeqT%%1)*100 %/% (t.period*100) ) * t.period] )
+	tmp[, COL:=tmp[, factor(as.numeric(FIR<=PosSeqT), levels=c(0,1), labels=c('before loss of contact', 'after loss of contact'))]]		
+	ggplot(tmp, aes(x=FIR, y=PosSeqT, colour=COL)) + geom_point() + geom_abline() +
+			labs(colour='sequenced', x='first time not in contact', y='sequence sampling time') +
+			theme_bw() +
+			theme(legend.position='bottom')
+	file		<- paste(plot.file, '_contactBySeq.pdf',sep='')
+	ggsave(file=file, h=6, w=6)		
+	
+	tmp			<- subset(X.incare, contact=='No' | incontact==0)
+	setnames(tmp, 't.Patient', 'Patient')
+	tmp			<- merge(tmp, unique(tmp2), by='Patient', all.x=1)
+	ggplot(tmp, aes(x=t, fill=factor(as.numeric(!is.na(PosSeqT)), levels=c(0,1),labels=c("No","Yes")))) + geom_histogram(binwidth=0.125) + 
+			scale_x_continuous(breaks=seq(1980, 2020, 5), minor_breaks=seq(1980, 2020, 1)) + 
+			scale_y_continuous(expand=c(0,0)) +
+			coord_trans(limx=c(1996.5, 2011)) +
+			labs(x='', y='potential transmitters with no contact\n(#)', fill='with a sequence') +
+			theme_bw() +
+			theme(panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.4), axis.text.x=element_text(angle=0, vjust=0, hjust=0), legend.position='bottom')
+	file		<- paste(plot.file, '_contactHist.pdf',sep='')
+	ggsave(file=file, h=6, w=6)		
+	
+		
+	#
+	set(X.incare, X.incare[, which(!incontact & contact=='Yes')], 'contact', 'No')	
+	set(X.incare, NULL, 'incontact', NULL )
+	if(X.incare[, length(which(is.na(stage)))])	stop('unexpected NA stage')
+	X.incare
+	
 	tmp		<- subset(YX, select=c(t.Patient, t, contact, CD4c))
 	setkey(tmp, t.Patient, t)
 	tmp		<- unique(tmp)

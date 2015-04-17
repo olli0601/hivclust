@@ -984,6 +984,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 	if(1)
 	{
 		file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.R",sep='/')
+		file.primoSHM	<- paste(dir.name,"original/ATHENA_1501_primoSHM.csv",sep='/')
 		file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patient.R",sep='/')
 		file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
 		file.immu		<- paste(dir.name,"derived/ATHENA_2013_03_Immu.R",sep='/')
@@ -993,6 +994,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 	if(0)
 	{
 		file.seq		<- paste(dir.name,"derived/ATHENA_2013_03_Sequences_AllMSM.R",sep='/')
+		file.primoSHM	<- paste(dir.name,"original/ATHENA_1501_primoSHM.csv",sep='/')
 		file.patient	<- paste(dir.name,"derived/ATHENA_2013_03_Patient_AllMSM.R",sep='/')
 		file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
 		file.immu		<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.R",sep='/')
@@ -1169,7 +1171,8 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		
 		#	reset Acute field		
 		df.all[, DUMMY:= df.all[, as.numeric(difftime(AnyPos_T1, NegT, units="days"))/365]]		
-		tmp	<- df.all[, which(!is.na(DUMMY) & DUMMY<=1 & (Acute_Spec=='CLIN' | Acute_Spec=='SYM' | is.na(Acute_Spec)))]
+		#tmp	<- df.all[, which(!is.na(DUMMY) & DUMMY<=1 & (Acute_Spec=='CLIN' | Acute_Spec=='SYM' | is.na(Acute_Spec)))]
+		tmp	<- df.all[, which(!is.na(DUMMY) & DUMMY<=1)]
 		cat(paste('\nFound patients with NegT<1yr, n=', length(tmp)))
 		set( df.all, tmp, 'Acute_Spec', 'NEGTEST' )
 		# df.all[, table(!is.na(DUMMY) & DUMMY<=1, Acute_Spec, useNA='if')]
@@ -1185,6 +1188,15 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		df.all[, Acute_Spec_2:=NULL]
 		df.all[, Acute_Spec_3:=NULL]
 		df.all[, Acute_Spec_4:=NULL]
+		#
+		#	add participation in primo-SHM
+		#
+		df.pr	<- as.data.table(read.csv(file.primoSHM, stringsAsFactors=FALSE, header=FALSE, col.names='Patient'))
+		df.pr[, WithPrimoSHMID:='Yes']
+		df.all	<- merge(df.all, df.pr, by='Patient', all.x=1)
+		set(df.all, df.all[, which(is.na(WithPrimoSHMID))], 'WithPrimoSHMID', 'No' )
+		set(df.all, NULL, 'WithPrimoSHMID', df.all[, factor(WithPrimoSHMID, levels=c('No','Yes'), labels=c('No','Yes'))])
+		#setkey(df.all, Patient); unique(df.all)[, table(WithPrimoSHMID)]		
 		if(verbose)	cat(paste("\nsave to file",file.out))
 		save(df.all,file=file.out)
 		str(df.all)		

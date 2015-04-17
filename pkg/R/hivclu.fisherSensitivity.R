@@ -898,8 +898,8 @@ project.athena.Fisheretal.sensitivity.factor.legend<- function(method.risk)
 				"#1A9850","#A6D96A","grey70"
 		)
 		factor.long		<- c(	'Undiagnosed,\n Confirmed recent infection\n at diagnosis',					
-				'Undiagnosed,\n Unconfirmed recent infection',
-				'Undiagnosed,\n Unconfirmed chronic infection',
+				'Undiagnosed,\n Estimated to be in recent infection',
+				'Undiagnosed,\n Estimated to be in infection',
 				'Diagnosed < 3mo,\n Recent infection\n at diagnosis',					
 				'Diagnosed,\n CD4 progression to >500',
 				'Diagnosed,\n CD4 progression to [350-500]',

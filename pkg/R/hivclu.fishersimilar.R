@@ -2310,9 +2310,9 @@ project.athena.Fisheretal.t2inf.estimate.quantileparameter<- function(df.all.all
 	{
 		ggplot(df.calim, aes(x=p, y=value, group=variable, colour=variable)) + 
 				geom_ribbon(ymin=3.0, ymax=3.41, fill='grey50', alpha=0.25, colour='transparent') +
-				geom_ribbon(ymin=3.5, ymax=4.8, fill='grey50', alpha=0.25, colour='transparent') +
+				geom_ribbon(ymin=3.87, ymax=5.11, fill='grey50', alpha=0.25, colour='transparent') +
 				geom_hline(yintercept=3.16, linetype='dotted') +
-				geom_hline(yintercept=3.9, linetype='dashed') +				
+				geom_hline(yintercept=4.34, linetype='dashed') +				
 				geom_line() + theme_bw() +
 				scale_x_continuous(limits=c(0.01,0.99), expand=c(0,0)) +
 				scale_y_continuous(breaks=seq(0,10,1)) +

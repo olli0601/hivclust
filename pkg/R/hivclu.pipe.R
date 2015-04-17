@@ -894,12 +894,12 @@ hivc.pipeline.various<- function()
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
 	}
-	if(0)
+	if(1)
 	{
 		project.Gates()
 		quit("no")
 	}
-	if(1)
+	if(0)
 	{
 		#project.hivc.examl.median.brl()
 		cmd			<- hivc.cmd.various()
