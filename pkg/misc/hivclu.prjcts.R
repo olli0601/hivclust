@@ -551,7 +551,7 @@ project.Gates.test.runxml<- function()
 			infile		<- substr(infile, 1, nchar(infile)-4) 		
 			cmd			<- hivc.cmd.beast.runxml(indir, infile, insignat, prog.beast=PR.BEAST, prog.beast.opt=" -beagle -working", hpc.tmpdir.prefix="beast", hpc.ncpu=hpc.ncpu)
 			cat(cmd)	
-			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=hpc.ncpu, hpc.walltime=71, hpc.mem="3600mb")		
+			cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=hpc.ncpu, hpc.walltime=71, hpc.mem="6000mb")		
 			outdir		<- indir
 			outfile		<- paste("bpg.",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='')					
 			hivc.cmd.hpccaller(outdir, outfile, cmd)		
@@ -1044,9 +1044,11 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		load(file.viro)	
 		tmp		<- subset(df, select=c(Patient, PoslRNA_T1, lRNA_T1))
 		setkey(tmp, Patient)
+		set(tmp, NULL, 'Patient', tmp[, as.character(Patient)])
 		df.all	<- merge(df.all, unique(tmp), by='Patient', all.x=1)
 		load(file.treatment)
-		tmp		<- subset(df, select=c(Patient, AnyT_T1))
+		tmp		<- subset(df, select=c(Patient, AnyT_T1))		
+		set(tmp, NULL, 'Patient', tmp[, as.character(Patient)])
 		setkey(tmp, Patient)
 		df.all	<- merge(df.all, unique(tmp), by='Patient', all.x=1)
 		tmp		<- subset(df.all, !is.na(PosT) & !is.na(NegT) & PosT<NegT)
@@ -1090,6 +1092,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		#
 		if(verbose)		cat(paste("\nadding virology data"))
 		load(file.viro)
+		set(df, NULL, 'Patient', df[, as.character(Patient)])
 		df.all[, idx:=seq_len(nrow(df.all))]
 		df.cross	<- merge( subset(df.all, select=c(idx,FASTASampleCode,Patient,AnyPos_T1,PosT,PosSeqT,AnyT_T1,NegT,NegT_Acc)), df, allow.cartesian=T, by="Patient" )
 		#	checking manually AnyPos_T1>PosRNA & lRNA<3
@@ -1124,6 +1127,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		#
 		if(verbose)		cat(paste("\nadding treatment data"))
 		load(file.treatment)
+		set(df, NULL, 'Patient', df[, as.character(Patient)])
 		df			<- subset(df, select=c(Patient, StartTime, StopTime, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel, TrI.n, TrI.mo, TrI.p, AnyT_T1, AnyT_T1_Acc, HAART_T1))
 		tmp			<- subset(df, select=c(Patient, TrI.n, AnyT_T1, AnyT_T1_Acc ))
 		setkey(tmp, Patient)
@@ -1142,6 +1146,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		#
 		if(verbose)		cat(paste("\nadding CD4 data"))
 		load(file.immu)
+		set(df, NULL, 'Patient', df[, as.character(Patient)])
 		if(length(which(df[,is.na(PosCD4_T1)])))	stop("unexpected NA in PosCD4_T1")
 		if(length(which(df[, is.na(PosCD4)]))) stop("unexpected NA in PosCD4")
 		if(length(which(df[, is.na(CD4)]))) stop("unexpected NA in CD4")
@@ -2657,13 +2662,13 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	df.update$Transmission[df.update$Transmission==800]	<- 108
 	df.update$Transmission[df.update$Transmission==150]	<- 110	
 	cat(paste('\ndifferent variables that are new in update=',paste(setdiff(colnames(df.update), colnames(df)), collapse=' ')))
-	#	no update for same patients in df
+	#	no update for patients in df that are not in df.update
 	tmp					<- merge( data.frame(Patient=setdiff( df[, 'Patient'], df.update[, 'Patient'])), df, by='Patient' )
 	tmp$DateAIDS		<- ''
 	tmp$Acute			<- tmp$AcuteInfection
-	cat(paste('\nFound patients with no update, n=',nrow(tmp)))
+	cat(paste('\nFound patients in df that are not in update, n=',nrow(tmp)))
 	#	update for all other patients in df
-	df					<- merge( subset(df, select=c(Patient, DateFirstEverCDCC)), df.update, by='Patient' )
+	df					<- merge( subset(df, select=c(Patient, DateFirstEverCDCC)), df.update, by='Patient', all.y=1 )
 	for(x in setdiff(colnames(df), colnames(tmp)))
 	{
 		cat(paste('\nadding new row to those entries with no update',x))
@@ -5481,6 +5486,172 @@ project.hivc.clustering.plottree<- function()
 	states		<- states[ph.tip.state,]
 	hivc.clu.plot.tiplabels( seq_len(Ntip(ph)), matrix(states[,state.text], nrow=1,ncol=nrow(states)), matrix(states[,state.col], nrow=1,ncol=nrow(states)), cex=0.4, adj=c(-1,0.5) )
 	
+}
+######################################################################################
+inla.tut1<- function()
+{
+	install.packages("INLA", repos="http://www.math.ntnu.no/inla/R/testing")
+	library(INLA)
+	data(Seeds)
+	head(Seeds)
+	formula	<- r ~ 1 + x1+x2+x1:x2
+	#INLA f() random effect
+	formula	<- r ~ 1 + x1+x2+x1:x2+f(plate, model='iid')
+	result	<- inla(formula, family='binomial', data=Seeds, Ntrials=n)
+	summary(result)
+	plot(result)
+	#	INLA parameters must be small 10-15 at max
+	#	can give fixed covariate u an AR smoothing effect -> remains Gaussian
+	#	AR parameter is an INLA parameter
+	#	precision matrix shows correlation of response and covariates and hyperparameters
+	#	ie which of the 'locations' are correlated to explain 'transmissions'	
+}
+######################################################################################
+inla.tut.basic1<- function()
+{
+	library(spatstat)
+	library(mvtnorm)
+	library(lattice)
+	library(mgcv)
+	library(pixmap)
+	library(numDeriv)
+	library(fields)
+	library(INLA)
+	
+	data(Seeds)
+	Y		<- Seeds$r
+	Z1		<- Seeds$x1
+	Z2		<- Seeds$x2
+	n		<- Seeds$n
+	formula <- Y ~ 1 + Z1 * Z2
+	data	<- data.frame(Y, Z1, Z2, n)
+	result	<- inla(formula, data=data, family="binomial", Ntrials=n, verbose=TRUE, 
+								control.compute=list(dic=TRUE))
+	summary(result)
+	plot(result)
+	#	fixed effects: OK I get the posterior means etc. great.
+	
+	plate	<- Seeds$plate
+	data	<- data.frame(Y, Z1, Z2, n, plate)
+	formula <- Y ~ Z1*Z2 + f(plate, model="iid")
+	result2	<- inla(formula, data=data, family="binomial", Ntrials=n, verbose=0, 
+								control.compute=list(dic=TRUE))
+	summary(result2)	
+	
+	data(trees)
+	Y		<- log(trees$Volume)
+	Z1		<-trees$Girth
+	Z2		<-trees$Height
+	prior.c	<- c(1,0.05)
+	hyper	<- list(theta=list(param=prior.c))
+	formula <- Y ~ 1 + f(Z1, model = "rw2", hyper=hyper) + f(Z2, model = "rw2", hyper=hyper)
+	data	<- data.frame(Y, Z1, Z2)
+	result3	<- inla(formula, data=data, family="normal", verbose=0, 
+								control.compute=list(dic=TRUE))
+	summary(result3)
+	plot(result3)
+	#	with random effects, the mean is always zero and the output reports marginal posterior precision
+	#	Z1 linear, Z2 tips off at the end -- num issue?
+	#	what is linear predictor? fitted values?
+	
+	prior.c	<- c(20,0.05)
+	#	what are the equations behind the prior parameters?
+	#	x ~ N(0, tau^-1 Q^-1) Q depends on knots
+	#	with scale.model Q is re-scaled so tau is comparable across models
+	#	important for prior spec, otherwise prior data may concentrate oddly
+	#	scale.model ~ prior on precision * knots
+	hyper	<- list(theta=list(param=prior.c))
+	formula <- Y ~ 1 + f(Z1, model = "rw2", hyper=hyper, scale.model=TRUE) + f(Z2, model = "rw2", hyper=hyper, scale.model=TRUE)
+	result4	<- inla(formula, data=data, family="normal", verbose=0, 
+								control.compute=list(dic=TRUE))
+	summary(result4)
+	plot(result4)
+	#	how can I 'see' the model, ie plot data and prediction on data with CIs?
+	
+	prior.c	<- c(1,0.05)
+	hyper	<- list(theta=list(param=prior.c))
+	formula <- Y ~ 1 + f(Z1, model = "rw1", hyper=hyper) + f(Z2, model = "rw1", hyper=hyper)
+	data	<- data.frame(Y, Z1, Z2)
+	result5	<- inla(formula, data=data, family="normal", verbose=0, 
+			control.compute=list(dic=TRUE))
+	summary(result5)
+	plot(result5)
+	#	for predict, need to: response<- c(Y, rep(n, NA))	data<- c(X, X)
+	#	need to do it this way because bunch of results are thrown away
+
+	#	inla.mcmc
+	#	check demo: secret args
+}
+######################################################################################
+inla.tut.rainfall<- function()
+{
+	library(lattice)
+	library(INLA)
+	indir	<- '~/duke/2015_tutorial_INLA/Practicals'
+	file	<- paste(indir, 'rainfall.RData', sep='/')
+	load(file) 
+	head(rainfall)	
+	loc = cbind(rainfall$lon, rainfall$lat)
+		
+	mesh	<- inla.mesh.create.helper(	points.domain=cbind(rainfall$lon,rainfall$lat),
+									max.edge=c(2,100))
+	plot(mesh)
+	spde 	<- inla.spde2.matern(mesh, alpha=2)
+	A 		<- inla.spde.make.A(mesh=mesh, loc =loc)
+	formula <- z ~ intercept + f(nodes, model = spde) - 1
+	stack 	<- inla.stack(	data= list(z=rainfall$z), 
+							A= list(1,A),
+							effects= list(intercept=rep(1,length(rainfall$z)),
+							nodes= 1:spde$n.spde ))
+	result 	<- inla(formula,
+							data=inla.stack.data(stack),
+							control.predictor=list(A=inla.stack.A(stack)))
+	result$summary.fixed	
+	result$summary.hyperpar
+	#	transform marginal with delta method
+	post.se <- inla.tmarginal(function(x) sqrt(1/x), result$marginals.hyperpar[[1]])
+	inla.emarginal(function(x) x, post.se)
+	inla.qmarginal(c(0.025, 0.5, 0.975), post.se)
+	inla.hpdmarginal(0.95, post.se)
+	inla.pmarginal(c(0.5, 0.7), post.se)
+	
+	result.field 	<- inla.spde2.result(result, 'nodes', spde, do.transf=TRUE)
+	
+	inla.emarginal(function(x) x, result.field$marginals.kappa[[1]]) 
+	inla.emarginal(function(x) x, result.field$marginals.variance.nominal[[1]]) 
+	inla.emarginal(function(x) x, result.field$marginals.range.nominal[[1]])
+	
+	
+	require(maps) #install.packages(c("maps","maptools")) 
+	require(maptools)
+	## Calculate mapping between triangulation vertices and grid points:
+	proj 			<- inla.mesh.projector(mesh, dims=c(200,200))
+	## Construct greyscale palette function:
+	my.grey.palette <- function (n,...) { return (grey.colors(n,0.05,0.95,...))}
+	my.palette 		<- my.grey.palette
+	## Construct map data appropriate for easy plotting:
+	levelplotmap 	<- function(..., mm) {
+											panel.levelplot(...)
+											panel.lines(mm$x, mm$y, col="black")
+										}
+	#####################
+	## Plot results:
+	plotdata 		<- inla.mesh.project(proj, result.field$summary.values$mean)
+	dev.new()
+	bbb 			<- levelplot(	row.values=proj$x, column.values=proj$y, x=plotdata,								
+									mm=map("usa"), panel=levelplotmap,
+									col.regions=my.palette,
+									xlim=range(proj$x), ylim=range(proj$y), aspect="iso",
+									contour=TRUE, cuts=11, labels=FALSE, pretty=TRUE,
+									xlab="Easting",ylab="Northing")
+
+	print(bbb)
+	#	geostatsp
+	#	diseasemapping
+}
+######################################################################################
+inla.tut.havard.spde<- function()
+{
 }
 ######################################################################################
 project.hivc.examl<- function()

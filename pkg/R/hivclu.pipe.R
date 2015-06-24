@@ -701,7 +701,7 @@ hivc.pipeline.props_univariate<- function()
 				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
 		)
 		df.method				<- do.call('rbind', df.method)				
-		#df.method				<- df.method[7,]
+		df.method				<- df.method[c(12,13),]
 		if(1)
 			df.method[, method.risk:='m2Awmx.wtn.tp4']
 		if(0)
@@ -894,7 +894,7 @@ hivc.pipeline.various<- function()
 		cmd			<- paste(CODE.HOME,"misc/hivclu.startme.R -exe=BETAREG.NUMBERS\n",sep='/')
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="149000mb")
 	}
-	if(1)
+	if(0)
 	{
 		project.Gates()
 		quit("no")
@@ -909,7 +909,39 @@ hivc.pipeline.various<- function()
 		outfile		<- paste("vrs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		quit("no")		
-	}						
+	}	
+	if(1)	#	run ExamML with partition for tree comparison
+	{		
+		indir.wgaps	<- '/Users/Oliver/git/HPTN071sim/treec150623/withgapstrees'
+		indir.wgaps	<- '/work/or105/Gates_2014/tree_comparison'
+		infiles		<- data.table(FILE=list.files(indir.wgaps, pattern='\\.R$'))
+		infiles[,SIGNAT:=infiles[, regmatches(FILE,regexpr('BWC.*|UGC.*', FILE))]]
+		tmp			<- infiles[, list(BASE=gsub(paste('_',SIGNAT,sep=''),'',FILE)), by='FILE']
+		infiles		<- merge(infiles, tmp, by='FILE')
+		set(infiles, NULL, 'SIGNAT', infiles[, gsub('\\.R','',SIGNAT)])
+		infiles[, PARTITION:= gsub('\\.R','_codon.txt',FILE)]
+		bs.from		<- 0
+		bs.to		<- 9
+		bs.n		<- 20
+		
+		invisible(infiles[, {					
+							infile		<- BASE
+							signat.in	<- signat.out	<- SIGNAT
+							args.parser	<- paste("-m DNA -q",PARTITION)
+							cmd			<- hivc.cmd.examl.bootstrap(indir.wgaps, infile, signat.in, signat.out, bs.from=bs.from, bs.to=bs.to, prog.bscreate=PR.EXAML.BSCREATE, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, opt.bootstrap.by="codon", args.parser=args.parser, args.examl="-f o -m GAMMA", prog.supportadder=PR.EXAML.BS, tmpdir.prefix="examl")					
+							invisible(lapply(cmd, function(x)
+											{												
+												x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q="pqeelab", hpc.mem="950mb", hpc.nproc=1)
+												signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+												outfile	<- paste("ex",signat,sep='.')
+												#cat(x)
+												hivc.cmd.hpccaller(outdir, outfile, x)
+												Sys.sleep(1)
+											}))
+							NULL					
+						}, by='FILE'])				
+	}
+		
 }
 
 

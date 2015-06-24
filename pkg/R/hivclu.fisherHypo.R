@@ -128,7 +128,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 							"test-PrEP (44%)", "test-PrEP (44%)-treat (CD4<500)", "test-PrEP (44%)-treat (Immediate)",   
 							"test-PrEP (86%)", "test-PrEP (86%)-treat (CD4<500)", "test-PrEP (86%)-treat (Immediate)" )
 	set( runs.av.info, NULL, 'PREV', runs.av.info[, factor(PREV, levels=rev(tmp), labels=rev(tmp))] )	
-	runs.av.info	<- subset(runs.av.info, !is.na(PREV))
+	runs.av.info	<- subset(runs.av.info, !is.na(PREV) & STAT=='Pjx.e0cp')
 	#
 	#	plot 
 	#
@@ -228,6 +228,31 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			facet_grid(method.legend~LEGEND)
 	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionByExclusionCriteria.pdf'
 	ggsave(file=file, w=14, h=45)
+	#
+	#	plot for SOM: across exclusion criteria gen distance
+	#
+	tmp				<- data.table(	method.brl=c(	"3pa1H1.48C2V100b0.02T7", "3pa1H1.48C2V100b0.04T7"	), 
+									method.legend=c( 'central estimate of HIV infection times\ncentral phylogenetic exclusion criteria\nand genetic distance <2%',
+													 'central estimate of HIV infection times\ncentral phylogenetic exclusion criteria\nand genetic distance <4%'	))										 
+	set(tmp, NULL, 'method.legend', tmp[, factor(method.legend, levels=method.legend, labels=method.legend)])
+	runs.av.plot	<- merge(runs.av.plot, tmp, by='method.brl')
+	tmp				<- subset(runs.av.plot, method.brl=='3pa1H1.48C2V100b0.02T7' & HYPO=='HypoPrestPROUDC12m70pc70pc+ARTat500')
+	set(tmp, 1L, 'method.legend','central estimate of HIV infection times\ncentral phylogenetic exclusion criteria\nand genetic distance <4%')
+	runs.av.plot	<- rbind(runs.av.plot,tmp)
+	setkey(runs.av.plot, PREV)
+	
+	ggplot( runs.av.plot, aes(x=PREV, fill=factor( grepl('PrEP', PREV) + grepl('86%', PREV)) ) ) +
+			geom_hline(yintercept=50, colour="grey70", size=2) +
+			scale_fill_manual(values=c("#FED9A6", "#FFFFCC", "#E5D8BD"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
+			geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color='black', width=0.9, size=0.7) +
+			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+			labs(x='', y='\nHIV infections amongst MSM\nthat could have been averted in 09/07 - 10/12\n(%)') + 
+			coord_flip() +			
+			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
+			facet_grid(method.legend~LEGEND)
+	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150618_PreventionByGenDist.pdf'
+	ggsave(file=file, w=14, h=10)
 	
 	#
 	#

@@ -43,6 +43,7 @@ require(hivclust)
 CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 #CODE.HOME	<<- "/Users/Stephane/Phylogenetics/github/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
+HIVC.CODE.HOME	<<- substr(CODE.HOME,1,nchar(CODE.HOME)-4)
 INST		<<- paste(CODE.HOME,"inst",sep='/')
 HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
 #HOME		<<- "/Users/Oliver/duke/2013_HIV_Hue/UKCA_1309"
@@ -403,7 +404,7 @@ if(length(args))
 	argv<<- args
 }
 ###############################################################################
-stop()
+#stop()
 if(HIVC.DEBUG)	options(error= my.dumpframes)	
 cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	

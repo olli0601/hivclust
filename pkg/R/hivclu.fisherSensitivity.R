@@ -19,8 +19,8 @@ project.athena.Fisheretal.sensitivity<- function()
 	outdir					<- paste(DATA,"fisheretal_150308",sep='/')		
 	indir					<- paste(DATA,"fisheretal_150312",sep='/')
 	outdir					<- paste(DATA,"fisheretal_150312",sep='/')		
-	#indir					<- paste(DATA,"fisheretal_150319",sep='/')
-	#outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
+	indir					<- paste(DATA,"fisheretal_150319",sep='/')
+	outdir					<- paste(DATA,"fisheretal_150319",sep='/')		
 	
 	
 	infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
@@ -1252,6 +1252,97 @@ project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals<- 
 			facet_grid(. ~ group, scales='free_y', margins=FALSE)		
 	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','ratio',".pdf", sep='')	
 	ggsave(file=file, w=9, h=7)
+}
+######################################################################################
+project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals.notime.separate<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, group)
+{			
+	df		<- subset(runs.table, method.denom==method.DENOM & method.BRL==method.brl & grepl(method.RISK,method.risk), c(stat, method.risk, factor, n, p, l95.bs, u95.bs))
+	if(method.WEIGHT=='')
+		df		<- subset(df, !grepl('wstar',method.risk) & !grepl('now',method.risk))
+	if(method.WEIGHT!='')
+		df		<- subset(df, grepl(method.WEIGHT,method.risk) )
+	set(df, NULL, 'factor', df[, as.character(factor)])	
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'factor', df[, factor(factor, levels=factors[, levels(factor)])])
+	
+	#	prop potential transmission intervals 
+	tmp		<- subset(df, stat%in%c('X.msm.e0cp','nRec'))	
+	tmp		<- dcast.data.table(tmp, t.period+factor+method.risk~stat, value.var='n')
+	tmp[, n:= X.msm.e0cp/8/nRec*100]	
+	tmp		<- tmp[, list(n.coh=sum(n)), by='factor']
+	tmp[, p.coh:= tmp[, n.coh/sum(n.coh)]]
+	set(tmp, NULL, 'n.coh', tmp[, round(n.coh, d=0)])			
+	ans		<- subset(tmp, select=c(factor,  p.coh))
+	#	prop likely transmission intervals 
+	tmp		<- subset(df, stat%in%c('YX','nRecLkl'))
+	tmp2	<- subset(df, stat=='YX', select=c(factor, t.period, p))
+	tmp		<- dcast.data.table(tmp, t.period+factor+method.risk~stat, value.var='n')
+	tmp		<- merge(tmp, tmp2, by=c('factor','t.period'))
+	tmp[, n:= YX/nRecLkl*100]	
+	tmp		<- tmp[, list(n.lkl=sum(n)), by='factor']
+	tmp[, p.lkl:= tmp[, n.lkl/sum(n.lkl)]]	
+	set(tmp, NULL, 'n.lkl', tmp[, round(n.lkl, d=0)])		
+	ans		<- merge(ans, subset(tmp, select=c(factor, p.lkl)), by='factor')
+	#	prop likely transmission intervals + expected missing intervals per 100 'recipient with lkl transmitter' in time period
+	tmp		<- subset(df, stat%in%c('YX','Sx.e0cp','nRecLkl'))
+	tmp2	<- subset(df, stat=='Sx.e0cp', select=c(factor, t.period, l95.bs, u95.bs))
+	tmp		<- dcast.data.table(tmp, t.period+factor+method.risk~stat, value.var='n')
+	tmp		<- merge(tmp, tmp2, by=c('factor','t.period'))
+	tmp[, n:= (YX+Sx.e0cp/8)/nRecLkl*100]
+	tmp[, l95.bs:= (YX+l95.bs/8)/nRecLkl*100]
+	tmp[, u95.bs:= (YX+u95.bs/8)/nRecLkl*100]	
+	tmp		<- tmp[, list(n.lklm=sum(n), l95.lklm=sum(l95.bs), u95.lklm=sum(u95.bs)), by='factor']
+	tmp[, p.lklm:= tmp[, n.lklm/sum(n.lklm)]]
+	ans		<- merge(ans, subset(tmp, select=c(factor, p.lklm)), by='factor')
+	#	ratio of proportions
+	ans[, r.lkl:= p.lkl/p.coh]
+	ans[, r.lklm:= p.lklm/p.coh]
+	ans		<- melt(ans, measure.vars=c('p.coh','p.lklm'))
+	# group
+	if(group=='cascade')
+	{
+		scale.name	<- 'in infection/care stage'
+		ans[, group:=ans[, substr(factor, 1, 1)]]
+		set(ans, ans[,which(group=='A')], 'group', 'ART started')
+		set(ans, ans[,which(group=='U')], 'group', 'Undiagnosed')
+		set(ans, ans[,which(group=='D')], 'group', 'Diagnosed')
+		set(ans, ans[,which(group=='L')], 'group', 'Not in contact')
+		set(ans, NULL, 'group', ans[, factor(group, levels=c('Undiagnosed','Diagnosed','ART started','Not in contact'))])		
+	}
+	if(group=='age')
+	{		
+		scale.name	<- 'from age group'
+		ans[, group:=NA_character_ ]
+		set(ans, ans[,which(factor%in%c('t<=20','t<=25'))], 'group', '<30')
+		set(ans, ans[,which(factor%in%c('t<=30','t<=35'))], 'group', '30-39')
+		set(ans, ans[,which(factor%in%c('t<=40','t<=45','t<=100'))], 'group', '40-')
+		set(ans, NULL, 'group', ans[, factor(group, levels=c('<30','30-39','40-'))])
+		theme.age <- function (base_size = 12, base_family = "") 
+		{
+			theme_grey(base_size = base_size, base_family = base_family) %+replace% 
+					theme(	legend.key.size=unit(11,'mm'), 
+							axis.text.x=element_text(angle = -60, vjust = 0.5, hjust=0.5), 
+							panel.background = element_rect(fill = 'grey60'),
+							panel.grid.minor.y = element_line(colour='grey70'),
+							panel.grid.major = element_line(colour='grey70'),
+							legend.key=element_rect(fill='grey60'))
+		}
+		theme_set(theme.age())
+	}
+	#factor.long	
+	ans	<- merge(ans, factors, by='factor')	
+	set(ans, ans[, which(variable=='p.coh')], 'variable', 'in the population,\namong potential transmitters that\noverlap with infection windows')
+	set(ans, ans[, which(variable=='p.lklm')], 'variable', 'among phylogenetically probable\ntransmitters')
+	ggplot(ans, aes(x=factor, y=value*100, fill=factor.legend)) + geom_bar(stat='identity', position='dodge') +
+			scale_fill_manual(values=ans[, unique(factor.color)], guide=FALSE) +			
+			scale_y_continuous(breaks=seq(0,50,10), minor_breaks=seq(0,50,2), limits=c(0,35), expand=c(0,0)) +
+			theme_bw() + 
+			labs(x='', y='Transmission intervals\n(%)') +
+			theme(strip.text=element_text(size=14), axis.text=element_text(size=14), axis.title=element_text(size=14), legend.key.size=unit(11,'mm'), legend.position = "bottom", legend.box = "vertical", axis.ticks.x=element_blank(), axis.text.x=element_blank(), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7)) +
+			facet_grid(.~variable)
+	file			<- paste(outdir, '/', outfile, '_', gsub('/',':',insignat),'_','2011','_',method.DENOM, '_',method.BRL,'_',df[1, method.risk],'_','enrichv2',".pdf", sep='')	
+	ggsave(file=file, w=10, h=3.5)
 }
 ######################################################################################
 project.athena.Fisheretal.sensitivity.getfigures.comparetransmissionintervals.notime<- function(runs.table, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, outfile, tperiod.info, group)

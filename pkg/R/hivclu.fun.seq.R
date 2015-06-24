@@ -534,19 +534,19 @@ seq.rmgaps<- function(seq.DNAbin.matrix, rm.only.col.gaps=1, rm.char='-', verbos
 	{	
 		if(is.matrix(seq.DNAbin.matrix))
 		{
-			tmp					<- lapply(seq_len(nrow(seq.DNAbin.matrix)), function(i){	seq.DNAbin.matrix[i, seq.DNAbin.matrix[i,]!=rm.char]	})
+			tmp					<- lapply(seq_len(nrow(seq.DNAbin.matrix)), function(i){	seq.DNAbin.matrix[i, !seq.DNAbin.matrix[i,]%in%rm.char]	})
 			names(tmp)			<- rownames(seq.DNAbin.matrix)
 		}
 		else
 		{
-			tmp					<- lapply(seq_along(seq.DNAbin.matrix), function(i){	seq.DNAbin.matrix[[i]][ seq.DNAbin.matrix[[i]]!=rm.char]	})
+			tmp					<- lapply(seq_along(seq.DNAbin.matrix), function(i){	seq.DNAbin.matrix[[i]][ !seq.DNAbin.matrix[[i]]%in%rm.char]	})
 			names(tmp)			<- names(seq.DNAbin.matrix)
 		}		
 		seq.DNAbin.matrix	<- tmp
 	}
 	else
 	{		
-		gap					<- apply(seq.DNAbin.matrix,2,function(x) all(x==rm.char)) 
+		gap					<- apply(seq.DNAbin.matrix,2,function(x) all(x%in%rm.char)) 
 		if(verbose)		cat(paste("\nremove gaps, n=",length(which(gap))))
 		if(verbose>1)	cat(paste("\nremove gaps, at pos=",which(gap)))
 		seq.DNAbin.matrix	<- seq.DNAbin.matrix[,!gap]	
