@@ -665,7 +665,7 @@ hivc.cmd.examl.bootstrap<- function(indir, infile, signat.in, signat.out, bs.fro
 					tmp		<- gsub('-q ','',regmatches(args.parser,regexpr('-q .*',args.parser)))
 					if(length(tmp))
 					{
-						cmd	<- paste(cmd,"cp ",indir,'/',tmp," ",tmpdir,sep='')
+						cmd	<- paste(cmd,"\ncp ",indir,'/',tmp," ",tmpdir,sep='')
 					}
 					cmd		<- paste(cmd,hivc.cmd.examl.bsalignment(tmpdir, infile, signat.in, signat.out, bs.id[i], prog.bscreate=prog.bscreate, opt.bootstrap.by=opt.bootstrap.by, outdir=tmpdir, verbose=verbose),sep='\n')
 					cmd		<- paste(cmd,hivc.cmd.examl(tmpdir, infile, signat.in, signat.out, outdir=tmpdir, prog.parser= prog.parser, args.parser=args.parser, prog.starttree= prog.starttree, args.starttree.seed=bs.seeds[i], args.starttree.bsid= bs.id[i], prog.examl=prog.examl, args.examl=args.examl, resume=resume, verbose=verbose),sep='\n')
