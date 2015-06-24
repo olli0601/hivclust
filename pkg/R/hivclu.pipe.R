@@ -923,7 +923,7 @@ hivc.pipeline.various<- function()
 		bs.from		<- 0
 		bs.to		<- 9
 		bs.n		<- 20
-		
+		outdir		<- indir.wgaps
 		invisible(infiles[, {					
 							infile		<- BASE
 							signat.in	<- signat.out	<- SIGNAT
