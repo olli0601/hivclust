@@ -6,6 +6,7 @@ all:
 	echo "current directory is "$(CWD)
 	echo "destination directory for external code is "$(EXTERNAL_CODE)
 	mkdir -p $(EXTERNAL_CODE)
+	cp -R ../misc $(DEST)
 	@echo "*********************************************** "
 	@echo "********* BUILDING standard-RAxML ************* "
 	@echo "*********************************************** "	
@@ -54,13 +55,13 @@ EXAML-parsimonator:
 	
 examl:	
 	echo $(CWD)	
-	tar -xzvf ../inst/ExaML.tar.gz	
+	tar -xzvf ../inst/ExaML-3.0.14.tar.gz	
 	#git clone https://github.com/stamatak/ExaML.git
-	make -C ExaML/parser -f Makefile.SSE3.gcc
-	mv $(CWD)/ExaML/parser/parse-examl $(EXTERNAL_CODE)/ExaML-parser
-	make -C ExaML/examl -f Makefile.SSE3.gcc
-	mv $(CWD)/ExaML/examl/examl $(EXTERNAL_CODE)/ExaML-examl
-	rm -rf ExaML
+	make -C ExaML-3.0.14/parser -f Makefile.SSE3.gcc
+	mv $(CWD)/ExaML-3.0.14/parser/parse-examl $(EXTERNAL_CODE)/ExaML-parser
+	make -C ExaML-3.0.14/examl -f Makefile.SSE3.gcc
+	mv $(CWD)/ExaML-3.0.14/examl/examl $(EXTERNAL_CODE)/ExaML-examl
+	rm -rf ExaML-3.0.14
 	mv $(EXTERNAL_CODE)/ExaML-examl $(EXTERNAL_CODE)/examl
 	
 beast2.jar:

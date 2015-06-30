@@ -3,7 +3,7 @@
 ##	CHANGE  as needed
 ##! /Library/Frameworks/R.framework/Versions/2.11/Resources/bin/Rscript
 ##! /Library/Frameworks/R.framework/Versions/2.15/Resources/bin/Rscript
-##! /apps/R/2.15/lib64/R/bin/Rscript
+##! /apps/R/3.2.0/lib64/R/bin/Rscript
 ##! /usr/bin/Rscript
 ##! /Library/Frameworks/R.framework/Versions/2.11/Resources/bin/Rscript
 ###############################################################################
@@ -43,8 +43,6 @@ require(hivclust)
 CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 #CODE.HOME	<<- "/Users/Stephane/Phylogenetics/github/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
-HIVC.CODE.HOME	<<- substr(CODE.HOME,1,nchar(CODE.HOME)-4)
-INST		<<- paste(CODE.HOME,"inst",sep='/')
 HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
 #HOME		<<- "/Users/Oliver/duke/2013_HIV_Hue/UKCA_1309"
 #HOME		<<- "/work/or105/UKCA_1309"

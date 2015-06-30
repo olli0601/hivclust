@@ -105,7 +105,37 @@ db.clusterR.plot<- function()
 			theme(legend.position='bottom') +
 			facet_grid(.~CID.ERA)
 	file	<- paste(indir, '/', substr(infile,1,nchar(infile)-6),'_RmeanByEra.pdf', sep='')
-	ggsave(file=file, w=12, h=6)
+	ggsave(file=file, w=12, h=6)	
+}
+
+db.extract.clusters	<- function()
+{
+	indir	<- '~/Dropbox\ (Infectious Disease)/material for paper/resubmission'
+	infile	<- '150629_NLB10blast_fasttree.newick'
+	thr.bs	<- 0.9
 	
 	
+	ph								<- ladderize( read.tree(paste(indir,'/',infile,sep='')) )	
+	#read bootstrap support values	
+	ph.node.bs						<- as.numeric( ph$node.label )		
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph$node.label					<- ph.node.bs
+	#read patristic distances based on branch lenght calculation method
+	#calculate single linkage genetic distance
+	stat.fun						<- hivc.clu.min.transmission.cascade
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)
+	print(dist.brl)
+	print(quantile(dist.brl,seq(0.1,0.8,by=0.05)))
+	
+	thr.brls		<- seq(0.016, 0.05, 0.002)
+	for(thr.brl in thr.brls)
+	{
+		#produce clustering 
+		clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thr.bs, thresh.brl=thr.brl, dist.brl=dist.brl, nodesupport=ph.node.bs, retval="all")
+		#print(clustering)	
+		df			<- data.table(LABEL=ph$tip.label, IDCLU=clustering$clu.mem[seq_len(Ntip(ph))])
+		file		<- paste(indir, '/', gsub('\\.newick','',infile), '_', thr.bs*100, '_', thr.brl*1000, '.pdf',sep='')
+		hivc.clu.plot(ph, clustering[["clu.mem"]], file=file, pdf.scaley=25)
+		write.csv(df, gsub('\\.pdf','\\.csv',file), row.names=FALSE)
+	}	
 }

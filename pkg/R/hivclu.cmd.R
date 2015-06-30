@@ -1,8 +1,7 @@
-if(!exists("HIVC.CODE.HOME"))	
-{	
-	INST			<- paste(HIVC.CODE.HOME,"inst",sep='/')
-}
 
+#' @export
+PR.STARTME		<- system.file(package="hivclust", "misc", "hivclu.startme.R")
+		
 #' @export
 PR.BLASTMASK	<- "windowmasker"
 
@@ -16,40 +15,40 @@ PR.BLASTN		<- "blastn"
 PR.CLUSTALO		<- "clustalo"
 
 #' @export
-PR.CLUSTALO.HMM	<- paste(INST,"align_HIV-1_pol_DNA.hmm",sep='/')
+PR.CLUSTALO.HMM	<- system.file(package="hivclust", "data", "align_HIV-1_pol_DNA.hmm")	
 
 #' @export
-PR.FIRSTSEQ		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=FIRSTSEQ",sep='/')
+PR.FIRSTSEQ		<- paste(PR.STARTME," -exe=FIRSTSEQ",sep='')
 
 #' @export
-PR.GENDISTMAT	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=GENDISTMAT",sep='/')
+PR.GENDISTMAT	<- paste(PR.STARTME," -exe=GENDISTMAT",sep='')
 
 #' @export
-PR.PRECLUST		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=PRECLUST",sep='/')
+PR.PRECLUST		<- paste(PR.STARTME," -exe=PRECLUST",sep='')
 
 #' @export
-PR.CLUST		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=CLUST",sep='/')
+PR.CLUST		<- paste(PR.STARTME," -exe=CLUST",sep='')
 
 #' @export
-PR.CLUSTTPTN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=CLUSTTPTN",sep='/')
+PR.CLUSTTPTN	<- paste(PR.STARTME," -exe=CLUSTTPTN",sep='')
 
 #' @export
-PR.CLUSTMSM		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=CLUSTMSM",sep='/')
+PR.CLUSTMSM		<- paste(PR.STARTME," -exe=CLUSTMSM",sep='')
 
 #' @export
-PR.EXAML.BSCREATE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BOOTSTRAPSEQ",sep='/')
+PR.EXAML.BSCREATE	<- paste(PR.STARTME," -exe=BOOTSTRAPSEQ",sep='')
 
 #' @export
 PR.RECOMB.3SEQ	<- system.file(package="hivclust", "ext", "3seq") 
 
 #' @export
-PR.RECOMB.PROCESS3SEQOUTPUT	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=RECOMB.PROCESS3SEQOUT",sep='/')
+PR.RECOMB.PROCESS3SEQOUTPUT	<- paste(PR.STARTME," -exe=RECOMB.PROCESS3SEQOUT",sep='')
 
 #' @export
-PR.RECOMB.CHECKCANDIDATES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=RECOMB.CHECKCANDIDATES",sep='/')
+PR.RECOMB.CHECKCANDIDATES	<- paste(PR.STARTME," -exe=RECOMB.CHECKCANDIDATES",sep='')
 
 #' @export
-PR.RECOMB.PLOTINCONGRUENCE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=RECOMB.PLOTINCONGRUENCE",sep='/')
+PR.RECOMB.PLOTINCONGRUENCE	<- paste(PR.STARTME," -exe=RECOMB.PLOTINCONGRUENCE",sep='')
 
 #' @export
 PR.EXAML.PARSER	<- system.file(package="hivclust", "ext", "ExaML-parser") 
@@ -70,10 +69,10 @@ PR.BEAST		<- {tmp<- c("/Applications/BEAST_1.7.5/bin/beast","beast"); names(tmp)
 PR.BEASTMCC		<- {tmp<- c("/Applications/BEAST_1.7.5/bin/treeannotator","treeannotator"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp }
 
 #' @export
-PR.BEASTEVALRUN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEASTEVALRUN",sep='/')
+PR.BEASTEVALRUN	<- paste(PR.STARTME," -exe=BEASTEVALRUN",sep='')
 
 #' @export
-PR.BEASTPOOLRUN	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEASTPOOLRUN",sep='/')
+PR.BEASTPOOLRUN	<- paste(PR.STARTME," -exe=BEASTPOOLRUN",sep='')
 
 #' @export
 PR.BEAST2		<- system.file(package="hivclust", "ext", "beast2.jar") 
@@ -82,29 +81,29 @@ PR.BEAST2		<- system.file(package="hivclust", "ext", "beast2.jar")
 PR.BEAST2SA		<- system.file(package="hivclust", "ext", "beast2-SA.jar")
 
 #' @export
-PR.BEAST2.CLUTREES.PIPE	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.PIPE.CLUTREES",sep='/')
+PR.BEAST2.CLUTREES.PIPE	<- paste(PR.STARTME," -exe=BEAST2.PIPE.CLUTREES",sep='')
 
 #' @export
-PR.BEAST2CLUTREES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.CLUTREES",sep='/')
+PR.BEAST2CLUTREES	<- paste(PR.STARTME," -exe=BEAST2.CLUTREES",sep='')
 
 #' @export
-PR.BEASTPARSER	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST.READNEXUS",sep='/')
+PR.BEASTPARSER	<- paste(PR.STARTME," -exe=BEAST.READNEXUS",sep='')
 
 #' @export
-PR.BEAST2CLUPOSTERIOR	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.CLUPOSTERIOR",sep='/')
+PR.BEAST2CLUPOSTERIOR	<- paste(PR.STARTME," -exe=BEAST2.CLUPOSTERIOR",sep='')
 
 #' @export
-PR.BEAST2.PLOTCLUTREES	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=BEAST2.PLOTCLUTREES",sep='/')
+PR.BEAST2.PLOTCLUTREES	<- paste(PR.STARTME," -exe=BEAST2.PLOTCLUTREES",sep='')
 
 #' @export
-PR.VARIOUS	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=VARIOUS",sep='/')
+PR.VARIOUS	<- paste(PR.STARTME," -exe=VARIOUS",sep='')
 
 
 #' @export
-PR.PH.DISTTIPS	<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=PH.DISTTIPS",sep='/')
+PR.PH.DISTTIPS	<- paste(PR.STARTME," -exe=PH.DISTTIPS",sep='')
 
 #' @export
-PR.PROPS.ESTIMATE		<- paste(HIVC.CODE.HOME,"pkg/misc/hivclu.startme.R -exe=PROPS.ESTIMATE",sep='/')
+PR.PROPS.ESTIMATE		<- paste(PR.STARTME," -exe=PROPS.ESTIMATE",sep='')
 
 #' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
