@@ -3129,6 +3129,27 @@ project.hivc.clustering.NoRecombNoDR.to.NoShort<- function()
 			})			
 }
 ######################################################################################
+project.hivc.clustering.forStephane<- function()
+{	
+	verbose		<- 1
+	resume		<- 1
+	patient.n	<- 15700; 	thresh.brl<- 0.096; 	thresh.bs<- 0.8;	opt.brl<- "dist.brl.casc" 
+	indircov	<- paste(DATA,"derived",sep='/')
+	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	indir		<- paste(DATA,"tmp",sep='/')	
+	#
+	# get clusters for No Recombination + No Drug resistance mutations + No short sequences, single linkage criterion		
+	#						
+	infile			<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_examlbs500"			
+	insignat		<- "Wed_Dec_18_11/37/00_2013"
+	#
+	argv			<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
+	argv			<<- unlist(strsplit(argv,' '))
+	nsh.clu.pre		<- hivc.prog.get.clustering.precompute()
+	#
+	nsh.clu.pre$linked.bypatient
+}
+######################################################################################
 project.hivc.clustering.compare.NoDR.to.NoRecombNoDR.to.NoShort<- function()
 {	
 	verbose		<- 1

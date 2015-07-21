@@ -301,7 +301,8 @@ project.athena.Fisheretal.X.nocontact<- function(X.incare, df.viro, df.immu, df.
 	#
 	set(X.incare, X.incare[, which(!incontact & contact=='Yes')], 'contact', 'No')	
 	set(X.incare, NULL, 'incontact', NULL )
-	if(X.incare[, length(which(is.na(stage)))])	stop('unexpected NA stage')
+	if('stage'%in%colnames(X.incare) && X.incare[, length(which(is.na(stage)))])	
+		stop('unexpected NA stage')
 	X.incare
 }
 ######################################################################################

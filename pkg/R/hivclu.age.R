@@ -431,7 +431,7 @@ age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, ins
 		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))		
 		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables',method.PDT,'_',save.file,'.R',sep='')
-		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=save.file, method=method.risk)
+		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=save.file, method=method.risk)
 		if(!is.null(X.tables))
 		{
 			cat('\nloaded X.tables')
@@ -452,9 +452,9 @@ age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, ins
 	X.tables
 }
 ######################################################################################
-sampling.dev<- function(t.endctime, method.lRNA.supp)
+sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.nsupp=4, contact.grace=1.5)
 {	
-	method.lRNA.nsupp	<- 4
+	
 	df.viro.allmsm
 	
 	pt.df	<- data.table(Patient=X.msm[, unique(t.Patient)])
@@ -463,7 +463,7 @@ sampling.dev<- function(t.endctime, method.lRNA.supp)
 	setkey(ptd.df, Patient)
 	ptd.df	<- unique(ptd.df)
 	#	With sequence	
-	ptd.df[, SQD:= factor(as.numeric(!is.na(PosSeqT)), levels=c(0,1), labels=c('N','Y'))]
+	ptd.df[, SQD:= as.integer(!is.na(PosSeqT))]
 	#	Acute at Diag
 	set(ptd.df, ptd.df[, which(isAcute!='Yes' | is.na(isAcute))], 'isAcute', 'NI')
 	set(ptd.df, NULL, 'isAcute', ptd.df[, factor(isAcute)])
@@ -490,9 +490,30 @@ sampling.dev<- function(t.endctime, method.lRNA.supp)
 	setkey(tmp, Patient)
 	tmp		<- unique(tmp)
 	ptd.df	<- merge(ptd.df, subset(tmp, select=c(Patient, VNS_ANY, VS_ALL)), by='Patient', all.x=T)
+	#	ever not in contact	
+	incare		<- merge( subset(ptd.df, select=Patient), unique( subset(df.all.allmsm, select=c(Patient, AnyPos_T1, DateDied)) ), by='Patient' )	
+	set(incare, NULL, 'AnyPos_T1', incare[, floor(AnyPos_T1) + round( (AnyPos_T1%%1)*100 %/% (t.period*100) ) * t.period] )
+	set(incare, incare[,which(is.na(DateDied))], 'DateDied', t.endctime)
+	set(incare, NULL, 'DateDied', incare[, floor(DateDied) + round( (DateDied%%1)*100 %/% (t.period*100) ) * t.period] )
+	incare		<- subset( incare, AnyPos_T1<DateDied )
+	incare.t	<- incare[, list(t= seq(AnyPos_T1, DateDied-t.period, by=t.period)),by='Patient']
+	tmp			<- subset(ptd.df, select=Patient)
+	setnames(tmp, 'Patient', 't.Patient')
+	setnames(incare.t, 'Patient', 't.Patient')
+	tmp			<- project.athena.Fisheretal.X.nocontact(incare.t, df.viro.allmsm, df.immu.allmsm, df.treatment.allmsm, tmp, df.all.allmsm, contact.grace=contact.grace, t.period=t.period, t.endctime=t.endctime)
+	setnames(tmp, 't.Patient', 'Patient')
+	ptd.df		<- merge(ptd.df, tmp[, list(NC_ANY=any(contact=='No')), by='Patient'], by='Patient',all.x=T)	
+	set(ptd.df, NULL, 'VNS_ANY', ptd.df[, factor(as.numeric(VNS_ANY), levels=c(0,1), labels=c('N','Y'))])
+	set(ptd.df, NULL, 'VS_ALL', ptd.df[, factor(as.numeric(VS_ALL), levels=c(0,1), labels=c('N','Y'))])
+	set(ptd.df, NULL, 'NC_ANY', ptd.df[, factor(as.numeric(NC_ANY), levels=c(0,1), labels=c('N','Y'))])
+	#	handle NA's
+	set(ptd.df, ptd.df[, which(is.na(DT_ART))],'DT_ART',0)
+	set(ptd.df, ptd.df[, which(is.na(VNS_ANY))],'VNS_ANY','N')
+	set(ptd.df, ptd.df[, which(is.na(VS_ALL))],'VS_ALL','N')
+	set(ptd.df, ptd.df[, which(is.na(NC_ANY))],'NC_ANY','N')
+	#	save
+	save(ptd.df, file="/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age/sampling_dev.R")
 	
-	tmp[, table(VNS_ANY, VS_ALL)]
-	#	ever not in contact
 }
 ######################################################################################
 sampling.get.all.tables.args<- function(method)
@@ -508,7 +529,7 @@ sampling.get.all.tables.args<- function(method)
 	c('factor.ref.v'=factor.ref.v, 'risktp.col'=risktp.col, 'risk.col'=risk.col)
 }
 ######################################################################################
-censoring.get.all.tables<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
+censoring.get.all.tables<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
 {
 	stopifnot(!is.na(risk.col), !is.na(risktp.col), !is.na(factor.ref.v))
 	
@@ -522,23 +543,23 @@ censoring.get.all.tables<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL,
 	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
 	{
 		ans	<- NULL		
-		if(is.null(YX) || is.null(X.den) || is.null(X.msm) || is.null(X.clu))
+		if(is.null(YX) || is.null(X.seq) || is.null(X.msm) || is.null(X.clu))
 		{
 			cat(paste('\nreturn NULL table', method))
 			return(ans)	
 		}			
 		cat(paste('\ntables by method', method,'\nrisk.col', risk.col,'\nrisk.col.tp', risktp.col,'\nfactor.ref.v',factor.ref.v))
-		#YX<- copy(YX.s); X.clu<- copy(X.clu.s); X.den<- copy(X.seq.s); X.msm<- copy(X.msm.s)
+		#YX<- copy(YX.s); X.clu<- copy(X.clu.s); X.seq<- copy(X.seq.s); X.msm<- copy(X.msm.s)
 		#	set stratifications. always use 'risktp.col' for censoring
 		set(YX, NULL, 'stage', YX[[risktp.col]])				
 		set(X.clu, NULL, 'stage', X.clu[[risktp.col]])
-		set(X.den, NULL, 'stage', X.den[[risktp.col]])
+		set(X.seq, NULL, 'stage', X.seq[[risktp.col]])
 		set(X.msm, NULL, 'stage', X.msm[[risktp.col]])
 		set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])									
-		set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])		
+		set(X.seq, NULL, 'stage', X.seq[, factor(as.character(stage), levels=X.msm[, levels(stage)])])		
 		set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 		set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])
-		risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])		
+		risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)])		
 		#						
 		#	cens.table for all potential transmitters
 		#	these will be treated as uncensored in bootstrap estimation of censoring
@@ -554,7 +575,7 @@ censoring.get.all.tables<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL,
 									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu')												
 								},by='risk'],
 						risk.df[,	{
-									z	<- table( X.den[, risk, with=FALSE], useNA='ifany')
+									z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
 									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq')												
 								},by='risk'],
 						risk.df[,	{
@@ -628,7 +649,7 @@ censoring.get.all.tables<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL,
 	ans
 }
 ######################################################################################
-sampling.get.all.tables<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
+sampling.get.all.tables<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
 {	
 	stopifnot(!is.na(risk.col), !is.na(risktp.col), !is.na(factor.ref.v))
 	
@@ -642,23 +663,23 @@ sampling.get.all.tables<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, 
 	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
 	{
 		ans	<- NULL		
-		if(is.null(YX) || is.null(X.den) || is.null(X.msm) || is.null(X.clu))
+		if(is.null(YX) || is.null(X.seq) || is.null(X.msm) || is.null(X.clu))
 		{
 			cat(paste('\nreturn NULL table', method))
 			return(ans)	
 		}			
 		cat(paste('\ntables by method', method,'\nrisk.col', risk.col,'\nrisk.col.tp', risktp.col,'\nfactor.ref.v',factor.ref.v))
-		#	YX<- copy(YX.s); X.clu<- copy(X.clu.s); X.den<- copy(X.seq.s); X.msm<- copy(X.msm.s)
+		#	YX<- copy(YX.s); X.clu<- copy(X.clu.s); X.seq<- copy(X.seq.s); X.msm<- copy(X.msm.s)
 		#	get number of recipients per time period			
 		ans$cens.Patient.n	<- do.call('rbind',list( 	
 						YX[, list(stat='YX', Patient.n=length(unique(Patient))), by='t.period'],
 						X.clu[, list(stat='X.clu', Patient.n=length(unique(Patient))), by='t.period'],
-						X.den[, list(stat='X.seq', Patient.n=length(unique(Patient))), by='t.period'],
+						X.seq[, list(stat='X.seq', Patient.n=length(unique(Patient))), by='t.period'],
 						X.msm[, list(stat='X.msm', Patient.n=length(unique(Patient))), by='t.period']	))
 		#	get diagnosis times of transmitters for each stage
 		set(X.msm, NULL, 'stage', X.msm[[risktp.col]])
 		set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])			
-		risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)])
+		risk.df			<- data.table(risk='stage',factor=X.msm[, levels(stage)])
 		ans$cens.AnyPos_T1	<- risk.df[,	{
 					tmp	<- subset( X.msm[ which(X.msm[[risk]]==factor), ], select=c(t.Patient, t.AnyPos_T1))
 					setkey(tmp, t.Patient)			
@@ -673,19 +694,19 @@ sampling.get.all.tables<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, 
 		#	set stratifications to stage
 		set(YX, NULL, 'stage', YX[[tmp]])				
 		set(X.clu, NULL, 'stage', X.clu[[tmp]])
-		set(X.den, NULL, 'stage', X.den[[tmp]])
+		set(X.seq, NULL, 'stage', X.seq[[tmp]])
 		set(X.msm, NULL, 'stage', X.msm[[tmp]])
 		set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])									
-		set(X.den, NULL, 'stage', X.den[, factor(as.character(stage), levels=X.msm[, levels(stage)])])								
+		set(X.seq, NULL, 'stage', X.seq[, factor(as.character(stage), levels=X.msm[, levels(stage)])])								
 		set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
 		set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])			
-		risk.df			<- data.table(risk='stage',factor=X.den[, levels(stage)], risk.ref='stage', factor.ref=factor.ref.v)
+		risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)], risk.ref='stage', factor.ref=factor.ref.v)
 		gc()
 		cat(paste('\ncompute nt.table'))
 		#	potential transmission intervals by stage and transmitter
 		nt.table.pt		<- do.call('rbind', list( 	YX[, list(nt= length(t), stat='YX'), by=c('stage','t.Patient')],
 						X.clu[, list(nt= length(t), stat='X.clu'), by=c('stage','t.Patient')],
-						X.den[, list(nt= length(t), stat='X.seq'), by=c('stage','t.Patient')],
+						X.seq[, list(nt= length(t), stat='X.seq'), by=c('stage','t.Patient')],
 						X.msm[, list(nt= length(t), stat='X.msm'), by=c('stage','t.Patient')] 	)	)
 		setnames(nt.table.pt, 'stage', 'factor')
 		tmp				<- data.table( expand.grid(t.Patient=nt.table.pt[, unique(t.Patient)], factor=nt.table.pt[, unique(as.character(factor))], stat=nt.table.pt[, unique(as.character(stat))], stringsAsFactors=FALSE) )			
@@ -697,7 +718,7 @@ sampling.get.all.tables<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, 
 		#	potential transmission intervals by stage and recipient
 		nt.table		<- do.call('rbind', list( 	YX[, list(nt= length(t), stat='YX'), by=c('stage','Patient')],
 						X.clu[, list(nt= length(t), stat='X.clu'), by=c('stage','Patient')],
-						X.den[, list(nt= length(t), stat='X.seq'), by=c('stage','Patient')],
+						X.seq[, list(nt= length(t), stat='X.seq'), by=c('stage','Patient')],
 						X.msm[, list(nt= length(t), stat='X.msm'), by=c('stage','Patient')] 	)	)
 		setnames(nt.table, 'stage', 'factor')
 		tmp				<- data.table( expand.grid(Patient=nt.table[, unique(Patient)], factor=nt.table[, unique(as.character(factor))], stat=nt.table[, unique(as.character(stat))], stringsAsFactors=FALSE) )			
@@ -718,7 +739,7 @@ sampling.get.all.tables<- function(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, 
 									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu')												
 								},by='risk'],
 						risk.df[,	{
-									z	<- table( X.den[, risk, with=FALSE])
+									z	<- table( X.seq[, risk, with=FALSE])
 									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq')												
 								},by='risk'],
 						risk.df[,	{
