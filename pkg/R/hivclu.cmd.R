@@ -1,7 +1,9 @@
 
 #' @export
 PR.STARTME		<- system.file(package="hivclust", "misc", "hivclu.startme.R")
-		
+
+PR.STARTME.DEV	<- paste(CODE.HOME, '/misc/hivclu.startme.R', sep='')
+
 #' @export
 PR.BLASTMASK	<- "windowmasker"
 
@@ -106,7 +108,7 @@ PR.PH.DISTTIPS	<- paste(PR.STARTME," -exe=PH.DISTTIPS",sep='')
 PR.PROPS.ESTIMATE		<- paste(PR.STARTME," -exe=PROPS.ESTIMATE",sep='')
 
 #' @export
-PR.AGE.ESTIMATE		<- paste(PR.STARTME," -exe=AGE.ESTIMATE",sep='')
+PR.AGE.ESTIMATE		<- paste(PR.STARTME.DEV," -exe=AGE.ESTIMATE",sep='')
 
 #' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
@@ -459,7 +461,7 @@ hivc.cmd.age.estimate<- function(indir, infile, insignat, indircov, infilecov, i
 	cmd		<- paste(cmd,paste("\necho \'end ",prog,"\'",sep=''))
 	cmd		<- paste(cmd,"\n#######################################################
 # end: estimate age sources etc
-					#######################################################\n",sep='')
+#######################################################\n",sep='')
 	cmd
 }
 ######################################################################################

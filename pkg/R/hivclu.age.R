@@ -611,7 +611,7 @@ stop()
 		X.clu<- X.seq<- X.msm<- NULL
 		gc()
 		stop()
-	}
+	
 	ans		<- list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, YX=YX, Y.brl.bs=Y.brl.bs)
 	ans
 }

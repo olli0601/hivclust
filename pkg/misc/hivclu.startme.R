@@ -81,7 +81,7 @@ EPS			<<- 1e-12
 #default.fun 	<- "hivc.pipeline.BEAST"
 #default.fun		<- "hivc.pipeline.BEASTout"
 #default.fun		<- "hivc.pipeline.props_univariate"
-default.fun		<- "hivc.pipeline.ages"
+default.fun			<- "hivc.pipeline.ages"
 #default.fun		<- "project.athena.Fisheretal.numbers"
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
