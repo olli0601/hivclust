@@ -80,7 +80,8 @@ EPS			<<- 1e-12
 #default.fun		<- "hivc.pipeline.clustering"
 #default.fun 	<- "hivc.pipeline.BEAST"
 #default.fun		<- "hivc.pipeline.BEASTout"
-default.fun		<- "hivc.pipeline.props_univariate"
+#default.fun		<- "hivc.pipeline.props_univariate"
+default.fun		<- "hivc.pipeline.ages"
 #default.fun		<- "project.athena.Fisheretal.numbers"
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
@@ -388,6 +389,7 @@ if(length(args))
 					RECOMB.CHECKCANDIDATES	= "hivc.prog.recombination.check.candidates",
 					RECOMB.PLOTINCONGRUENCE	= "hivc.prog.recombination.plot.incongruence",
 					PROPS.ESTIMATE			= "hivc.prog.props_univariate",
+					AGE.ESTIMATE			= "hivc.prog.age_props_univariate",
 					BETAREG.NUMBERS			= "project.athena.Fisheretal.numbers",
 					VARIOUS					= "project.hivc.examl.median.brl"
 					)

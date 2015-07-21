@@ -106,6 +106,9 @@ PR.PH.DISTTIPS	<- paste(PR.STARTME," -exe=PH.DISTTIPS",sep='')
 PR.PROPS.ESTIMATE		<- paste(PR.STARTME," -exe=PROPS.ESTIMATE",sep='')
 
 #' @export
+PR.AGE.ESTIMATE		<- paste(PR.STARTME," -exe=AGE.ESTIMATE",sep='')
+
+#' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
 
 #' @export
@@ -118,7 +121,7 @@ HPC.CX1.IMPERIAL<- "cx1.hpc.ic.ac.uk"		#this is set to system('domainname',inter
 HPC.MEM			<- "1750mb"
 
 #' @export
-HPC.LOAD		<- "module load intel-suite mpi R/2.15 raxml examl/2013-05-09 beast/1.8.0 beagle-lib/2014-07-30"
+HPC.LOAD		<- "module load intel-suite mpi R/3.2.0 raxml beast/1.8.0 beagle-lib/2014-07-30"
 
 
 ######################################################################################
@@ -436,6 +439,29 @@ hivc.cmd.get.firstseq<- function(indir, infile, signat.in, signat.out, outdir=in
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n\n",sep=''))
 	cmd
 }	
+######################################################################################
+#' @export
+hivc.cmd.age.estimate<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, method.realloc=NA, outdir=indir, outfile=infile, prog= PR.AGE.ESTIMATE, resume=1, verbose=1)
+{
+	cmd		<- "#######################################################
+# start: estimate age sources etc
+			#######################################################"
+	cmd		<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
+	#default commands
+	cmd		<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov, " -infiletree=",infiletree, sep='')
+	cmd		<- paste(cmd,	" -infilexml.opt=",infilexml.opt," -infilexml.template=",infilexml.template," -method=",method," -method.nodectime=",method.nodectime," -method.risk=",method.risk, 
+			" -method.recentctime=",method.recentctime," -method.PDT=",method.PDT, " -method.Acute=",method.Acute,' -method.use.AcuteSpec=',method.use.AcuteSpec,' -method.minQLowerU=',method.minQLowerU,
+			' -method.lRNA.supp=',method.lRNA.supp,' -method.thresh.pcoal=',method.thresh.pcoal, ' -method.thresh.bs=',method.thresh.bs, ' -method.minLowerUWithNegT=',method.minLowerUWithNegT, ' -method.cut.brl=', method.cut.brl, sep='')
+	if(!is.na(method.realloc))				
+		cmd	<- paste(cmd," -method.realloc=",method.realloc, sep='')
+	cmd		<- paste(cmd," -outdir=",outdir," -outfile=",outfile, sep='')
+	#verbose stuff
+	cmd		<- paste(cmd,paste("\necho \'end ",prog,"\'",sep=''))
+	cmd		<- paste(cmd,"\n#######################################################
+# end: estimate age sources etc
+					#######################################################\n",sep='')
+	cmd
+}
 ######################################################################################
 #' @export
 hivc.cmd.props.estimate<- function(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, method.realloc=NA, outdir=indir, outfile=infile, prog= PR.PROPS.ESTIMATE, resume=1, verbose=1)

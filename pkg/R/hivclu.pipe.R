@@ -619,13 +619,13 @@ hivc.pipeline.props_univariate<- function()
 	if(0)	#	iterate over first large run
 	{
 		df.method				<- list(
-						#	infection times
-						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.148, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
-						#	phylo exclusion criteria
-						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
-						#	branch lengths
-						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
-						)
+				#	infection times
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.148, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
+				#	phylo exclusion criteria
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
+				#	branch lengths
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
+		)
 		df.method				<- do.call('rbind', df.method)
 		df.method				<- df.method[-c(1,2,3,13,14,11,12),]
 		tmp						<- data.table(DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
@@ -634,22 +634,22 @@ hivc.pipeline.props_univariate<- function()
 		df.method[, DUMMY:=seq_len(nrow(df.method))]
 		
 		df.method[,{
-						cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
-						cat(cmd)	
-						cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
-						hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
-					}, by='DUMMY']		
+					cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
+					cat(cmd)	
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
+					hivc.cmd.hpccaller(paste(DATA,"tmp",sep='/'), paste("beta.",paste(strsplit(date(),split=' ')[[1]],collapse='_'),sep=''), cmd)
+				}, by='DUMMY']		
 	}
 	if(0)	#	iterate over second large run: bootstrap censoring
 	{
 		df.method				<- list(
-						#	infection times
-						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
-						#	phylo exclusion criteria
-						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
-						#	branch lengths
-						as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
-						)
+				#	infection times
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
+				#	phylo exclusion criteria
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.1,0.2,0.3), method.thresh.bs=c(0.7,0.8,0.85), method.cut.brl=Inf )),
+				#	branch lengths
+				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
+		)
 		df.method				<- do.call('rbind', df.method)				
 		tmp						<- data.table(method.risk=paste('m2Awmx.tp',1:6,'.clu.adj', sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)
 		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)
@@ -680,9 +680,9 @@ hivc.pipeline.props_univariate<- function()
 		#tmp					<- data.table(method.risk=paste('m2Cwmx.noscore.tp',1:6, sep=''), DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1)		
 		df.method				<- merge(df.method, tmp, by='DUMMY', allow.cartesian=TRUE)		
 		df.method				<- df.method[,{
-							cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
-							list(CMD=cmd)
-						}, by=c('DUMMY','DUMMY2')]	
+					cmd			<- hivc.cmd.props.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, method.risk, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
+					list(CMD=cmd)
+				}, by=c('DUMMY','DUMMY2')]	
 		df.method[,{
 					cmd			<- paste(CMD, collapse='', sep='')
 					cat(cmd)					
@@ -708,21 +708,21 @@ hivc.pipeline.props_univariate<- function()
 			df.method			<- merge(df.method, data.table(DUMMY=1, method.risk=c('m2Awmx.wtn.tp4','m2Awmx.noscore.tp4','m2Awmx.nophyloscore.tp4')), by='DUMMY')
 		if(0)
 			tmp					<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,												
-												method.realloc=  c(	'ImmediateART','ARTat500',	
-																	#	testing 12m
-																	paste('TestC12m',seq(30,70,10),'pc',sep=''), paste('TestA12m',seq(30,70,10),'pc',sep=''),
-																	#	testing 6m
-																	paste('TestC6m',seq(30,70,10),'pc',sep=''), paste('TestA6m',seq(30,70,10),'pc',sep=''),																	
-																	#	test + PrEP 
-																	paste('PrestIPrEXC12m',seq(30,70,10),'pc',seq(30,70,10),'pc',sep=''), paste('PrestPROUDC12m',seq(30,70,10),'pc',seq(30,70,10),'pc',sep=''),																	
-																	#	Test + PrEP + Immediate ART
-																	paste('PrestIPrEXC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ImmediateART',sep=''), paste('PrestPROUDC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ImmediateART',sep=''),																	
-																	#	Test + PrEP + ARTat500
-																	paste('PrestIPrEXC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ARTat500',sep=''), paste('PrestPROUDC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ARTat500',sep=''),
-																	#	test + treat
-																	paste('TestC12m',seq(30,70,10),'pc+ImmediateART',sep=''), paste('TestC12m',seq(30,70,10),'pc+ARTat500',sep='')
-																	)
-												)
+					method.realloc=  c(	'ImmediateART','ARTat500',	
+							#	testing 12m
+							paste('TestC12m',seq(30,70,10),'pc',sep=''), paste('TestA12m',seq(30,70,10),'pc',sep=''),
+							#	testing 6m
+							paste('TestC6m',seq(30,70,10),'pc',sep=''), paste('TestA6m',seq(30,70,10),'pc',sep=''),																	
+							#	test + PrEP 
+							paste('PrestIPrEXC12m',seq(30,70,10),'pc',seq(30,70,10),'pc',sep=''), paste('PrestPROUDC12m',seq(30,70,10),'pc',seq(30,70,10),'pc',sep=''),																	
+							#	Test + PrEP + Immediate ART
+							paste('PrestIPrEXC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ImmediateART',sep=''), paste('PrestPROUDC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ImmediateART',sep=''),																	
+							#	Test + PrEP + ARTat500
+							paste('PrestIPrEXC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ARTat500',sep=''), paste('PrestPROUDC12m',seq(30,70,10),'pc',seq(30,70,10),'pc+ARTat500',sep=''),
+							#	test + treat
+							paste('TestC12m',seq(30,70,10),'pc+ImmediateART',sep=''), paste('TestC12m',seq(30,70,10),'pc+ARTat500',sep='')
+					)
+			)
 		if(1)
 			tmp					<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,												
 					method.realloc=  c(	#	test (Acute)  + treat		
@@ -764,8 +764,8 @@ hivc.pipeline.props_univariate<- function()
 		#	basic m2Bwmx runs	mem=1800 MB	
 		#method.risk		<- c(	'm2Cwmx.wtn.tp1','m2Cwmx.wtn.tp2','m2Cwmx.wtn.tp3','m2Cwmx.wtn.tp4','m2Cwmx.wtn.tp5','m2Cwmx.wtn.tp6')
 		method.risk		<- c(	'm2Awmx.wtn.tp1','m2Awmx.wtn.tp2','m2Awmx.wtn.tp3','m2Awmx.wtn.tp4','m2Awmx.wtn.tp5','m2Awmx.wtn.tp6',
-								'm2Bwmx.wtn.tp1','m2Bwmx.wtn.tp2','m2Bwmx.wtn.tp3','m2Bwmx.wtn.tp4','m2Bwmx.wtn.tp5','m2Bwmx.wtn.tp6',
-								'm2Cwmx.wtn.tp1','m2Cwmx.wtn.tp2','m2Cwmx.wtn.tp3','m2Cwmx.wtn.tp4','m2Cwmx.wtn.tp5','m2Cwmx.wtn.tp6')
+				'm2Bwmx.wtn.tp1','m2Bwmx.wtn.tp2','m2Bwmx.wtn.tp3','m2Bwmx.wtn.tp4','m2Bwmx.wtn.tp5','m2Bwmx.wtn.tp6',
+				'm2Cwmx.wtn.tp1','m2Cwmx.wtn.tp2','m2Cwmx.wtn.tp3','m2Cwmx.wtn.tp4','m2Cwmx.wtn.tp5','m2Cwmx.wtn.tp6')
 		#method.risk		<- c(	'm2Cwmx.tp1','m2Cwmx.tp2','m2Cwmx.tp3','m2Cwmx.tp4','m2Cwmx.tp5','m2Cwmx.tp6',
 		#		'm2Cwmx.nophyloscore.tp1','m2Cwmx.nophyloscore.tp2','m2Cwmx.nophyloscore.tp3','m2Cwmx.nophyloscore.tp4','m2Cwmx.nophyloscore.tp5','m2Cwmx.nophyloscore.tp6',
 		#		'm2Cwmx.noscore.tp1','m2Cwmx.noscore.tp2','m2Cwmx.noscore.tp3','m2Cwmx.noscore.tp4','m2Cwmx.noscore.tp5','m2Cwmx.noscore.tp6')
@@ -791,6 +791,61 @@ hivc.pipeline.props_univariate<- function()
 					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
 					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
 					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
+					outdir		<- paste(DATA,"tmp",sep='/')
+					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+					hivc.cmd.hpccaller(outdir, outfile, cmd)			
+				})	
+	}
+}
+######################################################################################
+hivc.pipeline.ages<- function()
+{
+	#stop()
+	indir					<- paste(DATA,"fisheretal_data",sep='/')		
+	indircov				<- paste(DATA,"fisheretal_data",sep='/')
+	outdir					<- paste(DATA,"tpairs_age",sep='/')
+	infilecov				<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	if(1)
+	{
+		method					<- '3p'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		infilexml.opt			<- "clrh80"
+		infilexml.template		<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'Ac=MY_D=35_sasky',sep='_')
+	}	
+	if(1)	#custom
+	{
+		method.lRNA.supp			<- 100
+		method.use.AcuteSpec		<- 1
+		method.minQLowerU			<- 0.148	#0.194 0.148 0.109
+		method.thresh.pcoal			<- 0.2
+		method.PDT					<- 'SEQ'
+		#method.Acute				<- 'empirical'
+		method.Acute				<- 'higher'
+		#method.Acute				<- 'lower'
+		#method.Acute				<- 'central'
+		method.minLowerUWithNegT	<- 1
+		method.cut.brl				<- Inf
+		method.thresh.bs			<- 0.8
+		
+		# use to pre-compute tables mem 130 GB
+		method.risk				<- c( 	'm5A.tp1.clu.adj' )			
+		dummy	<- sapply(method.risk, function(x)
+				{
+					cmd	<- hivc.cmd.age.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
+					cat(cmd)
+					#stop()
+					#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=3, hpc.mem="1800mb")
+					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=20, hpc.mem="1900mb")
+					#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeelab', hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
+					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="4000mb")
+					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q='pqeph', hpc.nproc=1, hpc.walltime=71, hpc.mem="7800mb")
+					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
 					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
@@ -921,7 +976,7 @@ hivc.pipeline.various<- function()
 		set(infiles, NULL, 'SIGNAT', infiles[, gsub('\\.R','',SIGNAT)])
 		infiles[, PARTITION:= gsub('\\.R','_codon.txt',FILE)]
 		bs.from		<- 0
-		bs.to		<- 9
+		bs.to		<- 19
 		bs.n		<- 20
 		outdir		<- indir.wgaps
 		invisible(infiles[, {					
