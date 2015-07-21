@@ -431,7 +431,7 @@ age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, ins
 		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))		
 		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
 		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables',method.PDT,'_',save.file,'.R',sep='')
-		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=save.file, method=method.risk)
+		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=save.file, method=method.risk)
 		if(!is.null(X.tables))
 		{
 			cat('\nloaded X.tables')
@@ -513,6 +513,39 @@ sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.ns
 	set(ptd.df, ptd.df[, which(is.na(NC_ANY))],'NC_ANY','N')
 	#	save
 	save(ptd.df, file="/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age/sampling_dev.R")
+	#
+	#	first regression models
+	#
+	ptr.df	<- copy(ptd.df)
+	ptr.df[, PosSeqT:=NULL]
+	ptr.df[, AnyT_T1:=NULL]
+	
+	require(zoo)
+	setkey(ptr.df, AnyPos_T1)
+	
+	ptr.df[, SQD.rm:=ptr.df[, rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE)]]	
+	ms1		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5), family=BI(), data=ptr.df)
+	ptr.df[, MS1:=predict(ms1, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm','MS1'), id.vars=c('AnyPos_T1')), aes(x=AnyPos_T1, y=value, colour=variable)) + geom_line()
+	#	150721:	ns(AnyPos_T1, df=5) worked better than bs(AnyPos_T1, degree=5)
+
+	#	take time dependent regression as baseline model; 
+
+	#	try to improve based on ACUTE
+	setkey(ptr.df, isAcute, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm2=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by='isAcute']
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','isAcute'))
+	ms2		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + isAcute-1, family=BI(), data=ptr.df)
+	ptr.df[, MS2:=predict(ms2, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm2','MS2'), id.vars=c('AnyPos_T1','isAcute')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~isAcute)
+	
+	#	try to improve based on ACUTE
+	setkey(ptr.df, isAcute, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm2=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by='isAcute']
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','isAcute'))
+	ms2		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + isAcute-1, family=BI(), data=ptr.df)
+	ptr.df[, MS2:=predict(ms2, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm2','MS2'), id.vars=c('AnyPos_T1','isAcute')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~isAcute)
 	
 }
 ######################################################################################
