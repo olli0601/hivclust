@@ -471,11 +471,10 @@ sampling.dev<- function(t.endctime)
 	#	time since ART start
 	ptd.df[, DT_ART:= DateDied-AnyT_T1]
 	#	ever on ART
-	ptd.df[, Ever_ART:= factor(as.numeric(!is.na(AnyT_T1)), levels=c(0,1), labels=c('N','Y'))]
+	ptd.df[, Ever_ART:= factor(as.numeric(!is.na(AnyT_T1)), levels=c(0,1), labels=c('N','Y'))]	
+	#	ever not suppressed after first suppression for more than 3 mnths
+	
 	#	ever not in contact
-	#	ever not suppressed after first suppression
-	
-	
 }
 ######################################################################################
 sampling.get.all.tables.args<- function(method)
@@ -933,7 +932,7 @@ stratificationmodel.Age_253045.Stage_UA_UC_D_T_F<- function(YX)
 	if('score.Y'%in%colnames(YX.m5))
 		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, telapsed, brl, stage, t.period, t.isAcute, contact, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, t.InfT, w, w.i, w.in, w.t, w.tn, t.Age, Age ))	
 	if(!'score.Y'%in%colnames(YX.m5))
-		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, stage, t.period, t.isAcute, contact, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, t.InfT, t.Age, Age ))
+		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, stage, t.period, t.isAcute, contact, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, t.InfT, t.Age, Age ))
 	gc()	
 	if('score.Y'%in%colnames(YX.m5) && YX.m5[, !any(score.Y>1.1)])
 	{
