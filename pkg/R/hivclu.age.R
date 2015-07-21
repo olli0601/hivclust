@@ -452,8 +452,11 @@ age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, ins
 	X.tables
 }
 ######################################################################################
-sampling.dev<- function(t.endctime)
+sampling.dev<- function(t.endctime, method.lRNA.supp)
 {	
+	method.lRNA.nsupp	<- 4
+	df.viro.allmsm
+	
 	pt.df	<- data.table(Patient=X.msm[, unique(t.Patient)])
 	ptd.df	<- merge(pt.df, subset( df.all.allmsm, select=c(Patient, PosSeqT, RegionHospital, DateBorn, DateDied, isAcute, AnyPos_T1, AnyT_T1)), by='Patient')
 	setkey(ptd.df, Patient, PosSeqT)
@@ -472,8 +475,23 @@ sampling.dev<- function(t.endctime)
 	ptd.df[, DT_ART:= DateDied-AnyT_T1]
 	#	ever on ART
 	ptd.df[, Ever_ART:= factor(as.numeric(!is.na(AnyT_T1)), levels=c(0,1), labels=c('N','Y'))]	
-	#	ever not suppressed after first suppression for more than 3 mnths
+	#	ever not suppressed for more than 3 mnths after first suppression 
+	tmp		<- subset( df.viro.allmsm, select=c(Patient, PosRNA, lRNA) )
+	set(tmp, NULL, 'PosRNA', hivc.db.Date2numeric(tmp[,PosRNA]))
+	tmp		<- merge(subset(ptd.df, Ever_ART=='Y',c(Patient, AnyT_T1)),tmp,by='Patient')
+	#	add VS_T1: time of first viral suppression
+	tmp		<- merge(tmp, tmp[, list(VS_T1=PosRNA[ head(which(lRNA<method.lRNA.supp),1)]), by='Patient'], by='Patient', all.x=1)
+	#	check for which patient we have two consecutive msrmnts above 10,000 cps
+	z		<- subset(tmp, !is.na(VS_T1) & PosRNA>=VS_T1 )[, 
+			{				
+				list( VNS_ANY= grepl('11',paste( as.numeric(lRNA>method.lRNA.nsupp), collapse='' )), VS_ALL= all(lRNA<=method.lRNA.supp) )				
+			}, by='Patient']
+	tmp		<- merge(tmp, z, by='Patient',all.x=T)
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)
+	ptd.df	<- merge(ptd.df, subset(tmp, select=c(Patient, VNS_ANY, VS_ALL)), by='Patient', all.x=T)
 	
+	tmp[, table(VNS_ANY, VS_ALL)]
 	#	ever not in contact
 }
 ######################################################################################
@@ -899,12 +917,12 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 	if(grepl('adj',method.risk) & grepl('clu',method.risk))
 	{
 			#	get args
-			save.file		<- NA
+			save.file		<- tmp	<- NA
 			resume			<- 0
 			args			<- sampling.get.all.tables.args(method.risk)			
 			if(grepl('m5A',method.risk))		
 				tmp			<- 'm5A'
-			if(is.na(save.file))	
+			if(is.na(tmp))	
 				stop('unknown method.risk')				
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Stables',method.PDT,'_',tmp,'.R',sep='')
 			#	sampling tables
