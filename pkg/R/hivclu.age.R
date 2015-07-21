@@ -539,13 +539,43 @@ sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.ns
 	ptr.df[, MS2:=predict(ms2, type='response')]	
 	ggplot(melt(ptr.df, measure.vars=c('SQD.rm2','MS2'), id.vars=c('AnyPos_T1','isAcute')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~isAcute)
 	
-	#	try to improve based on ACUTE
-	setkey(ptr.df, isAcute, AnyPos_T1)
-	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm2=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by='isAcute']
-	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','isAcute'))
-	ms2		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + isAcute-1, family=BI(), data=ptr.df)
-	ptr.df[, MS2:=predict(ms2, type='response')]	
-	ggplot(melt(ptr.df, measure.vars=c('SQD.rm2','MS2'), id.vars=c('AnyPos_T1','isAcute')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~isAcute)
+	#	try to improve based on Not Suppressed
+	setkey(ptr.df, VNS_ANY, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm3=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by='VNS_ANY']
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','VNS_ANY'))
+	ms3		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + VNS_ANY-1, family=BI(), data=ptr.df)
+	ptr.df[, MS3:=predict(ms3, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm3','MS3'), id.vars=c('AnyPos_T1','VNS_ANY')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~VNS_ANY)
+	
+	#	try to improve based on Suppressed
+	setkey(ptr.df, VS_ALL, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm4=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by='VS_ALL']
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','VS_ALL'))
+	ms4		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + VS_ALL-1, family=BI(), data=ptr.df)
+	ptr.df[, MS4:=predict(ms4, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm4','MS4'), id.vars=c('AnyPos_T1','VS_ALL')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~VS_ALL)
+	#	suppressed has lower AIC
+	
+	#	try to improve based on region hospital
+	setkey(ptr.df, RegionHospital, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm5=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by='RegionHospital']
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','RegionHospital'))
+	ms5		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + RegionHospital-1, family=BI(), data=ptr.df)
+	ptr.df[, MS5:=predict(ms5, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm5','MS5'), id.vars=c('AnyPos_T1','RegionHospital')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~RegionHospital)
+	
+	#	try to improve based on no contact
+	setkey(ptr.df, NC_ANY, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm6=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by='NC_ANY']
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','NC_ANY'))
+	ms6		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + NC_ANY-1, family=BI(), data=ptr.df)
+	ptr.df[, MS6:=predict(ms6, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm6','MS6'), id.vars=c('AnyPos_T1','NC_ANY')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~NC_ANY)
+	
+	
+	#
+	#	overall, VS_ALL > region >  no contact > isAcute
+	#
 	
 }
 ######################################################################################
@@ -1065,7 +1095,7 @@ stratificationmodel.Age_253045.Stage_UA_UC_D_T_F<- function(YX)
 	}	
 	gc()	
 	cat(paste('\nsubset to save further mem\n'))
-	set(YX.m5, NULL, c('t.InfT','t.isAcute','contact','stage','t.AnyT_T1','AnyPos_T1','t.AnyPos_T1'), NULL)
+	set(YX.m5, NULL, c('t.InfT','t.isAcute','contact','stage','t.AnyT_T1','AnyPos_T1'), NULL)
 	gc()
 	YX.m5
 }
