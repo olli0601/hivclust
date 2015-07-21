@@ -282,10 +282,10 @@ hivc.prog.age_props_univariate<- function()
 		stopifnot(length(files)==0)		
 	}		
 	#	check if we have precomputed tables
-	X.tables				<- hivc.prog.props_univariate.Xtables(method, method.PDT, method.risk, outdir, outfile, insignat)
+	X.tables				<- age.get.Xtables(method, method.PDT, method.risk, outdir, outfile, insignat)
 	#	if no tables, precompute tables and stop (because mem intensive)
 	#	otherwise return stratified YX data.table and continue
-	tmp	<- hivc.prog.age.precompute(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,
+	tmp	<- age.precompute(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,
 			clu.indir, clu.insignat, clu.infile,
 			infile, infiletree, insignat, clu.infilexml.opt, clu.infilexml.template,
 			method, method.recentctime, method.nodectime, method.risk, method.Acute, method.minQLowerU, method.use.AcuteSpec, method.brl.bwhost, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.tpcut, method.PDT, method.cut.brl, tp.cut, adjust.AcuteByNegT, any.pos.grace.yr, dur.Acute, method.thresh.bs, 
@@ -419,9 +419,40 @@ hivc.prog.age_props_univariate<- function()
 	outfile					<- paste(indir,'/',infile, '_', clu.infilexml.template, '_', clu.infilexml.opt, '_', gsub('/',':',insignat), '_', 'pt_anypos_3.5_anynodectime', '.pdf',sep='')	
 	project.athena.Fisheretal.plot.selected.transmitters(clumsm.info, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, outfile, pdf.height=600)	
 }
-
 ######################################################################################
-hivc.prog.age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,
+age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, insignat)
+{
+	X.tables			<- NULL
+	if(1)
+	{
+		save.file		<- NA
+		if(grepl('m5A',method.risk))	save.file	<- 'm5A'
+		if(is.na(save.file))	stop('unknown method.risk')				
+		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))		
+		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore',method,'_tables',method.PDT,'_',save.file,'.R',sep='')
+		X.tables		<- project.athena.Fisheretal.estimate.risk.table(YX=NULL, X.den=NULL, X.msm=NULL, X.clu=NULL, resume=TRUE, save.file=save.file, method=method.risk)
+		if(!is.null(X.tables))
+		{
+			cat('\nloaded X.tables')
+			##	sense check that risk factors have been correctly computed
+			nt.table	<- copy(X.tables$nt.table.pt)
+			nt.table	<- dcast.data.table(nt.table, t.Patient + risk + factor ~ stat, value.var="nt")		
+			tmp			<- nt.table[, which(X.seq>X.msm)]
+			if(length(tmp))	cat(paste('\nWARNING: X.seq>X.msm for entries n=',length(tmp)))
+			#stopifnot(length(tmp)==0)			
+			tmp			<- nt.table[, which(X.clu>X.seq)]
+			if(length(tmp))	cat(paste('\nWARNING: X.clu>X.seq for entries n=',length(tmp)))
+			#stopifnot(length(tmp)==0)		
+			tmp			<- nt.table[, which(YX>X.clu)]
+			if(length(tmp))	cat(paste('\nWARNING: YX>X.clu for entries n=',length(tmp)))
+			#stopifnot(length(tmp)==0)	#there s one recipient that is just on the boundary for m2Bwmx.tp1 - let pass		
+		}
+	}
+	X.tables
+}
+######################################################################################
+age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,
 		clu.indir, clu.insignat, clu.infile,
 		infile, infiletree, insignat, clu.infilexml.opt, clu.infilexml.template,
 		method, method.recentctime, method.nodectime, method.risk, method.Acute, method.minQLowerU, method.use.AcuteSpec, method.brl.bwhost, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.tpcut, method.PDT, method.cut.brl, tp.cut, adjust.AcuteByNegT, any.pos.grace.yr, dur.Acute, method.thresh.bs, 
@@ -580,14 +611,14 @@ hivc.prog.age.precompute<- function(	indir, indircov, infile.cov.study, infile.v
 	#	stratify YX
 	if(substr(method.risk,1,2)=='m5A')	
 	{
-		YX					<- project.athena.Fisheretal.YX.model.Age_253045.Stage_UA_UC_D_T_F(YX)
+		YX					<- stratificationmodel.Age_253045.Stage_UA_UC_D_T_F(YX)
 		if(is.null(X.tables))
 		{
-			X.clu			<- project.athena.Fisheretal.YX.model.Age_253045.Stage_UA_UC_D_T_F(X.clu)
+			X.clu			<- stratificationmodel.Age_253045.Stage_UA_UC_D_T_F(X.clu)
 			gc()
-			X.seq			<- project.athena.Fisheretal.YX.model.Age_253045.Stage_UA_UC_D_T_F(X.seq)
+			X.seq			<- stratificationmodel.Age_253045.Stage_UA_UC_D_T_F(X.seq)
 			gc()
-			X.msm			<- project.athena.Fisheretal.YX.model.Age_253045.Stage_UA_UC_D_T_F(X.msm)
+			X.msm			<- stratificationmodel.Age_253045.Stage_UA_UC_D_T_F(X.msm)
 			gc()
 		}
 	}
@@ -617,7 +648,7 @@ stop()
 }
 
 ######################################################################################
-project.athena.Fisheretal.YX.model.Age_253045.Stage_UA_UC_D_T_F<- function(YX)
+stratificationmodel.Age_253045.Stage_UA_UC_D_T_F<- function(YX)
 {
 	#	get age stages
 	YX.m5	<- copy(YX)

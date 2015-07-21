@@ -447,7 +447,7 @@ hivc.cmd.age.estimate<- function(indir, infile, insignat, indircov, infilecov, i
 {
 	cmd		<- "#######################################################
 # start: estimate age sources etc
-			#######################################################"
+#######################################################"
 	cmd		<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
 	#default commands
 	cmd		<- paste(cmd,prog," -v=",verbose," -resume=",resume," -indir=",indir," -infile=",infile," -insignat=",insignat," -indircov=",indircov," -infilecov=",infilecov, " -infiletree=",infiletree, sep='')
