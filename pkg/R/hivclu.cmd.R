@@ -98,7 +98,7 @@ PR.BEAST2CLUPOSTERIOR	<- paste(PR.STARTME," -exe=BEAST2.CLUPOSTERIOR",sep='')
 PR.BEAST2.PLOTCLUTREES	<- paste(PR.STARTME," -exe=BEAST2.PLOTCLUTREES",sep='')
 
 #' @export
-PR.VARIOUS	<- paste(PR.STARTME," -exe=VARIOUS",sep='')
+PR.VARIOUS	<- paste(PR.STARTME.DEV," -exe=VARIOUS",sep='')
 
 
 #' @export
