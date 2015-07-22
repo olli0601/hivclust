@@ -391,7 +391,7 @@ if(length(args))
 					PROPS.ESTIMATE			= "hivc.prog.props_univariate",
 					AGE.ESTIMATE			= "hivc.prog.age_props_univariate",
 					BETAREG.NUMBERS			= "project.athena.Fisheretal.numbers",
-					VARIOUS					= "project.hivc.examl.median.brl"
+					VARIOUS					= "project.hivc.clustering.forStephane"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)
@@ -404,7 +404,7 @@ if(length(args))
 	argv<<- args
 }
 ###############################################################################
-#stop()
+stop()
 if(HIVC.DEBUG)	options(error= my.dumpframes)	
 cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	

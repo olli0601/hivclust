@@ -954,18 +954,18 @@ hivc.pipeline.various<- function()
 		project.Gates()
 		quit("no")
 	}
-	if(0)
+	if(1)
 	{
 		#project.hivc.examl.median.brl()
 		cmd			<- hivc.cmd.various()
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q="pqeph", hpc.walltime=171, hpc.mem="7800mb")
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=71, hpc.mem="95000mb")
 		cat(cmd)		
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("vrs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		quit("no")		
 	}	
-	if(1)	#	run ExamML with partition for tree comparison
+	if(0)	#	run ExamML with partition for tree comparison
 	{		
 		indir.wgaps	<- '/Users/Oliver/git/HPTN071sim/treec150623/withgapstrees'
 		indir.wgaps	<- '/work/or105/Gates_2014/tree_comparison'

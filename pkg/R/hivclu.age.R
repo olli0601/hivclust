@@ -452,12 +452,62 @@ age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, ins
 	X.tables
 }
 ######################################################################################
-sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.nsupp=4, contact.grace=1.5)
+sampling.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
+{		
+	require(Hmisc)
+	indir	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
+	infile	<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3pa1H1.48C2V100bInfT7_StablesSEQ_m5A.R'	
+	
+	load(paste(indir,'/',infile,sep=''))
+	df		<- ans$risk.table	
+	set(df, NULL, 'factor', df[, as.character(factor)])	
+	df[, t.period:=df[, substr(factor, nchar(factor), nchar(factor))]]
+	set(df, NULL, 'factor', df[, substr(factor, 1, nchar(factor)-2)])
+	set(df, NULL, 'factor', df[, factor(factor)])
+	dfp		<- df[, 	{
+				#BINCONF not appropriate because potential transmission intervals are not independent
+				p.seq.cis	<- as.double(binconf( sum(n[stat=='X.seq']), sum(n[stat=='X.msm']), alpha=0.05, method= "wilson", include.x=FALSE, include.n=FALSE, return.df=FALSE))
+				list( 	p.seq= sum(n[stat=='X.seq']) / sum(n[stat=='X.msm']),
+						p.seq.l= p.seq.cis[2],
+						p.seq.u= p.seq.cis[3] )
+			}, by=c('factor','t.period')]
+	dfp		<- merge(dfp, df[, list( factor=factor[stat=='X.msm'], pp.coh=n[stat=='X.msm']/sum(n[stat=='X.msm']), pp.pos=n[stat=='YX']/sum(n[stat=='YX']) ), by='t.period'], by=c('factor','t.period'))	
+	set(dfp, NULL, 'p.seq', dfp[, round(p.seq, d=3)]*100)		
+	set(dfp, NULL, 't.period.long', dfp[, factor(t.period, levels=c('1','2','3','4'), labels=c("96/07-06/06", "06/07-07/12", "08/01-09/06", "09/07-10/12"))])
+	#	separate stage and age
+	set(dfp, NULL, 'age', dfp[, sapply(strsplit(as.character(factor),'_'),'[[',2)])
+	set(dfp, NULL, 'stage', dfp[, sapply(strsplit(as.character(factor),'_'),'[[',1)])
+	set(dfp, NULL, 'stage', dfp[, factor(stage, levels=c('UA','UC','D','T','L'))])
+	set(dfp, NULL, 'age', dfp[, factor(age, levels=c('(-1,25]','(25,30]','(30,45]','(45,100]'))])
+	#	plot p.seq		
+	ggplot(dfp, aes(x=p.seq, y=t.period.long, shape=age, colour=age)) + geom_point(size=3) +
+				scale_x_continuous(breaks=seq(0,100,10), minor_breaks=NULL, limit=c(0,100), expand=c(0,0)) +
+				scale_shape_discrete(guide=FALSE) +
+				#scale_colour_manual(values=dfp[, unique(factor.color)], guide=FALSE) +
+				theme_bw() +				
+				theme(axis.text.x=element_text(size=10), axis.text.y=element_text(size=10), axis.title=element_text(size=10), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.4), panel.grid.minor.x=element_line(colour="grey70", size=0.4), panel.grid.minor.y=element_blank(), panel.grid.major.y=element_blank(), panel.margin = unit(2, "lines")) + 				
+				labs(y='', x='overlap intervals\nof a potential transmitter with a sequence\n(%)', colour='age of potential transmitter\nat transmission interval') +
+				facet_grid(~stage)  				
+	ggsave(file=paste(indir, '/', gsub('\\.R','_STRATSAMPLING_cmp_Age.pdf',infile), sep=''), w=15, h=5)
+	
+	ggplot(dfp, aes(x=p.seq, y=t.period.long, shape=stage, colour=stage)) + geom_point(size=3) +
+			scale_x_continuous(breaks=seq(0,100,10), minor_breaks=NULL, limit=c(0,100), expand=c(0,0)) +
+			scale_shape_discrete(guide=FALSE) +
+			#scale_colour_manual(values=dfp[, unique(factor.color)], guide=FALSE) +
+			theme_bw() +				
+			theme(axis.text.x=element_text(size=10), axis.text.y=element_text(size=10), axis.title=element_text(size=10), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.4), panel.grid.minor.x=element_line(colour="grey70", size=0.4), panel.grid.minor.y=element_blank(), panel.grid.major.y=element_blank(), panel.margin = unit(2, "lines")) + 				
+			labs(y='', x='overlap intervals\nof a potential transmitter with a sequence\n(%)', colour='stage of potential transmitter\nat transmission interval') +
+			facet_grid(~age)  				
+	ggsave(file=paste(indir, '/', gsub('\\.R','_STRATSAMPLING_cmp_Stage.pdf',infile), sep=''), w=15, h=5)
+	
+	#
+	#	sequence sampling does not vary much by age of potential transmitter
+	#
+}
+######################################################################################
+sampling.get.dataset<- function(pt.df, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, df.treatment.allmsm, t.period, t.endctime, method.lRNA.supp=2, method.lRNA.nsupp=4, contact.grace=1.5)
 {	
-	
-	df.viro.allmsm
-	
-	pt.df	<- data.table(Patient=X.msm[, unique(t.Patient)])
+	#pt.df	<- data.table(Patient=X.msm[, unique(t.Patient)])
 	ptd.df	<- merge(pt.df, subset( df.all.allmsm, select=c(Patient, PosSeqT, RegionHospital, DateBorn, DateDied, isAcute, AnyPos_T1, AnyT_T1)), by='Patient')
 	setkey(ptd.df, Patient, PosSeqT)
 	setkey(ptd.df, Patient)
@@ -467,6 +517,11 @@ sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.ns
 	#	Acute at Diag
 	set(ptd.df, ptd.df[, which(isAcute!='Yes' | is.na(isAcute))], 'isAcute', 'NI')
 	set(ptd.df, NULL, 'isAcute', ptd.df[, factor(isAcute)])
+	#	Acute at Diag in Amsterdam or North
+	set(ptd.df, NULL, 'isAcuteAN', ptd.df[, as.character(isAcute)])
+	set(ptd.df, ptd.df[, which(isAcute!='Yes' | is.na(isAcute) | RegionHospital%in%c('S','W','E'))], 'isAcuteAN', 'NI')
+	set(ptd.df, NULL, 'isAcuteAN', ptd.df[, factor(isAcuteAN)])
+	
 	#	time since diagnosis
 	set(ptd.df, ptd.df[, which(is.na(DateDied))], 'DateDied', t.endctime)
 	ptd.df[, DT_Diag:= DateDied-AnyPos_T1]
@@ -511,26 +566,77 @@ sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.ns
 	set(ptd.df, ptd.df[, which(is.na(VNS_ANY))],'VNS_ANY','N')
 	set(ptd.df, ptd.df[, which(is.na(VS_ALL))],'VS_ALL','N')
 	set(ptd.df, ptd.df[, which(is.na(NC_ANY))],'NC_ANY','N')
+	#	Acute at Diag in Amsterdam or North, only when in contact
+	set(ptd.df, NULL, 'isAcuteANC', ptd.df[, as.character(isAcute)])
+	set(ptd.df, ptd.df[, which(isAcute!='Yes' | is.na(isAcute) | RegionHospital%in%c('S','W','E') | NC_ANY=='Y')], 'isAcuteANC', 'NI')
+	set(ptd.df, NULL, 'isAcuteANC', ptd.df[, factor(isAcuteANC)])	
 	#	save
-	save(ptd.df, file="/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age/sampling_dev.R")
+	if(!is.na(save.file))		
+		save(ptd.df, file=save.file)
+	ptd.df
+}
+######################################################################################
+sampling.model.150722<- function(ptd.df)
+{	
+	#	use model m12	
+	set(ptr.df, NULL, 'p.seq', NA_real_)
+	z		<- subset(ptr.df, NC_ANY=='Y', select=which(colnames(ptr.df)!='p.seq'))
+	ms12a	<- gamlss(formula= SQD ~ RegionHospital*ns(AnyPos_T1, df=1) + VS_ALL  + isAcuteANC - 1, family=BI(), data=z)
+	z[, p.seq:=predict(ms12a, type='response')]		
+	set(ptr.df, ptr.df[, which(NC_ANY=='Y')], 'p.seq', z[, p.seq])
+	z		<- subset(ptr.df, isAcuteANC=='Yes', select=which(colnames(ptr.df)!='p.seq'))
+	ms12b	<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=1) + VS_ALL  - 1, family=BI(), data=z)
+	z[, p.seq:=predict(ms12b, type='response')]	
+	set(ptr.df, ptr.df[, which(isAcuteANC=='Yes')], 'p.seq', z[, p.seq])
+	z		<- subset(ptr.df, isAcuteANC=='NI' & NC_ANY=='N', select=which(colnames(ptr.df)!='p.seq'))
+	ms12c	<- gamlss(formula= SQD ~ RegionHospital*ns(AnyPos_T1, df=6) + VS_ALL - 1, family=BI(), data=z)	
+	z[, p.seq:=predict(ms12c, type='response')]
+	set(ptr.df, ptr.df[, which(isAcuteANC=='NI' & NC_ANY=='N')], 'p.seq', z[, p.seq])
+	
+	ptr.df
+}
+######################################################################################
+sampling.model.exploreoptions<- function(ptd.df)
+{	
 	#
-	#	first regression models
+	#	explore first regression models
 	#
+	require(zoo)
+	outdir	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
+	oufile	<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011'
+	
+	#	is age at diagnosis an explanatory variable?
+	#	use 2009.2 to kill censoring effects
+	pta.df	<- subset(ptd.df, AnyPos_T1>2006.5 & AnyPos_T1<=2009.2 & VNS_ANY=='N' & NC_ANY=='N' & RegionHospital%in%c('Amst','W'))
+	pta.df[, Age_T1:= AnyPos_T1-DateBorn]
+	setkey(pta.df, Age_T1)
+	pta.df[, SQD.rm:=pta.df[, rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE)]]	
+	ggplot(pta.df, aes(x=Age_T1, y=SQD.rm)) + geom_line()
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ageatdiag.pdf', sep=''), w=5, h=5)
+	#	once censoring is 'excluded' as an effect ie focuse on <2009, there seems to be a 'dip' close to age 30,
+	#	but overall, there is no additional age effect
+
+	#	is time since diagnosis an explanatory variable?
+	setkey(pta.df, DT_Diag)
+	pta.df[, SQD.rm:=pta.df[, rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE)]]	
+	ggplot(pta.df, aes(x=DT_Diag, y=SQD.rm)) + geom_line()
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_tsincediag.pdf', sep=''), w=5, h=5)
+	#	once censoring is 'excluded' as an effect ie focuse on <2009,
+	#	time since diag has no strong impact on rolling mean
+	
 	ptr.df	<- copy(ptd.df)
 	ptr.df[, PosSeqT:=NULL]
-	ptr.df[, AnyT_T1:=NULL]
+	ptr.df[, AnyT_T1:=NULL]			
 	
-	require(zoo)
-	setkey(ptr.df, AnyPos_T1)
-	
+	setkey(ptr.df, AnyPos_T1)	
 	ptr.df[, SQD.rm:=ptr.df[, rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE)]]	
 	ms1		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5), family=BI(), data=ptr.df)
 	ptr.df[, MS1:=predict(ms1, type='response')]	
 	ggplot(melt(ptr.df, measure.vars=c('SQD.rm','MS1'), id.vars=c('AnyPos_T1')), aes(x=AnyPos_T1, y=value, colour=variable)) + geom_line()
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms1.pdf', sep=''), w=5, h=5)
 	#	150721:	ns(AnyPos_T1, df=5) worked better than bs(AnyPos_T1, degree=5)
 
 	#	take time dependent regression as baseline model; 
-
 	#	try to improve based on ACUTE
 	setkey(ptr.df, isAcute, AnyPos_T1)
 	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm2=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by='isAcute']
@@ -538,6 +644,18 @@ sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.ns
 	ms2		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + isAcute-1, family=BI(), data=ptr.df)
 	ptr.df[, MS2:=predict(ms2, type='response')]	
 	ggplot(melt(ptr.df, measure.vars=c('SQD.rm2','MS2'), id.vars=c('AnyPos_T1','isAcute')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~isAcute)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms2.pdf', sep=''), w=8, h=5)
+	
+	#	take time dependent regression as baseline model; 
+	#	try to improve based on ACUTE-AN
+	setkey(ptr.df, isAcuteAN, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm2b=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by='isAcuteAN']
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','isAcuteAN'))	
+	ms2b	<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + isAcuteAN - 1, family=BI(), data=ptr.df)
+	ptr.df[, MS2b:=predict(ms2b, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm2b','MS2b'), id.vars=c('AnyPos_T1','isAcuteAN')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~isAcuteAN)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms2b.pdf', sep=''), w=8, h=5)
+	
 	
 	#	try to improve based on Not Suppressed
 	setkey(ptr.df, VNS_ANY, AnyPos_T1)
@@ -546,6 +664,7 @@ sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.ns
 	ms3		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + VNS_ANY-1, family=BI(), data=ptr.df)
 	ptr.df[, MS3:=predict(ms3, type='response')]	
 	ggplot(melt(ptr.df, measure.vars=c('SQD.rm3','MS3'), id.vars=c('AnyPos_T1','VNS_ANY')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~VNS_ANY)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms3.pdf', sep=''), w=8, h=5)
 	
 	#	try to improve based on Suppressed
 	setkey(ptr.df, VS_ALL, AnyPos_T1)
@@ -554,6 +673,7 @@ sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.ns
 	ms4		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + VS_ALL-1, family=BI(), data=ptr.df)
 	ptr.df[, MS4:=predict(ms4, type='response')]	
 	ggplot(melt(ptr.df, measure.vars=c('SQD.rm4','MS4'), id.vars=c('AnyPos_T1','VS_ALL')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~VS_ALL)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms4.pdf', sep=''), w=8, h=5)
 	#	suppressed has lower AIC
 	
 	#	try to improve based on region hospital
@@ -563,6 +683,20 @@ sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.ns
 	ms5		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + RegionHospital-1, family=BI(), data=ptr.df)
 	ptr.df[, MS5:=predict(ms5, type='response')]	
 	ggplot(melt(ptr.df, measure.vars=c('SQD.rm5','MS5'), id.vars=c('AnyPos_T1','RegionHospital')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~RegionHospital)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms5.pdf', sep=''), w=8, h=5)
+	#	baseline model seems OK except for South -- try separate model there	
+	setkey(ptr.df, RegionHospital, AnyPos_T1)
+	#ms5b	<- gamlss(formula= SQD ~ I(RegionHospital=='S')*lo(~AnyPos_T1, span=0.3) + RegionHospital-1, family=BI(), data=ptr.df)
+	#ms5b	<- gamlss(formula= SQD ~ I(RegionHospital=='S')*ns(AnyPos_T1, df=7) + RegionHospital-1, family=BI(), data=ptr.df)
+	ms5b	<- gamlss(formula= SQD ~ RegionHospital*ns(AnyPos_T1, df=6), family=BI(), data=ptr.df)
+	ptr.df[, MS5b:=predict(ms5b, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm5','MS5b'), id.vars=c('AnyPos_T1','RegionHospital')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~RegionHospital)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms5b.pdf', sep=''), w=8, h=5)
+	
+	#z		<- subset(ptr.df, RegionHospital=='S')
+	#ms5b	<- gamlss(formula= SQD ~ lo(~AnyPos_T1, span=0.3), family=BI(), data=z)
+	#z[, MS5b:=predict(ms5b, type='response')]
+	#ggplot(melt(z, measure.vars=c('SQD.rm5','MS5b'), id.vars=c('AnyPos_T1','RegionHospital')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~RegionHospital)
 	
 	#	try to improve based on no contact
 	setkey(ptr.df, NC_ANY, AnyPos_T1)
@@ -571,12 +705,77 @@ sampling.dev<- function(t.period, t.endctime, method.lRNA.supp=2, method.lRNA.ns
 	ms6		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + NC_ANY-1, family=BI(), data=ptr.df)
 	ptr.df[, MS6:=predict(ms6, type='response')]	
 	ggplot(melt(ptr.df, measure.vars=c('SQD.rm6','MS6'), id.vars=c('AnyPos_T1','NC_ANY')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~NC_ANY)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms6.pdf', sep=''), w=8, h=5)
 	
+	#	combine VS_ALL > region >  no contact
+	setkey(ptr.df, VS_ALL, RegionHospital, NC_ANY, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm7=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by=c('VS_ALL','RegionHospital','NC_ANY')]
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','VS_ALL','RegionHospital','NC_ANY'))
+	ms7		<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=5) + VS_ALL + RegionHospital + NC_ANY-1, family=BI(), data=ptr.df)
+	ptr.df[, MS7:=predict(ms7, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm7','MS7'), id.vars=c('AnyPos_T1','VS_ALL','RegionHospital','NC_ANY')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(RegionHospital~VS_ALL+NC_ANY)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms7.pdf', sep=''), w=10, h=10)
+
+	#	combine VS_ALL > region >  no contact;	use region specific sampling model
+	setkey(ptr.df, VS_ALL, RegionHospital, NC_ANY, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm8=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by=c('VS_ALL','RegionHospital','NC_ANY')]
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','VS_ALL','RegionHospital','NC_ANY'))
+	ms8		<- gamlss(formula= SQD ~ RegionHospital*ns(AnyPos_T1, df=6) + VS_ALL + NC_ANY - 1, family=BI(), data=ptr.df)
+	ptr.df[, MS8:=predict(ms8, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm8','MS8'), id.vars=c('AnyPos_T1','VS_ALL','RegionHospital','NC_ANY')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(RegionHospital~VS_ALL+NC_ANY)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms8.pdf', sep=''), w=10, h=10)
 	
+	#	combine VS_ALL > region > isAcuteAN >  no contact;	use region specific sampling model
+	setkey(ptr.df, VS_ALL, RegionHospital, NC_ANY, isAcuteAN, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm10=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by=c('VS_ALL','RegionHospital','NC_ANY','isAcuteAN')]
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','VS_ALL','RegionHospital','NC_ANY','isAcuteAN'))
+	ms10	<- gamlss(formula= SQD ~ RegionHospital*ns(AnyPos_T1, df=6) + VS_ALL + NC_ANY + isAcuteAN - 1, family=BI(), data=ptr.df)
+	ptr.df[, MS10:=predict(ms10, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm10','MS10'), id.vars=c('AnyPos_T1','VS_ALL','RegionHospital','NC_ANY','isAcuteAN')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(RegionHospital~VS_ALL+NC_ANY+isAcuteAN)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms10.pdf', sep=''), w=12, h=10)
+	
+	#	combine VS_ALL > region > isAcuteANC >  no contact;	use region specific sampling model
+	setkey(ptr.df, VS_ALL, RegionHospital, NC_ANY, isAcuteANC, AnyPos_T1)
+	tmp		<- 	ptr.df[, list( Patient=Patient, SQD.rm11=rollapply(SQD, width=100, FUN=mean, align="center", partial=TRUE) ), by=c('VS_ALL','RegionHospital','NC_ANY','isAcuteANC')]
+	ptr.df	<- merge(ptr.df, tmp, by=c('Patient','VS_ALL','RegionHospital','NC_ANY','isAcuteANC'))
+	ms11	<- gamlss(formula= SQD ~ RegionHospital*ns(AnyPos_T1, df=6) + VS_ALL + NC_ANY + isAcuteANC - 1, family=BI(), data=ptr.df)
+	ptr.df[, MS11:=predict(ms11, type='response')]	
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm11','MS11'), id.vars=c('AnyPos_T1','VS_ALL','RegionHospital','NC_ANY','isAcuteANC')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(RegionHospital~VS_ALL+NC_ANY+isAcuteANC)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms11.pdf', sep=''), w=12, h=10)
+	
+	set(ptr.df, NULL, 'MS12', NA_real_)
+	z		<- subset(ptr.df, NC_ANY=='Y', select=which(colnames(ptr.df)!='MS12'))
+	ms12a	<- gamlss(formula= SQD ~ RegionHospital*ns(AnyPos_T1, df=1) + VS_ALL  + isAcuteANC - 1, family=BI(), data=z)
+	z[, MS12:=predict(ms12a, type='response')]		
+	set(ptr.df, ptr.df[, which(NC_ANY=='Y')], 'MS12', z[, MS12])
+	z		<- subset(ptr.df, isAcuteANC=='Yes', select=which(colnames(ptr.df)!='MS12'))
+	ms12b	<- gamlss(formula= SQD ~ ns(AnyPos_T1, df=1) + VS_ALL  - 1, family=BI(), data=z)
+	z[, MS12:=predict(ms12b, type='response')]	
+	set(ptr.df, ptr.df[, which(isAcuteANC=='Yes')], 'MS12', z[, MS12])
+	z		<- subset(ptr.df, isAcuteANC=='NI' & NC_ANY=='N', select=which(colnames(ptr.df)!='MS12'))
+	ms12c	<- gamlss(formula= SQD ~ RegionHospital*ns(AnyPos_T1, df=6) + VS_ALL - 1, family=BI(), data=z)	
+	z[, MS12:=predict(ms12c, type='response')]
+	set(ptr.df, ptr.df[, which(isAcuteANC=='NI' & NC_ANY=='N')], 'MS12', z[, MS12])
+	ggplot(melt(ptr.df, measure.vars=c('SQD.rm11','MS12'), id.vars=c('AnyPos_T1','VS_ALL','RegionHospital','NC_ANY','isAcuteANC')), aes(x=AnyPos_T1, y=value, group=variable, colour=variable)) + 
+			geom_line() +
+			coord_cartesian(xlim=c(1990,2012)) +
+			facet_grid(RegionHospital~VS_ALL+NC_ANY+isAcuteANC)
+	ggsave(file=paste(outdir, '/', outfile, '_SAMPLINGMODEL_ms12.pdf', sep=''), w=12, h=10)
+	
+	#	sapply(list(ms1, ms2, ms2b, ms3, ms4, ms5, ms5b, ms6, ms7, ms8, ms9, ms10), Rsq)
+	#	0.05869068 0.06241876 0.07190648 0.07340679 0.07538781 0.09400546 0.11839415 0.06397835 0.11540097 0.13952236 0.14305379 0.14303762
+	#	sapply(list(ms1, ms2,  ms2b, ms3, ms4, ms5, ms5b, ms6, ms7, ms8, ms9, ms10), AIC)
+	#	16169.58 16123.19 15999.18 15979.45 15953.35 15711.33 15428.61 16102.89 15423.94 15136.84 15088.69 15088.92
+
+	#	not much impr of ms9 over ms8
+	#	but spline for each region is much better than spline+region 
+
 	#
-	#	overall, VS_ALL > region >  no contact > isAcute
+	#	overall univariate effect: 
+	#	region > VS_ALL > VNS_ANY > no contact > isAcute
+	#	region > VS_ALL > VNS_ANY > isAcuteAN > no contact 
+	#	use ms9
 	#
-	
 }
 ######################################################################################
 sampling.get.all.tables.args<- function(method)
@@ -1042,7 +1241,7 @@ stratificationmodel.Age_253045.Stage_UA_UC_D_T_F<- function(YX)
 		set(YX.m5, which(tmp), 'score.Y', YX.m5[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )
 	}	
 	#
-	#	PREPARE AGE
+	#	PREPARE AGE (Age and t.Age are ages at midpoint of infection interval)
 	#
 	#	set age group of transmitter				
 	age.breaks		<- c(-1, 25, 30, 45, 100)

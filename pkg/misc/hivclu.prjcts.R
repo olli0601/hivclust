@@ -3137,6 +3137,7 @@ project.hivc.clustering.forStephane<- function()
 	indircov	<- paste(DATA,"derived",sep='/')
 	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
 	indir		<- paste(DATA,"tmp",sep='/')	
+	outdir		<- paste(DATA,"brl_surrlink",sep='/')
 	#
 	# get clusters for No Recombination + No Drug resistance mutations + No short sequences, single linkage criterion		
 	#						
@@ -3146,8 +3147,35 @@ project.hivc.clustering.forStephane<- function()
 	argv			<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 	argv			<<- unlist(strsplit(argv,' '))
 	nsh.clu.pre		<- hivc.prog.get.clustering.precompute()
-	#
-	nsh.clu.pre$linked.bypatient
+	#	read TP tips and TN tips
+	tips.linked		<- subset(nsh.clu.pre$bs.linked.bypatient, select=c('tip1','tip2'))
+	tips.unlinked	<- do.call('rbind',nsh.clu.pre$unlinked.bytime)
+	tips.unlinked	<- subset(tips.unlinked, select=c('query.FASTASampleCode','FASTASampleCode'))
+	setnames(tips.linked, c('tip1','tip2'), c('FASTASampleCode','t.FASTASampleCode'))
+	setnames(tips.unlinked, c('query.FASTASampleCode','FASTASampleCode'), c('FASTASampleCode','t.FASTASampleCode'))
+	#	get unique tips
+	tmp				<- tips.unlinked[, which(FASTASampleCode<t.FASTASampleCode)]
+	z				<- tips.unlinked[tmp, t.FASTASampleCode]
+	set(tips.unlinked,tmp,'t.FASTASampleCode',tips.unlinked[tmp, FASTASampleCode])
+	set(tips.unlinked,tmp,'FASTASampleCode',z)
+	setkey(tips.unlinked, FASTASampleCode, t.FASTASampleCode)
+	#	get branch lengths of TP and TN data sets
+	indir.dists		<- paste(DATA,"fisheretal_data",sep='/')
+	if(0)
+	{
+		tips.linked		<- project.athena.Fisheretal.brl.read.distTipsToRec(indir.dists, tips.linked, verbose=1)
+		file			<- paste(outdir,'/',infile,'_TPbrl.R',sep='')
+		cat('\nsave to file',file)
+		save(tips.linked, file=file)
+	}
+	if(1)
+	{
+		tips.unlinked	<- project.athena.Fisheretal.brl.read.distTipsToRec(indir.dists, tips.unlinked, verbose=1)
+		file			<- paste(outdir,'/',infile,'_TNbrl.R',sep='')
+		cat('\nsave to file',file)
+		save(tips.unlinked, file=file)
+	}
+	
 }
 ######################################################################################
 project.hivc.clustering.compare.NoDR.to.NoRecombNoDR.to.NoShort<- function()
