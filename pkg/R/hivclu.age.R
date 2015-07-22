@@ -1095,7 +1095,7 @@ stratificationmodel.Age_253045.Stage_UA_UC_D_T_F<- function(YX)
 	}	
 	gc()	
 	cat(paste('\nsubset to save further mem\n'))
-	set(YX.m5, NULL, c('t.InfT','t.isAcute','contact','stage','t.AnyT_T1','AnyPos_T1'), NULL)
+	set(YX.m5, NULL, c('t.InfT','t.isAcute','contact','stage','t.AnyT_T1'), NULL)
 	gc()
 	YX.m5
 }
