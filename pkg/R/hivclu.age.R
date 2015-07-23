@@ -427,6 +427,7 @@ age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, ins
 	{
 		save.file		<- NA
 		if(grepl('m5A',method.risk))	save.file	<- 'm5A'
+		if(grepl('m5B',method.risk))	save.file	<- 'm5B'
 		if(is.na(save.file))	stop('unknown method.risk')				
 		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))		
 		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
@@ -450,6 +451,108 @@ age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, ins
 		}
 	}
 	X.tables
+}
+######################################################################################
+censoring.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
+{		
+	require(Hmisc)
+	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
+	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3pa1H1.48C2V100bInfT7_CtablesSEQ_m5A.R'	
+	plot.file	<- paste(indir,'/',gsub('\\.R','\\.pdf',gsub('CtablesSEQ','CENSORINGFRACTION',infile)),sep='')
+	
+	load(paste(indir,'/',infile,sep=''))
+	ct			<- copy(ans$cens.table)
+	setkey(ct, stat, t.period, risk, factor)
+	ct			<- unique(ct)
+	ctb			<- copy(ans$cens.table.bs)
+	setkey(ctb, stat, t.period, risk, factor)
+	ctb			<- unique(ctb)
+	 	
+	
+	
+	#	ct.bs contains counts at times [t1bs, t2bs]
+	#	divide these by the counts at times [t1,t2] --> bootstrap fraction
+	set(ctb, NULL, 'c', ctb[, nc/n])
+	set(ctb, ctb[, which(n==0)], 'c', 1.)
+	set(ctb, NULL, 't2c', ctb[, cens.t-t.period.max.bs])
+	if(!is.na(plot.file))
+	{
+		ct.plot		<- subset(ctb, select=c(risk, factor, factor2, c, t2c))	
+		#ct.plot		<- merge( ct.plot, factors, by='factor2')
+		ct.plot		<- merge(ct.plot, ct.plot[, list(mc=median(c)), by='factor'], by='factor')
+		#if(method.group=='cascade')
+		ct.plot		<- subset(ct.plot, grepl('^U',factor2))
+		set(ct.plot, NULL, 't2cf', ct.plot[, factor(round(t2c,d=2))])
+		ct.plot[, factor.legend:= factor2]
+		ct.plot[, age:= ct.plot[, factor(sapply(strsplit(factor2,'_'),'[[',2))]]
+		ct.plot[, stage:= ct.plot[, factor(sapply(strsplit(factor2,'_'),'[[',1))]]
+		setkey(ct.plot, factor.legend)
+		ggplot(ct.plot, aes(x=2011-t2c, y=100*c, colour=factor.legend)) + geom_boxplot(aes(position=factor(t2c)), outlier.shape = NA) +
+				labs(x=expression('end time of observation period ('*t[2]^k*' )'), y='fraction of non-censored\npotential transmission intervals\n( % )') +
+				#scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +
+				scale_colour_discrete(guide=FALSE) +
+				scale_y_continuous(breaks=seq(0,100,20), lim=c(0,100), expand=c(0,1) ) + theme_bw() +
+				theme(panel.grid.major=element_line(colour="grey70", size=0.4), legend.position = "bottom") + 
+				facet_grid(stage ~ age, margins=FALSE)
+		ggsave(file=plot.file, w=10, h=6)		
+	}
+	#	compute adjusted numbers for each bootstrap run
+	ctn		<- merge( subset(ct, stat=='X.msm', c(risk, factor, factor2, t.period, n)), subset(ctb, select=c(risk, factor, factor2, t.period, BS, c)), by=c('t.period','risk','factor','factor2'))
+	ctn[, n.adj:= ctn[, n/c]]	
+	#	compute sample mean and median of bootstrap fraction -- mean is OK
+	ctb		<- ctb[, list(p.cens.med=median(c), p.cens=mean(c), p.cens.95l=quantile(c, p=0.025), p.cens.95u=quantile(c, p=0.975)), by=c('t.period','risk','factor')]
+	ctb		<- merge(subset(ct, stat=='X.msm', c(risk, factor, factor2, t.period, n)), ctb, by=c('t.period','risk','factor'))	
+	#	adjust number of potential transmission intervals
+	ctb[, n.adj:= ctb[, n/p.cens]]	
+	#
+	if(!is.na(plot.file))
+	{
+		ct.plot		<- copy(ctb)
+		ct.plot		<- merge(ct.plot, subset(ctn, select=c('t.period','Patient.n')), by='t.period')
+		ct.plot		<- melt(ct.plot, measure.vars=c('n','n.adj'), variable.name='group', value.name='n')
+		set(ct.plot, NULL, 'n', ct.plot[, n/Patient.n])
+		ct.plot		<- merge( ct.plot, factors, by='factor2')
+		#	add time period
+		tmp			<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))		
+		set(tmp, NULL, 't.period.min', tmp[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
+		set(tmp, NULL, 't.period.max', tmp[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )		
+		ct.plot		<- merge( ct.plot, tmp, by='t.period')
+		ct.plot[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
+		#	set pretty labels
+		set(ct.plot, ct.plot[,which(group=='n')], 'group', 'observed counts')
+		set(ct.plot, ct.plot[,which(group=='n.adj')], 'group', 'estimate adjusted\nfor right censoring')		
+		set(ct.plot, NULL, 'group', ct.plot[, factor(group, levels=c('observed counts','estimate adjusted\nfor right censoring'))])
+		#	plot
+		ggplot(ct.plot, aes(x=t.period.long, y=n, colour=factor.legend, shape=group)) + geom_point(size=3) +
+				labs(x='', y='potential transmission intervals in cohort\n(person-years per recipient MSM)',shape='') +
+				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +	
+				scale_shape_manual(values=c(8,2)) +
+				facet_grid(. ~ factor.legend, margins=FALSE) + theme(legend.position = "bottom")
+		file		<- paste(plot.file,'_censoringmodel.pdf',sep='')
+		ggsave(file=file, w=17, h=6)	
+		#
+		ct.plot		<- copy(ctb)			
+		ct.plot		<- merge(ct.plot, ct.plot[, list(risk=risk, factor2=factor2, prop.adj=round(n.adj/sum(n.adj),d=4), prop=round(n/sum(n),d=4)), by='t.period'], by=c('t.period','risk','factor2'))
+		ct.plot		<- melt(ct.plot, measure.vars=c('prop','prop.adj'), id.vars=c('t.period','risk','factor2','factor'), variable.name='group', value.name='prop')
+		ct.plot		<- merge( ct.plot, factors, by='factor2')
+		ct.plot		<- merge( ct.plot, tmp, by='t.period')
+		ct.plot[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
+		set(ct.plot, ct.plot[,which(group=='prop')], 'group', 'observed proportion')
+		set(ct.plot, ct.plot[,which(group=='prop.adj')], 'group', 'estimated proportion,\nadjusted for right censoring')
+		set(ct.plot, NULL, 'group', ct.plot[, factor(group, levels=c('observed proportion','estimated proportion,\nadjusted for right censoring'))])
+		ggplot(ct.plot, aes(x=t.period.long, y=prop, colour=factor.legend, shape=group)) + geom_point(size=3) +
+				labs(x='', y='potential transmission intervals in cohort\n(% within each observation period)',shape='') +
+				scale_y_continuous(breaks=seq(0,1,0.05)) +
+				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +	
+				scale_shape_manual(values=c(8,2)) +
+				facet_grid(. ~ factor.legend, margins=FALSE) + theme(legend.position = "bottom")
+		file		<- paste(plot.file,'_censoringmodelprop.pdf',sep='')
+		ggsave(file=file, w=17, h=6)	
+	}
+	#
+	ctb		<- subset(ctb, select=c(t.period, risk, factor, factor2, p.cens, p.cens.95l, p.cens.95u))
+	ctn		<- subset(ctn, select=c(t.period, risk, factor, factor2, n.adj))
+	list( ctb=ctb, ctn=ctn )
 }
 ######################################################################################
 sampling.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
@@ -1190,10 +1293,23 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 			gc()
 		}
 	}
+	if(grepl('m5B',method.risk))	
+	{
+		YX					<- stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F(YX)
+		if(is.null(X.tables))
+		{
+			X.clu			<- stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F(X.clu)
+			gc()
+			X.seq			<- stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F(X.seq)
+			gc()
+			X.msm			<- stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F(X.msm)
+			gc()
+		}
+	}
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', method, 'STRAT_',gsub('\\.clu\\.adj','',gsub('\\.tp[0-9]','',method.risk)),'.R',sep='')
 	save(YX, X.clu, X.seq, X.msm, file=save.file)	
 #STOP1		
-#stop()
+stop()
 	#
 	#	compute sampling and censoring tables that are needed for adjustments
 	#
@@ -1205,6 +1321,8 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 			args			<- sampling.get.all.tables.args(method.risk)			
 			if(grepl('m5A',method.risk))		
 				tmp			<- 'm5A'
+			if(grepl('m5B',method.risk))		
+				tmp			<- 'm5B'
 			if(is.na(tmp))	
 				stop('unknown method.risk')				
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Stables',method.PDT,'_',tmp,'.R',sep='')
@@ -1223,10 +1341,10 @@ stop()
 }
 
 ######################################################################################
-stratificationmodel.Age_253045.Stage_UA_UC_D_T_F<- function(YX)
+stratificationmodel.Age_253045.Stage_UA_UC_D_T_F<- function(YX.m5)
 {
 	#	get age stages
-	YX.m5	<- copy(YX)
+	#YX.m5	<- copy(YX)
 	if('U.score'%in%colnames(YX.m5))
 		YX.m5[, U.score:=NULL]
 	cat(paste('\nsubset to save mem\n'))
@@ -1267,6 +1385,82 @@ stratificationmodel.Age_253045.Stage_UA_UC_D_T_F<- function(YX)
 	set(YX.m5, YX.m5[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stageC', 'UA' )
 	#	estimated recent
 	set(YX.m5, YX.m5[, which(stage=='U' & (t-t.InfT)<1 & (t.isAcute!='Yes' | is.na(t.isAcute)))], 'stageC', 'UA')
+	#	set Lost
+	stopifnot( nrow(subset(YX.m5, stage!='U' & is.na(contact)))==0 )	
+	set(YX.m5, YX.m5[, which(stage!='U' & contact!='Yes')], 'stageC', 'L')
+	set(YX.m5, NULL, 'stageC', YX.m5[, factor(stageC)])
+	#
+	#	PREPARE STAGE:AGE
+	#	
+	YX.m5[, t.stAgeC:= YX.m5[, factor(paste(as.character(stageC),'_',as.character(t.AgeC),sep=''))]]
+	#
+	#	PREPARE cross with time period
+	#	
+	if(1 & 't.period'%in%colnames(YX.m5) & YX.m5[, any(t.period=='6')])
+	{
+		set(YX.m5, YX.m5[, which(t.period%in%c('5','6'))], 't.period', '4')
+		set(YX.m5, NULL, 't.period', YX.m5[, factor(t.period)])
+	}
+	if('t.period'%in%colnames(YX.m5))
+	{
+		
+		cat(paste('\nadding tperiod columns\n'))
+		YX.m5[, AgeC.prd:= factor(paste(as.character(AgeC), t.period,sep='.'))]
+		YX.m5[, t.AgeC.prd:= factor(paste(as.character(t.AgeC), t.period,sep='.'))]
+		YX.m5[, p.AgeC.prd:= factor(paste(as.character(t.AgeC.prd),'->',as.character(AgeC.prd),sep=''))]
+		YX.m5[, t.stAgeC.prd:= factor(paste(as.character(t.stAgeC), t.period,sep='.'))]		
+	}	
+	gc()	
+	cat(paste('\nsubset to save further mem\n'))
+	set(YX.m5, NULL, c('t.InfT','t.isAcute','contact','stage','t.AnyT_T1'), NULL)
+	gc()
+	YX.m5
+}
+######################################################################################
+stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F<- function(YX.m5)
+{
+	#	get age stages
+	#	YX.m5	<- copy(YX)
+	if('U.score'%in%colnames(YX.m5))
+		YX.m5[, U.score:=NULL]
+	cat(paste('\nsubset to save mem\n'))
+	if('score.Y'%in%colnames(YX.m5))
+		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, telapsed, brl, stage, t.period, t.isAcute, contact, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, t.InfT, w, w.i, w.in, w.t, w.tn, t.Age, Age ))	
+	if(!'score.Y'%in%colnames(YX.m5))
+		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, stage, t.period, t.isAcute, contact, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, t.InfT, t.Age, Age ))
+	gc()	
+	if('score.Y'%in%colnames(YX.m5) && YX.m5[, !any(score.Y>1.1)])
+	{
+		tmp	<- YX.m5[, score.Y>0]
+		set(YX.m5, which(tmp), 'score.Y', YX.m5[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )
+	}	
+	#
+	#	PREPARE AGE (Age and t.Age are ages at midpoint of infection interval)
+	#
+	#	set age group of transmitter				
+	age.breaks		<- c(-1, 25, 30, 45, 100)
+	age.labels		<- c('<25','<30','<45','<100')	
+	YX.m5[, t.AgeC:= YX.m5[, cut(t.Age, breaks=age.breaks)]]	
+	set(YX.m5, NULL, 't.AgeC', YX.m5[, factor(as.character(t.AgeC))])
+	#	set age group of recipient
+	YX.m5[, AgeC:= YX.m5[, cut(Age, breaks=age.breaks)]]	
+	set(YX.m5, NULL, 'AgeC', YX.m5[, factor(as.character(AgeC))])
+	#	set age group of pair
+	YX.m5[, p.AgeC:= YX.m5[, paste(as.character(t.AgeC),'->',as.character(AgeC),sep='')]]
+	set(YX.m5, NULL, 'p.AgeC', YX.m5[, factor(p.AgeC)])
+	#
+	#	PREPARE STAGE
+	#	
+	YX.m5[, stageC:=NA_character_]
+	set(YX.m5, YX.m5[, which(stage=='Diag')], 'stageC', 'D')
+	set(YX.m5, YX.m5[, which(stage=='ART.started')], 'stageC', 'T' )
+	set(YX.m5, YX.m5[, which(stage=='U')], 'stageC', 'UC')
+	#	confirmed acute --> UA
+	set(YX.m5, YX.m5[, which(stage=='U' & t.isAcute=='Yes')], 'stageC', 'UAC')
+	#	confirmed acute and diagnosed in first 3 mnths --> UA
+	set(YX.m5, YX.m5[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stageC', 'DAC' )
+	#	estimated recent
+	set(YX.m5, YX.m5[, which(stage=='U' & (t-t.InfT)<1 & (t.isAcute!='Yes' | is.na(t.isAcute)))], 'stageC', 'UAE')
 	#	set Lost
 	stopifnot( nrow(subset(YX.m5, stage!='U' & is.na(contact)))==0 )	
 	set(YX.m5, YX.m5[, which(stage!='U' & contact!='Yes')], 'stageC', 'L')

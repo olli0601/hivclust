@@ -3174,6 +3174,71 @@ project.hivc.clustering.forStephane<- function()
 		file			<- paste(outdir,'/',infile,'_TNbrl.R',sep='')
 		cat('\nsave to file',file)
 		save(tips.unlinked, file=file)
+	}	
+	if(0)	
+	{
+		#get Shankarappa TP data set
+		require(gtools)
+		file	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/brl_surrlink/set1_Shankarappa.fasta'
+		shk		<- read.dna(file=file, format='fasta')
+		shk.brl	<- dist.dna(shk, model='raw', as.matrix=T)
+		shk.df	<- data.table(TAXON1= rownames(shk))
+		shk.df[, PATIENT:=shk.df[, regmatches(TAXON1,regexpr('[0-9]+V',TAXON1))]] 
+		set(shk.df, NULL, 'PATIENT', shk.df[ , substr(PATIENT,1,nchar(PATIENT)-1) ])
+		shk.df	<- shk.df[, 
+				{
+					z<- combinations(length(TAXON1),2)
+					list(TAXON1=TAXON1[z[,1]], TAXON2=TAXON1[z[,2]])
+				}, by='PATIENT']
+		shk.df	<- shk.df[, list(BRL= shk.brl[TAXON1,TAXON2]), by=c('TAXON1','TAXON2')]
+		file	<- paste(outdir,'/Shankarappa_TPbrl.R',sep='')
+		save(shk.df, file=file)
+		#
+		#		analysis of Shankarappa TP data
+		#
+		shk.df[, quantile(BRL, p=c(0.95,0.975,0.99))]
+		#	95%      	97.5%        	99% 
+		#	0.06250000 	0.06854839 		0.07459677 
+		ggplot(shk.df, aes(x=BRL)) +
+				scale_x_continuous(breaks=seq(0,0.3,0.01), limit=c(0,0.15)) +
+				geom_histogram() + theme_bw() + labs(x='genetic distance among within-host Shankarappa sequences\n(substitutions/site)')
+		ggsave(file= paste(outdir,'/Shankarappa_TPbrl.pdf',sep=''), w=8, h=5)		
+	}
+	if(0)
+	{
+		tips.linked[, TYPE:='LINKED']
+		tips.unlinked[, TYPE:='UNLINKED']
+		#
+		#		analysis of ATHENA TP / TN data
+		#
+		subset(tips.linked, BS==0)[, quantile(BRL, p=c(0.95,0.975,0.99))]
+		#       95%      	97.5%       99% 
+		#		0.03780011 	0.08691466 	0.21071687
+		tips.unlinked.bs0	<- subset(tips.unlinked, BS==0)
+		tips.unlinked.bs0[, quantile(BRL, p=c(0.05,0.025,0.01, 0.001, 0.0001))]
+		#	    5%       	2.5%         	1%       	0.1%      	0.01% 
+		#		0.16053774 	0.15067962 		0.13792314 	0.10836011 	0.04658164
+		#		this is **much** larger than SH calculated, but still the TN pairs are the majority  
+	
+		brl					<- rbind( tips.unlinked.bs0, subset(tips.linked, BS==0) )	
+		
+		ggplot(subset(tips.linked, BS==0), aes(x=BRL)) +
+				scale_x_continuous(breaks=seq(0,0.3,0.01), limit=c(0,0.15)) +
+				geom_histogram() + theme_bw() + labs(x='genetic distance among within-host sequences\n(substitutions/site)')
+		ggsave(file= paste(outdir,'/',infile,'_TPbrl.pdf',sep=''), w=8, h=5)
+		
+		ggplot(brl, aes(x=BRL, group=TYPE, fill=TYPE)) +
+				scale_x_continuous(breaks=seq(0,0.6,0.05)) +
+				scale_y_continuous(breaks=c(10,100,1000,10000,20000), minor_breaks=NULL, trans ="log1p") +
+				scale_fill_brewer(palette='Set1') +
+				geom_histogram(alpha=0.4) + theme_bw() + labs(x='genetic distance among surrogate pairs\n(substitutions/site)')
+		ggsave(file= paste(outdir,'/',infile,'_TPTNbrl.pdf',sep=''), w=8, h=6)
+		
+		ggplot(brl, aes(x=BRL, group=TYPE, fill=TYPE)) +
+				scale_x_continuous(breaks=seq(0,0.3,0.01), limit=c(0,0.2)) +
+				geom_histogram() + theme_bw() + labs(x='genetic distance among surrogate pairs\n(substitutions/site)')
+		
+		
 	}
 	
 }
