@@ -468,8 +468,6 @@ censoring.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
 	setkey(ctb, stat, t.period, risk, factor)
 	ctb			<- unique(ctb)
 	 	
-	
-	
 	#	ct.bs contains counts at times [t1bs, t2bs]
 	#	divide these by the counts at times [t1,t2] --> bootstrap fraction
 	set(ctb, NULL, 'c', ctb[, nc/n])
@@ -503,52 +501,7 @@ censoring.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
 	ctb		<- ctb[, list(p.cens.med=median(c), p.cens=mean(c), p.cens.95l=quantile(c, p=0.025), p.cens.95u=quantile(c, p=0.975)), by=c('t.period','risk','factor')]
 	ctb		<- merge(subset(ct, stat=='X.msm', c(risk, factor, factor2, t.period, n)), ctb, by=c('t.period','risk','factor'))	
 	#	adjust number of potential transmission intervals
-	ctb[, n.adj:= ctb[, n/p.cens]]	
-	#
-	if(!is.na(plot.file))
-	{
-		ct.plot		<- copy(ctb)
-		ct.plot		<- merge(ct.plot, subset(ctn, select=c('t.period','Patient.n')), by='t.period')
-		ct.plot		<- melt(ct.plot, measure.vars=c('n','n.adj'), variable.name='group', value.name='n')
-		set(ct.plot, NULL, 'n', ct.plot[, n/Patient.n])
-		ct.plot		<- merge( ct.plot, factors, by='factor2')
-		#	add time period
-		tmp			<- as.data.table(structure(list(t.period = structure(1:4, .Label = c("1", "2", "3", "4"), class = "factor"), t.period.min = c(1996.503, 2006.408, 2008.057, 2009.512), t.period.max = c(2006.308, 2007.957, 2009.49, 2010.999)), row.names = c(NA, -4L), class = "data.frame", .Names = c("t.period", "t.period.min", "t.period.max")))		
-		set(tmp, NULL, 't.period.min', tmp[,  paste(floor(t.period.min), floor( 1+(t.period.min%%1)*12 ), sep='-')] )
-		set(tmp, NULL, 't.period.max', tmp[,  paste(floor(t.period.max), floor( 1+(t.period.max%%1)*12 ), sep='-')] )		
-		ct.plot		<- merge( ct.plot, tmp, by='t.period')
-		ct.plot[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
-		#	set pretty labels
-		set(ct.plot, ct.plot[,which(group=='n')], 'group', 'observed counts')
-		set(ct.plot, ct.plot[,which(group=='n.adj')], 'group', 'estimate adjusted\nfor right censoring')		
-		set(ct.plot, NULL, 'group', ct.plot[, factor(group, levels=c('observed counts','estimate adjusted\nfor right censoring'))])
-		#	plot
-		ggplot(ct.plot, aes(x=t.period.long, y=n, colour=factor.legend, shape=group)) + geom_point(size=3) +
-				labs(x='', y='potential transmission intervals in cohort\n(person-years per recipient MSM)',shape='') +
-				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +	
-				scale_shape_manual(values=c(8,2)) +
-				facet_grid(. ~ factor.legend, margins=FALSE) + theme(legend.position = "bottom")
-		file		<- paste(plot.file,'_censoringmodel.pdf',sep='')
-		ggsave(file=file, w=17, h=6)	
-		#
-		ct.plot		<- copy(ctb)			
-		ct.plot		<- merge(ct.plot, ct.plot[, list(risk=risk, factor2=factor2, prop.adj=round(n.adj/sum(n.adj),d=4), prop=round(n/sum(n),d=4)), by='t.period'], by=c('t.period','risk','factor2'))
-		ct.plot		<- melt(ct.plot, measure.vars=c('prop','prop.adj'), id.vars=c('t.period','risk','factor2','factor'), variable.name='group', value.name='prop')
-		ct.plot		<- merge( ct.plot, factors, by='factor2')
-		ct.plot		<- merge( ct.plot, tmp, by='t.period')
-		ct.plot[, t.period.long:= paste(t.period.min, ' to\n ', t.period.max,sep='')]
-		set(ct.plot, ct.plot[,which(group=='prop')], 'group', 'observed proportion')
-		set(ct.plot, ct.plot[,which(group=='prop.adj')], 'group', 'estimated proportion,\nadjusted for right censoring')
-		set(ct.plot, NULL, 'group', ct.plot[, factor(group, levels=c('observed proportion','estimated proportion,\nadjusted for right censoring'))])
-		ggplot(ct.plot, aes(x=t.period.long, y=prop, colour=factor.legend, shape=group)) + geom_point(size=3) +
-				labs(x='', y='potential transmission intervals in cohort\n(% within each observation period)',shape='') +
-				scale_y_continuous(breaks=seq(0,1,0.05)) +
-				scale_colour_manual(values=ct.plot[, unique(factor.color)], guide = FALSE) +	
-				scale_shape_manual(values=c(8,2)) +
-				facet_grid(. ~ factor.legend, margins=FALSE) + theme(legend.position = "bottom")
-		file		<- paste(plot.file,'_censoringmodelprop.pdf',sep='')
-		ggsave(file=file, w=17, h=6)	
-	}
+	ctb[, n.adj:= ctb[, n/p.cens]]		
 	#
 	ctb		<- subset(ctb, select=c(t.period, risk, factor, factor2, p.cens, p.cens.95l, p.cens.95u))
 	ctn		<- subset(ctn, select=c(t.period, risk, factor, factor2, n.adj))
@@ -891,10 +844,16 @@ sampling.get.all.tables.args<- function(method)
 			risktp.col		<- 't.stAgeC.prd'
 			risk.col		<- 't.stAgeC'			
 	}
+	if(grepl('m5B',method))
+	{
+		factor.ref.v	<- paste('T_(30,45]',tp,sep='')
+		risktp.col		<- 't.stAgeC.prd'
+		risk.col		<- 't.stAgeC'			
+	}
 	c('factor.ref.v'=factor.ref.v, 'risktp.col'=risktp.col, 'risk.col'=risk.col)
 }
 ######################################################################################
-censoring.get.all.tables<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
+censoring.get.all.tables.by.tperiod<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
 {
 	stopifnot(!is.na(risk.col), !is.na(risktp.col), !is.na(factor.ref.v))
 	
@@ -995,6 +954,131 @@ censoring.get.all.tables<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL,
 		setnames(cens.table.bs, c('factor.tp','factor'), c('factor', 'factor2'))			
 		set(cens.table.bs, NULL, 'stat',  cens.table.bs[, paste('X.msm.cbs',BS,sep='')])
 		cens.table.bs[, t.period:= cens.table.bs[, substr(factor, nchar(factor), nchar(factor))]]
+		gc()
+		#
+		# 	end boostrapping
+		#
+		# 	revert factor to tp for X.msm
+		set(X.msm, NULL, 'stage', X.msm[[risktp.col]])
+		set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])									
+		#	save
+		ans$cens.table		<- cens.table
+		ans$cens.table.bs	<- cens.table.bs
+		if(!is.na(save.file))
+		{			
+			cat(paste('\nsave to file', save.file))
+			save(ans, file=save.file)
+		}
+	}
+	ans
+}
+######################################################################################
+censoring.get.all.tables.by.trinterval<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA, c.period=0.125, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
+{
+	stopifnot(!is.na(risk.col), !is.na(risktp.col), !is.na(factor.ref.v))
+	t.period	
+	if(resume & !is.na(save.file))
+	{
+		options(show.error.messages = FALSE)		
+		readAttempt		<- try(suppressWarnings(load(save.file)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",save.file))					
+		options(show.error.messages = TRUE)		
+	}
+	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
+	{
+		ans	<- NULL		
+		if(is.null(YX) || is.null(X.seq) || is.null(X.msm) || is.null(X.clu))
+		{
+			cat(paste('\nreturn NULL table', method))
+			return(ans)	
+		}			
+		cat(paste('\ntables by method', method,'\nrisk.col', risk.col,'\nrisk.col.tp', risktp.col,'\nfactor.ref.v',factor.ref.v))
+		#YX<- copy(YX.s); X.clu<- copy(X.clu.s); X.seq<- copy(X.seq.s); X.msm<- copy(X.msm.s)
+		#	set stratifications. always use 'risktp.col' for censoring
+		set(YX, NULL, 'stage', YX[[risktp.col]])				
+		set(X.clu, NULL, 'stage', X.clu[[risktp.col]])
+		set(X.seq, NULL, 'stage', X.seq[[risktp.col]])
+		set(X.msm, NULL, 'stage', X.msm[[risktp.col]])
+		set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])									
+		set(X.seq, NULL, 'stage', X.seq[, factor(as.character(stage), levels=X.msm[, levels(stage)])])		
+		set(X.clu, NULL, 'stage', X.clu[, factor(as.character(stage), levels=X.msm[, levels(stage)])])
+		set(YX,    NULL, 'stage', YX[,    factor(as.character(stage), levels=X.msm[, levels(stage)])])
+		risk.df			<- data.table(risk='stage',factor=X.seq[, levels(stage)])		
+		#						
+		#	cens.table for all potential transmitters
+		#	these will be treated as uncensored in bootstrap estimation of censoring
+		#
+		cat(paste('\ncompute cens.table'))
+		cens.table		<- do.call('rbind',list(
+						risk.df[,	{
+									z	<- table( YX[, risk, with=FALSE], useNA='ifany')
+									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+								},by='risk'],
+						risk.df[,	{
+									z	<- table( X.clu[, risk, with=FALSE], useNA='ifany')
+									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.clu')												
+								},by='risk'],
+						risk.df[,	{
+									z	<- table( X.seq[, risk, with=FALSE], useNA='ifany')
+									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.seq')												
+								},by='risk'],
+						risk.df[,	{
+									z	<- table( X.msm[, risk, with=FALSE], useNA='ifany')
+									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='X.msm')
+								},by='risk']))
+		cens.table[, t.period:=cens.table[, substr(factor, nchar(factor), nchar(factor))]]
+		cens.table[, factor2:=cens.table[, substr(factor, 1, nchar(factor)-2)]]
+		cens.table		<- merge(cens.table, cens.table[, list(factor=factor, sum=sum(n, na.rm=TRUE), p= n/sum(n, na.rm=TRUE)), by=c('stat','t.period')], by=c('stat','t.period','factor'))
+		gc()
+		#
+		#	bootstrap approach to estimata right censoring
+		#
+		#	need temporarily factor without tp for X.msm
+		set(X.msm, NULL, 'stage', X.msm[[risk.col]])
+		set(X.msm, NULL, 'stage', X.msm[, factor(as.character(stage))])
+		#
+		#	start boostrapping estimation of censoring
+		#			
+		bs.cdelta		<- runif(bs.n, bs.cdelta.min, bs.cdelta.max)
+		#	table with bootstrap versions of calendar time periods for censoring					
+		tmp				<- rev(seq( tperiod.info[, max(t.period.max)], tperiod.info[, min(t.period.min)]-c.period, by=-c.period ))
+		tperiod.bs		<- data.table(t.period=factor(seq_len(length(tmp)-1)), t.period.min=tmp[-length(tmp)], t.period.max=tmp[-1])
+		tmp				<- tperiod.bs[, max(t.period.max)]
+		tperiod.bs		<- lapply(seq_along(bs.cdelta), function(b)
+				{
+					tmp	<- tperiod.bs[, list(t.period.min.bs= t.period.min-bs.cdelta[b], t.period.max.bs= t.period.max-bs.cdelta[b], cens.t=tmp-bs.cdelta[b], cens.delta=bs.cdelta[b]), by='t.period']
+					tmp[, BS:=b]
+					tmp
+				})
+		tperiod.bs		<- do.call('rbind', tperiod.bs)		
+		#	expand tperiod.bs to include risk and factor
+		tmp				<- as.data.table(expand.grid(risk='stage', factor=X.msm[, levels(stage)], t.period= tperiod.bs[, unique(t.period)], stringsAsFactors=F))
+		tperiod.bs		<- merge(tperiod.bs, tmp, by='t.period', allow.cartesian=TRUE)
+		#
+		# 	compute cens.table.bs	
+		# 	for every bootstrap cdelta.bs
+		#		compute tperiod.bs by	tperiod.start/end - cdelta.bs
+		#		get table
+		cat(paste('\ncompute cens.table.bs'))
+		cens.table.bs	<- tperiod.bs[, {
+					bs.breaks	<- c( -Inf, t.period.min.bs, max(t.period.max.bs), Inf)
+					bs.labels	<- paste(factor,seq.int(0,length(bs.breaks)-2),sep='.')
+					tmp			<- which( X.msm[[risk]]==factor )							
+					n.all		<- cut( X.msm[tmp, AnyPos_T1], breaks=bs.breaks, labels=bs.labels, right=FALSE)
+					n.all		<- table(n.all, useNA='ifany'  )					
+					n.pseudocens<- cut( subset(X.msm[tmp,], t.AnyPos_T1<cens.t[1])[, AnyPos_T1], breaks=bs.breaks, labels=bs.labels, right=FALSE)
+					n.pseudocens<- table(n.pseudocens, useNA='ifany'  )
+					tmp			<- merge( data.table( factor.tp=rownames(n.all), n=as.numeric(unclass(n.all)) ), data.table( factor.tp=rownames(n.pseudocens), nc=as.numeric(unclass(n.pseudocens)) ), by='factor.tp', all.x=TRUE, all.y=TRUE )
+					set(tmp, NULL, 't.period', tmp[, as.numeric(regmatches(factor.tp, regexpr('[0-9]+$',factor.tp)))])
+					setkey(tmp, t.period)
+					tmp[, t.period.min.bs:=c(NA_real_,t.period.min.bs,NA_real_)]
+					tmp[, t.period.max.bs:=c(NA_real_,t.period.max.bs,NA_real_)]
+					list(factor.tp=tmp[, factor.tp], n=tmp[, n], nc=tmp[, nc], t.period.min.bs=tmp[, t.period.min.bs], t.period.max.bs=tmp[,t.period.max.bs], cens.delta=cens.delta[1], cens.t=cens.t[1])
+				}, by=c('BS','risk','factor')]	
+		cens.table.bs	<- subset(cens.table.bs, !is.na(t.period.min.bs))
+		setnames(cens.table.bs, c('factor.tp','factor'), c('factor', 'factor2'))			
+		set(cens.table.bs, NULL, 'stat',  cens.table.bs[, paste('X.msm.cbs',BS,sep='')])
+		cens.table.bs[, t.period:= cens.table.bs[, regmatches(factor,regexpr('[0-9]+$',factor))]]
 		gc()
 		#
 		# 	end boostrapping
@@ -1309,7 +1393,7 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', method, 'STRAT_',gsub('\\.clu\\.adj','',gsub('\\.tp[0-9]','',method.risk)),'.R',sep='')
 	save(YX, X.clu, X.seq, X.msm, file=save.file)	
 #STOP1		
-stop()
+#stop()
 	#
 	#	compute sampling and censoring tables that are needed for adjustments
 	#
@@ -1329,8 +1413,9 @@ stop()
 			#	sampling tables
 			Stab			<- sampling.get.all.tables(YX, X.seq, X.msm, X.clu, tperiod.info=tperiod.info, resume=resume, save.file=save.file, method=method.risk, risk.col=args['risk.col'], risktp.col=args['risktp.col'], factor.ref.v=args['factor.ref.v'])
 			#	censoring tables
-			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Ctables',method.PDT,'_',tmp,'.R',sep='')
-			Ctab			<- censoring.get.all.tables(YX, X.seq, X.msm, X.clu, tperiod.info=tperiod.info, resume=resume, save.file=save.file, method=method.risk, risk.col=args['risk.col'], risktp.col=args['risktp.col'], factor.ref.v=args['factor.ref.v'], bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
+			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Ctables',method.PDT,'_',tmp,'.R',sep='')			
+			Ctab			<- censoring.get.all.tables.by.trinterval(YX, X.seq, X.msm, X.clu, tperiod.info=tperiod.info, resume=resume, save.file=save.file, method=method.risk, risk.col=args['risk.col'], risktp.col=args['risktp.col'], factor.ref.v=args['factor.ref.v'], c.period=t.period, bs.n=1000, bs.cdelta.min=2, bs.cdelta.max=3)
+			#Ctab			<- censoring.get.all.tables(YX, X.seq, X.msm, X.clu, tperiod.info=tperiod.info, resume=resume, save.file=save.file, method=method.risk, risk.col=args['risk.col'], risktp.col=args['risktp.col'], factor.ref.v=args['factor.ref.v'], bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
 stop()
 	}
 	X.clu<- X.seq<- X.msm<- NULL
