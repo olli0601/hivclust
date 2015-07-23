@@ -976,7 +976,6 @@ censoring.get.all.tables.by.tperiod<- function(YX=NULL, X.seq=NULL, X.msm=NULL, 
 censoring.get.all.tables.by.trinterval<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA, c.period=0.125, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
 {
 	stopifnot(!is.na(risk.col), !is.na(risktp.col), !is.na(factor.ref.v))
-	t.period	
 	if(resume & !is.na(save.file))
 	{
 		options(show.error.messages = FALSE)		
