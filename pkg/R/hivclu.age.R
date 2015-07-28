@@ -282,7 +282,8 @@ hivc.prog.age_props_univariate<- function()
 		stopifnot(length(files)==0)		
 	}		
 	#	check if we have precomputed tables
-	X.tables				<- age.get.Xtables(method, method.PDT, method.risk, outdir, outfile, insignat)
+	#X.tables				<- age.get.Xtables(method, method.PDT, method.risk, outdir, outfile, insignat)
+	X.tables				<- age.get.sampling.censoring.models(method, method.PDT, method.risk, outdir, outfile, insignat)
 	#	if no tables, precompute tables and stop (because mem intensive)
 	#	otherwise return stratified YX data.table and continue
 	tmp	<- age.precompute(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,
@@ -291,7 +292,7 @@ hivc.prog.age_props_univariate<- function()
 			method, method.recentctime, method.nodectime, method.risk, method.Acute, method.minQLowerU, method.use.AcuteSpec, method.brl.bwhost, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.tpcut, method.PDT, method.cut.brl, tp.cut, adjust.AcuteByNegT, any.pos.grace.yr, dur.Acute, method.thresh.bs, 
 			outdir, outfile,
 			t.period, t.recent.startctime, t.endctime, t.recent.endctime,
-			X.tables, resume, verbose
+			is.null(X.tables), resume, verbose
 	)
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args
@@ -420,6 +421,22 @@ hivc.prog.age_props_univariate<- function()
 	project.athena.Fisheretal.plot.selected.transmitters(clumsm.info, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, outfile, pdf.height=600)	
 }
 ######################################################################################
+age.get.sampling.censoring.models<- function(method, method.PDT, method.risk, outdir, outfile, insignat)
+{
+	ans				<- NULL
+	tmp				<- NA
+	if(grepl('m5A',method.risk))	tmp	<- 'm5A'
+	if(grepl('m5B',method.risk))	tmp	<- 'm5B'
+	if(is.na(save.file))	stop('unknown method.risk')								
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Smodel',method.PDT,'_',tmp,'.R',sep='')
+	sm				<- sampling.model.calculate(NULL, NULL, NULL, NULL, NULL, resume=TRUE, save.file=save.file)		
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Cmodel',method.PDT,'_',tmp,'.R',sep='')
+	cm				<- censoring.model.calculate.bs(NULL, NULL, resume=TRUE, save.file=save.file, t.recent.endctime=NA, risk.col=NA, c.period=NA, c.smpl.n=NA, bs.n=NA, bs.cdelta.min=NA, bs.cdelta.max=NA)		
+	ans$sm			<- sm
+	ans$cm			<- cm				
+	ans
+}
+######################################################################################
 age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, insignat)
 {
 	X.tables			<- NULL
@@ -451,6 +468,317 @@ age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, ins
 		}
 	}
 	X.tables
+}
+######################################################################################
+censoring.get.dataset<- function(tp.df, df.all.allmsm)
+{	
+	#	set up data set	
+	if(!any(colnames(tp.df)=='r.Patient'))
+		setnames(tp.df, c('t.Patient','Patient'), c('Patient','r.Patient'))
+	setkey(tp.df, r.Patient, Patient)
+	setkey(df.all.allmsm, Patient)
+	tmp			<- unique(df.all.allmsm)
+	tmp			<- subset( tmp, select=c(Patient, RegionHospital, DateBorn, isAcute, NegT, AnyPos_T1, PosCD4_T1, CD4_T1))
+	#	add age at diagnosis
+	tmp[, Age_T1:= AnyPos_T1-DateBorn]
+	tmp[, DateBorn:=NULL]
+	#	add isAcute
+	set(tmp, tmp[, which(isAcute!='Yes' | is.na(isAcute))], 'isAcute', 'NI')
+	set(tmp, NULL, 'isAcute', tmp[, factor(isAcute)])
+	#	add CD4C
+	tmp[, CD4C:= tmp[, cut(CD4_T1, breaks=c(-Inf,250, 350, 500, 750, Inf))]]
+	set(tmp, tmp[, which(is.na(CD4C))],'CD4C','CD4.NA')
+	set(tmp, tmp[, which(PosCD4_T1-AnyPos_T1>1)],'CD4C','CD4.late')	
+	tmp[, AgeC_T1:= tmp[, cut(Age_T1, breaks=c(-Inf,25, 30, 45, Inf))]]	
+	#	add ACD4C isAcute=='NI' and CD4C
+	tmp[, ACD4C:= tmp[, cut(CD4_T1, breaks=c(-Inf,250, 350, 500, 750, Inf))]]
+	set(tmp, tmp[, which(is.na(ACD4C))],'ACD4C','CD4.NA')
+	set(tmp, tmp[, which(PosCD4_T1-AnyPos_T1>1)],'ACD4C','CD4.late')	
+	set(tmp, tmp[, which(isAcute=='Yes')],'ACD4C','CD4.Acute')
+	#	add age at diagnosis
+	tmp[, AgeC_T1:= tmp[, cut(Age_T1, breaks=c(-Inf,25, 30, 45, Inf))]]
+	#	interaction age and ACD4C
+	tmp[, AACD4C:= tmp[, factor(paste(as.character(ACD4C),'-',as.character(AgeC_T1),sep=''))]]
+	#
+	tpd.df		<- merge(tp.df, tmp, by='Patient')	
+	tpd.df
+}
+######################################################################################
+censoring.check.censdelta<- function()
+{
+	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
+	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C2V100bInfT7STRAT_m5B.R'
+	load(paste(indir,'/',infile,sep=''))
+	stage.labels<- c("UAC", "UAE", "UC", "DAC", "D", "L", "T")
+	c.period	<- 0.125 
+	bs.cdelta.min	<- 2
+	bs.cdelta.max	<- 3
+	
+	require(zoo)
+	tp.df		<- subset(X.msm, grepl('^U',stageC))[, list(tm=mean(t)), by=c('t.Patient','Patient')]
+	tpd.df		<- censoring.get.dataset(tp.df, df.all.allmsm)	
+	
+	
+	cens.bs		<- c(bs.cdelta.min, (bs.cdelta.min+bs.cdelta.max)/2, bs.cdelta.max)
+	cens.bs		<- data.table(cens.t=t.recent.endctime-cens.bs, cens.delta=cens.bs, BS=seq_along(cens.bs))
+	tpd.df[, NCNS:= tpd.df[, as.numeric(AnyPos_T1<cens.bs[2, cens.t])]]	#transmitter not censored
+	set(tpd.df, NULL, 'tm', tpd.df[, tm-cens.bs[2, cens.t]])
+	tpd.df[, NCNST:='2008.5']
+	tmp			<- copy(tpd.df)
+	tmp[, NCNS:= tmp[, as.numeric(AnyPos_T1<cens.bs[3, cens.t])]]	
+	tmp[, NCNST:='2008']
+	set(tmp, NULL, 'tm', tmp[, cens.bs[2, cens.t]+tm-cens.bs[3, cens.t]])
+	tpd.df		<- rbind(tpd.df, tmp)
+	tmp[, NCNS:= tmp[, as.numeric(AnyPos_T1<cens.bs[1, cens.t])]]	
+	set(tmp, NULL, 'tm', tmp[, cens.bs[3, cens.t]+tm-cens.bs[1, cens.t]])
+	tmp[, NCNST:='2009']
+	tpd.df		<- rbind(tpd.df, tmp)
+	
+	tmp			<- rev(seq(t.recent.endctime, 2000, by=-c.period)) - (t.recent.endctime-(bs.cdelta.min+bs.cdelta.max)/2)
+	tmp			<- c( tpd.df[, min(tm)-c.period], tmp)
+	tpd.df[, tmC:= tpd.df[, cut(tm, breaks=tmp)]]
+	tpd.df[, DUMMY:=seq_len(nrow(tpd.df))]
+	tmp			<- tpd.df[, {
+				list(DUMMY=sample(DUMMY, min( length(DUMMY),c.smpl.n ))) 
+			}, by=c('tmC','ACD4C','AgeC_T1','NCNST')]
+	tpds.df		<- merge( tpd.df, subset(tmp, select=DUMMY), by='DUMMY' )
+	tpds.df[, DUMMY:=NULL]
+	
+	#	stratify by isAcute + NCNST
+	setkey(tpds.df, NCNST, isAcute, tm)
+	tmp		<- merge(tpds.df, data.table(isAcute=c('Yes','NI'), DUMMY=c(1e2, 2e3)), by='isAcute')
+	setkey(tmp, NCNST, isAcute, tm)		
+	z		<- tmp[, list( Patient=Patient, r.Patient=r.Patient, tm=tm, NCNS.rm5=rollapply(NCNS, width=DUMMY[1], FUN=mean, align="center", partial=TRUE) ), by=c('NCNST','isAcute')]
+	tpds.df	<- merge(tpds.df, z, by=c('Patient','r.Patient','tm','NCNST','isAcute'))
+	
+	
+	ggplot(tpds.df, aes(x=tm, y=NCNS.rm5, colour=NCNST)) + geom_line() + facet_grid(~isAcute)
+	ggsave(file=paste(outdir, '/', outfile, '_CENSMODEL_censdelta_hasnoeffect.pdf', sep=''), w=10, h=5)
+}
+######################################################################################
+censoring.subsample.tmC_ACD4C_AgeC_T1<- function(tpd.df, t.recent.endctime, bs.cdelta.min, bs.cdelta.max, c.period)
+{
+	tpds.df		<- copy(tpd.df)
+	tmp			<- rev(seq(t.recent.endctime, 2000, by=-c.period)) - (t.recent.endctime-(bs.cdelta.min+bs.cdelta.max)/2)
+	tmp			<- c( tpds.df[, min(tm)-c.period], tmp)
+	tpds.df[, tmC:= tpds.df[, cut(tm, breaks=tmp)]]
+	tpds.df[, DUMMY:=seq_len(nrow(tpds.df))]
+	tmp			<- tpds.df[, {
+				list(DUMMY=sample(DUMMY, min( length(DUMMY),c.smpl.n ))) 
+			}, by=c('tmC','ACD4C','AgeC_T1')]
+	tpds.df		<- merge( tpds.df, subset(tmp, select=DUMMY), by='DUMMY' )
+	tpds.df[, DUMMY:=NULL]
+	tpds.df
+}
+######################################################################################
+censoring.model.exploreoptions<- function(tpds.df)
+{
+	#	explore different censoring models
+	#	baseline model: depends on midpoint of transmission interval
+	setkey(tpds.df, tm)
+	tpds.df[, NCNS.rm:=tpds.df[, rollapply(NCNS, width=1e3, FUN=mean, align="center", partial=TRUE)]]	
+	ggplot(tpds.df, aes(x=tm, y=NCNS.rm)) + geom_line()
+	#	stratify by isAcute
+	setkey(tpds.df, isAcute, tm)
+	tmp		<- tpds.df[, list( Patient=Patient, r.Patient=r.Patient, tm=tm, NCNS.rm1=rollapply(NCNS, width=1e3, FUN=mean, align="center", partial=TRUE) ), by='isAcute']
+	tpds.df	<- merge(tpds.df, tmp, by=c('Patient','r.Patient','tm','isAcute'))
+	ggplot(tpds.df, aes(x=tm, y=NCNS.rm1, colour=isAcute)) + geom_line() + scale_x_continuous(breaks=seq(-20,10,5), minor_breaks=seq(-20,10,1))
+	ggsave(file=paste(outdir, '/', outfile, '_CENSRMEAN_rm1.pdf', sep=''), w=5, h=5)
+	#	substantial differences in censoring
+	
+	#	stratify by RegionHospital + isAcute
+	setkey(tpds.df, RegionHospital, isAcute, tm)
+	tmp		<- merge(tpds.df, data.table(isAcute=c('Yes','NI'), DUMMY=c(1e2, 1e3)), by='isAcute')
+	setkey(tmp, RegionHospital, isAcute, tm)	
+	z		<- tmp[, list( Patient=Patient, r.Patient=r.Patient, tm=tm, NCNS.rm2=rollapply(NCNS, width=DUMMY[1], FUN=mean, align="center", partial=TRUE) ), by=c('RegionHospital','isAcute')]
+	tpds.df	<- merge(tpds.df, z, by=c('tm','Patient','r.Patient','RegionHospital','isAcute'))
+	setkey(tpds.df, RegionHospital, isAcute, tm)
+	ggplot(tpds.df, aes(x=tm, y=NCNS.rm2, colour=RegionHospital)) + geom_line() + facet_grid(~isAcute) + scale_x_continuous(breaks=seq(-20,10,5), minor_breaks=seq(-20,10,1))
+	ggsave(file=paste(outdir, '/', outfile, '_CENSRMEAN_rm2.pdf', sep=''), w=10, h=5)
+	#	no particular geographical differences
+	
+	#	stratify by CD4 at diagnosis
+	setkey(tpds.df, ACD4C, tm)
+	tmp		<- merge(tpds.df, data.table(ACD4C=c("(-Inf,250]","(250,350]","(350,500]","(500,750]","(750, Inf]","CD4.NA","CD4.late","CD4.Acute"), DUMMY=c(rep(1e3,7),1e2)), by='ACD4C')
+	setkey(tmp, ACD4C, tm)		
+	z		<- tmp[, list( Patient=Patient, r.Patient=r.Patient, tm=tm, NCNS.rm3=rollapply(NCNS, width=DUMMY[1], FUN=mean, align="center", partial=TRUE) ), by=c('ACD4C')]
+	tpds.df	<- merge(tpds.df, z, by=c('tm','Patient','r.Patient','ACD4C'))
+	setkey(tpds.df, ACD4C, tm)
+	ggplot(tpds.df, aes(x=tm, y=NCNS.rm3, colour=ACD4C)) + geom_line() + scale_x_continuous(breaks=seq(-20,10,5), minor_breaks=seq(-20,10,1))
+	ggsave(file=paste(outdir, '/', outfile, '_CENSRMEAN_rm3.pdf', sep=''), w=5, h=5)
+	#	for isAcute=Yes, no stratification needed
+	#	for isAcute=NI, <250, 250-350, 350-500, 500-750, >750, CD4.NA, CD4.late seem good
+	
+	#	stratify by age at diagnosis + CD4 at diagnosis
+	setkey(tpds.df, AACD4C, tm)
+	tmp		<- data.table(AACD4C=tpds.df[, levels(AACD4C)], DUMMY=2e2)
+	set(tmp, tmp[, which(grepl('CD4.Acute',AACD4C,fixed=T))], 'DUMMY', 1e2)
+	tmp		<- merge(tpds.df, tmp, by='AACD4C')
+	setkey(tmp, AACD4C, tm)		
+	z		<- tmp[, list( Patient=Patient, r.Patient=r.Patient, tm=tm, NCNS.rm4=rollapply(NCNS, width=DUMMY[1], FUN=mean, align="center", partial=TRUE) ), by=c('AACD4C')]
+	tpds.df	<- merge(tpds.df, z, by=c('tm','Patient','r.Patient','AACD4C'))
+	setkey(tpds.df, AACD4C, tm)
+	ggplot(tpds.df, aes(x=tm, y=NCNS.rm4, colour=AgeC_T1)) + geom_line() + facet_grid(~ACD4C) + scale_x_continuous(breaks=seq(-20,10,5), minor_breaks=seq(-20,10,1))
+	ggsave(file=paste(outdir, '/', outfile, '_CENSRMEAN_rm4.pdf', sep=''), w=20, h=5)
+	#	for isAcute=NI, Age is an independent effect in addition to CD4C
+	
+	#
+	#	build models
+	#
+	tprs.df	<- subset(tpds.df, select=c(tm, Patient, r.Patient, AgeC_T1, CD4C, ACD4C, AACD4C, isAcute, RegionHospital, NCNS, NCNS.rm, NCNS.rm1, NCNS.rm2, NCNS.rm3, NCNS.rm4))	
+	#	isAcute
+	cs1		<- gamlss(formula= NCNS ~ isAcute*ns(tm, df=6), family=BI(), data=tprs.df)
+	tprs.df[, CS1:=predict(cs1, type='response')]	
+	ggplot(melt(tprs.df, measure.vars=c('NCNS.rm1','CS1'), id.vars=c('tm','isAcute')), aes(x=tm, y=value, group=variable, colour=variable)) +
+			scale_x_continuous(breaks=seq(1980,2020,5), minor_breaks=seq(1980,2020,1)) +
+			geom_line() + facet_grid(~isAcute)
+	ggsave(file=paste(outdir, '/', outfile, '_CENSMODEL_cs1.pdf', sep=''), w=10, h=5)
+	#
+	#	isAcute and CD4
+	#cs3		<- gamlss(formula= NCNS ~ ACD4C*ns(tm, df=6), family=BI(), data=tprs.df)
+	#	df=6 results in bumps; df3 looks much better
+	cs3		<- gamlss(formula= NCNS ~ ACD4C*ns(tm, df=3), family=BI(), data=tprs.df)	
+	tprs.df[, CS3:=predict(cs3, type='response')]
+	tmp		<- melt(tprs.df, measure.vars=c('NCNS.rm3','CS3'), id.vars=c('tm','ACD4C'))
+	ggplot(tmp, aes(x=tm, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(~ACD4C)
+	ggsave(file=paste(outdir, '/', outfile, '_CENSMODEL_cs3.pdf', sep=''), w=20, h=5)
+	#
+	#	isAcute, CD4, Age at diagnosis
+	cs4		<- gamlss(formula= NCNS ~ AACD4C*cs(tm, df=5), family=BI(), data=tprs.df)
+	tprs.df[, CS4:=predict(cs4, type='response')]
+	tmp		<- melt(tprs.df, measure.vars=c('NCNS.rm4','CS4'), id.vars=c('tm','ACD4C','AgeC_T1'))
+	ggplot(tmp, aes(x=tm, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(AgeC_T1~ACD4C)
+	ggsave(file=paste(outdir, '/', outfile, '_CENSMODEL_cs4.pdf', sep=''), w=20, h=15)
+	#z		<- subset(tprs.df, AgeC_T1=='(-Inf,25]')
+	#cs4b	<- gamlss(formula= NCNS ~ ACD4C*cs(tm, df=3), family=BI(), data=z)
+	#z[, CS4:=predict(cs4b, type='response')]
+	#ggplot(melt(z, measure.vars=c('NCNS.rm4','CS4'), id.vars=c('tm','ACD4C','AgeC_T1')), aes(x=tm, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(AgeC_T1~ACD4C)	
+}
+######################################################################################
+censoring.model.150728<- function(tpds.df)
+{
+	tprs.df	<- subset(tpds.df, select=c(tm, Patient, r.Patient, AACD4C, NCNS))
+	cs4		<- gamlss(formula= NCNS ~ AACD4C*cs(tm, df=5), family=BI(), data=tprs.df)
+	tprs.df[, p.nc:=predict(cs4, type='response')]
+	list(predict=subset(tprs.df, select=c(tm, Patient, r.Patient, p.nc)), model=cs4)
+	#tmp		<- melt(tprs.df, measure.vars=c('NCNS.rm4','CS4'), id.vars=c('tm','ACD4C','AgeC_T1'))
+	#ggplot(tmp, aes(x=tm, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(AgeC_T1~ACD4C)
+	#ggsave(file=paste(outdir, '/', outfile, '_CENSMODEL_cs4.pdf', sep=''), w=20, h=15)	
+}
+######################################################################################
+censoring.model.calculate.bs.args<- function(method)
+{	
+	if(grepl('m5A',method))
+	{
+		risk.col		<- 'stageC'			
+	}
+	if(grepl('m5B',method))
+	{
+		risk.col		<- 'stageC'			
+	}
+	risk.col
+}
+######################################################################################
+censoring.model.calculate.bs<- function(X.msm, df.all.allmsm, resume=TRUE, save.file=NA, t.recent.endctime=NA, risk.col=NA, c.period=0.125, c.smpl.n=50, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
+{
+	require(zoo)	
+	if(resume & !is.na(save.file))
+	{
+		options(show.error.messages = FALSE)		
+		readAttempt		<- try(suppressWarnings(load(save.file)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",save.file))					
+		options(show.error.messages = TRUE)		
+	}
+	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
+	{		
+		if(is.null(X.msm))
+			return(NULL)
+		stopifnot(!is.na(risk.col),  !is.na(t.recent.endctime))
+		cens.bs		<- runif(bs.n, bs.cdelta.min, bs.cdelta.max)
+		cens.bs		<- data.table(cens.t=t.recent.endctime-cens.bs, cens.delta=cens.bs, BS=seq_along(cens.bs))
+		cens.m		<- vector('list', length=bs.n)
+		cens.p		<- vector('list', length=bs.n)
+		tp.df		<- subset(X.msm, grepl('^U', X.msm[[risk.col]]))[, list(tm=mean(t)), by=c('t.Patient','Patient')]
+		tpd.df		<- censoring.get.dataset(tp.df, df.all.allmsm)
+		tpd.df[, tmo:= tpd.df[, tm]]
+		#	add pseudo censoring time
+		for(bs in seq_len(bs.n))
+		{
+			tpd.df[, NCNS:= tpd.df[, as.numeric(AnyPos_T1<cens.bs[bs, cens.t])]]	#transmitter not censored
+			set(tpd.df, NULL, 'tm', tpd.df[, tmo-cens.bs[bs, cens.t]])
+			#	balanced sub sampling so regression is comp feasible
+			tpds.df		<- censoring.subsample.tmC_ACD4C_AgeC_T1(tpd.df, t.recent.endctime, bs.cdelta.min, bs.cdelta.max, c.period)
+			tmp			<- censoring.model.150728(tpds.df)
+			cens.m[[bs]]<- tmp$model
+			cens.p[[bs]]<- copy(tmp$predict)
+			cens.p[[bs]][, BS:=bs]
+		}
+		#	save
+		if(!is.na(save.file))
+			save(tp.df, tpd.df, cens.p, cens.m, file=save.file)
+	}
+	list(cens.p=cens.p, cens.m=cens.m)
+}
+######################################################################################
+censoring.dev<- function()
+{
+	#	take Xmsm potential transmitters to recipients and collect variables
+	#	t.isAcute, t.diag time, t.age at diag, t.RegionHospital
+	#	
+	#	for pseudo censoring time tc, and censor every transmitter with t.AnyPos_T1>tc -> y=0
+	#	p is then the prob of not being censored
+	#	p depends on as a spline on trintervaltime t. Too much data. Take midpoint of infection window.
+	#	spline differs for isAcute. 
+	#	Age of transmitter at diagnosis? If old, likely to have progressed further and more likely to be observed. 
+	#	CD4 of transmitter at diagnosis. If low CD4, more likely to be oserved.
+	#	RegionHospital	
+	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
+	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C2V100bInfT7STRAT_m5B.R'
+	load(paste(indir,'/',infile,sep=''))
+	stage.labels<- c("UAC", "UAE", "UC", "DAC", "D", "L", "T")
+	
+	#need df.all.allmsm
+	c.period	<- 0.125
+	c.smpl.n	<- 50
+	bs.n=10
+	bs.cdelta.min=2
+	bs.cdelta.max=3
+	t.recent.endctime
+		
+	cens.bs		<- runif(bs.n, bs.cdelta.min, bs.cdelta.max)
+	cens.bs		<- data.table(cens.t=t.recent.endctime-cens.bs, cens.delta=cens.bs, BS=seq_along(cens.bs))
+	bs			<- 1
+	
+	cens.m		<- vector('list', length=bs.n)
+	cens.p		<- vector('list', length=bs.n)
+	require(zoo)
+	tp.df		<- subset(X.msm, grepl('^U',stageC))[, list(tm=mean(t)), by=c('t.Patient','Patient')]
+	tpd.df		<- censoring.get.dataset(tp.df, df.all.allmsm)
+	tpd.df[, tmo:= tpd.df[, tm]]
+	#	add pseudo censoring time
+	for(bs in seq_len(bs.n))
+	{
+		tpd.df[, NCNS:= tpd.df[, as.numeric(AnyPos_T1<cens.bs[bs, cens.t])]]	#transmitter not censored
+		set(tpd.df, NULL, 'tm', tpd.df[, tmo-cens.bs[bs, cens.t]])
+		#	balanced sub sampling so regression is comp feasible
+		tpds.df		<- censoring.subsample.tmC_ACD4C_AgeC_T1(tpd.df, t.recent.endctime, bs.cdelta.min, bs.cdelta.max, c.period)
+		tmp			<- censoring.model.150728(tpds.df)
+		cens.m[[bs]]<- tmp$model
+		cens.p[[bs]]<- copy(tmp$predict)
+		cens.p[[bs]][, BS:=bs]
+	}
+	cens.p		<- do.call('rbind', cens.p)
+	cens.pm		<- cens.p[, list(p.nc.med= median(p.nc)), by=c('Patient','r.Patient')]
+	cens.p		<- merge(cens.p, subset(tpd.df, select=c(Patient, r.Patient, AgeC_T1, ACD4C, AACD4C)), by=c('Patient','r.Patient'))
+	ggplot(cens.p, aes(x=tm, y=p.nc, group=factor(BS), colour=factor(BS))) + geom_line() + facet_grid(AgeC_T1~ACD4C)	
+	ggsave(file=paste(outdir, '/', outfile, '_CENSMODEL_cs4_bsn10.pdf', sep=''), w=20, h=15)	
+	#	save
+	save(tp.df, tpd.df, cens.p, cens.m, df.all.allmsm, file=paste(outdir, '/', outfile, '_CENSMODEL_cs4_bsn10.R', sep=''))
+	
+	#	predict
+	z		<- subset(cens.p, BS==1 & AACD4C=='(-Inf,250]-(30,45]')[1,]
+	z		<- merge(subset(z, select=which(colnames(z)!='tm')), data.table(Patient=z$Patient[1], tm=seq(-5,0,0.25)), by='Patient')
+	predict(cens.m[[4]], data=subset(cens.p, BS==4), newdata=z , type='response')
 }
 ######################################################################################
 censoring.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
@@ -511,8 +839,13 @@ censoring.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
 sampling.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
 {		
 	require(Hmisc)
-	indir	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
-	infile	<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3pa1H1.48C2V100bInfT7_StablesSEQ_m5A.R'	
+	indir			<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
+	infile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3pa1H1.48C2V100bInfT7_StablesSEQ_m5A.R'	
+	stage.labels	<- c('UA','UC','D','T','L')
+	pdf.w			<- 15
+	infile			<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3pa1H1.48C2V100bInfT7_StablesSEQ_m5B.R'
+	stage.labels	<- c("UAC", "UAE", "UC", "DAC", "D", "L", "T")
+	pdf.w			<- 20
 	
 	load(paste(indir,'/',infile,sep=''))
 	df		<- ans$risk.table	
@@ -533,7 +866,7 @@ sampling.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
 	#	separate stage and age
 	set(dfp, NULL, 'age', dfp[, sapply(strsplit(as.character(factor),'_'),'[[',2)])
 	set(dfp, NULL, 'stage', dfp[, sapply(strsplit(as.character(factor),'_'),'[[',1)])
-	set(dfp, NULL, 'stage', dfp[, factor(stage, levels=c('UA','UC','D','T','L'))])
+	set(dfp, NULL, 'stage', dfp[, factor(stage, levels=stage.labels)])
 	set(dfp, NULL, 'age', dfp[, factor(age, levels=c('(-1,25]','(25,30]','(30,45]','(45,100]'))])
 	#	plot p.seq		
 	ggplot(dfp, aes(x=p.seq, y=t.period.long, shape=age, colour=age)) + geom_point(size=3) +
@@ -544,24 +877,137 @@ sampling.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
 				theme(axis.text.x=element_text(size=10), axis.text.y=element_text(size=10), axis.title=element_text(size=10), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.4), panel.grid.minor.x=element_line(colour="grey70", size=0.4), panel.grid.minor.y=element_blank(), panel.grid.major.y=element_blank(), panel.margin = unit(2, "lines")) + 				
 				labs(y='', x='overlap intervals\nof a potential transmitter with a sequence\n(%)', colour='age of potential transmitter\nat transmission interval') +
 				facet_grid(~stage)  				
-	ggsave(file=paste(indir, '/', gsub('\\.R','_STRATSAMPLING_cmp_Age.pdf',infile), sep=''), w=15, h=5)
+	ggsave(file=paste(indir, '/', gsub('\\.R','_STRATSAMPLING_cmp_Age.pdf',infile), sep=''), w=pdf.w, h=5)
 	
-	ggplot(dfp, aes(x=p.seq, y=t.period.long, shape=stage, colour=stage)) + geom_point(size=3) +
-			scale_x_continuous(breaks=seq(0,100,10), minor_breaks=NULL, limit=c(0,100), expand=c(0,0)) +
-			scale_shape_discrete(guide=FALSE) +
+	ggplot(dfp, aes(x=p.seq, y=t.period.long, colour=stage)) + geom_point(size=3) +
+			scale_x_continuous(breaks=seq(0,100,10), minor_breaks=NULL, limit=c(0,100), expand=c(0,0)) +			
 			#scale_colour_manual(values=dfp[, unique(factor.color)], guide=FALSE) +
 			theme_bw() +				
 			theme(axis.text.x=element_text(size=10), axis.text.y=element_text(size=10), axis.title=element_text(size=10), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.4), panel.grid.minor.x=element_line(colour="grey70", size=0.4), panel.grid.minor.y=element_blank(), panel.grid.major.y=element_blank(), panel.margin = unit(2, "lines")) + 				
 			labs(y='', x='overlap intervals\nof a potential transmitter with a sequence\n(%)', colour='stage of potential transmitter\nat transmission interval') +
 			facet_grid(~age)  				
-	ggsave(file=paste(indir, '/', gsub('\\.R','_STRATSAMPLING_cmp_Stage.pdf',infile), sep=''), w=15, h=5)
-	
+	ggsave(file=paste(indir, '/', gsub('\\.R','_STRATSAMPLING_cmp_Stage.pdf',infile), sep=''), w=15, h=5)	
 	#
-	#	sequence sampling does not vary much by age of potential transmitter
+	#	compare with new sampling model
 	#
+	tmp		<- subset(dfp, select=c(t.period.long, age, stage, p.seq))
+	setnames(tmp, c('p.seq','stage','age'),c('p.seq.prev','stageC','t.AgeC'))
+	z		<- YXs[, list(p.seq.me=mean(p.seq), p.seq.md=median(p.seq)), by=c('t.period.long','t.AgeC','stageC')]
+	tmp		<- merge(tmp, z, by=c('t.period.long','t.AgeC','stageC'))
+	ggplot(tmp, aes(x=p.seq.prev, y=100*p.seq.me, colour=stageC)) + geom_abline(intercept=0, slope=1, colour='black') + 
+			geom_point() +
+			facet_grid(t.period.long~t.AgeC) +
+			labs(colour='stage of potential transmitter\nat transmission interval') +
+			theme_bw() + theme(legend.position='bottom')
+	ggsave(file=paste(indir, '/', gsub('\\.R','_STRATSAMPLINGMODEL_cmp_Stage.pdf',infile), sep=''), w=7, h=7)
+	#
+	#	when there s few cases eg (-1,25] then the sampling probs may disagree 
+	#	overall, the new model gives higher sampling probabilities
 }
 ######################################################################################
-sampling.get.dataset<- function(pt.df, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, df.treatment.allmsm, t.period, t.endctime, method.lRNA.supp=2, method.lRNA.nsupp=4, contact.grace=1.5)
+sampling.model.calculate<- function(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, df.treatment.allmsm, t.period=NA, t.endctime=NA, method.lRNA.supp=NA, method.lRNA.nsupp=4, contact.grace=NA, resume=TRUE, save.file=NA)	
+{
+	
+	if(resume & !is.na(save.file))
+	{
+		options(show.error.messages = FALSE)		
+		readAttempt		<- try(suppressWarnings(load(save.file)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",save.file))					
+		options(show.error.messages = TRUE)		
+	}
+	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
+	{	
+		if(is.null(X.msm))
+			return(NULL)
+		stopifnot(!is.na(t.period), !is.na(t.endctime), !is.na(method.lRNA.supp), !is.na(contact.grace))
+		pt.df		<- data.table(Patient=X.msm[, unique(t.Patient)])
+		ptd.df		<- sampling.get.dataset(pt.df, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, df.treatment.allmsm, t.period, t.endctime, method.lRNA.supp=method.lRNA.supp, method.lRNA.nsupp=4, contact.grace=contact.grace)
+		ptr.df		<- sampling.model.150722(ptd.df)
+		setnames(ptr.df, 'Patient', 't.Patient')
+		ptr.df		<- subset( ptr.df, select=c(t.Patient,p.seq) )
+		if(!is.na(save.file))
+			save(ptr.df, file=save.file)
+	}
+	ptr.df
+}
+######################################################################################
+sampling.dev<- function()
+{
+	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
+	#
+	#	for m5A
+	#
+	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C2V100bInfT7STRAT_m5A.R'
+	load(paste(indir,'/',infile,sep=''))
+	stage.labels<- c('UA','UC','D','T','L')
+	pt.df		<- data.table(Patient=X.msm[, unique(t.Patient)])
+	ptd.df		<- sampling.get.dataset(pt.df, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, df.treatment.allmsm, t.period, t.endctime, method.lRNA.supp=2, method.lRNA.nsupp=4, contact.grace=1.5)
+	ptr.df		<- sampling.model.150722(ptd.df)
+	setnames(ptr.df, 'Patient', 't.Patient')
+	riskcl		<- 't.stAgeC'	
+	YXs			<- merge( YX, subset(ptr.df, select=c('t.Patient','p.seq')), all.x=T, by='t.Patient' )
+	set(YXs, NULL, 'stageC', YXs[, factor(as.character(stageC), levels=stage.labels)])
+	ggplot(YXs, aes(y=100*p.seq, x=stageC, fill=stageC)) +
+			geom_boxplot() +
+			#geom_point(size=3) +
+			scale_y_continuous(breaks=seq(0,100,10), minor_breaks=NULL, limit=c(0,100), expand=c(0,0)) +
+			scale_shape_discrete(guide=FALSE) +
+			#scale_colour_manual(values=dfp[, unique(factor.color)], guide=FALSE) +
+			theme_bw() +				
+			theme(axis.text=element_text(size=10), axis.title=element_text(size=10), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.4), panel.grid.minor.x=element_line(colour="grey70", size=0.4), panel.grid.minor.y=element_blank(), panel.grid.major.y=element_blank(), panel.margin = unit(2, "lines")) +
+			labs(x='', y='sampling probability\namong prob transmitters\n(%)', colour='stage of potential transmitter\nat transmission interval') +
+			coord_flip() +
+			facet_grid(~t.AgeC) 
+	plot.file	<- paste(indir,'/',gsub('\\.R','_SAMPLINGMODEL_ms12.pdf',infile),sep='')	   				
+	ggsave(file=plot.file, w=10, h=5)
+		
+	set(YXs, NULL, 't.period.long', YXs[, factor(t.period, levels=c('1','2','3','4'), labels=c("96/07-06/06", "06/07-07/12", "08/01-09/06", "09/07-10/12"))])
+	ggplot(YXs, aes(y=100*p.seq, x=t.period.long, fill=stageC)) +
+			geom_boxplot(size=0.5, weight=0.5, outlier.size=0.5) +
+			#geom_point(size=3) +
+			scale_y_continuous(breaks=seq(0,100,10), minor_breaks=NULL, limit=c(0,100), expand=c(0,0)) +
+			#scale_fill_brewer(palette='Set1') +
+			scale_shape_discrete(guide=FALSE) +
+			#scale_colour_manual(values=dfp[, unique(factor.color)], guide=FALSE) +
+			theme_bw() +				
+			theme(axis.text=element_text(size=10), axis.title=element_text(size=10), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.4), panel.grid.minor.x=element_line(colour="grey70", size=0.4), panel.grid.minor.y=element_blank(), panel.grid.major.y=element_blank(), panel.margin = unit(2, "lines")) +
+			labs(x='', y='sampling probability\namong prob transmitters\n(%)', fill='stage of potential transmitter\nat transmission interval') +
+			coord_flip() +
+			facet_grid(~t.AgeC) 
+	plot.file	<- paste(indir,'/',gsub('\\.R','_SAMPLINGMODEL_ms12_by_tperiod.pdf',infile),sep='')	   				
+	ggsave(file=plot.file, w=10, h=8)
+	#
+	#	for m5B
+	#
+	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C2V100bInfT7STRAT_m5B.R'
+	load(paste(indir,'/',infile,sep=''))
+	stage.labels<- c("UAC", "UAE", "UC", "DAC", "D", "L", "T")	   
+	pt.df		<- data.table(Patient=X.msm[, unique(t.Patient)])
+	ptd.df		<- sampling.get.dataset(pt.df, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, df.treatment.allmsm, t.period, t.endctime, method.lRNA.supp=2, method.lRNA.nsupp=4, contact.grace=1.5)
+	ptr.df		<- sampling.model.150722(ptd.df)
+	setnames(ptr.df, 'Patient', 't.Patient')
+	riskcl		<- 't.stAgeC'	
+	YXs			<- merge( YX, subset(ptr.df, select=c('t.Patient','p.seq')), all.x=T, by='t.Patient' )
+	set(YXs, NULL, 'stageC', YXs[, factor(as.character(stageC), levels=stage.labels)])
+	set(YXs, NULL, 't.period.long', YXs[, factor(t.period, levels=c('1','2','3','4'), labels=c("96/07-06/06", "06/07-07/12", "08/01-09/06", "09/07-10/12"))])
+	ggplot(YXs, aes(y=100*p.seq, x=t.period.long, fill=stageC)) +
+			geom_boxplot(size=0.5, weight=0.5, outlier.size=0.5) +
+			#geom_point(size=3) +
+			scale_y_continuous(breaks=seq(0,100,10), minor_breaks=NULL, limit=c(0,100), expand=c(0,0)) +
+			#scale_fill_brewer(palette='Set1') +
+			scale_shape_discrete(guide=FALSE) +
+			#scale_colour_manual(values=dfp[, unique(factor.color)], guide=FALSE) +
+			theme_bw() +				
+			theme(axis.text=element_text(size=10), axis.title=element_text(size=10), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.4), panel.grid.minor.x=element_line(colour="grey70", size=0.4), panel.grid.minor.y=element_blank(), panel.grid.major.y=element_blank(), panel.margin = unit(2, "lines")) +
+			labs(x='', y='sampling probability\namong prob transmitters\n(%)', fill='stage of potential transmitter\nat transmission interval') +
+			coord_flip() +
+			facet_grid(~t.AgeC) 
+	plot.file	<- paste(indir,'/',gsub('\\.R','_SAMPLINGMODEL_ms12_by_tperiod.pdf',infile),sep='')	   				
+	ggsave(file=plot.file, w=10, h=9)
+	 
+}
+######################################################################################
+sampling.get.dataset<- function(pt.df, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, df.treatment.allmsm, t.period, t.endctime, method.lRNA.supp=2, method.lRNA.nsupp=4, contact.grace=1.5, save.file=NA)
 {	
 	#pt.df	<- data.table(Patient=X.msm[, unique(t.Patient)])
 	ptd.df	<- merge(pt.df, subset( df.all.allmsm, select=c(Patient, PosSeqT, RegionHospital, DateBorn, DateDied, isAcute, AnyPos_T1, AnyT_T1)), by='Patient')
@@ -634,6 +1080,11 @@ sampling.get.dataset<- function(pt.df, df.all.allmsm, df.viro.allmsm, df.immu.al
 ######################################################################################
 sampling.model.150722<- function(ptd.df)
 {	
+	ptr.df	<- copy(ptd.df)
+	if(any(colnames(ptr.df)=='PosSeqT'))
+		ptr.df[, PosSeqT:=NULL]
+	if(any(colnames(ptr.df)=='AnyT_T1'))
+		ptr.df[, AnyT_T1:=NULL]					
 	#	use model m12	
 	set(ptr.df, NULL, 'p.seq', NA_real_)
 	z		<- subset(ptr.df, NC_ANY=='Y', select=which(colnames(ptr.df)!='p.seq'))
@@ -1212,7 +1663,7 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 		method, method.recentctime, method.nodectime, method.risk, method.Acute, method.minQLowerU, method.use.AcuteSpec, method.brl.bwhost, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.tpcut, method.PDT, method.cut.brl, tp.cut, adjust.AcuteByNegT, any.pos.grace.yr, dur.Acute, method.thresh.bs, 
 		outdir, outfile,
 		t.period, t.recent.startctime, t.endctime, t.recent.endctime,
-		X.tables, resume, verbose
+		with.Xmsmetc, resume, verbose
 )
 {
 	#
@@ -1306,7 +1757,7 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 	#	get timelines for all clustering candidate transmitters to the recently infected RI.PT
 	#	
 	X.clu				<- NULL
-	if(is.null(X.tables) && grepl('.clu',method.risk,fixed=1))
+	if(with.Xmsmetc && grepl('.clu',method.risk,fixed=1))
 	{		
 		tmp				<- copy(clumsm.info)
 		setkey(tmp, Patient)
@@ -1322,7 +1773,7 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 	#	get timelines for all candidate transmitters in df.all (anyone with subtype B sequ) to the recently infected RI.PT
 	#	
 	X.seq			<- NULL
-	if(is.null(X.tables))
+	if(with.Xmsmetc)
 	{
 		if(method.PDT=='CLU')
 		{			
@@ -1342,7 +1793,7 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 	#	get timelines for all candidate transmitters in ATHENA.MSM (anyone with MSM exposure group irrespective of sequ available or not) to the recently infected RI.PT
 	#	
 	X.msm				<- NULL	
-	if(is.null(X.tables) & ( grepl('adj',method.risk) | grepl('cens',method.risk)))
+	if(with.Xmsmetc & ( grepl('adj',method.risk) | grepl('cens',method.risk)))
 	{
 		if(method.PDT=='CLU')
 		{						
@@ -1366,7 +1817,7 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 	if(grepl('m5A',method.risk))	
 	{
 		YX					<- stratificationmodel.Age_253045.Stage_UA_UC_D_T_F(YX)
-		if(is.null(X.tables))
+		if(with.Xmsmetc)
 		{
 			X.clu			<- stratificationmodel.Age_253045.Stage_UA_UC_D_T_F(X.clu)
 			gc()
@@ -1379,7 +1830,7 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 	if(grepl('m5B',method.risk))	
 	{
 		YX					<- stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F(YX)
-		if(is.null(X.tables))
+		if(with.Xmsmetc)
 		{
 			X.clu			<- stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F(X.clu)
 			gc()
@@ -1394,27 +1845,33 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 #STOP1		
 #stop()
 	#
-	#	compute sampling and censoring tables that are needed for adjustments
+	#	compute sampling and censoring tables/models that are needed for adjustments
 	#
 	if(grepl('adj',method.risk) & grepl('clu',method.risk))
 	{
 			#	get args
 			save.file		<- tmp	<- NA
-			resume			<- 0
-			args			<- sampling.get.all.tables.args(method.risk)			
+			resume			<- 0						
 			if(grepl('m5A',method.risk))		
 				tmp			<- 'm5A'
 			if(grepl('m5B',method.risk))		
 				tmp			<- 'm5B'
 			if(is.na(tmp))	
-				stop('unknown method.risk')				
-			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Stables',method.PDT,'_',tmp,'.R',sep='')
+				stop('unknown method.risk')
 			#	sampling tables
+			args			<- sampling.get.all.tables.args(method.risk)
+			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Stables',method.PDT,'_',tmp,'.R',sep='')			
 			Stab			<- sampling.get.all.tables(YX, X.seq, X.msm, X.clu, tperiod.info=tperiod.info, resume=resume, save.file=save.file, method=method.risk, risk.col=args['risk.col'], risktp.col=args['risktp.col'], factor.ref.v=args['factor.ref.v'])
+			#	sampling model
+			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Smodel',method.PDT,'_',tmp,'.R',sep='')
+			sm				<- sampling.model.calculate(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, df.treatment.allmsm, t.period=t.period, t.endctime=t.endctime, method.lRNA.supp=method.lRNA.supp, method.lRNA.nsupp=4, contact.grace=1.5, resume=resume, save.file=save.file)			
 			#	censoring tables
-			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Ctables',method.PDT,'_',tmp,'.R',sep='')			
-			Ctab			<- censoring.get.all.tables.by.trinterval(YX, X.seq, X.msm, X.clu, tperiod.info=tperiod.info, resume=resume, save.file=save.file, method=method.risk, risk.col=args['risk.col'], risktp.col=args['risktp.col'], factor.ref.v=args['factor.ref.v'], c.period=t.period, bs.n=1000, bs.cdelta.min=2, bs.cdelta.max=3)
-			#Ctab			<- censoring.get.all.tables(YX, X.seq, X.msm, X.clu, tperiod.info=tperiod.info, resume=resume, save.file=save.file, method=method.risk, risk.col=args['risk.col'], risktp.col=args['risktp.col'], factor.ref.v=args['factor.ref.v'], bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
+			#save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Ctables',method.PDT,'_',tmp,'.R',sep='')			
+			#Ctab			<- censoring.get.all.tables.by.trinterval(YX, X.seq, X.msm, X.clu, tperiod.info=tperiod.info, resume=resume, save.file=save.file, method=method.risk, risk.col=args['risk.col'], risktp.col=args['risktp.col'], factor.ref.v=args['factor.ref.v'], c.period=t.period, bs.n=1000, bs.cdelta.min=2, bs.cdelta.max=3)
+			#	censoring model
+			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Cmodel',method.PDT,'_',tmp,'.R',sep='')
+			risk.col		<- censoring.model.calculate.bs.args(method.risk)
+			cm				<- censoring.model.calculate.bs(X.msm, df.all.allmsm, resume=resume, save.file=save.file, t.recent.endctime=t.recent.endctime, risk.col=risk.col, c.period=t.period, c.smpl.n=50, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)			
 stop()
 	}
 	X.clu<- X.seq<- X.msm<- NULL
