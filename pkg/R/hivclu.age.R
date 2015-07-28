@@ -556,7 +556,7 @@ censoring.check.censdelta<- function()
 	ggsave(file=paste(outdir, '/', outfile, '_CENSMODEL_censdelta_hasnoeffect.pdf', sep=''), w=10, h=5)
 }
 ######################################################################################
-censoring.subsample.tmC_ACD4C_AgeC_T1<- function(tpd.df, t.recent.endctime, bs.cdelta.min, bs.cdelta.max, c.period)
+censoring.subsample.tmC_ACD4C_AgeC_T1<- function(tpd.df, t.recent.endctime, bs.cdelta.min, bs.cdelta.max, c.period, c.smpl.n)
 {
 	tpds.df		<- copy(tpd.df)
 	tmp			<- rev(seq(t.recent.endctime, 2000, by=-c.period)) - (t.recent.endctime-(bs.cdelta.min+bs.cdelta.max)/2)
@@ -707,7 +707,7 @@ censoring.model.calculate.bs<- function(X.msm, df.all.allmsm, resume=TRUE, save.
 			tpd.df[, NCNS:= tpd.df[, as.numeric(AnyPos_T1<cens.bs[bs, cens.t])]]	#transmitter not censored
 			set(tpd.df, NULL, 'tm', tpd.df[, tmo-cens.bs[bs, cens.t]])
 			#	balanced sub sampling so regression is comp feasible
-			tpds.df		<- censoring.subsample.tmC_ACD4C_AgeC_T1(tpd.df, t.recent.endctime, bs.cdelta.min, bs.cdelta.max, c.period)
+			tpds.df		<- censoring.subsample.tmC_ACD4C_AgeC_T1(tpd.df, t.recent.endctime, bs.cdelta.min, bs.cdelta.max, c.period, c.smpl.n)
 			tmp			<- censoring.model.150728(tpds.df)
 			cens.m[[bs]]<- tmp$model
 			cens.p[[bs]]<- copy(tmp$predict)
