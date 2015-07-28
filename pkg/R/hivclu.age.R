@@ -292,7 +292,7 @@ hivc.prog.age_props_univariate<- function()
 			method, method.recentctime, method.nodectime, method.risk, method.Acute, method.minQLowerU, method.use.AcuteSpec, method.brl.bwhost, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.tpcut, method.PDT, method.cut.brl, tp.cut, adjust.AcuteByNegT, any.pos.grace.yr, dur.Acute, method.thresh.bs, 
 			outdir, outfile,
 			t.period, t.recent.startctime, t.endctime, t.recent.endctime,
-			is.null(X.tables), resume, verbose
+			is.null(X.tables$sm) | is.null(X.tables$cm), resume, verbose
 	)
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args
@@ -423,7 +423,7 @@ hivc.prog.age_props_univariate<- function()
 ######################################################################################
 age.get.sampling.censoring.models<- function(method, method.PDT, method.risk, outdir, outfile, insignat)
 {
-	ans				<- NULL
+	ans				<- vector('list',2)
 	tmp				<- NA
 	if(grepl('m5A',method.risk))	tmp	<- 'm5A'
 	if(grepl('m5B',method.risk))	tmp	<- 'm5B'
