@@ -1841,7 +1841,8 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 		}
 	}
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', method, 'STRAT_',gsub('\\.clu\\.adj','',gsub('\\.tp[0-9]','',method.risk)),'.R',sep='')
-	save(YX, X.clu, X.seq, X.msm, file=save.file)	
+	save(YX, X.clu, X.seq, X.msm, file=save.file)
+print(with.Xmsmetc)	
 #STOP1		
 #stop()
 	#
@@ -1872,11 +1873,11 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Cmodel',method.PDT,'_',tmp,'.R',sep='')
 			risk.col		<- censoring.model.calculate.bs.args(method.risk)
 			cm				<- censoring.model.calculate.bs(X.msm, df.all.allmsm, resume=resume, save.file=save.file, t.recent.endctime=t.recent.endctime, risk.col=risk.col, c.period=t.period, c.smpl.n=50, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)			
-stop()
+stop('stop1')
 	}
 	X.clu<- X.seq<- X.msm<- NULL
 	gc()
-stop()	
+stop('stop2')	
 	ans		<- list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, YX=YX, Y.brl.bs=Y.brl.bs)
 	ans
 }
