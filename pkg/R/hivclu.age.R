@@ -427,7 +427,7 @@ age.get.sampling.censoring.models<- function(method, method.PDT, method.risk, ou
 	tmp				<- NA
 	if(grepl('m5A',method.risk))	tmp	<- 'm5A'
 	if(grepl('m5B',method.risk))	tmp	<- 'm5B'
-	if(is.na(save.file))	stop('unknown method.risk')								
+	if(is.na(tmp))	stop('unknown method.risk')								
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Smodel',method.PDT,'_',tmp,'.R',sep='')
 	sm				<- sampling.model.calculate(NULL, NULL, NULL, NULL, NULL, resume=TRUE, save.file=save.file)		
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Cmodel',method.PDT,'_',tmp,'.R',sep='')
