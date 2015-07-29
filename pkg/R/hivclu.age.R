@@ -421,7 +421,7 @@ hivc.prog.age_props_univariate<- function()
 	project.athena.Fisheretal.plot.selected.transmitters(clumsm.info, df.immu, df.viro, df.treatment, df.tpairs, cluphy, cluphy.info, cluphy.subtrees, cluphy.map.nodectime, outfile, pdf.height=600)	
 }
 ######################################################################################
-age.get.sampling.censoring.models<- function(method, method.PDT, method.risk, outdir, outfile, insignat)
+age.get.sampling.censoring.models<- function(method, method.PDT, method.risk, outdir, outfile, insignat, load.bs.id=100)
 {
 	ans				<- vector('list',2)
 	tmp				<- NA
@@ -431,7 +431,7 @@ age.get.sampling.censoring.models<- function(method, method.PDT, method.risk, ou
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Smodel',method.PDT,'_',tmp,'.R',sep='')
 	sm				<- sampling.model.calculate(NULL, NULL, NULL, NULL, NULL, resume=TRUE, save.file=save.file)		
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Cmodel',method.PDT,'_',tmp,'.R',sep='')
-	cm				<- censoring.model.calculate.bs(NULL, NULL, resume=TRUE, save.file=save.file, t.recent.endctime=NA, risk.col=NA, c.period=NA, c.smpl.n=NA, bs.n=NA, bs.cdelta.min=NA, bs.cdelta.max=NA)		
+	cm				<- censoring.model.calculate.bs(NULL, NULL, resume=TRUE, save.file=save.file, t.recent.endctime=NA, risk.col=NA, c.period=NA, c.smpl.n=NA, bs.n=load.bs.id, bs.cdelta.min=NA, bs.cdelta.max=NA)		
 	ans$sm			<- sm
 	ans$cm			<- cm				
 	ans
@@ -660,7 +660,7 @@ censoring.model.150728<- function(tpds.df)
 	tprs.df	<- subset(tpds.df, select=c(tm, Patient, r.Patient, AACD4C, NCNS))
 	cs4		<- gamlss(formula= NCNS ~ AACD4C*cs(tm, df=5), family=BI(), data=tprs.df)
 	tprs.df[, p.nc:=predict(cs4, type='response')]
-	list(predict=subset(tprs.df, select=c(tm, Patient, r.Patient, p.nc)), model=cs4)
+	list(predict=tprs.df, model=cs4)
 	#tmp		<- melt(tprs.df, measure.vars=c('NCNS.rm4','CS4'), id.vars=c('tm','ACD4C','AgeC_T1'))
 	#ggplot(tmp, aes(x=tm, y=value, group=variable, colour=variable)) + geom_line() + facet_grid(AgeC_T1~ACD4C)
 	#ggsave(file=paste(outdir, '/', outfile, '_CENSMODEL_cs4.pdf', sep=''), w=20, h=15)	
@@ -723,12 +723,122 @@ censoring.model.calculate.bs<- function(X.msm, df.all.allmsm, resume=TRUE, save.
 	list(cens.p=cens.p, cens.m=cens.m)
 }
 ######################################################################################
-censoring.dev<- function()
+adjust.dev.code.for.ntPatient.adjustment<- function()
 {
-	YX
 	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
-	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3pa1H1.48C2V100bInfT7_CmodelSEQ_m5A.R'
-	z<- load(paste(indir,'/',infile,sep=''))
+	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C2V100bInfT7STRAT_m5A.R'
+	
+	YX
+	sm		<- X.tables$sm
+	YXs		<- merge(YX, sm, by='t.Patient')
+	
+	#	get w per interval
+	cat(paste('\nsetting likelihood to likelihood of pair / number transmission intervals'))
+	set(YXs, NULL, 'score.Y.raw', YXs[, score.Y])
+	set(YXs, NULL, 'score.Y', YXs[, score.Y*w.tn])				
+	YXs[, ntPatient:= factor(YXs[, 1/w.in])]
+	
+	#	are the w's confounded by cluster size?
+	tmp		<- YXs[, list(score.Y.m=mean(score.Y), stageC=stageC[1], t.AgeC=t.AgeC[1]), by=c('ntPatient','t.stAgeC')]
+	ggplot( tmp, aes(x=ntPatient, y=score.Y.m)) + geom_bar(stat='identity') + facet_grid(stageC~t.AgeC)
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeansByStageNtPatient_raw.pdf',infile),sep='')	
+	ggsave(file=file, w=20,h=10)
+	tmp		<- YXs[, list(score.Y.mx=max(score.Y)), by=c('ntPatient','Patient')]
+	tmp		<- tmp[, list(score.Y.mx.me=mean(score.Y.mx)), by='ntPatient']
+	ggplot( tmp, aes(x=ntPatient, y=score.Y.mx.me)) + geom_bar(stat='identity')
+	tmp		<- YXs[, list(score.Y.me=mean(score.Y),score.Y.md=median(score.Y),n=length(score.Y)), by=c('ntPatient','Patient')][, list(n=as.double(sum(n)),score.Y.me=mean(score.Y.me), score.Y.md=mean(score.Y.md)), by='ntPatient']
+	ggplot( melt(tmp, id.vars='ntPatient'), aes(x=ntPatient, y=value)) + geom_bar(stat='identity') + facet_wrap(~variable, scales='free_y')
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeansByNtPatient_raw.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=7)
+	
+	ggplot(YXs, aes(x=score.Y.raw, y=score.Y, colour=as.numeric(as.character(ntPatient)))) + geom_point(alpha=0.5) + geom_abline(slope=1, intercept=0) + theme_bw()
+	#
+	#	no, of course not!! the p's will be confounded by cluster size!!
+	#
+	
+	
+	#	need mean or median w for each stage: problem is it s confounded by cluster size..	
+	YXr		<- subset(YXs, select=c('t.Patient','t','Patient', 'score.Y','ntPatient','stageC','t.AgeC', rfactor)) 	
+	#	Exp has default link log
+	mExp	<- gamlss( score.Y~ntPatient, data=YXr, family=EXP() )
+	#	Gamma has default links log log
+	mGA		<- gamlss( score.Y~ntPatient, data=YXr, family=GA() )
+	mGAS	<- gamlss( score.Y~ntPatient, sigma.formula=~ntPatient, data=YXr, family=GA() )
+	
+	setkey(YXr, ntPatient)
+	mpars	<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	mpars	<- merge(unique(YXr), mpars, by='ntPatient')
+	mpars[, score.mu:= predict(mExp, data=YXr, newdata=mpars, type='response', what='mu')]
+	mpars[, TYPE:= 'Exp']
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mGA, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGA, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GA']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mGAS, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGAS, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GAS']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+}
+######################################################################################
+adjust.dev<- function()
+{
+	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
+	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C2V100bInfT7STRAT_m5A.R'
+	
+	YX
+	sm			<- X.tables$sm
+	cp			<- X.tables$cm$cens.p		#model built after subsampling, so cannot apply straight-away	
+	cm			<- X.tables$cm$cens.m
+	YXs			<- merge(YX, sm, by='t.Patient')
+	merge(YXs, cp, by=c('t.Patient','Patient'))
+	#		
+	risk.col	<- 't.stAgeC'
+	tp.df		<- subset(YXs, grepl('^U', YXs[[risk.col]]))[, list(tm=mean(t)), by=c('t.Patient','Patient')]
+	tp.df		<- censoring.get.dataset(tp.df, df.all.allmsm)
+	setnames(YXs, c('t.Patient','Patient'), c('Patient','r.Patient'))
+	#	YXc so far only contains transmitters with at least one undiagnosed interval
+	YXc		<- merge(YXs, subset(tp.df, select=c(Patient, r.Patient, tm, AACD4C)), by=c('Patient','r.Patient'))
+	YXc[, p.nc:=predict(cm, data=cp, newdata=YXc, type='response')]
+	
+	#	get w per interval
+	cat(paste('\nsetting likelihood to likelihood of pair / number transmission intervals'))
+	set(YXs, NULL, 'score.Y.raw', YXs[, score.Y])
+	set(YXs, NULL, 'score.Y', YXs[, score.Y*w.tn])				
+	YXs[, ntPatient:= factor(YXs[, 1/w.in])]
+	
+	#	are the w's confounded by cluster size?
+	tmp		<- YXs[, list(score.Y.m=mean(score.Y), stageC=stageC[1], t.AgeC=t.AgeC[1]), by=c('ntPatient','t.stAgeC')]
+	ggplot( tmp, aes(x=ntPatient, y=score.Y.m)) + geom_bar(stat='identity') + facet_grid(stageC~t.AgeC)
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeansByStageNtPatient_raw.pdf',infile),sep='')	
+	ggsave(file=file, w=20,h=10)
+	tmp		<- YXs[, list(score.Y.me=mean(score.Y)), by=c('ntPatient')]
+	ggplot( tmp, aes(x=ntPatient, y=score.Y.me)) + geom_bar(stat='identity')
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeansByNtPatient_raw.pdf',infile),sep='')	
+	ggsave(file=file, w=5,h=5)	
+	ggplot(YXs, aes(x=score.Y.raw, y=score.Y, colour=as.numeric(as.character(ntPatient)))) + geom_point(alpha=0.5) + geom_abline(slope=1, intercept=0) + theme_bw()
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYvsScoreYRaw.pdf',infile),sep='')	
+	ggsave(file=file, w=5,h=5)	
+	#	no, of course not!! the p's will be confounded by cluster size!!
+	
+	#
+	#	mean or median w for each stage:
+	#	distribution of rel tr probs
+	rltvtp.exploredistribution(YXs, indir, infile)
+	tmp		<- rltvtp.model.150729(YXs)
+	
+	
+	#
+	
+	
+	
 	
 	
 }
@@ -2045,4 +2155,147 @@ stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F<- function(YX.m5)
 	set(YX.m5, NULL, c('t.InfT','t.isAcute','contact','stage','t.AnyT_T1'), NULL)
 	gc()
 	YX.m5
+}
+######################################################################################
+rltvtp.model.150729<- function(YXs, indir=NA, infile=NA)
+{
+	YXr		<- subset(YXs, select=c('t.Patient','t','Patient', 'score.Y','ntPatient','stageC','t.AgeC', rfactor))
+	wm1		<- gamlss( score.Y~t.AgeC-1, sigma.formula=~t.AgeC-1, data=YXr, family=GA() )
+	wm2		<- gamlss( score.Y~stageC-1, sigma.formula=~stageC-1, data=YXr, family=GA() )
+	wm3		<- gamlss( score.Y~t.stAgeC-1, sigma.formula=~1, data=YXr, family=GA() )
+	wm4		<- gamlss( score.Y~t.stAgeC-1, sigma.formula=~t.stAgeC-1, data=YXr, family=GA() )
+	
+	#	get model parameters so that we can add densities to histograms and compare means
+	tmp		<- as.data.table(expand.grid(t.AgeC=YXr[, levels(t.AgeC)], stageC=YXr[, levels(stageC)]))
+	tmp[, t.stAgeC:= tmp[, factor(paste(as.character(stageC),'_',as.character(t.AgeC),sep=''), levels=YXr[, levels(t.stAgeC)])]]	
+	mu		<- predict(wm4, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(wm4, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, mu:=mu]
+	tmp[, sigma:=sigma]
+	tmp[, TYPE:='wm4']
+	wpars	<- copy(tmp)
+	tmp		<- as.data.table(expand.grid(t.AgeC=YXr[, levels(t.AgeC)], stageC=YXr[, levels(stageC)]))
+	tmp[, t.stAgeC:= tmp[, factor(paste(as.character(stageC),'_',as.character(t.AgeC),sep=''), levels=YXr[, levels(t.stAgeC)])]]	
+	mu		<- predict(wm3, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(wm3, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, mu:=mu]
+	tmp[, sigma:=sigma]
+	tmp[, TYPE:='wm3']
+	wpars	<- rbind(wpars,tmp)
+	tmp		<- as.data.table(expand.grid(t.AgeC=YXr[, levels(t.AgeC)], stageC=YXr[, levels(stageC)]))
+	tmp[, t.stAgeC:= tmp[, factor(paste(as.character(stageC),'_',as.character(t.AgeC),sep=''), levels=YXr[, levels(t.stAgeC)])]]	
+	mu		<- predict(wm2, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(wm2, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, mu:=mu]
+	tmp[, sigma:=sigma]
+	tmp[, TYPE:='wm2']
+	wpars	<- rbind(wpars,tmp)
+	tmp		<- as.data.table(expand.grid(t.AgeC=YXr[, levels(t.AgeC)], stageC=YXr[, levels(stageC)]))
+	tmp[, t.stAgeC:= tmp[, factor(paste(as.character(stageC),'_',as.character(t.AgeC),sep=''), levels=YXr[, levels(t.stAgeC)])]]	
+	mu		<- predict(wm1, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(wm1, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, mu:=mu]
+	tmp[, sigma:=sigma]
+	tmp[, TYPE:='wm1']
+	wpars	<- rbind(wpars,tmp)
+	
+	if(!is.na(indir))
+	{
+		#	show if means differ from mus
+		tmp		<- YXr[, list(score.Y.me= mean(score.Y), TYPE='wm1'), by='t.AgeC']
+		wparp	<- merge(wpars, tmp, by=c('TYPE','t.AgeC'))
+		tmp		<- YXr[, list(score.Y.me= mean(score.Y), TYPE='wm2'), by='stageC']
+		tmp		<- merge(wpars, tmp, by=c('TYPE','stageC'))
+		wparp	<- rbind(wparp, tmp, use.names=TRUE)
+		tmp		<- YXr[, list(score.Y.me= mean(score.Y), TYPE='wm3'), by='t.stAgeC']
+		tmp		<- merge(wpars, tmp, by=c('TYPE','t.stAgeC'))
+		wparp	<- rbind(wparp, tmp, use.names=TRUE)
+		tmp		<- YXr[, list(score.Y.me= mean(score.Y), TYPE='wm4'), by='t.stAgeC']
+		tmp		<- merge(wpars, tmp, by=c('TYPE','t.stAgeC'))
+		wparp	<- rbind(wparp, tmp, use.names=TRUE)
+		ggplot(wparp, aes(x=score.Y.me, y=mu)) + geom_abline(intercept=0, slope=1,colour='grey50') + 
+				geom_point() + facet_wrap(~TYPE,ncol=2) + theme_bw()
+		file	<- paste(indir,'/',gsub('\\.R','_scoreYmeansVsMus.pdf',infile),sep='')	
+		ggsave(file=file, w=6,h=6)
+		#	--> spot on
+	}
+	list(wm1=wm1, wm2=wm2, wm3=wm3, wm4=wm4, par=wpars)
+}
+######################################################################################
+rltvtp.exploredistribution<- function(YXs, indir, infile)
+{
+	YXr		<- subset(YXs, select=c('t.Patient','t','Patient', 'score.Y','ntPatient','stageC','t.AgeC', rfactor)) 	
+	#	Exp has default link log	
+	mExp	<- gamlss( score.Y~1, data=YXr, family=EXP() )
+	mExpNt	<- gamlss( score.Y~ntPatient, data=YXr, family=EXP() )
+	#	Gamma has default links log log
+	mGA		<- gamlss( score.Y~1, data=YXr, family=GA() )
+	mGANt	<- gamlss( score.Y~ntPatient, data=YXr, family=GA() )
+	mGANtS	<- gamlss( score.Y~ntPatient, sigma.formula=~ntPatient, data=YXr, family=GA() )
+	#
+	setkey(YXr, ntPatient)
+	mpars	<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	mpars	<- merge(unique(YXr), mpars, by='ntPatient')
+	mpars[, score.mu:= predict(mExp, data=YXr, newdata=mpars, type='response', what='mu')]
+	mpars[, TYPE:= 'Exp']
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mExpNt, data=YXr, newdata=tmp, type='response', what='mu')	
+	tmp[, score.mu:= mu]
+	tmp[, TYPE:= 'ExpNt']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#	
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mGA, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGA, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GA']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mGANt, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGANt, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GANt']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mGANtS, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGANtS, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GANtS']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	YXp		<- mpars[, {
+				if(grepl('Exp',TYPE))
+					z<- rEXP(1e4, mu=score.mu)
+				if(grepl('GA',TYPE))
+					z<- rGA(1e4, mu=score.mu, sigma=score.sigma)
+				list(score.Y=z)
+			}, by=c('ntPatient','TYPE')]
+	tmp		<- subset(YXr, select=c(ntPatient, score.Y))
+	tmp[, TYPE:= 'OBS']
+	YXp		<- rbind(tmp, YXp,use.names=TRUE)
+	#ggplot(YXp, aes(x=score.Y, group=TYPE, colour=TYPE)) + stat_ecdf() + facet_wrap(~ntPatient, ncol=5)
+	ggplot(YXp, aes(x=score.Y, group=TYPE, colour=TYPE)) +
+			scale_x_continuous(limits=c(0,50)) +
+			scale_colour_brewer(palette='Set1') +
+			geom_density() + 
+			facet_wrap(~ntPatient, ncol=5, scales='free_y') 
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYdensitiesByNtPatient.pdf',infile),sep='')	
+	ggsave(file=file, w=15,h=15)
+	ggplot(subset(YXp, !grepl('Nt',TYPE)), aes(x=score.Y, group=TYPE, colour=TYPE)) +
+			scale_x_continuous(limits=c(0,50)) +
+			scale_colour_brewer(palette='Set1') +
+			geom_density() 
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYdensities.pdf',infile),sep='')	
+	ggsave(file=file, w=7,h=5)
+#	--> GA model is better than Exp
 }
