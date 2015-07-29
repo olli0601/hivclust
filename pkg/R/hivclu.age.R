@@ -684,9 +684,10 @@ censoring.model.calculate.bs<- function(X.msm, df.all.allmsm, resume=TRUE, save.
 	require(zoo)	
 	if(resume & !is.na(save.file))
 	{
-		options(show.error.messages = FALSE)		
-		readAttempt		<- try(suppressWarnings(load(save.file)))
-		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",save.file))					
+		options(show.error.messages = FALSE)
+		tmp				<- gsub('\\.R',paste('_bs',bs.n,'\\.R',sep=''),save.file)
+		readAttempt		<- try(suppressWarnings(load(tmp)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresumed file",tmp))					
 		options(show.error.messages = TRUE)		
 	}
 	if(!resume || is.na(save.file) || inherits(readAttempt, "try-error"))
@@ -709,18 +710,30 @@ censoring.model.calculate.bs<- function(X.msm, df.all.allmsm, resume=TRUE, save.
 			#	balanced sub sampling so regression is comp feasible
 			tpds.df		<- censoring.subsample.tmC_ACD4C_AgeC_T1(tpd.df, t.recent.endctime, bs.cdelta.min, bs.cdelta.max, c.period, c.smpl.n)
 			tmp			<- censoring.model.150728(tpds.df)
-			cens.m[[bs]]<- tmp$model
-			cens.p[[bs]]<- copy(tmp$predict)
-			cens.p[[bs]][, BS:=bs]
-		}
-		#	save
-		if(!is.na(save.file))
-			save(tp.df, tpd.df, cens.p, cens.m, file=save.file)
+			cens.m		<- tmp$model
+			cens.p		<- copy(tmp$predict)
+			cens.p[, BS:=bs]
+			#	save
+			if(!is.na(save.file))
+			{				
+				save(tp.df, tpd.df, cens.p, cens.m, file=gsub('\\.R',paste('_bs',bs,'\\.R',sep=''),save.file))
+			}							
+		}		
 	}
 	list(cens.p=cens.p, cens.m=cens.m)
 }
 ######################################################################################
 censoring.dev<- function()
+{
+	YX
+	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
+	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_Yscore3pa1H1.48C2V100bInfT7_CmodelSEQ_m5A.R'
+	z<- load(paste(indir,'/',infile,sep=''))
+	
+	
+}
+######################################################################################
+censoring.dev.sampling.model.calculate<- function()
 {
 	#	take Xmsm potential transmitters to recipients and collect variables
 	#	t.isAcute, t.diag time, t.age at diag, t.RegionHospital
@@ -1842,7 +1855,6 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 	}
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', method, 'STRAT_',gsub('\\.clu\\.adj','',gsub('\\.tp[0-9]','',method.risk)),'.R',sep='')
 	save(YX, X.clu, X.seq, X.msm, file=save.file)
-print(with.Xmsmetc)	
 #STOP1		
 #stop()
 	#
@@ -1873,11 +1885,11 @@ print(with.Xmsmetc)
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Cmodel',method.PDT,'_',tmp,'.R',sep='')
 			risk.col		<- censoring.model.calculate.bs.args(method.risk)
 			cm				<- censoring.model.calculate.bs(X.msm, df.all.allmsm, resume=resume, save.file=save.file, t.recent.endctime=t.recent.endctime, risk.col=risk.col, c.period=t.period, c.smpl.n=50, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)			
-stop('stop1')
+			stop()
 	}
 	X.clu<- X.seq<- X.msm<- NULL
 	gc()
-stop('stop2')	
+#stop()	
 	ans		<- list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, YX=YX, Y.brl.bs=Y.brl.bs)
 	ans
 }
