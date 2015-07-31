@@ -2,8 +2,7 @@
 hivc.prog.age_props_univariate<- function()
 {	
 	require(reshape2)
-	require(data.table)
-	
+	require(data.table)	
 	require(ape)
 	#stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
@@ -283,7 +282,7 @@ hivc.prog.age_props_univariate<- function()
 	}		
 	#	check if we have precomputed tables
 	#X.tables				<- age.get.Xtables(method, method.PDT, method.risk, outdir, outfile, insignat)
-	X.tables				<- age.get.sampling.censoring.models(method, method.PDT, method.risk, outdir, outfile, insignat)
+	X.tables				<- age.get.sampling.censoring.models(method, method.PDT, method.risk, outdir, outfile, insignat, load.bs.id=1)
 	#	if no tables, precompute tables and stop (because mem intensive)
 	#	otherwise return stratified YX data.table and continue
 	tmp	<- age.precompute(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,
@@ -292,7 +291,7 @@ hivc.prog.age_props_univariate<- function()
 			method, method.recentctime, method.nodectime, method.risk, method.Acute, method.minQLowerU, method.use.AcuteSpec, method.brl.bwhost, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.tpcut, method.PDT, method.cut.brl, tp.cut, adjust.AcuteByNegT, any.pos.grace.yr, dur.Acute, method.thresh.bs, 
 			outdir, outfile,
 			t.period, t.recent.startctime, t.endctime, t.recent.endctime,
-			is.null(X.tables$sm) | is.null(X.tables$cm), resume, verbose
+			is.null(X.tables$st) | is.null(X.tables$sm) | is.null(X.tables$cm), resume, verbose
 	)
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args
@@ -423,17 +422,18 @@ hivc.prog.age_props_univariate<- function()
 ######################################################################################
 age.get.sampling.censoring.models<- function(method, method.PDT, method.risk, outdir, outfile, insignat, load.bs.id=100)
 {
-	ans				<- vector('list',2)
+	ans				<- vector('list')
 	tmp				<- NA
 	if(grepl('m5A',method.risk))	tmp	<- 'm5A'
 	if(grepl('m5B',method.risk))	tmp	<- 'm5B'
-	if(is.na(tmp))	stop('unknown method.risk')								
+	if(is.na(tmp))	stop('unknown method.risk')	
+	
+	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Stables',method.PDT,'_',tmp,'.R',sep='')			
+	ans$st			<- sampling.get.all.tables(NULL, NULL, NULL, NULL, tperiod.info=NULL, resume=TRUE, save.file=save.file, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA)
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Smodel',method.PDT,'_',tmp,'.R',sep='')
-	sm				<- sampling.model.calculate(NULL, NULL, NULL, NULL, NULL, resume=TRUE, save.file=save.file)		
+	ans$sm			<- sampling.model.calculate(NULL, NULL, NULL, NULL, NULL, resume=TRUE, save.file=save.file)		
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Cmodel',method.PDT,'_',tmp,'.R',sep='')
-	cm				<- censoring.model.calculate.bs(NULL, NULL, resume=TRUE, save.file=save.file, t.recent.endctime=NA, risk.col=NA, c.period=NA, c.smpl.n=NA, bs.n=load.bs.id, bs.cdelta.min=NA, bs.cdelta.max=NA)		
-	ans$sm			<- sm
-	ans$cm			<- cm				
+	ans$cm			<- censoring.model.calculate.bs(NULL, NULL, resume=TRUE, save.file=save.file, t.recent.endctime=NA, risk.col=NA, c.period=NA, c.smpl.n=NA, bs.n=load.bs.id, bs.cdelta.min=NA, bs.cdelta.max=NA)		
 	ans
 }
 ######################################################################################
@@ -788,59 +788,395 @@ adjust.dev.code.for.ntPatient.adjustment<- function()
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 }
 ######################################################################################
+altvtp.model.150730<- function(YXc)
+{
+	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
+	YXr[, ntPatientn:= as.numeric(as.character(ntPatient))]
+	#	relevel so regression coefficients are contrasts of interest
+	base.df	<- data.table(	ST=c('stageC','t.AgeC','t.stAgeC'), 
+							RSKFbaseline=c('D','(30,45]','D_(30,45]'))
+	setkey(base.df, ST)
+	set(YXr, NULL, 'stageC', YXr[, relevel(stageC, ref=base.df['stageC',][,RSKFbaseline])])
+	set(YXr, NULL, 't.AgeC', YXr[, relevel(t.AgeC, ref=base.df['t.AgeC',][,RSKFbaseline])])
+	set(YXr, NULL, 't.stAgeC', YXr[, relevel(t.stAgeC, ref=base.df['t.stAgeC',][,RSKFbaseline])])
+	#	fit contrasts 
+	#	(we only do this to get the risk ratio and confidence intervals)
+	wm1		<- gamlss( score.p~t.AgeC+ntPatientn, sigma.formula=~t.AgeC+ntPatientn, data=YXr, family=GA() )
+	wm2		<- gamlss( score.p~stageC+ntPatientn, sigma.formula=~stageC+ntPatientn, data=YXr, family=GA() )
+	wm3		<- gamlss( score.p~t.stAgeC+ntPatientn, sigma.formula=~ntPatientn, data=YXr, family=GA() )
+	wm4		<- gamlss( score.p~t.stAgeC+ntPatientn, sigma.formula=~t.stAgeC+ntPatientn, data=YXr, family=GA() )
+	#	read out contrasts
+	tmp		<- coef(wm1)
+	cf		<- data.table(MO='wm1', ST='t.AgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.AgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wm1)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wm1, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.AgeC','',RSKF)])
+	wc		<- copy(cf)
+	#
+	tmp		<- coef(wm2)
+	cf		<- data.table(MO='wm2', ST='stageC', RSKF=names(tmp), RSKFbaseline=base.df['stageC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wm2)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wm2, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('stageC','',RSKF)])
+	wc		<- rbind(wc, cf)
+	#
+	tmp		<- coef(wm3)
+	cf		<- data.table(MO='wm3', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wm3)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wm3, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wc		<- rbind(wc, cf)
+	#
+	tmp		<- coef(wm4)
+	cf		<- data.table(MO='wm4', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wm4)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wm4, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wc		<- rbind(wc, cf)
+	#	transform to risk ratios
+	tmp		<- melt(wc, id.vars=c('RSKF','MO','ST','RSKFbaseline'))
+	set(tmp, NULL, 'value', tmp[, exp(value)])
+	wc		<- dcast.data.table(tmp, MO+ST+RSKFbaseline+RSKF~variable, value.var='value')
+	tmp		<- names(wc)[ grepl('CNTR',names(wc)) ]
+	setnames(wc, tmp, gsub('CNTR','RR',tmp))
+	set(wc, wc[, which(RSKF=='(Intercept)')],'RR',1.)
+	set(wc, wc[, which(RSKF=='(Intercept)')],c('RRL','RRU','RRLr','RRUr'),NA_real_)
+	tmp		<- wc[, which(RSKF=='(Intercept)')]	
+	set(wc, tmp, 'RSKF', wc[tmp,RSKFbaseline])
+	
+	
+	
+	#	plot
+	tmp		<- subset(wc, MO=='wm4' & RSKF!='ntPatientn')
+	lvls	<- as.vector(sapply(		c('UA','UC','D','T','L'), function(x) paste(x,c('(-1,25]','(25,30]','(30,45]','(45,100]'),sep='_')		))
+	set(tmp, NULL, 'RSKF', tmp[, factor(RSKF, levels=rev(lvls))])
+	ggplot( tmp, aes(y=RSKF, x=RR, xmin=RRL, xmax=RRU) ) +
+			scale_x_continuous(breaks=seq(0,5,0.2)) + geom_vline(x=1, colour='grey50', lwd=1) +
+			geom_point() + geom_errorbarh(height=0.5) + theme_bw()
+	
+	list(wm1=wm1, wm2=wm2, wm3=wm3, wm4=wm4, wc=wc, data=YXr)
+}
+######################################################################################
+altvtp.exploredistribution<- function(YXc, indir, infile)
+{
+	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
+	YXr[, ntPatientn:= as.numeric(as.character(ntPatient))]
+	#	Exp has default link log	
+	mExp	<- gamlss( score.p~1, data=YXr, family=EXP() )
+	mExpNt	<- gamlss( score.p~ntPatient, data=YXr, family=EXP() )
+	mExpNtL	<- gamlss( score.p~ntPatientn, data=YXr, family=EXP() )
+	mExpNtQ	<- gamlss( score.p~ns(ntPatientn, df=2), data=YXr, family=EXP() )
+	#	Gamma has default links log log
+	mGA		<- gamlss( score.p~1, data=YXr, family=GA() )
+	mGANt	<- gamlss( score.p~ntPatient, data=YXr, family=GA() )
+	mGANtS	<- gamlss( score.p~ntPatient, sigma.formula=~ntPatient, data=YXr, family=GA() )
+	mGANtSL	<- gamlss( score.p~ntPatientn, sigma.formula=~ntPatientn, data=YXr, family=GA() )
+	mGANtSQ	<- gamlss( score.p~ns(ntPatientn, df=2), sigma.formula=~ns(ntPatientn, df=2), data=YXr, family=GA() )
+	#	Beta with links log log
+	mBEL	<- gamlss( score.p~1, data=YXr, family=BE(mu.link='log'), n.cyc = 40 )
+	mBELNt	<- gamlss( score.p~ntPatient, data=YXr, family=BE(mu.link='log'), n.cyc = 40 )
+	mBELNtS	<- gamlss( score.p~ntPatient, sigma.formula=~ntPatient, data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
+	mBELNtSL<- gamlss( score.p~ntPatientn, sigma.formula=~ntPatientn, data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
+	mBELNtSQ<- gamlss( score.p~ns(ntPatientn, df=2), sigma.formula=~ns(ntPatientn, df=2), data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
+	#
+	setkey(YXr, ntPatient)
+	mpars	<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	mpars	<- merge(unique(YXr), mpars, by='ntPatient')
+	mpars[, score.mu:= predict(mExp, data=YXr, newdata=mpars, type='response', what='mu')]
+	mpars[, TYPE:= 'Exp']
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mExpNt, data=YXr, newdata=tmp, type='response', what='mu')	
+	tmp[, score.mu:= mu]
+	tmp[, TYPE:= 'ExpNt']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mExpNtL, data=YXr, newdata=tmp, type='response', what='mu')	
+	tmp[, score.mu:= mu]
+	tmp[, TYPE:= 'ExpNtL']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mExpNtQ, data=YXr, newdata=tmp, type='response', what='mu')	
+	tmp[, score.mu:= mu]
+	tmp[, TYPE:= 'ExpNtQ']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#	
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mGA, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGA, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GA']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mGANt, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGANt, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GANt']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mGANtS, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGANtS, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GANtS']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mGANtSL, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGANtSL, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GANtSL']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mGANtSQ, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGANtSQ, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GANtSQ']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mBEL, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mBEL, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'BEL']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mBELNt, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mBELNt, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'BELNt']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mBELNtS, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mBELNtS, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'BELNtS']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mBELNtSL, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mBELNtSL, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'BELNtSL']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
+	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	mu		<- predict(mBELNtSQ, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mBELNtSQ, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'BELNtSQ']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	
+	mpars[, score.sd:=NA_real_]
+	tmp		<- mpars[, which(grepl('Exp',TYPE))]
+	set(mpars, tmp, 'score.sd', mpars[tmp, score.mu])
+	tmp		<- mpars[, which(grepl('GA',TYPE))]
+	set(mpars, tmp, 'score.sd', mpars[tmp, score.mu*score.sigma])
+	tmp		<- mpars[, which(grepl('BE',TYPE))]
+	set(mpars, tmp, 'score.sd', mpars[tmp, sqrt(score.mu*(1-score.mu))*score.sigma])
+		
+	#	check fit in terms of means and sds
+	tmp		<- YXr[, list(score.mu=mean(score.p), score.sd=sd(score.p)), by='ntPatient']
+	ggplot(mpars, aes(x=as.numeric(as.character(ntPatient)), y=score.mu)) + 
+			geom_point(aes(colour=TYPE)) + geom_line(aes(colour=TYPE, group=TYPE)) +
+			geom_point(data=tmp, colour='black') +  
+			facet_wrap(~TYPE, ncol=4)
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeansByModel.pdf',infile),sep='')	
+	ggsave(file=file, w=15,h=10)
+	ggplot(mpars, aes(x=as.numeric(as.character(ntPatient)), y=score.sd)) + 
+			geom_point(aes(colour=TYPE)) + geom_line(aes(colour=TYPE, group=TYPE)) +
+			geom_point(data=tmp, colour='black') +  
+			facet_wrap(~TYPE, ncol=4)
+	file	<- paste(indir,'/',gsub('\\.R','_scorePsdsByModel.pdf',infile),sep='')	
+	ggsave(file=file, w=15,h=10)
+	#	--> BELNtSL and GALNtSL look good
+	
+	#	get samples from fitted distribution
+	YXp		<- subset(mpars, TYPE!='OBS')[, {
+				if(grepl('Exp',TYPE))
+					z<- rEXP(1e4, mu=score.mu)
+				if(grepl('GA',TYPE))
+					z<- rGA(1e4, mu=score.mu, sigma=score.sigma)
+				if(grepl('BE',TYPE))
+					z<- rBE(1e4, mu=score.mu, sigma=score.sigma)
+				list(score.p=z)
+			}, by=c('ntPatient','TYPE')]
+	tmp		<- subset(YXr, select=c(ntPatient, score.p))
+	tmp[, TYPE:= 'OBS']
+	YXp		<- rbind(tmp, YXp,use.names=TRUE)
+	
+	#	check fit in terms of densities
+	ggplot(subset(YXp, grepl('BELNtSL|GANtSL|OBS',TYPE)), aes(x=score.p, group=TYPE, colour=TYPE)) +
+			scale_x_continuous(limits=c(0,0.1)) +
+			scale_colour_brewer(palette='Set1') +
+			geom_density() + 
+			facet_wrap(~ntPatient, ncol=5, scales='free_y') 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePdensitiesByNtPatient.pdf',infile),sep='')	
+	ggsave(file=file, w=15,h=15)	
+	#
+	file	<- paste(indir,'/',gsub('\\.R','_scorePdensities_mBELNtSL.pdf',infile),sep='')
+	pdf(file=file, w=6, h=6)
+	plot(mBELNtSL)
+	dev.off()
+	file	<- paste(indir,'/',gsub('\\.R','_scorePdensities_mGANtSL.pdf',infile),sep='')
+	pdf(file=file, w=6, h=6)
+	plot(mGANtSL)
+	dev.off()
+}
+######################################################################################
+altvtp.confounded.ntransmitters<- function(YXc, indir, infile)
+{
+	tmp		<- YXc[, list(score.p.me=mean(score.p)), by=c('ntPatient')]
+	ggplot( tmp, aes(x=ntPatient, y=score.p.me)) + geom_bar(stat='identity')
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeansByNtPatient_raw.pdf',infile),sep='')	
+	ggsave(file=file, w=5,h=5)		
+	tmp		<- YXc[, list(score.p.m=mean(score.p), stageC=stageC[1], t.AgeC=t.AgeC[1]), by=c('ntPatient','stageC')]
+	ggplot( tmp, aes(x=ntPatient, y=score.p.m)) + geom_bar(stat='identity') + facet_grid(stageC~.)
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeansBystageCNtPatient_raw.pdf',infile),sep='')	
+	ggsave(file=file, w=5,h=7)
+	tmp		<- YXc[, list(score.p.m=mean(score.p), stageC=stageC[1], t.AgeC=t.AgeC[1]), by=c('ntPatient','t.AgeC')]
+	ggplot( tmp, aes(x=ntPatient, y=score.p.m)) + geom_bar(stat='identity') + facet_grid(t.AgeC~.)
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeansBytAgeCNtPatient_raw.pdf',infile),sep='')	
+	ggsave(file=file, w=5,h=7)	
+	tmp		<- YXc[, list(score.p.m=mean(score.p), stageC=stageC[1], t.AgeC=t.AgeC[1]), by=c('ntPatient','t.stAgeC')]
+	ggplot( tmp, aes(x=ntPatient, y=score.p.m)) + geom_bar(stat='identity') + facet_grid(t.AgeC~stageC)
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeansBytstAgeCNtPatient_raw.pdf',infile),sep='')	
+	ggsave(file=file, w=20,h=10)
+}
+######################################################################################
 adjust.dev<- function()
 {
 	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
 	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C2V100bInfT7STRAT_m5A.R'
 	
 	YX
-	sm			<- X.tables$sm
-	cp			<- X.tables$cm$cens.p		#model built after subsampling, so cannot apply straight-away	
-	cm			<- X.tables$cm$cens.m
-	YXs			<- merge(YX, sm, by='t.Patient')
-	merge(YXs, cp, by=c('t.Patient','Patient'))
-	#		
+	t.recent.endctime
 	risk.col	<- 't.stAgeC'
+	X.tables
+	
+	#	get clustering, sampling and non-censoring probabilities 
+	#	for each prob transmitter at the transmission interval 
+	sm			<- X.tables$sm
+	YXs			<- merge(YX, sm, by='t.Patient')
+	#	p.nc	(non-censoring prob)
+	cp			<- copy(X.tables$cm$cens.p)		#model built after subsampling, so cannot apply straight-away
+	set(cp, NULL, c('BS','p.nc'), NULL)
+	cm			<- X.tables$cm$cens.m	
 	tp.df		<- subset(YXs, grepl('^U', YXs[[risk.col]]))[, list(tm=mean(t)), by=c('t.Patient','Patient')]
 	tp.df		<- censoring.get.dataset(tp.df, df.all.allmsm)
 	setnames(YXs, c('t.Patient','Patient'), c('Patient','r.Patient'))
 	#	YXc so far only contains transmitters with at least one undiagnosed interval
-	YXc		<- merge(YXs, subset(tp.df, select=c(Patient, r.Patient, tm, AACD4C)), by=c('Patient','r.Patient'))
-	YXc[, p.nc:=predict(cm, data=cp, newdata=YXc, type='response')]
+	YXc			<- merge(YXs, subset(tp.df, select=c(Patient, r.Patient, tm, AACD4C)), by=c('Patient','r.Patient'))	
+	YXc[, p.nc:= predict(cm, data=cp, newdata=subset(YXc, select=c(tm, AACD4C)), type='response')]
+	set(YXc, NULL, 'tm', YXc[, tm-t.recent.endctime])	
+	YXc[, p.nc:=predict(cm, data=cp, newdata=subset(YXc, select=c(tm, AACD4C)), type='response')]
+	setnames(YXs, c('Patient','r.Patient'), c('t.Patient','Patient'))
+	setnames(YXc, c('Patient','r.Patient'), c('t.Patient','Patient'))
+	YXc			<- merge(YXs, subset(YXc, select=c(t.Patient, Patient, t, p.nc)), by=c('t.Patient','Patient','t'), all.x=TRUE)
+	set(YXc, YXc[, which(is.na(p.nc))], 'p.nc', 1)
+	#	p.clu	(clustering prob)
+	#	model derived from t.stAgeC.tperiod stratification
+	st			<- subset(X.tables$st$risk.table, stat%in%c('X.clu','X.seq')) 
+	st[, t.period:= substr(factor, nchar(factor),nchar(factor))]
+	st[, p:=NULL]	
+	st[, t.stAgeC:= substr(factor, 1,nchar(factor)-2)]
+	st[, stageC:= sapply(strsplit(t.stAgeC,'_'),'[[',1)]
+	st[, t.AgeC:= sapply(strsplit(t.stAgeC,'_'),'[[',2)]
+	st			<- dcast.data.table(st, risk+t.period+stageC+t.AgeC+t.stAgeC~stat, value.var='n')
+	st[, p.clu:= X.clu/X.seq]
+	YXc		<- merge(YXc, subset(st, select=c(t.stAgeC, t.period, p.clu)), by=c('t.stAgeC','t.period'))
+	ggplot(st, aes(y=t.stAgeC, x=100*p.clu, pch=factor(tperiod), colour=stageC, size=X.clu)) + geom_point() + 
+			scale_x_continuous(breaks=seq(0,100,10)) + theme_bw()
+	file	<- paste(indir,'/',gsub('\\.R','_ClusteringByTperiod.pdf',infile),sep='')	
+	ggsave(file=file, w=7,h=20)	
+	
 	
 	#	get w per interval
 	cat(paste('\nsetting likelihood to likelihood of pair / number transmission intervals'))
-	set(YXs, NULL, 'score.Y.raw', YXs[, score.Y])
-	set(YXs, NULL, 'score.Y', YXs[, score.Y*w.tn])				
-	YXs[, ntPatient:= factor(YXs[, 1/w.in])]
+	set(YXc, NULL, 'score.Y.raw', YXc[, score.Y])
+	set(YXc, NULL, 'score.Y', YXc[, score.Y*w.tn])				
+	YXc[, ntPatient:= factor(YXc[, 1/w.in])]
 	
 	#	are the w's confounded by cluster size?
-	tmp		<- YXs[, list(score.Y.m=mean(score.Y), stageC=stageC[1], t.AgeC=t.AgeC[1]), by=c('ntPatient','t.stAgeC')]
-	ggplot( tmp, aes(x=ntPatient, y=score.Y.m)) + geom_bar(stat='identity') + facet_grid(stageC~t.AgeC)
-	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeansByStageNtPatient_raw.pdf',infile),sep='')	
-	ggsave(file=file, w=20,h=10)
-	tmp		<- YXs[, list(score.Y.me=mean(score.Y)), by=c('ntPatient')]
-	ggplot( tmp, aes(x=ntPatient, y=score.Y.me)) + geom_bar(stat='identity')
-	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeansByNtPatient_raw.pdf',infile),sep='')	
-	ggsave(file=file, w=5,h=5)	
-	ggplot(YXs, aes(x=score.Y.raw, y=score.Y, colour=as.numeric(as.character(ntPatient)))) + geom_point(alpha=0.5) + geom_abline(slope=1, intercept=0) + theme_bw()
-	file	<- paste(indir,'/',gsub('\\.R','_scoreYvsScoreYRaw.pdf',infile),sep='')	
-	ggsave(file=file, w=5,h=5)	
+	rltvtp.confounded.ntransmitters(YXc, indir, infile)
 	#	no, of course not!! the p's will be confounded by cluster size!!
 	
+	#	mean or median w for each stage:	
+	rltvtp.exploredistribution(YXc, indir, infile)
+	
+	#	calculate absolute transmission probabilities
+	#	need first: average score per stage
+	#	need second: expected missing intervals per stage
+	#	then obtain p = w / ( sum(w) + exp missing per recipient )
+	tmp		<- rltvtp.model.150729(YXc)
+	rtpm	<- tmp$wm4
+	rtpmus	<- subset(tmp$par, TYPE=='wm4')
+	rtpd	<- tmp$data
+	YXc[, missexp:= YXc[, 1/(p.seq*p.nc)-1]]
+	rtpmiss	<- merge( YXc[, list(missexp=sum(missexp)), by=risk.col], rtpmus, by=risk.col )
+	rtpmiss[, score.Y:= rtpmiss[, missexp*mu]]
+	rtpmissr	<- rtpmiss[, sum(score.Y)] / YXc[, length(unique(Patient))]	#sum of expected missing relative transmission probabilities, per recipient 
+	
+	tmp		<- YXc[, list(score.p= score.Y/(sum(score.Y)+rtpmissr), t.Patient=t.Patient, t=t), by='Patient']
+	YXc		<- merge(YXc, tmp, by=c('t.Patient','Patient','t'))
 	#
-	#	mean or median w for each stage:
-	#	distribution of rel tr probs
-	rltvtp.exploredistribution(YXs, indir, infile)
-	tmp		<- rltvtp.model.150729(YXs)
+	ggplot(YXc, aes(x=missexp, fill=t.stAgeC)) + geom_histogram(binwidth=0.25) +
+			scale_x_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1)) +
+			facet_grid(t.stAgeC~., scales='free') + 
+			theme_bw() 
+	file	<- paste(indir,'/',gsub('\\.R','_missexpBytstAgeC.pdf',infile),sep='')	
+	ggsave(file=file, w=7,h=20)	
+	ggplot(YXc, aes(x=100*score.p, fill=stageC)) + geom_histogram(binwidth=2) +
+			scale_x_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			facet_grid(t.AgeC~stageC, scales='free', space='free') + 
+			labs(x='absolute phylogenetic transmission probability\nfor observed transmission intervals\n(%)') +
+			theme_bw() 
+	file	<- paste(indir,'/',gsub('\\.R','_atpBytstAgeC.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
 	
 	
+	#	are the p's confounded by cluster size?
+	altvtp.confounded.ntransmitters(YXc, indir, infile)
+	#	Yes, quite strongly!
+
 	#
-	
-	
-	
-	
-	
 }
 ######################################################################################
 censoring.dev.sampling.model.calculate<- function()
@@ -1671,10 +2007,8 @@ censoring.get.all.tables.by.trinterval<- function(YX=NULL, X.seq=NULL, X.msm=NUL
 	ans
 }
 ######################################################################################
-sampling.get.all.tables<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
+sampling.get.all.tables<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, clumsm.info=NULL, tperiod.info=NULL, resume=TRUE, save.file=NA, method=NA, risk.col=NA, risktp.col=NA, factor.ref.v=NA, bs.n=100, bs.cdelta.min=2, bs.cdelta.max=3)
 {	
-	stopifnot(!is.na(risk.col), !is.na(risktp.col), !is.na(factor.ref.v))
-	
 	if(resume & !is.na(save.file))
 	{
 		options(show.error.messages = FALSE)		
@@ -1690,6 +2024,7 @@ sampling.get.all.tables<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, 
 			cat(paste('\nreturn NULL table', method))
 			return(ans)	
 		}			
+		stopifnot(!is.na(risk.col), !is.na(risktp.col), !is.na(factor.ref.v))
 		cat(paste('\ntables by method', method,'\nrisk.col', risk.col,'\nrisk.col.tp', risktp.col,'\nfactor.ref.v',factor.ref.v))
 		#	YX<- copy(YX.s); X.clu<- copy(X.clu.s); X.seq<- copy(X.seq.s); X.msm<- copy(X.msm.s)
 		#	get number of recipients per time period			
@@ -1750,11 +2085,29 @@ sampling.get.all.tables<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, 
 		nt.table		<- subset( nt.table, select=c(risk, factor, Patient, nt, stat) )
 		ans$nt.table	<- nt.table			
 		#	risk tables
+		tmp				<- subset(clumsm.info, select=c(Patient, cluster))
+		setkey(tmp, Patient)
+		tmp				<- merge( unique(tmp), unique( subset(YX, select=Patient) ), by='Patient' )
+		R.clu			<- merge(X.clu, tmp, by='Patient')		
+		R.seq			<- merge(X.seq, tmp, by='Patient')		
+		tmp				<- subset(clumsm.info, select=c(Patient, cluster))
+		setnames(tmp, c('Patient','cluster'), c('t.Patient','t.cluster'))
+		setkey(tmp, t.Patient)
+		R.clu			<- merge(R.clu, unique(tmp), by='t.Patient')	
+		R.clu			<- subset(R.clu, cluster==t.cluster)
 		cat(paste('\ncompute risk.table'))
 		risk.table		<- do.call('rbind',list(
 						risk.df[,	{
 									z	<- table( YX[, risk, with=FALSE])
 									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='YX')												
+								},by='risk'],
+						risk.df[,	{
+									z	<- table( R.clu[, risk, with=FALSE])
+									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='R.clu')												
+								},by='risk'],
+						risk.df[,	{
+									z	<- table( R.seq[, risk, with=FALSE])
+									list(factor=rownames(z), n=as.numeric(unclass(z)), stat='R.seq')												
 								},by='risk'],
 						risk.df[,	{
 									z	<- table( X.clu[, risk, with=FALSE])
@@ -1984,7 +2337,7 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 			#	sampling tables
 			args			<- sampling.get.all.tables.args(method.risk)
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Stables',method.PDT,'_',tmp,'.R',sep='')			
-			Stab			<- sampling.get.all.tables(YX, X.seq, X.msm, X.clu, tperiod.info=tperiod.info, resume=resume, save.file=save.file, method=method.risk, risk.col=args['risk.col'], risktp.col=args['risktp.col'], factor.ref.v=args['factor.ref.v'])
+			Stab			<- sampling.get.all.tables(YX, X.seq, X.msm, X.clu, clumsm.info, tperiod.info=tperiod.info, resume=resume, save.file=save.file, method=method.risk, risk.col=args['risk.col'], risktp.col=args['risktp.col'], factor.ref.v=args['factor.ref.v'])
 			#	sampling model
 			save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Smodel',method.PDT,'_',tmp,'.R',sep='')
 			sm				<- sampling.model.calculate(X.msm, df.all.allmsm, df.viro.allmsm, df.immu.allmsm, df.treatment.allmsm, t.period=t.period, t.endctime=t.endctime, method.lRNA.supp=method.lRNA.supp, method.lRNA.nsupp=4, contact.grace=1.5, resume=resume, save.file=save.file)			
@@ -1999,7 +2352,7 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 	}
 	X.clu<- X.seq<- X.msm<- NULL
 	gc()
-#stop()	
+stop()	
 	ans		<- list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, YX=YX, Y.brl.bs=Y.brl.bs)
 	ans
 }
@@ -2157,9 +2510,9 @@ stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F<- function(YX.m5)
 	YX.m5
 }
 ######################################################################################
-rltvtp.model.150729<- function(YXs, indir=NA, infile=NA)
+rltvtp.model.150729<- function(YXc, indir=NA, infile=NA)
 {
-	YXr		<- subset(YXs, select=c('t.Patient','t','Patient', 'score.Y','ntPatient','stageC','t.AgeC', rfactor))
+	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.Y','ntPatient','stageC','t.AgeC', 't.stAgeC'))
 	wm1		<- gamlss( score.Y~t.AgeC-1, sigma.formula=~t.AgeC-1, data=YXr, family=GA() )
 	wm2		<- gamlss( score.Y~stageC-1, sigma.formula=~stageC-1, data=YXr, family=GA() )
 	wm3		<- gamlss( score.Y~t.stAgeC-1, sigma.formula=~1, data=YXr, family=GA() )
@@ -2219,7 +2572,22 @@ rltvtp.model.150729<- function(YXs, indir=NA, infile=NA)
 		ggsave(file=file, w=6,h=6)
 		#	--> spot on
 	}
-	list(wm1=wm1, wm2=wm2, wm3=wm3, wm4=wm4, par=wpars)
+	list(wm1=wm1, wm2=wm2, wm3=wm3, wm4=wm4, par=wpars, data=YXr)
+}
+######################################################################################
+rltvtp.confounded.ntransmitters<- function(YXc, indir, infile)
+{
+	tmp		<- YXc[, list(score.Y.m=mean(score.Y), stageC=stageC[1], t.AgeC=t.AgeC[1]), by=c('ntPatient','t.stAgeC')]
+	ggplot( tmp, aes(x=ntPatient, y=score.Y.m)) + geom_bar(stat='identity') + facet_grid(stageC~t.AgeC)
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeansByStageNtPatient_raw.pdf',infile),sep='')	
+	ggsave(file=file, w=20,h=10)
+	tmp		<- YXc[, list(score.Y.me=mean(score.Y)), by=c('ntPatient')]
+	ggplot( tmp, aes(x=ntPatient, y=score.Y.me)) + geom_bar(stat='identity')
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeansByNtPatient_raw.pdf',infile),sep='')	
+	ggsave(file=file, w=5,h=5)	
+	ggplot(YXc, aes(x=score.Y.raw, y=score.Y, colour=as.numeric(as.character(ntPatient)))) + geom_point(alpha=0.5) + geom_abline(slope=1, intercept=0) + theme_bw()
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYvsScoreYRaw.pdf',infile),sep='')	
+	ggsave(file=file, w=5,h=5)		
 }
 ######################################################################################
 rltvtp.exploredistribution<- function(YXs, indir, infile)
