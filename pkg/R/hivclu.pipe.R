@@ -834,7 +834,8 @@ hivc.pipeline.ages<- function()
 		
 		# use to pre-compute tables mem 130 GB
 		#method.risk				<- c( 	'm5B.tp1.clu.adj' )
-		method.risk				<- c( 	'm5A.tp1.clu.adj' )
+		#method.risk				<- c( 	'm5A.tp1.clu.adj' )
+		method.risk				<- c( 	'm5C.tp1.clu.adj' )
 		dummy	<- sapply(method.risk, function(x)
 				{
 					cmd	<- hivc.cmd.age.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)

@@ -9966,9 +9966,11 @@ project.athena.Fisheretal.censoring.model<- function(ct, ctb, ctn=NULL, plot.fil
 	list( ctb=ctb, ctn=ctn )
 }	
 ######################################################################################
-project.athena.Fisheretal.brl.read.distTipsToRec<- function(indir, df.pairs, verbose=1)
+project.athena.Fisheretal.brl.read.distTipsToRec<- function(indir, df.pairs, verbose=1, select=NA)
 {	
 	infiles			<- list.files(path=indir, pattern='*distTipsToRec*')
+	if(!is.na(select))
+		infiles		<- infiles[ grepl(select, infiles) ]	
 	if(verbose)
 		cat(paste('\nFound distTipsToRec files, n=', length(infiles)))
 	stopifnot(length(infiles)>0)

@@ -426,6 +426,7 @@ age.get.sampling.censoring.models<- function(method, method.PDT, method.risk, ou
 	tmp				<- NA
 	if(grepl('m5A',method.risk))	tmp	<- 'm5A'
 	if(grepl('m5B',method.risk))	tmp	<- 'm5B'
+	if(grepl('m5C',method.risk))	tmp	<- 'm5C'
 	if(is.na(tmp))	stop('unknown method.risk')	
 	
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'Yscore', method,'_Stables',method.PDT,'_',tmp,'.R',sep='')			
@@ -445,6 +446,7 @@ age.get.Xtables<- function(method, method.PDT, method.risk, outdir, outfile, ins
 		save.file		<- NA
 		if(grepl('m5A',method.risk))	save.file	<- 'm5A'
 		if(grepl('m5B',method.risk))	save.file	<- 'm5B'
+		if(grepl('m5C',method.risk))	save.file	<- 'm5C'
 		if(is.na(save.file))	stop('unknown method.risk')				
 		tmp				<- regmatches(method.risk, regexpr('tp[0-9]', method.risk))		
 		save.file		<- paste(save.file, ifelse(length(tmp), paste('.',tmp,sep=''), ''), sep='')
@@ -502,6 +504,80 @@ censoring.get.dataset<- function(tp.df, df.all.allmsm)
 	#
 	tpd.df		<- merge(tp.df, tmp, by='Patient')	
 	tpd.df
+}
+######################################################################################
+clustering.getrisks<- function(risk.table, indir=NA, infile=NA, rskf.name='t.stAgeC', rskf.baseline='D_(30,45]')
+{
+	#	p.clu	(clustering prob)
+	#	model derived from t.stAgeC.tperiod stratification
+	tclu		<- subset(risk.table, stat%in%c('R.clu','R.seq')) 
+	tclu[, t.period:= substr(factor, nchar(factor),nchar(factor))]
+	tclu[, p:=NULL]	
+	tclu[, factor2:= substr(factor, 1,nchar(factor)-2)]	
+	tmp			<- dcast.data.table(tclu, risk+factor2~stat, value.var='n', fun.aggregate=sum)
+	tmp[, t.period:='Overall']
+	tclu		<- dcast.data.table(tclu, risk+t.period+factor2~stat, value.var='n')
+	tclu		<- rbind(tclu, tmp, fill=T, use.names=T)
+	tclu[, p.clu:= R.clu/R.seq]	
+	tmp			<- subset(tclu, factor2==rskf.baseline)
+	setnames(tmp, c('factor2','p.clu'), c('factor2r','p.clur'))
+	tclu		<- merge(tclu, subset(tmp, select=c('t.period','risk','factor2r','p.clur')), by=c('t.period','risk'))
+	tclu[, RR:= p.clu/p.clur]
+	#	p.pt	(prob of being a prob transmitter if in same cluster)
+	#	model derived from t.stAgeC.tperiod stratification
+	tpt			<- subset(risk.table, stat%in%c('R.clu','YX')) 
+	tpt[, t.period:= substr(factor, nchar(factor),nchar(factor))]
+	tpt[, p:=NULL]	
+	tpt[, factor2:= substr(factor, 1,nchar(factor)-2)]
+	tmp			<- dcast.data.table(tpt, risk+factor2~stat, value.var='n', fun.aggregate=sum)
+	tmp[, t.period:='Overall']	
+	tpt			<- dcast.data.table(tpt, risk+t.period+factor2~stat, value.var='n')
+	tpt			<- rbind(tpt, tmp, fill=T, use.names=T)
+	tpt[, p.pt:= YX/R.clu]
+	tmp			<- subset(tpt, factor2==rskf.baseline)
+	setnames(tmp, c('factor2','p.pt'), c('factor2r','p.ptr'))
+	tpt		<- merge(tpt, subset(tmp, select=c('t.period','risk','factor2r','p.ptr')), by=c('t.period','risk'))
+	tpt[, RR:= p.pt/p.ptr]
+	
+	if(!is.na(indir) & !is.na(infile))
+	{
+		ggplot(subset(tclu,t.period!='Overall'), aes(y=factor2, x=100*p.clu, pch=factor(t.period), size=R.clu)) + geom_point() + 
+				scale_x_continuous(breaks=seq(0,10,0.2)) + theme_bw()
+		file	<- paste(indir,'/',gsub('\\.R','_ClusteringByTperiod.pdf',infile),sep='')	
+		ggsave(file=file, w=6,h=7)
+		ggplot(subset(tclu,t.period!='Overall'), aes(y=factor2, x=RR, pch=factor(t.period), size=R.clu)) + geom_point() + 
+				geom_vline(xintercept=1, colour='grey50',lwd=1) +
+				scale_x_continuous(breaks=seq(0,10,0.5)) + theme_bw()
+		file	<- paste(indir,'/',gsub('\\.R','_ClusteringByTperiodRR.pdf',infile),sep='')	
+		ggsave(file=file, w=6,h=7)
+		ggplot(subset(tclu,t.period=='Overall'), aes(y=factor2, x=100*p.clu, size=R.clu)) + geom_point() + 
+				scale_x_continuous(breaks=seq(0,10,0.2)) + theme_bw()
+		file	<- paste(indir,'/',gsub('\\.R','_ClusteringOverall.pdf',infile),sep='')	
+		ggsave(file=file, w=6,h=7)
+		ggplot(subset(tclu,t.period=='Overall'), aes(y=factor2, x=RR, size=R.clu)) + geom_point() + 
+				geom_vline(xintercept=1, colour='grey50',lwd=1) +
+				scale_x_continuous(breaks=seq(0,10,0.5)) + theme_bw()
+		file	<- paste(indir,'/',gsub('\\.R','_ClusteringOverallRR.pdf',infile),sep='')	
+		ggsave(file=file, w=6,h=7)
+		#		
+		ggplot(subset(tpt,t.period!='Overall'), aes(y=factor2, x=100*p.pt, pch=factor(t.period), size=YX)) + geom_point() + 
+				scale_x_continuous(breaks=seq(0,100,10)) + theme_bw()
+		file	<- paste(indir,'/',gsub('\\.R','_ProbTrByTperiod.pdf',infile),sep='')	
+		ggsave(file=file, w=6,h=7)	
+		ggplot(subset(tpt,t.period!='Overall'), aes(y=factor2, x=RR, pch=factor(t.period), size=YX)) + geom_point() + 
+				geom_vline(xintercept=1, colour='grey50',lwd=1) + scale_x_continuous(breaks=seq(0,10,0.5)) + theme_bw()
+		file	<- paste(indir,'/',gsub('\\.R','_ProbTrByTperiodRR.pdf',infile),sep='')	
+		ggsave(file=file, w=6,h=7)	
+		ggplot(subset(tpt,t.period=='Overall'), aes(y=factor2, x=100*p.pt, size=YX)) + geom_point() + 
+				scale_x_continuous(breaks=seq(0,100,10)) + theme_bw()
+		file	<- paste(indir,'/',gsub('\\.R','_ProbTrOverall.pdf',infile),sep='')	
+		ggsave(file=file, w=6,h=7)	
+		ggplot(subset(tpt,t.period=='Overall'), aes(y=factor2, x=RR, size=YX)) + geom_point() + 
+				geom_vline(xintercept=1, colour='grey50',lwd=1) + scale_x_continuous(breaks=seq(0,10,0.5)) + theme_bw()
+		file	<- paste(indir,'/',gsub('\\.R','_ProbTrOverallRR.pdf',infile),sep='')	
+		ggsave(file=file, w=6,h=7)	
+	}
+	list(tpt=tpt, tclu=tclu)
 }
 ######################################################################################
 censoring.check.censdelta<- function()
@@ -676,6 +752,10 @@ censoring.model.calculate.bs.args<- function(method)
 	{
 		risk.col		<- 'stageC'			
 	}
+	if(grepl('m5C',method))
+	{
+		risk.col		<- 'stageC'			
+	}
 	risk.col
 }
 ######################################################################################
@@ -788,6 +868,54 @@ adjust.dev.code.for.ntPatient.adjustment<- function()
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 }
 ######################################################################################
+#	models with time dependence
+altvtp.model.150827<- function(YXc)
+{
+	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','score.p.nadj','missexp','score.Y','ntPatient','stageC','t.AgeC','t.stAgeC'))
+	YXr[, ntPatientn:= as.numeric(as.character(ntPatient))]
+	YXr		<- melt( YXr, measure.vars=c('score.p','score.p.nadj','missexp','score.Y'), variable.name='STAT', value.name='V' )
+	#	get smooth in terms of t.stAgeC
+	require(zoo)	
+	setkey(YXr, t.stAgeC, t)
+	tmp		<- YXr[, list(V=mean(V)), by=c('t','t.stAgeC','STAT')]
+	tmp		<- merge(tmp, tmp[, list(t=t, n=seq_along(t)), by=c('t.stAgeC','STAT')], by=c('t.stAgeC','t','STAT'))
+	setkey(tmp, STAT, t.stAgeC, t)
+	tmp		<- tmp[, list(n=n, t=t, V.rm=rollapply(V, width=ceiling(max(n)/5), FUN=mean, align="center", partial=TRUE)), by=c('STAT','t.stAgeC')]
+	YXr		<- merge(YXr, tmp, by=c('STAT','t','t.stAgeC'))	
+	tmp		<- melt(subset(YXr, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','t.stAgeC','stageC','t.AgeC','ntPatient','ntPatientn'), measure.vars='n', variable.name='STAT', value.name='V')
+	YXr[, n:=NULL]
+	tmp[, V.rm:=V]	
+	YXr		<- rbind(YXr, tmp, use.names=TRUE)
+	tmp[, ALPHA:=0.2]
+	set(tmp, tmp[, which(V>20)],'ALPHA',1)
+	YXr		<- merge(YXr, subset(tmp, select=c('t.Patient','Patient','t','ALPHA')), by=c('t.Patient','Patient','t'))
+	
+	ggplot(YXr, aes(x=t, y=V.rm, colour=t.AgeC, group=t.stAgeC, alpha=ALPHA)) + geom_line() + geom_point(size=1.2) +
+			facet_grid(STAT~stageC, scales='free') + labs(y='absolute phylogenetic transmission probability\nrolling mean\n(%)') +
+			theme_bw()
+	file	<- paste(indir,'/',gsub('\\.R','_scorePMUByTime.pdf',infile),sep='')	
+	ggsave(file=file, w=15,h=10)	
+	
+	
+	#	relevel so regression coefficients are contrasts of interest
+	base.df	<- data.table(	ST=c('stageC','t.AgeC','t.stAgeC'), 
+			RSKFbaseline=c('D','(30,45]','D_(30,45]'))
+	setkey(base.df, ST)
+	set(YXr, NULL, 'stageC', YXr[, relevel(stageC, ref=base.df['stageC',][,RSKFbaseline])])
+	set(YXr, NULL, 't.AgeC', YXr[, relevel(t.AgeC, ref=base.df['t.AgeC',][,RSKFbaseline])])
+	set(YXr, NULL, 't.stAgeC', YXr[, relevel(t.stAgeC, ref=base.df['t.stAgeC',][,RSKFbaseline])])
+	#	fit contrasts 
+	#	(we only do this to get the risk ratio and confidence intervals)
+	wcm1	<- gamlss( score.p~t.AgeC+ntPatientn, sigma.formula=~t.AgeC+ntPatientn, data=YXr, family=GA() )
+	wcm2	<- gamlss( score.p~stageC+ntPatientn, sigma.formula=~stageC+ntPatientn, data=YXr, family=GA() )	
+	wcm5	<- gamlss( score.p~t.stAgeC+ntPatientn, sigma.formula=~t.stAgeC+ntPatientn, data=YXr, family=GA() )
+	#	fit coefficients that correspond to stages 
+	#	(we only do this to get the risk ratio and confidence intervals)
+	wbm1	<- gamlss( score.p~t.AgeC+ntPatientn-1, sigma.formula=~t.AgeC+ntPatientn-1, data=YXr, family=GA() )
+	wbm2	<- gamlss( score.p~stageC+ntPatientn-1, sigma.formula=~stageC+ntPatientn-1, data=YXr, family=GA() )	
+	wbm5	<- gamlss( score.p~t.stAgeC+ntPatientn-1, sigma.formula=~t.stAgeC+ntPatientn-1, data=YXr, family=GA() )
+}
+######################################################################################
 altvtp.model.150730<- function(YXc)
 {
 	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
@@ -801,43 +929,111 @@ altvtp.model.150730<- function(YXc)
 	set(YXr, NULL, 't.stAgeC', YXr[, relevel(t.stAgeC, ref=base.df['t.stAgeC',][,RSKFbaseline])])
 	#	fit contrasts 
 	#	(we only do this to get the risk ratio and confidence intervals)
-	wm1		<- gamlss( score.p~t.AgeC+ntPatientn, sigma.formula=~t.AgeC+ntPatientn, data=YXr, family=GA() )
-	wm2		<- gamlss( score.p~stageC+ntPatientn, sigma.formula=~stageC+ntPatientn, data=YXr, family=GA() )
-	wm3		<- gamlss( score.p~t.stAgeC+ntPatientn, sigma.formula=~ntPatientn, data=YXr, family=GA() )
-	wm4		<- gamlss( score.p~t.stAgeC+ntPatientn, sigma.formula=~t.stAgeC+ntPatientn, data=YXr, family=GA() )
+	wcm1	<- gamlss( score.p~t.AgeC+ntPatientn, sigma.formula=~t.AgeC+ntPatientn, data=YXr, family=GA() )
+	wcm2	<- gamlss( score.p~stageC+ntPatientn, sigma.formula=~stageC+ntPatientn, data=YXr, family=GA() )	
+	wcm3	<- gamlss( score.p~t.stAgeC, sigma.formula=~t.stAgeC, data=YXr, family=GA() )
+	wcm4	<- gamlss( score.p~t.stAgeC+ntPatientn, sigma.formula=~ntPatientn, data=YXr, family=GA() )
+	wcm5	<- gamlss( score.p~t.stAgeC+ntPatientn, sigma.formula=~t.stAgeC+ntPatientn, data=YXr, family=GA() )
+	#	fit coefficients that correspond to stages 
+	#	(we only do this to get the risk ratio and confidence intervals)
+	wbm1	<- gamlss( score.p~t.AgeC+ntPatientn-1, sigma.formula=~t.AgeC+ntPatientn-1, data=YXr, family=GA() )
+	wbm2	<- gamlss( score.p~stageC+ntPatientn-1, sigma.formula=~stageC+ntPatientn-1, data=YXr, family=GA() )	
+	#wbm3	<- gamlss( score.p~t.stAgeC-1, sigma.formula=~t.stAgeC-1, data=YXr, family=GA() )
+	wbm3	<- gamlss( score.p~t.stAgeC-1, data=YXr, family=GA() )
+	wbm4	<- gamlss( score.p~t.stAgeC+ntPatientn-1, sigma.formula=~ntPatientn-1, data=YXr, family=GA() )
+	wbm5	<- gamlss( score.p~t.stAgeC+ntPatientn-1, sigma.formula=~t.stAgeC+ntPatientn-1, data=YXr, family=GA() )
+	#	read out coefficients
+	tmp		<- coef(wbm1)
+	cf		<- data.table(MO='wbm1', ST='t.AgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.AgeC',][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(wbm1)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wbm1, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.AgeC','',RSKF)])
+	wb		<- copy(cf)
+	#
+	tmp		<- coef(wbm2)
+	cf		<- data.table(MO='wbm2', ST='stageC', RSKF=names(tmp), RSKFbaseline=base.df['stageC',][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(wbm2)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wbm2, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('stageC','',RSKF)])
+	wb		<- rbind(wb, cf)
+	#
+	tmp		<- coef(wbm3)
+	cf		<- data.table(MO='wbm3', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(wbm3)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wbm3, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wb		<- rbind(wb, cf)	
+	#
+	tmp		<- coef(wbm4)
+	cf		<- data.table(MO='wbm4', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(wbm4)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wbm4, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wb		<- rbind(wb, cf)
+	#
+	tmp		<- coef(wbm5)
+	cf		<- data.table(MO='wbm5', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(wbm5)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wbm5, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wb		<- rbind(wb, cf)	
+	tmp		<- melt(wb, id.vars=c('RSKF','MO','ST','RSKFbaseline'))
+	set(tmp, NULL, 'value', tmp[, exp(value)])
+	wb		<- dcast.data.table(tmp, MO+ST+RSKFbaseline+RSKF~variable, value.var='value')
+	#
 	#	read out contrasts
-	tmp		<- coef(wm1)
-	cf		<- data.table(MO='wm1', ST='t.AgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.AgeC',][,RSKFbaseline], CNTR=tmp)
-	tmp		<- confint(wm1)
+	#
+	tmp		<- coef(wcm1)
+	cf		<- data.table(MO='wcm1', ST='t.AgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.AgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wcm1)
 	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
-	tmp		<- confint(wm1, robust=TRUE)
+	tmp		<- confint(wcm1, robust=TRUE)
 	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
 	set(cf, NULL, 'RSKF', cf[,gsub('t.AgeC','',RSKF)])
 	wc		<- copy(cf)
 	#
-	tmp		<- coef(wm2)
-	cf		<- data.table(MO='wm2', ST='stageC', RSKF=names(tmp), RSKFbaseline=base.df['stageC',][,RSKFbaseline], CNTR=tmp)
-	tmp		<- confint(wm2)
+	tmp		<- coef(wcm2)
+	cf		<- data.table(MO='wcm2', ST='stageC', RSKF=names(tmp), RSKFbaseline=base.df['stageC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wcm2)
 	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
-	tmp		<- confint(wm2, robust=TRUE)
+	tmp		<- confint(wcm2, robust=TRUE)
 	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
 	set(cf, NULL, 'RSKF', cf[,gsub('stageC','',RSKF)])
 	wc		<- rbind(wc, cf)
 	#
-	tmp		<- coef(wm3)
-	cf		<- data.table(MO='wm3', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], CNTR=tmp)
-	tmp		<- confint(wm3)
+	tmp		<- coef(wcm3)
+	cf		<- data.table(MO='wcm3', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wcm3)
 	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
-	tmp		<- confint(wm3, robust=TRUE)
+	tmp		<- confint(wcm3, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wc		<- rbind(wc, cf)	
+	#
+	tmp		<- coef(wcm4)
+	cf		<- data.table(MO='wcm4', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wcm4)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wcm4, robust=TRUE)
 	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
 	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
 	wc		<- rbind(wc, cf)
 	#
-	tmp		<- coef(wm4)
-	cf		<- data.table(MO='wm4', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], CNTR=tmp)
-	tmp		<- confint(wm4)
+	tmp		<- coef(wcm5)
+	cf		<- data.table(MO='wcm5', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wcm5)
 	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
-	tmp		<- confint(wm4, robust=TRUE)
+	tmp		<- confint(wcm5, robust=TRUE)
 	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
 	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
 	wc		<- rbind(wc, cf)
@@ -852,17 +1048,51 @@ altvtp.model.150730<- function(YXc)
 	tmp		<- wc[, which(RSKF=='(Intercept)')]	
 	set(wc, tmp, 'RSKF', wc[tmp,RSKFbaseline])
 	
-	
-	
-	#	plot
-	tmp		<- subset(wc, MO=='wm4' & RSKF!='ntPatientn')
+	#	plot mus
+	tmp		<- subset(wb, grepl('wbm3|wbm4|wbm5',MO) & RSKF!='ntPatientn')	
 	lvls	<- as.vector(sapply(		c('UA','UC','D','T','L'), function(x) paste(x,c('(-1,25]','(25,30]','(30,45]','(45,100]'),sep='_')		))
 	set(tmp, NULL, 'RSKF', tmp[, factor(RSKF, levels=rev(lvls))])
-	ggplot( tmp, aes(y=RSKF, x=RR, xmin=RRL, xmax=RRU) ) +
-			scale_x_continuous(breaks=seq(0,5,0.2)) + geom_vline(x=1, colour='grey50', lwd=1) +
-			geom_point() + geom_errorbarh(height=0.5) + theme_bw()
+	set(tmp, NULL, 'stageC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',1)])
+	set(tmp, NULL, 't.AgeC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',2)])
+	setnames(tmp, 'RSKF','t.stAgeC')
+	tmp		<- merge(tmp, YXr[, list(mean=mean(score.p), ql= quantile(score.p,p=0.025), qu= quantile(score.p,p=0.975)), by=c('stageC','t.AgeC','t.stAgeC')], by=c('stageC','t.AgeC','t.stAgeC'))
+	ggplot( tmp, aes(x=t.AgeC, y=100*MU, ymin=100*MUL, ymax=100*MUU, colour=stageC)) +
+			scale_y_continuous(breaks=seq(0,50,5), minor_breaks=seq(0,50,1)) + 
+			geom_point() + geom_errorbar(width=0.5) + 
+			theme_bw() + theme(legend.position='bottom') +
+			facet_grid(MO~stageC) 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePMUByModel2.pdf',infile),sep='')	
+	ggsave(file=file, w=12,h=12)	
+	#	plot mu vs empirical mean
+	ggplot(subset(tmp, MO=='wbm3'), aes(x=mean, xmin=ql, xmax=qu, y=MU, ymin=MUL, ymax=MUU, colour=t.AgeC)) + geom_abline(intercept=0, slope=1) + 
+			geom_point() + geom_errorbar() + geom_errorbarh() +			
+			theme_bw() + 
+			facet_wrap(~stageC, ncol=5, scales='free')
+	file	<- paste(indir,'/',gsub('\\.R','_scorePMUvsMEAN.pdf',infile),sep='')	
+	ggsave(file=file, w=15,h=5)		
+	#	plot contrasts
+	tmp		<- subset(wc, grepl('wcm3|wcm4|wcm5',MO) & RSKF!='ntPatientn')	
+	lvls	<- as.vector(sapply(		c('UA','UC','D','T','L'), function(x) paste(x,c('(-1,25]','(25,30]','(30,45]','(45,100]'),sep='_')		))
+	set(tmp, NULL, 'RSKF', tmp[, factor(RSKF, levels=rev(lvls))])
+	set(tmp, NULL, 'stageC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',1)])
+	set(tmp, NULL, 't.AgeC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',2)])
+	ggplot( tmp, aes(x=t.AgeC, y=RR, ymin=RRL, ymax=RRU, colour=stageC)) +
+			scale_y_continuous(breaks=seq(0,5,0.5), minor_breaks=seq(0,5,0.1)) + geom_hline(y=1, colour='grey50', lwd=1) +
+			geom_point() + geom_errorbar(width=0.5) + 
+			theme_bw() + theme(legend.position='bottom') +
+			facet_grid(MO~stageC) 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePRRByModel2.pdf',infile),sep='')	
+	ggsave(file=file, w=12,h=12)	
 	
-	list(wm1=wm1, wm2=wm2, wm3=wm3, wm4=wm4, wc=wc, data=YXr)
+	ggplot( tmp, aes(y=MO, x=RR, xmin=RRL, xmax=RRU, colour=RSKF) ) +
+			scale_x_continuous(breaks=seq(0,5,0.2)) + geom_vline(x=1, colour='grey50', lwd=1) +
+			geom_point() + geom_errorbarh(height=0.5) + theme_bw() + theme(legend.position='bottom') +
+			facet_grid(RSKF~.) +
+			guides(colour=guide_legend(ncol=4))
+	file	<- paste(indir,'/',gsub('\\.R','_scorePRRByModel.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=20)	
+	
+	list(data=YXr, wb=wb, wc=wc, wbm1=wbm1, wbm2=wbm2, wbm3=wbm3, wbm4=wbm4, wbm5=wbm5, wcm1=wcm1, wcm2=wcm2, wcm3=wcm3, wcm4=wcm4, wcm5=wcm5)
 }
 ######################################################################################
 altvtp.exploredistribution<- function(YXc, indir, infile)
@@ -1061,6 +1291,53 @@ altvtp.exploredistribution<- function(YXc, indir, infile)
 	dev.off()
 }
 ######################################################################################
+altvtp.plot	<- function(YXc, indir, infile)
+{
+	ggplot(YXc, aes(x=missexp, fill=stageC)) + geom_histogram(binwidth=0.25) +
+			scale_x_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1)) +
+			facet_grid(t.AgeC~stageC, scales='free') + 
+			theme_bw() 
+	file	<- paste(indir,'/',gsub('\\.R','_missexpBytstAgeC.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
+	
+	ggplot(YXc, aes(x=t.AgeC, y=missexp, fill=stageC)) + geom_boxplot(outlier.shape = NA) +
+			scale_y_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,10)) +
+			facet_grid(~stageC, space='free', scales='free')  +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(y='expected missing\n(transmission intervals)') 
+	file	<- paste(indir,'/',gsub('\\.R','_missexpBytstAgeC2.pdf',infile),sep='')	
+	ggsave(file=file, w=13,h=7)	
+	
+	
+	ggplot(YXc, aes(x=t.AgeC, y=score.Y, fill=stageC)) + geom_boxplot(outlier.shape = NA) +
+			scale_y_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,70)) +
+			facet_grid(~stageC, space='free', scales='free')  +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(y='relative phylogenetic transmission probability\nfor observed transmission intervals\n(scoreY)') 
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYBytstAgeC.pdf',infile),sep='')	
+	ggsave(file=file, w=13,h=7)	
+	
+	ggplot(YXc, aes(x=t.AgeC, y=100*score.p.nadj, fill=stageC)) + geom_boxplot(outlier.shape = NA) +
+			scale_y_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,30)) +
+			facet_grid(~stageC, space='free', scales='free')  +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(y='unadjusted absolute phylogenetic transmission probability\nfor observed transmission intervals\n(%)') 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePnadjBytstAgeC.pdf',infile),sep='')	
+	ggsave(file=file, w=13,h=7)	
+	
+	ggplot(YXc, aes(x=t.AgeC, y=100*score.p, fill=stageC)) + geom_boxplot(outlier.shape = NA) +
+			scale_y_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,10)) +
+			facet_grid(~stageC, space='free', scales='free')  +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(y='absolute phylogenetic transmission probability\nfor observed transmission intervals\n(%)') 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePBytstAgeC.pdf',infile),sep='')	
+	ggsave(file=file, w=13,h=7)		
+}
+######################################################################################
 altvtp.confounded.ntransmitters<- function(YXc, indir, infile)
 {
 	tmp		<- YXc[, list(score.p.me=mean(score.p)), by=c('ntPatient')]
@@ -1086,6 +1363,8 @@ adjust.dev<- function()
 	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
 	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C2V100bInfT7STRAT_m5A.R'
 	
+	YXo			<- copy(YX)	#before strat
+	YXo2		<- copy(YX)	#after strat
 	YX
 	t.recent.endctime
 	risk.col	<- 't.stAgeC'
@@ -1111,22 +1390,19 @@ adjust.dev<- function()
 	setnames(YXc, c('Patient','r.Patient'), c('t.Patient','Patient'))
 	YXc			<- merge(YXs, subset(YXc, select=c(t.Patient, Patient, t, p.nc)), by=c('t.Patient','Patient','t'), all.x=TRUE)
 	set(YXc, YXc[, which(is.na(p.nc))], 'p.nc', 1)
-	#	p.clu	(clustering prob)
-	#	model derived from t.stAgeC.tperiod stratification
-	st			<- subset(X.tables$st$risk.table, stat%in%c('X.clu','X.seq')) 
-	st[, t.period:= substr(factor, nchar(factor),nchar(factor))]
-	st[, p:=NULL]	
-	st[, t.stAgeC:= substr(factor, 1,nchar(factor)-2)]
-	st[, stageC:= sapply(strsplit(t.stAgeC,'_'),'[[',1)]
-	st[, t.AgeC:= sapply(strsplit(t.stAgeC,'_'),'[[',2)]
-	st			<- dcast.data.table(st, risk+t.period+stageC+t.AgeC+t.stAgeC~stat, value.var='n')
-	st[, p.clu:= X.clu/X.seq]
-	YXc		<- merge(YXc, subset(st, select=c(t.stAgeC, t.period, p.clu)), by=c('t.stAgeC','t.period'))
-	ggplot(st, aes(y=t.stAgeC, x=100*p.clu, pch=factor(tperiod), colour=stageC, size=X.clu)) + geom_point() + 
-			scale_x_continuous(breaks=seq(0,100,10)) + theme_bw()
-	file	<- paste(indir,'/',gsub('\\.R','_ClusteringByTperiod.pdf',infile),sep='')	
-	ggsave(file=file, w=7,h=20)	
-	
+	#	get p.clu and p.pt
+	risk.table	<- X.tables$st$risk.table
+	tmp			<- clustering.getrisks(risk.table, indir=indir, infile=infile, rskf.name='t.stAgeC', rskf.baseline='D_(30,45]')
+	tpt			<- tmp$tpt
+	tclu		<- tmp$tclu	
+	tmp			<- subset(tclu, t.period=='Overall', select=c(factor2, p.clu))
+	setnames(tmp, 'factor2', 't.stAgeC')	
+	set(tmp, NULL, 't.stAgeC', tmp[, factor(t.stAgeC, levels=YXc[, levels(t.stAgeC)], labels=YXc[, levels(t.stAgeC)])])
+	YXc			<- merge(YXc, tmp, by=c('t.stAgeC'))
+	tmp			<- subset(tpt, t.period=='Overall', select=c(factor2, p.pt))
+	setnames(tmp, 'factor2', 't.stAgeC')		
+	set(tmp, NULL, 't.stAgeC', tmp[, factor(t.stAgeC, levels=YXc[, levels(t.stAgeC)], labels=YXc[, levels(t.stAgeC)])])
+	YXc			<- merge(YXc, tmp, by=c('t.stAgeC'))
 	
 	#	get w per interval
 	cat(paste('\nsetting likelihood to likelihood of pair / number transmission intervals'))
@@ -1152,26 +1428,11 @@ adjust.dev<- function()
 	YXc[, missexp:= YXc[, 1/(p.seq*p.nc)-1]]
 	rtpmiss	<- merge( YXc[, list(missexp=sum(missexp)), by=risk.col], rtpmus, by=risk.col )
 	rtpmiss[, score.Y:= rtpmiss[, missexp*mu]]
-	rtpmissr	<- rtpmiss[, sum(score.Y)] / YXc[, length(unique(Patient))]	#sum of expected missing relative transmission probabilities, per recipient 
-	
-	tmp		<- YXc[, list(score.p= score.Y/(sum(score.Y)+rtpmissr), t.Patient=t.Patient, t=t), by='Patient']
+	rtpmissr	<- rtpmiss[, sum(score.Y)] / YXc[, length(unique(Patient))]	#sum of expected missing relative transmission probabilities, per recipient 	
+	tmp		<- YXc[, list(score.p= score.Y/(sum(score.Y)+rtpmissr), score.p.nadj= score.Y/sum(score.Y), t.Patient=t.Patient, t=t), by='Patient']
 	YXc		<- merge(YXc, tmp, by=c('t.Patient','Patient','t'))
-	#
-	ggplot(YXc, aes(x=missexp, fill=t.stAgeC)) + geom_histogram(binwidth=0.25) +
-			scale_x_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1)) +
-			facet_grid(t.stAgeC~., scales='free') + 
-			theme_bw() 
-	file	<- paste(indir,'/',gsub('\\.R','_missexpBytstAgeC.pdf',infile),sep='')	
-	ggsave(file=file, w=7,h=20)	
-	ggplot(YXc, aes(x=100*score.p, fill=stageC)) + geom_histogram(binwidth=2) +
-			scale_x_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
-			facet_grid(t.AgeC~stageC, scales='free', space='free') + 
-			labs(x='absolute phylogenetic transmission probability\nfor observed transmission intervals\n(%)') +
-			theme_bw() 
-	file	<- paste(indir,'/',gsub('\\.R','_atpBytstAgeC.pdf',infile),sep='')	
-	ggsave(file=file, w=10,h=10)	
-	
-	
+	#	explore p across stages
+	altvtp.plot(YXc, indir, infile)
 	#	are the p's confounded by cluster size?
 	altvtp.confounded.ntransmitters(YXc, indir, infile)
 	#	Yes, quite strongly!
@@ -1278,7 +1539,7 @@ censoring.frac.Age_253045.Stage_UA_UC_D_T_F<- function()
 				scale_colour_discrete(guide=FALSE) +
 				scale_y_continuous(breaks=seq(0,100,20), lim=c(0,100), expand=c(0,1) ) + theme_bw() +
 				theme(panel.grid.major=element_line(colour="grey70", size=0.4), legend.position = "bottom") + 
-				facet_grid(stage ~ age, margins=FALSE)
+				facet_grid(stage ~ age, margins=FALSE) 
 		ggsave(file=plot.file, w=10, h=6)		
 	}
 	#	compute adjusted numbers for each bootstrap run
@@ -1757,6 +2018,12 @@ sampling.get.all.tables.args<- function(method)
 	if(grepl('m5B',method))
 	{
 		factor.ref.v	<- paste('T_(30,45]',tp,sep='')
+		risktp.col		<- 't.stAgeC.prd'
+		risk.col		<- 't.stAgeC'			
+	}
+	if(grepl('m5C',method))
+	{
+		factor.ref.v	<- paste('TS_(30,45]',tp,sep='')
 		risktp.col		<- 't.stAgeC.prd'
 		risk.col		<- 't.stAgeC'			
 	}
@@ -2316,10 +2583,23 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 			gc()
 		}
 	}
+	if(grepl('m5C',method.risk))	
+	{
+		YX					<- stratificationmodel.Age_253045.Stage_UA_UC_D_TS_TO_F(YX)
+		if(with.Xmsmetc)
+		{
+			X.clu			<- stratificationmodel.Age_253045.Stage_UA_UC_D_TS_TO_F(X.clu)
+			gc()
+			X.seq			<- stratificationmodel.Age_253045.Stage_UA_UC_D_TS_TO_F(X.seq)
+			gc()
+			X.msm			<- stratificationmodel.Age_253045.Stage_UA_UC_D_TS_TO_F(X.msm)
+			gc()
+		}
+	}
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', method, 'STRAT_',gsub('\\.clu\\.adj','',gsub('\\.tp[0-9]','',method.risk)),'.R',sep='')
 	save(YX, X.clu, X.seq, X.msm, file=save.file)
 #STOP1		
-#stop()
+stop()
 	#
 	#	compute sampling and censoring tables/models that are needed for adjustments
 	#
@@ -2332,6 +2612,8 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 				tmp			<- 'm5A'
 			if(grepl('m5B',method.risk))		
 				tmp			<- 'm5B'
+			if(grepl('m5C',method.risk))		
+				tmp			<- 'm5C'
 			if(is.na(tmp))	
 				stop('unknown method.risk')
 			#	sampling tables
@@ -2356,7 +2638,108 @@ stop()
 	ans		<- list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, YX=YX, Y.brl.bs=Y.brl.bs)
 	ans
 }
-
+######################################################################################
+stratificationmodel.Age_253045.Stage_UA_UC_D_TS_TO_F<- function(YX.m5, lRNA.supp=2)
+{
+	#	get age stages
+	#YX.m5	<- copy(YX)
+	if('U.score'%in%colnames(YX.m5))
+		YX.m5[, U.score:=NULL]
+	cat(paste('\nsubset to save mem\n'))
+	if('score.Y'%in%colnames(YX.m5))
+		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, FASTASampleCode, t.FASTASampleCode, score.Y, telapsed, brl, stage, t.period, t.isAcute, contact, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, t.InfT, w, w.i, w.in, w.t, w.tn, t.Age, Age, lRNA_T1.supp, lRNA, nlRNA.supp, nlRNA.nsupp ))	
+	if(!'score.Y'%in%colnames(YX.m5))
+		YX.m5	<- subset(YX.m5, select=c(t, t.Patient, Patient, stage, t.period, t.isAcute, contact, t.AnyT_T1, AnyPos_T1, t.AnyPos_T1, t.InfT, t.Age, Age, lRNA_T1.supp, lRNA, nlRNA.supp, nlRNA.nsupp ))
+	gc()	
+	if('score.Y'%in%colnames(YX.m5) && YX.m5[, !any(score.Y>1.1)])
+	{
+		tmp	<- YX.m5[, score.Y>0]
+		set(YX.m5, which(tmp), 'score.Y', YX.m5[tmp,(score.Y*(length(tmp)-1)+0.5)/length(tmp)] )
+	}	
+	#
+	#	PREPARE AGE (Age and t.Age are ages at midpoint of infection interval)
+	#
+	#	set age group of transmitter				
+	age.breaks		<- c(-1, 25, 30, 45, 100)
+	age.labels		<- c('<25','<30','<45','<100')	
+	YX.m5[, t.AgeC:= YX.m5[, cut(t.Age, breaks=age.breaks)]]	
+	set(YX.m5, NULL, 't.AgeC', YX.m5[, factor(as.character(t.AgeC))])
+	#	set age group of recipient
+	YX.m5[, AgeC:= YX.m5[, cut(Age, breaks=age.breaks)]]	
+	set(YX.m5, NULL, 'AgeC', YX.m5[, factor(as.character(AgeC))])
+	#	set age group of pair
+	YX.m5[, p.AgeC:= YX.m5[, paste(as.character(t.AgeC),'->',as.character(AgeC),sep='')]]
+	set(YX.m5, NULL, 'p.AgeC', YX.m5[, factor(p.AgeC)])
+	#
+	#	PREPARE STAGE
+	#	
+	YX.m5[, stageC:=NA_character_]
+	set(YX.m5, YX.m5[, which(stage=='Diag')], 'stageC', 'D')
+	set(YX.m5, YX.m5[, which(stage=='ART.started')], 'stageC', 'T' )
+	set(YX.m5, YX.m5[, which(stage=='U')], 'stageC', 'UC')
+	#	confirmed acute --> UA
+	set(YX.m5, YX.m5[, which(stage=='U' & t.isAcute=='Yes')], 'stageC', 'UA')
+	#	confirmed acute and diagnosed in first 3 mnths --> UA
+	set(YX.m5, YX.m5[, which(t.isAcute=='Yes' & stage=='Diag' & t-t.AnyPos_T1 < 0.25)], 'stageC', 'UA' )
+	#	estimated recent
+	set(YX.m5, YX.m5[, which(stage=='U' & (t-t.InfT)<1 & (t.isAcute!='Yes' | is.na(t.isAcute)))], 'stageC', 'UA')
+	#	set Lost
+	stopifnot( nrow(subset(YX.m5, stage!='U' & is.na(contact)))==0 )	
+	set(YX.m5, YX.m5[, which(stage!='U' & contact!='Yes')], 'stageC', 'L')	
+	#	break up treated
+	YX.m5	<- merge(YX.m5, YX.m5[, {
+					lRNA.c3			<- 'ART.vlNA'
+					tmp				<- which(!is.na(lRNA))
+					if( any(t<lRNA_T1.supp) | any(is.na(lRNA_T1.supp)))
+						lRNA.c3		<- 'ART.NotYetFirstSu'
+					if( all(t>=lRNA_T1.supp) && length(tmp) && max(lRNA[tmp])>lRNA.supp)
+					{
+						tmp2		<- sum(nlRNA.nsupp, na.rm=TRUE)
+						if(tmp2<=0)
+							lRNA.c3	<- 'ART.vlNA'
+						if(tmp2>0)
+							lRNA.c3	<- 'ART.suA.N'	
+					}
+					if( all(t>=lRNA_T1.supp) && length(tmp) &&  max(lRNA[tmp])<=lRNA.supp)
+					{
+						tmp2		<- sum(nlRNA.supp, na.rm=TRUE)
+						if(tmp2<=0)
+							lRNA.c3	<- 'ART.vlNA'
+						if(tmp2>=1)
+							lRNA.c3	<- 'ART.suA.Y'																					
+					} 						
+					list( lRNA.c3=lRNA.c3 )
+				}, by=c('Patient','t.Patient')], by=c('Patient','t.Patient'), all.x=TRUE)
+	set(YX.m5, YX.m5[, which(stageC=='T' & lRNA.c3=='ART.suA.Y')], 'stageC', 'TS')
+	set(YX.m5, YX.m5[, which(stageC=='T' & lRNA.c3!='ART.suA.Y')], 'stageC', 'TO')
+	set(YX.m5, NULL, 'stageC', YX.m5[, factor(stageC, levels=c('UA','UC','D','TO','TS','L'))])
+	#
+	#	PREPARE STAGE:AGE
+	#	
+	YX.m5[, t.stAgeC:= YX.m5[, factor(paste(as.character(stageC),'_',as.character(t.AgeC),sep=''))]]
+	#
+	#	PREPARE cross with time period
+	#	
+	if(1 & 't.period'%in%colnames(YX.m5) & YX.m5[, any(t.period=='6')])
+	{
+		set(YX.m5, YX.m5[, which(t.period%in%c('5','6'))], 't.period', '4')
+		set(YX.m5, NULL, 't.period', YX.m5[, factor(t.period)])
+	}
+	if('t.period'%in%colnames(YX.m5))
+	{
+		
+		cat(paste('\nadding tperiod columns\n'))
+		YX.m5[, AgeC.prd:= factor(paste(as.character(AgeC), t.period,sep='.'))]
+		YX.m5[, t.AgeC.prd:= factor(paste(as.character(t.AgeC), t.period,sep='.'))]
+		YX.m5[, p.AgeC.prd:= factor(paste(as.character(t.AgeC.prd),'->',as.character(AgeC.prd),sep=''))]
+		YX.m5[, t.stAgeC.prd:= factor(paste(as.character(t.stAgeC), t.period,sep='.'))]		
+	}	
+	gc()	
+	cat(paste('\nsubset to save further mem\n'))
+	set(YX.m5, NULL, c('t.InfT','t.isAcute','contact','stage','t.AnyT_T1'), NULL)
+	gc()
+	YX.m5
+}
 ######################################################################################
 stratificationmodel.Age_253045.Stage_UA_UC_D_T_F<- function(YX.m5)
 {

@@ -3148,7 +3148,7 @@ project.hivc.clustering.forStephane<- function()
 	argv			<<- unlist(strsplit(argv,' '))
 	nsh.clu.pre		<- hivc.prog.get.clustering.precompute()
 	#	read TP tips and TN tips
-	tips.linked		<- subset(nsh.clu.pre$bs.linked.bypatient, select=c('tip1','tip2'))
+	tips.linked		<- subset(nsh.clu.pre$bs.linked.bypatient, select=c('tip1','tip2','bs','PosSeqT.diff'))
 	tips.unlinked	<- do.call('rbind',nsh.clu.pre$unlinked.bytime)
 	tips.unlinked	<- subset(tips.unlinked, select=c('query.FASTASampleCode','FASTASampleCode'))
 	setnames(tips.linked, c('tip1','tip2'), c('FASTASampleCode','t.FASTASampleCode'))
@@ -3159,21 +3159,52 @@ project.hivc.clustering.forStephane<- function()
 	set(tips.unlinked,tmp,'t.FASTASampleCode',tips.unlinked[tmp, FASTASampleCode])
 	set(tips.unlinked,tmp,'FASTASampleCode',z)
 	setkey(tips.unlinked, FASTASampleCode, t.FASTASampleCode)
-	#	get branch lengths of TP and TN data sets
+	#
+	#	get branch lengths of TP 
+	#	get max bootstrap from mrca to root
+	#
 	indir.dists		<- paste(DATA,"fisheretal_data",sep='/')
 	if(0)
 	{
-		tips.linked		<- project.athena.Fisheretal.brl.read.distTipsToRec(indir.dists, tips.linked, verbose=1)
+		tmp				<- subset(tips.linked, select=c('FASTASampleCode','t.FASTASampleCode'))
+		ph.dist			<- cophenetic.phylo(ph)
+		tmp				<- tmp[, list(BRL=ph.dist[FASTASampleCode,t.FASTASampleCode]) ,by=c('FASTASampleCode','t.FASTASampleCode')]
+		tips.linked		<- merge(tmp, tips.linked, by=c('FASTASampleCode','t.FASTASampleCode'))
+		setnames(tips.linked, c('bs'), c('BS'))
 		file			<- paste(outdir,'/',infile,'_TPbrl.R',sep='')
 		cat('\nsave to file',file)
 		save(tips.linked, file=file)
+		
+		load(file)
 	}
+	#
+	#	get branch lengths of TN
+	#	get max bootstrap from mrca to root
+	#
 	if(1)
 	{
-		tips.unlinked	<- project.athena.Fisheretal.brl.read.distTipsToRec(indir.dists, tips.unlinked, verbose=1)
+		tips.unlinked.d	<- copy(tips.unlinked)
+		tmp				<- subset(tips.unlinked.d, select=c('FASTASampleCode','t.FASTASampleCode'))
+		tmp				<- tmp[, list(BRL=ph.dist[FASTASampleCode,t.FASTASampleCode]) ,by=c('FASTASampleCode','t.FASTASampleCode')]
+		tips.unlinked.d	<- merge(tmp, tips.unlinked.d, by=c('FASTASampleCode','t.FASTASampleCode'))		
+		
+		ph					<- nsh.clu.pre$ph
+		ph.mrca				<- mrca(ph)		
+		tmp					<- tips.unlinked.d[, list(MRCA= ph.mrca[FASTASampleCode,t.FASTASampleCode]), by=c('FASTASampleCode','t.FASTASampleCode')]
+		tips.unlinked.d		<- merge(tips.unlinked.d, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))
+		tips.unlinked.d[, BSatMRCA:= ph$node.label[ tips.unlinked.d[, MRCA-Ntip(ph)] ]]
+		tmp					<- tips.unlinked.d[, {													
+					tmp			<- Ancestors(ph, MRCA)		
+					anc.bs		<- ph$node.label[ tmp-Ntip(ph) ]
+					list(	BSbelowMRCA= ifelse(length(tmp),max(anc.bs),0)		)													
+				}, by=c('FASTASampleCode','t.FASTASampleCode')]
+		tips.unlinked.d		<- merge(tips.unlinked.d, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))
+		tmp					<- tips.unlinked.d[,	list(BS=max(BSbelowMRCA,BSatMRCA)),		by=c('FASTASampleCode','t.FASTASampleCode')]
+		tips.unlinked.d		<- merge(tips.unlinked.d, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))	
+		
 		file			<- paste(outdir,'/',infile,'_TNbrl.R',sep='')
 		cat('\nsave to file',file)
-		save(tips.unlinked, file=file)
+		save(tips.unlinked.d, file=file)		
 	}	
 	if(0)	
 	{
@@ -3237,10 +3268,74 @@ project.hivc.clustering.forStephane<- function()
 		ggplot(brl, aes(x=BRL, group=TYPE, fill=TYPE)) +
 				scale_x_continuous(breaks=seq(0,0.3,0.01), limit=c(0,0.2)) +
 				geom_histogram() + theme_bw() + labs(x='genetic distance among surrogate pairs\n(substitutions/site)')
+	}	
+	#
+	#	get heatmaps
+	#
+	if(0)
+	{
+		tips.linked.d	<- subset(tips.linked, BRL_TREE_ID==0)
+		heat			<- as.data.table(expand.grid(BS_CUT=seq(0,1,0.05), BRL_CUT=seq(0, 0.2, 0.005), DATA='Dataset Surrogate Linked', DECLARE='Declare Linked'))
+		tmp				<- heat[, list( PC= nrow(subset(tips.linked, BS>=BS_CUT & BRL<=BRL_CUT)) / nrow(tips.linked) ), by=c('BS_CUT','BRL_CUT')]
+		heat			<- merge(heat, tmp, by=c('BS_CUT','BRL_CUT'))
+		heat.df			<- copy(heat)
 		
+		heat			<- as.data.table(expand.grid(BS_CUT=seq(0,1,0.05), BRL_CUT=seq(0, 0.2, 0.005), DATA='Dataset Unlinked', DECLARE='Declare Linked'))
+		tmp				<- heat[, list( PC= nrow(subset(tips.unlinked.d, BS>=BS_CUT & BRL<=BRL_CUT)) / nrow(tips.unlinked.d) ), by=c('BS_CUT','BRL_CUT')]
+		heat			<- merge(heat, tmp, by=c('BS_CUT','BRL_CUT'))
+		heat.df			<- rbind(heat.df, heat)
+		
+		heat			<- copy(heat.df)
+		set(heat, NULL, 'DECLARE', 'Declare Unlinked')
+		set(heat, NULL, 'PC', heat[, 1-PC])
+		heat.df			<- rbind(heat.df, heat)
+		
+		ggplot(heat.df, aes(x=100*BS_CUT, y=BRL_CUT, fill=cut(PC, breaks=c(-0.01, 0.01, 0.05, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.01)))) + geom_tile(colour = "white") +
+							scale_fill_brewer(palette='PiYG') + theme_bw() +
+							scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0)) +
+							labs(x='bootstrap support threshold\n(%)', y='single linkage branch length threshold\n(%)', fill='%') +
+							facet_grid(DECLARE~DATA) +
+							theme_bw() + theme(legend.position='bottom') + guides(fill = guide_legend(ncol=5))
+		file			<- paste(outdir,'/',infile,'_heatmaps.pdf',sep='')	
+		ggsave(file= file, w=8, h=8)
+	}
+	#
+	#	get false discovery rate
+	#
+	if(0)
+	{
+		setkey(heat.df, BS_CUT, BRL_CUT)
+		fdr.df			<- subset(unique(heat.df), select=c(BS_CUT, BRL_CUT))		
+		tntp.df			<- fdr.df[, {
+					clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=BS_CUT, thresh.brl=BRL_CUT, dist.brl=nsh.clu.pre$dist.brl.casc, nodesupport=ph$node.label, retval="all")
+					tmp			<- data.table(CLU_N= clustering$size.tips)
+					tmp[, TP:= CLU_N-1]
+					tmp[, TN:= choose(CLU_N-1,2)]
+					stopifnot( tmp[, !any(is.na(TP))], tmp[, !any(is.na(TN))])
+					list( SUM_TP= tmp[, sum(TP)], SUM_TN= tmp[, sum(TN)])			
+				}, by=c('BS_CUT','BRL_CUT')]
+		fdr.df			<- merge(heat.df, tntp.df, by=c('BS_CUT','BRL_CUT'))		
+		set( fdr.df, NULL, 'DATA', fdr.df[, gsub(' ','xx',DATA)]) 
+		set( fdr.df, NULL, 'DECLARE', fdr.df[, gsub(' ','xx',DECLARE)]) 
+		fdr.df				<- dcast.data.table(fdr.df, BS_CUT+BRL_CUT+SUM_TP+SUM_TN~DATA+DECLARE, value.var='PC')
+		fdr.df[, ETL:= DatasetxxSurrogatexxLinked_DeclarexxLinked*SUM_TP]
+		fdr.df[, EFL:= DatasetxxUnlinked_DeclarexxLinked*SUM_TN]		
+		fdr.df[, ETU:= DatasetxxSurrogatexxLinked_DeclarexxUnlinked*SUM_TP]
+		fdr.df[, EFU:= DatasetxxUnlinked_DeclarexxUnlinked*SUM_TN]
+		fdr.df[, EFDRL:= EFL / (ETL+EFL)]
+		fdr.df[, EFDRU:= EFU / (ETU+EFU)]
+		fdr.df			<- melt(fdr.df, id.vars=c('BS_CUT','BRL_CUT','SUM_TP','SUM_TN'), measure.vars=c('EFDRL','EFDRU'), value.name='FDR', variable.name='DECLARE')
+		set(fdr.df, fdr.df[, which(DECLARE=='EFDRL')], 'DECLARE', 'Declare Linked')
+		set(fdr.df, fdr.df[, which(DECLARE=='EFDRU')], 'DECLARE', 'Declare Unlinked')
+		
+		ggplot(fdr.df, aes(x=100*BS_CUT, y=100*BRL_CUT, fill=cut(FDR, breaks=c(-0.01, 0.01, 0.05, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.01)))) + geom_tile(colour = "white") +
+				scale_fill_brewer(palette='PiYG') + theme_bw() +
+				scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0)) +
+				labs(x='bootstrap support threshold\n(%)', y='single linkage branch length threshold\n(%)', fill='%') +
+				facet_grid(DECLARE~.) +
+				theme_bw() + theme(legend.position='bottom') + guides(fill = guide_legend(ncol=5))
 		
 	}
-	
 }
 ######################################################################################
 project.hivc.clustering.compare.NoDR.to.NoRecombNoDR.to.NoShort<- function()
@@ -4147,7 +4242,7 @@ project.hivc.clustering<- function(dir.name= DATA)
 	if(0)	#test clustering on simple test tree
 	{		
 		ph	<- "(Wulfeniopsis:0.196108,(((TN_alpinus:0.459325,TN_grandiflora:0.259364)1.00:0.313204,uniflora:1.155678)1.00:0.160549,(((TP_angustibracteata:0.054609,(TN_brevituba:0.085086,TP_stolonifera:0.086001)0.76:0.035958)1.00:0.231339,(((axillare:0.017540,liukiuense:0.018503)0.96:0.038019,stenostachyum:0.049803)1.00:0.083104,virginicum:0.073686)1.00:0.103843)1.00:0.086965,(carinthiaca:0.018150,orientalis:0.019697)1.00:0.194784)1.00:0.077110)1.00:0.199516,(((((abyssinica:0.077714,glandulosa:0.063758)1.00:0.152861,((((allionii:0.067154,(morrisonicola:0.033595,officinalis:0.067266)1.00:0.055175)1.00:0.090694,(alpina:0.051894,baumgartenii:0.024152,(bellidioides:0.016996,nutans:0.063292)0.68:0.031661,urticifolia:0.032044)0.96:0.036973,aphylla:0.117223)0.67:0.033757,(((japonensis:0.018053,miqueliana:0.033676)1.00:0.160576,vandellioides:0.099761)0.69:0.036188,montana:0.050690)1.00:0.058380)1.00:0.115874,scutellata:0.232093)0.99:0.055014)1.00:0.209754,((((((acinifolia:0.112279,reuterana:0.108698)0.94:0.055829,pusilla:0.110550)1.00:0.230282,((davisii:0.053261,serpyllifolia:0.087290)0.89:0.036820,(gentianoides:0.035798,schistosa:0.038522)0.95:0.039292)1.00:0.092830)1.00:0.169662,(((anagalloides:0.018007,scardica:0.017167)1.00:0.135357,peregrina:0.120179)1.00:0.098045,beccabunga:0.069515)1.00:0.103473)1.00:0.287909,(((((((((((agrestis:0.017079,filiformis:0.018923)0.94:0.041802,ceratocarpa:0.111521)1.00:0.072991,amoena:0.229452,(((argute_serrata:0.017952,campylopoda:0.075210)0.64:0.034411,capillipes:0.022412)0.59:0.034547,biloba:0.037143)1.00:0.141513,intercedens:0.339760,((opaca:0.019779,persica:0.035744)0.94:0.038558,polita:0.036762)1.00:0.108620,rubrifolia:0.186799)1.00:0.144789,(((bombycina_11:0.033926,bombycina_bol:0.035290,cuneifolia:0.017300,jacquinii:0.054249,oltensis:0.045755,paederotae:0.051579,turrilliana:0.017117)0.85:0.049052,czerniakowskiana:0.089983)0.93:0.051111,farinosa:0.138075)1.00:0.080565)1.00:0.104525,((albiflora:0.017984,ciliata_Anna:0.032685,vandewateri:0.017610)0.97:0.045649,arguta:0.063057,(catarractae:0.022789,decora:0.049785)0.96:0.048220,((cheesemanii:0.040125,cupressoides:0.146538)1.00:0.067761,macrantha:0.038130)1.00:0.088158,(densifolia:0.090044,formosa:0.116180)0.71:0.046353,(elliptica:0.038650,(odora:0.019325,salicornioides:0.021228)0.94:0.042950,salicifolia:0.020829)0.92:0.043978,(nivea:0.070429,(papuana:0.035003,tubata:0.031140)0.98:0.064379)0.93:0.065336,raoulii:0.109101)0.97:0.076607)0.93:0.085835,chamaepithyoides:0.485601)0.57:0.072713,(ciliata_157:0.069943,lanuginosa:0.052833)1.00:0.098638,(densiflora:0.069429,macrostemon:0.118926)0.92:0.124911,(fruticulosa:0.086891,saturejoides:0.041181)0.94:0.086148,kellererii:0.083762,lanosa:0.263033,mampodrensis:0.103384,nummularia:0.191180,pontica:0.128944,thessalica:0.129197)0.65:0.031006,(arvensis:0.342138,(((((chamaedrys:0.043720,micans:0.032021,vindobonensis:0.033309)0.51:0.034053,micrantha:0.019084)0.64:0.037906,krumovii:0.020175)1.00:0.103875,verna:0.254017)0.81:0.057105,magna:0.112657)1.00:0.104070)1.00:0.101845)1.00:0.149208,(((aznavourii:0.664103,glauca:0.405588)0.85:0.209945,praecox:0.447238)1.00:0.185614,(donii:0.260827,triphyllos:0.176032)1.00:0.194928)1.00:0.611079)0.74:0.055152,((crista:0.591702,(((cymbalaria_Avlan:0.017401,panormitana:0.017609)1.00:0.229508,((cymbalaria_Istanbul:0.028379,trichadena_332:0.016891,trichadena_Mugla:0.019131)1.00:0.196417,lycica_333:0.146772)1.00:0.097646,lycica_192:0.154877)1.00:0.234748,(((hederifolia:0.018068,triloba:0.075784)1.00:0.084865,(sibthorpioides:0.122542,sublobata:0.136951)1.00:0.074683)0.89:0.043623,stewartii:0.040679)1.00:0.596859)1.00:0.237324)0.58:0.057120,javanica:0.133802)1.00:0.137214)1.00:0.269201,(missurica:0.016685,rubra:0.019696)1.00:0.351184)0.54:0.058275)0.52:0.062485,((dahurica:0.023542,longifolia:0.016484,spicata:0.018125)0.95:0.042294,(nakaiana:0.016270,schmidtiana:0.058451)0.88:0.037207)1.00:0.261643)0.55:0.056458)1.00:0.229509,kurrooa:0.100611)0.74:0.068198,(bonarota:0.040842,lutea:0.115316)1.00:0.241657)0.99:0.085772);"
-		ph <- ladderize( read.tree(text = ph) )				
+		ph 	<- ladderize( read.tree(text = ph) )				
 		#read bootstrap support values
 		thresh.bs						<- 0.9
 		ph.node.bs						<- as.numeric( ph$node.label )		

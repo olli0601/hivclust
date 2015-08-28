@@ -60,12 +60,17 @@ seq.length<- function(seq.DNAbin.mat, exclude=c('-','?'))
 	apply(counts[ !rownames(counts)%in%exclude, ],2,sum)
 }
 ######################################################################################
-seq.proportion.ambiguous<- function(seq.DNAbin.mat, exclude=c('-','?'))
+seq.proportion<- function(seq.DNAbin.mat, include=c('a'), exclude=c('-','?'))
 {
 	counts	<- apply(seq.DNAbin.mat,1,function(x) base.freq(x, freq=1, all=1))
 	len		<- apply(counts[ !rownames(counts)%in%exclude, ],2,sum)
-	pa		<- apply(counts[c("r", "m", "w", "s", "k", "y", "v", "h", "d", "b"),],2,sum)
+	pa		<- apply(counts[ include,],2,sum)
 	pa/len
+}
+######################################################################################
+seq.proportion.ambiguous<- function(seq.DNAbin.mat, exclude=c('-','?'))
+{
+	seq.proportion(seq.DNAbin.mat, include=c("r", "m", "w", "s", "k", "y", "v", "h", "d", "b"), exclude=exclude)	
 }
 ######################################################################################
 seq.gc.content<- function(seq.DNAbin.mat)
