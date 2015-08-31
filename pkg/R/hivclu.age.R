@@ -869,31 +869,93 @@ adjust.dev.code.for.ntPatient.adjustment<- function()
 }
 ######################################################################################
 #	models with time dependence
-altvtp.model.150827<- function(YXc)
+altvtp.explore.time<- function(YXc)
 {
+	require(zoo)	
 	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','score.p.nadj','missexp','score.Y','ntPatient','stageC','t.AgeC','t.stAgeC'))
 	YXr[, ntPatientn:= as.numeric(as.character(ntPatient))]
-	YXr		<- melt( YXr, measure.vars=c('score.p','score.p.nadj','missexp','score.Y'), variable.name='STAT', value.name='V' )
-	#	get smooth in terms of t.stAgeC
-	require(zoo)	
-	setkey(YXr, t.stAgeC, t)
-	tmp		<- YXr[, list(V=mean(V)), by=c('t','t.stAgeC','STAT')]
-	tmp		<- merge(tmp, tmp[, list(t=t, n=seq_along(t)), by=c('t.stAgeC','STAT')], by=c('t.stAgeC','t','STAT'))
-	setkey(tmp, STAT, t.stAgeC, t)
-	tmp		<- tmp[, list(n=n, t=t, V.rm=rollapply(V, width=ceiling(max(n)/5), FUN=mean, align="center", partial=TRUE)), by=c('STAT','t.stAgeC')]
-	YXr		<- merge(YXr, tmp, by=c('STAT','t','t.stAgeC'))	
-	tmp		<- melt(subset(YXr, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','t.stAgeC','stageC','t.AgeC','ntPatient','ntPatientn'), measure.vars='n', variable.name='STAT', value.name='V')
-	YXr[, n:=NULL]
+	#
+	#	get smooth in terms of t.AgeC	6m rolling mean
+	#
+	YXp		<- copy(YXr)
+	setnames(YXp, 't.AgeC','RSKF')
+	tmp		<- YXp[, list(nt=length(score.Y)), by=c('RSKF','t')]
+	setkey(tmp, RSKF, t)
+	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=0.5) ])), cnt=cumsum(nt)	), by=c('RSKF')]
+	YXp		<- merge(YXp, tmp, by=c('RSKF','t'))		
+	YXp		<- melt( YXp, measure.vars=c('score.p','score.p.nadj','missexp','score.Y'), variable.name='STAT', value.name='V' )
+	#tmp		<- YXp[, list(V=mean(V), nt=nt[1], cnt=cnt[1], wnt=wnt[1]), by=c('t','RSKF','STAT')]
+	#tmp		<- tmp[, list(t=t, V.rm=rollapply(V, width=ceiling(max(cnt)/100), FUN=mean, align="center", partial=TRUE)), by=c('STAT','RSKF')]
+	setkey(YXp, STAT, RSKF, t)
+	tmp		<- YXp[, {
+				z	<- unique(t)
+				list(t=z, V.rm= sapply(seq_along(z), function(i)	mean(V[ which(abs(z[i]-t)<=0.5) ]))	)	
+			}, by=c('STAT','RSKF')]
+	YXp		<- merge(YXp, tmp, by=c('STAT','t','RSKF'))		
+	tmp		<- melt(subset(YXp, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.stAgeC','ntPatient','ntPatientn'), measure.vars=c('wnt'), variable.name='STAT', value.name='V')
+	set(YXp, NULL, c('nt','wnt','cnt'), NULL)
 	tmp[, V.rm:=V]	
-	YXr		<- rbind(YXr, tmp, use.names=TRUE)
+	YXp		<- rbind(YXp, tmp, use.names=TRUE)
+	tmp[, ALPHA:=0.2]
+	set(tmp, tmp[, which(V>100)],'ALPHA',1)
+	YXp		<- merge(YXp, subset(tmp, select=c('t.Patient','Patient','t','ALPHA')), by=c('t.Patient','Patient','t'))
+	ggplot(subset(YXp, !(STAT=='score.p.nadj' & V.rm>0.3)), aes(x=t, y=V.rm, colour=RSKF, group=RSKF, alpha=ALPHA)) + geom_line() + geom_point(size=1.2) +
+			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
+			facet_grid(STAT~., scales='free') + labs(y='absolute phylogenetic transmission probability\n6m rolling mean\n(%)') +
+			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeanstAgeCByTime_6mrollingmean.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
+	#
+	#	get smooth in terms of t.AgeC	rolling mean by intervals of length cnt/100 
+	#
+	YXp		<- copy(YXr)
+	setnames(YXp, 't.AgeC','RSKF')
+	tmp		<- YXp[, list(nt=length(score.Y)), by=c('RSKF','t')]
+	setkey(tmp, RSKF, t)
+	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=0.5) ])), cnt=cumsum(nt)	), by=c('RSKF')]
+	YXp		<- merge(YXp, tmp, by=c('RSKF','t'))		
+	YXp		<- melt( YXp, measure.vars=c('score.p','score.p.nadj','missexp','score.Y'), variable.name='STAT', value.name='V' )
+	tmp		<- YXp[, list(V=mean(V), nt=nt[1], cnt=cnt[1], wnt=wnt[1]), by=c('t','RSKF','STAT')]
+	setkey(YXp, STAT, RSKF, t)
+	tmp		<- tmp[, list(t=t, V.rm=rollapply(V, width=ceiling(max(cnt)/100), FUN=mean, align="center", partial=TRUE)), by=c('STAT','RSKF')]	
+	YXp		<- merge(YXp, tmp, by=c('STAT','t','RSKF'))		
+	tmp		<- melt(subset(YXp, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.stAgeC','ntPatient','ntPatientn'), measure.vars=c('wnt'), variable.name='STAT', value.name='V')
+	set(YXp, NULL, c('nt','wnt','cnt'), NULL)
+	tmp[, V.rm:=V]	
+	YXp		<- rbind(YXp, tmp, use.names=TRUE)
+	tmp[, ALPHA:=0.2]
+	set(tmp, tmp[, which(V>100)],'ALPHA',1)
+	YXp		<- merge(YXp, subset(tmp, select=c('t.Patient','Patient','t','ALPHA')), by=c('t.Patient','Patient','t'))
+	ggplot(subset(YXp, !(STAT=='score.p.nadj' & V.rm>0.3)), aes(x=t, y=V.rm, colour=RSKF, group=RSKF, alpha=ALPHA)) + geom_line() + geom_point(size=1.2) +
+			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
+			facet_grid(STAT~., scales='free') + labs(y='absolute phylogenetic transmission probability\ncnt/100 rolling mean\n(%)') +
+			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeanstAgeCByTime_cnt100rollingmean.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
+	
+	
+	#	get smooth in terms of t.stAgeC
+	YXp		<- melt( YXr, measure.vars=c('score.p','score.p.nadj','missexp','score.Y'), variable.name='STAT', value.name='V' )	
+	require(zoo)	
+	setnames(YXp, 't.stAgeC','RSKF')
+	require(zoo)		
+	tmp		<- YXp[, list(V=mean(V)), by=c('t','RSKF','STAT')]
+	tmp		<- merge(tmp, tmp[, list(t=t, n=seq_along(t)), by=c('RSKF','STAT')], by=c('RSKF','t','STAT'))
+	setkey(tmp, STAT, RSKF, t)
+	tmp		<- tmp[, list(n=n, t=t, V.rm=rollapply(V, width=ceiling(max(n)/5), FUN=mean, align="center", partial=TRUE)), by=c('STAT','RSKF')]
+	YXp		<- merge(YXp, tmp, by=c('STAT','t','RSKF'))	
+	tmp		<- melt(subset(YXp, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.AgeC','ntPatient','ntPatientn'), measure.vars='n', variable.name='STAT', value.name='V')
+	YXp[, n:=NULL]
+	tmp[, V.rm:=V]	
+	YXp		<- rbind(YXp, tmp, use.names=TRUE)
 	tmp[, ALPHA:=0.2]
 	set(tmp, tmp[, which(V>20)],'ALPHA',1)
-	YXr		<- merge(YXr, subset(tmp, select=c('t.Patient','Patient','t','ALPHA')), by=c('t.Patient','Patient','t'))
+	YXp		<- merge(YXp, subset(tmp, select=c('t.Patient','Patient','t','ALPHA')), by=c('t.Patient','Patient','t'))
 	
-	ggplot(YXr, aes(x=t, y=V.rm, colour=t.AgeC, group=t.stAgeC, alpha=ALPHA)) + geom_line() + geom_point(size=1.2) +
+	ggplot(YXp, aes(x=t, y=V.rm, colour=t.AgeC, group=RSKF, alpha=ALPHA)) + geom_line() + geom_point(size=1.2) +
 			facet_grid(STAT~stageC, scales='free') + labs(y='absolute phylogenetic transmission probability\nrolling mean\n(%)') +
 			theme_bw()
-	file	<- paste(indir,'/',gsub('\\.R','_scorePMUByTime.pdf',infile),sep='')	
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeanststAgeCByTime.pdf',infile),sep='')	
 	ggsave(file=file, w=15,h=10)	
 	
 	
@@ -1369,7 +1431,10 @@ adjust.dev<- function()
 	t.recent.endctime
 	risk.col	<- 't.stAgeC'
 	X.tables
-	
+	#
+	#	focus on >2003 and before ART start
+	#
+	YX			<- subset(YX, t>=2004.5 & !stageC%in%c('L','T'))
 	#	get clustering, sampling and non-censoring probabilities 
 	#	for each prob transmitter at the transmission interval 
 	sm			<- X.tables$sm
@@ -1410,12 +1475,31 @@ adjust.dev<- function()
 	set(YXc, NULL, 'score.Y', YXc[, score.Y*w.tn])				
 	YXc[, ntPatient:= factor(YXc[, 1/w.in])]
 	
-	#	are the w's confounded by cluster size?
-	rltvtp.confounded.ntransmitters(YXc, indir, infile)
-	#	no, of course not!! the p's will be confounded by cluster size!!
+	if(0)
+	{
+		#	are the w's confounded by cluster size?
+		rltvtp.confounded.ntransmitters(YXc, indir, infile)
+		#	no, of course not!! the p's will be confounded by cluster size!!		
+		#	mean or median w for each stage:	
+		rltvtp.exploredistribution(YXc, indir, infile)		
+	}
 	
-	#	mean or median w for each stage:	
-	rltvtp.exploredistribution(YXc, indir, infile)
+	#	get rolling mean score.Y.rm over time
+	tmp		<- rltvtp.model.time.150828(YXc)
+	rltvm	<- tmp$rltvm
+	rltvd	<- tmp$rltvd
+	#	calculate absolute transmission probabilities
+	#	need first: average score per stage
+	#	need second: expected missing intervals per stage
+	#	then obtain p = w / ( sum(w) + exp missing per recipient AT TIME t)
+	YXc[, missexp:= YXc[, 1/(p.seq*p.nc)-1]]
+	YXc[, missexp:= YXc[, 1/(p.seq)-1]]
+	YXc[, missexp:= YXc[, 1/(p.nc)-1]]
+	tmp		<- YXc[, list(tm= sum(missexp)), by='t']
+	ggplot(tmp, aes(x=t, y=tm)) + geom_line()
+	
+	YXc		<- merge(YXc, subset(rltvd, select=c(t.Patient, Patient, t, score.Y.rm)), by=c('t.Patient','Patient','t'))
+	YXc[, list( n=length(unique(Patient)), score.Y.miss=sum(missexp*score.Y.rm)), by='t']
 	
 	#	calculate absolute transmission probabilities
 	#	need first: average score per stage
@@ -2891,6 +2975,90 @@ stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F<- function(YX.m5)
 	set(YX.m5, NULL, c('t.InfT','t.isAcute','contact','stage','t.AnyT_T1'), NULL)
 	gc()
 	YX.m5
+}
+######################################################################################
+rltvtp.model.time.150828<- function(YXc)
+{
+	YXr		<- subset(YXc, t>=2004.5, select=c('t.Patient','t','Patient', 'score.Y','stageC','t.AgeC', 't.stAgeC'))
+	#	get rolling mean
+	tmp		<- YXr[, list(nt=length(score.Y)), by=c('t.stAgeC','t')]
+	setkey(tmp, t.stAgeC, t)
+	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=1) ]))	), by=c('t.stAgeC')]
+	YXr		<- merge(YXr, tmp, by=c('t.stAgeC','t'))			
+	setkey(YXr, t.stAgeC, t)
+	tmp		<- YXr[, {
+				z	<- unique(t)
+				list(t=z, score.Y.rm= sapply(seq_along(z), function(i)	mean(score.Y[ which(abs(z[i]-t)<=1) ]))	)	
+			}, by=c('t.stAgeC')]
+	YXr		<- merge(YXr, tmp, by=c('t','t.stAgeC'))
+	#	get model
+	wm8		<- gamlss( score.Y~t.stAgeC+t:t.stAgeC-1, sigma.formula=~t.stAgeC, data=YXr, family=GA(mu.link='identity') )
+	list(rltvm= wm8, rltvd= YXr)
+}
+######################################################################################
+rltvtp.explore.time.150828<- function(YXc, indir=NA, infile=NA)
+{
+	#	it s very difficult to look at anything before 2003
+	#	before 2004.5, the GA ID link model leads to negative values.. 
+	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.Y','ntPatient','stageC','t.AgeC', 't.stAgeC'))
+	YXr[, ntPatientn:= as.numeric(as.character(ntPatient))]
+	YXp		<- copy(YXr)
+	setnames(YXp, 't.stAgeC','RSKF')
+	tmp		<- YXp[, list(nt=length(score.Y)), by=c('RSKF','t')]
+	setkey(tmp, RSKF, t)
+	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=1) ])), cnt=cumsum(nt)	), by=c('RSKF')]
+	YXp		<- merge(YXp, tmp, by=c('RSKF','t'))		
+	YXp		<- melt( YXp, measure.vars=c('score.Y'), variable.name='STAT', value.name='V' )
+	setkey(YXp, STAT, RSKF, t)
+	#tmp		<- YXp[, list(V=mean(V), nt=nt[1], cnt=cnt[1], wnt=wnt[1]), by=c('t','RSKF','STAT')]
+	#tmp		<- tmp[, list(t=t, V.rm=rollapply(V, width=ceiling(max(cnt)/100), FUN=mean, align="center", partial=TRUE)), by=c('STAT','RSKF')]	
+	tmp		<- YXp[, {
+				z	<- unique(t)
+				list(t=z, V.rm= sapply(seq_along(z), function(i)	mean(V[ which(abs(z[i]-t)<=1) ]))	)	
+			}, by=c('STAT','RSKF')]
+	YXp		<- merge(YXp, tmp, by=c('STAT','t','RSKF'))		
+	tmp		<- melt(subset(YXp, STAT=='score.Y'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.AgeC','ntPatient','ntPatientn'), measure.vars=c('wnt'), variable.name='STAT', value.name='V')
+	set(YXp, NULL, c('nt','wnt','cnt'), NULL)
+	tmp[, V.rm:=V]	
+	YXp		<- rbind(YXp, tmp, use.names=TRUE)
+	tmp[, ALPHA:=0.2]
+	set(tmp, tmp[, which(V>100)],'ALPHA',1)
+	YXp		<- merge(YXp, subset(tmp, select=c('t.Patient','Patient','t','ALPHA')), by=c('t.Patient','Patient','t'))
+	ggplot(YXp, aes(x=t, y=V.rm, colour=t.AgeC, group=RSKF, alpha=ALPHA)) + geom_line() + geom_point(size=1.2) +
+			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
+			facet_grid(STAT~stageC, scales='free') + labs(y='relative phylogenetic transmission probability\n6m rolling mean') +
+			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeanstAgeCByTime_6mrollingmean.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
+	#
+	tmp		<- dcast.data.table(YXp, t.Patient+Patient+t+ntPatientn+RSKF+stageC+t.AgeC+ALPHA~STAT, value.var='V.rm')
+	set(tmp, NULL, 'wnt', NULL)
+	setnames(tmp, 'score.Y', 'score.Y.rm')	
+	YXr		<- merge(tmp, dcast.data.table(YXp, t.Patient+Patient+t+ntPatientn+RSKF+stageC+t.AgeC+ALPHA~STAT, value.var='V'), by=c('t.Patient','Patient','t','ntPatientn','RSKF','stageC','t.AgeC','ALPHA'))
+	wm4		<- gamlss( score.Y~RSKF-1, sigma.formula=~RSKF-1, data=YXr, family=GA() )
+	wm5		<- gamlss( score.Y~ns(t, df=1)+t.AgeC+stageC-1, sigma.formula=~t.AgeC+stageC-1, data=YXr, family=GA(mu.link='identity') )
+	wm6		<- gamlss( score.Y~t.AgeC+t:t.AgeC+stageC-1, sigma.formula=~t.AgeC+stageC-1, data=YXr, family=GA(mu.link='identity') )
+	wm7		<- gamlss( score.Y~t:RSKF, sigma.formula=~RSKF, data=YXr, family=GA(mu.link='identity') )	
+	wm8		<- gamlss( score.Y~RSKF+t:RSKF-1, sigma.formula=~RSKF, data=YXr, family=GA(mu.link='identity') )	
+	ywm4	<- predict(wm4, data=YXr, type='response', what='mu')
+	ywm5	<- predict(wm5, data=YXr, type='response', what='mu')
+	ywm6	<- predict(wm6, data=YXr, type='response', what='mu')
+	ywm7	<- predict(wm7, data=YXr, type='response', what='mu')
+	ywm8	<- predict(wm8, data=YXr, type='response', what='mu')
+	YXr[, score.Y.wm4:=ywm4]
+	YXr[, score.Y.wm5:=ywm5]
+	YXr[, score.Y.wm6:=ywm6]
+	YXr[, score.Y.wm7:=ywm7]
+	YXr[, score.Y.wm8:=ywm8]
+	YXp		<- melt(YXr, measure.vars=c('score.Y.wm4', 'score.Y.wm5', 'score.Y.wm6', 'score.Y.wm7', 'score.Y.wm8'))
+	ggplot(YXp, aes(x=t, colour=t.AgeC, group=RSKF)) + geom_line(aes(y=value)) + geom_point(aes(y=score.Y.rm), size=1.2) +
+			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
+			scale_y_continuous(limits=c(0,40)) +
+			facet_grid(variable~stageC, scales='free') + labs(y='relative phylogenetic transmission probability\n6m rolling mean') +
+			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeanstAgeCByTimeModels_6mrollingmean.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
+	
 }
 ######################################################################################
 rltvtp.model.150729<- function(YXc, indir=NA, infile=NA)
