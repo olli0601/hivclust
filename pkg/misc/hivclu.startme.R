@@ -44,6 +44,7 @@ CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 #CODE.HOME	<<- "/Users/Stephane/Phylogenetics/github/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
 HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
+#HOME        <<- "/work/or105/ACpolext"
 #HOME		<<- "/Users/Oliver/duke/2013_HIV_Hue/UKCA_1309"
 #HOME		<<- "/work/or105/UKCA_1309"
 #HOME		<<- "/Users/Stephane/Desktop/CASCADE_phylo/hivclust"
@@ -97,7 +98,7 @@ default.fun			<- "project.ACpolext.examl"
 #cat(paste("is.loaded('tipcr')->",is.loaded("tipc_tabulate_after_sample"),'\n'))
 ###############################################################################
 function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$", all.files = FALSE,
-		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),paste(CODE.HOME,"misc","gcproject2013.R",sep='/'))
+		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.ACprjcts.R",sep='/'),paste(CODE.HOME,"misc","gcproject2013.R",sep='/'))
 sapply(function.list,function(x){ print(x); source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE) })
 ###############################################################################	
 if(0)
@@ -405,7 +406,7 @@ if(length(args))
 	argv<<- args
 }
 ###############################################################################
-stop()
+#stop()
 if(HIVC.DEBUG)	options(error= my.dumpframes)	
 cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	

@@ -868,12 +868,10 @@ adjust.dev.code.for.ntPatient.adjustment<- function()
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 }
 ######################################################################################
-#	models with time dependence
-altvtp.explore.time<- function(YXc)
+altvtp.explore.time.rollingmean<- function(YXc, indir, infile)
 {
 	require(zoo)	
-	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','score.p.nadj','missexp','score.Y','ntPatient','stageC','t.AgeC','t.stAgeC'))
-	YXr[, ntPatientn:= as.numeric(as.character(ntPatient))]
+	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','score.p.nadj','missexp.pr','score.Y','ntPatient','stageC','t.AgeC','t.stAgeC'))	
 	#
 	#	get smooth in terms of t.AgeC	6m rolling mean
 	#
@@ -883,7 +881,7 @@ altvtp.explore.time<- function(YXc)
 	setkey(tmp, RSKF, t)
 	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=0.5) ])), cnt=cumsum(nt)	), by=c('RSKF')]
 	YXp		<- merge(YXp, tmp, by=c('RSKF','t'))		
-	YXp		<- melt( YXp, measure.vars=c('score.p','score.p.nadj','missexp','score.Y'), variable.name='STAT', value.name='V' )
+	YXp		<- melt( YXp, measure.vars=c('score.p','score.p.nadj','missexp.pr','score.Y'), variable.name='STAT', value.name='V' )
 	#tmp		<- YXp[, list(V=mean(V), nt=nt[1], cnt=cnt[1], wnt=wnt[1]), by=c('t','RSKF','STAT')]
 	#tmp		<- tmp[, list(t=t, V.rm=rollapply(V, width=ceiling(max(cnt)/100), FUN=mean, align="center", partial=TRUE)), by=c('STAT','RSKF')]
 	setkey(YXp, STAT, RSKF, t)
@@ -892,7 +890,7 @@ altvtp.explore.time<- function(YXc)
 				list(t=z, V.rm= sapply(seq_along(z), function(i)	mean(V[ which(abs(z[i]-t)<=0.5) ]))	)	
 			}, by=c('STAT','RSKF')]
 	YXp		<- merge(YXp, tmp, by=c('STAT','t','RSKF'))		
-	tmp		<- melt(subset(YXp, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.stAgeC','ntPatient','ntPatientn'), measure.vars=c('wnt'), variable.name='STAT', value.name='V')
+	tmp		<- melt(subset(YXp, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.stAgeC','ntPatient'), measure.vars=c('wnt'), variable.name='STAT', value.name='V')
 	set(YXp, NULL, c('nt','wnt','cnt'), NULL)
 	tmp[, V.rm:=V]	
 	YXp		<- rbind(YXp, tmp, use.names=TRUE)
@@ -903,7 +901,7 @@ altvtp.explore.time<- function(YXc)
 			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
 			facet_grid(STAT~., scales='free') + labs(y='absolute phylogenetic transmission probability\n6m rolling mean\n(%)') +
 			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))
-	file	<- paste(indir,'/',gsub('\\.R','_scorePmeanstAgeCByTime_6mrollingmean.pdf',infile),sep='')	
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeantAgeCByTime_6mrollingmean.pdf',infile),sep='')	
 	ggsave(file=file, w=10,h=10)	
 	#
 	#	get smooth in terms of t.AgeC	rolling mean by intervals of length cnt/100 
@@ -914,12 +912,12 @@ altvtp.explore.time<- function(YXc)
 	setkey(tmp, RSKF, t)
 	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=0.5) ])), cnt=cumsum(nt)	), by=c('RSKF')]
 	YXp		<- merge(YXp, tmp, by=c('RSKF','t'))		
-	YXp		<- melt( YXp, measure.vars=c('score.p','score.p.nadj','missexp','score.Y'), variable.name='STAT', value.name='V' )
+	YXp		<- melt( YXp, measure.vars=c('score.p','score.p.nadj','missexp.pr','score.Y'), variable.name='STAT', value.name='V' )
 	tmp		<- YXp[, list(V=mean(V), nt=nt[1], cnt=cnt[1], wnt=wnt[1]), by=c('t','RSKF','STAT')]
 	setkey(YXp, STAT, RSKF, t)
 	tmp		<- tmp[, list(t=t, V.rm=rollapply(V, width=ceiling(max(cnt)/100), FUN=mean, align="center", partial=TRUE)), by=c('STAT','RSKF')]	
 	YXp		<- merge(YXp, tmp, by=c('STAT','t','RSKF'))		
-	tmp		<- melt(subset(YXp, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.stAgeC','ntPatient','ntPatientn'), measure.vars=c('wnt'), variable.name='STAT', value.name='V')
+	tmp		<- melt(subset(YXp, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.stAgeC','ntPatient'), measure.vars=c('wnt'), variable.name='STAT', value.name='V')
 	set(YXp, NULL, c('nt','wnt','cnt'), NULL)
 	tmp[, V.rm:=V]	
 	YXp		<- rbind(YXp, tmp, use.names=TRUE)
@@ -930,52 +928,1238 @@ altvtp.explore.time<- function(YXc)
 			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
 			facet_grid(STAT~., scales='free') + labs(y='absolute phylogenetic transmission probability\ncnt/100 rolling mean\n(%)') +
 			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))
-	file	<- paste(indir,'/',gsub('\\.R','_scorePmeanstAgeCByTime_cnt100rollingmean.pdf',infile),sep='')	
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeantAgeCByTime_cnt100rollingmean.pdf',infile),sep='')	
 	ggsave(file=file, w=10,h=10)	
-	
-	
-	#	get smooth in terms of t.stAgeC
-	YXp		<- melt( YXr, measure.vars=c('score.p','score.p.nadj','missexp','score.Y'), variable.name='STAT', value.name='V' )	
-	require(zoo)	
+	#
+	#	get smooth in terms of t.stAgeC	1y rolling mean
+	#
+	YXp		<- copy(YXr)
 	setnames(YXp, 't.stAgeC','RSKF')
-	require(zoo)		
-	tmp		<- YXp[, list(V=mean(V)), by=c('t','RSKF','STAT')]
-	tmp		<- merge(tmp, tmp[, list(t=t, n=seq_along(t)), by=c('RSKF','STAT')], by=c('RSKF','t','STAT'))
-	setkey(tmp, STAT, RSKF, t)
-	tmp		<- tmp[, list(n=n, t=t, V.rm=rollapply(V, width=ceiling(max(n)/5), FUN=mean, align="center", partial=TRUE)), by=c('STAT','RSKF')]
-	YXp		<- merge(YXp, tmp, by=c('STAT','t','RSKF'))	
-	tmp		<- melt(subset(YXp, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.AgeC','ntPatient','ntPatientn'), measure.vars='n', variable.name='STAT', value.name='V')
-	YXp[, n:=NULL]
+	tmp		<- YXp[, list(nt=length(score.Y)), by=c('RSKF','t')]
+	setkey(tmp, RSKF, t)
+	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=1) ])), cnt=cumsum(nt)	), by=c('RSKF')]
+	YXp		<- merge(YXp, tmp, by=c('RSKF','t'))		
+	YXp		<- melt( YXp, measure.vars=c('score.p','score.p.nadj','missexp.pr','score.Y'), variable.name='STAT', value.name='V' )
+	#tmp		<- YXp[, list(V=mean(V), nt=nt[1], cnt=cnt[1], wnt=wnt[1]), by=c('t','RSKF','STAT')]
+	#tmp		<- tmp[, list(t=t, V.rm=rollapply(V, width=ceiling(max(cnt)/100), FUN=mean, align="center", partial=TRUE)), by=c('STAT','RSKF')]
+	setkey(YXp, STAT, RSKF, t)
+	tmp		<- YXp[, {
+				z	<- unique(t)
+				list(t=z, V.rm= sapply(seq_along(z), function(i)	mean(V[ which(abs(z[i]-t)<=1) ]))	)	
+			}, by=c('STAT','RSKF')]
+	YXp		<- merge(YXp, tmp, by=c('STAT','t','RSKF'))		
+	tmp		<- melt(subset(YXp, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.AgeC','ntPatient'), measure.vars=c('wnt'), variable.name='STAT', value.name='V')
+	set(YXp, NULL, c('nt','wnt','cnt'), NULL)
 	tmp[, V.rm:=V]	
 	YXp		<- rbind(YXp, tmp, use.names=TRUE)
 	tmp[, ALPHA:=0.2]
-	set(tmp, tmp[, which(V>20)],'ALPHA',1)
+	set(tmp, tmp[, which(V>100)],'ALPHA',1)
 	YXp		<- merge(YXp, subset(tmp, select=c('t.Patient','Patient','t','ALPHA')), by=c('t.Patient','Patient','t'))
+	ggplot(subset(YXp, !(STAT=='score.p.nadj' & V.rm>0.3)), aes(x=t, y=V.rm, colour=t.AgeC, group=RSKF, alpha=ALPHA)) + geom_line() + geom_point(size=1.2) +
+			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
+			facet_grid(STAT~stageC, scales='free') + labs(y='absolute phylogenetic transmission probability\n1yr rolling mean\n(%)') +
+			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeanstAgeCByTime_1yrollingmean.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
+	#
+	#	get smooth in terms of t.stAgeC	by intervals of length cnt/100
+	#
+	YXp		<- copy(YXr)
+	setnames(YXp, 't.stAgeC','RSKF')
+	tmp		<- YXp[, list(nt=length(score.Y)), by=c('RSKF','t')]
+	setkey(tmp, RSKF, t)
+	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=0.5) ])), cnt=cumsum(nt)	), by=c('RSKF')]
+	YXp		<- merge(YXp, tmp, by=c('RSKF','t'))		
+	YXp		<- melt( YXp, measure.vars=c('score.p','score.p.nadj','missexp.pr','score.Y'), variable.name='STAT', value.name='V' )
+	setkey(YXp, STAT, RSKF, t)
+	tmp		<- YXp[, list(V=mean(V), nt=nt[1], cnt=cnt[1], wnt=wnt[1]), by=c('t','RSKF','STAT')]
+	setkey(YXp, STAT, RSKF, t)
+	tmp		<- tmp[, list(t=t, V.rm=rollapply(V, width=ceiling(max(cnt)/100), FUN=mean, align="center", partial=TRUE)), by=c('STAT','RSKF')]
+	YXp		<- merge(YXp, tmp, by=c('STAT','t','RSKF'))		
+	tmp		<- melt(subset(YXp, STAT=='score.p'), id.vars=c('t.Patient','Patient','t','RSKF','stageC','t.AgeC','ntPatient'), measure.vars=c('wnt'), variable.name='STAT', value.name='V')
+	set(YXp, NULL, c('nt','wnt','cnt'), NULL)
+	tmp[, V.rm:=V]	
+	YXp		<- rbind(YXp, tmp, use.names=TRUE)
+	tmp[, ALPHA:=0.2]
+	set(tmp, tmp[, which(V>100)],'ALPHA',1)
+	YXp		<- merge(YXp, subset(tmp, select=c('t.Patient','Patient','t','ALPHA')), by=c('t.Patient','Patient','t'))
+	ggplot(subset(YXp, !(STAT=='score.p.nadj' & V.rm>0.3)), aes(x=t, y=V.rm, colour=t.AgeC, group=RSKF, alpha=ALPHA)) + geom_line() + geom_point(size=1.2) +
+			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
+			facet_grid(STAT~stageC, scales='free') + labs(y='absolute phylogenetic transmission probability\ncnt/100 rolling mean\n(%)') +
+			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeanstAgeCByTime_cnt100rollingmean.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
+}
+gamlss	<- function (formula = formula(data), sigma.formula = ~1, nu.formula = ~1, 
+		tau.formula = ~1, family = NO(), data = sys.parent(), weights = NULL, 
+		contrasts = NULL, method = RS(), start.from = NULL, mu.start = NULL, 
+		sigma.start = NULL, nu.start = NULL, tau.start = NULL, mu.fix = FALSE, 
+		sigma.fix = FALSE, nu.fix = FALSE, tau.fix = FALSE, control = gamlss.control(...), 
+		i.control = glim.control(...), ...) 
+{
+	rqres <- function(pfun = "pNO", type = c("Continuous", "Discrete", 
+					"Mixed"), censored = NULL, ymin = NULL, mass.p = NULL, 
+			prob.mp = NULL, y = y, ...) {
+	}
+	body(rqres) <- eval(quote(body(rqres)), envir = getNamespace("gamlss"))
+	mixed <- function(n1 = 1, n2 = 20) {
+		conv <- RS(n.cyc = n1, no.warn = FALSE)
+		conv <- CG(n.cyc = n2)
+		conv
+	}
+	RS <- function(n.cyc = control$n.cyc, no.warn = TRUE) {
+		glim.fit <- function(f, X, y, w, fv, os, step = 1, control = glim.control(), 
+				auto, gd.tol) {
+			cc <- control$cc
+			cyc <- control$cyc
+			trace <- control$glm.trace
+			bf.cyc <- control$bf.cyc
+			bf.tol <- control$bf.tol
+			bf.trace <- control$bf.trace
+			itn <- 0
+			lp <- eta <- f$linkfun(fv)
+			dr <- f$dr(eta)
+			dr <- 1/dr
+			di <- f$G.di(fv)
+			dv <- sum(w * di)
+			olddv <- dv + 1
+			dldp <- f$dldp(fv)
+			d2ldp2 <- f$d2ldp2(fv)
+			d2ldp2 <- ifelse(d2ldp2 < -1e-15, d2ldp2, -1e-15)
+			wt <- -(d2ldp2/(dr * dr))
+			wv <- (eta - os) + dldp/(dr * wt)
+			if (family$type == "Mixed") 
+				wv <- ifelse(is.nan(wv), 0, wv)
+			iterw <- FALSE
+			who <- f$who
+			smooth.frame <- f$smooth.frame
+			s <- f$smooth
+			while (abs(olddv - dv) > cc && itn < cyc) {
+				itn <- itn + 1
+				lpold <- lp
+				sold <- s
+				if (any(is.na(wt)) || any(is.na(wv))) 
+					stop("NA's in the working vector or weights for parameter ", 
+							names(formals(f$valid)), "\n")
+				if (any(!is.finite(wt)) || any(!is.finite(wv))) 
+					stop("Inf values in the working vector or weights for parameter ", 
+							names(formals(f$valid)), "\n")
+				if (length(who) > 0) {
+					fit <- additive.fit(x = X, y = wv, w = wt * 
+									w, s = s, who = who, smooth.frame, maxit = bf.cyc, 
+							tol = bf.tol, trace = bf.trace)
+					lp <- if (itn == 1) 
+								fit$fitted.values
+							else step * fit$fitted.values + (1 - step) * 
+										lpold
+					s <- if (itn == 1) 
+								fit$smooth
+							else step * fit$smooth + (1 - step) * sold
+				}
+				else {
+					fit <- lm.wfit(X, wv, wt * w, method = "qr")
+					lp <- if (itn == 1) 
+								fit$fitted.values
+							else step * fit$fitted.values + (1 - step) * 
+										lpold
+				}
+				eta <- lp + os
+				fv <- f$linkinv(eta)
+				di <- f$G.di(fv)
+				olddv <- dv
+				dv <- sum(w * di)
+				if (dv > olddv && itn >= 2 && auto == TRUE) {
+					for (i in 1:5) {
+						lp <- (lp + lpold)/2
+						eta <- lp + os
+						fv <- f$linkinv(eta)
+						di <- f$G.di(fv)
+						dv <- sum(w * di)
+						if (length(who) > 0) 
+							s <- (s + sold)/2
+						if ((olddv - dv) > cc) 
+							break
+					}
+				}
+				if ((dv > olddv + gd.tol) && itn >= 2 && iterw == 
+						FALSE) {
+					warning("The deviance has increased in an inner iteration for ", 
+							names(formals(f$valid)), "\n", "If persist, try different steps or model maybe inappropriate")
+					iterw <- TRUE
+				}
+				if (is.na(!f$valid(fv))) 
+					stop("fitted values in the inner iteration out of range")
+				dr <- f$dr(eta)
+				dr <- 1/dr
+				dldp <- f$dldp(fv)
+				d2ldp2 <- f$d2ldp2(fv)
+				d2ldp2 <- ifelse(d2ldp2 < -1e-15, d2ldp2, -1e-15)
+				wt <- -(d2ldp2/(dr * dr))
+				wv <- (eta - os) + dldp/(dr * wt)
+				if (family$type == "Mixed") 
+					wv <- ifelse(is.nan(wv), 0, wv)
+				if (trace) 
+					cat("GLIM iteration ", itn, " for ", names(formals(f$valid)), 
+							": Global Deviance = ", format(round(dv, 
+											4)), " \n", sep = "")
+			}
+			pen <- 0
+			if (length(who) > 0) {
+				pen <- sum(eta * wt * (wv - eta))
+			}
+			c(fit, list(fv = fv, wv = wv, wt = wt, eta = eta, 
+							os = os, pen = pen))
+		}
+		c.crit <- control$c.crit
+		trace <- control$trace
+		autostep <- control$autostep
+		mu.step <- control$mu.step
+		sigma.step <- control$sigma.step
+		nu.step <- control$nu.step
+		tau.step <- control$tau.step
+		gd.tol <- control$gd.tol
+		iter <- control$iter
+		conv <- FALSE
+		G.dev.incr <- eval(G.dev.expr)
+		G.dev <- sum(w * G.dev.incr)
+		G.dev.old <- G.dev + 1
+		while (abs(G.dev.old - G.dev) > c.crit && iter < n.cyc) {
+			if ("mu" %in% names(family$parameters)) {
+				if (family$parameter$mu == TRUE & mu.fix == FALSE) {
+					mu.fit <<- glim.fit(f = mu.object, X = mu.X, 
+							y = y, w = w, fv = mu, os = mu.offset, step = mu.step, 
+							control = i.control, gd.tol = gd.tol, auto = autostep)
+					mu <<- mu.fit$fv
+					mu.object$smooth <- mu.fit$smooth
+				}
+			}
+			if ("sigma" %in% names(family$parameters)) {
+				if (family$parameter$sigma == TRUE & sigma.fix == 
+						FALSE) {
+					sigma.fit <<- glim.fit(f = sigma.object, X = sigma.X, 
+							y = y, w = w, fv = sigma, os = sigma.offset, 
+							step = sigma.step, control = i.control, gd.tol = gd.tol, 
+							auto = autostep)
+					sigma <<- sigma.fit$fv
+					sigma.object$smooth <- sigma.fit$smooth
+				}
+			}
+			if ("nu" %in% names(family$parameters)) {
+				if (family$parameter$nu == TRUE & nu.fix == FALSE) {
+					nu.fit <<- glim.fit(f = nu.object, X = nu.X, 
+							y = y, w = w, fv = nu, os = nu.offset, step = nu.step, 
+							control = i.control, gd.tol = gd.tol, auto = autostep)
+					nu <<- nu.fit$fv
+					nu.object$smooth <- nu.fit$smooth
+				}
+			}
+			if ("tau" %in% names(family$parameters)) {
+				if (family$parameter$tau == TRUE & tau.fix == 
+						FALSE) {
+					tau.fit <<- glim.fit(f = tau.object, X = tau.X, 
+							y = y, w = w, fv = tau, os = tau.offset, 
+							step = tau.step, control = i.control, gd.tol = gd.tol, 
+							auto = autostep)
+					tau <<- tau.fit$fv
+					tau.object$smooth <- tau.fit$smooth
+				}
+			}
+			G.dev.old <- G.dev
+			G.dev.incr <- eval(G.dev.expr)
+			G.dev <- sum(w * G.dev.incr)
+			iter <- iter + 1
+			fiter <<- iter
+			if (trace) 
+				cat("GAMLSS-RS iteration ", iter, ": Global Deviance = ", 
+						format(round(G.dev, 4)), " \n", sep = "")
+			if (G.dev > (G.dev.old + gd.tol) && iter > 1) 
+				stop(paste("The global deviance is increasing", 
+								"\n", "Try different steps for the parameters or the model maybe inappropriate"))
+		}
+		if (abs(G.dev.old - G.dev) < c.crit) 
+			conv <- TRUE
+		else FALSE
+		if (!conv && no.warn) 
+			warning("Algorithm RS has not yet converged")
+		conv
+	}
+	CG <- function(n.cyc = control$n.cyc) {
+		c.crit <- control$c.crit
+		trace <- control$trace
+		mu.step <- control$mu.step
+		sigma.step <- control$sigma.step
+		nu.step <- control$nu.step
+		tau.step <- control$tau.step
+		gd.tol <- control$gd.tol
+		autostep <- control$autostep
+		iter <- control$iter
+		conv <- FALSE
+		i.c.crit <- i.control$cc
+		i.n.cyc <- i.control$cyc
+		i.trace <- i.control$glm.trace
+		bf.tol <- i.control$bf.tol
+		bf.trace <- i.control$bf.trace
+		first.iter <- TRUE
+		G.dev.incr <- eval(G.dev.expr)
+		G.dev <- sum(w * G.dev.incr)
+		G.dev.old <- G.dev + 1
+		w.mu.sigma <- w.mu.nu <- w.mu.tau <- w.sigma.nu <- w.sigma.tau <- w.nu.tau <- rep(0, 
+				N)
+		eta.mu <- eta.old.mu <- eta.sigma <- eta.old.sigma <- eta.nu <- eta.old.nu <- rep(0, 
+				N)
+		eta.old.tau <- eta.tau <- rep(0, N)
+		while (abs(G.dev.old - G.dev) > c.crit && iter < n.cyc) {
+			i.iter <- 0
+			if ("mu" %in% names(family$parameters)) {
+				eta.mu <- eta.old.mu <- family$mu.linkfun(mu)
+				u.mu <- mu.object$dldp(mu = mu)
+				u2.mu <- mu.object$d2ldp2(mu = mu)
+				dr.mu <- family$mu.dr(eta.mu)
+				dr.mu <- 1/dr.mu
+				who.mu <- mu.object$who
+				smooth.frame.mu <- mu.object$smooth.frame
+				s.mu <- if (first.iter) 
+							mu.object$smooth
+						else s.mu
+				w.mu <- -u2.mu/(dr.mu * dr.mu)
+				z.mu <- (eta.old.mu - mu.offset) + mu.step * 
+						u.mu/(dr.mu * w.mu)
+			}
+			if ("sigma" %in% names(family$parameters)) {
+				eta.sigma <- eta.old.sigma <- family$sigma.linkfun(sigma)
+				u.sigma <- sigma.object$dldp(sigma = sigma)
+				u2.sigma <- sigma.object$d2ldp2(sigma = sigma)
+				u2.mu.sigma <- family$d2ldmdd(sigma = sigma)
+				dr.sigma <- family$sigma.dr(eta.sigma)
+				dr.sigma <- 1/dr.sigma
+				who.sigma <- sigma.object$who
+				smooth.frame.sigma <- sigma.object$smooth.frame
+				s.sigma <- if (first.iter) 
+							sigma.object$smooth
+						else s.sigma
+				w.sigma <- -u2.sigma/(dr.sigma * dr.sigma)
+				w.mu.sigma <- -u2.mu.sigma/(dr.mu * dr.sigma)
+				z.sigma <- (eta.old.sigma - sigma.offset) + sigma.step * 
+						u.sigma/(dr.sigma * w.sigma)
+			}
+			if ("nu" %in% names(family$parameters)) {
+				eta.nu <- eta.old.nu <- family$nu.linkfun(nu)
+				u.nu <- nu.object$dldp(nu = nu)
+				u2.nu <- nu.object$d2ldp2(nu = nu)
+				u2.mu.nu <- family$d2ldmdv(nu = nu)
+				u2.sigma.nu <- family$d2ldddv(nu = nu)
+				dr.nu <- family$nu.dr(eta.nu)
+				dr.nu <- 1/dr.nu
+				who.nu <- nu.object$who
+				smooth.frame.nu <- nu.object$smooth.frame
+				s.nu <- if (first.iter) 
+							nu.object$smooth
+						else s.nu
+				w.nu <- -u2.nu/(dr.nu * dr.nu)
+				w.mu.nu <- -u2.mu.nu/(dr.mu * dr.nu)
+				w.sigma.nu <- -u2.sigma.nu/(dr.sigma * dr.nu)
+				z.nu <- (eta.old.nu - nu.offset) + nu.step * 
+						u.nu/(dr.nu * w.nu)
+			}
+			if ("tau" %in% names(family$parameters)) {
+				eta.tau <- eta.old.tau <- family$tau.linkfun(tau)
+				u.tau <- tau.object$dldp(tau = tau)
+				u2.tau <- tau.object$d2ldp2(tau = tau)
+				u2.mu.tau <- family$d2ldmdt(tau = tau)
+				u2.sigma.tau <- family$d2ldddt(tau = tau)
+				u2.nu.tau <- family$d2ldvdt(tau = tau)
+				dr.tau <- family$tau.dr(eta.tau)
+				dr.tau <- 1/dr.tau
+				who.tau <- tau.object$who
+				smooth.frame.tau <- tau.object$smooth.frame
+				s.tau <- if (first.iter) 
+							tau.object$smooth
+						else s.tau
+				w.tau <- -u2.tau/(dr.tau * dr.tau)
+				w.mu.tau <- -u2.mu.tau/(dr.mu * dr.tau)
+				w.sigma.tau <- -u2.sigma.tau/(dr.sigma * dr.tau)
+				w.nu.tau <- -u2.nu.tau/(dr.nu * dr.tau)
+				z.tau <- (eta.old.tau - tau.offset) + tau.step * 
+						u.tau/(dr.tau * w.tau)
+			}
+			G.dev.in <- G.dev + 1
+			i.G.dev <- G.dev
+			first.iter <- FALSE
+			while (abs(G.dev.in - i.G.dev) > i.c.crit && i.iter < 
+					i.n.cyc) {
+				if ("mu" %in% names(family$parameters)) {
+					if (family$parameter$mu == TRUE & mu.fix == 
+							FALSE) {
+						adj.mu <- -(w.mu.sigma * (eta.sigma - eta.old.sigma) + 
+									w.mu.nu * (eta.nu - eta.old.nu) + w.mu.tau * 
+									(eta.tau - eta.old.tau))/w.mu
+						wv.mu <- z.mu + adj.mu
+						if (length(who.mu) > 0) {
+							mu.fit <<- additive.fit(x = mu.X, y = wv.mu, 
+									w = w.mu * w, s = s.mu, who = who.mu, 
+									smooth.frame = smooth.frame.mu, maxit = 1, 
+									tol = bf.tol, trace = bf.trace)
+							mu.fit$eta <<- eta.mu <- mu.fit$fitted.values + 
+									mu.offset
+							mu.fit$fv <<- mu <<- mu.object$linkinv(eta.mu)
+							s.mu.old <- s.mu
+							s.mu <- mu.fit$smooth
+							mu.fit$pen <<- sum(eta.mu * w.mu * (wv.mu - 
+												eta.mu))
+							mu.fit$wv <<- wv.mu
+							mu.fit$wt <<- w.mu
+							mu.fit$os <<- mu.offset
+						}
+						else {
+							mu.fit <<- lm.wfit(x = mu.X, y = wv.mu, 
+									w = w.mu * w, method = "qr")
+							mu.fit$eta <<- eta.mu <- mu.fit$fitted.values + 
+									mu.offset
+							mu.fit$fv <<- mu <<- mu.object$linkinv(eta.mu)
+							mu.fit$wv <<- wv.mu
+							mu.fit$wt <<- w.mu
+							mu.fit$os <<- mu.offset
+						}
+					}
+				}
+				if ("sigma" %in% names(family$parameters)) {
+					if (family$parameter$sigma == TRUE & sigma.fix == 
+							FALSE) {
+						adj.sigma <- -(w.mu.sigma * (eta.mu - eta.old.mu) + 
+									w.sigma.nu * (eta.nu - eta.old.nu) + w.sigma.tau * 
+									(eta.tau - eta.old.tau))/w.sigma
+						wv.sigma <- z.sigma + adj.sigma
+						if (length(who.sigma) > 0) {
+							sigma.fit <<- additive.fit(x = sigma.X, 
+									y = wv.sigma, w = w.sigma * w, s = s.sigma, 
+									who = who.sigma, smooth.frame = smooth.frame.sigma, 
+									maxit = 1, tol = bf.tol, trace = bf.trace)
+							sigma.fit$eta <<- eta.sigma <- sigma.fit$fitted.values + 
+									sigma.offset
+							sigma.fit$fv <<- sigma <<- sigma.object$linkinv(eta.sigma)
+							s.sigma.old <- s.sigma
+							s.sigma <- sigma.fit$smooth
+							sigma.fit$pen <<- sum(eta.sigma * w.sigma * 
+											(wv.sigma - eta.sigma))
+							sigma.fit$wv <<- wv.sigma
+							sigma.fit$wt <<- w.sigma
+							sigma.fit$os <<- sigma.offset
+						}
+						else {
+							sigma.fit <<- lm.wfit(x = sigma.X, y = wv.sigma, 
+									w = w.sigma * w, method = "qr")
+							sigma.fit$eta <<- eta.sigma <- sigma.fit$fitted.values + 
+									sigma.offset
+							sigma.fit$fv <<- sigma <<- sigma.object$linkinv(eta.sigma)
+							sigma.fit$wv <<- wv.sigma
+							sigma.fit$wt <<- w.sigma
+							sigma.fit$os <<- sigma.offset
+						}
+					}
+				}
+				if ("nu" %in% names(family$parameters)) {
+					if (family$parameter$nu == TRUE & nu.fix == 
+							FALSE) {
+						adj.nu <- -(w.mu.nu * (eta.mu - eta.old.mu) + 
+									w.sigma.nu * (eta.sigma - eta.old.sigma) + 
+									w.nu.tau * (eta.tau - eta.old.tau))/w.nu
+						wv.nu <- z.nu + adj.nu
+						if (length(who.nu) > 0) {
+							nu.fit <<- additive.fit(x = nu.X, y = wv.nu, 
+									w = w.nu * w, s = s.nu, who = who.nu, 
+									smooth.frame = smooth.frame.nu, maxit = 1, 
+									tol = bf.tol, trace = bf.trace)
+							nu.fit$eta <<- eta.nu <- nu.fit$fitted.values + 
+									nu.offset
+							nu.fit$fv <<- nu <<- nu.object$linkinv(eta.nu)
+							s.nu.old <- s.nu
+							s.nu <- nu.fit$smooth
+							nu.fit$pen <<- sum(eta.nu * w.nu * (wv.nu - 
+												eta.nu))
+							nu.fit$wv <<- wv.nu
+							nu.fit$wt <<- w.nu
+							nu.fit$os <<- nu.offset
+						}
+						else {
+							nu.fit <<- lm.wfit(x = nu.X, y = wv.nu, 
+									w = w.nu * w, method = "qr")
+							nu.fit$eta <<- eta.nu <- nu.fit$fitted.values + 
+									nu.offset
+							nu.fit$fv <<- nu <<- nu.object$linkinv(eta.nu)
+							nu.fit$wv <<- wv.nu
+							nu.fit$wt <<- w.nu
+							nu.fit$os <<- nu.offset
+						}
+					}
+				}
+				if ("tau" %in% names(family$parameters)) {
+					if (family$parameter$tau == TRUE & tau.fix == 
+							FALSE) {
+						adj.tau <- -(w.mu.tau * (eta.mu - eta.old.mu) + 
+									w.sigma.tau * (eta.sigma - eta.old.sigma) + 
+									w.nu.tau * (eta.nu - eta.old.nu))/w.tau
+						wv.tau <- z.tau + adj.tau
+						if (length(who.tau) > 0) {
+							tau.fit <<- additive.fit(x = tau.X, y = wv.tau, 
+									w = w.tau * w, s = s.tau, who = who.tau, 
+									smooth.frame = smooth.frame.tau, maxit = 1, 
+									tol = bf.tol, trace = bf.trace)
+							tau.fit$eta <<- eta.tau <- tau.fit$fitted.values + 
+									tau.offset
+							tau.fit$fv <<- tau <<- tau.object$linkinv(eta.tau)
+							s.tau.old <- s.tau
+							s.tau <- tau.fit$smooth
+							tau.fit$pen <<- sum(eta.tau * w.tau * (wv.tau - 
+												eta.tau))
+							tau.fit$wv <<- wv.tau
+							tau.fit$wt <<- w.tau
+							tau.fit$os <<- tau.offset
+						}
+						else {
+							tau.fit <<- lm.wfit(x = tau.X, y = wv.tau, 
+									w = w.tau * w, method = "qr")
+							tau.fit$eta <<- eta.tau <- tau.fit$fitted.values + 
+									tau.offset
+							tau.fit$fv <<- tau <<- tau.object$linkinv(eta.tau)
+							tau.fit$wv <<- wv.tau
+							tau.fit$wt <<- w.tau
+							tau.fit$os <<- tau.offset
+						}
+					}
+				}
+				G.dev.in <- i.G.dev
+				G.dev.incr <- eval(G.dev.expr)
+				i.G.dev <- sum(w * G.dev.incr)
+				i.iter <- i.iter + 1
+				if (i.trace) 
+					cat("CG inner iteration ", iter, ": Global Deviance = ", 
+							format(round(i.G.dev, 4)), " \n", sep = "")
+				if (i.G.dev > (G.dev.in + gd.tol) && iter > 1) 
+					stop(paste("The global deviance is increasing in the inner CG loop", 
+									"\n", "Try different steps for the parameters or the model maybe inappropriate"))
+			}
+			G.dev.old <- G.dev
+			G.dev.incr <- eval(G.dev.expr)
+			G.dev <- sum(w * G.dev.incr)
+			if (G.dev > G.dev.old && iter >= 2 && autostep == 
+					TRUE) {
+				for (i in 1:5) {
+					if ("mu" %in% names(family$parameters)) {
+						eta.mu <- (eta.mu + eta.old.mu)/2
+						mu <<- mu.object$linkinv(eta.mu)
+						if (length(who.mu) > 0) 
+							s.mu <- (s.mu + s.mu.old)/2
+					}
+					if ("sigma" %in% names(family$parameters)) {
+						eta.sigma <- (eta.sigma + eta.old.sigma)/2
+						sigma <<- sigma.object$linkinv(eta.sigma)
+						if (length(who.sigma) > 0) 
+							s.sigma <- (s.sigma + s.sigma.old)/2
+					}
+					if ("nu" %in% names(family$parameters)) {
+						eta.nu <- (eta.nu + eta.old.nu)/2
+						nu <<- nu.object$linkinv(eta.nu)
+						if (length(who.nu) > 0) 
+							s.nu <- (s.nu + s.nu.old)/2
+					}
+					if ("tau" %in% names(family$parameters)) {
+						eta.tau <- (eta.tau + eta.old.tau)/2
+						tau <<- tau.object$linkinv(eta.tau)
+						if (length(who.tau) > 0) 
+							s.tau <- (s.tau + s.tau.old)/2
+					}
+					G.dev.incr <- eval(G.dev.expr)
+					G.dev <- sum(w * G.dev.incr)
+					if (G.dev < G.dev.old) 
+						break
+				}
+			}
+			iter <- iter + 1
+			fiter <<- iter
+			if (trace) 
+				cat("GAMLSS-CG iteration ", iter, ": Global Deviance = ", 
+						format(round(G.dev, 4)), " \n", sep = "")
+			if (G.dev > (G.dev.old + gd.tol) && iter > 1) 
+				stop(paste("The global deviance is increasing in CG-algorithm ", 
+								"\n", "Try different steps for the parameters or the model maybe inappropriate"))
+		}
+		if (abs(G.dev.old - G.dev) < c.crit) 
+			conv <- TRUE
+		else FALSE
+		if (!conv) 
+			warning("Algorithm CG has not yet converged")
+		conv
+	}
+	parameterOut <- function(what = "mu", save) {
+		out <- list()
+		if (save == TRUE) {
+			if (family$parameter[[what]] == TRUE && eval(parse(text = paste(what, 
+									".fix", sep = ""))) == FALSE) {
+				out$fv <- eval(parse(text = what))
+				out$lp <- eval(parse(text = (paste(what, ".fit$eta", 
+													sep = ""))))
+				out$wv <- eval(parse(text = (paste(what, ".fit$wv", 
+													sep = ""))))
+				out$wt <- eval(parse(text = (paste(what, ".fit$wt", 
+													sep = ""))))
+				out$link <- eval(parse(text = (paste(what, ".object$link", 
+													sep = ""))))
+				out$terms <- eval(parse(text = (paste(what, ".terms", 
+													sep = ""))))
+				out$x <- eval(parse(text = (paste(what, ".X", 
+													sep = ""))))
+				out$qr <- eval(parse(text = (paste(what, ".fit$qr", 
+													sep = ""))))
+				out$coefficients <- eval(parse(text = (paste(what, 
+													".fit$coefficients", sep = ""))))
+				out$offset <- eval(parse(text = (paste(what, 
+													".fit$os", sep = ""))))
+				out$xlevels <- .getXlevels(eval(parse(text = paste(what, 
+												".terms", sep = ""))), eval(parse(text = paste(what, 
+												".frame", sep = ""))))
+				out$formula <- eval(parse(text = paste(what, 
+										".formula", sep = "")))
+				if (length(eval(parse(text = paste(what, ".smoothers", 
+												sep = "")))) > 0) {
+					out$df <- eval(parse(text = paste(what, ".fit$nl.df", 
+													sep = ""))) + eval(parse(text = paste(what, 
+													".fit$rank", sep = "")))
+					out$nl.df <- eval(parse(text = paste(what, 
+											".fit$nl.df", sep = "")))
+					out$s <- eval(parse(text = paste(what, ".fit$smooth", 
+											sep = "")))
+					out$var <- eval(parse(text = paste(what, ".fit$var", 
+											sep = "")))
+					out$coefSmo <- eval(parse(text = paste(what, 
+											".fit$coefSmo", sep = "")))
+					out$lambda <- eval(parse(text = paste(what, 
+											".fit$lambda", sep = "")))
+					out$pen <- eval(parse(text = paste(what, ".fit$pen", 
+											sep = "")))
+				}
+				else {
+					out$df <- eval(parse(text = paste(what, ".fit$rank", 
+											sep = "")))
+					out$nl.df <- 0
+					out$pen <- 0
+				}
+			}
+			else {
+				out$fix <- eval(parse(text = paste(what, ".fix", 
+										sep = "")))
+				out$df <- 0
+				out$fv <- eval(parse(text = what))
+			}
+		}
+		else {
+			if (family$parameter[[what]] == TRUE && eval(parse(text = paste(what, 
+									".fix", sep = ""))) == FALSE) {
+				if (length(eval(parse(text = paste(what, ".smoothers", 
+												sep = "")))) > 0) {
+					out$df <- eval(parse(text = paste(what, ".fit$nl.df", 
+													sep = ""))) + eval(parse(text = paste(what, 
+													".fit$rank", sep = "")))
+					out$nl.df <- eval(parse(text = paste(what, 
+											".fit$nl.df", sep = "")))
+					out$terms <- eval(parse(text = (paste(what, 
+														".terms", sep = ""))))
+					out$formula <- eval(parse(text = paste(what, 
+											".formula", sep = "")))
+				}
+				else {
+					out$df <- eval(parse(text = paste(what, ".fit$rank", 
+											sep = "")))
+					out$nl.df <- 0
+					out$terms <- eval(parse(text = (paste(what, 
+														".terms", sep = ""))))
+					out$formula <- eval(parse(text = paste(what, 
+											".formula", sep = "")))
+				}
+			}
+			else {
+				out$df <- 0
+			}
+		}
+		out
+	}
+	other.formula <- function(form) {
+		dform <- formula(form)
+		if (length(dform) == 2) {
+			dform[3] <- dform[2]
+			dform[2] <- if (is(formula, "terms")) 
+						formula[[2]]
+					else formula[2]
+		}
+		dform
+	}
+	get.smoothers <- function(term) {
+		a <- attributes(term)
+		smoothers <- a$specials
+		if (length(smoothers) > 0) {
+			smoothers <- smoothers[sapply(smoothers, length) > 
+							0]
+			for (i in seq(along = smoothers)) {
+				tt <- smoothers[[i]]
+				ff <- apply(a$factors[tt, , drop = FALSE], 2, 
+						any)
+				smoothers[[i]] <- if (any(ff)) 
+							seq(along = ff)[a$order == 1 & ff]
+						else NULL
+			}
+		}
+		smoothers
+	}
+	get.object <- function(what) {
+		link <- eval(parse(text = (paste("family$", what, ".link", 
+											sep = ""))))
+		linkfun <- eval(parse(text = (paste("family$", what, 
+											".linkfun", sep = ""))))
+		linkinv <- eval(parse(text = (paste("family$", what, 
+											".linkinv", sep = ""))))
+		dr <- eval(parse(text = (paste("family$", what, ".dr", 
+											sep = ""))))
+		dldp <- switch(what, mu = family$dldm, sigma = family$dldd, 
+				nu = family$dldv, tau = family$dldt)
+		d2ldp2 <- switch(what, mu = family$d2ldm2, sigma = family$d2ldd2, 
+				nu = family$d2ldv2, tau = family$d2ldt2)
+		G.di <- family$G.dev.incr
+		valid <- eval(parse(text = (paste("family$", what, ".valid", 
+											sep = ""))))
+		object <- list(link = link, linkfun = linkfun, linkinv = linkinv, 
+				dr = dr, dldp = dldp, d2ldp2 = d2ldp2, G.di = G.di, 
+				valid = valid)
+		if (length(eval(parse(text = (paste(what, ".smoothers", 
+													sep = ""))))) > 0) {
+			parAttrTermlevels <- eval(parse(text = (paste(what, 
+												".a$term.labels", sep = ""))))
+			who <- parAttrTermlevels[unlist(eval(parse(text = (paste(what, 
+																".smoothers", sep = "")))))]
+			smooth.frame <- eval(parse(text = (paste(what, ".frame", 
+												sep = ""))))
+			s <- matrix(0, N, length(who))
+			dimnames(s) <- list(names(y), who)
+			object$smooth <- s
+			object$who <- who
+			object$smooth.frame <- smooth.frame
+		}
+		object
+	}
+	gamlsscall <- match.call()
+	if (!missing(data) & any(is.na(data))) 
+		stop("The data contains NA's, use data = na.omit(mydata)")
+	mnames <- c("", "formula", "data", "weights")
+	cnames <- names(gamlsscall)
+	cnames <- cnames[match(mnames, cnames, 0)]
+	mcall <- gamlsscall[cnames]
+	mcall[[1]] <- as.name("model.frame")
+	mcall$formula <- if (missing(data)) 
+				terms(formula, specials = .gamlss.sm.list)
+			else terms(formula, specials = .gamlss.sm.list, data = data)
+	mu.frame <- eval(mcall, sys.parent())
+	family <- as.gamlss.family(family)
+	G.dev.expr <- body(family$G.dev.inc)
+	Y <- model.extract(mu.frame, "response")
+	if (is.null(dim(Y))) 
+		N <- length(Y)
+	else N <- dim(Y)[1]
+	if (any(family$family %in% .gamlss.bi.list)) {
+		if (NCOL(Y) == 1) {
+			y <- if (is.factor(Y)) 
+						Y != levels(Y)[1]
+					else Y
+			bd <- rep(1, N)
+			if (any(y < 0 | y > 1)) 
+				stop("y values must be 0 <= y <= 1")
+		}
+		else if (NCOL(Y) == 2) {
+			if (any(abs(Y - round(Y)) > 0.001)) {
+				warning("non-integer counts in a binomial GAMLSS!")
+			}
+			bd <- Y[, 1] + Y[, 2]
+			y <- Y[, 1]
+			if (any(y < 0 | y > bd)) 
+				stop("y values must be 0 <= y <= N")
+		}
+		else stop(paste("For the binomial family, Y must be", 
+							"a vector of 0 and 1's or a 2 column", "matrix where col 1 is no. successes", 
+							"and col 2 is no. failures"))
+	}
+	else if (any(family$family %in% .gamlss.multin.list)) {
+		y <- if (is.factor(Y)) 
+					unclass(Y)
+				else Y
+	}
+	else if (is.Surv(Y)) {
+		if (length(grep("censored", family$family[[2]])) == 0) 
+			stop(paste("the family in not a censored distribution, use cens()"))
+		if (length(grep(attr(Y, "type"), family$family[[2]])) == 
+				0) 
+			stop(paste("the Surv object and the censored distribution are not of the same type"))
+		y <- Y
+	}
+	else {
+		y <- Y
+	}
+	if (!family$y.valid(y)) 
+		stop("response variable out of range")
+	if (!is.null(start.from)) {
+		if (!is.gamlss(start.from)) 
+			stop(paste("The object in start.from is not a gamlss object", 
+							"\n", ""))
+		mu.start <- NULL
+		sigma.start <- NULL
+		nu.start <- NULL
+		tau.start <- NULL
+		if ("mu" %in% start.from$parameters) {
+			mu.start <- start.from$mu.fv
+		}
+		if ("sigma" %in% start.from$parameters) {
+			sigma.start <- start.from$sigma.fv
+		}
+		if ("nu" %in% start.from$parameters) {
+			nu.start <- start.from$nu.fv
+		}
+		if ("tau" %in% start.from$parameters) {
+			tau.start <- start.from$tau.fv
+		}
+	}
+	if (!is.logical(mu.fix)) 
+		stop("mu.fix should be logical TRUE or FALSE")
+	if (!is.logical(sigma.fix)) 
+		stop("sigma.fix should be logical TRUE or FALSE")
+	if (!is.logical(nu.fix)) 
+		stop("nu.fix should be logical TRUE or FALSE")
+	if (!is.logical(tau.fix)) 
+		stop("tau.fix should be logical TRUE or FALSE")
+	w <- model.extract(mu.frame, weights)
+	if (is.null(w)) 
+		w <- rep(1, N)
+	else if (any(w < 0)) 
+		stop("negative weights not allowed")
+	mu.fit <- list()
+	mu.formula <- formula
+	mu.terms <- attr(mu.frame, "terms")
+	mu.smoothers <- get.smoothers(mu.terms)
+	mu.a <- attributes(mu.terms)
+	mu.X <- model.matrix(mu.terms, mu.frame, contrasts)
+	mu.offset <- model.extract(mu.frame, offset)
+	if (is.null(mu.offset)) 
+		mu.offset <- rep(0, N)
+	mu.object <- get.object("mu")
+	formals(mu.object$dldp, envir = new.env()) <- alist(mu = fv)
+	formals(mu.object$d2ldp2, envir = new.env()) <- alist(mu = fv)
+	formals(mu.object$G.di, envir = new.env()) <- alist(mu = fv)
+	formals(mu.object$valid, envir = new.env()) <- alist(mu = fv)
+	if (!is.null(mu.start)) {
+		mu <- if (length(mu.start) > 1) 
+					mu.start
+				else rep(mu.start, N)
+	}
+	else (eval(family$mu.initial))
+	if ("sigma" %in% names(family$parameters)) {
+		orig.Envir <- attr(mcall$formula, ".Environment")
+		sigma.fit <- list()
+		form.sigma <- other.formula(form = sigma.formula)
+		sigma.terms <- if (missing(data)) 
+					terms(form.sigma, specials = .gamlss.sm.list)
+				else terms(form.sigma, specials = .gamlss.sm.list, data = data)
+		mcall$formula <- sigma.terms
+		attr(mcall$formula, ".Environment") <- orig.Envir
+		sigma.frame <- eval(mcall, sys.parent())
+		sigma.terms <- attr(sigma.frame, "terms")
+		sigma.smoothers <- get.smoothers(sigma.terms)
+		sigma.a <- attributes(sigma.terms)
+		sigma.X <- model.matrix(sigma.terms, sigma.frame, contrasts)
+		sigma.offset <- model.extract(sigma.frame, offset)
+		if (is.null(sigma.offset)) 
+			sigma.offset <- rep(0, N)
+		sigma.object <- get.object("sigma")
+		formals(sigma.object$dldp, envir = new.env()) <- alist(sigma = fv)
+		formals(sigma.object$d2ldp2, envir = new.env()) <- alist(sigma = fv)
+		formals(sigma.object$G.di, envir = new.env()) <- alist(sigma = fv)
+		formals(sigma.object$valid, envir = new.env()) <- alist(sigma = fv)
+		formals(family$d2ldmdd, envir = new.env()) <- alist(sigma = sigma)
+		if (!is.null(sigma.start)) 
+			sigma <- if (length(sigma.start) > 1) 
+						sigma.start
+					else rep(sigma.start, N)
+		else eval(family$sigma.initial)
+	}
+	if ("nu" %in% names(family$parameters)) {
+		nu.fit <- list()
+		form.nu <- other.formula(form = nu.formula)
+		nu.terms <- if (missing(data)) 
+					terms(form.nu, specials = .gamlss.sm.list)
+				else terms(form.nu, specials = .gamlss.sm.list, data = data)
+		mcall$formula <- nu.terms
+		attr(mcall$formula, ".Environment") <- orig.Envir
+		nu.frame <- eval(mcall, sys.parent())
+		nu.terms <- attr(nu.frame, "terms")
+		nu.a <- attributes(nu.terms)
+		nu.smoothers <- get.smoothers(nu.terms)
+		nu.X <- model.matrix(form.nu, nu.frame, contrasts)
+		nu.offset <- model.extract(nu.frame, offset)
+		if (is.null(nu.offset)) 
+			nu.offset <- rep(0, N)
+		nu.object <- get.object("nu")
+		formals(nu.object$dldp, envir = new.env()) <- alist(nu = fv)
+		formals(nu.object$d2ldp2, envir = new.env()) <- alist(nu = fv)
+		formals(nu.object$G.di, envir = new.env()) <- alist(nu = fv)
+		formals(nu.object$valid, envir = new.env()) <- alist(nu = fv)
+		formals(family$d2ldmdv, envir = new.env()) <- alist(nu = nu)
+		formals(family$d2ldddv, envir = new.env()) <- alist(nu = nu)
+		if (!is.null(nu.start)) {
+			nu <- if (length(nu.start) > 1) 
+						nu.start
+					else rep(nu.start, N)
+		}
+		else {
+			eval(family$nu.initial)
+		}
+	}
+	if ("tau" %in% names(family$parameters)) {
+		tau.fit <- list()
+		form.tau <- other.formula(form = tau.formula)
+		tau.terms <- if (missing(data)) 
+					terms(form.tau, specials = .gamlss.sm.list)
+				else terms(form.tau, specials = .gamlss.sm.list, data = data)
+		mcall$formula <- tau.terms
+		attr(mcall$formula, ".Environment") <- orig.Envir
+		tau.frame <- eval(mcall, sys.parent())
+		tau.terms <- attr(tau.frame, "terms")
+		tau.a <- attributes(tau.terms)
+		tau.smoothers <- get.smoothers(tau.terms)
+		tau.X <- model.matrix(form.tau, tau.frame, contrasts)
+		tau.offset <- model.extract(tau.frame, offset)
+		if (is.null(tau.offset)) 
+			tau.offset <- rep(0, N)
+		tau.object <- get.object("tau")
+		formals(tau.object$dldp, envir = new.env()) <- alist(tau = fv)
+		formals(tau.object$d2ldp2, envir = new.env()) <- alist(tau = fv)
+		formals(tau.object$G.di, envir = new.env()) <- alist(tau = fv)
+		formals(tau.object$valid, envir = new.env()) <- alist(tau = fv)
+		formals(family$d2ldmdt, envir = new.env()) <- alist(tau = tau)
+		formals(family$d2ldddt, envir = new.env()) <- alist(tau = tau)
+		formals(family$d2ldvdt, envir = new.env()) <- alist(tau = tau)
+		if (!is.null(tau.start)) {
+			tau <- if (length(tau.start) > 1) 
+						tau.start
+					else rep(tau.start, N)
+		}
+		else {
+			eval(family$tau.initial)
+		}
+	}
+	name.method <- substitute(method)
+	name.method <- deparse(name.method[1])
+	list.methods <- c("RS()", "CG()", "mixed()")
+	i.method <- pmatch(name.method, list.methods, nomatch = 0)
+	if (!i.method) 
+		stop("Method must be RS(), CG() or mixed()")
+	fiter <- 0
+	conv <- eval(substitute(method))
+	method <- substitute(method)
+	G.dev.incr <- eval(G.dev.expr)
+	G.dev <- sum(w * G.dev.incr)
+	out <- list(family = family$family, parameters = names(family$parameters), 
+			call = gamlsscall, y = y, control = control, weights = w, 
+			G.deviance = G.dev, N = N, rqres = family$rqres, iter = fiter, 
+			type = family$type, method = method, contrasts = contrasts)
+	out$converged <- conv
+	out$residuals <- eval(family$rqres)
+	noObs <- if (all(trunc(w) == w)) 
+				sum(w)
+			else N
+	out$noObs <- noObs
+	if (any(family$family %in% .gamlss.bi.list)) 
+		out$bd <- bd
+	saveParam <- control$save
+	if ("mu" %in% names(family$parameters)) {
+		out <- c(out, mu = parameterOut(what = "mu", save = saveParam))
+	}
+	else {
+		out$mu.df <- 0
+	}
+	out$df.fit <- out$mu.df
+	out$pen <- out$mu.pen
+	out$df.residual <- noObs - out$mu.df
+	if ("sigma" %in% names(family$parameters)) {
+		out <- c(out, sigma = parameterOut(what = "sigma", save = saveParam))
+		out$df.fit <- out$mu.df + out$sigma.df
+		out$pen <- out$mu.pen + out$sigma.pen
+		out$df.residual <- noObs - out$mu.df - out$sigma.df
+	}
+	if ("nu" %in% names(family$parameters)) {
+		out <- c(out, nu = parameterOut(what = "nu", save = saveParam))
+		out$df.fit <- out$mu.df + out$sigma.df + out$nu.df
+		out$df.residual <- noObs - out$mu.df - out$sigma.df - 
+				out$nu.df
+		out$pen <- out$mu.pen + out$sigma.pen + out$nu.pen
+	}
+	if ("tau" %in% names(family$parameters)) {
+		out <- c(out, tau = parameterOut(what = "tau", save = saveParam))
+		out$df.fit <- out$mu.df + out$sigma.df + out$nu.df + 
+				out$tau.df
+		out$pen <- out$mu.pen + out$sigma.pen + out$nu.pen + 
+				out$tau.pen
+		out$df.residual <- noObs - out$mu.df - out$sigma.df - 
+				out$nu.df - out$tau.df
+	}
+	out$P.deviance <- out$G.deviance + out$pen
+	out$aic <- G.dev + 2 * out$df.fit
+	out$sbc <- G.dev + log(noObs) * out$df.fit
+	class(out) <- c("gamlss", "gam", "glm", "lm")
+	out
+}
+
+######################################################################################
+altvtp.explore.time.models<- function(YXc, indir, infile)
+{
+	YXr		<- subset(YXc, select=c('t', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
+	YXr		<- subset(YXr, !stageC%in%c('L','T'))
+	tmp		<- YXr[, list(nt=length(score.p)), by=c('t.stAgeC','t')]
+	setkey(tmp, t.stAgeC, t)
+	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=1) ])), cnt=cumsum(nt)	), by=c('t.stAgeC')]
+	YXr		<- merge(YXr, tmp, by=c('t.stAgeC','t'))
+	setkey(YXr, t.stAgeC, t)
+	tmp		<- YXr[, {
+				z	<- unique(t)
+				list(t=z, score.p.rm= sapply(seq_along(z), function(i)	mean(score.p[ which(abs(z[i]-t)<=1) ]))	)	
+			}, by='t.stAgeC']
+	YXr		<- merge(YXr, tmp, by=c('t','t.stAgeC'))
+	#	
+	am1		<- gamlss( score.p~t.stAgeC+t:t.stAgeC-1, sigma.formula=~t.stAgeC, data=YXr, family=GA() )
+	am2		<- gamlss( score.p~t.stAgeC+t:t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient, data=YXr, family=GA() )
+	#am3		<- gamlss( score.p~t.stAgeC+t:t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient, data=subset(YXr, score.p>0.001), family=GA(mu.link='identity'), i.control = glim.control(bf.trace=1, glm.trace=1), method=CG() )	
+	#am3		<- gamlss( log(score.p)~t.stAgeC+t:t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient, data=YXr, family=NO() )	
+	#	get GA(mu.link='identity') model for score.p.rm
+	#	need to deal with convergence issues
+	YXh				<- subset(YXr, !stageC%in%c('L','T') & !(t.stAgeC=='D_(45,100]' & t>2010))
+	set(YXh, NULL, 'score.p', NULL)
+	setnames(YXh,'score.p.rm','score.p')	
+	gamlss.limit	<- c(0, 0.001, 0.005, 0.006, 0.0061, 0.00623, 0.00623, 0.0063, 0.00638, 0.00639, 0.0064, 0.0065, 0.0066, 0.0067, 0.0068, 0.0069, 0.007, 0.008, 0.009, 0.01 )
+	mu.start		<- NULL
+	sigma.start		<- NULL
+	for(i in rev(seq_along(gamlss.limit)[-1]))
+	{
+		cat('\nat iteration', gamlss.limit[i],'\n')
+		am3h		<- gamlss( 	score.p~t.stAgeC+t:t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient, 
+								data=subset(YXh, score.p>gamlss.limit[i]), family=GA(mu.link='identity'), i.control = glim.control(bf.trace=1, glm.trace=1), mu.start=mu.start, sigma.start=sigma.start)		
+		tmp			<- subset(YXh, score.p>gamlss.limit[i-1])
+		mu.start	<- predict(am3h, data=subset(YXh, score.p>gamlss.limit[i]), newdata=tmp, type='response', what='mu')
+		sigma.start	<- predict(am3h, data=subset(YXh, score.p>gamlss.limit[i]), newdata=tmp, type='response', what='sigma')		
+	}	
+	YXp				<- copy(YXr)
+	set(YXp, NULL, 'score.p', NULL)
+	setnames(YXp,'score.p.rm','score.p')		
+	mu.start		<- predict(am3h, data=YXh, newdata=YXp, type='response', what='mu')
+	sigma.start		<- predict(am3h, data=YXh, newdata=YXp, type='response', what='sigma')	
+	am3rm			<- gamlss( 	score.p~t.stAgeC+t:t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient, 
+								data=YXp, family=GA(mu.link='identity'), i.control = glim.control(bf.trace=1, glm.trace=1), mu.start=mu.start, sigma.start=sigma.start)	
+	#
+	YXh				<- subset(YXr, score.p>0.03 & !stageC%in%c('L','T') & !(t.stAgeC=='D_(45,100]' & t>2010), select=c(t.stAgeC, t, ntPatient, stageC, t.AgeC, nt, wnt, cnt, score.p))					
+	mu.start		<- predict(am3rm, data=YXp, newdata=YXh, type='response', what='mu')
+	sigma.start		<- predict(am3rm, data=YXp, newdata=YXh, type='response', what='sigma')	
+	gamlss( 	score.p~t.stAgeC+t:t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient, 
+								data=subset(YXh, score.p>0.03), family=GA(mu.link='identity'), i.control = glim.control(bf.trace=1, glm.trace=1), mu.start=mu.start, sigma.start=sigma.start)					
+	YXpp	<- as.data.table(expand.grid(t=YXr[, sort(unique(t))], t.stAgeC=YXr[, unique(as.character(t.stAgeC))], ntPatient=YXr[, median(ntPatient)]))	
+	yam1	<- predict(am1, data=YXr, newdata=YXpp, type='response', what='mu')
+	yam2	<- predict(am2, data=YXr, newdata=YXpp, type='response', what='mu')
+	yam3	<- predict(am3rm, data=YXp, newdata=YXpp, type='response', what='mu')	
+	YXpp	<- merge(YXpp, unique(subset(YXr, select=c(stageC, t.AgeC, t.stAgeC))), by='t.stAgeC')
+	YXpp[, score.p.am1:=yam1]
+	YXpp[, score.p.am2:=yam2]
+	YXpp[, score.p.am3:=yam3]
+	YXpp	<- melt(YXpp, measure.vars=c('score.p.am1', 'score.p.am2', 'score.p.am3'))
+	ggplot(YXpp, aes(x=t, colour=as.character(t.AgeC))) + 
+			geom_point(data=YXr, aes(y=score.p.rm), size=1.2) +
+			geom_line(aes(y=value, group=as.character(t.stAgeC))) + 
+			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
+			facet_grid(variable~stageC, scales='free') + labs(y='absolute phylogenetic transmission probability\n1yr rolling mean\n(%)') +
+			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))	
+	file	<- paste(indir,'/',gsub('\\.R','_scorePmeanstAgeCByTimeModels_1yrollingmean.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
 	
-	ggplot(YXp, aes(x=t, y=V.rm, colour=t.AgeC, group=RSKF, alpha=ALPHA)) + geom_line() + geom_point(size=1.2) +
-			facet_grid(STAT~stageC, scales='free') + labs(y='absolute phylogenetic transmission probability\nrolling mean\n(%)') +
-			theme_bw()
-	file	<- paste(indir,'/',gsub('\\.R','_scorePmeanststAgeCByTime.pdf',infile),sep='')	
-	ggsave(file=file, w=15,h=10)	
-	
-	
+}
+######################################################################################
+altvtp.model.150902<- function(YXc)
+{
+	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))	
 	#	relevel so regression coefficients are contrasts of interest
 	base.df	<- data.table(	ST=c('stageC','t.AgeC','t.stAgeC'), 
-			RSKFbaseline=c('D','(30,45]','D_(30,45]'))
+							RSKFbaseline=c('D','(30,45]','D_(30,45]'))
 	setkey(base.df, ST)
 	set(YXr, NULL, 'stageC', YXr[, relevel(stageC, ref=base.df['stageC',][,RSKFbaseline])])
 	set(YXr, NULL, 't.AgeC', YXr[, relevel(t.AgeC, ref=base.df['t.AgeC',][,RSKFbaseline])])
 	set(YXr, NULL, 't.stAgeC', YXr[, relevel(t.stAgeC, ref=base.df['t.stAgeC',][,RSKFbaseline])])
 	#	fit contrasts 
 	#	(we only do this to get the risk ratio and confidence intervals)
-	wcm1	<- gamlss( score.p~t.AgeC+ntPatientn, sigma.formula=~t.AgeC+ntPatientn, data=YXr, family=GA() )
-	wcm2	<- gamlss( score.p~stageC+ntPatientn, sigma.formula=~stageC+ntPatientn, data=YXr, family=GA() )	
-	wcm5	<- gamlss( score.p~t.stAgeC+ntPatientn, sigma.formula=~t.stAgeC+ntPatientn, data=YXr, family=GA() )
+	wcm1	<- gamlss( score.p~t.AgeC+ntPatient, sigma.formula=~t.AgeC+ntPatient, data=YXr, family=GA() )
+	wcm2	<- gamlss( score.p~stageC+ntPatient, sigma.formula=~stageC+ntPatient, data=YXr, family=GA() )	
+	wcm3	<- gamlss( score.p~t.stAgeC, sigma.formula=~t.stAgeC, data=YXr, family=GA() )
+	wcm4	<- gamlss( score.p~t.stAgeC+ntPatient, sigma.formula=~ntPatient, data=YXr, family=GA() )
+	wcm5	<- gamlss( score.p~t.stAgeC+ntPatient, sigma.formula=~t.stAgeC+ntPatient, data=YXr, family=GA() )
 	#	fit coefficients that correspond to stages 
 	#	(we only do this to get the risk ratio and confidence intervals)
-	wbm1	<- gamlss( score.p~t.AgeC+ntPatientn-1, sigma.formula=~t.AgeC+ntPatientn-1, data=YXr, family=GA() )
-	wbm2	<- gamlss( score.p~stageC+ntPatientn-1, sigma.formula=~stageC+ntPatientn-1, data=YXr, family=GA() )	
-	wbm5	<- gamlss( score.p~t.stAgeC+ntPatientn-1, sigma.formula=~t.stAgeC+ntPatientn-1, data=YXr, family=GA() )
+	wbm1	<- gamlss( score.p~t.AgeC+ntPatient-1, sigma.formula=~t.AgeC+ntPatient-1, data=YXr, family=GA() )
+	wbm2	<- gamlss( score.p~stageC+ntPatient-1, sigma.formula=~stageC+ntPatient-1, data=YXr, family=GA() )	
+	#wbm3	<- gamlss( score.p~t.stAgeC-1, sigma.formula=~t.stAgeC-1, data=YXr, family=GA() )
+	wbm3	<- gamlss( score.p~t.stAgeC-1, data=YXr, family=GA() )
+	wbm4	<- gamlss( score.p~t.stAgeC+ntPatient-1, sigma.formula=~ntPatient-1, data=YXr, family=GA() )
+	wbm5	<- gamlss( score.p~t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient-1, data=YXr, family=GA() )
+	#	read out coefficients
+	tmp		<- coef(wbm1)
+	cf		<- data.table(MO='wbm1', ST='t.AgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.AgeC',][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(wbm1)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wbm1, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.AgeC','',RSKF)])
+	wb		<- copy(cf)
+	#
+	tmp		<- coef(wbm2)
+	cf		<- data.table(MO='wbm2', ST='stageC', RSKF=names(tmp), RSKFbaseline=base.df['stageC',][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(wbm2)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wbm2, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('stageC','',RSKF)])
+	wb		<- rbind(wb, cf)
+	#
+	tmp		<- coef(wbm3)
+	cf		<- data.table(MO='wbm3', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(wbm3)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wbm3, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wb		<- rbind(wb, cf)	
+	#
+	tmp		<- coef(wbm4)
+	cf		<- data.table(MO='wbm4', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(wbm4)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wbm4, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wb		<- rbind(wb, cf)
+	#
+	tmp		<- coef(wbm5)
+	cf		<- data.table(MO='wbm5', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(wbm5)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wbm5, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wb		<- rbind(wb, cf)	
+	tmp		<- melt(wb, id.vars=c('RSKF','MO','ST','RSKFbaseline'))
+	set(tmp, NULL, 'value', tmp[, exp(value)])
+	wb		<- dcast.data.table(tmp, MO+ST+RSKFbaseline+RSKF~variable, value.var='value')
+	#
+	#	read out contrasts
+	#
+	tmp		<- coef(wcm1)
+	cf		<- data.table(MO='wcm1', ST='t.AgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.AgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wcm1)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wcm1, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.AgeC','',RSKF)])
+	wc		<- copy(cf)
+	#
+	tmp		<- coef(wcm2)
+	cf		<- data.table(MO='wcm2', ST='stageC', RSKF=names(tmp), RSKFbaseline=base.df['stageC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wcm2)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wcm2, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('stageC','',RSKF)])
+	wc		<- rbind(wc, cf)
+	#
+	tmp		<- coef(wcm3)
+	cf		<- data.table(MO='wcm3', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wcm3)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wcm3, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wc		<- rbind(wc, cf)	
+	#
+	tmp		<- coef(wcm4)
+	cf		<- data.table(MO='wcm4', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wcm4)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wcm4, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wc		<- rbind(wc, cf)
+	#
+	tmp		<- coef(wcm5)
+	cf		<- data.table(MO='wcm5', ST='t.stAgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.stAgeC',][,RSKFbaseline], CNTR=tmp)
+	tmp		<- confint(wcm5)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRL= tmp[,1], CNTRU= tmp[,2]), by='RSKF')
+	tmp		<- confint(wcm5, robust=TRUE)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), CNTRLr= tmp[,1], CNTRUr= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub('t.stAgeC','',RSKF)])
+	wc		<- rbind(wc, cf)
+	#	transform to risk ratios
+	tmp		<- melt(wc, id.vars=c('RSKF','MO','ST','RSKFbaseline'))
+	set(tmp, NULL, 'value', tmp[, exp(value)])
+	wc		<- dcast.data.table(tmp, MO+ST+RSKFbaseline+RSKF~variable, value.var='value')
+	tmp		<- names(wc)[ grepl('CNTR',names(wc)) ]
+	setnames(wc, tmp, gsub('CNTR','RR',tmp))
+	set(wc, wc[, which(RSKF=='(Intercept)')],'RR',1.)
+	set(wc, wc[, which(RSKF=='(Intercept)')],c('RRL','RRU','RRLr','RRUr'),NA_real_)
+	tmp		<- wc[, which(RSKF=='(Intercept)')]	
+	set(wc, tmp, 'RSKF', wc[tmp,RSKFbaseline])
+	
+	#	plot mus
+	tmp		<- subset(wb, grepl('wbm3|wbm4|wbm5',MO) & RSKF!='ntPatient')	
+	lvls	<- c( 	as.vector(sapply(		c('UA','UC','D'), function(x) paste(x,c('(-1,25]','(25,30]','(30,45]','(45,100]'),sep='_')		)),
+					'T_(-1,100]','L_(-1,100]' )	
+	set(tmp, NULL, 'RSKF', tmp[, factor(RSKF, levels=rev(lvls))])
+	set(tmp, NULL, 'stageC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',1)])
+	set(tmp, NULL, 't.AgeC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',2)])
+	setnames(tmp, 'RSKF','t.stAgeC')
+	tmp		<- merge(tmp, YXr[, list(mean=mean(score.p), ql= quantile(score.p,p=0.025), qu= quantile(score.p,p=0.975)), by=c('stageC','t.AgeC','t.stAgeC')], by=c('stageC','t.AgeC','t.stAgeC'))
+	ggplot( tmp, aes(x=t.AgeC, y=100*MU, ymin=100*MUL, ymax=100*MUU, colour=stageC)) +
+			scale_y_continuous(breaks=seq(0,50,5), minor_breaks=seq(0,50,1)) + 
+			geom_point() + geom_errorbar(width=0.5) + 
+			theme_bw() + theme(legend.position='bottom') +
+			facet_grid(MO~stageC) 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePMUByModel150902.pdf',infile),sep='')	
+	ggsave(file=file, w=12,h=12)	
+	#	plot mu vs empirical mean
+	ggplot(subset(tmp, MO=='wbm3'), aes(x=mean, xmin=ql, xmax=qu, y=MU, ymin=MUL, ymax=MUU, colour=t.AgeC)) + geom_abline(intercept=0, slope=1) + 
+			geom_point() + geom_errorbar() + geom_errorbarh() +			
+			theme_bw() + 
+			facet_wrap(~stageC, ncol=5, scales='free')
+	file	<- paste(indir,'/',gsub('\\.R','_scorePMUvsMEAN150902.pdf',infile),sep='')	
+	ggsave(file=file, w=15,h=5)		
+	#	plot contrasts
+	tmp		<- subset(wc, grepl('wcm3|wcm4|wcm5',MO) & RSKF!='ntPatient')	
+	lvls	<- c( 	as.vector(sapply(		c('UA','UC','D'), function(x) paste(x,c('(-1,25]','(25,30]','(30,45]','(45,100]'),sep='_')		)),
+					'T_(-1,100]','L_(-1,100]' )	
+	set(tmp, NULL, 'RSKF', tmp[, factor(RSKF, levels=rev(lvls))])
+	set(tmp, NULL, 'stageC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',1)])
+	set(tmp, NULL, 't.AgeC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',2)])
+	ggplot( tmp, aes(x=t.AgeC, y=RR, ymin=RRL, ymax=RRU, colour=stageC)) +
+			scale_y_continuous(breaks=seq(0,5,0.5), minor_breaks=seq(0,5,0.1)) + geom_hline(y=1, colour='grey50', lwd=1) +
+			geom_point() + geom_errorbar(width=0.5) + 
+			theme_bw() + theme(legend.position='bottom') +
+			facet_grid(MO~stageC) 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePRRByModel150902.pdf',infile),sep='')	
+	ggsave(file=file, w=12,h=12)	
+	
+	ggplot( tmp, aes(y=MO, x=RR, xmin=RRL, xmax=RRU, colour=RSKF) ) +
+			scale_x_continuous(breaks=seq(0,5,0.2)) + geom_vline(x=1, colour='grey50', lwd=1) +
+			geom_point() + geom_errorbarh(height=0.5) + theme_bw() + theme(legend.position='bottom') +
+			facet_grid(RSKF~.) +
+			guides(colour=guide_legend(ncol=4))
+	file	<- paste(indir,'/',gsub('\\.R','_scorePRRByModel150902.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=20)	
+	
+	list(data=YXr, wb=wb, wc=wc, wbm1=wbm1, wbm2=wbm2, wbm3=wbm3, wbm4=wbm4, wbm5=wbm5, wcm1=wcm1, wcm2=wcm2, wcm3=wcm3, wcm4=wcm4, wcm5=wcm5)
 }
 ######################################################################################
 altvtp.model.150730<- function(YXc)
@@ -1157,84 +2341,83 @@ altvtp.model.150730<- function(YXc)
 	list(data=YXr, wb=wb, wc=wc, wbm1=wbm1, wbm2=wbm2, wbm3=wbm3, wbm4=wbm4, wbm5=wbm5, wcm1=wcm1, wcm2=wcm2, wcm3=wcm3, wcm4=wcm4, wcm5=wcm5)
 }
 ######################################################################################
-altvtp.exploredistribution<- function(YXc, indir, infile)
+altvtp.explore.distribution<- function(YXc, indir, infile)
 {
-	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
-	YXr[, ntPatientn:= as.numeric(as.character(ntPatient))]
+	YXr		<- subset(YXc, select=c('score.p','ntPatient'))	
+	YXr[, ntPatientf:= factor(ntPatient)]
 	#	Exp has default link log	
 	mExp	<- gamlss( score.p~1, data=YXr, family=EXP() )
-	mExpNt	<- gamlss( score.p~ntPatient, data=YXr, family=EXP() )
-	mExpNtL	<- gamlss( score.p~ntPatientn, data=YXr, family=EXP() )
-	mExpNtQ	<- gamlss( score.p~ns(ntPatientn, df=2), data=YXr, family=EXP() )
+	mExpNt	<- gamlss( score.p~ntPatientf-1, data=YXr, family=EXP() )
+	mExpNtL	<- gamlss( score.p~ntPatient, data=YXr, family=EXP() )
+	mExpNtQ	<- gamlss( score.p~ns(ntPatient, df=2), data=YXr, family=EXP() )
 	#	Gamma has default links log log
 	mGA		<- gamlss( score.p~1, data=YXr, family=GA() )
-	mGANt	<- gamlss( score.p~ntPatient, data=YXr, family=GA() )
-	mGANtS	<- gamlss( score.p~ntPatient, sigma.formula=~ntPatient, data=YXr, family=GA() )
-	mGANtSL	<- gamlss( score.p~ntPatientn, sigma.formula=~ntPatientn, data=YXr, family=GA() )
-	mGANtSQ	<- gamlss( score.p~ns(ntPatientn, df=2), sigma.formula=~ns(ntPatientn, df=2), data=YXr, family=GA() )
+	mGANt	<- gamlss( score.p~ntPatientf-1, data=YXr, family=GA() )
+	mGANtS	<- gamlss( score.p~ntPatientf-1, sigma.formula=~ntPatientf-1, data=YXr, family=GA() )
+	mGANtSL	<- gamlss( score.p~ntPatient, sigma.formula=~ntPatient, data=YXr, family=GA() )
+	mGANtSLI<- gamlss( score.p~ntPatient, sigma.formula=~ntPatient, data=YXr, family=GA(mu.link='inverse') )
+	mGANtSQ	<- gamlss( score.p~ns(ntPatient, df=2), sigma.formula=~ns(ntPatient, df=2), data=YXr, family=GA() )
+	mGANtSQI<- gamlss( score.p~ns(ntPatient, df=2), sigma.formula=~ns(ntPatient, df=2), data=YXr, family=GA(mu.link='identity') )
 	#	Beta with links log log
 	mBEL	<- gamlss( score.p~1, data=YXr, family=BE(mu.link='log'), n.cyc = 40 )
-	mBELNt	<- gamlss( score.p~ntPatient, data=YXr, family=BE(mu.link='log'), n.cyc = 40 )
-	mBELNtS	<- gamlss( score.p~ntPatient, sigma.formula=~ntPatient, data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
-	mBELNtSL<- gamlss( score.p~ntPatientn, sigma.formula=~ntPatientn, data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
-	mBELNtSQ<- gamlss( score.p~ns(ntPatientn, df=2), sigma.formula=~ns(ntPatientn, df=2), data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
+	mBELNt	<- gamlss( score.p~ntPatientf-1, data=YXr, family=BE(mu.link='log'), n.cyc = 40 )
+	mBELNtS	<- gamlss( score.p~ntPatientf-1, sigma.formula=~ntPatientf-1, data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
+	mBELNtSL<- gamlss( score.p~ntPatient, sigma.formula=~ntPatient, data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
+	mBELNtSQ<- gamlss( score.p~ns(ntPatient, df=2), sigma.formula=~ns(ntPatient, df=2), data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
 	#
-	setkey(YXr, ntPatient)
-	mpars	<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	mpars	<- merge(unique(YXr), mpars, by='ntPatient')
+	setkey(YXr, ntPatientf)
+	mpars	<- data.table(ntPatientf= YXr[, levels(ntPatientf)])	
 	mpars[, score.mu:= predict(mExp, data=YXr, newdata=mpars, type='response', what='mu')]
 	mpars[, TYPE:= 'Exp']
+	setnames(mpars, 'ntPatientf', 'ntPatient')
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])
 	mu		<- predict(mExpNt, data=YXr, newdata=tmp, type='response', what='mu')	
 	tmp[, score.mu:= mu]
 	tmp[, TYPE:= 'ExpNt']
+	setnames(tmp, 'ntPatientf', 'ntPatient')
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
 	mu		<- predict(mExpNtL, data=YXr, newdata=tmp, type='response', what='mu')	
 	tmp[, score.mu:= mu]
 	tmp[, TYPE:= 'ExpNtL']
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])
 	mu		<- predict(mExpNtQ, data=YXr, newdata=tmp, type='response', what='mu')	
 	tmp[, score.mu:= mu]
 	tmp[, TYPE:= 'ExpNtQ']
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 	#	
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])	
 	mu		<- predict(mGA, data=YXr, newdata=tmp, type='response', what='mu')
 	sigma	<- predict(mGA, data=YXr, newdata=tmp, type='response', what='sigma')
 	tmp[, score.mu:= mu]
 	tmp[, score.sigma:= sigma]
 	tmp[, TYPE:= 'GA']
+	setnames(tmp, 'ntPatientf', 'ntPatient')
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])
 	mu		<- predict(mGANt, data=YXr, newdata=tmp, type='response', what='mu')
 	sigma	<- predict(mGANt, data=YXr, newdata=tmp, type='response', what='sigma')
 	tmp[, score.mu:= mu]
 	tmp[, score.sigma:= sigma]
 	tmp[, TYPE:= 'GANt']
+	setnames(tmp, 'ntPatientf', 'ntPatient')
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])	
 	mu		<- predict(mGANtS, data=YXr, newdata=tmp, type='response', what='mu')
 	sigma	<- predict(mGANtS, data=YXr, newdata=tmp, type='response', what='sigma')
 	tmp[, score.mu:= mu]
 	tmp[, score.sigma:= sigma]
 	tmp[, TYPE:= 'GANtS']
+	setnames(tmp, 'ntPatientf', 'ntPatient')
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
 	mu		<- predict(mGANtSL, data=YXr, newdata=tmp, type='response', what='mu')
 	sigma	<- predict(mGANtSL, data=YXr, newdata=tmp, type='response', what='sigma')
 	tmp[, score.mu:= mu]
@@ -1242,44 +2425,58 @@ altvtp.exploredistribution<- function(YXc, indir, infile)
 	tmp[, TYPE:= 'GANtSL']
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
 	mu		<- predict(mGANtSQ, data=YXr, newdata=tmp, type='response', what='mu')
 	sigma	<- predict(mGANtSQ, data=YXr, newdata=tmp, type='response', what='sigma')
 	tmp[, score.mu:= mu]
 	tmp[, score.sigma:= sigma]
 	tmp[, TYPE:= 'GANtSQ']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
+	mu		<- predict(mGANtSLI, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGANtSLI, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'mGANtSLI']
+	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	#
+	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
+	mu		<- predict(mGANtSQI, data=YXr, newdata=tmp, type='response', what='mu')
+	sigma	<- predict(mGANtSQI, data=YXr, newdata=tmp, type='response', what='sigma')
+	tmp[, score.mu:= mu]
+	tmp[, score.sigma:= sigma]
+	tmp[, TYPE:= 'GANtSQI']
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])	
 	mu		<- predict(mBEL, data=YXr, newdata=tmp, type='response', what='mu')
 	sigma	<- predict(mBEL, data=YXr, newdata=tmp, type='response', what='sigma')
 	tmp[, score.mu:= mu]
 	tmp[, score.sigma:= sigma]
 	tmp[, TYPE:= 'BEL']
+	setnames(tmp, 'ntPatientf', 'ntPatient')
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])	
 	mu		<- predict(mBELNt, data=YXr, newdata=tmp, type='response', what='mu')
 	sigma	<- predict(mBELNt, data=YXr, newdata=tmp, type='response', what='sigma')
 	tmp[, score.mu:= mu]
 	tmp[, score.sigma:= sigma]
 	tmp[, TYPE:= 'BELNt']
+	setnames(tmp, 'ntPatientf', 'ntPatient')
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])
 	mu		<- predict(mBELNtS, data=YXr, newdata=tmp, type='response', what='mu')
 	sigma	<- predict(mBELNtS, data=YXr, newdata=tmp, type='response', what='sigma')
 	tmp[, score.mu:= mu]
 	tmp[, score.sigma:= sigma]
 	tmp[, TYPE:= 'BELNtS']
+	setnames(tmp, 'ntPatientf', 'ntPatient')
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])
 	mu		<- predict(mBELNtSL, data=YXr, newdata=tmp, type='response', what='mu')
 	sigma	<- predict(mBELNtSL, data=YXr, newdata=tmp, type='response', what='sigma')
 	tmp[, score.mu:= mu]
@@ -1287,8 +2484,7 @@ altvtp.exploredistribution<- function(YXc, indir, infile)
 	tmp[, TYPE:= 'BELNtSL']
 	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 	#
-	tmp		<- data.table(ntPatient= YXr[, levels(ntPatient)])
-	tmp		<- merge(unique(YXr), tmp, by='ntPatient')
+	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
 	mu		<- predict(mBELNtSQ, data=YXr, newdata=tmp, type='response', what='mu')
 	sigma	<- predict(mBELNtSQ, data=YXr, newdata=tmp, type='response', what='sigma')
 	tmp[, score.mu:= mu]
@@ -1306,19 +2502,19 @@ altvtp.exploredistribution<- function(YXc, indir, infile)
 		
 	#	check fit in terms of means and sds
 	tmp		<- YXr[, list(score.mu=mean(score.p), score.sd=sd(score.p)), by='ntPatient']
-	ggplot(mpars, aes(x=as.numeric(as.character(ntPatient)), y=score.mu)) + 
+	ggplot(mpars, aes(x=as.numeric(ntPatient), y=score.mu)) + 
 			geom_point(aes(colour=TYPE)) + geom_line(aes(colour=TYPE, group=TYPE)) +
 			geom_point(data=tmp, colour='black') +  
 			facet_wrap(~TYPE, ncol=4)
 	file	<- paste(indir,'/',gsub('\\.R','_scorePmeansByModel.pdf',infile),sep='')	
 	ggsave(file=file, w=15,h=10)
-	ggplot(mpars, aes(x=as.numeric(as.character(ntPatient)), y=score.sd)) + 
+	ggplot(mpars, aes(x=as.numeric(ntPatient), y=score.sd)) + 
 			geom_point(aes(colour=TYPE)) + geom_line(aes(colour=TYPE, group=TYPE)) +
 			geom_point(data=tmp, colour='black') +  
 			facet_wrap(~TYPE, ncol=4)
 	file	<- paste(indir,'/',gsub('\\.R','_scorePsdsByModel.pdf',infile),sep='')	
 	ggsave(file=file, w=15,h=10)
-	#	--> BELNtSL and GALNtSL look good
+	#	--> GALNtSLI looks good
 	
 	#	get samples from fitted distribution
 	YXp		<- subset(mpars, TYPE!='OBS')[, {
@@ -1329,8 +2525,8 @@ altvtp.exploredistribution<- function(YXc, indir, infile)
 				if(grepl('BE',TYPE))
 					z<- rBE(1e4, mu=score.mu, sigma=score.sigma)
 				list(score.p=z)
-			}, by=c('ntPatient','TYPE')]
-	tmp		<- subset(YXr, select=c(ntPatient, score.p))
+			}, by=c('ntPatientf','TYPE')]
+	tmp		<- subset(YXr, select=c(ntPatientf, score.p))
 	tmp[, TYPE:= 'OBS']
 	YXp		<- rbind(tmp, YXp,use.names=TRUE)
 	
@@ -1339,7 +2535,7 @@ altvtp.exploredistribution<- function(YXc, indir, infile)
 			scale_x_continuous(limits=c(0,0.1)) +
 			scale_colour_brewer(palette='Set1') +
 			geom_density() + 
-			facet_wrap(~ntPatient, ncol=5, scales='free_y') 
+			facet_wrap(~ntPatientf, ncol=5, scales='free_y') 
 	file	<- paste(indir,'/',gsub('\\.R','_scorePdensitiesByNtPatient.pdf',infile),sep='')	
 	ggsave(file=file, w=15,h=15)	
 	#
@@ -1353,7 +2549,72 @@ altvtp.exploredistribution<- function(YXc, indir, infile)
 	dev.off()
 }
 ######################################################################################
-altvtp.plot	<- function(YXc, indir, infile)
+altvtp.plot.150901	<- function(YXc, indir, infile)
+{
+	ggplot(YXc, aes(x=missexp.pr/DUMMY, fill=stageC)) + geom_histogram(binwidth=0.25) +
+			scale_x_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1)) +
+			facet_grid(t.AgeC~stageC, scales='free') + 
+			theme_bw() 
+	file	<- paste(indir,'/',gsub('\\.R','_missexpBytstAgeC150901.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
+	
+	ggplot(YXc, aes(x=t.AgeC, y=missexp.pr/DUMMY, fill=stageC)) + geom_boxplot(outlier.shape = NA) +
+			scale_y_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,10)) +
+			facet_grid(~stageC, space='free', scales='free')  +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(y='expected missing\n(transmission intervals)') 
+	file	<- paste(indir,'/',gsub('\\.R','_missexpBytstAgeC2150901.pdf',infile),sep='')	
+	ggsave(file=file, w=13,h=7)	
+	
+	ggplot(YXc, aes(x=t.AgeC, y=missexp.pr/DUMMY, fill=stageC)) + geom_boxplot(outlier.shape = NA) +
+			scale_y_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,10)) +
+			facet_grid(stageC~t.period, space='free', scales='free')  +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(y='expected missing\n(transmission intervals)') 
+	file	<- paste(indir,'/',gsub('\\.R','_missexpBytstAgeCPeriod150901.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
+	
+	ggplot(YXc, aes(x=t.period, y=missexp.pr/DUMMY, fill=stageC)) + geom_boxplot(outlier.shape = NA) +
+			scale_y_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,10)) +
+			facet_grid(.~stageC, space='free', scales='free')  +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(y='expected missing\n(transmission intervals)') 
+	file	<- paste(indir,'/',gsub('\\.R','_missexpBystageCPeriod150901.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=6)	
+	
+	
+	ggplot(YXc, aes(x=t.AgeC, y=score.Y, fill=stageC)) + geom_boxplot(outlier.shape = NA) +
+			scale_y_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,70)) +
+			facet_grid(~stageC, space='free', scales='free')  +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(y='relative phylogenetic transmission probability\nfor observed transmission intervals\n(scoreY)') 
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYBytstAgeC150901.pdf',infile),sep='')	
+	ggsave(file=file, w=13,h=7)	
+	
+	ggplot(YXc, aes(x=t.AgeC, y=100*score.p.nadj, fill=stageC)) + geom_boxplot(outlier.shape = NA) +
+			scale_y_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,30)) +
+			facet_grid(~stageC, space='free', scales='free')  +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(y='unadjusted absolute phylogenetic transmission probability\nfor observed transmission intervals\n(%)') 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePnadjBytstAgeC150901.pdf',infile),sep='')	
+	ggsave(file=file, w=13,h=7)	
+	
+	ggplot(YXc, aes(x=t.AgeC, y=100*score.p, fill=stageC)) + geom_boxplot(outlier.shape = NA) +
+			scale_y_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,10)) +
+			facet_grid(~stageC, space='free', scales='free')  +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(y='absolute phylogenetic transmission probability\nfor observed transmission intervals\n(%)') 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePBytstAgeC150901.pdf',infile),sep='')	
+	ggsave(file=file, w=13,h=7)		
+}
+######################################################################################
+altvtp.plot.150828	<- function(YXc, indir, infile)
 {
 	ggplot(YXc, aes(x=missexp, fill=stageC)) + geom_histogram(binwidth=0.25) +
 			scale_x_continuous(breaks=seq(0,100,5), minor_breaks=seq(0,100,1)) +
@@ -1434,7 +2695,23 @@ adjust.dev<- function()
 	#
 	#	focus on >2003 and before ART start
 	#
-	YX			<- subset(YX, t>=2004.5 & !stageC%in%c('L','T'))
+	#YX			<- subset(YX, t>2004.5 & !stageC%in%c('L','T'))
+	YX			<- copy(YXo2)
+	YX			<- subset(YX, AnyPos_T1>2005)
+	tmp			<- YX[, which(stageC=='L')]
+	set(YX, tmp, 't.AgeC', '(-1,100]')
+	set(YX, tmp, 't.stAgeC', 'L_(-1,100]')
+	tmp			<- YX[, which(stageC=='T')]
+	set(YX, tmp, 't.AgeC', '(-1,100]')
+	set(YX, tmp, 't.stAgeC', 'T_(-1,100]')	
+	#tmp		<- YXc[, which(stageC=='L' | stageC=='T')]
+	#set(YXc, tmp, 't.AgeC', '(-1,100]')
+	#set(YXc, tmp, 'stageC', 'LT')
+	#set(YXc, tmp, 't.stAgeC', 'LT_(-1,100]')	
+	set(YX, NULL, 'stageC', YX[, factor(as.character(stageC))])
+	set(YX, NULL, 't.stAgeC', YX[, factor(as.character(t.stAgeC))])
+	set(YX, NULL, 't.stAgeC.prd', YX[, factor(as.character(t.stAgeC.prd))])
+	
 	#	get clustering, sampling and non-censoring probabilities 
 	#	for each prob transmitter at the transmission interval 
 	sm			<- X.tables$sm
@@ -1447,10 +2724,14 @@ adjust.dev<- function()
 	tp.df		<- censoring.get.dataset(tp.df, df.all.allmsm)
 	setnames(YXs, c('t.Patient','Patient'), c('Patient','r.Patient'))
 	#	YXc so far only contains transmitters with at least one undiagnosed interval
-	YXc			<- merge(YXs, subset(tp.df, select=c(Patient, r.Patient, tm, AACD4C)), by=c('Patient','r.Patient'))	
-	YXc[, p.nc:= predict(cm, data=cp, newdata=subset(YXc, select=c(tm, AACD4C)), type='response')]
+	YXc			<- merge(YXs, subset(tp.df, select=c(Patient, r.Patient, tm, AACD4C)), by=c('Patient','r.Patient'))
 	set(YXc, NULL, 'tm', YXc[, tm-t.recent.endctime])	
 	YXc[, p.nc:=predict(cm, data=cp, newdata=subset(YXc, select=c(tm, AACD4C)), type='response')]
+	#	p.nc is allocated to transmitters with at least one undiagnosed interval
+	#	set p.nc to 1 for all intervals after diagnosis
+	set(YXc, YXc[, which(!is.na(p.nc) & !grepl('^U', stageC))], 'p.nc', 1)
+	#ggplot(YXc, aes(x=tm, y=p.nc, group=AACD4C)) + geom_line() + facet_wrap(~AACD4C, ncol=4)
+	#ggplot(YXc, aes(x=tm)) + geom_histogram()	
 	setnames(YXs, c('Patient','r.Patient'), c('t.Patient','Patient'))
 	setnames(YXc, c('Patient','r.Patient'), c('t.Patient','Patient'))
 	YXc			<- merge(YXs, subset(YXc, select=c(t.Patient, Patient, t, p.nc)), by=c('t.Patient','Patient','t'), all.x=TRUE)
@@ -1463,18 +2744,16 @@ adjust.dev<- function()
 	tmp			<- subset(tclu, t.period=='Overall', select=c(factor2, p.clu))
 	setnames(tmp, 'factor2', 't.stAgeC')	
 	set(tmp, NULL, 't.stAgeC', tmp[, factor(t.stAgeC, levels=YXc[, levels(t.stAgeC)], labels=YXc[, levels(t.stAgeC)])])
-	YXc			<- merge(YXc, tmp, by=c('t.stAgeC'))
+	YXc			<- merge(YXc, tmp, by=c('t.stAgeC'), all.x=TRUE)
 	tmp			<- subset(tpt, t.period=='Overall', select=c(factor2, p.pt))
 	setnames(tmp, 'factor2', 't.stAgeC')		
 	set(tmp, NULL, 't.stAgeC', tmp[, factor(t.stAgeC, levels=YXc[, levels(t.stAgeC)], labels=YXc[, levels(t.stAgeC)])])
-	YXc			<- merge(YXc, tmp, by=c('t.stAgeC'))
-	
+	YXc			<- merge(YXc, tmp, by=c('t.stAgeC'), all.x=TRUE)	
 	#	get w per interval
 	cat(paste('\nsetting likelihood to likelihood of pair / number transmission intervals'))
 	set(YXc, NULL, 'score.Y.raw', YXc[, score.Y])
 	set(YXc, NULL, 'score.Y', YXc[, score.Y*w.tn])				
-	YXc[, ntPatient:= factor(YXc[, 1/w.in])]
-	
+	YXc		<- merge(YXc, YXc[, list(t=t, t.Patient=t.Patient, ntPatient= length(unique(t.Patient))), by=c('Patient')], by=c('Patient','t.Patient','t'))
 	if(0)
 	{
 		#	are the w's confounded by cluster size?
@@ -1483,45 +2762,51 @@ adjust.dev<- function()
 		#	mean or median w for each stage:	
 		rltvtp.exploredistribution(YXc, indir, infile)		
 	}
-	
-	#	get rolling mean score.Y.rm over time
-	tmp		<- rltvtp.model.time.150828(YXc)
+	YXc[, p.seqnc:= p.seq*p.nc]
+	YXc[, me:= 1/(p.seq*p.nc)-1]	
+	#	calculate absolute transmission probabilities
+	#	need first: predicted score by stage and time t
+	#	need second: predicted missing intervals per recipient, by stage and time t
+	#	then calculate: exp missing score.Y per recipient by time t= sum_stage missexp.pr(stage,t) * scoreY.pr(stage,t)
+	tmp		<- rltvtp.model.time.150901(YXc)
 	rltvm	<- tmp$rltvm
 	rltvd	<- tmp$rltvd
-	#	calculate absolute transmission probabilities
-	#	need first: average score per stage
-	#	need second: expected missing intervals per stage
-	#	then obtain p = w / ( sum(w) + exp missing per recipient AT TIME t)
-	YXc[, missexp:= YXc[, 1/(p.seq*p.nc)-1]]
-	YXc[, missexp:= YXc[, 1/(p.seq)-1]]
-	YXc[, missexp:= YXc[, 1/(p.nc)-1]]
-	tmp		<- YXc[, list(tm= sum(missexp)), by='t']
-	ggplot(tmp, aes(x=t, y=tm)) + geom_line()
+	YXc		<- subset(YXc, AnyPos_T1<2010.8)
+	tmp		<- miss.model.150904b(YXc)	
+	md		<- tmp$miss.d
+	mm		<- tmp$miss.m
+	tmp		<- YXc[, list(ns=length(t.Patient)), by=c('t','t.stAgeC')]
+	tmp		<- merge(tmp, YXc[, list(nr=length(Patient)), by=c('t')], by=c('t'))	
+	tmp[, missexp.pr:=predict(mm, data=md, newdata=subset(tmp, select=c(t, t.stAgeC)), type='response', what='mu')]
+	tmp[, scoreY.pr:=predict(rltvm, data=rltvd, newdata=subset(tmp, select=c(t, t.stAgeC)), type='response', what='mu')]
 	
-	YXc		<- merge(YXc, subset(rltvd, select=c(t.Patient, Patient, t, score.Y.rm)), by=c('t.Patient','Patient','t'))
-	YXc[, list( n=length(unique(Patient)), score.Y.miss=sum(missexp*score.Y.rm)), by='t']
 	
-	#	calculate absolute transmission probabilities
-	#	need first: average score per stage
-	#	need second: expected missing intervals per stage
-	#	then obtain p = w / ( sum(w) + exp missing per recipient )
-	tmp		<- rltvtp.model.150729(YXc)
-	rtpm	<- tmp$wm4
-	rtpmus	<- subset(tmp$par, TYPE=='wm4')
-	rtpd	<- tmp$data
-	YXc[, missexp:= YXc[, 1/(p.seq*p.nc)-1]]
-	rtpmiss	<- merge( YXc[, list(missexp=sum(missexp)), by=risk.col], rtpmus, by=risk.col )
-	rtpmiss[, score.Y:= rtpmiss[, missexp*mu]]
-	rtpmissr	<- rtpmiss[, sum(score.Y)] / YXc[, length(unique(Patient))]	#sum of expected missing relative transmission probabilities, per recipient 	
-	tmp		<- YXc[, list(score.p= score.Y/(sum(score.Y)+rtpmissr), score.p.nadj= score.Y/sum(score.Y), t.Patient=t.Patient, t=t), by='Patient']
+	tmp		<- as.data.table(expand.grid(t.stAgeC=YXc[, levels(t.stAgeC)], t=YXc[, sort(unique(t))]))
+	tmp2	<- predict(mm, data=md, newdata=tmp, type='response', what='mu')
+	tmp[, scoreY.pr:=predict(rltvm, data=rltvd, newdata=tmp, type='response', what='mu')]
+	tmp[, missexp.pr:=tmp2]	
+	set(tmp, tmp[, which(scoreY.pr<0)], 'scoreY.pr', 0)
+	set(tmp, tmp[, which(missexp.pr<0)], 'missexp.pr', 0)
+	
+	
+	
+	#	then calculate p = w / ( sum(w) + sum_time exp missing per recipient AT TIME t)	
+	YXc		<- merge(YXc, tmp[, list(missexp.pr=mean(missexp.pr), scoreY.pr.miss= mean(missexp.pr*scoreY.pr)), by='t'], by='t')
+	YXc		<- merge(YXc, YXc[, list(DUMMY= length(t.Patient)), by=c('Patient','t')], by=c('Patient','t'))
+	#	sum_time exp missing per recipient AT TIME t	is already per recipient and per time. To sum correctly, need to divide by the number of 't' intervals per recipient		
+	set(YXc, NULL, 'scoreY.pr.miss', YXc[, scoreY.pr.miss/DUMMY])
+	#set(YXc, NULL, 'DUMMY', NULL)	
+	tmp		<- YXc[, list(score.p= score.Y/(sum(score.Y)+sum(scoreY.pr.miss)), score.p.nadj= score.Y/sum(score.Y), t.Patient=t.Patient, t=t), by='Patient']
 	YXc		<- merge(YXc, tmp, by=c('t.Patient','Patient','t'))
 	#	explore p across stages
-	altvtp.plot(YXc, indir, infile)
-	#	are the p's confounded by cluster size?
+	altvtp.plot.150901(YXc, indir, infile)
+	#	are the p's confounded by cluster size? --> Yes, quite strongly!
 	altvtp.confounded.ntransmitters(YXc, indir, infile)
-	#	Yes, quite strongly!
+	#	explore p across time and stages
+	altvtp.explore.time.models(YXc, indir, infile)
+	#	get RR irrespective of time 
 
-	#
+
 }
 ######################################################################################
 censoring.dev.sampling.model.calculate<- function()
@@ -1733,6 +3018,139 @@ sampling.model.calculate<- function(X.msm, df.all.allmsm, df.viro.allmsm, df.imm
 			save(ptr.df, file=save.file)
 	}
 	ptr.df
+}
+######################################################################################
+miss.model.150904<- function(YXc, indir, infile)
+{	
+	YXm		<- subset(YXc, AnyPos_T1<2010.8, select=c(t, t.stAgeC, me))
+	set(YXm, NULL, 't.stAgeC', YXm[, factor(as.character(t.stAgeC))])
+	mm4		<- gamlss(me~t.stAgeC+ns(t, df=3):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	list(miss.m=mm4, miss.d=YXm)	
+}
+######################################################################################
+miss.model.150904b<- function(YXc, indir, infile)
+{	
+	YXm		<- subset(YXc, AnyPos_T1<2010.8, select=c(t, t.stAgeC, p.seqnc))
+	set(YXm, NULL, 't.stAgeC', YXm[, factor(as.character(t.stAgeC))])
+	mm4		<- gamlss(p.seqnc~t.stAgeC+ns(t, df=3):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	list(miss.m=mm4, miss.d=YXm)	
+}
+######################################################################################
+miss.model.150831<- function(YXc)
+{
+	YXm		<- subset(YXc, AnyPos_T1<2010.8)
+	tmp		<- YXm[, list(ttlme= sum(1/(p.seq*p.nc)-1)/length(unique(Patient)), nR=length(unique(Patient)) ), by='t']
+	YXm		<- merge(YXm, tmp,by='t')
+	tmp		<- YXm[, list(me= sum(1/(p.seq*p.nc)-1)/nR[1] ), by=c('t','t.stAgeC')]
+	YXm		<- merge(YXm, tmp, by=c('t','t.stAgeC'))
+	YXm[, nR:=NULL]
+	YXm		<- subset(YXm, select=c(t, t.stAgeC, me))
+	mm3		<- gamlss(me~t.stAgeC+ns(t, df=4):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	list(miss.m=mm3, miss.d=YXm)
+}
+######################################################################################
+miss.explore.150904<- function(YXc, indir, infile)
+{
+	tmp		<- melt(YXc, measure.vars=c('p.seq','p.nc','p.seqnc','me'))
+	ggplot(tmp, aes(x=t.period, y=value, fill=stageC)) + geom_boxplot() +
+			facet_grid(variable~stageC, scales='free') + theme_bw()
+	ggsave(file=paste(indir,'/',gsub('\\.R','_EXPMISSforcensoringsampling_empirical\\.pdf',infile),sep=''), w=10, h=14)	
+	ggplot(YXc, aes(x=t, y=me, colour=t.AgeC)) + geom_point(alpha=0.5) + geom_smooth(colour='black', fill='grey50', alpha=1) +
+			facet_grid(t.AgeC~stageC, scales='free') + theme_bw()
+	ggsave(file=paste(indir,'/',gsub('\\.R','_EXPMISSforcensoringsampling_smooth\\.pdf',infile),sep=''), w=10, h=14)
+	
+	
+	YXc		<- subset(YXc, AnyPos_T1<2010.8)
+	YXm		<- subset(YXc, select=c(t, stageC, t.AgeC, t.stAgeC, p.seqnc))
+	set(YXm, NULL, 't.stAgeC', YXm[, factor(as.character(t.stAgeC))])	
+	mm1		<- gamlss(p.seqnc~t.stAgeC+t.stAgeC:t, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	mm2		<- gamlss(p.seqnc~t.stAgeC+ns(t, df=2):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	mm3		<- gamlss(p.seqnc~t.stAgeC+ns(t, df=4):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	mm4		<- gamlss(p.seqnc~t.stAgeC+ns(t, df=3):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())	
+	me1		<- predict(mm1,type='response',what='mu')
+	me2		<- predict(mm2,type='response',what='mu')
+	me3		<- predict(mm3,type='response',what='mu')
+	me4		<- predict(mm4,type='response',what='mu')
+	YXm[, p.seqnc1:=me1]
+	YXm[, p.seqnc2:=me2]
+	YXm[, p.seqnc3:=me3]
+	YXm[, p.seqnc4:=me4]
+	#YXm		<- melt(YXm, measure.vars=c('me1','me2','me3','me4'))
+	ggplot(melt(YXm, measure.vars=c('p.seqnc1','p.seqnc2','p.seqnc3','p.seqnc4')), aes(x=t, colour=t.AgeC, group=t.stAgeC)) + 
+			geom_point(aes(y=p.seqnc), alpha=0.4) + geom_smooth(aes(y=p.seqnc), colour='black', fill='grey50', alpha=1) +
+			geom_line(aes(y=value), colour='red') +
+			facet_grid(t.AgeC~variable+stageC, scales='free') +
+			theme_bw()
+	ggsave(file=paste(indir,'/',gsub('\\.R','_EXPMISSpmodels150904\\.pdf',infile),sep=''), w=30, h=15)
+	
+	
+	YXc		<- subset(YXc, AnyPos_T1<2010.8)		
+	YXm		<- subset(YXc, select=c(t, stageC, t.AgeC, t.stAgeC, me))
+	set(YXm, NULL, 't.stAgeC', YXm[, factor(as.character(t.stAgeC))])
+	mm1		<- gamlss(me~t.stAgeC+t.stAgeC:t, data=YXm, family=GA())
+	mm2		<- gamlss(me~t.stAgeC+t.stAgeC:t, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	mm3		<- gamlss(me~t.stAgeC+ns(t, df=4):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	mm4		<- gamlss(me~t.stAgeC+ns(t, df=3):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())	
+	me1		<- predict(mm1,type='response',what='mu')
+	me2		<- predict(mm2,type='response',what='mu')
+	me3		<- predict(mm3,type='response',what='mu')
+	me4		<- predict(mm4,type='response',what='mu')
+	YXm[, me1:=me1]
+	YXm[, me2:=me2]
+	YXm[, me3:=me3]
+	YXm[, me4:=me4]
+	#YXm		<- melt(YXm, measure.vars=c('me1','me2','me3','me4'))
+	ggplot(melt(YXm, measure.vars=c('me1','me2','me3','me4')), aes(x=t, colour=t.AgeC, group=t.stAgeC)) + 
+			geom_point(aes(y=me), alpha=0.4) + geom_smooth(aes(y=me), colour='black', fill='grey50', alpha=1) +
+			geom_line(aes(y=value), colour='red') +
+			facet_grid(t.AgeC~variable+stageC, scales='free') +
+			theme_bw()
+	ggsave(file=paste(indir,'/',gsub('\\.R','_EXPMISSmodels150904\\.pdf',infile),sep=''), w=30, h=15)		
+}
+######################################################################################
+miss.explore.150831<- function(YXc, indir, infile)
+{
+	YXc		<- subset(YXc, AnyPos_T1<2010.8)
+	tmp		<- YXc[, list(tm= sum(1/(p.nc)-1)/length(unique(Patient)), rn=length(unique(Patient)) ), by='t']
+	ggplot(tmp, aes(x=t, y=tm)) + geom_line() + labs(y='exp missing intervals per recipient')
+	ggsave(file=paste(indir,'/',gsub('\\.R','_EXPMISSforcensoring\\.pdf',infile),sep=''), w=5, h=4)
+	tmp		<- YXc[, list(tm= sum(1/(p.seq)-1)/length(unique(Patient)), rn=length(unique(Patient)) ), by='t']
+	ggplot(tmp, aes(x=t, y=tm)) + geom_line() + labs(y='exp missing intervals per recipient')
+	ggsave(file=paste(indir,'/',gsub('\\.R','_EXPMISSforsampling\\.pdf',infile),sep=''), w=5, h=4)	
+	tmp		<- YXc[, list(ttlme= sum(1/(p.seq*p.nc)-1)/length(unique(Patient)), nR=length(unique(Patient)) ), by='t']
+	setkey(tmp, t)
+	ggplot(tmp, aes(x=t, y=ttlme)) + geom_line() + labs(y='exp missing intervals per recipient')
+	ggsave(file=paste(indir,'/',gsub('\\.R','_EXPMISSforcensoringsampling\\.pdf',infile),sep=''), w=5, h=4)	
+	YXc		<- merge(YXc, tmp,by='t')
+	tmp		<- YXc[, list(me= sum(1/(p.seq*p.nc)-1)/nR[1] ), by=c('t','t.stAgeC')]
+	YXc		<- merge(YXc, tmp, by=c('t','t.stAgeC'))
+	YXm		<- subset(YXc, t<2010.75, select=c(t, stageC, t.AgeC, t.stAgeC, me, ttlme))
+	set(YXm, NULL, 't.stAgeC', YXm[, factor(as.character(t.stAgeC))])
+	mm1		<- gamlss(me~t.stAgeC+t.stAgeC:t, data=YXm, family=GA())
+	mm2		<- gamlss(me~t.stAgeC+t.stAgeC:t, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	mm3		<- gamlss(me~t.stAgeC+ns(t, df=4):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	mm4		<- gamlss(me~t.stAgeC+ns(t, knots=c(2005,2009,2010,2010.5)):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())
+	me1		<- predict(mm1,type='response',what='mu')
+	me2		<- predict(mm2,type='response',what='mu')
+	me3		<- predict(mm3,type='response',what='mu')
+	me4		<- predict(mm4,type='response',what='mu')
+	YXm[, me1:=me1]
+	YXm[, me2:=me2]
+	YXm[, me3:=me3]
+	YXm[, me4:=me4]
+	#YXm		<- melt(YXm, measure.vars=c('me1','me2','me3','me4'))
+	ggplot(melt(YXm, measure.vars=c('me1','me2','me3','me4')), aes(x=t, colour=t.AgeC, group=t.stAgeC)) + geom_point(aes(y=me)) +
+			geom_line(aes(y=value)) +
+			facet_wrap(variable~stageC, scales='free', ncol=5) +
+			theme_bw()
+	ggsave(file=paste(indir,'/',gsub('\\.R','_EXPMISSmodels\\.pdf',infile),sep=''), w=15, h=10)	
+	
+	tmp2	<- as.data.table(expand.grid(t.stAgeC=YXm[, levels(t.stAgeC)], t=YXm[, sort(unique(t))]))
+	tmp2[, mem:=predict(mm3, data=YXm, newdata=tmp2, type='response', what='mu')]
+	ggplot(tmp2[, list(ttlmem=sum(mem)), by='t'], aes(x=t)) + 
+			geom_line(aes(y=ttlmem), colour='red') +
+			geom_line(data=YXm, aes(y=ttlme)) + labs(y='black line: empirical\nred line: predicted')
+	ggsave(file=paste(indir,'/',gsub('\\.R','_EXPMISSmodelvsempirical\\.pdf',infile),sep=''), w=10, h=10)
 }
 ######################################################################################
 sampling.dev<- function()
@@ -2977,6 +4395,14 @@ stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F<- function(YX.m5)
 	YX.m5
 }
 ######################################################################################
+rltvtp.model.time.150901<- function(YXc)
+{
+	YXr		<- subset(YXc, select=c('t', 'score.Y', 't.stAgeC'))
+	#	get model
+	wm8		<- gamlss( score.Y~t.stAgeC+t:t.stAgeC-1, sigma.formula=~t.stAgeC, data=YXr, family=GA(mu.link='identity') )
+	list(rltvm= wm8, rltvd= YXr)
+}
+######################################################################################
 rltvtp.model.time.150828<- function(YXc)
 {
 	YXr		<- subset(YXc, t>=2004.5, select=c('t.Patient','t','Patient', 'score.Y','stageC','t.AgeC', 't.stAgeC'))
@@ -2999,8 +4425,8 @@ rltvtp.model.time.150828<- function(YXc)
 rltvtp.explore.time.150828<- function(YXc, indir=NA, infile=NA)
 {
 	#	it s very difficult to look at anything before 2003
-	#	before 2004.5, the GA ID link model leads to negative values.. 
-	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.Y','ntPatient','stageC','t.AgeC', 't.stAgeC'))
+	#	before 2004.5, the GA ID link model leads to negative values.. 		
+	YXr		<- subset(YXc, AnyPos_T1>=2005, select=c('t.Patient','t','Patient', 'score.Y','ntPatient','stageC','t.AgeC', 't.stAgeC'))
 	YXr[, ntPatientn:= as.numeric(as.character(ntPatient))]
 	YXp		<- copy(YXr)
 	setnames(YXp, 't.stAgeC','RSKF')
@@ -3026,9 +4452,9 @@ rltvtp.explore.time.150828<- function(YXc, indir=NA, infile=NA)
 	YXp		<- merge(YXp, subset(tmp, select=c('t.Patient','Patient','t','ALPHA')), by=c('t.Patient','Patient','t'))
 	ggplot(YXp, aes(x=t, y=V.rm, colour=t.AgeC, group=RSKF, alpha=ALPHA)) + geom_line() + geom_point(size=1.2) +
 			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
-			facet_grid(STAT~stageC, scales='free') + labs(y='relative phylogenetic transmission probability\n6m rolling mean') +
+			facet_grid(STAT~stageC, scales='free') + labs(y='relative phylogenetic transmission probability\n1yr rolling mean') +
 			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))
-	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeanstAgeCByTime_6mrollingmean.pdf',infile),sep='')	
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeanstAgeCByTime_1yrollingmean.pdf',infile),sep='')	
 	ggsave(file=file, w=10,h=10)	
 	#
 	tmp		<- dcast.data.table(YXp, t.Patient+Patient+t+ntPatientn+RSKF+stageC+t.AgeC+ALPHA~STAT, value.var='V.rm')
@@ -3037,7 +4463,7 @@ rltvtp.explore.time.150828<- function(YXc, indir=NA, infile=NA)
 	YXr		<- merge(tmp, dcast.data.table(YXp, t.Patient+Patient+t+ntPatientn+RSKF+stageC+t.AgeC+ALPHA~STAT, value.var='V'), by=c('t.Patient','Patient','t','ntPatientn','RSKF','stageC','t.AgeC','ALPHA'))
 	wm4		<- gamlss( score.Y~RSKF-1, sigma.formula=~RSKF-1, data=YXr, family=GA() )
 	wm5		<- gamlss( score.Y~ns(t, df=1)+t.AgeC+stageC-1, sigma.formula=~t.AgeC+stageC-1, data=YXr, family=GA(mu.link='identity') )
-	wm6		<- gamlss( score.Y~t.AgeC+t:t.AgeC+stageC-1, sigma.formula=~t.AgeC+stageC-1, data=YXr, family=GA(mu.link='identity') )
+	wm6		<- gamlss( score.Y~t.AgeC+t:t.AgeC+stageC-1, sigma.formula=~t.AgeC+stageC-1, data=YXr, family=GA() )
 	wm7		<- gamlss( score.Y~t:RSKF, sigma.formula=~RSKF, data=YXr, family=GA(mu.link='identity') )	
 	wm8		<- gamlss( score.Y~RSKF+t:RSKF-1, sigma.formula=~RSKF, data=YXr, family=GA(mu.link='identity') )	
 	ywm4	<- predict(wm4, data=YXr, type='response', what='mu')
@@ -3054,9 +4480,9 @@ rltvtp.explore.time.150828<- function(YXc, indir=NA, infile=NA)
 	ggplot(YXp, aes(x=t, colour=t.AgeC, group=RSKF)) + geom_line(aes(y=value)) + geom_point(aes(y=score.Y.rm), size=1.2) +
 			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
 			scale_y_continuous(limits=c(0,40)) +
-			facet_grid(variable~stageC, scales='free') + labs(y='relative phylogenetic transmission probability\n6m rolling mean') +
+			facet_grid(variable~stageC, scales='free') + labs(y='relative phylogenetic transmission probability\n1yr rolling mean') +
 			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))
-	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeanstAgeCByTimeModels_6mrollingmean.pdf',infile),sep='')	
+	file	<- paste(indir,'/',gsub('\\.R','_scoreYmeanstAgeCByTimeModels_1yrollingmean.pdf',infile),sep='')	
 	ggsave(file=file, w=10,h=10)	
 	
 }

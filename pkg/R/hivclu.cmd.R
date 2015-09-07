@@ -1,4 +1,26 @@
+######################################################################################
+hivc.cmd.hpcsys<- function()
+{
+	tmp<- system('domainname',intern=T)
+	if(!nchar(tmp))	tmp<- "debug"
+	tmp
+}
+######################################################################################
+#' @export
+HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
 
+#' @export
+HPC.MPIRUN		<- {tmp<- c("mpirun","mpiexec"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
+
+#' @export
+HPC.CX1.IMPERIAL<- "cx1.hpc.ic.ac.uk"		#this is set to system('domainname',intern=T) for the hpc cluster of choice
+
+#' @export
+HPC.MEM			<- "1750mb"
+
+#' @export
+HPC.LOAD		<- "module load intel-suite/2015.1 mpi examl/2015-09-04 R/3.2.0 raxml beast/1.8.0 beagle-lib/2014-07-30"
+######################################################################################
 #' @export
 PR.STARTME		<- system.file(package="hivclust", "misc", "hivclu.startme.R")
 
@@ -58,8 +80,16 @@ PR.EXAML.PARSER	<- system.file(package="hivclust", "ext", "ExaML-parser")
 #' @export
 PR.EXAML.STARTTREE	<- system.file(package="hivclust", "ext", "ExaML-parsimonator")
 
-#' @export
-PR.EXAML.EXAML	<- system.file(package="hivclust", "ext", "examl")
+if(hivc.cmd.hpcsys()==HPC.CX1.IMPERIAL)
+{
+	#' @export
+	PR.EXAML.EXAML	<- "examl"
+}	
+if(hivc.cmd.hpcsys()!=HPC.CX1.IMPERIAL)
+{
+	#' @export
+	PR.EXAML.EXAML	<- system.file(package="hivclust", "ext", "examl")
+}	
 
 #' @export
 PR.EXAML.BS		<- system.file(package="hivclust", "ext", "ExaML-raxml")
@@ -110,29 +140,7 @@ PR.PROPS.ESTIMATE		<- paste(PR.STARTME," -exe=PROPS.ESTIMATE",sep='')
 #' @export
 PR.AGE.ESTIMATE		<- paste(PR.STARTME.DEV," -exe=AGE.ESTIMATE",sep='')
 
-#' @export
-HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
 
-#' @export
-HPC.MPIRUN		<- {tmp<- c("mpirun","mpiexec"); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}
-
-#' @export
-HPC.CX1.IMPERIAL<- "cx1.hpc.ic.ac.uk"		#this is set to system('domainname',intern=T) for the hpc cluster of choice
-
-#' @export
-HPC.MEM			<- "1750mb"
-
-#' @export
-HPC.LOAD		<- "module load intel-suite mpi R/3.2.0 raxml beast/1.8.0 beagle-lib/2014-07-30"
-
-
-######################################################################################
-hivc.cmd.hpcsys<- function()
-{
-	tmp<- system('domainname',intern=T)
-	if(!nchar(tmp))	tmp<- "debug"
-	tmp
-}
 ######################################################################################
 #' @export
 hivc.cmd.ph.dist.tips<- function(file, prog=PR.PH.DISTTIPS)
