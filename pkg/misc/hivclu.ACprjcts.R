@@ -121,9 +121,9 @@ project.ACpolext.examl<- function()
 {	  	
 	indir		<- DATA
 	infile		<- "ZA_SubC_12432_nDRM"
-	signat.in	<- '150831' 
-	signat.out	<- '150831'
-	signat.out	<- '150906'
+	signat.in	<- signat.out	<- '150831'
+	signat.in   <- signat.out   <- '150906'
+	#signat.in   <- signat.out   <- '150907'
 	#	ExaML bootstrap args
 	bs.from		<- 0
 	bs.to		<- 0
@@ -132,13 +132,15 @@ project.ACpolext.examl<- function()
 	
 	#args.parser	<- paste("-m DNA -q",PARTITION)
 	args.parser	<- paste("-m DNA")
-	args.examl	<- "-f d -D -m GAMMA"
-	args.examl	<- "-f o -D -m GAMMA"
+	args.examl	<- "-f d -m GAMMA"		#	150831
+	args.examl	<- "-f d -D -m GAMMA"	#	150907
+	args.examl	<- "-f o -D -m GAMMA"	#	150906
 	cmd			<- hivc.cmd.examl.bootstrap(indir, infile, signat.in, signat.out, bs.from=bs.from, bs.to=bs.to, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
 	dummy		<- lapply(cmd, function(x)
 			{				
 				#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
-				x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=999, hpc.q="pqeph", hpc.mem="800mb", hpc.nproc=1)
+				#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=799, hpc.q="pqeph", hpc.mem="800mb", hpc.nproc=1)
+				x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=799, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
 				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 				outfile	<- paste("exa",signat,sep='.')
 				cat(x)

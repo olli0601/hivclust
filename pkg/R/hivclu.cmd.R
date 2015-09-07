@@ -75,20 +75,21 @@ PR.RECOMB.CHECKCANDIDATES	<- paste(PR.STARTME," -exe=RECOMB.CHECKCANDIDATES",sep
 PR.RECOMB.PLOTINCONGRUENCE	<- paste(PR.STARTME," -exe=RECOMB.PLOTINCONGRUENCE",sep='')
 
 #' @export
-PR.EXAML.PARSER	<- system.file(package="hivclust", "ext", "ExaML-parser") 
-
-#' @export
 PR.EXAML.STARTTREE	<- system.file(package="hivclust", "ext", "ExaML-parsimonator")
 
 if(hivc.cmd.hpcsys()==HPC.CX1.IMPERIAL)
 {
 	#' @export
 	PR.EXAML.EXAML	<- "examl"
+	#' @export
+	PR.EXAML.PARSER	<- "parse-examl"
 }	
 if(hivc.cmd.hpcsys()!=HPC.CX1.IMPERIAL)
 {
 	#' @export
 	PR.EXAML.EXAML	<- system.file(package="hivclust", "ext", "examl")
+	#' @export
+	PR.EXAML.PARSER	<- system.file(package="hivclust", "ext", "ExaML-parser") 
 }	
 
 #' @export
