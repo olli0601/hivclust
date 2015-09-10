@@ -90,7 +90,8 @@ project.ACpolext.trees.inspect<- function()
 	
 	pdf(file= infiles[i,paste(FILE,'.pdf',sep='')], width=40, height=250)
 	plot(ph, tip.color= phd[, TIP.CLR], cex=0.5, adj=1)
-	dev.off()
+	dev.off()	
+	save(ph, phd, file=infiles[i,paste(FILE,'.R',sep='')])
 	
 	infile		<- "ZA_SubC_12432_nDRM"
 	signat.in	<- '150831' 

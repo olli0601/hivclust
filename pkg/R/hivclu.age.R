@@ -1913,7 +1913,7 @@ gamlss	<- function (formula = formula(data), sigma.formula = ~1, nu.formula = ~1
 }
 
 ######################################################################################
-altvtp.explore.time.models<- function(YXc, indir, infile)
+altvtp.explore.time.models.150904<- function(YXc, indir, infile, suffix='')
 {
 	YXr		<- subset(YXc, select=c('t', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
 	YXr		<- subset(YXr, !stageC%in%c('L','T'))
@@ -1977,9 +1977,63 @@ altvtp.explore.time.models<- function(YXc, indir, infile)
 			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
 			facet_grid(variable~stageC, scales='free') + labs(y='absolute phylogenetic transmission probability\n1yr rolling mean\n(%)') +
 			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))	
-	file	<- paste(indir,'/',gsub('\\.R','_scorePmeanstAgeCByTimeModels_1yrollingmean.pdf',infile),sep='')	
+	file	<- paste(indir,'/',gsub('\\.R',paste('_scorePmeanstAgeCByTimeModels_1yrollingmean',suffix,'.pdf',sep=''),infile),sep='')	
+	ggsave(file=file, w=10,h=10)		
+}
+######################################################################################
+altvtp.explore.time.models.150909<- function(YXc, indir, infile, suffix='')
+{
+	YXr		<- subset(YXc, select=c('t', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
+	YXr		<- subset(YXr, !stageC%in%c('L','T'))
+	tmp		<- YXr[, list(nt=length(score.p)), by=c('t.stAgeC','t')]
+	setkey(tmp, t.stAgeC, t)
+	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=1) ])), cnt=cumsum(nt)	), by=c('t.stAgeC')]
+	YXr		<- merge(YXr, tmp, by=c('t.stAgeC','t'))
+	setkey(YXr, t.stAgeC, t)
+	tmp		<- YXr[, {
+				z	<- unique(t)
+				list(t=z, score.p.rm= sapply(seq_along(z), function(i)	mean(score.p[ which(abs(z[i]-t)<=1) ]))	)	
+			}, by='t.stAgeC']
+	YXr		<- merge(YXr, tmp, by=c('t','t.stAgeC'))
+	#	
+	am1		<- gamlss( score.p~t.stAgeC+t:t.stAgeC-1, sigma.formula=~t.stAgeC, data=YXr, family=GA() )
+	am2		<- gamlss( score.p~t.stAgeC+t:t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient, data=YXr, family=GA() )
+	am3		<- gamlss( score.p~t.stAgeC+ns(t,df=2):t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient, data=YXr, family=GA() )
+	am4		<- gamlss( score.p~t.stAgeC+ns(t,df=3):t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient, data=YXr, family=GA() )
+	am5		<- gamlss( score.p~t.stAgeC+ns(t,df=4):t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient, data=YXr, family=GA() )
+	
+	YXpp	<- as.data.table(expand.grid(t=YXr[, sort(unique(t))], t.stAgeC=YXr[, unique(as.character(t.stAgeC))], ntPatient=YXr[, median(ntPatient)]))	
+	yam1	<- predict(am1, data=YXr, newdata=YXpp, type='response', what='mu')
+	yam2	<- predict(am2, data=YXr, newdata=YXpp, type='response', what='mu')
+	yam3	<- predict(am3, data=YXp, newdata=YXpp, type='response', what='mu')
+	yam4	<- predict(am4, data=YXp, newdata=YXpp, type='response', what='mu')
+	yam5	<- predict(am5, data=YXp, newdata=YXpp, type='response', what='mu')
+	YXpp	<- merge(YXpp, unique(subset(YXr, select=c(stageC, t.AgeC, t.stAgeC))), by='t.stAgeC')
+	YXpp[, score.p.am1:=yam1]
+	YXpp[, score.p.am2:=yam2]
+	YXpp[, score.p.am3:=yam3]
+	YXpp[, score.p.am4:=yam4]
+	YXpp[, score.p.am5:=yam5]
+	YXpp	<- melt(YXpp, measure.vars=c('score.p.am1', 'score.p.am2', 'score.p.am3', 'score.p.am4', 'score.p.am5'))
+	ggplot(YXpp, aes(x=t, colour=as.character(t.AgeC))) + 
+			geom_point(data=YXr, aes(y=score.p.rm), size=1.2) +
+			geom_line(aes(y=value, group=as.character(t.stAgeC))) + 
+			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
+			facet_grid(variable~stageC, scales='free') + labs(y='absolute phylogenetic transmission probability\n1yr rolling mean\n(%)') +
+			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4))	
+	file	<- paste(indir,'/',gsub('\\.R',paste('_scorePmeanstAgeCByTimeModels_1yrollingmean',suffix,'.pdf',sep=''),infile),sep='')	
 	ggsave(file=file, w=10,h=10)	
 	
+	YXr		<- subset(YXc, select=c('t', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
+	ggplot(YXr, aes(x=t, y=100*score.p, colour=as.character(t.AgeC))) + 
+			geom_point(size=1.2, alpha=0.5) +
+			geom_smooth(colour='black', method='loess', span=0.5, degree=1) + 
+			scale_x_continuous(breaks=seq(1995,2020, 5), minor_breaks=seq(1995,2020,0.5)) +
+			scale_y_continuous(expand=c(0,0)) +
+			facet_grid(t.AgeC~stageC, scales='free') + labs(y='absolute phylogenetic transmission probability\n(%)') +
+			theme_bw() + theme(panel.grid.minor=element_line(colour="grey90", size=0.4), panel.grid.major=element_line(colour="grey90", size=0.4), legend.position='bottom')
+	file	<- paste(indir,'/',gsub('\\.R',paste('_scoreP_tAgeCByTime_loess',suffix,'.pdf',sep=''),infile),sep='')	
+	ggsave(file=file, w=14,h=14)	
 }
 ######################################################################################
 altvtp.model.150902<- function(YXc)
@@ -2364,134 +2418,27 @@ altvtp.explore.distribution<- function(YXc, indir, infile)
 	mBELNtS	<- gamlss( score.p~ntPatientf-1, sigma.formula=~ntPatientf-1, data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
 	mBELNtSL<- gamlss( score.p~ntPatient, sigma.formula=~ntPatient, data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
 	mBELNtSQ<- gamlss( score.p~ns(ntPatient, df=2), sigma.formula=~ns(ntPatient, df=2), data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
-	#
-	setkey(YXr, ntPatientf)
-	mpars	<- data.table(ntPatientf= YXr[, levels(ntPatientf)])	
-	mpars[, score.mu:= predict(mExp, data=YXr, newdata=mpars, type='response', what='mu')]
-	mpars[, TYPE:= 'Exp']
-	setnames(mpars, 'ntPatientf', 'ntPatient')
-	#
-	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])
-	mu		<- predict(mExpNt, data=YXr, newdata=tmp, type='response', what='mu')	
-	tmp[, score.mu:= mu]
-	tmp[, TYPE:= 'ExpNt']
-	setnames(tmp, 'ntPatientf', 'ntPatient')
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
-	#
-	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
-	mu		<- predict(mExpNtL, data=YXr, newdata=tmp, type='response', what='mu')	
-	tmp[, score.mu:= mu]
-	tmp[, TYPE:= 'ExpNtL']
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
-	#
-	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])
-	mu		<- predict(mExpNtQ, data=YXr, newdata=tmp, type='response', what='mu')	
-	tmp[, score.mu:= mu]
-	tmp[, TYPE:= 'ExpNtQ']
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
 	#	
-	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])	
-	mu		<- predict(mGA, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mGA, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'GA']
-	setnames(tmp, 'ntPatientf', 'ntPatient')
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
-	#
-	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])
-	mu		<- predict(mGANt, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mGANt, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'GANt']
-	setnames(tmp, 'ntPatientf', 'ntPatient')
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
-	#
-	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])	
-	mu		<- predict(mGANtS, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mGANtS, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'GANtS']
-	setnames(tmp, 'ntPatientf', 'ntPatient')
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
-	#
-	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
-	mu		<- predict(mGANtSL, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mGANtSL, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'GANtSL']
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
-	#
-	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
-	mu		<- predict(mGANtSQ, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mGANtSQ, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'GANtSQ']
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
-	#
-	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
-	mu		<- predict(mGANtSLI, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mGANtSLI, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'mGANtSLI']
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
-	#
-	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
-	mu		<- predict(mGANtSQI, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mGANtSQI, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'GANtSQI']
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
-	#
-	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])	
-	mu		<- predict(mBEL, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mBEL, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'BEL']
-	setnames(tmp, 'ntPatientf', 'ntPatient')
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)	
-	#
-	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])	
-	mu		<- predict(mBELNt, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mBELNt, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'BELNt']
-	setnames(tmp, 'ntPatientf', 'ntPatient')
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
-	#
-	tmp		<- data.table(ntPatientf= YXr[, levels(ntPatientf)])
-	mu		<- predict(mBELNtS, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mBELNtS, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'BELNtS']
-	setnames(tmp, 'ntPatientf', 'ntPatient')
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
-	#
-	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])
-	mu		<- predict(mBELNtSL, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mBELNtSL, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'BELNtSL']
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
-	#
-	tmp		<- data.table(ntPatient= YXr[, sort(unique(ntPatient))])	
-	mu		<- predict(mBELNtSQ, data=YXr, newdata=tmp, type='response', what='mu')
-	sigma	<- predict(mBELNtSQ, data=YXr, newdata=tmp, type='response', what='sigma')
-	tmp[, score.mu:= mu]
-	tmp[, score.sigma:= sigma]
-	tmp[, TYPE:= 'BELNtSQ']
-	mpars	<- rbind(mpars, tmp, use.names=TRUE, fill=TRUE)
+	z		<- list(mExp, mExpNt, mExpNtL, mExpNtQ, mGA, mGANt, mGANtS, mGANtSLI, mGANtSQ, mGANtSQI, mBEL, mBELNt, mBELNtS, mBELNtSL, mBELNtSQ)
+	names(z)<- c('mExp','mExpNt','mExpNtL','mExpNtQ', 'mGA', 'mGANt', 'mGANtS', 'mGANtSLI', 'mGANtSQ', 'mGANtSQI', 'mBEL', 'mBELNt', 'mBELNtS', 'mBELNtSL', 'mBELNtSQ')
 	
+	z		<- list(mExpNt)
+	names(z)<- c('mExpNt')
+	
+	mpars	<- do.call('rbind',lapply( seq_along(z), function(i){
+				tmp		<- copy(YXr)
+				mu		<- predict(z[[i]], type='response', what='mu')
+				if(grepl('Exp',names(z)[i]))
+					sigma	<- NA_real_
+				if(!grepl('Exp',names(z)[i]))
+					sigma	<- predict(z[[i]], type='response', what='sigma')				
+				tmp[, score.mu:= mu]
+				tmp[, score.sigma:= sigma]
+				tmp[, TYPE:= names(z)[i]]
+				setkey(tmp, ntPatient)
+				unique(tmp)
+			}))
+	#	
 	mpars[, score.sd:=NA_real_]
 	tmp		<- mpars[, which(grepl('Exp',TYPE))]
 	set(mpars, tmp, 'score.sd', mpars[tmp, score.mu])
@@ -2661,23 +2608,23 @@ altvtp.plot.150828	<- function(YXc, indir, infile)
 	ggsave(file=file, w=13,h=7)		
 }
 ######################################################################################
-altvtp.confounded.ntransmitters<- function(YXc, indir, infile)
+altvtp.confounded.ntransmitters<- function(YXc, indir, infile, suffix='')
 {
 	tmp		<- YXc[, list(score.p.me=mean(score.p)), by=c('ntPatient')]
 	ggplot( tmp, aes(x=ntPatient, y=score.p.me)) + geom_bar(stat='identity')
-	file	<- paste(indir,'/',gsub('\\.R','_scorePmeansByNtPatient_raw.pdf',infile),sep='')	
+	file	<- paste(indir,'/',gsub('\\.R',paste('_scorePmeansByNtPatient_raw',suffix,'.pdf',sep=''),infile),sep='')	
 	ggsave(file=file, w=5,h=5)		
 	tmp		<- YXc[, list(score.p.m=mean(score.p), stageC=stageC[1], t.AgeC=t.AgeC[1]), by=c('ntPatient','stageC')]
 	ggplot( tmp, aes(x=ntPatient, y=score.p.m)) + geom_bar(stat='identity') + facet_grid(stageC~.)
-	file	<- paste(indir,'/',gsub('\\.R','_scorePmeansBystageCNtPatient_raw.pdf',infile),sep='')	
+	file	<- paste(indir,'/',gsub('\\.R',paste('_scorePmeansBystageCNtPatient_raw',suffix,'.pdf',sep=''),infile),sep='')	
 	ggsave(file=file, w=5,h=7)
 	tmp		<- YXc[, list(score.p.m=mean(score.p), stageC=stageC[1], t.AgeC=t.AgeC[1]), by=c('ntPatient','t.AgeC')]
 	ggplot( tmp, aes(x=ntPatient, y=score.p.m)) + geom_bar(stat='identity') + facet_grid(t.AgeC~.)
-	file	<- paste(indir,'/',gsub('\\.R','_scorePmeansBytAgeCNtPatient_raw.pdf',infile),sep='')	
+	file	<- paste(indir,'/',gsub('\\.R',paste('_scorePmeansBytAgeCNtPatient_raw',suffix,'.pdf',sep=''),infile),sep='')	
 	ggsave(file=file, w=5,h=7)	
 	tmp		<- YXc[, list(score.p.m=mean(score.p), stageC=stageC[1], t.AgeC=t.AgeC[1]), by=c('ntPatient','t.stAgeC')]
 	ggplot( tmp, aes(x=ntPatient, y=score.p.m)) + geom_bar(stat='identity') + facet_grid(t.AgeC~stageC)
-	file	<- paste(indir,'/',gsub('\\.R','_scorePmeansBytstAgeCNtPatient_raw.pdf',infile),sep='')	
+	file	<- paste(indir,'/',gsub('\\.R',paste('_scorePmeansBytstAgeCNtPatient_raw',suffix,'.pdf',sep=''),infile),sep='')	
 	ggsave(file=file, w=20,h=10)
 }
 ######################################################################################
@@ -2775,35 +2722,21 @@ adjust.dev<- function()
 	tmp		<- miss.model.150904b(YXc)	
 	md		<- tmp$miss.d
 	mm		<- tmp$miss.m
-	tmp		<- YXc[, list(ns=length(t.Patient)), by=c('t','t.stAgeC')]
-	tmp		<- merge(tmp, YXc[, list(nr=length(Patient)), by=c('t')], by=c('t'))	
-	tmp[, missexp.pr:=predict(mm, data=md, newdata=subset(tmp, select=c(t, t.stAgeC)), type='response', what='mu')]
-	tmp[, scoreY.pr:=predict(rltvm, data=rltvd, newdata=subset(tmp, select=c(t, t.stAgeC)), type='response', what='mu')]
+	YXm		<- miss.smoothing.150909(YXc)
+	#	get expected missing term for denominator 'scoreYm.per.rec'
+	tmp		<- YXm[, list(miss.per.rec= sum(miss.prsm), scoreYm.per.rec= sum(miss.prsm*scoreY.pr)), by='Patient']
+	YXc		<- merge( YXc, tmp, by='Patient' )
+	#	then calculate p = w / ( sum(w) + scoreYm.per.rec)
+	YXc		<- merge(YXc, YXc[, list(score.p= score.Y/(sum(score.Y)+scoreYm.per.rec), score.p.nadj= score.Y/sum(score.Y), t.Patient=t.Patient, t=t), by='Patient'], by=c('Patient','t.Patient','t'))
+	ggplot(YXc, aes(x=AnyPos_T1, y=miss.per.rec)) + geom_point()
 	
-	
-	tmp		<- as.data.table(expand.grid(t.stAgeC=YXc[, levels(t.stAgeC)], t=YXc[, sort(unique(t))]))
-	tmp2	<- predict(mm, data=md, newdata=tmp, type='response', what='mu')
-	tmp[, scoreY.pr:=predict(rltvm, data=rltvd, newdata=tmp, type='response', what='mu')]
-	tmp[, missexp.pr:=tmp2]	
-	set(tmp, tmp[, which(scoreY.pr<0)], 'scoreY.pr', 0)
-	set(tmp, tmp[, which(missexp.pr<0)], 'missexp.pr', 0)
-	
-	
-	
-	#	then calculate p = w / ( sum(w) + sum_time exp missing per recipient AT TIME t)	
-	YXc		<- merge(YXc, tmp[, list(missexp.pr=mean(missexp.pr), scoreY.pr.miss= mean(missexp.pr*scoreY.pr)), by='t'], by='t')
-	YXc		<- merge(YXc, YXc[, list(DUMMY= length(t.Patient)), by=c('Patient','t')], by=c('Patient','t'))
-	#	sum_time exp missing per recipient AT TIME t	is already per recipient and per time. To sum correctly, need to divide by the number of 't' intervals per recipient		
-	set(YXc, NULL, 'scoreY.pr.miss', YXc[, scoreY.pr.miss/DUMMY])
-	#set(YXc, NULL, 'DUMMY', NULL)	
-	tmp		<- YXc[, list(score.p= score.Y/(sum(score.Y)+sum(scoreY.pr.miss)), score.p.nadj= score.Y/sum(score.Y), t.Patient=t.Patient, t=t), by='Patient']
-	YXc		<- merge(YXc, tmp, by=c('t.Patient','Patient','t'))
-	#	explore p across stages
-	altvtp.plot.150901(YXc, indir, infile)
 	#	are the p's confounded by cluster size? --> Yes, quite strongly!
-	altvtp.confounded.ntransmitters(YXc, indir, infile)
-	#	explore p across time and stages
-	altvtp.explore.time.models(YXc, indir, infile)
+	altvtp.confounded.ntransmitters(YXc, indir, infile, suffix='150909')	
+	#	explore p across time and stages --> I am not sure, it s not super convincing ..
+	#	TODO: get CIs on Gamma mu
+	altvtp.explore.time.models.150909(YXc, indir, infile, suffix='150909')
+	#	for time-independent analysis: find best depdendence on ntPatient
+	altvtp.explore.distribution(YXc, indir, infile)
 	#	get RR irrespective of time 
 
 
@@ -3047,6 +2980,184 @@ miss.model.150831<- function(YXc)
 	YXm		<- subset(YXm, select=c(t, t.stAgeC, me))
 	mm3		<- gamlss(me~t.stAgeC+ns(t, df=4):t.stAgeC, sigma.formula=~t.stAgeC, data=YXm, family=GA())
 	list(miss.m=mm3, miss.d=YXm)
+}
+######################################################################################
+miss.smoothing.150909.onns<- function(YXc, indir=NA, infile=NA)
+{
+	#	get scaffold: for all recipients at time t, all stages
+	YXm		<- YXc[, list(nr=length(Patient)), by='t']
+	YXm		<- merge(YXm, YXc[, list(tn=length(t.Patient)), by=c('t','Patient')], by='t')
+	YXm		<- merge( as.data.table(expand.grid(t.stAgeC=YXc[, levels(t.stAgeC)], t=YXc[, sort(unique(t))])), YXm, by='t', all.x=TRUE, allow.cartesian=TRUE )
+	#	add number observed intervals by t and stage
+	YXm		<- merge(YXm, YXc[, list(ns=length(t.Patient)), by=c('t','Patient','t.stAgeC')], by=c('t','Patient','t.stAgeC'), all.x=TRUE)
+	set(YXm, YXm[, which(is.na(ns))], c('ns'), 0)	
+	setkey(YXm, t, Patient)	
+	#	get smoothed w's and p's
+	YXm[, pseqnc.pr:=predict(mm, data=md, newdata=subset(YXm, select=c(t, t.stAgeC)), type='response', what='mu')]
+	YXm[, scoreY.pr:=predict(rltvm, data=rltvd, newdata=subset(YXm, select=c(t, t.stAgeC)), type='response', what='mu')]
+	set(YXm, YXm[, which(scoreY.pr<0)], 'scoreY.pr', 0)
+	set(YXm, YXm[, which(pseqnc.pr<0)], 'pseqnc.pr', 0)
+	set(YXm, YXm[, which(scoreY.pr>1)], 'scoreY.pr', 1)
+	set(YXm, YXm[, which(pseqnc.pr>1)], 'pseqnc.pr', 1)		
+	#	define adaptive chunks with at least 5 miss.pr>0
+	YXm		<- merge(YXm, YXm[, list(ns.per.t=sum(ns)), by=c('t','t.stAgeC')], by=c('t','t.stAgeC'))
+	#subset(YXm, t.stAgeC=='UC_(-1,25]' & t>2010.3)[,
+	tmp		<- YXm[, 
+			{
+				z	<- sapply(seq_along(t), function(i)	sort(abs(t[i]-t[ns>0]))		)				
+				z	<- z[ ifelse(nrow(z)<20, nrow(z), 20), ]
+				#print(z)
+				z	<- sapply(seq_along(t), function(i) c(	'tn.per.ch'=sum(tn[ abs(t[i]-t)<=z[i] ]), 
+									'ns.per.ch'=sum(ns[ abs(t[i]-t)<=z[i] ])				))
+				#print(z)				
+				list(t=t, Patient=Patient, tn.per.ch=z['tn.per.ch',], ns.per.ch=z['ns.per.ch',])				
+			}, by='t.stAgeC']
+	#	smooth ns
+	YXm		<- merge(YXm, tmp, by=c('t','t.stAgeC','Patient'))
+	YXm[, ns.sm:= ns.per.ch/tn.per.ch]
+	#	predict missing based on the smooth n's 
+	YXm[, miss.prsm:= ns.sm/pseqnc.pr-ns.sm]
+	YXm		<- merge(YXm, unique(subset(YXc, select=c(stageC, t.AgeC, t.stAgeC))), by='t.stAgeC')
+	#	plot smooth
+	tmp		<- subset(YXm, select=c(t, stageC, t.AgeC, t.stAgeC, miss.prsm, nr))
+	setkey(tmp, t, t.stAgeC)
+	tmp		<- unique(tmp)
+	if(!is.na(indir) & !is.na(infile))
+	{
+		ggplot( tmp, aes(x=t, y=miss.prsm, colour=t.AgeC, group=t.stAgeC)) + geom_step() + geom_point() +
+				theme_bw() + theme(legend.position='bottom') +
+				facet_wrap(~stageC, scales='free', ncol=5)
+		file	<- paste(indir,'/',gsub('\\.R','_missexpsmoothBytstAgeC.pdf',infile),sep='')	
+		ggsave(file=file, w=15,h=7)
+		
+		ggplot( YXm, aes(x=t, y=miss.prsm/nr, fill=t.AgeC)) + geom_bar(stat="identity") + 
+				theme_bw() + theme(legend.position='bottom') +
+				labs(y='total miss.prsm per t, standardized per recipient') +
+				facet_grid(t.AgeC~stageC, scales='free')
+		file	<- paste(indir,'/',gsub('\\.R','_missexpsmoothtotalBytstAgeC.pdf',infile),sep='')	
+		ggsave(file=file, w=12,h=12)	
+		ggplot( YXm, aes(x=t, y=miss.prsm/nr)) + geom_bar(stat="identity") + 
+				theme_bw() + theme(legend.position='bottom') +
+				labs(y='total miss.prsm per t, standardized per recipient')
+		file	<- paste(indir,'/',gsub('\\.R','_missexpsmoothtotal.pdf',infile),sep='')	
+		ggsave(file=file, w=5,h=4)
+	}
+	YXm
+}
+######################################################################################
+miss.smoothing.150909<- function(YXc, indir=NA, infile=NA)
+{
+	#	get scaffold: for all recipients at time t, all stages
+	YXm		<- YXc[, list(nr=length(Patient)), by='t']
+	YXm		<- merge(YXm, YXc[, list(tn=length(t.Patient)), by=c('t','Patient')], by='t')
+	YXm		<- merge( as.data.table(expand.grid(t.stAgeC=YXc[, levels(t.stAgeC)], t=YXc[, sort(unique(t))])), YXm, by='t', all.x=TRUE, allow.cartesian=TRUE )
+	#	add number observed intervals by t and stage
+	YXm		<- merge(YXm, YXc[, list(ns=length(t.Patient)), by=c('t','Patient','t.stAgeC')], by=c('t','Patient','t.stAgeC'), all.x=TRUE)
+	set(YXm, YXm[, which(is.na(ns))], c('ns'), 0)	
+	setkey(YXm, t, Patient)	
+	#	get smoothed w's and p's
+	YXm[, pseqnc.pr:=predict(mm, data=md, newdata=subset(YXm, select=c(t, t.stAgeC)), type='response', what='mu')]
+	YXm[, scoreY.pr:=predict(rltvm, data=rltvd, newdata=subset(YXm, select=c(t, t.stAgeC)), type='response', what='mu')]
+	set(YXm, YXm[, which(scoreY.pr<0)], 'scoreY.pr', 0)
+	set(YXm, YXm[, which(pseqnc.pr<0)], 'pseqnc.pr', 0)	
+	#	predict missing based on the n's -- allow for large tails in NB
+	YXm[, miss.pr:= ns/pseqnc.pr-ns]
+	#	define adaptive chunks with at least 5 miss.pr>0
+	YXm		<- merge(YXm, YXm[, list(ns.per.t=sum(ns)), by=c('t','t.stAgeC')], by=c('t','t.stAgeC'))
+	#subset(YXm, t.stAgeC=='UC_(-1,25]' & t>2010.3)[,
+	tmp		<- YXm[, 
+			{
+				z	<- sapply(seq_along(t), function(i)	sort(abs(t[i]-t[miss.pr>0]))		)				
+				z	<- z[ ifelse(nrow(z)<20, nrow(z), 20), ]
+				#print(z)
+				z	<- sapply(seq_along(t), function(i) c(	'miss.pr.per.ch'= sum(miss.pr[ abs(t[i]-t)<=z[i] ]), 
+									'tn.per.ch'=sum(tn[ abs(t[i]-t)<=z[i] ]), 
+									'ns.per.ch'=sum(ns[ abs(t[i]-t)<=z[i] ])				))
+				#print(z)				
+				list(t=t, Patient=Patient, miss.pr.per.ch=z['miss.pr.per.ch',], tn.per.ch=z['tn.per.ch',], ns.per.ch=z['ns.per.ch',])				
+			}, by='t.stAgeC']
+	YXm		<- merge(YXm, tmp, by=c('t','t.stAgeC','Patient'))
+	YXm[, miss.prsm:= miss.pr.per.ch/tn.per.ch]
+	YXm		<- merge(YXm, unique(subset(YXc, select=c(stageC, t.AgeC, t.stAgeC))), by='t.stAgeC')
+	#	plot smooth
+	if(!is.na(indir) & !is.na(infile))
+	{
+		tmp		<- subset(YXm, select=c(t, stageC, t.AgeC, t.stAgeC, miss.prsm, nr))
+		setkey(tmp, t, t.stAgeC)
+		tmp		<- unique(tmp)	
+		ggplot( tmp, aes(x=t, y=miss.prsm, colour=t.AgeC, group=t.stAgeC)) + geom_step() + geom_point() +
+				theme_bw() + theme(legend.position='bottom') +
+				facet_wrap(~stageC, scales='free', ncol=5)
+		file	<- paste(indir,'/',gsub('\\.R','_missexpsmoothBytstAgeC.pdf',infile),sep='')	
+		ggsave(file=file, w=15,h=7)	
+		ggplot( YXm, aes(x=t, y=miss.prsm/nr, fill=t.AgeC)) + geom_bar(stat="identity") + 
+				theme_bw() + theme(legend.position='bottom') +
+				labs(y='total miss.prsm per t, standardized per recipient') +
+				facet_grid(t.AgeC~stageC, scales='free')
+		file	<- paste(indir,'/',gsub('\\.R','_missexpsmoothtotalBytstAgeC.pdf',infile),sep='')	
+		ggsave(file=file, w=12,h=12)	
+		ggplot( YXm, aes(x=t, y=miss.prsm/nr)) + geom_bar(stat="identity") + 
+				theme_bw() + theme(legend.position='bottom') +
+				labs(y='total miss.prsm per t, standardized per recipient')
+		file	<- paste(indir,'/',gsub('\\.R','_missexpsmoothtotal.pdf',infile),sep='')	
+		ggsave(file=file, w=5,h=4)	
+	}
+	YXm
+}
+######################################################################################
+miss.explore.150907<- function(YXc)
+{
+	#	get scaffold: for all recipients at time t, all stages
+	YXm		<- YXc[, list(tn=length(t.Patient)), by=c('t','Patient')]
+	YXm		<- merge( as.data.table(expand.grid(t.stAgeC=YXc[, levels(t.stAgeC)], t=YXc[, sort(unique(t))])), YXm, by='t', all.x=TRUE, allow.cartesian=TRUE )
+	#	add number observed intervals by t and stage
+	YXm		<- merge(YXm, YXc[, list(ns=length(t.Patient)), by=c('t','Patient','t.stAgeC')], by=c('t','Patient','t.stAgeC'), all.x=TRUE)
+	set(YXm, YXm[, which(is.na(ns))], c('ns'), 0)	
+	setkey(YXm, t, Patient)	
+	#	get smoothed w's and p's
+	YXm[, pseqnc.pr:=predict(mm, data=md, newdata=subset(YXm, select=c(t, t.stAgeC)), type='response', what='mu')]
+	YXm[, scoreY.pr:=predict(rltvm, data=rltvd, newdata=subset(YXm, select=c(t, t.stAgeC)), type='response', what='mu')]
+	set(YXm, YXm[, which(scoreY.pr<0)], 'scoreY.pr', 0)
+	set(YXm, YXm[, which(pseqnc.pr<0)], 'pseqnc.pr', 0)	
+	#	predict missing based on the n's -- allow for large tails in NB
+	YXm[, miss.pr:= ns/pseqnc.pr-ns]
+	#	define adaptive chunks with at least 5 miss.pr>0
+	YXm		<- merge(YXm, YXm[, list(ns.per.t=sum(ns)), by=c('t','t.stAgeC')], by=c('t','t.stAgeC'))
+	#	define adaptive chunks with at least one ns.per.tsm
+	tsm.period	<- 0.25
+	YXm[, tsm:= YXm[, floor(t) + floor( (t%%1)*100 %/% (tsm.period*100) ) * tsm.period]]	
+	YXm		<- merge(YXm, YXm[, list(ns.per.t=sum(ns)), by=c('tsm','t.stAgeC')], by=c('tsm','t.stAgeC'))
+	tmp		<- unique(subset(YXm, select=c(tsm, t.stAgeC, ns.per.t)))
+	tmp		<- tmp[, list(tsm=tsm, adaptivechunk_id= cumsum(ns.per.t>0) ), by='t.stAgeC']
+	YXm		<- merge(YXm, tmp, by=c('tsm','t.stAgeC'))
+	#	smooth across time
+	YXm		<- merge(YXm, YXm[, list(tn.per.ch= sum(tn), ns.per.ch=sum(ns), miss.pr.per.ch=sum(miss.pr)), by=c('t.stAgeC','adaptivechunk_id')], by=c('t.stAgeC','adaptivechunk_id'))
+	YXm[, miss.prsm:= miss.pr.per.ch/tn.per.ch]
+	YXm		<- merge(YXm, unique(subset(YXc, select=c(stageC, t.AgeC, t.stAgeC))), by='t.stAgeC')
+	#	plot smooth
+	tmp		<- subset(YXm, select=c(t, stageC, t.AgeC, t.stAgeC, miss.prsm))
+	setkey(tmp, t, t.stAgeC)
+	tmp		<- unique(tmp)	
+	ggplot( tmp, aes(x=t, y=miss.prsm, colour=t.AgeC, group=t.stAgeC)) + geom_step() + geom_point() +
+			theme_bw() + theme(legend.position='bottom') +
+			facet_wrap(~stageC, scales='free', ncol=5)
+	file	<- paste(indir,'/',gsub('\\.R','_missexpsmoothBytstAgeC.pdf',infile),sep='')	
+	ggsave(file=file, w=15,h=7)	
+	#
+	#	ALTERNATIVE
+	#
+	#	define adaptive chunks with at least one ns.per.t
+	YXm		<- merge(YXm, YXm[, list(ns.per.t=sum(ns)), by=c('t','t.stAgeC')], by=c('t','t.stAgeC'))
+	tmp		<- unique(subset(YXm, select=c(t, t.stAgeC, ns.per.t)))
+	tmp		<- tmp[, list(t=t, adaptivechunk_id= cumsum(ns.per.t>0) ), by='t.stAgeC']
+	YXm		<- merge(YXm, tmp, by=c('t','t.stAgeC'))
+	#	smooth across time
+	YXm		<- merge(YXm, YXm[, list(tn.per.ch= sum(tn), ns.per.ch=sum(ns), miss.pr.per.ch=sum(miss.pr)), by=c('t.stAgeC','adaptivechunk_id')], by=c('t.stAgeC','adaptivechunk_id'))
+	YXm[, miss.prsm:= miss.pr.per.ch/tn.per.ch]
+	YXm		<- merge(YXm, unique(subset(YXc, select=c(stageC, t.AgeC, t.stAgeC))), by='t.stAgeC')
+	ggplot(subset(YXm, t.stAgeC=='UC_(-1,25]'), aes(x=t, y=miss.prsm)) + geom_bar(stat="identity")
+	file	<- paste(indir,'/',gsub('\\.R','_missexpsmoothtotalBytstAgeC.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=10)	
 }
 ######################################################################################
 miss.explore.150904<- function(YXc, indir, infile)
