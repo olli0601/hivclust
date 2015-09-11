@@ -2036,9 +2036,39 @@ altvtp.explore.time.models.150909<- function(YXc, indir, infile, suffix='')
 	ggsave(file=file, w=14,h=14)	
 }
 ######################################################################################
-altvtp.model.150902<- function(YXc)
+altvp.gamlss.start<- function(YXr,mu.formula,sigma.formula,gamlss.limit,gamlss.family,gamlss.control,gamlss.i.control,verbose=FALSE)
 {
-	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))	
+	mu.start		<- NULL
+	sigma.start		<- NULL
+	for(i in rev(seq_along(gamlss.limit)[-1]))
+	{
+		if(verbose)
+			cat('\nat iteration', gamlss.limit[i],'\n')
+		tmp.mo		<- gamlss( 	as.formula(mu.formula), sigma.formula=as.formula(sigma.formula), 
+				data=subset(YXr, score.p>gamlss.limit[i]), family=gamlss.family, control=gamlss.control, i.control=gamlss.i.control, mu.start=mu.start, sigma.start=sigma.start)		
+		tmp			<- subset(YXr, score.p>gamlss.limit[i-1])
+		mu.start	<- predict(tmp.mo, data=subset(YXr, score.p>gamlss.limit[i]), newdata=tmp, type='response', what='mu')
+		sigma.start	<- predict(tmp.mo, data=subset(YXr, score.p>gamlss.limit[i]), newdata=tmp, type='response', what='sigma')		
+	}	
+	list(mu=mu.start, sigma=sigma.start)		
+}
+######################################################################################
+altvtp.readcoef<- function(mo, tmp2, tmp3, tmp4)
+{
+	tmp		<- coef(mo)
+	#tmp		<- tmp[ grepl(tmp2,names(tmp)) ]
+	cf		<- data.table(MO_ID=tmp3, MO=tmp4, ST=tmp2, RSKF=names(tmp), RSKFbaseline=base.df[tmp2,][,RSKFbaseline], MU=tmp)
+	tmp		<- confint(mo)
+	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
+	set(cf, NULL, 'RSKF', cf[,gsub(tmp2,'',RSKF)])
+	cf
+}
+######################################################################################
+altvtp.model.150910<- function(YXc)
+{
+	
+	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
+	YXr2	<- subset(YXc, !stageC%in%c('T','L'),select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
 	#	relevel so regression coefficients are contrasts of interest
 	base.df	<- data.table(	ST=c('stageC','t.AgeC','t.stAgeC'), 
 							RSKFbaseline=c('D','(30,45]','D_(30,45]'))
@@ -2047,24 +2077,141 @@ altvtp.model.150902<- function(YXc)
 	set(YXr, NULL, 't.AgeC', YXr[, relevel(t.AgeC, ref=base.df['t.AgeC',][,RSKFbaseline])])
 	set(YXr, NULL, 't.stAgeC', YXr[, relevel(t.stAgeC, ref=base.df['t.stAgeC',][,RSKFbaseline])])
 	#	fit contrasts 
-	#	(we only do this to get the risk ratio and confidence intervals)
-	wcm1	<- gamlss( score.p~t.AgeC+ntPatient, sigma.formula=~t.AgeC+ntPatient, data=YXr, family=GA() )
-	wcm2	<- gamlss( score.p~stageC+ntPatient, sigma.formula=~stageC+ntPatient, data=YXr, family=GA() )	
+	#	(we only do this to get the risk ratio and confidence intervals)		
 	wcm3	<- gamlss( score.p~t.stAgeC, sigma.formula=~t.stAgeC, data=YXr, family=GA() )
-	wcm4	<- gamlss( score.p~t.stAgeC+ntPatient, sigma.formula=~ntPatient, data=YXr, family=GA() )
-	wcm5	<- gamlss( score.p~t.stAgeC+ntPatient, sigma.formula=~t.stAgeC+ntPatient, data=YXr, family=GA() )
+	#tmp		<- altvp.gamlss.start(YXr, mu.formula='score.p~t.stAgeC+ntPatient', sigma.formula='~t.stAgeC+ntPatient', gamlss.limit=c(0, 0.001, 0.005, 0.006, 0.01 ), gamlss.family=GA(mu.link='inverse'),gamlss.control=gamlss.control(trace=0),gamlss.i.control=glim.control(bf.trace=0, glm.trace=0), verbose=FALSE)
+	#wcm4	<- gamlss( score.p~t.stAgeC+ntPatient, sigma.formula=~t.stAgeC+ntPatient, data=YXr, family=GA(mu.link='inverse'), mu.start=tmp$mu, sigma.start=tmp$sigma)
+	wcm4	<- gamlss( score.p~t.stAgeC+ns(ntPatient, df=2), sigma.formula=~t.stAgeC+ns(ntPatient, df=2), data=YXr, family=GA() )
+	wcm5	<- gamlss( score.p~t.AgeC+stageC+ns(ntPatient, df=2), sigma.formula=~t.stAgeC+stageC+ns(ntPatient, df=2), data=YXr2, family=GA() )
 	#	fit coefficients that correspond to stages 
-	#	(we only do this to get the risk ratio and confidence intervals)
-	wbm1	<- gamlss( score.p~t.AgeC+ntPatient-1, sigma.formula=~t.AgeC+ntPatient-1, data=YXr, family=GA() )
-	wbm2	<- gamlss( score.p~stageC+ntPatient-1, sigma.formula=~stageC+ntPatient-1, data=YXr, family=GA() )	
-	#wbm3	<- gamlss( score.p~t.stAgeC-1, sigma.formula=~t.stAgeC-1, data=YXr, family=GA() )
-	wbm3	<- gamlss( score.p~t.stAgeC-1, data=YXr, family=GA() )
-	wbm4	<- gamlss( score.p~t.stAgeC+ntPatient-1, sigma.formula=~ntPatient-1, data=YXr, family=GA() )
-	wbm5	<- gamlss( score.p~t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient-1, data=YXr, family=GA() )
+	#	(we only do this to get the risk ratio and confidence intervals)	
+	wbm3	<- gamlss( score.p~t.stAgeC-1, sigma.formula=~t.stAgeC-1, data=YXr, family=GA() )
+	#	I don t get the inverse link to work!? The mu's are negative??
+	#tmp		<- altvp.gamlss.start(YXr, mu.formula='score.p~t.stAgeC+ntPatient-1', sigma.formula='~t.stAgeC+ntPatient-1', gamlss.limit=c(0, 0.001, 0.005, 0.006, 0.01 ), gamlss.family=GA(mu.link='inverse'),gamlss.control=gamlss.control(trace=0),gamlss.i.control=glim.control(bf.trace=0, glm.trace=0), verbose=FALSE)
+	#wbm4	<- gamlss( score.p~t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient-1, data=YXr, family=GA(mu.link='inverse'), mu.start=tmp$mu, sigma.start=tmp$sigma)
+	wbm4	<- gamlss( score.p~t.stAgeC+ns(ntPatient, df=2)-1, sigma.formula=~t.stAgeC+ns(ntPatient, df=2)-1, data=YXr, family=GA() )
+	wbm5	<- gamlss( score.p~t.AgeC+stageC+ns(ntPatient, df=2)-1, sigma.formula=~t.AgeC+stageC+ns(ntPatient, df=2)-1, data=YXr2, family=GA() )
+	#	read out coefficients
+	cf		<- altvtp.readcoef(wbm3, 't.stAgeC', 'wbm3', 'score.p~t.stAgeC-1')
+	wb		<- copy(cf)
+	cf		<- altvtp.readcoef(wbm4, 't.stAgeC', 'wbm4', 'score.p~t.stAgeC+ns(ntPatient, df=2)-1')
+	wb		<- rbind(wb, cf)
+	tmp		<- melt(wb, id.vars=c('RSKF','MO_ID','MO','ST','RSKFbaseline'))
+	set(tmp, NULL, 'value', tmp[, exp(value)])
+	wb		<- dcast.data.table(tmp, MO_ID+MO+ST+RSKFbaseline+RSKF~variable, value.var='value')
+	#	read out contrasts
+	cf		<- altvtp.readcoef(wcm3, 't.stAgeC', 'wcm3', 'score.p~t.stAgeC')
+	wc		<- copy(cf)
+	cf		<- altvtp.readcoef(wcm4, 't.stAgeC', 'wcm4', 'score.p~t.stAgeC+ns(ntPatient, df=2)')
+	wc		<- rbind(wc, cf)
+	tmp		<- melt(wc, id.vars=c('RSKF','MO_ID','MO','ST','RSKFbaseline'))
+	set(tmp, NULL, 'value', tmp[, exp(value)])
+	wc		<- dcast.data.table(tmp, MO_ID+MO+ST+RSKFbaseline+RSKF~variable, value.var='value')
+	tmp		<- names(wc)[ grepl('MU',names(wc)) ]
+	setnames(wc, tmp, gsub('MU','RR',tmp))
+	set(wc, wc[, which(RSKF=='(Intercept)')],'RR',1.)
+	set(wc, wc[, which(RSKF=='(Intercept)')],c('RRL','RRU'),NA_real_)
+	tmp		<- wc[, which(RSKF=='(Intercept)')]	
+	set(wc, tmp, 'RSKF', wc[tmp,RSKFbaseline])
+	#	for additive models, predict holding ntPatient fixed
+	tmp		<- copy(YXr2)	
+	tmp2	<- predict(wbm5, what='mu', type='response', se.fit=1)
+	tmp[, MU:=tmp2$fit]
+	tmp[, MUL:=tmp2$fit-2*tmp2$se.fit]
+	tmp[, MUU:=tmp2$fit+2*tmp2$se.fit]
+	setkey(tmp, t.stAgeC)
+	tmp		<- unique(subset(tmp, ntPatient==4, c(t.stAgeC, MU, MUL, MUU)))
+	tmp[, MO_ID:='wbm5']
+	tmp[, MO:='score.p~t.AgeC+stageC+ns(ntPatient, df=2)-1']
+	tmp[, ST:='t.stAgeC']
+	tmp[, RSKFbaseline:= base.df['t.stAgeC',][,RSKFbaseline]]
+	setnames(tmp, 't.stAgeC', 'RSKF')
+	wb		<- rbind(wb, tmp, use.names=TRUE)
+	#
+	
+	
+	#	plot mus
+	tmp		<- subset(wb, grepl('wbm3|wbm4|wbm5',MO_ID) & !grepl('ntPatient',RSKF))	
+	lvls	<- c( 	as.vector(sapply(		c('UA','UC','D'), function(x) paste(x,c('(-1,25]','(25,30]','(30,45]','(45,100]'),sep='_')		)),
+					'T_(-1,100]','L_(-1,100]' )	
+	set(tmp, NULL, 'RSKF', tmp[, factor(RSKF, levels=rev(lvls))])
+	set(tmp, NULL, 'stageC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',1)])
+	set(tmp, NULL, 't.AgeC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',2)])
+	setnames(tmp, 'RSKF','t.stAgeC')
+	tmp		<- merge(tmp, YXr[, list(mean=mean(score.p), ql= quantile(score.p,p=0.025), qu= quantile(score.p,p=0.975)), by=c('stageC','t.AgeC','t.stAgeC')], by=c('stageC','t.AgeC','t.stAgeC'))
+	ggplot( tmp, aes(x=t.AgeC)) +
+			scale_y_continuous(breaks=seq(0,50,5), minor_breaks=seq(0,50,1)) +
+			geom_point(data=YXr, aes(y=100*score.p, colour=stageC), alpha=0.3) +
+			geom_point(aes(y=100*MU)) + geom_errorbar(aes(ymin=100*MUL, ymax=100*MUU), width=0.5) + 
+			theme_bw() + theme(legend.position='bottom') +
+			facet_grid(MO~stageC) 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePMUByModel150910.pdf',infile),sep='')	
+	ggsave(file=file, w=12,h=12)	
+	#	plot mu vs empirical mean
+	ggplot(subset(tmp, MO_ID=='wbm3'), aes(x=mean, xmin=ql, xmax=qu, y=MU, ymin=MUL, ymax=MUU, colour=t.AgeC)) + 
+			geom_abline(intercept=0, slope=1) + 
+			geom_point() + geom_errorbar() + geom_errorbarh() +			
+			theme_bw() + theme(legend.position='bottom') +
+			facet_wrap(~stageC, ncol=5, scales='free')
+	file	<- paste(indir,'/',gsub('\\.R','_scorePMUvsMEAN150910.pdf',infile),sep='')	
+	ggsave(file=file, w=15,h=5)		
+	#	plot contrasts
+	tmp		<- subset(wc, grepl('wcm3|wcm4',MO_ID) & !grepl('ntPatient',RSKF))	
+	lvls	<- c( 	as.vector(sapply(		c('UA','UC','D'), function(x) paste(x,c('(-1,25]','(25,30]','(30,45]','(45,100]'),sep='_')		)),
+					'T_(-1,100]','L_(-1,100]' )	
+	set(tmp, NULL, 'RSKF', tmp[, factor(RSKF, levels=rev(lvls))])
+	set(tmp, NULL, 'stageC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',1)])
+	set(tmp, NULL, 't.AgeC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',2)])
+	ggplot( tmp, aes(x=t.AgeC, y=RR, ymin=RRL, ymax=RRU, colour=stageC)) +
+			scale_y_continuous(breaks=seq(0,5,0.5), minor_breaks=seq(0,5,0.1)) + geom_hline(y=1, colour='grey50', lwd=1) +
+			geom_point() + geom_errorbar(width=0.5) + 
+			theme_bw() + theme(legend.position='bottom') +
+			facet_grid(MO~stageC) 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePRRByModel150910.pdf',infile),sep='')	
+	ggsave(file=file, w=12,h=12)		
+	ggplot( tmp, aes(y=MO, x=RR, xmin=RRL, xmax=RRU, colour=RSKF) ) +
+			scale_x_continuous(breaks=seq(0,5,0.2)) + geom_vline(x=1, colour='grey50', lwd=1) +
+			geom_point() + geom_errorbarh(height=0.5) + theme_bw() + theme(legend.position='bottom') +
+			facet_grid(RSKF~.) +
+			guides(colour=guide_legend(ncol=4))
+	file	<- paste(indir,'/',gsub('\\.R','_scorePRRByModel150910_long.pdf',infile),sep='')	
+	ggsave(file=file, w=10,h=20)	
+	
+	list(data=YXr, wb=wb, wc=wc, wbm1=wbm1, wbm2=wbm2, wbm3=wbm3, wbm4=wbm4, wbm5=wbm5, wcm1=wcm1, wcm2=wcm2, wcm3=wcm3, wcm4=wcm4, wcm5=wcm5)
+}
+######################################################################################
+altvtp.model.150902<- function(YXc)
+{
+	YXr		<- subset(YXc, !stageC%in%c('T','L'),select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
+	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','t.stAgeC'))
+	#	relevel so regression coefficients are contrasts of interest
+	base.df	<- data.table(	ST=c('stageC','t.AgeC','t.stAgeC'), 
+							RSKFbaseline=c('D','(30,45]','D_(30,45]'))
+	setkey(base.df, ST)
+	set(YXr, NULL, 'stageC', YXr[, relevel(stageC, ref=base.df['stageC',][,RSKFbaseline])])
+	set(YXr, NULL, 't.AgeC', YXr[, relevel(t.AgeC, ref=base.df['t.AgeC',][,RSKFbaseline])])
+	set(YXr, NULL, 't.stAgeC', YXr[, relevel(t.stAgeC, ref=base.df['t.stAgeC',][,RSKFbaseline])])
+	#	fit contrasts 
+	#	(we only do this to get the risk ratio and confidence intervals)	
+	wcm1	<- gamlss( score.p~stageC+t.AgeC, sigma.formula=~stageC+t.AgeC, data=YXr, family=GA() )
+	wcm2	<- altvp.gamlss.guide(YXr, mu.formula='score.p~stageC+t.AgeC+ntPatient', sigma.formula='~stageC+t.AgeC+ntPatient', gamlss.limit=c(0, 0.001, 0.005, 0.006, 0.01 ), gamlss.family=GA(mu.link='inverse'),gamlss.control=gamlss.control(trace=0),gamlss.i.control=glim.control(bf.trace=0, glm.trace=0), verbose=FALSE) 
+	wcm3	<- gamlss( score.p~t.stAgeC, sigma.formula=~t.stAgeC, data=YXr, family=GA() )
+	wcm4	<- altvp.gamlss.guide(YXr, mu.formula='score.p~t.stAgeC+ntPatient', sigma.formula='~t.stAgeC+ntPatient', gamlss.limit=c(0, 0.001, 0.005, 0.006, 0.01 ), gamlss.family=GA(mu.link='inverse'),gamlss.control=gamlss.control(trace=0),gamlss.i.control=glim.control(bf.trace=0, glm.trace=0), verbose=FALSE)	
+	#	fit coefficients that correspond to stages 
+	#	(we only do this to get the risk ratio and confidence intervals)	
+	wbm1	<- gamlss( score.p~t.AgeC+stageC-1, sigma.formula=~t.AgeC+stageC-1, data=YXr, family=GA() )
+	wbm2	<- altvp.gamlss.guide(YXr, mu.formula='score.p~t.AgeC+stageC+ntPatient-1', sigma.formula='~t.AgeC+stageC+ntPatient-1', gamlss.limit=c(0, 0.001, 0.005, 0.006, 0.01 ), gamlss.family=GA(mu.link='inverse'),gamlss.control=gamlss.control(trace=0),gamlss.i.control=glim.control(bf.trace=0, glm.trace=0), verbose=FALSE) 
+	wbm3	<- gamlss( score.p~t.stAgeC-1, sigma.formula=~t.stAgeC-1, data=YXr, family=GA() )
+	wbm4	<- altvp.gamlss.guide(YXr, mu.formula='score.p~t.stAgeC+ntPatient-1', sigma.formula='~t.stAgeC+ntPatient-1', gamlss.limit=c(0, 0.001, 0.005, 0.006, 0.01 ), gamlss.family=GA(mu.link='inverse'),gamlss.control=gamlss.control(trace=0),gamlss.i.control=glim.control(bf.trace=0, glm.trace=0), verbose=FALSE)
+	
+	
 	#	read out coefficients
 	tmp		<- coef(wbm1)
-	cf		<- data.table(MO='wbm1', ST='t.AgeC', RSKF=names(tmp), RSKFbaseline=base.df['t.AgeC',][,RSKFbaseline], MU=tmp)
+	tmp2	<- 't.AgeC'
+	tmp		<- tmp[ grepl(tmp2,names(tmp)) ]
+	cf		<- data.table(MO_ID='wbm1', MO='score.p~t.AgeC+stageC-1', ST=tmp2, RSKF=names(tmp), RSKFbaseline=base.df[tmp2,][,RSKFbaseline], MU=tmp)
 	tmp		<- confint(wbm1)
+	tmp		<- tmp[ grepl(tmp2,names(tmp)) ]
 	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MUL= tmp[,1], MUU= tmp[,2]), by='RSKF')
 	tmp		<- confint(wbm1, robust=TRUE)
 	cf		<- merge(cf, data.table(RSKF= rownames(tmp), MULr= tmp[,1], MUUr= tmp[,2]), by='RSKF')
@@ -2399,6 +2546,7 @@ altvtp.explore.distribution<- function(YXc, indir, infile)
 {
 	YXr		<- subset(YXc, select=c('score.p','ntPatient'))	
 	YXr[, ntPatientf:= factor(ntPatient)]
+	setkey(YXr, ntPatient)
 	#	Exp has default link log	
 	mExp	<- gamlss( score.p~1, data=YXr, family=EXP() )
 	mExpNt	<- gamlss( score.p~ntPatientf-1, data=YXr, family=EXP() )
@@ -2419,12 +2567,10 @@ altvtp.explore.distribution<- function(YXc, indir, infile)
 	mBELNtSL<- gamlss( score.p~ntPatient, sigma.formula=~ntPatient, data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
 	mBELNtSQ<- gamlss( score.p~ns(ntPatient, df=2), sigma.formula=~ns(ntPatient, df=2), data=YXr, family=BE(mu.link='log', sigma.link='log'), n.cyc = 80 )
 	#	
-	z		<- list(mExp, mExpNt, mExpNtL, mExpNtQ, mGA, mGANt, mGANtS, mGANtSLI, mGANtSQ, mGANtSQI, mBEL, mBELNt, mBELNtS, mBELNtSL, mBELNtSQ)
-	names(z)<- c('mExp','mExpNt','mExpNtL','mExpNtQ', 'mGA', 'mGANt', 'mGANtS', 'mGANtSLI', 'mGANtSQ', 'mGANtSQI', 'mBEL', 'mBELNt', 'mBELNtS', 'mBELNtSL', 'mBELNtSQ')
-	
-	z		<- list(mExpNt)
-	names(z)<- c('mExpNt')
-	
+	z		<- list(mExp, mExpNt, mExpNtL, mExpNtQ, mGA, mGANt, mGANtS, mGANtSL, mGANtSLI, mGANtSQ, mGANtSQI, mBEL, mBELNt, mBELNtS, mBELNtSL, mBELNtSQ)
+	names(z)<- c('mExp','mExpNt','mExpNtL','mExpNtQ', 'mGA', 'mGANt', 'mGANtS', 'mGANtSL', 'mGANtSLI', 'mGANtSQ', 'mGANtSQI', 'mBEL', 'mBELNt', 'mBELNtS', 'mBELNtSL', 'mBELNtSQ')	
+	#z		<- list(mExpNt)
+	#names(z)<- c('mExpNt')	
 	mpars	<- do.call('rbind',lapply( seq_along(z), function(i){
 				tmp		<- copy(YXr)
 				mu		<- predict(z[[i]], type='response', what='mu')
@@ -2737,6 +2883,8 @@ adjust.dev<- function()
 	altvtp.explore.time.models.150909(YXc, indir, infile, suffix='150909')
 	#	for time-independent analysis: find best depdendence on ntPatient
 	altvtp.explore.distribution(YXc, indir, infile)
+	#	GANtSLI is best, followed by GANtSL
+
 	#	get RR irrespective of time 
 
 
