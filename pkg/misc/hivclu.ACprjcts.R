@@ -1,5 +1,5 @@
 ######################################################################################
-project.ACpolext.rmDRM<- function()
+project.ACpolext.rmDRM.150913<- function()
 {
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150831'
 	infile	<- 'SATURN150831.csv'
@@ -17,9 +17,41 @@ project.ACpolext.rmDRM<- function()
 	#	clarify: not all C? do we have subtype assignment for all others that are not in SATURN?
 	
 	
-	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150830_original'
-	infile	<- 'ZA.SubC.12432.aln.fasta'
-	acxs	<- read.dna(file=paste(indir, '/', infile,sep=''), format='fasta')
+	indir				<- '/Users/Oliver/Dropbox\ (Infectious Disease)/2015_AC_Origin_Cascade'
+	infile				<- 'ZA.SubC.12294.13.09.15.aln.fasta'
+	acxs				<- read.dna(file=paste(indir, '/', infile,sep=''), format='fasta')
+	tmp					<- which(grepl("B.FR.K03455.1983",rownames(acxs)))
+	rownames(acxs)[tmp]	<- 'HXB2'
+	tmp					<- big.phylo:::seq.rm.drugresistance(acxs)
+	nodr.info			<- tmp$nodr.info
+	seq					<- tmp$nodr.seq
+	write.dna(seq, file= paste(indir, '/', gsub('13.09.15.aln','alnnoDRM_150913',infile), sep=''), format='fasta', colsep='', nbcol=-1)
+	save(seq, nodr.info, file= paste(indir, '/', gsub('13.09.15.aln\\.fasta','alnnoDRM_150913\\.R',infile), sep=''))
+}
+######################################################################################
+project.ACpolext.rmDRM.150907<- function()
+{
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150831'
+	infile	<- 'SATURN150831.csv'
+	dfstr	<- data.table(read.csv(file=paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE))
+	infile	<- 'Eduan_DRT_170815.csv'
+	dfdrt	<- data.table(read.csv(file=paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE))
+	infile	<- 'Comet150831.csv'
+	dfcmt	<- data.table(read.csv(file=paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE))	
+	#	what subtypes do we have? 
+	dfcmt[, table(subtype)]
+	dfdrt[, table(assignment)]
+	#	OK separate all C and the non-C sequences.  
+	dfc		<- subset(dfdrt, assignment=='HIV-1 Subtype C', name) 
+	dfnc	<- subset(dfdrt, assignment!='HIV-1 Subtype C', name)
+	#	clarify: not all C? do we have subtype assignment for all others that are not in SATURN?
+	seq				<- seq[c("B.FR.83.HXB2_LAI_IIIB_BRU.K03455",arvdat[, PNG_ID_FULL]),]
+	rownames(seq)[1]	<- 'HXB2'
+	outfile			<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_PotentialDRMs_OR_150910.R'
+	tmp				<- big.phylo:::seq.rm.drugresistance(seq, outfile=outfile)
+	nodr.info		<- tmp$nodr.info
+	nodr.seq		<- tmp$nodr.seq
+	
 	#	determine alignment start relative to HXB2
 	#	pos 60 is pos 2300 in HXB2 ie pos 1 is pos 2241 in HXB2
 	paste(as.character(acxs[ which(grepl("B.FR.K03455.1983",rownames(acxs))), ]), collapse='')
@@ -121,21 +153,19 @@ project.ACpolext.trees.inspect<- function()
 project.ACpolext.examl<- function()
 {	  	
 	indir		<- DATA
-	infile		<- "ZA_SubC_12432_nDRM"
-	signat.in	<- signat.out	<- '150831'
-	signat.in   <- signat.out   <- '150906'
-	#signat.in   <- signat.out   <- '150907'
+	infile		<- "ZA.SubC.12294.alnnoDRM"	
+	signat.in   <- signat.out   <- '150913'
 	#	ExaML bootstrap args
 	bs.from		<- 0
-	bs.to		<- 0
+	bs.to		<- 10
 	bs.n		<- 500
 	outdir		<- indir
 	
 	#args.parser	<- paste("-m DNA -q",PARTITION)
 	args.parser	<- paste("-m DNA")
-	args.examl	<- "-f d -m GAMMA"		#	150831
-	args.examl	<- "-f d -D -m GAMMA"	#	150907
-	args.examl	<- "-f o -D -m GAMMA"	#	150906
+	#args.examl	<- "-f d -m GAMMA"		#	 -- ran for weeks
+	#args.examl	<- "-f o -D -m GAMMA"	#	 -- not followed up until 'default' worked
+	args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours	
 	cmd			<- hivc.cmd.examl.bootstrap(indir, infile, signat.in, signat.out, bs.from=bs.from, bs.to=bs.to, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
 	dummy		<- lapply(cmd, function(x)
 			{				

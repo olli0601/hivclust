@@ -871,7 +871,8 @@ adjust.dev.code.for.ntPatient.adjustment<- function()
 altvtp.explore.time.rollingmean<- function(YXc, indir, infile)
 {
 	require(zoo)	
-	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','score.p.nadj','missexp.pr','score.Y','ntPatient','stageC','t.AgeC','t.stAgeC'))	
+	YXr		<- subset(YXc, select=c('t.Patient','t','Patient', 'score.p','score.p.nadj','score.Y','ntPatient','stageC','t.AgeC','t.stAgeC'))
+	
 	#
 	#	get smooth in terms of t.AgeC	6m rolling mean
 	#
@@ -939,7 +940,7 @@ altvtp.explore.time.rollingmean<- function(YXc, indir, infile)
 	setkey(tmp, RSKF, t)
 	tmp		<- tmp[, list(t=t, nt=nt, wnt= sapply(seq_along(t), function(i)	sum(nt[ which(abs(t[i]-t)<=1) ])), cnt=cumsum(nt)	), by=c('RSKF')]
 	YXp		<- merge(YXp, tmp, by=c('RSKF','t'))		
-	YXp		<- melt( YXp, measure.vars=c('score.p','score.p.nadj','missexp.pr','score.Y'), variable.name='STAT', value.name='V' )
+	YXp		<- melt( YXp, measure.vars=c('score.p','score.p.nadj','score.Y'), variable.name='STAT', value.name='V' )
 	#tmp		<- YXp[, list(V=mean(V), nt=nt[1], cnt=cnt[1], wnt=wnt[1]), by=c('t','RSKF','STAT')]
 	#tmp		<- tmp[, list(t=t, V.rm=rollapply(V, width=ceiling(max(cnt)/100), FUN=mean, align="center", partial=TRUE)), by=c('STAT','RSKF')]
 	setkey(YXp, STAT, RSKF, t)
@@ -2064,6 +2065,155 @@ altvtp.readcoef<- function(mo, tmp2, tmp3, tmp4)
 	cf
 }
 ######################################################################################
+altvtp.model.150911<- function(YXc)
+{	
+	YXr		<- subset(YXc, score.p>1e-10, select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','p.AgeC','AgeC','t.stAgeC'))
+	YXr2	<- subset(YXc, !stageC%in%c('T','L'),select=c('t.Patient','t','Patient', 'score.p','ntPatient','stageC','t.AgeC','p.AgeC','AgeC','t.stAgeC'))
+	
+	wbm3	<- gamlss( score.p~t.stAgeC-1, sigma.formula=~t.stAgeC-1, data=YXr, family=GA() )	
+	wbm2	<- gamlss( score.p~t.stAgeC-1, sigma.formula=~t.stAgeC-1, nu.formula=~t.stAgeC-1, data=YXr, family=GG(), control=gamlss.control(n.cyc=60))	
+	wbm4	<- gamlss( score.p~t.stAgeC+ns(ntPatient, df=2)-1, sigma.formula=~t.stAgeC+ns(ntPatient, df=2)-1, data=YXr, family=GA() )
+	wbm5	<- gamlss( score.p~t.stAgeC+ns(ntPatient, df=2)-1, sigma.formula=~t.stAgeC+ns(ntPatient, df=2)-1, nu.formula=~t.stAgeC-1, data=YXr, family=GG(), control=gamlss.control(n.cyc=60) )
+	wbm6	<- gamlss( score.p~t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient-1, data=YXr, family=GA() )
+	wbm7	<- gamlss( score.p~t.stAgeC+ntPatient-1, sigma.formula=~t.stAgeC+ntPatient-1, nu.formula=~t.stAgeC-1, data=YXr, family=GG(), control=gamlss.control(n.cyc=200) )
+	wbm8	<- gamlss( score.p~t.stAgeC+ntPatient:stageC-1, sigma.formula=~t.stAgeC+ntPatient:stageC-1, data=YXr, family=GA() )	
+	wbm9	<- gamlss( score.p~t.stAgeC+ntPatient:t.stAgeC-1, sigma.formula=~t.stAgeC+ntPatient:t.stAgeC-1, data=YXr, family=GA() )
+	wbm10	<- gamlss( score.p~t.stAgeC+ns(ntPatient, df=2):t.stAgeC-1, sigma.formula=~t.stAgeC+ns(ntPatient, df=2):t.stAgeC-1, data=YXr, family=GA() )
+	wbm11	<- gamlss( score.p~t.stAgeC+ns(ntPatient, df=3):t.stAgeC-1, sigma.formula=~t.stAgeC+ns(ntPatient, df=3):t.stAgeC-1, data=YXr, family=GA() )
+	wbm12	<- gamlss( score.p~t.AgeC+stageC+ns(ntPatient, df=2):t.stAgeC-1, sigma.formula=~t.AgeC+stageC+ns(ntPatient, df=2):t.stAgeC-1, data=YXr2, family=GA() )
+	#
+	#	given there are 'outliers', try understand probabilistic model fit
+	#
+	file	<- paste(indir,'/',gsub('\\.R','_scorePResidualsModels150911.pdf',infile),sep='')
+	pdf(file=file, w=6, h=6)
+	qqnorm(resid(wbm3), main='score.p~t.stAgeC-1 GA', xlab = "Theoretical Quantiles", 
+			ylab = "Sample Quantiles", plot.it = TRUE, frame.plot = TRUE, 
+			col = "darkgreen")
+	lines(resid(wbm3), resid(wbm3), col = "red", lwd = 0.4, cex = 0.4)	
+	qqnorm(resid(wbm2), main='score.p~t.stAgeC-1 GG', xlab = "Theoretical Quantiles", 
+			ylab = "Sample Quantiles", plot.it = TRUE, frame.plot = TRUE, 
+			col = "darkgreen")
+	lines(resid(wbm2), resid(wbm2), col = "red", lwd = 0.4, cex = 0.4)
+	qqnorm(resid(wbm4), main='score.p~t.stAgeC+ns(ntPatient, df=2)-1 GA', xlab = "Theoretical Quantiles", 
+			ylab = "Sample Quantiles", plot.it = TRUE, frame.plot = TRUE, 
+			col = "darkgreen")
+	lines(resid(wbm4), resid(wbm4), col = "red", lwd = 0.4, cex = 0.4)
+	qqnorm(resid(wbm5), main='score.p~t.stAgeC+ns(ntPatient, df=2)-1 GG', xlab = "Theoretical Quantiles", 
+			ylab = "Sample Quantiles", plot.it = TRUE, frame.plot = TRUE, 
+			col = "darkgreen")
+	lines(resid(wbm5), resid(wbm5), col = "red", lwd = 0.4, cex = 0.4)	
+	qqnorm(resid(wbm6), main='score.p~t.stAgeC+ntPatient-1 GA', xlab = "Theoretical Quantiles", 
+			ylab = "Sample Quantiles", plot.it = TRUE, frame.plot = TRUE, 
+			col = "darkgreen")
+	lines(resid(wbm6), resid(wbm6), col = "red", lwd = 0.4, cex = 0.4)
+	qqnorm(resid(wbm7), main='score.p~t.stAgeC+ntPatient-1 GG', xlab = "Theoretical Quantiles", 
+			ylab = "Sample Quantiles", plot.it = TRUE, frame.plot = TRUE, 
+			col = "darkgreen")
+	lines(resid(wbm7), resid(wbm7), col = "red", lwd = 0.4, cex = 0.4)	
+	qqnorm(resid(wbm8), main='score.p~t.stAgeC+ntPatient:stageC-1 GA', xlab = "Theoretical Quantiles", 
+			ylab = "Sample Quantiles", plot.it = TRUE, frame.plot = TRUE, 
+			col = "darkgreen")
+	lines(resid(wbm8), resid(wbm8), col = "red", lwd = 0.4, cex = 0.4)		
+	dev.off()
+	#
+	#	plot boxplots on residuals -- did not help much to see what s going on
+	#
+	YXe		<- copy(YXr)
+	YXe[, rm3:= resid(wbm3)]
+	YXe[, rm4:= resid(wbm4)]
+	YXe[, rm6:= resid(wbm6)]
+	ggplot(melt(YXe, measure.vars=c('rm3', 'rm4', 'rm6')), aes(x=variable, y=value)) + 
+			geom_hline(yintercept=0, colour='grey80', lwd=1) + 
+			geom_boxplot() + facet_grid(t.stAgeC~.) + theme_bw() + coord_flip()
+	file	<- paste(indir,'/',gsub('\\.R','_scorePResidualsBoxPlotsModels150911.pdf',infile),sep='')
+	ggsave(file=file, w=10, h=15)
+	#
+	#	plot predictions as function of ntPatient -- useful
+	#
+	YXe		<- copy(YXr)
+	YXe[, p4:= predict(wbm4, what='mu', type='response')]
+	YXe[, p8:= predict(wbm8, what='mu', type='response')]
+	YXe[, p9:= predict(wbm9, what='mu', type='response')]
+	YXe[, p10:= predict(wbm10, what='mu', type='response')]
+	YXe[, p11:= predict(wbm11, what='mu', type='response')]
+	setkey(YXe, t.stAgeC, ntPatient)
+	YXe		<- melt(unique(subset(YXe, select=c(ntPatient, stageC, t.AgeC, t.stAgeC, p4, p8, p9, p10, p11))), measure.vars=c('p4', 'p8','p9', 'p10', 'p11'))
+	ggplot(YXr, aes(x=ntPatient)) + #geom_point(aes(y=score.p), alpha=0.2) + 
+			geom_smooth(aes(y=score.p), method='loess', degree=1, span=0.75, colour='black', fill='grey80') +
+			geom_line(data=YXe, aes(y=value, colour=variable, group=variable, linetype=variable)) +
+			facet_grid(t.AgeC~stageC, scales='free') + theme_bw() 
+	file	<- paste(indir,'/',gsub('\\.R','_scorePvsNtPatient150911.pdf',infile),sep='')
+	ggsave(file=file, w=8, h=8)
+	#
+	#	read out coefficients
+	#
+	cf		<- altvtp.readcoef(wbm3, 't.stAgeC', 'wbm3', 'score.p~t.stAgeC-1 GA')
+	wb		<- copy(cf)
+	cf		<- altvtp.readcoef(wbm4, 't.stAgeC', 'wbm4', 'score.p~t.stAgeC+\nns(ntPatient, df=2)-1 GA')
+	wb		<- rbind(wb, cf)	
+	cf		<- altvtp.readcoef(wbm8, 't.stAgeC', 'wbm8', 'score.p~t.stAgeC+\nntPatient:stageC-1 GA')
+	wb		<- rbind(wb, cf)
+	cf		<- altvtp.readcoef(wbm9, 't.stAgeC', 'wbm9', 'score.p~t.stAgeC+\nntPatient:t.stAgeC-1 GA')
+	wb		<- rbind(wb, cf)
+	cf		<- altvtp.readcoef(wbm10, 't.stAgeC', 'wbm10', 'score.p~t.stAgeC+\nns(ntPatient, df=2):t.stAgeC-1 GA')
+	wb		<- rbind(wb, cf)
+	tmp		<- melt(wb, id.vars=c('RSKF','MO_ID','MO','ST','RSKFbaseline'))
+	set(tmp, NULL, 'value', tmp[, exp(value)])
+	wb		<- dcast.data.table(tmp, MO_ID+MO+ST+RSKFbaseline+RSKF~variable, value.var='value')	
+	#	for additive models, predict holding ntPatient fixed
+	tmp		<- copy(YXr2)	
+	tmp2	<- predict(wbm12, what='mu', type='response', se.fit=1)
+	tmp[, MU:=tmp2$fit]
+	tmp[, MUL:=tmp2$fit-2*tmp2$se.fit]
+	tmp[, MUU:=tmp2$fit+2*tmp2$se.fit]
+	setkey(tmp, t.stAgeC)
+	tmp		<- unique(subset(tmp, ntPatient==4, c(t.stAgeC, MU, MUL, MUU)))
+	tmp[, MO_ID:='wbm12']
+	tmp[, MO:='score.p~t.AgeC+stageC+\nns(ntPatient, df=2):t.stAgeC-1']
+	tmp[, ST:='t.stAgeC']
+	tmp[, RSKFbaseline:= base.df['t.stAgeC',][,RSKFbaseline]]
+	setnames(tmp, 't.stAgeC', 'RSKF')
+	wb		<- rbind(wb, tmp, use.names=TRUE)
+	
+	tmp		<- subset(wb, !grepl('ntPatient',RSKF))	
+	lvls	<- c( 	as.vector(sapply(		c('UA','UC','D'), function(x) paste(x,c('(-1,25]','(25,30]','(30,45]','(45,100]'),sep='_')		)),
+			'T_(-1,100]','L_(-1,100]' )	
+	set(tmp, NULL, 'RSKF', tmp[, factor(RSKF, levels=rev(lvls))])
+	set(tmp, NULL, 'stageC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',1)])
+	set(tmp, NULL, 't.AgeC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',2)])
+	setnames(tmp, 'RSKF','t.stAgeC')
+	tmp		<- merge(tmp, YXr[, list(mean=mean(score.p), ql= quantile(score.p,p=0.025), qu= quantile(score.p,p=0.975)), by=c('stageC','t.AgeC','t.stAgeC')], by=c('stageC','t.AgeC','t.stAgeC'))
+	ggplot( tmp, aes(x=t.AgeC) ) +
+			scale_y_continuous(breaks=seq(0,50,5), minor_breaks=seq(0,50,1)) +
+			coord_cartesian(ylim=c(0,25)) +
+			geom_boxplot(data=YXr, aes(y=100*score.p, fill=stageC), colour='grey80', alpha=0.9, outlier.shape=NA) +
+			stat_summary(data=YXr, aes(y=100*score.p), fun.y=mean, colour="grey80", geom="point", shape=18, size=3, show_guide = FALSE) +
+			geom_point(aes(y=100*MU)) + geom_errorbar(aes(ymin=100*MUL, ymax=100*MUU), width=0.5) + 
+			theme_bw() + theme(legend.position='bottom') +
+			facet_grid(MO~stageC) 	
+	file	<- paste(indir,'/',gsub('\\.R','_scorePMUByModel150911.pdf',infile),sep='')	
+	ggsave(file=file, w=14,h=14)	
+
+	#
+	#	boxplots
+	#	
+	ggplot(YXr2, aes(x=t.AgeC, y=100*score.p, fill=t.AgeC)) + geom_boxplot(, colour='grey80', alpha=0.9,outlier.shape=NA) +
+			scale_y_continuous(breaks=seq(0,50,5), minor_breaks=seq(0,50,1)) + coord_cartesian(ylim=c(0,15)) +
+			stat_summary(data=YXr2, aes(y=100*score.p), fun.y=mean, colour="grey80", geom="point", shape=18, size=3, show_guide = FALSE) +
+			facet_grid(~AgeC, scales='free') + theme_bw()
+	file	<- paste(indir,'/',gsub('\\.R','_scorePBypAgeC150911.pdf',infile),sep='')	
+	ggsave(file=file, w=14,h=8)	
+	ggplot(YXr2, aes(x=t.AgeC, y=100*score.p, fill=t.AgeC)) + geom_boxplot(, colour='grey80', alpha=0.9,outlier.shape=NA) +
+			scale_y_continuous(breaks=seq(0,50,5), minor_breaks=seq(0,50,1)) + coord_cartesian(ylim=c(0,25)) +
+			facet_grid(stageC~AgeC, scales='free') + theme_bw()
+	file	<- paste(indir,'/',gsub('\\.R','_scorePBypAgeCStage150911.pdf',infile),sep='')	
+	ggsave(file=file, w=14,h=14)	
+	
+	
+	pm	<- gamlss( score.p~p.AgeC+stageC+ns(ntPatient, df=2):t.stAgeC-1, sigma.formula=~p.AgeC+stageC+ns(ntPatient, df=2):t.stAgeC-1, data=YXr2, family=GA() )
+			
+}
+######################################################################################
 altvtp.model.150910<- function(YXc)
 {
 	
@@ -2127,6 +2277,25 @@ altvtp.model.150910<- function(YXc)
 	tmp[, RSKFbaseline:= base.df['t.stAgeC',][,RSKFbaseline]]
 	setnames(tmp, 't.stAgeC', 'RSKF')
 	wb		<- rbind(wb, tmp, use.names=TRUE)
+	#	predict quantiles
+	tmp		<- copy(YXr)	
+	tmp2	<- predict(wbm3, what='mu', type='response', se.fit=1)
+	tmp[, MU:=tmp2$fit]
+	tmp[, MUL:=tmp2$fit-2*tmp2$se.fit]
+	tmp[, MUU:=tmp2$fit+2*tmp2$se.fit]
+	tmp2	<- predict(wbm3, what='sigma', type='response', se.fit=1)
+	tmp[, SI:=tmp2$fit]
+	tmp[, SIL:=tmp2$fit-2*tmp2$se.fit]
+	tmp[, SIU:=tmp2$fit+2*tmp2$se.fit]
+	tmp		<- unique(subset(tmp, ntPatient==4, c(t.stAgeC, MU, MUL, MUU, SI, SIL, SIU)))
+	tmp[, Q50:=qGA(0.5, mu=MU, sigma=SI)]
+	tmp[, MO_ID:='wbm3q']
+	tmp[, MO:='Q score.p~t.stAgeC-1']
+	tmp[, ST:='t.stAgeC']
+	tmp[, RSKFbaseline:= base.df['t.stAgeC',][,RSKFbaseline]]
+	set(tmp, NULL, c('MU','MUL','MUU','SI','SIL','SIU'), NULL)
+	setnames(tmp, c('t.stAgeC','Q50'),c('RSKF','MU'))
+	wb		<- rbind(wb, tmp, fill=TRUE, use.names=TRUE)
 	#
 	
 	
@@ -2139,14 +2308,16 @@ altvtp.model.150910<- function(YXc)
 	set(tmp, NULL, 't.AgeC', tmp[, sapply(strsplit(as.character(RSKF), '_', fixed=TRUE),'[[',2)])
 	setnames(tmp, 'RSKF','t.stAgeC')
 	tmp		<- merge(tmp, YXr[, list(mean=mean(score.p), ql= quantile(score.p,p=0.025), qu= quantile(score.p,p=0.975)), by=c('stageC','t.AgeC','t.stAgeC')], by=c('stageC','t.AgeC','t.stAgeC'))
-	ggplot( tmp, aes(x=t.AgeC)) +
+	ggplot( tmp, aes(x=factor(as.character(t.AgeC), levels=c('(-1,25]','(25,30]','(30,45]','(45,100]','(-1,100]'), labels=c('(-1,25]','(25,30]','(30,45]','(45,100]','(-1,100]')))) +
 			scale_y_continuous(breaks=seq(0,50,5), minor_breaks=seq(0,50,1)) +
-			geom_point(data=YXr, aes(y=100*score.p, colour=stageC), alpha=0.3) +
+			coord_cartesian(ylim=c(0,25)) +
+			geom_boxplot(data=YXr, aes(y=100*score.p, fill=stageC), colour='grey80', alpha=0.9, outlier.shape=NA) +
+			stat_summary(data=YXr, aes(y=100*score.p), fun.y=mean, colour="black", geom="point", shape=18, size=3, show_guide = FALSE) +
 			geom_point(aes(y=100*MU)) + geom_errorbar(aes(ymin=100*MUL, ymax=100*MUU), width=0.5) + 
 			theme_bw() + theme(legend.position='bottom') +
-			facet_grid(MO~stageC) 
+			facet_grid(MO~stageC) 	
 	file	<- paste(indir,'/',gsub('\\.R','_scorePMUByModel150910.pdf',infile),sep='')	
-	ggsave(file=file, w=12,h=12)	
+	ggsave(file=file, w=14,h=12)	
 	#	plot mu vs empirical mean
 	ggplot(subset(tmp, MO_ID=='wbm3'), aes(x=mean, xmin=ql, xmax=qu, y=MU, ymin=MUL, ymax=MUU, colour=t.AgeC)) + 
 			geom_abline(intercept=0, slope=1) + 
@@ -2776,10 +2947,12 @@ altvtp.confounded.ntransmitters<- function(YXc, indir, infile, suffix='')
 ######################################################################################
 adjust.dev<- function()
 {
+	require(survival)
 	indir		<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
 	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C2V100bInfT7STRAT_m5A.R'
 	
 	YXo			<- copy(YX)	#before strat
+	YXo2		<- stratificationmodel.Age_253045.Stage_UA_UC_D_T_F(YX)
 	YXo2		<- copy(YX)	#after strat
 	YX
 	t.recent.endctime
