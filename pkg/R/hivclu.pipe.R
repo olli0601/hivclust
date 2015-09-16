@@ -849,7 +849,7 @@ hivc.pipeline.ages<- function()
 					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
-					outfile		<- paste("ags.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+					outfile		<- paste("ags.",gsub(' ','_',date()),sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
 				})	
 	}
