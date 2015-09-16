@@ -3,6 +3,7 @@ age.props_univariate<- function()
 {	
 	require(reshape2)
 	require(data.table)	
+	require(survival)
 	require(ape)
 	#stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
