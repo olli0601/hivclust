@@ -3188,7 +3188,57 @@ project.hivc.clustering.NoRecombNoDR.to.NoShort<- function()
 			})			
 }
 ######################################################################################
-project.hivc.clustering.forStephane<- function()
+project.hivc.clustering.forStephane.onUK<- function()
+{	
+	verbose		<- 1
+	resume		<- 1
+	patient.n	<- 15700; 	thresh.brl<- 0.096; 	thresh.bs<- 0.8;	opt.brl<- "dist.brl.casc" 
+	indircov	<- paste(DATA,"derived",sep='/')
+	infilecov	<- "ATHENA_2013_03_AllSeqPatientCovariates"
+	indir		<- paste(DATA,"tmp",sep='/')	
+	outdir		<- paste(DATA,"brl_surrlink",sep='/')
+	
+	infile		<- "~/duke/2015_OptimalClusteringThresholds/TNTP_PRRT_FastTree.nwk"
+	ph			<- read.tree(infile)
+	ph 			<- ladderize( ph )
+	ph.node.bs						<- as.numeric( ph$node.label )		
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph$node.label					<- ph.node.bs
+	stat.fun						<- hivc.clu.min.transmission.cascade
+	#stat.fun						<- max
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)	
+	save(ph, dist.brl,ph.node.bs, file=gsub('\\.nwk','_PRECLU\\.R',infile))
+	
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=0.8, thresh.brl=0.04, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+	print(clustering)		
+	
+	
+	#read bootstrap support values
+	thresh.bs						<- 0.9
+	ph.node.bs[c(13,15,27,41,43)]	<- thresh.bs-0.05*seq(0.01,length.out=5)
+	ph.node.bs[ph.node.bs==1]		<- seq_along(which(ph.node.bs==1))*0.005 + 0.7
+	ph$node.label					<- ph.node.bs
+	#read patristic distances
+	stat.fun						<- hivc.clu.min.transmission.cascade
+	#stat.fun						<- max
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)
+	print(dist.brl)
+	thresh.brl						<- quantile(dist.brl,seq(0.1,1,by=0.05))["100%"]
+	print(quantile(dist.brl,seq(0.1,0.5,by=0.05)))
+	print(thresh.brl)
+	#produce clustering 
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+	print(clustering)		
+	hivc.clu.plot(ph, clustering[["clu.mem"]], highlight.edge.of.tiplabel=c("TN_","TP_"), highlight.edge.of.tiplabel.col= c("red","blue") )
+	#produce some tip states
+	ph.tip.state<- rep(1:20, each=ceiling( length( ph$tip.label )/20 ))[seq_len(Ntip(ph))]
+	states		<- data.table(state.text=1:20, state.col=rainbow(20))
+	states		<- states[ph.tip.state,]
+	hivc.clu.plot.tiplabels( seq_len(Ntip(ph)), matrix(states[,state.text], nrow=1,ncol=nrow(states)), matrix(states[,state.col], nrow=1,ncol=nrow(states)), cex=0.4, adj=c(-1,0.5) )
+	
+}
+######################################################################################
+project.hivc.clustering.forStephane.onNL<- function()
 {	
 	verbose		<- 1
 	resume		<- 1

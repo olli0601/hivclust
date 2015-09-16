@@ -4725,7 +4725,8 @@ project.athena.Fisheretal.Wallinga.run<- function(YX.m3, YXf, Y.brl.bs, X.tables
 	#	number of transmissions and proportions by raw count
 	#	*** among recipients with likely transmitter only ***
 	#
-	missing		<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table, risk.df, YX.m3, YXf, use.YXf=use.YXf, method.missingy='y=median')	
+	missing		<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table, risk.df, YX.m3, YXf, use.YXf=use.YXf, method.missingy='y=median')
+	missing		<- project.athena.Fisheretal.Wallinga.prep.expmissing(nt.table, risk.df, YX.m3, YXf, use.YXf=use.YXf, method.missingy='y=mean')
 	#	calculate prob Pj(x) that recipient j got infected from x  - with and without adjustment	
 	trm.p		<- subset(missing, select=c(Patient, risk, factor, yYX.sum, YXm.sum.e0, YXm.sum.e0cp, YX.w, YX.n, YXm.e.e0, YXm.e.e0cp))
 	trm.p[, BS:=0]	

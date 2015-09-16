@@ -833,9 +833,9 @@ hivc.pipeline.ages<- function()
 		method.thresh.bs			<- 0.8
 		
 		# use to pre-compute tables mem 130 GB
-		#method.risk				<- c( 	'm5B.tp1.clu.adj' )
+		method.risk				<- c( 	'm5B.tp1.clu.adj' )
 		#method.risk				<- c( 	'm5A.tp1.clu.adj' )
-		method.risk				<- c( 	'm5C.tp1.clu.adj' )
+		#method.risk				<- c( 	'm5C.tp1.clu.adj' )
 		dummy	<- sapply(method.risk, function(x)
 				{
 					cmd	<- hivc.cmd.age.estimate(indir, infile, insignat, indircov, infilecov, infiletree, infilexml.opt, infilexml.template, method, method.nodectime, x, method.recentctime, method.PDT, method.Acute, method.use.AcuteSpec, method.minQLowerU, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.cut.brl, method.thresh.bs, outdir=outdir, outfile=outfile, resume=1, verbose=1)
@@ -849,7 +849,7 @@ hivc.pipeline.ages<- function()
 					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="95000mb")
 					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.q=NA, hpc.nproc=1, hpc.walltime=71, hpc.mem="130000mb")
 					outdir		<- paste(DATA,"tmp",sep='/')
-					outfile		<- paste("beta.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
+					outfile		<- paste("ags.",strsplit(date(),split=' ')[[1]],collapse='_',sep='')					
 					hivc.cmd.hpccaller(outdir, outfile, cmd)			
 				})	
 	}

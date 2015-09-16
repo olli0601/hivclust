@@ -106,12 +106,12 @@ project.ACpolext.rmDRM.150907<- function()
 ######################################################################################
 project.ACpolext.trees.inspect<- function()
 {	  	
-	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150831/ExaML'
+	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150913'
 	infiles		<- data.table(FILE=list.files(indir, pattern='^ExaML_result', full.names=1))
 	require(phytools)
 	i			<- 1
 	ph			<- read.tree(infiles[i,FILE])	
-	tmp			<- which(ph$tip.label=="B.FR.K03455.1983")
+	tmp			<- which(grepl('HXB2',ph$tip.label))
 	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
 	
 	ph			<- ladderize(ph)
