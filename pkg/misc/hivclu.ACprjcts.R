@@ -137,7 +137,7 @@ project.ACpolext.trees.inspect<- function()
 	#args.parser	<- paste("-m DNA -q",PARTITION)
 	args.parser	<- paste("-m DNA")
 	args.examl	<- "-f d -m GAMMA"	
-	cmd			<- hivc.cmd.examl.bootstrap(indir, infile, signat.in, signat.out, bs.from=bs.from, bs.to=bs.to, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
+	cmd			<- hivc.cmd.examl.bootstrap(indir, infile, signat.in, signat.out, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
 	dummy		<- lapply(cmd, function(x)
 			{				
 				#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
@@ -166,7 +166,7 @@ project.ACpolext.examl<- function()
 	#args.examl	<- "-f d -m GAMMA"		#	 -- ran for weeks
 	#args.examl	<- "-f o -D -m GAMMA"	#	 -- not followed up until 'default' worked
 	args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours	
-	cmd			<- hivc.cmd.examl.bootstrap(indir, infile, signat.in, signat.out, bs.from=bs.from, bs.to=bs.to, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
+	cmd			<- hivc.cmd.examl.bootstrap(indir, infile, signat.in, signat.out, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
 	dummy		<- lapply(cmd, function(x)
 			{				
 				#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
