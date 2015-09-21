@@ -156,8 +156,8 @@ project.ACpolext.examl<- function()
 	infile		<- "ZA.SubC.12294.alnnoDRM"	
 	signat.in   <- signat.out   <- '150913'
 	#	ExaML bootstrap args
-	bs.from		<- 0
-	bs.to		<- 10
+	bs.from		<- 151
+	bs.to		<- 200
 	bs.n		<- 500
 	outdir		<- indir
 	
@@ -170,12 +170,12 @@ project.ACpolext.examl<- function()
 	dummy		<- lapply(cmd, function(x)
 			{				
 				#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
-				#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=799, hpc.q="pqeph", hpc.mem="800mb", hpc.nproc=1)
-				x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=799, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
+				#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeph", hpc.mem="1800mb", hpc.nproc=1)
+				x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
 				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 				outfile	<- paste("exa",signat,sep='.')
 				cat(x)
-				#hivc.cmd.hpccaller(outdir, outfile, x)
+				hivc.cmd.hpccaller(outdir, outfile, x)
 				Sys.sleep(1)
 			})	
 }
