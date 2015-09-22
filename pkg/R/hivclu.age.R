@@ -4541,7 +4541,7 @@ sampling.get.all.tables.args<- function(method)
 	}
 	if(grepl('m5B',method))
 	{
-		factor.ref.v	<- paste('TS_(-1,100]',tp,sep='')
+		factor.ref.v	<- paste('TS_(30,45]',tp,sep='')
 		risktp.col		<- 't.stAgeC.prd'
 		risk.col		<- 't.stAgeC'			
 	}
@@ -4553,13 +4553,13 @@ sampling.get.all.tables.args<- function(method)
 	}
 	if(grepl('m5D',method))
 	{
-		factor.ref.v	<- paste('TS_(-1,100]',tp,sep='')
+		factor.ref.v	<- paste('TS_(30,45]',tp,sep='')
 		risktp.col		<- 't.stAgeC.prd'
 		risk.col		<- 't.stAgeC'			
 	}
 	if(grepl('m5E',method))
 	{
-		factor.ref.v	<- paste('TS_(-1,100]',tp,sep='')
+		factor.ref.v	<- paste('TS_(30,45]',tp,sep='')
 		risktp.col		<- 't.stAgeC.prd'
 		risk.col		<- 't.stAgeC'			
 	}
@@ -5293,22 +5293,20 @@ stratificationmodel.Age_253045.Stage_UAE_UAC_UC_D_TS_TO_F<- function(YX.m5, lRNA
 	#
 	#	set age group of transmitter				
 	age.breaks		<- c(-1, 25, 30, 45, 100)
-	age.labels		<- c('<25','<30','<45','<100')	
-	YX.m5[, t.AgeC:= YX.m5[, cut(t.Age, breaks=age.breaks)]]	
+	tmp				<- c("(-1,25]","(25,35]","(35,45]","(45,55]","(55,100]")
+	YX.m5[, t.AgeC:= YX.m5[, cut(t.Age, breaks=age.breaks, labels=tmp)]]	
 	#	set age group of recipient
-	YX.m5[, AgeC:= YX.m5[, cut(Age, breaks=age.breaks)]]	
-	#	pool age groups  of the transmitters if transmitters are in L, TS, TO
-	set(YX.m5, YX.m5[, which(stageC%in%c('L','TS','TO'))], c('t.AgeC'), '(-1,100]')	
+	YX.m5[, AgeC:= YX.m5[, cut(Age, breaks=age.breaks, labels=tmp)]]	
 	#	set age group of pair
 	YX.m5[, p.AgeC:= YX.m5[, paste(as.character(t.AgeC),'->',as.character(AgeC),sep='')]]
 	#	factors
-	set(YX.m5, NULL, 't.AgeC', YX.m5[, factor(as.character(t.AgeC), levels=c("(-1,25]","(25,30]","(30,45]","(45,100]","(-1,100]"), labels=c("(-1,25]","(25,30]","(30,45]","(45,100]","(-1,100]"))])
-	set(YX.m5, NULL, 'AgeC', YX.m5[, factor(as.character(AgeC), levels=c("(-1,25]","(25,30]","(30,45]","(45,100]"), labels=c("(-1,25]","(25,30]","(30,45]","(45,100]"))])
+	set(YX.m5, NULL, 't.AgeC', YX.m5[, factor(as.character(t.AgeC), levels=tmp, labels=tmp)])
+	set(YX.m5, NULL, 'AgeC', YX.m5[, factor(as.character(AgeC), levels=tmp, labels=tmp)])
 	set(YX.m5, NULL, 'p.AgeC', YX.m5[, factor(p.AgeC)])
 	#
 	#	PREPARE STAGE:AGE
 	#		
-	tmp				<- c("UAC_(-1,25]","UAC_(25,30]","UAC_(30,45]","UAC_(45,100]","UAE_(-1,25]","UAE_(25,30]","UAE_(30,45]","UAE_(45,100]","UC_(-1,25]","UC_(25,30]","UC_(30,45]","UC_(45,100]","D_(-1,25]","D_(25,30]","D_(30,45]","D_(45,100]","TO_(-1,100]","TS_(-1,100]","L_(-1,100]")
+	tmp				<- as.vector(sapply( c("UAC","UAE","UC","D","TO","TS","L"), function(x)	paste(x,'_',tmp,sep='')))	
 	YX.m5[, t.stAgeC:= YX.m5[, factor(paste(as.character(stageC),'_',as.character(t.AgeC),sep=''),labels=tmp, levels=tmp)]]
 	#
 	#	PREPARE cross with time period
@@ -5509,28 +5507,21 @@ stratificationmodel.Age_25354555.Stage_UAE_UAC_UC_D_TS_TO_F<- function(YX.m5, lR
 	#	PREPARE AGE (Age and t.Age are ages at midpoint of infection interval)
 	#
 	#	set age group of transmitter				
-	age.breaks		<- c(-1, 25, 35, 45, 55, 100)
-	age.labels		<- c('<25','<35','<45','<55','<100')	
+	age.breaks		<- c(-1, 25, 35, 45, 55, 100)		
 	YX.m5[, t.AgeC:= YX.m5[, cut(t.Age, breaks=age.breaks)]]	
 	#	set age group of recipient
 	YX.m5[, AgeC:= YX.m5[, cut(Age, breaks=age.breaks)]]	
-	#	pool age groups  of the transmitters if transmitters are in L, TS, TO
-	set(YX.m5, YX.m5[, which(stageC%in%c('L','TS','TO'))], c('t.AgeC'), '(-1,100]')	
 	#	set age group of pair
 	YX.m5[, p.AgeC:= YX.m5[, paste(as.character(t.AgeC),'->',as.character(AgeC),sep='')]]
 	#	factors
-	tmp				<- c("(-1,25]","(25,35]","(35,45]","(45,55]","(55,100]","(-1,100]")
+	tmp				<- c("(-1,25]","(25,35]","(35,45]","(45,55]","(55,100]")
 	set(YX.m5, NULL, 't.AgeC', YX.m5[, factor(as.character(t.AgeC), levels=tmp, labels=tmp)])
 	set(YX.m5, NULL, 'AgeC', YX.m5[, factor(as.character(AgeC), levels=tmp, labels=tmp)])
 	set(YX.m5, NULL, 'p.AgeC', YX.m5[, factor(p.AgeC)])
 	#
 	#	PREPARE STAGE:AGE
 	#		
-	tmp				<- c(	"UAC_(-1,25]","UAC_(25,35]","UAC_(35,45]","UAC_(45,55]","UAC_(55,100]",
-							"UAE_(-1,25]","UAE_(25,35]","UAE_(35,45]","UAE_(45,55]","UAE_(55,100]",
-							"UC_(-1,25]","UC_(25,35]","UC_(35,45]","UC_(45,55]","UC_(55,100]",
-							"D_(-1,25]","D_(25,35]","D_(35,45]","D_(45,55]","D_(55,100]",
-							"TO_(-1,100]","TS_(-1,100]","L_(-1,100]")
+	tmp				<- as.vector(sapply( c("UAC","UAE","UC","D","TO","TS","L"), function(x)	paste(x,'_',tmp,sep='')))
 	YX.m5[, t.stAgeC:= YX.m5[, factor(paste(as.character(stageC),'_',as.character(t.AgeC),sep=''),labels=tmp, levels=tmp)]]
 	#
 	#	PREPARE cross with time period
