@@ -1043,7 +1043,7 @@ hivc.prog.get.firstseq<- function()
 	}
 }
 ######################################################################################
-hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
+hivc.prog.get.clustering.MSM<- function(clu.pre=NULL, with.foreign=FALSE)
 {
 	verbose		<- 1
 	resume		<- 1
@@ -1116,7 +1116,10 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 	if(resume)												#//load if there is R Master data.table
 	{
 		outdir			<- indir
-		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
+		if(with.foreign)
+			outfile		<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgrwfrgn",sep='')
+		if(!with.foreign)
+			outfile		<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
 		outsignat		<- insignat	
 		file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')		
 		options(show.error.messages = FALSE)		
@@ -1181,25 +1184,28 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 			outfile		<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"mixedexpgr",sep='')
 			outsignat	<- insignat		
 			hivc.clu.getplot.mixedexposuregroup( clu.pre$ph, clu$clustering, df.cluinfo, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep='') )
-		}	
-		#
-		# remove clusters with all seq coming from frgn infection
-		#
-		tmp			<- hivc.clu.getplot.excludeallmultifrgninfection(clu.pre$ph, clu$clustering, df.cluinfo, char.select= "!all(!is.na(CountryInfection) & grepl('FRGN',CountryInfection) )")
-		ph			<- tmp$cluphy
-		df.cluinfo	<- tmp$cluphy.df
-		clustering	<- tmp$cluphy.clustering		
-		#
-		#get in-country clusters. this drops foreign sequences in clusters				
-		outdir			<- indir
-		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"incountry",sep='')
-		outsignat		<- insignat									
-		#ph			<- clu.pre$ph; clustering	<- clu$clustering; plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); char.frgn  	='CountryInfection=="FRGN"'; char.frgntn	='CountryInfection=="FRGNTN"'; 
-		incountry		<- hivc.clu.getplot.incountry(ph, clustering, df.cluinfo, split.clusters=FALSE, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), char.frgn='CountryInfection=="FRGN"', char.frgntn='CountryInfection=="FRGNTN"')
-		ph				<- incountry$cluphy
-		clustering		<- incountry$clustering
-		df.cluinfo		<- incountry$df.cluinfo
-		stopifnot( nrow(subset(df.cluinfo, is.na(PosSeqT)))==0 )
+		}
+		if(!with.foreign)
+		{
+			#
+			# remove clusters with all seq coming from frgn infection
+			#
+			tmp			<- hivc.clu.getplot.excludeallmultifrgninfection(clu.pre$ph, clu$clustering, df.cluinfo, char.select= "!all(!is.na(CountryInfection) & grepl('FRGN',CountryInfection) )")
+			ph			<- tmp$cluphy
+			df.cluinfo	<- tmp$cluphy.df
+			clustering	<- tmp$cluphy.clustering		
+			#
+			#get in-country clusters. this drops foreign sequences in clusters				
+			outdir			<- indir
+			outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"incountry",sep='')
+			outsignat		<- insignat									
+			#ph			<- clu.pre$ph; clustering	<- clu$clustering; plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''); char.frgn  	='CountryInfection=="FRGN"'; char.frgntn	='CountryInfection=="FRGNTN"'; 
+			incountry		<- hivc.clu.getplot.incountry(ph, clustering, df.cluinfo, split.clusters=FALSE, plot.file=paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".pdf",sep=''), char.frgn='CountryInfection=="FRGN"', char.frgntn='CountryInfection=="FRGNTN"')
+			ph				<- incountry$cluphy
+			clustering		<- incountry$clustering
+			df.cluinfo		<- incountry$df.cluinfo
+			stopifnot( nrow(subset(df.cluinfo, is.na(PosSeqT)))==0 )			
+		}
 		#
 		# get msm exposure group clusters. this drops clusters with no MSM / BI patient
 		#
@@ -1261,7 +1267,10 @@ hivc.prog.get.clustering.MSM<- function(clu.pre= NULL)
 		# save
 		#
 		outdir			<- indir
-		outfile			<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
+		if(with.foreign)
+			outfile		<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgr",sep='')
+		if(!with.foreign)
+			outfile		<- paste(infile,"_clust_",opt.brl,"_bs",thresh.bs*100,"_brl",thresh.brl*100,'_',"msmexpgrwfrgn",sep='')
 		outsignat		<- insignat	
 		file			<- paste(outdir,'/',outfile,'_',gsub('/',':',outsignat),".R",sep='')
 		if(verbose)	cat(paste("\nsave msm output to",file))

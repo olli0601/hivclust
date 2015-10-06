@@ -1,62 +1,4 @@
-project.treecomparison.submissions<- function()	
-{
-	indir	<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/IQTree/IQTree201507'
-	infiles	<- list.files(indir, pattern='treefile$', recursive=1, full.names=1)
-	indir	<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/PhyML'
-	infiles	<- c(infiles, list.files(indir, pattern='*tree*', recursive=1, full.names=1))
-	indir	<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/RAxML'
-	infiles	<- c(infiles, list.files(indir, pattern='*RAxML_bestTree*', recursive=1, full.names=1))	
-	infiles	<- data.table(FILE=infiles)
-	submitted.trees			<- lapply(infiles[, FILE], function(x)
-			{
-				cat(x)
-				read.tree(file=x)	
-			})
-	names(submitted.trees)	<- infiles[, FILE]
 
-	indir	<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/MetaPIGA'
-	tmp		<-  list.files(indir, pattern='*result*', recursive=1, full.names=1)
-	tmp		<- data.table(FILE=tmp)
-	
-	tmp.trees			<- lapply(tmp[, FILE], function(x)
-			{
-				cat(x)
-				read.nexus(file=x)	
-			})
-	sapply(tmp.trees, length)
-	MetaPIGA.trees			<- c(lapply(tmp.trees, '[[', 1), lapply(tmp.trees, '[[', 2), lapply(tmp.trees, '[[', 3), lapply(tmp.trees, '[[', 4))
-	names(MetaPIGA.trees)	<- c(sapply(tmp.trees, function(x) names(x)[1]), sapply(tmp.trees, function(x) names(x)[2]), sapply(tmp.trees, function(x) names(x)[3]), sapply(tmp.trees, function(x) names(x)[4]))	
-	submitted.trees			<- c(submitted.trees, MetaPIGA.trees)	
-	submitted.info			<- data.table(FILE=names(submitted.trees))
-	
-	submitted.info[, TEAM:=NA_character_]
-	set(submitted.info, submitted.info[, which(grepl('RAXML',FILE))], 'TEAM', 'RAXML')
-	set(submitted.info, submitted.info[, which(grepl('IQTree',FILE))], 'TEAM', 'IQTree')
-	set(submitted.info, submitted.info[, which(grepl('MetaPIGA',FILE))], 'TEAM', 'MetaPIGA')
-	set(submitted.info, submitted.info[, which(grepl('PhyML',FILE))], 'TEAM', 'PhyML')
-	submitted.info[, SC:=NA_character_]
-	tmp		<- submitted.info[, which(grepl('150701_Regional_TRAIN[0-9]', FILE))]
-	set(submitted.info, tmp, 'SC', submitted.info[tmp, regmatches(FILE, regexpr('150701_Regional_TRAIN[0-9]',FILE))])
-	tmp		<- submitted.info[, which(grepl('150701_Vill_SCENARIO-[A-Z]', FILE))]
-	set(submitted.info, tmp, 'SC', submitted.info[tmp, regmatches(FILE, regexpr('150701_Vill_SCENARIO-[A-Z]',FILE))])
-	tmp		<- submitted.info[, which(is.na(SC) & grepl('TRAIN[0-9]', FILE))]
-	set(submitted.info, tmp, 'SC', submitted.info[tmp, paste('150701_Regional_',regmatches(FILE, regexpr('TRAIN[0-9]',FILE)),sep='')])
-	tmp		<- submitted.info[, which(is.na(SC) & grepl('scenario[A-Z]', FILE))]
-	set(submitted.info, tmp, 'SC', submitted.info[tmp, paste('150701_Vill_',regmatches(FILE, regexpr('scenario[A-Z]',FILE)),sep='')])
-	tmp		<- submitted.info[, which(is.na(SC) & grepl('150701_regional_train[0-9]', FILE))]
-	set(submitted.info, tmp, 'SC', submitted.info[tmp, regmatches(FILE, regexpr('150701_regional_train[0-9]',FILE))])
-	tmp		<- submitted.info[, which(is.na(SC) & grepl('150701_vill_scenario-[A-Z]', FILE))]
-	set(submitted.info, tmp, 'SC', submitted.info[tmp, regmatches(FILE, regexpr('150701_vill_scenario-[A-Z]',FILE))])
-	tmp		<- submitted.info[, which(is.na(SC) & grepl('Vill_99_Apr15', FILE))]
-	set(submitted.info, tmp, 'SC', 'Vill_99_Apr15')
-	
-	set(submitted.info, NULL, 'SC', submitted.info[, toupper(SC)])
-	tmp		<- submitted.info[, which(grepl('150701_VILL_SCENARIO[A-Z]', SC))]
-	set(submitted.info, tmp, 'SC', submitted.info[tmp, gsub('150701_VILL_SCENARIO','150701_VILL_SCENARIO-',SC)])
-	
-	outfile	<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/submitted_150911.rda'
-	save(submitted.trees, submitted.info, file=outfile)
-}
 ######################################################################################
 project.hivc.check.nt.table<- function(dir.name= DATA, verbose=1)
 {
@@ -1060,7 +1002,12 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 		file.treatment	<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
 		file.out		<- paste(dir.name,"derived/ATHENA_2013_03_AllSeqPatientCovariates_AllMSM.R",sep='/')
 	}
-	
+	if(1)
+	{
+		dir.name		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+		file.seq		<- paste(dir.name,"ATHENA_1502_All_Sequences.R",sep='/')
+		file.patient	<- paste(dir.name,"ATHENA_1502_All_Patient.R",sep='/')
+	}
 	if(resume)												#//load if there is R Master data.table
 	{
 		options(show.error.messages = FALSE)		
@@ -1073,29 +1020,31 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 	{
 		#get data.table of seqs		
 		load(file.seq)			
-		df		<- lapply( df,function(x)	data.table(x[,c("Patient","DateRes","SampleCode")], key="SampleCode")	)
-		df		<- merge(df[[1]],df[[2]],all.x=1,all.y=1)
-		setkey(df, Patient.x)
-		tmp		<- which(df[,is.na(Patient.x)])
-		set(df, tmp, "Patient.x", df[tmp, Patient.y])
-		set(df, tmp, "DateRes.x", df[tmp, DateRes.y])
+		df		<- do.call('rbind',lapply( seq_along(df),	function(i)
+					{
+						z	<- data.table(df[[i]][,	c("Patient","DateRes","Subtype","SampleCode")], key="SampleCode")
+						z[, GENE:=names(df)[i]]
+						z
+					}))
+		df		<- dcast.data.table(df, Patient+DateRes+Subtype+SampleCode~GENE, value.var='GENE')
 		set(df, NULL, "SampleCode", gsub(' ','', df[, SampleCode]))
-		setnames(df, c("SampleCode","Patient.x","DateRes.x"), c("FASTASampleCode","Patient","PosSeqT"))
+		setnames(df, c("SampleCode","DateRes"), c("FASTASampleCode","PosSeqT"))
 		#set(df, NULL, "FASTASampleCode", factor(df[,FASTASampleCode]))
 		#set(df, NULL, "Patient", factor(df[,Patient]))		
-		df.all	<- subset(df, select=c(FASTASampleCode,Patient,PosSeqT))
+		df.all	<- subset(df, select=c(FASTASampleCode,Patient,Subtype,PosSeqT))
 		if(verbose)		cat(paste("\nnumber of sequences found, n=", nrow(df.all)))
 		#
 		# add Patient data
 		#
 		if(verbose)		cat(paste("\nadding patient data"))
-		load(file.patient)		
+		load(file.patient)
+		df[, Subtype:=NULL]
 		df.all	<- merge(df.all, df, all.x=1, all.y=1, by="Patient")
 		setnames(df.all, c("MyDateNeg1","MyDatePos1"), c("NegT","PosT"))
 		#	reset PosT_Acc=='No' conservatively to end of year / month
 		df.all	<- hivc.db.reset.inaccuratePosT(df.all, nacc.dy.dy= 30, nacc.mody.mo= 11, nacc.mody.dy= 31, verbose=1)
 		#	reset NegT_Acc=='No' conservatively to start of year / month
-		df.all	<- hivc.db.reset.inaccurateNegT(df.all)
+		df.all	<- hivc.db.reset.inaccurateNegT(df.all)		
 		#
 		#	check for clashes in NegT and PosT
 		# 	add viro data to check PosT and NegT
@@ -2675,12 +2624,21 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	if(1)
 	{
 		file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient.csv",sep='/')			#all with sequence
-		file.update			<- paste(dir.name,"derived/ATHENA_2014_06_Patient_All.csv",sep='/')		
+		file.update			<- paste(dir.name,"derived/ATHENA_2014_06_Patient_All.csv",sep='/')
+		date.format			<- "%d/%m/%Y"
 	}
 	if(1)
 	{
 		file				<- paste(dir.name,"derived/ATHENA_2013_03_Patient_AllMSM.csv",sep='/')	#all MSM
-		file.update			<- paste(dir.name,"derived/ATHENA_2014_06_Patient_AllMSM.csv",sep='/')	#all MSM update		
+		file.update			<- paste(dir.name,"derived/ATHENA_2014_06_Patient_AllMSM.csv",sep='/')	#all MSM update
+		date.format			<- "%d/%m/%Y"
+	}
+	if(1)
+	{
+		dir.name			<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+		file				<- NA
+		file.update			<- paste(dir.name,"ATHENA_1502_All_Patient.csv",sep='/')
+		date.format			<- "%d/%m/%y"
 	}
 	
 	
@@ -2692,48 +2650,67 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	NA.time				<- c("","01/01/1911","11/11/1911")		
 	NA.transmission		<- 900
 	#	read PATIENT csv data file	
-	df					<- read.csv(file, stringsAsFactors=FALSE)	
-	#
-	#	UPDATE	
-	#	
-	df.update			<- read.csv(file.update, stringsAsFactors=FALSE)
-	tmp					<- as.data.table( merge( subset(df, select=c('Patient','Transmission')), subset(df.update, select=c('Patient','Transmission')), by='Patient' ) )
-	setkey(tmp, Transmission.x)
-	#	Transmission codes changed	!!!
-	#	Transmission.x Transmission.y
-	#   100            100
-	#	101            110
-	#	102            200
-	#	103            300
-	#	104            400
-	#	105            450
-	#	106            600
-	#	108            800
-	#	110            150
-	#	202            202
-	#	900            900
-	df.update$Transmission[df.update$Transmission==110]	<- 101
-	df.update$Transmission[df.update$Transmission==200]	<- 102
-	df.update$Transmission[df.update$Transmission==300]	<- 103
-	df.update$Transmission[df.update$Transmission==400]	<- 104
-	df.update$Transmission[df.update$Transmission==450]	<- 105
-	df.update$Transmission[df.update$Transmission==600]	<- 106
-	df.update$Transmission[df.update$Transmission==800]	<- 108
-	df.update$Transmission[df.update$Transmission==150]	<- 110	
-	cat(paste('\ndifferent variables that are new in update=',paste(setdiff(colnames(df.update), colnames(df)), collapse=' ')))
-	#	no update for patients in df that are not in df.update
-	tmp					<- merge( data.frame(Patient=setdiff( df[, 'Patient'], df.update[, 'Patient'])), df, by='Patient' )
-	tmp$DateAIDS		<- ''
-	tmp$Acute			<- tmp$AcuteInfection
-	cat(paste('\nFound patients in df that are not in update, n=',nrow(tmp)))
-	#	update for all other patients in df
-	df					<- merge( subset(df, select=c(Patient, DateFirstEverCDCC)), df.update, by='Patient', all.y=1 )
-	for(x in setdiff(colnames(df), colnames(tmp)))
+	if(!is.na(file))
 	{
-		cat(paste('\nadding new row to those entries with no update',x))
-		tmp[[x]]= NA
-	}		
-	df					<- rbind( df, subset(tmp, select=colnames(df)) )
+		df					<- read.csv(file, stringsAsFactors=FALSE)	
+		#
+		#	UPDATE	
+		#	
+		df.update			<- read.csv(file.update, stringsAsFactors=FALSE)
+		tmp					<- as.data.table( merge( subset(df, select=c('Patient','Transmission')), subset(df.update, select=c('Patient','Transmission')), by='Patient' ) )
+		setkey(tmp, Transmission.x)
+		#	Transmission codes changed	!!!
+		#	Transmission.x Transmission.y
+		#   100            100
+		#	101            110
+		#	102            200
+		#	103            300
+		#	104            400
+		#	105            450
+		#	106            600
+		#	108            800
+		#	110            150
+		#	202            202
+		#	900            900
+		df.update$Transmission[df.update$Transmission==110]	<- 101
+		df.update$Transmission[df.update$Transmission==200]	<- 102
+		df.update$Transmission[df.update$Transmission==300]	<- 103
+		df.update$Transmission[df.update$Transmission==400]	<- 104
+		df.update$Transmission[df.update$Transmission==450]	<- 105
+		df.update$Transmission[df.update$Transmission==600]	<- 106
+		df.update$Transmission[df.update$Transmission==800]	<- 108
+		df.update$Transmission[df.update$Transmission==150]	<- 110	
+		cat(paste('\ndifferent variables that are new in update=',paste(setdiff(colnames(df.update), colnames(df)), collapse=' ')))
+		#	no update for patients in df that are not in df.update
+		tmp					<- merge( data.frame(Patient=setdiff( df[, 'Patient'], df.update[, 'Patient'])), df, by='Patient' )
+		tmp$DateAIDS		<- ''
+		tmp$Acute			<- tmp$AcuteInfection
+		cat(paste('\nFound patients in df that are not in update, n=',nrow(tmp)))
+		#	update for all other patients in df
+		df					<- merge( subset(df, select=c(Patient, DateFirstEverCDCC)), df.update, by='Patient', all.y=1 )
+		for(x in setdiff(colnames(df), colnames(tmp)))
+		{
+			cat(paste('\nadding new row to those entries with no update',x))
+			tmp[[x]]= NA
+		}		
+		df					<- rbind( df, subset(tmp, select=colnames(df)) )		
+	}
+	if(is.na(file))
+	{
+		df.update			<- read.csv(file.update, stringsAsFactors=FALSE)
+		df.update$Transmission[df.update$Transmission==100]	<- 101
+		df.update$Transmission[df.update$Transmission==110]	<- 101
+		df.update$Transmission[df.update$Transmission==150]	<- 110
+		df.update$Transmission[df.update$Transmission==200]	<- 102
+		df.update$Transmission[df.update$Transmission==202]	<- 202
+		df.update$Transmission[df.update$Transmission==300]	<- 103
+		df.update$Transmission[df.update$Transmission==400]	<- 104
+		df.update$Transmission[df.update$Transmission==450]	<- 105
+		df.update$Transmission[df.update$Transmission==600]	<- 106
+		df.update$Transmission[df.update$Transmission==800]	<- 108
+		df.update$Transmission[df.update$Transmission==900]	<- NA_real_
+		df					<- copy(df.update)
+	}
 	#	
 	#
 	df$isDead			<- as.numeric( df[,"DateDied"]!="")
@@ -2741,7 +2718,8 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	if(length(tmp))
 		df[tmp,"Transmission"]<- NA
 	
-	date.var			<- c("DateBorn","MyDateNeg1","MyDatePos1","DateDied","DateLastContact","DateFirstEverCDCC","DateAIDS")		
+	#date.var			<- c("DateBorn","MyDateNeg1","MyDatePos1","DateDied","DateLastContact","DateFirstEverCDCC","DateAIDS")
+	date.var			<- c("DateBorn","MyDateNeg1","MyDatePos1","DateDied","DateLastContact","DateAIDS","FirstMed","DateInCare","T0")
 	for(x in date.var)
 	{
 		cat(paste("\nprocess Time", x))
@@ -2759,11 +2737,12 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 		if(verbose)	cat(paste("\nentries with format ",NA.time[3],", n=", length(nok.idx)))
 		if(length(nok.idx))
 			df[nok.idx,x]	<- NA
-		df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
+		df[,x]			<- as.Date(df[,x], format=date.format)	
 	}
 	
 	df<- data.table(df)
-	setnames(df, c("MyDateNeg1_Acc","MyDatePos1_Acc","Acute","Transmission","HospitalRegion"), c("NegT_Acc","PosT_Acc","isAcute","Trm","RegionHospital"))
+	#setnames(df, c("MyDateNeg1_Acc","MyDatePos1_Acc","Acute","Transmission","HospitalRegion"), c("NegT_Acc","PosT_Acc","isAcute","Trm","RegionHospital"))
+	setnames(df, c("MyDateNeg1_Acc","MyDatePos1_Acc","Acute","Transmission"), c("NegT_Acc","PosT_Acc","isAcute","Trm"))
 	#set(df, NULL, "Patient", factor(df[,Patient]))
 	set(df, which( df[,isAcute%in%NA.Acute] ), "isAcute", NA )		
 	set(df, NULL, "isAcute", factor(df[,isAcute], levels=c(0,1,2), labels=c("No","Yes","Maybe")) )
@@ -2781,8 +2760,8 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	set(df, NULL, "PosT_Acc", factor(df[,PosT_Acc], levels=c(0,1), labels=c("No","Yes")))		
 	set(df, NULL, "isDead", factor(df[,isDead], levels=c(0,1), labels=c("No","Yes")))
 	set(df, NULL, "Trm", factor(df[, Trm], levels=c(100, 101,  102,  202, 103,  104,  105,  106,  107, 108,  110), labels= c("MSM","BI","HET","HETfa","IDU","BLOOD","NEEACC", "PREG", "BREAST", "OTH", "SXCH")) )
-	set(df, NULL, "RegionHospital", factor(df[,RegionHospital], levels=c(1,2,3,4,5,6), labels=c("Amst","N","E","S","W","Curu")))
-	set(df, NULL, "ReasonStopRegistration", factor(df[,ReasonStopRegistration], levels=c(0,1,2,3,4), labels=c("OptOut","Died","Moved","Lost","PrntsOptOut")))	
+	#set(df, NULL, "RegionHospital", factor(df[,RegionHospital], levels=c(1,2,3,4,5,6), labels=c("Amst","N","E","S","W","Curu")))
+	#set(df, NULL, "ReasonStopRegistration", factor(df[,ReasonStopRegistration], levels=c(0,1,2,3,4), labels=c("OptOut","Died","Moved","Lost","PrntsOptOut")))	
 	tmp	<- df[, {
 				tmp		<- NA_character_
 				z		<- Acute_Spec_1%in%c(1L,2L) | Acute_Spec_2%in%c(1L,2L) | Acute_Spec_3%in%c(1L,2L) | Acute_Spec_4%in%c(1L,2L)
@@ -2845,16 +2824,19 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	tmp	<- df[, which(is.na(Acute_Spec) & isAcute=='Maybe')]
 	cat(paste('\nFound entries with is.na(Acute_Spec) and isAcute==Maybe, n=', length(tmp)))
 	set(df, tmp, 'Acute_Spec', 'SYM') 
-	
-	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
-	if(verbose) cat(paste("\nsave to", file))	
-	save(df, file=file)	
+	 	
+	if(verbose) cat(paste("\nsave to", paste(substr(file.update, 1, nchar(file.update)-3),'R',sep='')))	
+	save(df, file=paste(substr(file.update, 1, nchar(file.update)-3),'R',sep=''))	
 }
 ######################################################################################
 project.hivc.Excel2dataframe.Sequences<- function(dir.name= DATA)
 {
+	dir.name		<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.csv",sep='/')
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Sequences_AllMSM.csv",sep='/')
+	date.format		<- "%d/%m/%Y"
+	file			<- paste(dir.name,"ATHENA_1502_All_Sequences.csv",sep='/')
+	date.format		<- "%d/%m/%y"
 	#read SEQUENCE csv data file and preprocess				
 	verbose			<- 1
 	names.GeneCode	<- c("PROT","RT")
@@ -2864,7 +2846,7 @@ project.hivc.Excel2dataframe.Sequences<- function(dir.name= DATA)
 	proc.GeneCode	<- c(1,2)
 	
 	df				<- read.csv(file, stringsAsFactors=FALSE)
-	df[,"DateRes"]	<- as.Date(df[,"DateRes"], format="%d/%m/%Y")	
+	df[,"DateRes"]	<- as.Date(df[,"DateRes"], format=date.format)	
 	nok.idx<- which( df[,"DateRes"]==NA.DateRes )	
 	if(verbose) cat(paste("\nrange of DateRes is",paste(range(df[,"DateRes"], na.rm=1),collapse=', ')))
 	if(verbose) cat(paste("\nentries with missing DateRes, n=", length(nok.idx)))					
@@ -2880,7 +2862,7 @@ project.hivc.Excel2dataframe.Sequences<- function(dir.name= DATA)
 	df				<- lapply(proc.GeneCode,function(gene)
 			{
 				cat(paste("\nprocess GeneCode", gene))
-				tmp				<- df[ df[,"GeneCode"]==gene, c("Patient","SampleCode","DateRes","Sequence"), drop=0 ]								
+				tmp				<- df[ df[,"GeneCode"]==gene, c("Patient","SampleCode","DateRes","Subtype","Sequence"), drop=0 ]								
 				tmp
 			})		
 	names(df)	<- names.GeneCode
@@ -3383,13 +3365,23 @@ project.hivc.clustering.forStephane.onNL<- function()
 	#
 	if(0)
 	{
-		tips.linked.d	<- subset(tips.linked, BRL_TREE_ID==0)
-		heat			<- as.data.table(expand.grid(BS_CUT=seq(0,1,0.05), BRL_CUT=seq(0, 0.2, 0.005), DATA='Dataset Surrogate Linked', DECLARE='Declare Linked'))
+		tips.linked.d	<- copy(tips.linked)
+		#tips.linked.d	<- subset(tips.linked, BRL_TREE_ID==0)
+		heat			<- as.data.table(expand.grid(BS_CUT=seq(0,1,0.01), BRL_CUT=seq(0, 0.2, 0.005), DATA='Dataset Surrogate Linked', DECLARE='Declare Linked'))
 		tmp				<- heat[, list( PC= nrow(subset(tips.linked, BS>=BS_CUT & BRL<=BRL_CUT)) / nrow(tips.linked) ), by=c('BS_CUT','BRL_CUT')]
 		heat			<- merge(heat, tmp, by=c('BS_CUT','BRL_CUT'))
 		heat.df			<- copy(heat)
 		
-		heat			<- as.data.table(expand.grid(BS_CUT=seq(0,1,0.05), BRL_CUT=seq(0, 0.2, 0.005), DATA='Dataset Unlinked', DECLARE='Declare Linked'))
+		ggplot(subset(heat.df, DATA=='Dataset Surrogate Linked' & DECLARE=='Declare Linked' & BS_CUT>=0.5), aes(x=100*BS_CUT, y=100*BRL_CUT, fill=cut(PC, breaks=c(-0.01, 0.01, 0.1, 0.3, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.01), labels=c('<1%','1-10%','10-30%','30-50%','50-60%','60-70%','70-80%','80-90%','90-95%','>95%')))) + geom_tile(colour = "white") +
+				scale_fill_brewer(palette='PiYG') + theme_bw() +
+				scale_x_continuous(expand=c(0,0), breaks=c(50,60,70,80,90,95,100)) + scale_y_continuous(expand=c(0,0), breaks=c(0,2,4,6,8,10,15,20)) +
+				labs(x='bootstrap support threshold\n(%)', y='single linkage branch length threshold\n(%)', fill='Linked sequences\nthat are in same cluster') +
+				#facet_grid(DECLARE~DATA) +
+				theme_bw() + theme(legend.position='bottom') + guides(fill = guide_legend(ncol=4))
+		ggsave(file=paste(outdir,'/',infile,'_Bias.pdf',sep=''), w=5, h=6)
+		
+		
+		heat			<- as.data.table(expand.grid(BS_CUT=seq(0,1,0.01), BRL_CUT=seq(0, 0.2, 0.005), DATA='Dataset Unlinked', DECLARE='Declare Linked'))
 		tmp				<- heat[, list( PC= nrow(subset(tips.unlinked.d, BS>=BS_CUT & BRL<=BRL_CUT)) / nrow(tips.unlinked.d) ), by=c('BS_CUT','BRL_CUT')]
 		heat			<- merge(heat, tmp, by=c('BS_CUT','BRL_CUT'))
 		heat.df			<- rbind(heat.df, heat)
@@ -3405,8 +3397,57 @@ project.hivc.clustering.forStephane.onNL<- function()
 							labs(x='bootstrap support threshold\n(%)', y='single linkage branch length threshold\n(%)', fill='%') +
 							facet_grid(DECLARE~DATA) +
 							theme_bw() + theme(legend.position='bottom') + guides(fill = guide_legend(ncol=5))
-		file			<- paste(outdir,'/',infile,'_heatmaps.pdf',sep='')	
-		ggsave(file= file, w=8, h=8)
+		
+		
+		
+		
+		ggplot(subset(heat.df, DATA=='Dataset Unlinked' & DECLARE=='Declare Unlinked' & BS_CUT>=0.5), aes(x=100*BS_CUT, y=BRL_CUT, fill=cut(PC, include.lowest=0, breaks=c(-1,0.99, 0.999, 0.9999, 0.99995, 0.99999, 1.00, 1.01)))) + geom_tile(colour = "white") +
+				scale_fill_brewer(palette='PiYG') + theme_bw() +
+				scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0)) +
+				labs(x='bootstrap support threshold\n(%)', y='single linkage branch length threshold\n(%)', fill='%') +
+				facet_grid(DECLARE~DATA) +
+				theme_bw() + theme(legend.position='bottom') + guides(fill = guide_legend(ncol=5))
+		
+		
+		ggplot(subset(heat.df, DATA=='Dataset Unlinked' & DECLARE=='Declare Linked' & BS_CUT>=0.5), aes(x=100*BS_CUT, y=BRL_CUT, fill=cut(PC*nrow(tips.unlinked.d), breaks=c(100,80,60,40,20,10,5,1,-1), labels=c('<2','2-5','6-10','11-20','21-40','41-60','61-80','81-100')))) + 
+				geom_tile(colour = "white") +
+				scale_fill_brewer(palette='PiYG') + 
+				theme_bw() +
+				scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0)) +
+				labs(x='bootstrap support threshold\n(%)', y='single linkage branch length threshold\n(%)', fill='%') +
+				facet_grid(DECLARE~DATA) +
+				theme_bw() + theme(legend.position='bottom') + guides(fill = guide_legend(ncol=5))
+		
+		
+		
+		#tips.linked.d	<- subset(tips.linked, BRL_TREE_ID==0)
+		heat			<- as.data.table(expand.grid(BS_CUT=seq(0,1,0.05), BRL_CUT=seq(0, 0.2, 0.005)))
+		tmp				<- heat[, {
+										linked.declared.linked		<- nrow(subset(tips.linked, BS>=BS_CUT & BRL<=BRL_CUT))
+										linked.declared.unlinked	<- nrow(tips.linked)-linked.declared.linked
+										unlinked.declared.linked	<- nrow(subset(tips.unlinked.d, BS>=BS_CUT & BRL<=BRL_CUT))
+										unlinked.declared.unlinked	<- nrow(tips.unlinked.d)-unlinked.declared.linked
+										list( 	LdL=linked.declared.linked,
+												LdU=linked.declared.unlinked,
+												UdL=unlinked.declared.linked,
+												UdU=unlinked.declared.unlinked,
+												FDR_L= unlinked.declared.linked/(unlinked.declared.linked+linked.declared.linked),
+											  	FDR_U= linked.declared.unlinked/(linked.declared.unlinked+unlinked.declared.unlinked)	)						
+									}, by=c('BS_CUT','BRL_CUT')]
+		heat			<- merge(heat, tmp, by=c('BS_CUT','BRL_CUT'))
+		set(heat, heat[, which(is.nan(FDR_L))], 'FDR_L', 0)
+		set(heat, heat[, which(is.nan(FDR_U))], 'FDR_U', 0)
+		tmp				<- melt(heat, measure.vars=c('FDR_L','FDR_U'))
+		ggplot(tmp, aes(x=100*BS_CUT, y=BRL_CUT, fill=cut(value, breaks=c(-0.01, 0.01, 0.05, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.01)))) + 
+				geom_tile(colour = "white") +
+				scale_fill_brewer(palette='PiYG') + theme_bw() +
+				scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0)) +
+				labs(x='bootstrap support threshold\n(%)', y='single linkage branch length threshold\n(%)', fill='%') +
+				facet_grid(~variable) +
+				theme_bw() + theme(legend.position='bottom') + guides(fill = guide_legend(ncol=5))
+		
+		
+		
 	}
 	#
 	#	get false discovery rate

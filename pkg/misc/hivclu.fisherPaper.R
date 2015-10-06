@@ -1,4 +1,172 @@
 ######################################################################################
+project.athena.Fisheretal.revision.subtypeB<- function()
+{
+	tmp		<- subset(df.all, Trm%in%c('MSM','BI') & PosSeqT<'2013-04-01')
+	setkey(tmp, Patient)
+	tmp		<- unique(tmp)
+	tmp[, table(Subtype)]		#94% are B
+	
+	tmp[, tC:= cut(hivc.db.Date2numeric(PosSeqT), breaks=c(-Inf,2003, 2006, 2009, Inf))]
+	
+	tmp[, table(Subtype, tC)]
+	tmp[, mean(Subtype=='B'), by='tC']
+}
+######################################################################################
+project.athena.Fisheretal.revision.coclustering.recentlate<- function()
+{
+	crl		<- clumsm.info[, {
+				
+				LATn	<- ADVn	<- 0L
+				z		<- which(CD4_T1<200 & Trm%in%c('BI','MSM'))
+				if(length(z))
+					ADVn= length(setdiff(Patient[z], ri.CLU$Patient))
+				z		<- which(CD4_T1<350 & Trm%in%c('BI','MSM'))
+				if(length(z))
+					LATn= length(setdiff(Patient[z], ri.CLU$Patient))				
+				list( LATn=LATn, ADVn=ADVn, RECn=length(intersect(Patient, ri.CLU$Patient)), clu.npat=clu.npat[1], clu.nFrgnInfection=clu.nFrgnInfection[1], clu.AnyPos_T1=clu.AnyPos_T1[1] )
+			}, by='cluster']
+	crl[, LATp:= LATn/clu.npat]
+	crl[, RECp:= RECn/clu.npat]
+	crl[, RECc:= RECn>0]
+	crl[, tC:= cut(clu.AnyPos_T1, breaks=c(1985, 2000, 2007, 2013))]
+	
+	crlm1	<- gamlss(formula=LATn~RECn, family=NO(), data=subset(crl, select=c(LATn, RECn, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
+	crl[, m1p:=predict(crlm1)]	
+	ggplot(crl, aes(x=RECn, colour=clu.AnyPos_T1)) +
+			geom_abline(slope=1, intercept=0) +
+			geom_line(aes(y=m1p)) +
+			geom_jitter(aes(y=LATn), position = position_jitter(width=1/3, height=1/3), alpha=0.8) + theme_bw()
+	
+	crlm5	<- gamlss(formula=LATn~RECn:tC, family=NO(), data=subset(crl, select=c(LATn, RECn, tC, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
+	crl[, m5p:=predict(crlm5)]
+	ggplot(crl, aes(x=RECn, colour=clu.AnyPos_T1)) +
+			geom_abline(slope=1, intercept=0) +
+			geom_line(aes(y=m5p)) +			
+			geom_jitter(aes(y=LATn), position = position_jitter(width=1/3, height=1/3), alpha=0.8) + theme_bw() +
+			facet_grid(~tC)
+	
+	crlm6	<- gamlss(formula=LATn~RECc:tC, family=NO(), data=subset(crl, select=c(LATn, RECc, tC, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
+	crl[, m6p:=predict(crlm6)]
+	crl[, tC:= cut(clu.AnyPos_T1, breaks=c(1985, 2000, 2007, 2011, 2013))]
+	crl[, clu.npatC:= cut(clu.npat, breaks=c(-1,3,7,60), labels=c('<4','4-7','>7'))]
+	box.stat <- function(x)
+	{
+		v <- c(max(min(x), mean(x)-diff(quantile(x, p=c(0.25, 0.75)))), mean(x) - 2*sd(x)/sqrt(length(x)), mean(x), mean(x) + 2*sd(x)/sqrt(length(x)), min(max(x),mean(x)+diff(quantile(x, p=c(0.25, 0.75)))))
+		names(v) <- c("ymin", "lower", "middle", "upper", "ymax")
+		v
+	}
+	tmp		<- melt(crl, measure.vars=c('LATn','ADVn'))
+	set(tmp, tmp[, which(variable=='LATn')],'variable','late presenters\nin phylogenetic cluster')
+	set(tmp, tmp[, which(variable=='ADVn')],'variable','men with advanced disease\nin phylogenetic cluster')
+	ggp		<- ggplot(tmp, aes(x=RECc, y=value)) +
+			stat_summary(fun.data=box.stat, geom="boxplot", outlier.shape =NA) +
+			geom_jitter(aes(y=value), colour='grey70', position = position_jitter(width=1/3, height=1/10), alpha=0.7) + 							 
+			theme_bw() +
+			facet_grid(variable~tC, scales='free') + labs(x='\npresence of recipient MSM\nin cluster', y='#') +
+			theme(legend.position='bottom')
+	z <- ggplot_gtable(ggplot_build(ggp))
+	z <- gtable_add_rows(z, z$heights[[3]], 2)
+	z <- gtable_add_grob(z, 
+			list(	rectGrob(height = unit(2, "npc"), gp = gpar(col='black', fill=gray(0.8))),
+					textGrob("phylogenetic clusters by first date of diagnosis", gp = gpar(col = 'black'))), 3, 4, 3, 8, name = paste(runif(2)))
+	z <- gtable_add_rows(z, unit(2/8, "line"), 3)
+	grid.newpage()
+	pdf(file='~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/150626_revisionlate.pdf', w=10, h=7)
+	grid.draw(z)
+	dev.off()
+	
+	ggp		<- ggplot(tmp, aes(x=RECc, y=value)) +
+			stat_summary(fun.data=box.stat, geom="boxplot", outlier.shape =NA) +
+			geom_jitter(aes(y=value), colour='grey70', position = position_jitter(width=1/3, height=1/10), alpha=0.7) + 							 
+			theme_bw() +
+			facet_grid(variable~clu.npatC, scales='free') + labs(x='\npresence of recipient MSM\nin cluster', y='#') +
+			theme(legend.position='bottom')
+	z <- ggplot_gtable(ggplot_build(ggp))
+	z <- gtable_add_rows(z, z$heights[[3]], 2)
+	z <- gtable_add_grob(z, 
+			list(	rectGrob(height = unit(2, "npc"), gp = gpar(col='black', fill=gray(0.8))),
+					textGrob("number of men in phylogenetic cluster", gp = gpar(col = 'black'))), 3, 4, 3, 8, name = paste(runif(2)))
+	z <- gtable_add_rows(z, unit(2/8, "line"), 3)
+	grid.newpage()
+	pdf(file='~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/150626_revisionlate_clusize.pdf', w=10, h=7)
+	grid.draw(z)
+	dev.off()
+	
+	ggplot(crl, aes(x=clu.npat, y=LATn)) + geom_jitter(aes(colour=RECc), position = position_jitter(width=1/5, height=1/10), alpha=0.7) +			 
+			geom_smooth(method='lm', colour='black', fill='black', alpha=0.4) +
+			scale_colour_brewer(palette='Set2') +
+			coord_trans(xtrans="log10")  +			
+			geom_smooth(colour='blue', fill='blue', alpha=0.2) +
+			theme_bw() +
+			labs(colour='recipient MSM\nin cluster', x='men in cluster',y='late presenters in cluster') +
+			theme(legend.position='bottom')
+	ggsave(file='~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/150626_revisionlate_LATnvsSize.pdf', h=10, w=6)
+	
+	
+	crlm2	<- gamlss(formula=LATn~RECc+clu.npat, family=NO(), data=subset(crl, select=c(LATn, RECc, RECn, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
+	#	RECcTRUE      -0.4739    0.081008   -5.850   7.742e-09
+	crlm2b	<- gamlss(formula=LATn~RECc+clu.npat, sigma.formula=~clu.npat, family=NO(), data=subset(crl, select=c(LATn, RECc, RECn, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
+	#	RECcTRUE      -0.5747     0.06584   -8.729  2.119e-17
+	crlm3	<- gamlss(formula=LATn~RECc+clu.npat, family=PO(), data=subset(crl, select=c(LATn, RECc, RECn, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
+	#	RECcTRUE     -0.14073    0.078411   -1.795   7.269e-02
+	crlm4	<- gamlss(formula=LATn~RECc+clu.npat, family=PO(mu.link='identity'), data=subset(crl, select=c(LATn, RECc, RECn, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
+	#	RECcTRUE      -0.5525     0.07182   -7.693  1.433e-14
+	crlp4	<- data.table(RECc=TRUE, clu.npat=crl[, sort(unique(clu.npat))])
+	crlp4[, LATnp:= predict(crlm4, data=subset(crl, select=c(LATn, RECc, RECn, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)), newdata=crlp4)]
+	crlp4	<- merge(crl, subset(crlp4, select=c(clu.npat, LATnp)), by='clu.npat')
+	ggplot(crlp4, aes(x=RECc, y=LATn-LATnp)) +
+			stat_summary(fun.data=box.stat, geom="boxplot", outlier.shape =NA) +
+			geom_jitter(colour='grey70', position = position_jitter(width=1/3, height=1/10), alpha=0.7) +
+			geom_hline(yintercept=0, colour='blue') +
+			theme_bw() +
+			#facet_grid(~tC, scales='free') + 
+			labs(x='\npresence of recipient MSM\nin cluster', y='late presenters in cluster minus\nexpected number of late presenters in clusters with same size that have a recipient') +
+			theme(legend.position='bottom')
+	ggsave(file='~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/150626_revisionlate_contrastLATn.pdf', h=10, w=6)
+	
+	
+	library(coin)
+	wilcox_test(LATn~factor(RECc), data=subset(crl, tC=='(2007,2013]'), distribution='exact', alternative = "greater")
+	#	factors: 1=FALSE, 2=TRUE. contrast is mu=Y_1-Y_2. so Null is mu<=0 (absence does not results in more late representers)
+	oneway_test(LATn~factor(RECc), data=subset(crl, tC=='(2007,2013]'), distribution='exact', alternative = "greater")
+	#	p-value = 0.03548 n=175
+	oneway_test(ADVn~factor(RECc), data=subset(crl, tC=='(2007,2013]'), distribution='exact', alternative = "greater")
+	#	p-value = 0.2035
+	oneway_test(LATn~factor(RECc), data=crl, distribution='exact', alternative = "greater")
+	#	p-value = 0.9996 n=659
+	oneway_test(ADVn~factor(RECc), data=crl, distribution='exact', alternative = "greater")
+	#	p-value = 0.8958
+	crl[, tC:= cut(clu.AnyPos_T1, breaks=c(1985, 2006.6, 2008, 2009.5, 2011, 2013))]
+	ggplot(crl, aes(x=RECc, y=LATn)) +
+		geom_boxplot(outlier.shape =NA) +
+		geom_jitter(aes(y=LATn), colour='grey70', position = position_jitter(width=1/3, height=1/3), alpha=0.7) + 				
+		stat_summary(fun.y=mean, colour="red", geom="point", shape=18, size=3,show_guide = FALSE) + 
+		theme_bw() +
+		facet_grid(~tC) + labs(x='\npresence of recipient MSM\nin cluster', y='late presenters in phylogenetic cluster\n(#)') +
+		theme(legend.position='bottom')
+	
+		
+	
+	crlm2	<- gamlss(formula=LATn~RECn+clu.npat-1, family=NO(), data=subset(crl, select=c(LATn, RECn, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
+	crl[, m1p:=predict(crlm1)]
+	
+	crlm3	<- gamlss(formula=LATp~RECp-1, family=NO(), data=subset(crl, select=c(LATp, RECp, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
+	crl[, m3p:=predict(crlm3)]
+	ggplot(crl, aes(x=RECp, colour=clu.AnyPos_T1)) +
+			geom_abline(slope=1, intercept=0) +
+			geom_line(aes(y=m3p)) +
+			geom_jitter(aes(y=LATp), position = position_jitter(width=1/100, height=1/100), alpha=0.8) + theme_bw()
+	
+	crlm4	<- gamlss(formula=LATp~RECp:tC, family=NO(), data=subset(crl, select=c(LATp, RECp, tC, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
+	crl[, m4p:=predict(crlm4)]
+	ggplot(crl, aes(x=RECp, colour=clu.AnyPos_T1)) +
+			geom_line(aes(y=m4p)) +			
+			geom_jitter(aes(y=LATp), position = position_jitter(width=1/100, height=1/100), alpha=0.8) + theme_bw() +
+			facet_grid(~tC)
+	
+	
+}
+######################################################################################
 project.athena.Fisheretal.composition.censoringfraction<- function()
 {
 	require(data.table)
