@@ -96,7 +96,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	runs.av.info	<- dcast.data.table(runs.av.info, method.brl+method.risk+STAT+HYPO~EST, value.var='AV')
 	runs.av.info[, TEST_TYPE:= 'NONE']
 	set(runs.av.info, runs.av.info[, which(grepl('TestC|PROUDC|IPrEXC', HYPO))], 'TEST_TYPE', 'ELISA' )
-	set(runs.av.info, runs.av.info[, which(grepl('TestA', HYPO))], 'TEST_TYPE', 'Acute' )
+	set(runs.av.info, runs.av.info[, which(grepl('TestA', HYPO))], 'TEST_TYPE', 'RNA' )
 	runs.av.info[, TEST_FREQ:= 'NONE']
 	tmp				<- runs.av.info[, which(grepl('A[0-9]+', HYPO))]
 	set(runs.av.info, tmp, 'TEST_FREQ', substring(runs.av.info[tmp, regmatches(HYPO, regexpr('A[0-9]+', HYPO))],2) )
@@ -108,15 +108,15 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	set(runs.av.info, tmp, 'TEST_COV', runs.av.info[tmp, substr(TEST_COV, 1, nchar(TEST_COV)-2)] )
 	runs.av.info[, PREV:= 'NONE']
 	set(runs.av.info, runs.av.info[, which(!grepl('Test', HYPO) & !grepl('Prest', HYPO) & grepl('ART', HYPO))], 'PREV', 'TasP')	
-	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & TEST_TYPE!='Acute')], 'PREV', 'test')
-	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & TEST_TYPE=='Acute')], 'PREV', 'test (RNA)')
+	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & TEST_TYPE!='RNA')], 'PREV', 'test')
+	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & TEST_TYPE=='RNA')], 'PREV', 'test (RNA)')
 	tmp				<- runs.av.info[, which(grepl('Test', HYPO) & grepl('ART', HYPO))]
 	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '-treat',sep='')]) 	
 	set(runs.av.info, runs.av.info[, which(grepl('Prest', HYPO) )], 'PREV', 'test-PrEP')
 	tmp				<- runs.av.info[, which(grepl('Prest', HYPO) & grepl('PROUD', HYPO))]
-	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(86%)')])
+	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(86% eff)')])
 	tmp				<- runs.av.info[, which(grepl('Prest', HYPO) & grepl('IPrEX', HYPO))]
-	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(44%)')])
+	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(44% eff)')])
 	tmp				<- runs.av.info[, which(grepl('Prest', HYPO) & grepl('ART', HYPO))]	
 	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '-treat',sep='')])	
 	tmp				<- runs.av.info[, which(grepl('ARTat500', HYPO))]
@@ -125,12 +125,37 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	set(runs.av.info, tmp, 'PREV', runs.av.info[tmp, paste(PREV, '(Immediate)')])	
 	tmp				<- c(	"TasP (CD4<500)", "TasP (Immediate)", "test", "test (RNA)",                                               
 							"test-treat (CD4<500)", "test-treat (Immediate)", "test (RNA)-treat (Immediate)", 
-							"test-PrEP (44%)", "test-PrEP (44%)-treat (CD4<500)", "test-PrEP (44%)-treat (Immediate)",   
-							"test-PrEP (86%)", "test-PrEP (86%)-treat (CD4<500)", "test-PrEP (86%)-treat (Immediate)" )
+							"test-PrEP (44% eff)", "test-PrEP (44% eff)-treat (CD4<500)", "test-PrEP (44% eff)-treat (Immediate)",   
+							"test-PrEP (86% eff)", "test-PrEP (86% eff)-treat (CD4<500)", "test-PrEP (86% eff)-treat (Immediate)" )
 	set( runs.av.info, NULL, 'PREV', runs.av.info[, factor(PREV, levels=rev(tmp), labels=rev(tmp))] )	
 	runs.av.info	<- subset(runs.av.info, !is.na(PREV) & STAT=='Pjx.e0cp')
 	#
-	#	plot 
+	#	plot for Sciene TM revision
+	#
+	tmp				<- subset( runs.av.info, grepl('TasP', PREV), select=which(!grepl('TEST_',names(runs.av.info))) )
+	tmp				<- merge(tmp, as.data.table(expand.grid(PREV=unique(tmp$PREV), TEST_COV=seq(30,70,20), TEST_FREQ=12, TEST_TYPE='ELISA')), by='PREV', allow.cartesian=TRUE)	
+	runs.av.plot	<- subset( runs.av.info, !TEST_FREQ%in%c('NONE','6') & !TEST_COV%in%c('NONE', '40','60')  )
+	runs.av.plot	<- rbind(runs.av.plot, tmp, use.names=TRUE)	
+	set(runs.av.plot, NULL, 'LEGEND', runs.av.plot[, paste('annual testing coverage\nof probable transmitters\n',TEST_COV,'%',sep='')])
+	#
+	#	plot for main text ie 3pa1H1.48C2V100bInfT7
+	#
+	setkey(runs.av.plot, PREV)
+	ggplot( subset(runs.av.plot, STAT=='Pjx.e0cp' & method.risk=='m2Awmx.wtn' & method.brl=='3pa1H1.48C2V100bInfT7'), aes(x=PREV, fill=factor( grepl('PrEP', PREV) + grepl('86%', PREV)) ) ) +
+			geom_hline(yintercept=50, colour="grey70", size=2) +
+			scale_fill_manual(values=c("#FED9A6", "#FFFFCC", "#E5D8BD"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
+			geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color='black', width=0.9, size=0.7) +
+			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+			labs(x='', y='\nHIV infections amongst MSM\nthat could have been averted in 09/07 - 10/12\n(%)') + 
+			coord_flip() +			
+			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
+			facet_grid(~LEGEND)
+	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_Prevention.pdf'
+	ggsave(file=file, w=16, h=6)	
+	
+	#
+	#	plot before Sciene TM revision
 	#
 	tmp				<- subset( runs.av.info, grepl('TasP', PREV), select=which(!grepl('TEST_',names(runs.av.info))) )
 	tmp				<- merge(tmp, as.data.table(expand.grid(PREV=unique(tmp$PREV), TEST_COV=seq(30,70,20), TEST_FREQ=12, TEST_TYPE='ELISA')), by='PREV', allow.cartesian=TRUE)	

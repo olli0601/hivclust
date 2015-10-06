@@ -703,10 +703,11 @@ hivc.pipeline.props_univariate<- function()
 				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.148), method.thresh.pcoal=c(0.2), method.thresh.bs=c(0.8), method.cut.brl=c(0.02, 0.04) )) 
 		)
 		df.method				<- do.call('rbind', df.method)				
-		df.method				<- df.method[c(12,13),]
+		#df.method				<- df.method[c(12,13),]
+		df.method				<- df.method[7,]
 		if(1)
 			df.method[, method.risk:='m2Awmx.wtn.tp4']
-		if(0)
+		if(1)
 			df.method			<- merge(df.method, data.table(DUMMY=1, method.risk=c('m2Awmx.wtn.tp4','m2Awmx.noscore.tp4','m2Awmx.nophyloscore.tp4')), by='DUMMY')
 		if(1)
 			tmp					<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,												
@@ -722,7 +723,9 @@ hivc.pipeline.props_univariate<- function()
 							#	Test + PrEP + ARTat500
 							paste('PrestIPrEXC12m',testing.cov,'pc',testing.cov,'pc+ARTat500',sep=''), paste('PrestPROUDC12m',testing.cov,'pc',testing.cov,'pc+ARTat500',sep=''),
 							#	test + treat
-							paste('TestC12m',testing.cov,'pc+ImmediateART',sep=''), paste('TestC12m',testing.cov,'pc+ARTat500',sep='')
+							paste('TestC12m',testing.cov,'pc+ImmediateART',sep=''), paste('TestC12m',testing.cov,'pc+ARTat500',sep=''),
+							#	test (Acute)  + treat		
+							paste('TestA12m',seq(30,70,10),'pc+ImmediateART',sep=''), paste('TestA12m',seq(30,70,10),'pc+ARTat500',sep='')
 					)
 			)
 		if(0)
