@@ -133,15 +133,18 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	#	plot for Sciene TM revision
 	#
 	tmp				<- subset( runs.av.info, grepl('TasP', PREV), select=which(!grepl('TEST_',names(runs.av.info))) )
-	tmp				<- merge(tmp, as.data.table(expand.grid(PREV=unique(tmp$PREV), TEST_COV=seq(30,70,20), TEST_FREQ=12, TEST_TYPE='ELISA')), by='PREV', allow.cartesian=TRUE)	
+	tmp				<- merge(tmp, as.data.table(expand.grid(PREV=unique(tmp$PREV), TEST_COV=c(18,seq(30,70,20)), TEST_FREQ=12, TEST_TYPE='ELISA')), by='PREV', allow.cartesian=TRUE)	
 	runs.av.plot	<- subset( runs.av.info, !TEST_FREQ%in%c('NONE','6') & !TEST_COV%in%c('NONE', '40','60')  )
 	runs.av.plot	<- rbind(runs.av.plot, tmp, use.names=TRUE)	
 	set(runs.av.plot, NULL, 'LEGEND', runs.av.plot[, paste('annual testing coverage\nof probable transmitters\n',TEST_COV,'%',sep='')])
+	set(runs.av.plot, runs.av.plot[, which(grepl('18',LEGEND))], 'LEGEND', 'no improvements to\nannual testing coverage')
+	tmp				<- c("no improvements to\nannual testing coverage","annual testing coverage\nof probable transmitters\n30%","annual testing coverage\nof probable transmitters\n50%","annual testing coverage\nof probable transmitters\n70%")
+	set(runs.av.plot, NULL, 'LEGEND', runs.av.plot[, factor(LEGEND, levels=tmp, labels=tmp)])
 	#
 	#	plot for main text ie 3pa1H1.48C2V100bInfT7
 	#
 	setkey(runs.av.plot, PREV)
-	ggplot( subset(runs.av.plot, STAT=='Pjx.e0cp' & method.risk=='m2Awmx.wtn' & method.brl=='3pa1H1.48C2V100bInfT7'), aes(x=PREV, fill=factor( grepl('PrEP', PREV) + grepl('86%', PREV)) ) ) +
+	ggplot( subset(runs.av.plot, grepl('test',PREV) & !grepl('test (RNA)-treat',PREV, fixed=1) & STAT=='Pjx.e0cp' & method.risk=='m2Awmx.wtn' & method.brl=='3pa1H1.48C2V100b0.02T7'), aes(x=PREV, fill=factor( grepl('PrEP', PREV) + grepl('86%', PREV)) ) ) +
 			geom_hline(yintercept=50, colour="grey70", size=2) +
 			scale_fill_manual(values=c("#FED9A6", "#FFFFCC", "#E5D8BD"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
 			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
@@ -151,7 +154,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(~LEGEND)
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_Prevention.pdf'
+	file			<- '~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_Prevention.pdf'
 	ggsave(file=file, w=16, h=6)	
 	
 	#
@@ -628,8 +631,10 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 	#	get prop in ART stages after first suppression	
 	#	method.realloc<- 'PrestIPrEXC12m50pc50pc+ImmediateART'
 	#	method.realloc<- 'PrestPROUDC12m50pc50pc'
-	#	method.realloc<- 'TestC12m70pc+ImmediateART'
-	stopifnot(grepl('Test|ImmediateART|ARTat500|RPrEP|RPrEP|Prest',method.realloc))	
+	#	method.realloc<- 'TrestPROUDC12m50pc50pc28y'
+	#	method.realloc<- 'TestC12m18pc+ImmediateART'
+	#	method.realloc<- 'ImmediateART'
+	stopifnot(grepl('Test|ImmediateART|ARTat500|RPrEP|RPrEP|Prest|Trest',method.realloc))	
 	options(warn=0)	
 	if(resume & !is.na(save.file))
 	{
@@ -692,6 +697,12 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 						YX.h				<- copy(tmp$YX.h)
 						nt.table.h			<- copy(tmp$nt.table.h)						
 					}
+					if(grepl('Trest',method.realloc))
+					{			
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocPrEPandTestForTarget.getYXetc( YX.h, nt.table.h, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=sample, t=sample, eff=median')			
+						YX.h				<- copy(tmp$YX.h)
+						nt.table.h			<- copy(tmp$nt.table.h)						
+					}					
 					if(grepl('ART',method.realloc))
 					{
 						tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h, nt.table.h, method.risk, t.firstsuppressed=0, t.delta=t.period, method.realloc=method.realloc, method.sample='pair, stage=sample, y=sample')
@@ -801,7 +812,7 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 					#	bootstrap over reallocations	
 					if(grepl('Test',method.realloc))
 					{
-						tmp					<- project.athena.Fisheretal.Hypo.ReallocTest.getYXetc( YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=sample, t=sample', verbose=FALSE)			
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocTest.getYXetc( YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=sample, t=sample', verbose=TRUE)			
 						YX.h.bs				<- copy(tmp$YX.h)
 						nt.table.h.bs		<- copy(tmp$nt.table.h)
 					}					
@@ -811,7 +822,13 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 						tmp					<- project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc( YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=sample, t=sample, eff=sample', verbose=FALSE)			
 						YX.h.bs				<- copy(tmp$YX.h)
 						nt.table.h.bs		<- copy(tmp$nt.table.h)						
-					}					
+					}
+					if(grepl('Trest',method.realloc))
+					{			
+						tmp					<- project.athena.Fisheretal.Hypo.ReallocPrEPandTestForTarget.getYXetc( YX.h.bs, nt.table.h.bs, method.risk, predict.t2inf, t2inf.args, df.all, YXf=YXf, th.starttime=2008.5, th.endtime=2011, t.period=t.period, method.realloc=method.realloc, method.sample= 'stage=sample, y=sample, t=sample, eff=median', verbose=FALSE)			
+						YX.h.bs				<- copy(tmp$YX.h)
+						nt.table.h.bs		<- copy(tmp$nt.table.h)						
+					}										
 					if(grepl('ART',method.realloc))
 					{
 						tmp					<- project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc(YX.h.bs, nt.table.h.bs, method.risk, t.firstsuppressed=0, t.delta=t.period,  method.realloc=method.realloc, method.sample='pair, stage=sample, y=sample', verbose=FALSE)
@@ -824,21 +841,26 @@ project.athena.Fisheretal.Hypo.run<- function(YXe, method.risk, predict.t2inf=NU
 						YX.h.bs				<- copy(tmp$YX.h)
 						nt.table.h.bs		<- copy(tmp$nt.table.h)
 					}
+					#z<- merge(nt.table.bs, nt.table.h.bs, by=c('Patient','risk','factor','stat'))
 					stopifnot( length(setdiff( YX.h.bs[, unique(Patient)], YX.bs[, unique(Patient)] ))==0  )
 					stopifnot( length(setdiff( nt.table.h.bs[, unique(Patient)], nt.table.bs[, unique(Patient)] ))==0 )
 					#	prepare nt.table for bs YX and YX.hypothetical
 					nt.table.bs				<- project.athena.Fisheretal.Wallinga.prep.nttable(nt.table.bs, YX=YX.bs)
-					nt.table.h.bs			<- project.athena.Fisheretal.Wallinga.prep.nttable(nt.table.h.bs, YX=YX.h.bs)							
+					nt.table.h.bs			<- project.athena.Fisheretal.Wallinga.prep.nttable(nt.table.h.bs, YX=YX.h.bs)
+					#z<- merge(nt.table.bs, nt.table.h.bs, by=c('Patient','risk','factor'))
 					#	bs censoring probability				
 					ct.bs					<- subset( ct, bs==sample(ct[, unique(bs)], 1) )
 					#	bs censoring adjustment for nt.table
 #print('OK1')			
 					nt.table.bs				<- project.athena.Fisheretal.Wallinga.censoring(ct.bs, nt.table.bs, nt.table.4c=nt.table)
 					nt.table.h.bs			<- project.athena.Fisheretal.Wallinga.censoring(ct.bs, nt.table.h.bs, nt.table.4c=nt.table)
-#print('OK3')								
+#print('OK3')				
+#z<- merge(nt.table.bs, nt.table.h.bs, by=c('Patient','risk','factor'))
 					stopifnot(length(setdiff( subset(nt.table.h.bs, YX>0)[, sort(unique(Patient))], subset(nt.table.bs, YX>0)[, unique(Patient)]))==0)
 					#	bootstrap sample missing probabilities
+					set.seed(bs.i)
 					missing.bs				<- project.athena.Fisheretal.Hypo.prepmissingbs(YX.bs, nt.table.bs, method.risk, YXf=YXf, method.missingy='y=median')
+					set.seed(bs.i)
 					missing.h.bs			<- project.athena.Fisheretal.Hypo.prepmissingbs(YX.h.bs, nt.table.h.bs, method.risk, YXf=YXf, method.missingy='y=median')							
 					stopifnot(length(setdiff( missing.h.bs[, sort(unique(Patient))], missing.bs[, sort(unique(Patient))]))==0)							
 					#	calculate proportion of recipients averted	
@@ -1257,7 +1279,7 @@ project.athena.Fisheretal.Hypo.ReallocDiagToART.getYXetc<- function(YX, nt.table
 ######################################################################################
 project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, method.risk, predict.t2inf, t2inf.args, df.all, YXf=NULL, th.starttime=2008.5, th.endtime=2011, t.period=0.125, test.pc.prtr.current= 0.173, method.minLowerUWithNegT=1, method.resolveUAna=0, method.realloc='TestC18m', method.sample= 'stage=prop, y=median, t=mean', verbose=TRUE)
 {
-	#method.realloc<- 'TestC12m50pc'
+	#method.realloc<- 'TestC12m18pc'
 	stopifnot(grepl('stage=sample|stage=prop',method.sample))
 	stopifnot(grepl('y=sample|y=median|y=mean',method.sample))
 	stopifnot(grepl('t=mean|t=sample|t=start',method.sample))
@@ -1567,6 +1589,430 @@ project.athena.Fisheretal.Hypo.ReallocTest.getYXetc<- function( YX, nt.table, me
 }
 ######################################################################################
 #	method.sample<- 't=start, stage=prop, y=median, eff=median'; th.starttime=2008.5; th.endtime=2011;  t.period=0.125; method.minLowerUWithNegT=1; method.resolveUAna=1
+project.athena.Fisheretal.Hypo.ReallocPrEPandTestForTarget.getYXetc<- function( YX, nt.table, method.risk, predict.t2inf, t2inf.args, df.all, YXf=NULL, th.starttime=2008.5, th.endtime=2011, t.period=0.125, test.pc.prtr.current= 0.173, method.minLowerUWithNegT=1, method.resolveUAna=0, method.realloc='PrestC18m50pc', method.sample= "t=start, stage=prop, y=median, eff=median", verbose=TRUE)
+{
+	stopifnot(grepl('stage=sample|stage=prop',method.sample))
+	stopifnot(grepl('y=sample|y=median|y=mean',method.sample))
+	stopifnot(grepl('t=mean|t=sample|t=start',method.sample))
+	stopifnot(grepl('eff=sample|eff=median',method.sample))
+	stopifnot(grepl('Trest',method.realloc))
+	method.reallocate	<- '^U'
+	tmp					<- regmatches(method.realloc,regexpr('Trest[[:alnum:]]+', method.realloc))
+	prep.eff			<- substr(tmp,6,10)
+	prest.delay			<- substr(tmp,11,11)
+	prest.repeat		<- as.numeric(substr(tmp,12,13)) / 12
+	test.pc.target		<- regmatches(method.realloc,regexpr('m[0-9]+pc', tmp))
+	test.pc.target		<- as.numeric(substr(test.pc.target, 2, nchar(test.pc.target)-2)) / 100
+	prep.pc				<- regmatches(method.realloc,regexpr('c[0-9]+pc', tmp))
+	prep.pc				<- as.numeric(substr(prep.pc, 2, nchar(prep.pc)-2)) / 100
+	prep.tgt			<- regmatches(method.realloc,regexpr('[0-9]+y$', tmp))
+	prep.tgt			<- as.numeric(substr(prep.tgt, 1, nchar(prep.tgt)-1))
+	stopifnot(prep.eff%in%c('PROUD','IPrEX'), prest.delay%in%c('A','C'), is.finite(prep.tgt), is.finite(prest.repeat), is.finite(test.pc.target), is.finite(prep.pc))
+	prest.delay			<- ifelse(prest.delay=='A',0,1/12)	
+	#	set test.pc for transmitters
+	test.pc				<- round( (test.pc.target-test.pc.prtr.current)/(1-test.pc.prtr.current), d=3 )
+	if(verbose)
+	{
+		cat(paste('\nprest.repeat=',prest.repeat))
+		cat(paste('\ntest.pc.target=',test.pc.target))
+		cat(paste('\ntest.pc.prtr.current=',test.pc.prtr.current))
+		cat(paste('\ntest.pc=',test.pc))
+		cat(paste('\nprep.pc=',prep.pc))
+		cat(paste('\nprest.delay=',prest.delay))
+		cat(paste('\nprep.eff=',prep.eff))
+		cat(paste('\nprep.tgt=',prep.tgt))
+	}
+	#
+	rTest.Realloc<- function(df.tr, method.sample, df.dinfo)
+	{		
+		setkey(df.dinfo, stage)
+		tmp		<- unique(subset(df.dinfo, select=c(stage, pt)))
+		setkey(tmp,pt)			
+		#	allocate stage
+		if(grepl('stage=prop',method.sample))
+		{
+			tmp		<- merge(tmp, data.table(stage=rep(tmp$stage, ceiling(tmp$pt*nrow(df.tr)))), by='stage')
+			tmp		<- tmp[seq_len(nrow(df.tr)),]
+		}			
+		if(grepl('stage=sample',method.sample))
+			tmp		<- merge(tmp, data.table(stage=cut(runif(nrow(df.tr)), breaks=c(-Inf,cumsum(tmp$pt)), labels=tmp$stage)), by='stage')
+		tmp			<- cbind(df.tr, tmp)
+		#	allocate score by stage
+		set(tmp, NULL, 'stage', tmp[, as.character(stage)])
+		if(grepl('y=sample',method.sample))
+			tmp	<- tmp[ ,	list(Patient=Patient, t.Patient=t.Patient, REALLOC_SCORE_Y_RAW= my.sample(df.dinfo[['score.Y.raw']][ df.dinfo[['stage']]==stage ], length(pt), replace=TRUE)), by='stage']
+		if(grepl('y=median',method.sample))
+			tmp	<- tmp[ ,	list(Patient=Patient, t.Patient=t.Patient,  REALLOC_SCORE_Y_RAW= rep(median(df.dinfo[['score.Y.raw']][ df.dinfo[['stage']]==stage ]), length(pt))), by='stage']
+		if(grepl('y=mean',method.sample))
+			tmp	<- tmp[ ,	list(Patient=Patient, t.Patient=t.Patient,  REALLOC_SCORE_Y_RAW= rep(mean(df.dinfo[['score.Y.raw']][ df.dinfo[['stage']]==stage ]), length(pt))), by='stage']		
+		setnames(tmp, 'stage', 'REALLOC_STAGE')
+		tmp
+	}	
+	rPrEP<- function(df.rec, method.sample, prep.pc, prep.eff='IPrEX')
+	{		
+		if(grepl('stage=prop',method.sample))	 
+		{
+			tmp		<- df.rec[, which(is.na(PRESTED))]
+			z		<- c( rep(0, ceiling(length(tmp)*(1-prep.pc))), rep(1, ceiling(length(tmp)*prep.pc)) )
+			if(length(z)%%2)
+				z	<- c(z, NA)
+			z		<- na.omit(as.vector(t(matrix(z, ncol=2))))
+			set( df.rec, tmp, 'PRESTED', z[seq_along(tmp)] )			
+		}
+		if(grepl('stage=sample',method.sample))
+		{
+			tmp		<- df.rec[, which(is.na(PRESTED))]
+			set( df.rec, tmp, 'PRESTED', sample(c(0,1), length(tmp), replace=TRUE, prob=c(1-prep.pc, prep.pc)) )							
+		}		
+		if(!any('PREP_EFF'==names(df.rec)))
+			df.rec[, PREP_EFF:=NA_real_]
+		if(grepl('eff=median', method.sample))
+		{
+			if(!any('PREP_EFF_PAR'==names(df.rec)) & prep.eff=='IPrEX' )
+				df.rec[, PREP_EFF_PAR:=0.44]
+			if(!any('PREP_EFF_PAR'==names(df.rec)) & prep.eff=='PROUD' )
+				df.rec[, PREP_EFF_PAR:=0.86]			
+			tmp		<- df.rec[, which(is.na(PREP_EFF))]				
+			z		<- c( rep(0, ceiling(length(tmp)*(1-df.rec[1, PREP_EFF_PAR]))), rep(1, ceiling(length(tmp)*df.rec[1, PREP_EFF_PAR])) )
+			set(df.rec, tmp, 'PREP_EFF', z[seq_along(tmp)])			
+		}
+		if(grepl('eff=sample', method.sample))
+		{			
+			if(!any('PREP_EFF_PAR'==names(df.rec)) & prep.eff=='IPrEX' )
+				df.rec[, PREP_EFF_PAR:=rbeta(1, 6, (1-0.44)/0.44*6 )]
+			if(!any('PREP_EFF_PAR'==names(df.rec)) & prep.eff=='PROUD' )
+				df.rec[, PREP_EFF_PAR:=rbeta(1, 2.9, (1-0.86)/0.86*2.9 )]			
+			tmp		<- df.rec[, which(is.na(PREP_EFF))]
+			set(df.rec, tmp, 'PREP_EFF', sample(c(0,1), length(tmp), prob=c(1-df.rec[1, PREP_EFF_PAR], df.rec[1, PREP_EFF_PAR]), replace=TRUE) )
+		}
+		df.rec
+	}	
+	rTest.Time<- function(df.tr, method.sample, test.pc=0.5, prest.repeat=1, th.starttime=2008.5, th.endtime=2013.5)
+	{		
+		ans		<- unique(subset( df.tr, select=c(t.Patient, t.INFECTION_T) ))
+		#	first test for every t.Patient after th.starttime
+		if(grepl('t=mean',method.sample))
+			ans[, REALLOC_T1:=rep(th.starttime+prest.repeat/2, nrow(ans))]
+		if(grepl('t=start',method.sample))
+			ans[, REALLOC_T1:=rep(th.starttime, nrow(ans))]		
+		if(grepl('t=sample',method.sample))
+			ans[, REALLOC_T1:=runif(nrow(ans), th.starttime-prest.repeat/2, th.starttime+prest.repeat/2)]
+		#	subsequent tests 
+		ans		<- ans[, 	{
+					tmp	<- c( seq(REALLOC_T1, th.endtime-0.01, prest.repeat), Inf )
+					list(REALLOC_T1=REALLOC_T1, REALLOC_T=tmp[ which(tmp>=t.INFECTION_T) ][1])					
+				}, by='t.Patient']
+		ans		<- merge(ans, df.tr, by='t.Patient')
+		#	only fraction tests
+		ans[, REALLOC_Tc:= floor(REALLOC_T)]
+		setkey(ans, t.Patient)
+		if(grepl('stage=sample',method.sample))
+			tmp	<- unique(ans)[, list(t.Patient=t.Patient, PRESTED= sample(c(0,1), length(t.Patient), replace=TRUE, prob=c(1-test.pc, test.pc))), by='REALLOC_Tc']
+		if(grepl('stage=prop',method.sample))
+			tmp	<- unique(ans)[, {
+						z		<- c(rep(0,ceiling(length(t.Patient)*(1-test.pc))), rep(1,ceiling(length(t.Patient)*test.pc)))
+						if(length(z)%%2)
+							z	<- c(z, NA)
+						z		<- na.omit(as.vector(t(matrix(z, ncol=2))))
+						list(t.Patient=t.Patient, PRESTED= z[seq_along(t.Patient)])		
+					}, by='REALLOC_Tc']
+		ans		<- merge(ans, subset(tmp, select=c(t.Patient, PRESTED)), by='t.Patient')
+		ans
+	}
+	resolve.UAna<- function(df.all, df.select, method.sample, p.UAcond, verbose=TRUE)
+	{
+		setkey(df.all, Patient)
+		df.all	<- unique(df.all)
+		tmp3	<- df.all[, which(Patient%in%df.select[, t.Patient] & is.na(isAcute))]
+		if(verbose)
+			cat(paste('\nFound NA isAcute among transmitters, allocate to Yes or No, n=',length(tmp3)))
+		if(grepl('stage=sample',method.sample))
+			set(df.all, tmp3, 'isAcute', factor(rbinom(length(tmp3), 1, p.UAcond), levels=c(0,1), labels=c('No','Yes')) )
+		if(grepl('stage=prop',method.sample))
+		{
+			tmp		<- rep(c('No','Yes'), ceiling( c(1-p.UAcond, p.UAcond)*length(tmp3)))
+			tmp		<- tmp[seq_along(tmp3)]
+			set(df.all, tmp3, 'isAcute', tmp )
+		}		
+		df.all
+	}
+	
+	#	get proportion of stages to reallocate to
+	tp			<- as.numeric(substr(regmatches(method.risk,regexpr('tp[0-9]', method.risk)),3,3))
+	tmp			<- subset(YX, grepl('Dt|DA',stage))[, table(stage)]
+	df.dinfo	<- subset( data.table(stage=names(tmp), nt=tmp, pt=tmp/sum(tmp)), nt>0 )	
+	#	use YXf get set of new scores to sample from
+	if(is.null(YXf))
+		tmp		<- subset(YX, select=c(stage, Patient, t.Patient, score.Y.raw))
+	if(!is.null(YXf))
+		tmp		<- subset(YXf, select=c(stage, Patient, t.Patient, score.Y.raw))
+	setkey(tmp, Patient, t.Patient, stage)
+	tmp			<- unique(tmp)
+	set( tmp, NULL, 'stage', tmp[, as.character(stage)] )		#use all Diag intervals, not just those from tp4
+	set( tmp, NULL, 'stage', tmp[, paste(substr(stage,1,nchar(stage)-1),tp,sep='')] )
+	df.dinfo	<- merge(df.dinfo, tmp, by='stage')
+	set(df.dinfo, NULL, 'stage', df.dinfo[, as.character(stage)])	
+	#	estimated time of infection of transmitters
+	if(verbose)
+		cat(paste('\nusing method.resolveUAna=',method.resolveUAna))
+	#	get time of infection of transmitters
+	#	method.resolveUAna<- 0	
+	if(method.resolveUAna)
+	{
+		tmp		<- subset(YX, grepl(method.reallocate, stage), select=c(t.Patient, t, stage))
+		p.UAcond<- subset( tmp, grepl('UA.',stage, fixed=TRUE) | grepl('U.',stage, fixed=TRUE) )[, sum(grepl('UA.',stage, fixed=TRUE))/length(stage)]
+		#	of those with isAcute NA, set a proportion p.UAcond to Yes and the rest to No 
+		tmp		<- unique(subset(tmp, select=t.Patient))
+		tmp2	<- resolve.UAna(df.all, tmp, method.sample, p.UAcond, verbose=verbose)
+		df.tr	<- project.athena.Fisheretal.Y.infectiontime(tmp, tmp2, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT, verbose=FALSE)
+	}
+	if(!method.resolveUAna)
+	{
+		tmp			<- unique(subset(YX, grepl(method.reallocate, stage), select=t.Patient))
+		df.tr		<- project.athena.Fisheretal.Y.infectiontime(tmp, df.all, predict.t2inf, t2inf.args, t.period=t.period, ts.min=1980, method='for.transmitter', method.minLowerUWithNegT=method.minLowerUWithNegT, verbose=FALSE)		
+	}	
+	setkey(df.tr, t.Patient, t)
+	df.tr		<- df.tr[, list(t=t[1]), by='t.Patient']
+	setnames(df.tr, 't','t.INFECTION_T')
+	#	sample test times of transmitters	
+	df.tr		<- rTest.Time(df.tr, method.sample, test.pc=test.pc, prest.repeat=prest.repeat, th.starttime=th.starttime, th.endtime=2013.5)
+	#	those tested are offered PrEP, which may be efficacious from the first test time onwards
+	#	so PrEP improves on testing
+	#
+	tmp			<- subset(df.tr, select=c(t.Patient, PRESTED))
+	setnames(tmp, 't.Patient', 'Patient')
+	tmp			<- rPrEP(tmp, method.sample, prep.pc, prep.eff=prep.eff)		#prep.pc does not do anything here because all transmitters have !NA PRESTED
+	setnames(tmp, 'Patient', 't.Patient')
+	df.tr		<- merge(df.tr, unique(subset(tmp, select=c(t.Patient, PREP_EFF, PREP_EFF_PAR))), by='t.Patient')
+	#	use REALLOC_T1 to determine if first test before infection time. REALLOC_T is always first test AFTER infection time 
+	df.tr[, TR_PREP_ON:= as.numeric(PRESTED & PREP_EFF & t.INFECTION_T+prest.delay>REALLOC_T1)]
+	#	set PREP_EFF to 0 if t.Patient older than prep.tgt at first presting time 
+	tmp			<- unique(subset(df.all, select=c(Patient, DateBorn)))
+	setnames(tmp, 'Patient', 't.Patient')
+	df.tr		<- merge(df.tr, tmp, by='t.Patient')
+	set(df.tr, df.tr[, which(REALLOC_T1-DateBorn>=prep.tgt)], 'TR_PREP_ON', 0)	
+	if(verbose)
+	{
+		cat(paste('\nFound transmitters that are tested at baseline and at repeat points, n=', df.tr[, round(mean(PRESTED==1),d=3) ]))
+		cat(paste('\nFound transmitters with hyp effective PrEP, n=', df.tr[, round(mean(PREP_EFF==1),d=3) ]))
+		cat(paste('\nFound transmitters that could be on PrEP if inf time is after neg test, n=', df.tr[, round(mean(PRESTED & PREP_EFF),d=3) ]))
+		cat(paste('\nFound transmitters that are on PrEP, n=', df.tr[, round(mean(TR_PREP_ON==1),d=3) ]))
+	}
+	#
+	#	some of the transmitters are also recipients: offer PrEP consistently	
+	#
+#tmp	<- sapply(1:1000, function(j){
+	df.rec		<- unique(subset(nt.table, select=Patient))
+	tmp			<- unique(subset(df.tr, select=c(t.Patient, PRESTED, PREP_EFF, PREP_EFF_PAR)))
+	setnames(tmp, 't.Patient','Patient')
+	df.rec		<- merge(df.rec, tmp, by='Patient', all.x=1)
+	if(df.rec[,!all(is.na(PREP_EFF_PAR))])
+		set(df.rec, df.rec[, which(is.na(PREP_EFF_PAR))], 'PREP_EFF_PAR', df.rec[which(!is.na(PREP_EFF_PAR))[1],PREP_EFF_PAR])
+	if(df.rec[,all(is.na(PREP_EFF_PAR))])
+		set(df.rec, NULL, 'PREP_EFF_PAR', NULL)	
+	#	for those that are no transmitter, allocate if Prested and if PREP efficacious
+	df.rec		<- rPrEP(df.rec, method.sample, prep.pc, prep.eff=prep.eff)
+	df.rec[, REC_PREP_ON:= as.numeric(PRESTED & PREP_EFF)]
+	#	set PREP_EFF to 0 if t.Patient older than prep.tgt at first presting time
+	if(df.rec[1,grepl('_bs[0-9]+',Patient)])
+	{
+		df.rec[, Patient.b4bs:= sapply(strsplit(Patient,'_'), '[[', 1)]
+		tmp			<- unique(subset(df.all, select=c(Patient, DateBorn, AnyPos_T1)))
+		setnames(tmp, 'Patient','Patient.b4bs')
+		df.rec		<- merge(df.rec, tmp, by='Patient.b4bs')
+		set(df.rec, NULL, 'Patient.b4bs', NULL)
+	}
+	if(!df.rec[1,grepl('_bs[0-9]+',Patient)])
+	{
+		tmp			<- unique(subset(df.all, select=c(Patient, DateBorn, AnyPos_T1)))	
+		df.rec		<- merge(df.rec, tmp, by='Patient')		
+	}
+	set(df.rec, df.rec[, which(AnyPos_T1-1-DateBorn>=prep.tgt)], 'REC_PREP_ON', 0)		
+	if(verbose)
+	{
+		cat(paste('\nFound recipients that are offered PrEP at baseline, n=', df.rec[, round(length(which(PRESTED==1))/length(PRESTED),d=3) ]))
+		cat(paste('\nFound recipients with hyp effective PrEP, n=', df.rec[, round(length(which(PREP_EFF==1))/length(PRESTED),d=3) ]))
+		cat(paste('\nFound recipients that are on PrEP, n=', df.rec[, round(length(which(REC_PREP_ON==1))/length(PRESTED),d=3) ]))
+	}
+	#df.rec[, length(which(REC_PREP_ON=='1'))/length(REC_PREP_ON)]
+#})#	summary(tmp)
+	#
+	#	combine test of transmitters, PrEP of transmitters and PrEP of recipients  
+	#
+	
+	#	
+	#	determine which intervals could have been avoided trough testing
+	YX.h			<- copy(YX)
+	YX.h			<- merge(YX.h, subset(df.tr, select=c(t.Patient, t.INFECTION_T, REALLOC_T1, REALLOC_T, PRESTED, TR_PREP_ON)), by='t.Patient', all.x=TRUE)
+	YX.h			<- merge(YX.h, subset(df.rec, select=c(Patient, REC_PREP_ON)), by='Patient', all.x=TRUE)
+	if(!method.resolveUAna)
+		stopifnot(nrow(subset(YX.h, t.INFECTION_T>t))==0)	
+	if(verbose)
+		cat(paste('\ntransmission intervals, n=', nrow(YX.h)))	
+	#	remove intervals to recipients that are on effective PrEP
+	YX.h			<- subset(YX.h, REC_PREP_ON==0)
+	if(verbose)
+		cat(paste('\ntransmission intervals to recipients not on eff PrEP, n=', nrow(YX.h)))
+	#	proportion of transmission intervals for which PrEP works, after we rm recipient on PrEP
+	#	need this to reduce nt.table
+	df.uinfo		<- merge( subset(YX.h, TR_PREP_ON==1)[, list(TR_RM= length(t)), by='stage'], YX.h[, list(N= length(t)), by='stage'], by='stage', all.y=1)
+	set(df.uinfo, df.uinfo[, which(is.na(TR_RM))], 'TR_RM', 0)
+	df.uinfo[, TR_NRM:= 1-TR_RM/N]
+	set(df.uinfo, NULL, c('TR_RM','N'), NULL)
+	#	remove intervals from transmitters that are on effective PrEP
+	YX.h			<- subset(YX.h, is.na(TR_PREP_ON) | TR_PREP_ON==0)
+	if(verbose)
+		cat(paste('\ntransmission intervals from transmitters not on eff PrEP, n=', nrow(YX.h)))
+	#	realloc intervals from transmitters that tested positive
+	YX.h		<- merge(YX.h, YX.h[, list(t_min=min(t)), by=c('Patient','t.Patient')], by=c('Patient','t.Patient'))
+	set(YX.h, NULL, 't.grace', YX.h[,t.INFECTION_T-t_min])
+	set(YX.h, YX.h[, which(!grepl('UAna',stage) | t.grace<0 | is.na(t.grace)) ], 't.grace', 0)
+	if(verbose)
+		cat(paste('\ntransmission intervals with t.grace>0, n=', YX.h[, length(which(t.grace>0))]))	
+	#	re-alloc intervals of tested transmitters to diag
+	#	t.INFECTION_T+prest.delay<=REALLOC_T	--> infected before pos test
+	#	t+t.grace>REALLOC_T						--> intervals after pos test
+	YX.h[, TR_TEST:= 0]
+	tmp			<- YX.h[, which( 	!is.na(REALLOC_T) & PRESTED & t.INFECTION_T+prest.delay<=REALLOC_T & 
+									t+t.grace>REALLOC_T & grepl(method.reallocate, stage))]
+	set(YX.h, tmp, 'TR_TEST', 1)		
+	if(verbose)
+		cat(paste('\nrealloc transmission intervals from transmitters that got tested pos, n=', length(tmp)))
+	tmp			<- unique(subset(YX.h, TR_TEST==1, select=c(Patient, t.Patient)))
+	tmp			<- rTest.Realloc(tmp, method.sample, df.dinfo)
+	YX.h		<- merge( YX.h, tmp, by=c('Patient','t.Patient'), all.x=1 )
+	set(YX.h, YX.h[, which(TR_TEST==0)], 'REALLOC_STAGE', NA_character_)
+	set(YX.h, YX.h[, which(TR_TEST==0)], 'REALLOC_SCORE_Y_RAW', NA_real_)
+	#
+	#	add proportion of in and out reallocated stages to df.uinfo
+	#
+	tmp			<- subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_IN= length(t)), by='REALLOC_STAGE']	
+	setnames(tmp, 'REALLOC_STAGE', 'stage')
+	if(!nrow(tmp))
+		set(df.uinfo,NULL, c('U_OUT_AFTER_RM','D_IN_AFTER_RM'),0)
+	if(nrow(tmp))
+	{
+		df.uinfo	<- merge(df.uinfo, tmp, by='stage', all.x=1)
+		df.uinfo	<- merge( df.uinfo, YX.h[, list(NT= length(t)), by='stage'], by='stage', all=1 )
+		df.uinfo	<- merge( df.uinfo, subset(YX.h, !is.na(REALLOC_STAGE))[, list(REALLOC_NT_OUT= length(t)), by='stage'], by='stage', all=1 )
+		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_IN))], 'REALLOC_NT_IN', 0)
+		set(df.uinfo, df.uinfo[, which(is.na(REALLOC_NT_OUT))], 'REALLOC_NT_OUT', 0)
+		df.uinfo[, U_OUT_AFTER_RM:= REALLOC_NT_OUT/NT]
+		set(df.uinfo, df.uinfo[, which(is.na(NT))], c('NT','U_OUT_AFTER_RM'), 0)
+		df.uinfo[, D_IN_AFTER_RM:= REALLOC_NT_IN/sum(REALLOC_NT_IN)]		
+		set(df.uinfo, NULL, c('REALLOC_NT_IN','REALLOC_NT_OUT','NT'), NULL)
+	}
+	setnames(df.uinfo, 'stage', 'factor')
+	set(df.uinfo, NULL, 'factor', df.uinfo[, as.character(factor)])
+	df.uinfo[, risk:='stage']		
+	#
+	#	reallocate
+	#
+	tmp			<- YX.h[, which(TR_TEST==1)]
+	set(YX.h, tmp, 'stage', YX.h[tmp, REALLOC_STAGE])
+	set(YX.h, tmp, c('score.Y','score.Y.raw'), YX.h[tmp, REALLOC_SCORE_Y_RAW])
+	set(YX.h, NULL, c('t_min', 't.grace', 't.INFECTION_T', 'REALLOC_T1','REALLOC_T', 'REALLOC_STAGE', 'REALLOC_SCORE_Y_RAW', 'PRESTED', 'TR_PREP_ON', 'REC_PREP_ON', 'TR_TEST'), NULL)
+	#	update scores
+	if(grepl('wtn',method.risk))
+	{
+		if(verbose)
+			cat(paste('\nsetting likelihood to likelihood of pair / number transmission intervals'))
+		set(YX.h, NULL, 'score.Y', YX.h[, score.Y.raw*w.tn])				
+	}									
+	if(grepl('noscore',method.risk))
+	{
+		if(verbose)
+			cat(paste('\nsetting likelihood to 1'))
+		set(YX.h, NULL, 'score.Y', YX.h[, 1])						
+	}
+	if(grepl('nophyloscore',method.risk))
+	{
+		if(verbose)
+			cat(paste('\nsetting likelihood to nophyloscore'))
+		set(YX.h, NULL, 'score.Y', YX.h[, w.tn])						
+	}
+	#
+	#	prepare nt.table for hypothetical scenario
+	#			
+	#	for Xclu Xseq Xmsm, we don t have NegT etc unless we load the bigmem table X.msm 
+	#	avoid this by removing a fraction
+	setkey(df.uinfo, risk, factor)
+	setkey(nt.table, Patient, stat, risk, factor)
+	#	remove recipients that are on PrEP	
+	#	Xmsm includes participants with no transmitter, so need to use df.rec
+	nt.table.h		<- merge( nt.table, subset(df.rec, !REC_PREP_ON, Patient), by='Patient' )	
+	#	
+	#	remove transmitters that are on PrEP and thereafter, move stages according to fractions UPT and DPT
+	#
+	#	subset(nt.table, Patient=='M41498' & stat=='X.msm')
+	if(df.uinfo[, all(U_OUT_AFTER_RM==0)] & grepl('stage=sample',method.sample))
+		nt.table.h	<- subset(nt.table.h, stat!='YX')[, {
+					nt.nrm		<- rbinom(length(nt), nt, df.uinfo$TR_NRM)
+					list(factor=factor, nt= nt.nrm)
+				}, by=c('Patient','risk','stat')]
+	if(df.uinfo[, all(U_OUT_AFTER_RM==0)] & grepl('stage=prop',method.sample))
+		nt.table.h	<- subset(nt.table.h, stat!='YX')[, {
+					nt.nrm		<- round( nt * df.uinfo$TR_NRM)
+					list(factor=factor, nt= nt.nrm)					
+				}, by=c('Patient','risk','stat')]	
+	if(df.uinfo[, !all(U_OUT_AFTER_RM==0)] & grepl('stage=sample',method.sample))
+		nt.table.h	<- subset(nt.table.h, stat!='YX')[, {
+					nt.nrm		<- rbinom(length(nt), nt, df.uinfo$TR_NRM)
+					flow.out	<- rbinom(length(nt.nrm), nt.nrm, df.uinfo$U_OUT_AFTER_RM) 
+					flow.in		<- as.numeric(rmultinom(1, sum(flow.out), df.uinfo$D_IN_AFTER_RM))
+					stopifnot(sum(flow.out)==sum(flow.in))
+					#print(nt); print(flow.out); print(flow.in)
+					list(factor=factor, nt= nt.nrm-flow.out+flow.in)
+				}, by=c('Patient','risk','stat')]
+	if(df.uinfo[, !all(U_OUT_AFTER_RM==0)] & grepl('stage=prop',method.sample))
+		nt.table.h	<- subset(nt.table.h, stat!='YX')[, {
+					nt.nrm		<- round( nt * df.uinfo$TR_NRM)
+					flow.out	<- round( nt.nrm * df.uinfo$U_OUT_AFTER_RM )
+					flow.in		<- ceiling( sum(flow.out) * df.uinfo$D_IN_AFTER_RM )
+					flow.d		<- sum(flow.in)-sum(flow.out)
+					stopifnot( flow.d>=0, flow.d<=length(flow.in>0) )
+					flow.in[ flow.in>0 ]	<- flow.in[ flow.in>0 ] + c( rep(-1, flow.d), rep(0, length(which(flow.in>0))-flow.d) )
+					stopifnot(sum(flow.out)==sum(flow.in))
+					list(factor=factor, nt= nt.nrm-flow.out+flow.in)					
+				}, by=c('Patient','risk','stat')]		
+	#	
+	#	for YX, we know easily how many transmission intervals are removed / reallocated
+	nt.table.YX	<- YX.h[, 	{
+				z				<- table(as.character(stage))
+				list(risk='stage', stat='YX', factor=names(z), nt=as.numeric(z))
+			}, by='Patient']
+	tmp			<- merge( unique(subset(nt.table.h, select=c(risk, Patient))), unique(subset(nt.table.h, select=c(risk, factor))), by='risk', allow.cartesian=TRUE)
+	nt.table.YX	<- merge( nt.table.YX, tmp, by=c('Patient','risk','factor'), all.y=TRUE) 		
+	set(nt.table.YX, nt.table.YX[, which(is.na(nt))], 'stat', 'YX')
+	set(nt.table.YX, nt.table.YX[, which(is.na(nt))], 'nt', 0)
+	#
+	nt.table.h	<- rbind(nt.table.YX, nt.table.h, use.names=TRUE)
+	stopifnot( nrow(merge(nt.table.h, tmp, all.y=1, by=c('Patient','risk','factor')))==nrow(tmp)*4 )
+	nt.table.h	<- dcast.data.table(nt.table.h, Patient+risk+factor~stat, value.var='nt')
+	tmp			<- nt.table.h[, which(YX>X.clu)]
+	if(length(tmp))
+	{
+		cat(paste('\nWARNING UtoD Found YX>X.clu, n=',length(tmp)))
+		set(nt.table.h, tmp, 'X.clu', nt.table.h[tmp, YX])
+	}
+	tmp			<- nt.table.h[, which(X.clu>X.seq)]	
+	if(length(tmp))
+	{
+		cat(paste('\nWARNING UtoD Found X.clu>X.seq, n=',length(tmp)))	
+		set(nt.table.h, tmp, 'X.seq', nt.table.h[tmp, X.clu])
+	}
+	tmp			<- nt.table.h[, which(X.seq>X.msm)]	
+	if(length(tmp))
+	{
+		cat(paste('\nWARNING UtoD Found X.seq>X.msm, n=',length(tmp)))
+		set(nt.table.h, tmp, 'X.msm', nt.table.h[tmp, X.seq])
+	}	
+	nt.table.h	<- melt(nt.table.h, measure.vars=c('X.clu','X.msm','X.seq','YX'), value.name='nt', variable.name='stat')
+	#	
+	list(YX.h=YX.h, nt.table.h=nt.table.h)	 
+}
+######################################################################################
+#	method.sample<- 't=start, stage=prop, y=median, eff=median'; th.starttime=2008.5; th.endtime=2011;  t.period=0.125; method.minLowerUWithNegT=1; method.resolveUAna=1
 project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.table, method.risk, predict.t2inf, t2inf.args, df.all, YXf=NULL, th.starttime=2008.5, th.endtime=2011, t.period=0.125, test.pc.prtr.current= 0.173, method.minLowerUWithNegT=1, method.resolveUAna=0, method.realloc='PrestC18m50pc', method.sample= "t=start, stage=prop, y=median, eff=median", verbose=TRUE)
 {
 	stopifnot(grepl('stage=sample|stage=prop',method.sample))
@@ -1830,7 +2276,7 @@ project.athena.Fisheretal.Hypo.ReallocPrEPandTest.getYXetc<- function( YX, nt.ta
 	#	t+t.grace>REALLOC_T						--> intervals after pos test
 	YX.h[, TR_TEST:= 0]
 	tmp			<- YX.h[, which( 	!is.na(REALLOC_T) & PRESTED & t.INFECTION_T+prest.delay<=REALLOC_T & 
-									t+t.grace>REALLOC_T & grepl(method.reallocate, stage))]
+							t+t.grace>REALLOC_T & grepl(method.reallocate, stage))]
 	set(YX.h, tmp, 'TR_TEST', 1)		
 	if(verbose)
 		cat(paste('\nrealloc transmission intervals from transmitters that got tested pos, n=', length(tmp)))
