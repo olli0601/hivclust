@@ -694,6 +694,7 @@ hivc.pipeline.props_univariate<- function()
 	{
 		#testing.cov				<- seq(30,70,10)
 		testing.cov				<- c(18,seq(30,70,20))
+		prep.cov				<- c(33,50,66)
 		df.method				<- list(
 				#	infection times
 				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 
@@ -704,7 +705,8 @@ hivc.pipeline.props_univariate<- function()
 		)
 		df.method				<- do.call('rbind', df.method)				
 		#df.method				<- df.method[c(12,13),]
-		#df.method				<- df.method[7,]
+		#df.method				<- df.method[-7,]
+		df.method				<- df.method[7,]
 		if(1)
 			df.method[, method.risk:='m2Awmx.wtn.tp4']
 		if(0)
@@ -728,26 +730,30 @@ hivc.pipeline.props_univariate<- function()
 							paste('TestA12m',seq(30,70,10),'pc+ImmediateART',sep=''), paste('TestA12m',seq(30,70,10),'pc+ARTat500',sep='')
 					))
 		if(1)
-			tmp					<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,												
-												method.realloc=  c(	paste('TestC12m',testing.cov,'pc',sep=''), paste('TestA12m',testing.cov,'pc',sep=''),
-							#	test + PrEP 
-							paste('PrestIPrEXC12m',testing.cov,'pc',testing.cov,'pc',sep=''), paste('PrestPROUDC12m',testing.cov,'pc',testing.cov,'pc',sep=''),																	
-							#	Test + PrEP + Immediate ART
-							paste('PrestIPrEXC12m',testing.cov,'pc',testing.cov,'pc+ImmediateART',sep=''), paste('PrestPROUDC12m',testing.cov,'pc',testing.cov,'pc+ImmediateART',sep=''),																	
-							#	Test + PrEP + ARTat500
-							paste('PrestIPrEXC12m',testing.cov,'pc',testing.cov,'pc+ARTat500',sep=''), paste('PrestPROUDC12m',testing.cov,'pc',testing.cov,'pc+ARTat500',sep=''),							
-							#	test + Targeted PrEP 
-							paste('TrestIPrEXC12m',testing.cov,'pc',testing.cov,'pc30y',sep=''), paste('TrestPROUDC12m',testing.cov,'pc',testing.cov,'pc30y',sep=''),																	
-							#	Test + Targeted PrEP + Immediate ART
-							paste('TrestIPrEXC12m',testing.cov,'pc',testing.cov,'pc30y+ImmediateART',sep=''), paste('TrestPROUDC12m',testing.cov,'pc',testing.cov,'pc30y+ImmediateART',sep=''),																	
-							#	Test + Targeted PrEP + ARTat500
-							paste('TrestIPrEXC12m',testing.cov,'pc',testing.cov,'pc30y+ARTat500',sep=''), paste('TrestPROUDC12m',testing.cov,'pc',testing.cov,'pc30y+ARTat500',sep=''),
-							#	test + treat
-							paste('TestC12m',testing.cov,'pc+ImmediateART',sep=''), paste('TestC12m',testing.cov,'pc+ARTat500',sep=''),
-							#	test (Acute)  + treat		
-							paste('TestA12m',seq(30,70,10),'pc+ImmediateART',sep=''), paste('TestA12m',seq(30,70,10),'pc+ARTat500',sep='')
-					)
-			)		
+		{
+			tmp					<- as.vector(sapply(testing.cov, function(x)
+										{
+											c(	paste('TestC12m',x,'pc',sep=''), paste('TestA12m',x,'pc',sep=''), 
+													#	test + PrEP 
+													paste('PrestIPrEXC12m',x,'pc',prep.cov,'pc',sep=''), paste('PrestPROUDC12m',x,'pc',prep.cov,'pc',sep=''),																	
+													#	Test + PrEP + Immediate ART
+													paste('PrestIPrEXC12m',x,'pc',prep.cov,'pc+ImmediateART',sep=''), paste('PrestPROUDC12m',x,'pc',prep.cov,'pc+ImmediateART',sep=''),																	
+													#	Test + PrEP + ARTat500
+													paste('PrestIPrEXC12m',x,'pc',prep.cov,'pc+ARTat500',sep=''), paste('PrestPROUDC12m',x,'pc',prep.cov,'pc+ARTat500',sep=''),							
+													#	test + Targeted PrEP 
+													paste('TrestIPrEXC12m',x,'pc',prep.cov,'pc30y',sep=''), paste('TrestPROUDC12m',x,'pc',prep.cov,'pc30y',sep=''),																	
+													#	Test + Targeted PrEP + Immediate ART
+													paste('TrestIPrEXC12m',x,'pc',prep.cov,'pc30y+ImmediateART',sep=''), paste('TrestPROUDC12m',x,'pc',prep.cov,'pc30y+ImmediateART',sep=''),																	
+													#	Test + Targeted PrEP + ARTat500
+													paste('TrestIPrEXC12m',x,'pc',prep.cov,'pc30y+ARTat500',sep=''), paste('TrestPROUDC12m',x,'pc',prep.cov,'pc30y+ARTat500',sep=''),
+													#	test + treat
+													paste('TestC12m',x,'pc+ImmediateART',sep=''), paste('TestC12m',x,'pc+ARTat500',sep=''),
+													#	test (Acute)  + treat		
+													paste('TestA12m',x,'pc+ImmediateART',sep=''), paste('TestA12m',x,'pc+ARTat500',sep='')
+											)
+										}))
+			tmp					<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,	method.realloc=tmp)
+		}					
 		if(0)
 			tmp					<- data.table(	DUMMY=1, method.lRNA.supp=100, method.use.AcuteSpec=1, method.PDT='SEQ', 	method.Acute='higher', method.minLowerUWithNegT=1,												
 					method.realloc=  c(	#	test (Acute)  + treat		
