@@ -88,7 +88,8 @@ EPS			<<- 1e-12
 #default.fun		<- "project.athena.Fisheretal.numbers"
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
-default.fun		<- "hivc.pipeline.various"
+default.fun		<- "project.dual"
+#default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{

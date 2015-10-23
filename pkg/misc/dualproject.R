@@ -1,7 +1,8 @@
 project.dual<- function()
 {
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
-	project.dual.distances.231015()
+	#project.dual.distances.231015()
+	project.dual.examl.231015()
 }
 
 project.dual.distances.231015<- function()
@@ -12,6 +13,44 @@ project.dual.distances.231015<- function()
 	
 	for(i in seq_along(infiles))
 	{
+		load( paste(indir,'/',infiles[i],sep='') )
+		d		<- seq.dist(seq)
+		save(d, seq, file= gsub('\\.R','_dist\\.R',paste(indir,'/',infiles[i],sep='')))
+		gc()
+	}		
+}
+
+project.dual.examl.231015<- function()
+{
+	indir		<- paste(HOME,"alignments_151023",sep='/')
+	#indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
+	infiles		<- list.files(indir, pattern='consensus.*151023\\.R')
+	insignat	<- '151023'
+
+	for(i in seq_along(infiles))
+	{
+		bs.from		<- 0
+		bs.to		<- 100
+		bs.n		<- 100
+		outdir		<- indir
+		infile		<- gsub(paste('_',insignat,'\\.R',sep=''),'',infiles[i])
+		args.parser	<- "-m DNA"
+		args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours	
+		cmd			<- hivc.cmd.examl.bootstrap(indir, infile, insignat, insignat, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
+		
+		
+		dummy		<- lapply(cmd, function(x)
+				{				
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=33, hpc.q= NA, hpc.mem="1900mb", hpc.nproc=1)
+					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=50, hpc.q="pqeelab", hpc.mem="5500mb", hpc.nproc=1)
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("exa",signat,sep='.')
+					#cat(x)
+					hivc.cmd.hpccaller(outdir, outfile, x)
+					Sys.sleep(1)
+				})	
+		
+		
 		load( paste(indir,'/',infiles[i],sep='') )
 		d		<- seq.dist(seq)
 		save(d, seq, file= gsub('\\.R','_dist\\.R',paste(indir,'/',infiles[i],sep='')))
