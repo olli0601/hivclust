@@ -419,7 +419,7 @@ hivc.cmd.preclustering<- function(indir, infile, insignat, indircov, infilecov, 
 }
 ######################################################################################
 #' @export
-hivc.cmd.get.geneticdist<- function(indir, infile, signat, gd.max, outdir=indir, prog= PR.GENDISTMAT, resume=1, verbose=1)
+hivc.cmd.get.geneticdist<- function(indir, infile, signat=NA, gd.max=NA, outdir=indir, prog= PR.GENDISTMAT, resume=1, verbose=1)
 {
 	cmd<- "#######################################################
 # start: compute genetic distance matrix of sequence alignment
@@ -427,7 +427,11 @@ hivc.cmd.get.geneticdist<- function(indir, infile, signat, gd.max, outdir=indir,
 	cmd<- paste(cmd,paste("\necho \'run ",prog,"\'\n",sep=''))
 	#default commands
 	cmd<- paste(cmd,prog," -v=",verbose," -resume=",resume,sep='')
-	cmd<- paste(cmd," -indir=",indir," -infile=",infile," -outdir=",outdir," -signat=",signat," -maxgd=",gd.max,sep='')
+	cmd<- paste(cmd," -indir=\'",indir,"\' -infile=\'",infile,"\' -outdir=\'",outdir,"\'",sep='')
+	if(!is.na(gd.max))
+		cmd<- paste(cmd," -maxgd=",gd.max,sep='')
+	if(!is.na(signat))
+		cmd<- paste(cmd," -signat=",signat,sep='')	
 	#verbose stuff
 	cmd<- paste(cmd,paste("\necho \'end ",prog,"\'\n",sep=''))
 	cmd<- paste(cmd,"#######################################################

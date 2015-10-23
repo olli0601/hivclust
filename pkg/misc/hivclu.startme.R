@@ -83,12 +83,12 @@ EPS			<<- 1e-12
 #default.fun		<- "hivc.pipeline.BEASTout"
 #default.fun		<- "hivc.pipeline.props_univariate"
 #default.fun		<- "hivc.pipeline.ages"
-default.fun			<- "project.hivc.clustering.forStephane.examl"
+#default.fun			<- "project.hivc.clustering.forStephane.examl"
 #default.fun		<- "project.ACpolext.examl"
 #default.fun		<- "project.athena.Fisheretal.numbers"
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
-#default.fun		<- "hivc.pipeline.various"
+default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -394,7 +394,7 @@ if(length(args))
 					PROPS.ESTIMATE			= "hivc.prog.props_univariate",
 					AGE.ESTIMATE			= "age.props_univariate",
 					BETAREG.NUMBERS			= "project.athena.Fisheretal.numbers",
-					VARIOUS					= "project.hivc.clustering.forStephane"
+					VARIOUS					= "project.dual"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)
@@ -407,7 +407,7 @@ if(length(args))
 	argv<<- args
 }
 ###############################################################################
-stop()
+#stop()
 if(HIVC.DEBUG)	options(error= my.dumpframes)	
 cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	

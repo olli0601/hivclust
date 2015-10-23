@@ -166,7 +166,19 @@ seq.dist.pairwise<- function(x, y)
 }
 ######################################################################################
 #' @export
-seq.dist<- function(seq.DNAbin.matrix, verbose=1)
+seq.dist<- function(seq)
+{
+	require(data.table)
+	d		<- as.data.table( t(combn(rownames(seq),2)) )
+	setnames(d, c('V1','V2'), c('TAXA1','TAXA2'))
+	d[, list(	DN=as.numeric(dist.dna(seq[c(TAXA1,TAXA2),], model='N')),
+				DI=as.numeric(dist.dna(seq[c(TAXA1,TAXA2),], model='indel')),
+				DR=as.numeric(dist.dna(seq[c(TAXA1,TAXA2),], model='raw'))
+		), by=c('TAXA1','TAXA2')]
+}
+######################################################################################
+#' @export
+seq.dist.big<- function(seq.DNAbin.matrix, verbose=1)
 {
 	if(0)
 	{
