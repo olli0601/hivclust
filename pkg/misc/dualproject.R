@@ -7,7 +7,7 @@ project.dual<- function()
 project.dual.distances.231015<- function()
 {
 	indir		<- paste(HOME,"alignments_151023",sep='/')
-	indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
+	#indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
 	infiles		<- list.files(indir, pattern='R$')
 	
 	for(i in seq_along(infiles))
