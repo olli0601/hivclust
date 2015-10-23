@@ -3220,6 +3220,43 @@ project.hivc.clustering.forStephane.onUK<- function()
 	
 }
 ######################################################################################
+project.hivc.clustering.forStephane.examl<- function()
+{
+	require(ape)
+	
+	dir.name	<- DATA  	
+	indir		<- paste(dir.name,'hue',sep='/')
+	infile		<- "TNTP_PRRT_withoutDoublon_withoutDRM"
+	insignat	<- "151023"
+	
+	if(0)
+	{
+		seq.PROT.RT	<- read.dna(paste(indir, '/', infile, '.fasta', sep=''), format='fasta')
+		file		<- paste(indir, '/', infile, '_', insignat, '.R', sep='')
+		save(seq.PROT.RT, file=file)
+	}	
+	#	ExaML bootstrap args
+	bs.from		<- 0
+	bs.to		<- 0
+	bs.n		<- 500
+	outdir		<- indir
+	args.parser	<- "-m DNA"
+	args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours	
+	cmd			<- hivc.cmd.examl.bootstrap(indir, infile, insignat, insignat, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
+	
+	
+	dummy		<- lapply(cmd, function(x)
+			{				
+				#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+				x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=50, hpc.q="pqeelab", hpc.mem="5500mb", hpc.nproc=1)
+				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+				outfile	<- paste("exa",signat,sep='.')
+				#cat(x)
+				hivc.cmd.hpccaller(outdir, outfile, x)
+				Sys.sleep(1)
+			})	
+}
+######################################################################################
 project.hivc.clustering.forStephane.onNL<- function()
 {	
 	verbose		<- 1

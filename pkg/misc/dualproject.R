@@ -1,3 +1,9 @@
+project.dual.alignments.231015<- function()
+{
+	#	read global PANGEA alignment and split
+	
+}
+
 project.dualinfections.build.blastdb<- function()
 {
 	#	make BLAST database

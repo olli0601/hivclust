@@ -694,7 +694,8 @@ hivc.pipeline.props_univariate<- function()
 	{
 		#testing.cov				<- seq(30,70,10)
 		testing.cov				<- c(18,seq(30,70,20))
-		prep.cov				<- c(33,50,66)
+		#prep.cov				<- c(33,50,66)
+		prep.cov				<- 50
 		df.method				<- list(
 				#	infection times
 				as.data.table(expand.grid( DUMMY=1, method.minQLowerU=c(0.194, 0.109), method.thresh.pcoal=0.2, method.thresh.bs=0.8, method.cut.brl=Inf )), 

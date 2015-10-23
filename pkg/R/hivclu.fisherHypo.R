@@ -106,6 +106,10 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 	tmp				<- runs.av.info[, which(grepl('m[0-9]+pc', HYPO))]
 	set(runs.av.info, tmp, 'TEST_COV', substring(runs.av.info[tmp, regmatches(HYPO, regexpr('m[0-9]+pc', HYPO))],2) )
 	set(runs.av.info, tmp, 'TEST_COV', runs.av.info[tmp, substr(TEST_COV, 1, nchar(TEST_COV)-2)] )
+	runs.av.info[, PREP_COV:= 'NONE']
+	tmp				<- runs.av.info[, which(grepl('pc[0-9]+pc', HYPO))]
+	set(runs.av.info, tmp, 'PREP_COV', substring(runs.av.info[tmp, regmatches(HYPO, regexpr('pc[0-9]+pc', HYPO))],2) )
+	set(runs.av.info, tmp, 'PREP_COV', runs.av.info[tmp, substr(PREP_COV, 2, nchar(PREP_COV)-2)] )
 	runs.av.info[, PREV:= 'NONE']
 	set(runs.av.info, runs.av.info[, which(!grepl('Test', HYPO) & !grepl('Prest', HYPO) & !grepl('Trest', HYPO) & grepl('ART', HYPO))], 'PREV', 'TasP')	
 	set(runs.av.info, runs.av.info[, which(grepl('Test', HYPO) & TEST_TYPE!='RNA')], 'PREV', 'test')
@@ -131,20 +135,42 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 							"test-PrEP (<30 yrs)", "test-PrEP (<30 yrs)-treat (CD4<500)", "test-PrEP (<30 yrs)-treat (Immediate)",
 							"test-PrEP (all)", "test-PrEP (all)-treat (CD4<500)", "test-PrEP (all)-treat (Immediate)"	)
 	set( runs.av.info, NULL, 'PREV', runs.av.info[, factor(PREV, levels=rev(tmp), labels=rev(tmp))] )	
-	runs.av.info	<- subset(runs.av.info, !is.na(PREV) & STAT=='Pjx.e0cp')
+	runs.av.info	<- subset(runs.av.info, !is.na(PREV) )
 	#
 	#	plot for Sciene TM revision
 	#
-	tmp				<- subset( runs.av.info, grepl('TasP', PREV), select=which(!grepl('TEST_',names(runs.av.info))) )
-	tmp				<- merge(tmp, as.data.table(expand.grid(PREV=unique(tmp$PREV), TEST_COV=c(18,seq(30,70,20)), TEST_FREQ=12, TEST_TYPE='ELISA')), by='PREV', allow.cartesian=TRUE)	
-	runs.av.plot	<- subset( runs.av.info, !TEST_FREQ%in%c('NONE','6') & !TEST_COV%in%c('NONE', '40','60')  )
-	runs.av.plot	<- rbind(runs.av.plot, tmp, use.names=TRUE)	
+	#tmp				<- subset( runs.av.info, grepl('TasP', PREV), select=which(!grepl('TEST_',names(runs.av.info))) )
+	#tmp				<- merge(tmp, as.data.table(expand.grid(PREV=unique(tmp$PREV), TEST_COV=c(18,seq(30,70,20)), TEST_FREQ=12, TEST_TYPE='ELISA')), by='PREV', allow.cartesian=TRUE)
+	tmp					<- subset( runs.av.info, grepl('NONE', PREP_COV), select=which(!grepl('PREP_COV',names(runs.av.info))) )
+	tmp					<- merge(tmp, as.data.table(expand.grid(PREV=unique(tmp$PREV), PREP_COV=c('33','50','66'))), by='PREV', allow.cartesian=TRUE)	
+	runs.av.plot		<- subset( runs.av.info, !TEST_FREQ%in%c('NONE','6') & !TEST_COV%in%c('NONE', '40','60')  & PREP_COV%in%c('33','50','66') )	
+	runs.av.plot		<- rbind(runs.av.plot, tmp, use.names=TRUE)	
 	set(runs.av.plot, NULL, 'LEGEND', runs.av.plot[, paste('annual testing coverage\nof probable transmitters\n',TEST_COV,'%',sep='')])
 	set(runs.av.plot, runs.av.plot[, which(grepl('18',LEGEND))], 'LEGEND', 'no improvements to\nannual testing coverage')
-	tmp				<- c("no improvements to\nannual testing coverage","annual testing coverage\nof probable transmitters\n30%","annual testing coverage\nof probable transmitters\n50%","annual testing coverage\nof probable transmitters\n70%")
+	tmp					<- c("no improvements to\nannual testing coverage","annual testing coverage\nof probable transmitters\n30%","annual testing coverage\nof probable transmitters\n50%","annual testing coverage\nof probable transmitters\n70%")
 	set(runs.av.plot, NULL, 'LEGEND', runs.av.plot[, factor(LEGEND, levels=tmp, labels=tmp)])
+	set(runs.av.plot, NULL, 'LEGEND_PREP', runs.av.plot[, paste('PrEP coverage\nof probable transmitters\nthat test negative\n',PREP_COV,'%',sep='')])
+	tmp					<- c("PrEP coverage\nof probable transmitters\nthat test negative\n33%","PrEP coverage\nof probable transmitters\nthat test negative\n50%","PrEP coverage\nof probable transmitters\nthat test negative\n66%")
+	set(runs.av.plot, NULL, 'LEGEND_PREP', runs.av.plot[, factor(LEGEND_PREP, levels=tmp, labels=tmp)])
 	#
 	#	plot for main text ie 3pa1H1.48C2V100bInfT7
+	#
+	setkey(runs.av.plot, PREV)
+	ggplot( subset(runs.av.plot, PREP_COV=='50' & grepl('test',PREV) & !grepl('IPrEX',HYPO) & !grepl('test (RNA)-treat',PREV, fixed=1) & STAT=='Pjx.e0cp' & method.risk=='m2Awmx.wtn' & method.brl=='3pa1H1.48C2V100bInfT7'), aes(x=PREV, fill=factor( grepl('test-treat', PREV) + 2*grepl('PrEP', PREV) + grepl('all', PREV)) ) ) +
+			geom_hline(yintercept=50, colour="grey70", size=1) +
+			scale_fill_manual(values=c("#DFC27D","#F6E8C3","#C7EAE5","#80CDC1"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0, size=0.3) +
+			geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color='black', width=0.9, size=0.3) +
+			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+			labs(x='', y='\nHIV infections amongst MSM in the transmission cohort\nthat could have been averted in 08/07 - 10/12\n(%)') + 
+			coord_flip() +			
+			theme_bw() + theme(	text=element_text(size=6.5), panel.margin=unit(0.5,"lines"), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.3), panel.grid.minor.x=element_line(colour="grey70", size=0.3), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank(), 
+								axis.text.y=element_text(size=6), axis.ticks=element_line(size=0.2), plot.margin=unit(c(0.2,0.4,0.2,0.2),"mm")) +
+			facet_grid(LEGEND_PREP~LEGEND)
+	file			<- '~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_Prevention.pdf'
+	ggsave(file=file, w=7.3, h=2.5, units='in')
+	#
+	#	plot comparison PrEP coverage
 	#
 	setkey(runs.av.plot, PREV)
 	ggplot( subset(runs.av.plot, grepl('test',PREV) & !grepl('IPrEX',HYPO) & !grepl('test (RNA)-treat',PREV, fixed=1) & STAT=='Pjx.e0cp' & method.risk=='m2Awmx.wtn' & method.brl=='3pa1H1.48C2V100bInfT7'), aes(x=PREV, fill=factor( grepl('test-treat', PREV) + 2*grepl('PrEP', PREV) + grepl('all', PREV)) ) ) +
@@ -156,13 +182,13 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			labs(x='', y='\nHIV infections amongst MSM in the transmission cohort\nthat could have been averted in 08/07 - 10/12\n(%)') + 
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
-			facet_grid(~LEGEND)
-	file			<- '~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_Prevention.pdf'
-	ggsave(file=file, w=16, h=6)	
+			facet_grid(LEGEND_PREP~LEGEND)
+	file			<- '~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_PreventionPrEPCoverage.pdf'
+	ggsave(file=file, w=16, h=10)		
 	#
 	#	plot comparison 44% vs 86%
 	#
-	ggplot( subset(runs.av.plot, grepl('PROUD|IPrEX',HYPO) & STAT=='Pjx.e0cp' & method.risk=='m2Awmx.wtn' & method.brl=='3pa1H1.48C2V100bInfT7'), aes(x=PREV, fill=factor( grepl('test-treat', PREV) + 2*grepl('PrEP', PREV) + grepl('all', PREV)) ) ) +
+	ggplot( subset(runs.av.plot, PREP_COV=='50' & grepl('PROUD|IPrEX',HYPO) & STAT=='Pjx.e0cp' & method.risk=='m2Awmx.wtn' & method.brl=='3pa1H1.48C2V100bInfT7'), aes(x=PREV, fill=factor( grepl('test-treat', PREV) + 2*grepl('PrEP', PREV) + grepl('all', PREV)) ) ) +
 			geom_hline(yintercept=50, colour="grey70", size=2) +
 			scale_fill_manual(values=c("#C7EAE5","#80CDC1"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
 			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
@@ -174,6 +200,104 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			facet_grid(PREP_EFF~LEGEND)
 	file			<- '~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_Prevention4486.pdf'
 	ggsave(file=file, w=16, h=8)	
+	#
+	#	plot for SOM: across censoring adjustments etc
+	#
+	setkey(runs.av.plot, PREV)
+	tmp		<- data.table(STAT=c('Pjx.e0cp','Pjx.e0','Pjx'), stat.legend=c('with adjustment for\ncensoring and sampling biases','with adjustment for\nsampling biases','no adjustment for\nsampling and censoring biases'))
+	set(tmp, NULL, 'stat.legend', tmp[, factor(stat.legend, levels=stat.legend, labels=stat.legend)])
+	tmp		<- merge(runs.av.plot, tmp, by='STAT')	
+	ggplot( subset(tmp, PREP_COV=='50' & grepl('test',PREV) & !grepl('IPrEX',HYPO) & !grepl('test (RNA)-treat',PREV, fixed=1) & method.risk=='m2Awmx.wtn' & method.brl=='3pa1H1.48C2V100bInfT7'), aes(x=PREV, fill=factor( grepl('test-treat', PREV) + 2*grepl('PrEP', PREV) + grepl('all', PREV)) ) ) +
+			geom_hline(yintercept=50, colour="grey70", size=2) +
+			scale_fill_manual(values=c("#DFC27D","#F6E8C3","#C7EAE5","#80CDC1"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
+			geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color='black', width=0.9, size=0.7) +
+			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+			labs(x='', y='\nHIV infections amongst MSM in the transmission cohort\nthat could have been averted in 08/07 - 10/12\n(%)') + 
+			coord_flip() +			
+			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
+			facet_grid(stat.legend~LEGEND)
+	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_PreventionBySamplingAdj.pdf'
+	ggsave(file=file, w=16, h=10)
+	#
+	#	plot for SOM: across trm prob
+	#	
+	setkey(runs.av.plot, PREV)
+	tmp		<- data.table(	method.risk=c("m2Awmx.wtn","m2Awmx","m2Awmx.noscore","m2Awmx.nophyloscore"), 
+			method.legend=c(	'with phylogenetic transmission\nprobability per interval',
+					'with phylogenetic transmission\nprobability per probable transmitter',
+					'every interval\nequally likely',
+					'every probable transmitter\n equally likely'))
+	set(tmp, NULL, 'method.legend', tmp[, factor(method.legend, levels=method.legend, labels=method.legend)])
+	tmp		<- merge(runs.av.plot, tmp, by='method.risk')	
+	ggplot( subset(tmp, STAT=='Pjx.e0cp' & PREP_COV=='50' & grepl('test',PREV) & !grepl('IPrEX',HYPO) & !grepl('test (RNA)-treat',PREV, fixed=1) & method.brl=='3pa1H1.48C2V100bInfT7'), aes(x=PREV, fill=factor( grepl('test-treat', PREV) + 2*grepl('PrEP', PREV) + grepl('all', PREV)) ) ) +
+			geom_hline(yintercept=50, colour="grey70", size=2) +
+			scale_fill_manual(values=c("#DFC27D","#F6E8C3","#C7EAE5","#80CDC1"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
+			geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color='black', width=0.9, size=0.7) +
+			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+			labs(x='', y='\nHIV infections amongst MSM in the transmission cohort\nthat could have been averted in 08/07 - 10/12\n(%)') + 
+			coord_flip() +			
+			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
+			facet_grid(method.legend~LEGEND)			
+	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_PreventionByPhyloLkl.pdf'
+	ggsave(file=file, w=16, h=10)	
+	#
+	#	plot for SOM: across exclusion criteria
+	#
+	tmp				<- data.table(	method.brl=c(	"3pa1H1.48C2V100bInfT7", "3pa1H1.94C2V100bInfT7", "3pa1H1.09C2V100bInfT7",					
+					"3pa1H1.48C3V100bInfT7", "3pa1H1.48C1V100bInfT7", 
+					"3pa1H1.48C3V100bInfs0.85T7", "3pa1H1.48C2V100bInfs0.85T7", "3pa1H1.48C1V100bInfs0.85T7",
+					"3pa1H1.48C3V100bInfs0.7T7", "3pa1H1.48C2V100bInfs0.7T7", "3pa1H1.48C1V100bInfs0.7T7"), 
+			method.legend=c( 'central estimate of HIV infection times\ncentral phylogenetic exclusion criteria',
+					'lower estimate of HIV infection times',
+					'upper estimate of HIV infection times',
+					'phylogenetic exclusion criteria\ncoalescent compatibility < 30%\nclade frequency < 80%',
+					'phylogenetic exclusion criteria\ncoalescent compatibility < 10%\nclade frequency < 80%',
+					'phylogenetic exclusion criteria\ncoalescent compatibility < 30%\nclade frequency < 85%',
+					'phylogenetic exclusion criteria\ncoalescent compatibility < 20%\nclade frequency < 85%',
+					'phylogenetic exclusion criteria\ncoalescent compatibility < 10%\nclade frequency < 85%',
+					'phylogenetic exclusion criteria\ncoalescent compatibility < 30%\nclade frequency < 70%',
+					'phylogenetic exclusion criteria\ncoalescent compatibility < 20%\nclade frequency < 70%',
+					'phylogenetic exclusion criteria\ncoalescent compatibility < 10%\nclade frequency < 70%'))										 
+	set(tmp, NULL, 'method.legend', tmp[, factor(method.legend, levels=method.legend, labels=method.legend)])
+	tmp				<- merge(runs.av.plot, tmp, by='method.brl')
+	setkey(tmp, PREV)
+	ggplot( subset(tmp, STAT=='Pjx.e0cp' & PREP_COV=='50' & method.risk=='m2Awmx.wtn' & grepl('test',PREV) & !grepl('IPrEX',HYPO) & !grepl('test (RNA)-treat',PREV, fixed=1)), aes(x=PREV, fill=factor( grepl('test-treat', PREV) + 2*grepl('PrEP', PREV) + grepl('all', PREV)) ) ) +
+			geom_hline(yintercept=50, colour="grey70", size=2) +
+			scale_fill_manual(values=c("#DFC27D","#F6E8C3","#C7EAE5","#80CDC1"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
+			geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color='black', width=0.9, size=0.7) +
+			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+			labs(x='', y='\nHIV infections amongst MSM in the transmission cohort\nthat could have been averted in 08/07 - 10/12\n(%)') + 
+			coord_flip() +			
+			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
+			facet_grid(method.legend~LEGEND)			
+	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_PreventionByExclusionCriteria.pdf'
+	ggsave(file=file, w=16, h=45)
+	#
+	#	plot for SOM: across exclusion criteria gen distance
+	#
+	tmp				<- data.table(	method.brl=c(	"3pa1H1.48C2V100b0.02T7", "3pa1H1.48C2V100b0.04T7"	), 
+			method.legend=c( 'central estimate of HIV infection times\ncentral phylogenetic exclusion criteria\nand genetic distance <2%',
+					'central estimate of HIV infection times\ncentral phylogenetic exclusion criteria\nand genetic distance <4%'	))										 
+	set(tmp, NULL, 'method.legend', tmp[, factor(method.legend, levels=method.legend, labels=method.legend)])
+	tmp				<- merge(runs.av.plot, tmp, by='method.brl')
+	setkey(tmp, PREV)
+	ggplot( subset(tmp, STAT=='Pjx.e0cp' & PREP_COV=='50' & method.risk=='m2Awmx.wtn' & grepl('test',PREV) & !grepl('IPrEX',HYPO) & !grepl('test (RNA)-treat',PREV, fixed=1)), aes(x=PREV, fill=factor( grepl('test-treat', PREV) + 2*grepl('PrEP', PREV) + grepl('all', PREV)) ) ) +
+			geom_hline(yintercept=50, colour="grey70", size=2) +
+			scale_fill_manual(values=c("#DFC27D","#F6E8C3","#C7EAE5","#80CDC1"), name='hypothetical interventions\n in time period 09/07-10/12', guide=FALSE) +
+			geom_boxplot(aes(ymin=Q2.5*100, ymax=Q97.5*100, lower=Q25*100, middle=Q50*100, upper=Q75*100), stat="identity", fatten=0) +
+			geom_errorbar(aes(ymin=Q50*100,ymax=Q50*100), color='black', width=0.9, size=0.7) +
+			scale_y_continuous(expand=c(0,0), limits=c(0, 100), breaks=seq(0,100,10), minor_breaks=seq(0,100,5)) +
+			labs(x='', y='\nHIV infections amongst MSM in the transmission cohort\nthat could have been averted in 08/07 - 10/12\n(%)') + 
+			coord_flip() +			
+			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
+			facet_grid(method.legend~LEGEND)			
+	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_PreventionByGenDist.pdf'
+	ggsave(file=file, w=16, h=7)
+	
+	
 	
 	
 	
