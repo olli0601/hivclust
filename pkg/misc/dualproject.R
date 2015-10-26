@@ -1,8 +1,8 @@
 project.dual<- function()
 {
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
-	#project.dual.distances.231015()
-	project.dual.examl.231015()
+	project.dual.distances.231015()
+	#project.dual.examl.231015()
 }
 
 project.dual.distances.231015<- function()
@@ -24,13 +24,14 @@ project.dual.examl.231015<- function()
 {
 	indir		<- paste(HOME,"alignments_151023",sep='/')
 	#indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
-	infiles		<- list.files(indir, pattern='consensus.*151023\\.R')
+	#indir		<- '~/duke/2015_various'
+	infiles		<- list.files(indir, pattern='consensus.*151023\\.R')	
 	insignat	<- '151023'
 
 	for(i in seq_along(infiles))
 	{
 		bs.from		<- 0
-		bs.to		<- 100
+		bs.to		<- 0
 		bs.n		<- 100
 		outdir		<- indir
 		infile		<- gsub(paste('_',insignat,'\\.R',sep=''),'',infiles[i])
@@ -41,7 +42,7 @@ project.dual.examl.231015<- function()
 		
 		dummy		<- lapply(cmd, function(x)
 				{				
-					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=33, hpc.q= NA, hpc.mem="1900mb", hpc.nproc=1)
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=33, hpc.q= NA, hpc.mem="1800mb", hpc.nproc=1)
 					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=50, hpc.q="pqeelab", hpc.mem="5500mb", hpc.nproc=1)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("exa",signat,sep='.')
@@ -66,25 +67,32 @@ project.dual.alignments.231015<- function()
 	si		<- as.data.table(read.csv(file, stringsAsFactors=FALSE))
 	setnames(si, colnames(si), toupper(gsub('.','_',colnames(si),fixed=1))) 
 	set(si, NULL, 'PANGEA_ID', si[, gsub(' ','',PANGEA_ID)])
-	setkey(si, PANGEA_ID)
+	setnames(si, 'CLINICAL_GENOME_COVERAGE', 'COV')
 	
 	#	read global PANGEA alignment and split by site
-	file	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_GlobalAlignment.fasta"
-	sq		<- read.dna(file, format='fasta')
-	sqi		<- data.table(TAXA=rownames(sq))
+	file			<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_GlobalAlignment.fasta"
+	sq				<- read.dna(file, format='fasta')
+	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
+	tmp				<- sqi[, which(duplicated(TAXA))]
+	set(sqi, tmp, 'TAXA', sqi[tmp, paste(TAXA,'-R2',sep='')])
+	setkey(sqi, DUMMY)
+	rownames(sq)	<- sqi[,TAXA]	
+	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]	
 	sqi[, PNG:= sqi[, factor(grepl('PG',TAXA),levels=c(TRUE,FALSE),labels=c('Y','N'))]]		
 	sqi[, SITE:= NA_character_]
-	tmp		<- sqi[, which(PNG=='Y')]
+	tmp				<- sqi[, which(PNG=='Y')]
 	set(sqi, tmp, 'SITE', sqi[tmp, substring(sapply(strsplit(TAXA,'-'),'[[',2),1,2)])
-	setnames(sqi, 'TAXA', 'PANGEA_ID')
-	sqi		<- merge(sqi, unique(si), by='PANGEA_ID', all.x=1)
-	sqi		<- subset(sqi, is.na(CLINICAL_GENOME_COVERAGE) | CLINICAL_GENOME_COVERAGE>0)
-	seq		<- sq[ subset(sqi, SITE=='UG' | PNG=='N')[, PANGEA_ID], ]
-	write.dna( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_UG.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
-	save( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_UG.R',sep=''))
-	seq		<- sq[ subset(sqi, SITE=='BW' | PNG=='N')[, PANGEA_ID], ]
-	write.dna( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_BW.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
-	save( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_BW.R',sep=''))
+	sqi[, PANGEA_ID:= gsub('-R[0-9]+','',TAXA)]
+	sqi				<- subset(sqi, COV>0)
+	sqi				<- merge(sqi, si, by=c('PANGEA_ID','COV'), all.x=1)
+	seq				<- sq[ subset(sqi, SITE=='UG' | PNG=='N')[, TAXA], ]	
+	write.dna( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_UG_151023.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
+	save( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_UG_151023.R',sep=''))
+	seq		<- sq[ subset(sqi, SITE=='BW' | PNG=='N')[, TAXA], ]
+	write.dna( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_BW_151023.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
+	save( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_BW_151023.R',sep=''))
+	
 	
 	#	read contig alignment and split by site
 	file	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAcontigs_2015-09_Imperial/contigs_cnsalign_PNGIDn3366_CNTGSn6120_stripped99.fasta"
@@ -96,24 +104,28 @@ project.dual.alignments.231015<- function()
 	set(cri, tmp, 'SANGER_ID', cri[tmp, sapply(strsplit( gsub('^\\.', '', TAXA), '.', fixed=1),'[[',1)] )	
 	tmp		<- subset(cri, PNG=='Y')[, list(TAXA=TAXA, CNTG_ID_NEW=seq_along(TAXA), CONTG_ID= gsub(SANGER_ID,'',gsub('^\\.', '', TAXA))), by='SANGER_ID']
 	cri		<- merge(cri, tmp, all.x=1, by=c('SANGER_ID','TAXA'))
-	cri		<- merge(cri, si, by='SANGER_ID', all.x=1)
+	setnames(sqi, 'TAXA', 'PANGEA_ID_WDUP')
+	cri[, PNG:=NULL]
+	cri		<- merge(cri, subset(sqi, !is.na(SANGER_ID)), by='SANGER_ID', all.x=1)
 	stopifnot( nrow(subset(cri, is.na(SANGER_ID) & PNG=='Y'))==0 )
 	cri[, SITE:= NA_character_]
 	tmp		<- cri[, which(PNG=='Y')]
 	set(cri, tmp, 'SITE', cri[tmp, substring(sapply(strsplit(PANGEA_ID,'-'),'[[',2),1,2)])		
-	tmp		<- cri[, list(TAXA_NEW= ifelse( is.na(CNTG_ID_NEW), paste('Ref.',TAXA,sep=''), paste(PANGEA_ID,'-C',CNTG_ID_NEW,sep='') )), by='TAXA']
+	tmp		<- cri[, list(TAXA_NEW= ifelse( is.na(CNTG_ID_NEW), paste('Ref.',TAXA,sep=''), paste(PANGEA_ID_WDUP,'-C',CNTG_ID_NEW,sep='') )), by='TAXA']
 	cri		<- merge(cri, tmp, by='TAXA')
 	setkey(cri, TAXA)
 	rownames(cr)	<- cri[rownames(cr),][, TAXA_NEW]
 	seq		<- cr[ subset(cri, SITE=='UG' | PNG=='N')[, TAXA_NEW], ]
-	write.dna( seq, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_UG.fasta',sep=''), format='fasta', colsep='', nbcol=-1)
-	save( seq, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_UG.R',sep=''))
+	write.dna( seq, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_UG_151023.fasta',sep=''), format='fasta', colsep='', nbcol=-1)
+	save( seq, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_UG_151023.R',sep=''))
 	seq		<- cr[ subset(cri, SITE=='BW' | PNG=='N')[, TAXA_NEW], ]
-	write.dna( seq, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_BW.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
-	save( seq, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_BW.R',sep=''))
+	write.dna( seq, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_BW_151023.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
+	save( seq, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_BW_151023.R',sep=''))
+	
+	#	save info on consensus and contigs
+	save( sqi, cri, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_info.R',sep=''))
 	
 	#	next: distances
-	
 }
 
 project.dualinfections.build.blastdb<- function()
