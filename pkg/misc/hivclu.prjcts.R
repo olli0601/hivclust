@@ -3170,7 +3170,137 @@ project.hivc.clustering.NoRecombNoDR.to.NoShort<- function()
 			})			
 }
 ######################################################################################
-project.hivc.clustering.forStephane.onUK<- function()
+project.hivc.clustering.forStephane.onUK.ExaML<- function()
+{	
+	verbose			<- 1
+	resume			<- 1
+	patient.n		<- 15700; 	thresh.brl<- 0.096; 	thresh.bs<- 0.8;	opt.brl<- "dist.brl.casc" 
+	indir			<- '~/Dropbox (Infectious Disease)/2015_OptimalClusteringThresholds/data'	
+	outdir			<- '~/Dropbox (Infectious Disease)/2015_OptimalClusteringThresholds/data'
+	
+	#	read tree
+	if(0)
+	{
+		infile			<- "TNTP_PRRT_withoutDoublon_withoutDRM_examlbs500_151023.newick"
+		ph				<- read.tree(paste(indir,infile,sep='/'))
+		ph 				<- ladderize( ph )
+		ph.node.bs						<- as.numeric( ph$node.label )		
+		ph.node.bs[is.na(ph.node.bs)]	<- 0
+		ph.node.bs[c(2,3,4,5,6)]		<- 0
+		ph$node.label					<- ph.node.bs / 100	
+		ph$tip.label	<- toupper(ph$tip.label)
+		
+		tips.unlinked	<- as.data.table(read.csv2(file=paste(indir,'TN_correct2.csv',sep='/'), stringsAsFactors=FALSE))
+	}
+	if(1)
+	{
+		infile			<- "TNTP_PRRT_FastTree.newick"
+		ph				<- read.tree(paste(indir,infile,sep='/'))
+		ph 				<- ladderize( ph )
+		ph.node.bs						<- as.numeric( ph$node.label )		
+		ph.node.bs[is.na(ph.node.bs)]	<- 0		
+		ph$node.label					<- ph.node.bs 	
+		ph$tip.label	<- toupper(ph$tip.label)	
+		
+		tips.unlinked	<- as.data.table(read.csv2(file=paste(indir,'TN_correct.csv',sep='/'), stringsAsFactors=FALSE))
+	}
+	#	plot tree
+	pdf(file=paste(outdir,'/',gsub('\\.newick','\\.pdf',infile),sep=''), w=10, h=150)
+	plot(ph, show.tip.label=FALSE, show.node.label=TRUE, cex=0.4)
+	dev.off()
+	#	read TP 	
+	tips.linked		<- as.data.table(read.csv2(file=paste(indir,'TP.csv',sep='/'), stringsAsFactors=FALSE))
+	setnames(tips.linked, c('seq1','seq2'), c('FASTASampleCode','t.FASTASampleCode'))
+	#	read TN
+	
+	setnames(tips.unlinked, c('seq1','seq2'), c('FASTASampleCode','t.FASTASampleCode'))
+	#	get unique tips
+	tmp				<- tips.unlinked[, which(FASTASampleCode<t.FASTASampleCode)]
+	z				<- tips.unlinked[tmp, t.FASTASampleCode]
+	set(tips.unlinked,tmp,'t.FASTASampleCode',tips.unlinked[tmp, FASTASampleCode])
+	set(tips.unlinked,tmp,'FASTASampleCode',z)
+	setkey(tips.unlinked, FASTASampleCode, t.FASTASampleCode)
+	tips.unlinked	<- unique(tips.unlinked)	#they were unique :-)	
+	tmp				<- tips.linked[, which(FASTASampleCode<t.FASTASampleCode)]
+	z				<- tips.linked[tmp, t.FASTASampleCode]
+	set(tips.linked,tmp,'t.FASTASampleCode',tips.linked[tmp, FASTASampleCode])
+	set(tips.linked,tmp,'FASTASampleCode',z)
+	setkey(tips.linked, FASTASampleCode, t.FASTASampleCode)
+	tips.linked		<- unique(tips.linked)	#they were also unique :-)
+	#	some TP and TNs are not in the fasta file..
+	tips.linked		<- subset(tips.linked, FASTASampleCode%in%ph$tip.label & t.FASTASampleCode%in%ph$tip.label)
+	tips.unlinked	<- subset(tips.unlinked, FASTASampleCode%in%ph$tip.label & t.FASTASampleCode%in%ph$tip.label)
+	
+	#	get BRLs and MRCAS 
+	ph.dist				<- cophenetic.phylo(ph)
+	ph.mrca				<- mrca(ph)
+	rownames(ph.dist)	<- toupper(rownames(ph.dist))
+	colnames(ph.dist)	<- toupper(colnames(ph.dist))
+	rownames(ph.mrca)	<- toupper(rownames(ph.mrca))
+	colnames(ph.mrca)	<- toupper(colnames(ph.mrca))
+	tmp					<- tips.linked[, list(BRL=ph.dist[FASTASampleCode,t.FASTASampleCode]) ,by=c('FASTASampleCode','t.FASTASampleCode')]
+	tips.linked			<- merge(tmp, tips.linked, by=c('FASTASampleCode','t.FASTASampleCode'))
+	tmp					<- tips.unlinked[, list(BRL=ph.dist[FASTASampleCode,t.FASTASampleCode]) ,by=c('FASTASampleCode','t.FASTASampleCode')]
+	tips.unlinked		<- merge(tmp, tips.unlinked, by=c('FASTASampleCode','t.FASTASampleCode'))
+	tmp					<- tips.linked[, list(MRCA= ph.mrca[FASTASampleCode,t.FASTASampleCode]), by=c('FASTASampleCode','t.FASTASampleCode')]
+	tips.linked			<- merge(tips.linked, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))
+	tmp					<- tips.unlinked[, list(MRCA= ph.mrca[FASTASampleCode,t.FASTASampleCode]) ,by=c('FASTASampleCode','t.FASTASampleCode')]
+	tips.unlinked		<- merge(tmp, tips.unlinked, by=c('FASTASampleCode','t.FASTASampleCode'))
+	tips.linked[, BSatMRCA:= ph$node.label[ tips.linked[, MRCA-Ntip(ph)] ]]
+	tmp					<- tips.linked[, {													
+									tmp			<- Ancestors(ph, MRCA)		
+									anc.bs		<- ph$node.label[ tmp-Ntip(ph) ]
+									list(	BSbelowMRCA= ifelse(length(tmp),max(anc.bs),0)		)													
+								}, by=c('FASTASampleCode','t.FASTASampleCode')]
+	tips.linked			<- merge(tips.linked, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))	
+	tmp					<- tips.linked[,	list(BS=max(BSbelowMRCA,BSatMRCA)),		by=c('FASTASampleCode','t.FASTASampleCode')]
+	tips.linked			<- merge(tips.linked, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))		
+	tips.unlinked[, BSatMRCA:= ph$node.label[ tips.unlinked[, MRCA-Ntip(ph)] ]]
+	tmp					<- tips.unlinked[, {													
+				tmp			<- Ancestors(ph, MRCA)		
+				anc.bs		<- ph$node.label[ tmp-Ntip(ph) ]
+				list(	BSbelowMRCA= ifelse(length(tmp),max(anc.bs),0)		)													
+			}, by=c('FASTASampleCode','t.FASTASampleCode')]
+	tips.unlinked		<- merge(tips.unlinked, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))
+	tmp					<- tips.unlinked[,	list(BS=max(BSbelowMRCA,BSatMRCA)),		by=c('FASTASampleCode','t.FASTASampleCode')]
+	tips.unlinked		<- merge(tips.unlinked, tmp, by=c('FASTASampleCode','t.FASTASampleCode'))	
+	#	save	
+	file			<- paste(outdir,'/',gsub('\\.newick','_TPTN.R',infile),sep='')
+	cat('\nsave to file',file)
+	save(tips.linked, tips.unlinked, ph, ph.dist, ph.mrca, file=file)
+	
+	set(tips.linked, NULL, 'BS', tips.linked[, 100*BS])
+	set(tips.linked, NULL, 'BSatMRCA', tips.linked[, 100*BSatMRCA])
+	set(tips.linked, NULL, 'BSbelowMRCA', tips.linked[, 100*BSbelowMRCA])
+	set(tips.unlinked, NULL, 'BS', tips.unlinked[, 100*BS])
+	set(tips.unlinked, NULL, 'BSatMRCA', tips.unlinked[, 100*BSatMRCA])
+	set(tips.unlinked, NULL, 'BSbelowMRCA', tips.unlinked[, 100*BSbelowMRCA])
+	
+	
+	tips.linked[, TYPE:='LINKED']
+	tips.unlinked[, TYPE:='UNLINKED']
+	tips.lul		<- rbind(tips.linked, tips.unlinked)
+	ggplot(tips.lul, aes(x=BRL)) + geom_histogram(binwidth=0.002) + scale_x_continuous(lim=c(0,0.1)) + facet_grid(~TYPE)
+	ggsave(file=paste(outdir,'/',gsub('\\.newick','_LinkedUnlinkedBRLHisto.pdf',infile),sep=''), w=7, h=4)
+	ggplot(tips.lul, aes(x=BS)) + geom_histogram(binwidth=0.02) + facet_grid(~TYPE)
+	ggsave(file=paste(outdir,'/',gsub('\\.newick','_LinkedUnlinkedBSHisto.pdf',infile),sep=''), w=7, h=4)
+	
+	heat			<- as.data.table(expand.grid(BS_CUT=seq(0,1,0.01), BRL_CUT=seq(0, 0.2, 0.005), DATA='Dataset Surrogate Linked', DECLARE='Declare Linked'))
+	tmp				<- heat[, list( PC= nrow(subset(tips.linked, BS>=BS_CUT & BRL<=BRL_CUT)) / nrow(tips.linked) ), by=c('BS_CUT','BRL_CUT')]
+	heat			<- merge(heat, tmp, by=c('BS_CUT','BRL_CUT'))
+	
+	ggplot(subset(heat, DATA=='Dataset Surrogate Linked' & DECLARE=='Declare Linked' & BS_CUT>=0.5), aes(x=100*BS_CUT, y=100*BRL_CUT, fill=cut(PC, breaks=c(-0.01, 0.01, 0.1, 0.3, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.01), labels=c('<1%','1-10%','10-30%','30-50%','50-60%','60-70%','70-80%','80-90%','90-95%','>95%')))) + geom_tile(colour = "white") +
+			scale_fill_brewer(palette='PiYG') + theme_bw() +
+			scale_x_continuous(expand=c(0,0), breaks=c(50,60,70,80,90,95,100)) + scale_y_continuous(expand=c(0,0), breaks=c(0,2,4,6,8,10,15,20)) +
+			labs(x='bootstrap support threshold\n(%)', y='single linkage branch length threshold\n(%)', fill='Linked sequences\nthat are in same cluster') +
+			#facet_grid(DECLARE~DATA) +
+			theme_bw() + theme(legend.position='bottom') + guides(fill = guide_legend(ncol=3))
+	ggsave(file=paste(outdir,'/',infile,'_Bias.pdf',sep=''), w=5, h=6)
+	
+		
+}
+######################################################################################
+project.hivc.clustering.forStephane.onUK.FastTree<- function()
 {	
 	verbose		<- 1
 	resume		<- 1
@@ -3275,6 +3405,7 @@ project.hivc.clustering.forStephane.onNL<- function()
 	argv			<<- hivc.cmd.preclustering(indir, infile, insignat, indircov, infilecov, resume=resume)				 
 	argv			<<- unlist(strsplit(argv,' '))
 	nsh.clu.pre		<- hivc.prog.get.clustering.precompute()
+	ph				<- nsh.clu.pre$ph
 	#	read TP tips and TN tips
 	tips.linked		<- subset(nsh.clu.pre$bs.linked.bypatient, select=c('tip1','tip2','bs','PosSeqT.diff'))
 	tips.unlinked	<- do.call('rbind',nsh.clu.pre$unlinked.bytime)
@@ -3301,8 +3432,7 @@ project.hivc.clustering.forStephane.onNL<- function()
 		setnames(tips.linked, c('bs'), c('BS'))
 		file			<- paste(outdir,'/',infile,'_TPbrl.R',sep='')
 		cat('\nsave to file',file)
-		save(tips.linked, file=file)
-		
+		save(tips.linked, file=file)		
 		load(file)
 	}
 	#
@@ -3367,6 +3497,17 @@ project.hivc.clustering.forStephane.onNL<- function()
 	{
 		tips.linked[, TYPE:='LINKED']
 		tips.unlinked[, TYPE:='UNLINKED']
+		file			<- paste(outdir,'/',infile,'_TNTP.R',sep='')
+		cat('\nsave to file',file)
+		save(tips.unlinked, tips.linked, ph, file=file)
+		#		
+		tips.lul		<- rbind( subset(tips.linked, select=c(FASTASampleCode, t.FASTASampleCode, BRL, BS, TYPE)), subset(tips.unlinked, select=c(FASTASampleCode, t.FASTASampleCode, BRL, BS, TYPE)) )
+		ggplot(tips.lul, aes(x=BRL)) + geom_histogram(binwidth=0.002) + scale_x_continuous(lim=c(0,0.1)) + facet_grid(~TYPE)
+		ggsave(file=paste(outdir,'/',infile,'_LinkedUnlinkedBRLHisto.pdf',sep=''), w=7, h=4)
+		ggplot(tips.lul, aes(x=BS)) + geom_histogram(binwidth=0.02) + facet_grid(~TYPE)
+		ggsave(file=paste(outdir,'/',infile,'_LinkedUnlinkedBSHisto.pdf',sep=''), w=7, h=4)
+		ggplot(tips.lul, aes(x=BS)) + geom_histogram(binwidth=0.02) + coord_cartesian(ylim=c(0,2.1e3)) + facet_grid(~TYPE) 
+		ggsave(file=paste(outdir,'/',infile,'_LinkedUnlinkedBSHisto_Zoom.pdf',sep=''), w=7, h=4)		
 		#
 		#		analysis of ATHENA TP / TN data
 		#

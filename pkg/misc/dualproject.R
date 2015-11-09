@@ -1,6 +1,7 @@
 project.dual<- function()
 {
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
+	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
 	project.dual.distances.231015()
 	#project.dual.examl.231015()
 }
@@ -49,13 +50,7 @@ project.dual.examl.231015<- function()
 					#cat(x)
 					hivc.cmd.hpccaller(outdir, outfile, x)
 					Sys.sleep(1)
-				})	
-		
-		
-		load( paste(indir,'/',infiles[i],sep='') )
-		d		<- seq.dist(seq)
-		save(d, seq, file= gsub('\\.R','_dist\\.R',paste(indir,'/',infiles[i],sep='')))
-		gc()
+				})			
 	}		
 }
 
@@ -123,7 +118,7 @@ project.dual.alignments.231015<- function()
 	save( seq, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_BW_151023.R',sep=''))
 	
 	#	save info on consensus and contigs
-	save( sqi, cri, file=paste(outdir,'/PANGEAcontigs_2015-09_Imperial_info.R',sep=''))
+	save( sqi, cri, file=paste(outdir,'/PANGEAinfo_2015-09_Imperial.R',sep=''))
 	
 	#	next: distances
 }
@@ -289,6 +284,90 @@ project.dualinfections.summary<- function()
 	print(tmp)
 	
 	tmp		<- contigs.summarize(seq, seqn, seqa, seqd.str, outdir)
+}
+
+project.dualinfecions.NJExaTrees.BW.151030<- function()
+{
+	verbose		<- 1
+	resume		<- 1
+	thresh.brl	<- 0.07; 	thresh.bs<- 0.8;	 
+	indir		<- paste(HOME,"data",sep='/')
+	outdir		<- paste(HOME,"data",sep='/')
+	#
+	#	BW contigs
+	#
+	load('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023/PANGEAinfo_2015-09_Imperial.R')
+	
+	infile		<- "PANGEAcontigs_2015-09_Imperial_BW_151023_dist.R"
+	load( paste(indir,'/',infile,sep='') )
+	tmp		<- as.character(seq)
+	tx		<- data.table(	TAXA1= rownames(seq), 
+							FIRST= apply( tmp, 1, function(x) which(x!='-')[1] ),
+							LAST= ncol(seq)-apply( tmp, 1, function(x) which(rev(x)!='-')[1] )+1L		)
+	tx[, LEN1:= LAST-FIRST+1L]
+	d		<- merge(d, subset(tx, select=c(TAXA1,LEN1)), by='TAXA1')
+	setnames(tx, c('TAXA1','LEN1'), c('TAXA2','LEN2'))
+	d		<- merge(d, subset(tx, select=c(TAXA2,LEN2)), by='TAXA2')
+	#
+	#	BW ExaML consensus
+	#	
+	infile		<- "PANGEAconsensuses_2015-09_Imperial_BW_examlbs100_151023.newick"
+	ph			<- read.tree( paste(indir,'/',infile,sep='') )	
+	#	drop a few bizarre tips
+	ph			<- drop.tip(ph, c('PG14-BW000365-S06313','PG14-BW000374-S06322','PG14-BW000057-S01150-R2','PG14-BW000064-S01157-R2','PG14-BW000059-S01152-R2','PG14-BW000058-S01151-R2','PG14-BW000062-S01155-R2','PG14-BW000063-S01156-R2'))
+	#	reroot at SIV	
+	tmp			<- which(ph$tip.label=='CPZ.CM.05.SIVcpzMT145.DQ373066')
+	tmp			<- which(ph$tip.label=='CPZ.TZ.06.SIVcpzTAN13.JQ768416')
+	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])	
+	ph 			<- ladderize( ph )	
+	ph.node.bs						<- ph$node.label
+	ph.node.bs[ph.node.bs=='Root']	<- NA
+	ph.node.bs						<- as.numeric(ph.node.bs)
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph$node.label					<- ph.node.bs / 100
+	ph$node.label[ph$node.label>1]	<- 1	
+	stat.fun						<- hivc.clu.min.transmission.cascade
+	#stat.fun						<- max
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)	
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+	print(clustering)		
+	tip.color	<- rep('black',Ntip(ph))
+	tip.color[ grepl('PG14',ph$tip.label) ]	<- 'DarkRed'
+	file		<- paste(outdir,"/", gsub('\\.newick',paste('_gd',100*thresh.brl,'bs',thresh.bs*100,'\\.pdf',sep=''), infile), sep='')
+	hivc.clu.plot(ph, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=file, pdf.scaley=25, show.tip.label=TRUE, pdf.width=10)	
+	save(ph, dist.brl, file=paste(indir,'/',gsub('\\.newick','\\.R',infile),sep=''))
+	#
+	#	UG consensus
+	#
+	infile		<- "PANGEAconsensuses_2015-09_Imperial_UG_examlbs100_151023.newick"
+	ph			<- read.tree( paste(indir,'/',infile,sep='') )	
+	#	drop a few bizarre tips
+	#ph			<- drop.tip(ph, c('PG14-BW000365-S06313','PG14-BW000374-S06322','PG14-BW000057-S01150-R2','PG14-BW000064-S01157-R2','PG14-BW000059-S01152-R2','PG14-BW000058-S01151-R2','PG14-BW000062-S01155-R2','PG14-BW000063-S01156-R2'))
+	#	reroot at SIV		
+	tmp			<- which(ph$tip.label=='CPZ.TZ.06.SIVcpzTAN13.JQ768416')
+	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])	
+	ph 			<- ladderize( ph )
+	ph.node.bs						<- ph$node.label
+	ph.node.bs[ph.node.bs=='Root']	<- NA
+	ph.node.bs						<- as.numeric(ph.node.bs)
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph$node.label					<- ph.node.bs / 100
+	ph$node.label[ph$node.label>1]	<- 1	
+	stat.fun						<- hivc.clu.min.transmission.cascade
+	#stat.fun						<- max
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)	
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")	
+	tip.color	<- rep('black',Ntip(ph))
+	tip.color[ grepl('PG14',ph$tip.label) ]	<- 'DarkRed'
+	file		<- paste(outdir,"/", gsub('\\.newick',paste('_gd',100*thresh.brl,'bs',thresh.bs*100,'\\.pdf',sep=''), infile), sep='')
+	hivc.clu.plot(ph, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=file, pdf.scaley=50, show.tip.label=TRUE, pdf.width=30)	
+	save(ph, dist.brl, file=paste(indir,'/',gsub('\\.newick','\\.R',infile),sep=''))
+	
+	
+	#	
+	#pdf(file=paste(indir,'/',gsub('\\.newick','\\.pdf',infile),sep=''), w=10, h=250)
+	#plot(ph, show.node.label=TRUE, cex=0.4)
+	#dev.off()
 }
 
 project.dualinfections.basic<- function()
