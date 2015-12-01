@@ -64,8 +64,9 @@ project.dual.alignments.231015<- function()
 	set(si, NULL, 'PANGEA_ID', si[, gsub(' ','',PANGEA_ID)])
 	setnames(si, 'CLINICAL_GENOME_COVERAGE', 'COV')
 	
-	#	read global PANGEA alignment and split by site
+	#	read global PANGEA alignment and split by site	
 	file			<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_GlobalAlignment.fasta"
+	file			<- '~/Dropbox (Infectious Disease)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.fasta'
 	sq				<- read.dna(file, format='fasta')
 	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
 	tmp				<- sqi[, which(duplicated(TAXA))]
@@ -79,14 +80,16 @@ project.dual.alignments.231015<- function()
 	tmp				<- sqi[, which(PNG=='Y')]
 	set(sqi, tmp, 'SITE', sqi[tmp, substring(sapply(strsplit(TAXA,'-'),'[[',2),1,2)])
 	sqi[, PANGEA_ID:= gsub('-R[0-9]+','',TAXA)]
+	save(sqi, sq, si, file=paste(outdir, '/', gsub('fasta','rda',basename(file)),sep=''))
+	
 	sqi				<- subset(sqi, COV>0)
 	sqi				<- merge(sqi, si, by=c('PANGEA_ID','COV'), all.x=1)
 	seq				<- sq[ subset(sqi, SITE=='UG' | PNG=='N')[, TAXA], ]	
-	write.dna( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_UG_151023.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
-	save( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_UG_151023.R',sep=''))
+	write.dna( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_UG_151113.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
+	save( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_UG_151113.R',sep=''))
 	seq		<- sq[ subset(sqi, SITE=='BW' | PNG=='N')[, TAXA], ]
-	write.dna( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_BW_151023.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
-	save( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_BW_151023.R',sep=''))
+	write.dna( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_BW_151113.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
+	save( seq, file=paste(outdir,'/PANGEAconsensuses_2015-09_Imperial_BW_151113.R',sep=''))
 	
 	
 	#	read contig alignment and split by site
