@@ -1,12 +1,4 @@
 ######################################################################################
-project.London.rmDRM.151130<- function()
-{
-	infile	<- '~/Dropbox (Infectious Disease)/2016_LondonMSM/subUKogC.fasta'
-	seql	<- read.dna(infile, format='fasta')
-	
-	any(grepl('HXB2',rownames(seql)))
-}
-######################################################################################
 project.ACpolext.rmDRM.150913<- function()
 {
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150831'
