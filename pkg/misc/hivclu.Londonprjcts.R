@@ -7,7 +7,7 @@ project.London.rmDRM.151130<- function()
 	
 	require(big.phylo)
 	drmout	<- seq.rm.drugresistance(seql)
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_LondonMSM/subUKogC_noDRM_151202.fasta'	
+	outfile	<- '~/Dropbox (Infectious Disease)/2016_LondonMSM/subUKogC_noDRM.fasta'	
 	save(drmout, file=gsub('\\.fasta','_output.R',outfile))
 	seq		<- drmout$nodr.seq
 	save(seq, file=gsub('\\.fasta','.R',outfile))
@@ -17,10 +17,9 @@ project.London.rmDRM.151130<- function()
 project.London.FirstExaml.151202<- function()
 {
 	require(big.phylo)	
-	indir		<- '~/Dropbox (Infectious Disease)/2016_LondonMSM'	#TODO: currently no whitespace or brackets in file name
+	indir		<- '~/Dropbox (Infectious Disease)/2016_LondonMSM'	#TODO: currently no whitespace or brackets in file name: escape all files with ""
 	indir		<- '/Users/Oliver/duke/2015_various'
-	infile		<- "subUKogC_noDRM"				#TODO: use fasta instead of R
-	signat.in   <- signat.out   <- '151202'		#TODO: could be rm'd
+	infile		<- "subUKogC_noDRM"				#TODO: use fasta instead of R	
 	#	ExaML bootstrap args
 	bs.from		<- 0		# 0 is the actual data alignment
 	bs.to		<- 0
@@ -35,7 +34,7 @@ project.London.FirstExaml.151202<- function()
 	#args.examl	<- "-f d -m GAMMA"		#	 -- ran for weeks
 	#args.examl	<- "-f o -D -m GAMMA"	#	 -- not followed up until 'default' worked
 	args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours	
-	cmd			<- cmd.examl.bootstrap(indir, infile, signat.in, signat.out, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")
+	cmd			<- cmd.examl.bootstrap(indir, infile, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")
 	
 	# create UNIX commands: list, each element for one bs tree	
 	dummy		<- lapply(cmd, function(x)
