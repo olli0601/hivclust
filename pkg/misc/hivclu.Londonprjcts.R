@@ -22,7 +22,7 @@ project.London.FirstExaml.151202<- function()
 	infile		<- "subUKogC_noDRM"				#TODO: use fasta instead of R	
 	#	ExaML bootstrap args
 	bs.from		<- 0		# 0 is the actual data alignment
-	bs.to		<- 0
+	bs.to		<- 50
 	bs.n		<- 50		# optional
 	outdir		<- indir
 	

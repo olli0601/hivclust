@@ -89,8 +89,8 @@ EPS			<<- 1e-12
 #default.fun		<- "project.athena.Fisheretal.numbers"
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
-default.fun		<- "project.dual"
-#default.fun		<- "hivc.pipeline.various"
+#default.fun		<- "project.dual"
+default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -101,7 +101,7 @@ default.fun		<- "project.dual"
 #cat(paste("is.loaded('tipcr')->",is.loaded("tipc_tabulate_after_sample"),'\n'))
 ###############################################################################
 function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$", all.files = FALSE,
-		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.ACprjcts.R",sep='/'),paste(CODE.HOME,"misc","dualproject.R",sep='/'),paste(CODE.HOME,"misc","gcproject2013.R",sep='/'))
+		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.ACprjcts.R",sep='/'),paste(CODE.HOME,"misc","Londonprojects.R",sep='/'),paste(CODE.HOME,"misc","dualproject.R",sep='/'),paste(CODE.HOME,"misc","gcproject2013.R",sep='/'))
 sapply(function.list,function(x){ print(x); source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE) })
 ###############################################################################	
 if(0)

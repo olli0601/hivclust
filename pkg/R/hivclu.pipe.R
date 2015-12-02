@@ -993,6 +993,11 @@ hivc.pipeline.various<- function()
 	}	
 	if(1)
 	{
+		project.London.FirstExaml.151202()
+		quit("no")
+	}
+	if(0)
+	{
 		#project.hivc.examl.median.brl()
 		cmd			<- hivc.cmd.various()
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=71, hpc.mem="95000mb")
