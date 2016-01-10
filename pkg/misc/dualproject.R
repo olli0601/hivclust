@@ -1,14 +1,14 @@
 project.dual<- function()
 {
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
-	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
-	project.dual.distances.231015()
-	#project.dual.examl.231015()
+	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
+	#project.dual.distances.231015()
+	project.dual.examl.231015()
 }
 
 project.dual.distances.231015<- function()
 {
-	indir		<- paste(HOME,"alignments_151023",sep='/')
+	indir		<- paste(HOME,"alignments_160110",sep='/')
 	#indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
 	infiles		<- list.files(indir, pattern='R$')
 	
@@ -23,28 +23,30 @@ project.dual.distances.231015<- function()
 
 project.dual.examl.231015<- function()
 {
-	indir		<- paste(HOME,"alignments_151023",sep='/')
+	require(big.phylo)
+	#indir		<- paste(HOME,"alignments_151023",sep='/')
+	indir		<- paste(HOME,"alignments_160110",sep='/')	
 	#indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
 	#indir		<- '~/duke/2015_various'
-	infiles		<- list.files(indir, pattern='consensus.*151023\\.R')	
-	insignat	<- '151023'
-
+	#infiles		<- list.files(indir, pattern='PANGEA_HIV_n5003_Imperial_.*\\.R')	
+	infiles		<- 'PANGEA_HIV_n5003_Imperial_v160110_BW.R'
+	infiles		<- 'PANGEA_HIV_n5003_Imperial_v160110_UG.R'
+	infiles		<- 'PANGEA_HIV_n5003_Imperial_v160110_ZA.R'
+	
 	for(i in seq_along(infiles))
 	{
 		bs.from		<- 0
 		bs.to		<- 0
-		bs.n		<- 100
+		bs.n		<- 500
 		outdir		<- indir
-		infile		<- gsub(paste('_',insignat,'\\.R',sep=''),'',infiles[i])
+		infile		<- gsub(paste('\\.R',sep=''),'',infiles[i])
 		args.parser	<- "-m DNA"
-		args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours	
-		cmd			<- hivc.cmd.examl.bootstrap(indir, infile, insignat, insignat, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
-		
-		
+		args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours				
+		cmd			<- cmd.examl.bootstrap(indir, infile, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="nucleotide", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
 		dummy		<- lapply(cmd, function(x)
 				{				
-					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=33, hpc.q= NA, hpc.mem="1800mb", hpc.nproc=1)
-					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=50, hpc.q="pqeelab", hpc.mem="5500mb", hpc.nproc=1)
+					#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=33, hpc.q= NA, hpc.mem="1800mb", hpc.nproc=1)
+					x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=50, hpc.q="pqeelab", hpc.mem="5500mb", hpc.nproc=1)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("exa",signat,sep='.')
 					#cat(x)
@@ -54,9 +56,54 @@ project.dual.examl.231015<- function()
 	}		
 }
 
-project.dual.alignments.231015<- function()
+project.dual.alignments.160110<- function()
 {
-	outdir<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
+	outdir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110'
+	#	read info
+	#file	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
+	#si		<- as.data.table(read.csv(file, stringsAsFactors=FALSE))
+	#setnames(si, colnames(si), toupper(gsub('.','_',colnames(si),fixed=1))) 
+	#set(si, NULL, 'PANGEA_ID', si[, gsub(' ','',PANGEA_ID)])
+	#setnames(si, 'CLINICAL_GENOME_COVERAGE', 'COV')
+	
+	#	read global PANGEA alignment w SA seqs and split by site	
+	file			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151113/AfricaCentreSeqs/GlobalAln_PlusAllPANGEA.fasta'
+	sq				<- read.dna(file, format='fasta')
+	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
+	tmp				<- sqi[, which(duplicated(TAXA))]
+	set(sqi, tmp, 'TAXA', sqi[tmp, paste(TAXA,'-R2',sep='')])
+	set(sqi, NULL, 'TAXA', sqi[, gsub('_BaseFreqs','',TAXA)])
+	setkey(sqi, DUMMY)
+	rownames(sq)	<- sqi[,TAXA]	
+	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]	
+	sqi[, PNG:= sqi[, factor(grepl('^PG|^R[0-9]',TAXA),levels=c(TRUE,FALSE),labels=c('Y','N'))]]		
+	sqi[, SITE:= NA_character_]
+	tmp				<- sqi[, which(PNG=='Y' & grepl('^PG',TAXA))]
+	set(sqi, tmp, 'SITE', sqi[tmp, substring(sapply(strsplit(TAXA,'-'),'[[',2),1,2)])
+	tmp				<- sqi[, which(PNG=='Y' & grepl('^R[0-9]',TAXA))]
+	set(sqi, tmp, 'SITE','ZA')
+	sqi[, SEQLOC:= 'LosAlamos']
+	set(sqi, sqi[, which(grepl('^PG',TAXA))], 'SEQLOC','Sanger')
+	set(sqi, sqi[, which(grepl('^R[0-9]',TAXA))], 'SEQLOC','AfricaCentre')	
+	sqi[, PANGEA_ID:= gsub('-R[0-9]+','',TAXA)]
+	save(sqi, sq, file=paste(outdir, '/PANGEA_HIV_n5003_Imperial_v160110_GlobalAlignment.rda',sep=''))
+	
+	sqi				<- subset(sqi, COV>0)
+	seq				<- sq[ subset(sqi, SITE=='UG' | PNG=='N')[, TAXA], ]	
+	write.dna( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_UG.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
+	save( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_UG.R',sep=''))
+	seq		<- sq[ subset(sqi, SITE=='BW' | PNG=='N')[, TAXA], ]
+	write.dna( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_BW.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
+	save( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_BW.R',sep=''))	
+	seq		<- sq[ subset(sqi, SITE=='ZA' | PNG=='N')[, TAXA], ]
+	write.dna( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_ZA.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
+	save( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_ZA.R',sep=''))
+}
+
+project.dual.alignments.151023<- function()
+{
+	outdir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151113'
 	#	read info
 	file	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
 	si		<- as.data.table(read.csv(file, stringsAsFactors=FALSE))
@@ -340,7 +387,15 @@ project.dualinfecions.NJExaTrees.BW.151030<- function()
 	hivc.clu.plot(ph, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=file, pdf.scaley=25, show.tip.label=TRUE, pdf.width=10)	
 	save(ph, dist.brl, file=paste(indir,'/',gsub('\\.newick','\\.R',infile),sep=''))
 	#
-	#	UG consensus
+	#	UG consensus data tree
+	#
+	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEAconsensuses_2015-09_Imperial_UG_examlout_151023"
+	infile		<- "ExaML_result.PANGEAconsensuses_2015-09_Imperial_UG_151023.finaltree.040"
+	ph			<- read.tree( paste(indir,'/',infile,sep='') )	
+	#	no branch lengths??
+	
+	#
+	#	UG consensus BEST tree
 	#
 	infile		<- "PANGEAconsensuses_2015-09_Imperial_UG_examlbs100_151023.newick"
 	ph			<- read.tree( paste(indir,'/',infile,sep='') )	

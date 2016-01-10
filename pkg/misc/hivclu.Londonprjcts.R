@@ -19,6 +19,7 @@ project.London.FirstExaml.151202<- function()
 	require(big.phylo)	
 	indir		<- '~/Dropbox (Infectious Disease)/2016_LondonMSM'	#TODO: currently no whitespace or brackets in file name: escape all files with ""
 	indir		<- '/Users/Oliver/duke/2015_various'
+	indir		<- DATA
 	infile		<- "subUKogC_noDRM"				#TODO: use fasta instead of R	
 	#	ExaML bootstrap args
 	bs.from		<- 0		# 0 is the actual data alignment
