@@ -488,6 +488,7 @@ pty.cmdwrap <- function(pty.runs, si, pty.args)
 	ptyd		<- dcast.data.table(ptyd, FILE_ID~TYPE, value.var='FILE')
 	#	merge
 	pty.runs	<- merge(pty.runs, ptyd, by='FILE_ID', all.x=1)
+	print( subset(pty.runs, is.na(BAM) | is.na(REF)) )
 	stopifnot(		pty.runs[,!any(is.na(BAM))], pty.runs[,!any(is.na(REF))]		)	#check we have all BAM files
 	pty.runs	<- subset(pty.runs, !is.na(BAM) & !is.na(REF)) 	
 	#	determine length of each ref file
