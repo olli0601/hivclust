@@ -43,8 +43,8 @@ require(hivclust)
 CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 #CODE.HOME	<<- "/Users/Stephane/Phylogenetics/github/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
-HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
-#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
+#HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
+HOME		<<- "/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	#! quotes switch off tilde expansion
 #HOME        <<- "/work/or105/ACpolext"
 #HOME		<<- "/Users/Oliver/duke/2013_HIV_Hue/UKCA_1309"
 #HOME		<<- "/work/or105/UKCA_1309"
@@ -89,8 +89,8 @@ EPS			<<- 1e-12
 #default.fun		<- "project.athena.Fisheretal.numbers"
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
-#default.fun		<- "project.dual"
-default.fun		<- "hivc.pipeline.various"
+default.fun		<- "project.dual"
+#default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{

@@ -3,7 +3,8 @@ project.dual<- function()
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
-	project.dual.examl.231015()
+	#project.dual.examl.231015()
+	project.dualinfecions.phylotypes.pipeline.160110()
 }
 
 project.dual.distances.231015<- function()
@@ -67,12 +68,13 @@ project.dual.alignments.160110<- function()
 	#setnames(si, 'CLINICAL_GENOME_COVERAGE', 'COV')
 	
 	#	read global PANGEA alignment w SA seqs and split by site	
-	file			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151113/AfricaCentreSeqs/GlobalAln_PlusAllPANGEA.fasta'
+	file			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/AfricaCentreSeqs/GlobalAln_PlusAllPANGEA.fasta'
 	sq				<- read.dna(file, format='fasta')
 	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
 	tmp				<- sqi[, which(duplicated(TAXA))]
 	set(sqi, tmp, 'TAXA', sqi[tmp, paste(TAXA,'-R2',sep='')])
 	set(sqi, NULL, 'TAXA', sqi[, gsub('_BaseFreqs','',TAXA)])
+	set(sqi, NULL, 'TAXA', sqi[, gsub('-','_',TAXA)])
 	setkey(sqi, DUMMY)
 	rownames(sq)	<- sqi[,TAXA]	
 	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
@@ -80,13 +82,13 @@ project.dual.alignments.160110<- function()
 	sqi[, PNG:= sqi[, factor(grepl('^PG|^R[0-9]',TAXA),levels=c(TRUE,FALSE),labels=c('Y','N'))]]		
 	sqi[, SITE:= NA_character_]
 	tmp				<- sqi[, which(PNG=='Y' & grepl('^PG',TAXA))]
-	set(sqi, tmp, 'SITE', sqi[tmp, substring(sapply(strsplit(TAXA,'-'),'[[',2),1,2)])
+	set(sqi, tmp, 'SITE', sqi[tmp, substring(sapply(strsplit(TAXA,'_'),'[[',2),1,2)])
 	tmp				<- sqi[, which(PNG=='Y' & grepl('^R[0-9]',TAXA))]
 	set(sqi, tmp, 'SITE','ZA')
 	sqi[, SEQLOC:= 'LosAlamos']
 	set(sqi, sqi[, which(grepl('^PG',TAXA))], 'SEQLOC','Sanger')
 	set(sqi, sqi[, which(grepl('^R[0-9]',TAXA))], 'SEQLOC','AfricaCentre')	
-	sqi[, PANGEA_ID:= gsub('-R[0-9]+','',TAXA)]
+	sqi[, PANGEA_ID:= gsub('_R[0-9]+$','',TAXA)]
 	save(sqi, sq, file=paste(outdir, '/PANGEA_HIV_n5003_Imperial_v160110_GlobalAlignment.rda',sep=''))
 	
 	sqi				<- subset(sqi, COV>0)
@@ -336,8 +338,258 @@ project.dualinfections.summary<- function()
 	tmp		<- contigs.summarize(seq, seqn, seqa, seqd.str, outdir)
 }
 
-project.dualinfecions.NJExaTrees.BW.151030<- function()
+project.dualinfecions.copy.bam<- function()
 {
+	tmp		<- subset(si, grepl('^PG14-ZA', PANGEA_ID), c(PANGEA_ID, SANGER_ID))[, SANGER_ID]
+	tmp		<- subset(pty.clu, !is.na(SANGER_ID))[, SANGER_ID]
+	paste('zip SangerAC.zip ',paste(tmp,'_ref* ',collapse='',sep=''),paste(tmp,'.bam ',collapse='',sep=''),sep='')
+}
+
+project.dualinfecions.phylotypes.setup.ZA.160110<- function()
+{
+	#
+	#	input args
+	#
+	pty.gd		<- 0.2
+	pty.sel.n	<- 20
+	
+	infile		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_GlobalAlignment.rda'
+	load(infile)	#loads sqi, sq
+	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data"
+	outdir		<- indir
+	infile		<-  "PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500.rda"
+	load(paste(indir,infile,sep='/'))	#loads "ph" "dist.brl" "ph.gdtr"  "ph.mrca"
+	#	add SANGER_ID
+	infile.s	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
+	si			<- as.data.table(read.csv(infile.s, stringsAsFactors=FALSE))
+	setnames(si, colnames(si), toupper(gsub('.','_',colnames(si),fixed=1))) 
+	set(si, NULL, 'PANGEA_ID', si[, gsub(' ','',PANGEA_ID)])
+	setnames(si, 'CLINICAL_GENOME_COVERAGE', 'COV')
+	tmp			<- subset(si, grepl('^PG14-ZA', PANGEA_ID), c(PANGEA_ID, SANGER_ID))
+	set(tmp, NULL, 'PANGEA_ID', tmp[,gsub('-','_',PANGEA_ID)])
+	sqi			<- merge(sqi, tmp, by='PANGEA_ID', all.x=1)	
+	#	delete duplicates identified by Tulio from tree
+	infile.dup	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_ZA_Duplicates.csv'
+	dupl		<- as.data.table(read.csv(infile.dup, stringsAsFactors=FALSE))
+	dupl		<- subset(dupl, Duplicated==1, select=c(strains, Duplicated))
+	dupl[, DUP_ID:= seq_len(nrow(dupl))]
+	set(dupl, NULL, 'strains', dupl[, gsub(' +$','',gsub('^ +','',strains))])	
+	dupl		<- dupl[, list(TAXA= strsplit(strains,' ')[[1]]), by='DUP_ID']
+	dupl		<- merge(dupl, sqi, by='TAXA', all.x=1)
+	setkey(dupl, DUP_ID)
+	#write.dna( sq[dupl[, TAXA],], format='fasta', file=gsub('.csv','.fasta',infile.dup))
+	dupl		<- dupl[, list(TAXA= TAXA[which.min(COV)]),by='DUP_ID']
+	ph$tip.label<- gsub('-','_',ph$tip.label) 
+	ph			<- drop.tip(ph, dupl[,TAXA])
+	#	need to recalculate stats..
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)	
+	ph.gdtr							<- cophenetic.phylo(ph)
+	ph.mrca							<- mrca(ph)	
+	#
+	#	determine large clusters
+	#
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.brl=pty.gd, dist.brl=dist.brl, retval="all")	
+	pty.clu		<- subset(data.table(TX_IDX=seq_len(Ntip(ph)), TAXA= ph$tip.label, CLU_ID=clustering$clu.mem[seq_len(Ntip(ph))]), !is.na(CLU_ID))	
+	#	reduce to clusters containing at least one ZA sequence
+	pty.clu		<- merge(pty.clu, sqi,by='TAXA')
+	tmp			<- pty.clu[, list(ANY_NOT_INCOUNTRY= any(is.na(SITE) | SITE!='ZA'), ALL_NOT_INCOUNTRY= all(is.na(SITE) | SITE!='ZA')), by='CLU_ID']
+	cat('\nInspecting clusters if not in-country')
+	print(tmp[, table(ANY_NOT_INCOUNTRY, ALL_NOT_INCOUNTRY)])
+	tmp			<- subset(tmp, !ALL_NOT_INCOUNTRY)
+	pty.clu		<- merge(pty.clu, subset(tmp, select=c(CLU_ID)), by='CLU_ID')
+	#	reduce to clusters of ZA sequences
+	pty.clu		<- subset(pty.clu, PNG=='Y')
+	pty.clu		<- merge(pty.clu, pty.clu[, list(CLU_N= length(TAXA)), by='CLU_ID'], by='CLU_ID')
+	pty.clu		<- subset(pty.clu, CLU_N>1)
+	cat('\nFound in-country clusters of size:')	
+	print( unique(subset(pty.clu, select=c(CLU_ID, CLU_N)))[, table(CLU_N)] )
+	#
+	#	get all combinations within each cluster
+	#
+	pty.fill	<- which(grepl('^R[0-9]+|^PG',ph$tip.label))	
+	pty.runs	<- pty.clu[,{
+				#CLU_ID	<- 1; TX_IDX	<- subset(pty.clu, CLU_ID==1)[, TX_IDX]
+				ans	<- pty.get.taxa.combinations(length(TX_IDX), pty.sel.n)	# get all combinations within cluster
+				setnames(ans, 'TX_IDX', 'IDX')
+				tx	<- TX_IDX
+				tmp	<- pty.sel.n-length(TX_IDX)				
+				if(tmp>0)
+					tx	<- c(tx, sample(setdiff(pty.fill,TX_IDX), tmp))
+				ans	<- merge(ans, data.table(TX_IDX=tx, IDX=seq_along(tx), FILL= c(rep(0,length(TX_IDX)),rep(1,tmp))), by='IDX')
+				subset(ans, select=c(RUN, TX_IDX, FILL))
+			}, by='CLU_ID']
+	setnames(pty.runs, 'RUN', 'RUN_OF_CLU')
+	tmp			<- unique(subset(pty.runs, select=c(CLU_ID,RUN_OF_CLU)))
+	setkey(tmp, CLU_ID, RUN_OF_CLU)
+	tmp[, PTY_RUN:= seq_len(nrow(tmp))]
+	pty.runs	<- merge(tmp, pty.runs,by=c('CLU_ID','RUN_OF_CLU'))
+	pty.runs[, RUN_OF_CLU:=NULL]
+	pty.runs[, TAXA:= ph$tip.label[ TX_IDX] ]
+	#	
+	cat('\nNumber of clusters=', pty.runs[, length(unique(CLU_ID))])
+	cat('\nNumber of scheduled phylotype runs=', pty.runs[, max(PTY_RUN)])
+	cat('\nNumber of selected taxa=', subset(pty.runs, !FILL)[, length(unique(TAXA))])
+	cat('\nLargest cluster size=', unique(subset(pty.clu, select=c(CLU_ID, CLU_N)))[,  max(as.numeric(names(table(CLU_N))))] )
+	tmp			<- paste(indir, '/', gsub('\\.rda','_ptyrunsinput\\.rda',infile), sep='')
+	save(pty.runs, pty.clu, ph, dist.brl, ph.gdtr, ph.mrca, clustering, sqi, sq, file= tmp)
+	
+	
+	
+}
+
+pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees='',out.dir='.')
+{	
+	stopifnot(is.character(file.bam),is.character(file.ref),is.numeric(window.coord), !length(window.coord)%%2)
+	#	create local tmp dir
+	cmd		<- paste("CWD=$(pwd)\n",sep='\n')
+	cmd		<- paste(cmd,"echo $CWD\n",sep='')
+	tmpdir	<- paste('pty','_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')	
+	tmpdir	<- paste("$CWD/",tmpdir,sep='')
+	cmd		<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
+	#	copy files to local tmp dir
+	cmd		<- paste(cmd,'cp "',file.bam,'" "',tmpdir,'"\n',sep='')
+	cmd		<- paste(cmd,'cp "',file.ref,'" "',tmpdir,'"\n',sep='')
+	#	cd to tmp dir
+	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
+	cmd		<- paste(cmd, prog,' ',merge.threshold,' ',min.read.count,' "',basename(file.bam),'" "',basename(file.ref),'" ',paste(as.character(window.coord), collapse=' '),sep='')	
+	cmd		<- paste(cmd, '-Q1', quality.trim.ends, '-Q2',min.internal.quality, merge.paired.reads)
+	if(nchar(no.trees))		
+		cmd	<- paste(cmd, no.trees)	
+	cmd		<- paste(cmd, '--x-raxml',prog.raxml,'--x-mafft',prog.mafft,'\n')
+	tmp		<- gsub('_bam.txt','',basename(file.bam))	
+	cmd		<- paste(cmd, 'for file in RAxML_bestTree\\.*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
+	cmd		<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',tmp,'_}"\ndone\n',sep='')
+	cmd		<- paste(cmd, 'mv ',tmp,'*tree ',tmp,'*fasta "',out.dir,'"\n',sep='')
+	#	clean up
+	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
+	cmd
+}
+
+pty.cmdwrap <- function(pty.runs, si, pty.args) 		
+{
+	#
+	#	associate BAM and REF files with each scheduled phylotype run
+	#	
+	#	determine FILE_ID: pty.data stored in terms of SANGER_ID	
+	tmp			<- subset(si, select=c(SANGER_ID, PANGEA_ID))
+	set(tmp, NULL, 'PANGEA_ID', tmp[, gsub('-','_',PANGEA_ID)])
+	setnames(tmp, c('PANGEA_ID','SANGER_ID'), c('TAXA','FILE_ID'))
+	pty.runs	<- merge(pty.runs, tmp, by='TAXA', all.x=1)
+	tmp			<- pty.runs[, which(is.na(FILE_ID))]
+	set(pty.runs, tmp,'FILE_ID', pty.runs[tmp, TAXA])	
+	#	get available Bam files
+	ptyd		<- data.table(FILE=list.files(pty.args[['data.dir']]))
+	ptyd[, TYPE:=NA_character_]
+	set(ptyd, ptyd[, which(grepl('_ref.fasta$',FILE))], 'TYPE', 'REF')
+	set(ptyd, ptyd[, which(grepl('.bam$',FILE))], 'TYPE', 'BAM')
+	ptyd		<- subset(ptyd, !is.na(TYPE))
+	ptyd[, FILE_ID:= gsub('\\.bam|_ref\\.fasta','',FILE)]
+	ptyd		<- dcast.data.table(ptyd, FILE_ID~TYPE, value.var='FILE')
+	#	merge
+	pty.runs	<- merge(pty.runs, ptyd, by='FILE_ID', all.x=1)
+	stopifnot(		pty.runs[,!any(is.na(BAM))], pty.runs[,!any(is.na(REF))]		)	#check we have all BAM files
+	pty.runs	<- subset(pty.runs, !is.na(BAM) & !is.na(REF)) 	
+	#	determine length of each ref file
+	tmp			<- unique(subset(pty.runs, select=REF))
+	tmp			<- tmp[, list(REF_LEN=ncol(read.dna(file.path(pty.args[['data.dir']],REF), format='fasta'))), by='REF']
+	pty.runs	<- merge(pty.runs, tmp, by='REF')
+	setkey(pty.runs, PTY_RUN)
+	#
+	#	write pty.run files and get pty command lines
+	#
+	pty.win		<- pty.args[['win']]
+	pty.cmd		<- pty.runs[, {
+				if(0)
+				{
+					PTY_RUN		<- 2
+					BAM			<- subset(pty.runs, PTY_RUN==2)[, BAM]
+					REF			<- subset(pty.runs, PTY_RUN==2)[, REF]
+					REF_LEN		<- subset(pty.runs, PTY_RUN==2)[, REF_LEN]
+				}
+				#tmp			<- paste('ptyr',PTY_RUN,'_',paste(strsplit(gsub(':','',date()),split=' ')[[1]][2:4],collapse='',sep=''),sep='')	
+				#stopifnot(dir.create(file.path(pty.work.dir, tmp)))
+				file.bam	<- file.path(pty.work.dir, paste('ptyr',PTY_RUN,'_bam.txt',sep=''))
+				file.ref	<- file.path(pty.work.dir, paste('ptyr',PTY_RUN,'_ref.txt',sep=''))
+				cat( paste(file.path(pty.args[['data.dir']],BAM),collapse='\n'), file= file.bam	)
+				cat( paste(file.path(pty.args[['data.dir']],REF),collapse='\n'), file= file.ref	)				
+				windows		<- seq(1,by=pty.win,len=ceiling(max(REF_LEN)/pty.win))
+				windows		<- as.vector(rbind( windows,windows-1+pty.win ))
+				cmd			<- pty.cmd(	file.bam, file.ref, window.coord=windows, 
+										prog=pty.args[['prog']], prog.raxml=pty.args[['raxml']], prog.mafft=pty.args[['mafft']], 
+										merge.threshold=pty.args[['merge.threshold']], min.read.count=pty.args[['min.read.count']], quality.trim.ends=pty.args[['quality.trim.ends']], min.internal.quality=pty.args[['min.internal.quality']], merge.paired.reads=pty.args[['merge.paired.reads']],no.trees=pty.args[['no.trees']],
+										out.dir=pty.args[['out.dir']])
+				cat(cmd)
+				list(CMD= cmd)				
+			},by='PTY_RUN']
+	pty.cmd
+}	
+
+project.dualinfecions.phylotypes.pipeline.160110<- function()
+{
+	#
+	#	input args
+	#	(used function project.dualinfecions.phylotypes.setup.ZA.160110 to select bam files for one run)
+	#
+	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )	
+	pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
+	pty.prog			<- '/Users/Oliver/Dropbox\\ \\(Infectious\\ Disease\\)/PhylotypesCode/phylotypes.py'
+	raxml				<- 'raxmlHPC-AVX'
+	no.trees			<- ''
+	#	on HPC
+	if(1)
+	{
+		raxml			<- 'raxml'
+		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
+		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
+		no.trees		<- '-T 2'
+		HPC.LOAD		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
+	}
+	#
+	#	set up all temporary files and create bash commands
+	#
+	if(1)
+	{
+		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml,
+										data.dir=pty.data.dir, work.dir=file.path(HOME,"ptyruns"), out.dir=file.path(HOME,"phylotypes"),
+										merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300 )		
+		pty.cmd				<- pty.cmdwrap(pty.runs, si, pty.args)		
+	}	
+	#
+	#	add HPC header and submit
+	#
+	invisible(pty.cmd[,	{
+				#cmd		<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
+				cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=2)
+				outdir		<- file.path(HOME,"ptyruns")
+				outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+				hivc.cmd.hpccaller(outdir, outfile, cmd)
+				stop()
+			}, by='PTY_RUN'])
+}
+
+pty.get.taxa.combinations<- function(pty.taxan, pty.sel.n)
+{
+	pty.maxn	<- ceiling( (pty.taxan-pty.sel.n) / (pty.sel.n-1) )
+	pty.maxn	<- pty.maxn*(pty.sel.n-1)
+	pty.idx		<- matrix( rev(seq_len(pty.maxn))+pty.sel.n, nrow=pty.sel.n-1 )
+	#	for each col with lowest number x, repeat x-1 times
+	tmp			<- lapply( seq_len(ncol(pty.idx)), function(j)
+			{
+				z	<- seq_len(min(pty.idx[,j])-1)
+				z	<- t(matrix(data=z, nrow=length(z), ncol=nrow(pty.idx)+1))
+				z[seq_len(nrow(pty.idx))+1,]	<- NA				
+				z[seq_len(nrow(pty.idx))+1,]	<- pty.idx[,j]
+				t(z)
+			})
+	pty.idx		<- do.call('rbind',tmp)
+	pty.idx		<- rbind(matrix(seq_len(pty.sel.n),nrow=1), pty.idx)
+	pty.idx		<- do.call('rbind',lapply( seq_len(nrow(pty.idx)), function(i) data.table(RUN=i, TX_IDX=pty.idx[i,])))
+	pty.idx
+}
+
+project.dualinfecions.NJExaTrees.160110<- function()
+{
+	require(phytools)
 	verbose		<- 1
 	resume		<- 1
 	thresh.brl	<- 0.07; 	thresh.bs<- 0.8;	 
@@ -389,7 +641,7 @@ project.dualinfecions.NJExaTrees.BW.151030<- function()
 	#
 	#	UG consensus data tree
 	#
-	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEAconsensuses_2015-09_Imperial_UG_examlout_151023"
+	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data"
 	infile		<- "ExaML_result.PANGEAconsensuses_2015-09_Imperial_UG_151023.finaltree.040"
 	ph			<- read.tree( paste(indir,'/',infile,sep='') )	
 	#	no branch lengths??
@@ -421,6 +673,37 @@ project.dualinfecions.NJExaTrees.BW.151030<- function()
 	hivc.clu.plot(ph, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=file, pdf.scaley=50, show.tip.label=TRUE, pdf.width=30)	
 	save(ph, dist.brl, file=paste(indir,'/',gsub('\\.newick','\\.R',infile),sep=''))
 	
+	#
+	#	ZA consensus BEST tree
+	#	
+	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data"
+	outdir		<- indir
+	infile		<-  "PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500.newick"
+	ph			<- read.tree( paste(indir,'/',infile,sep='') )
+	#	reroot at SIV		
+	tmp			<- which(ph$tip.label=='CPZ.TZ.06.SIVcpzTAN13.JQ768416')
+	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])	
+	ph 			<- ladderize( ph )
+	ph.node.bs						<- ph$node.label
+	ph.node.bs[ph.node.bs=='Root']	<- NA
+	ph.node.bs						<- as.numeric(ph.node.bs)
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph$node.label					<- ph.node.bs / 100
+	ph$node.label[ph$node.label>1]	<- 1	
+	stat.fun						<- hivc.clu.min.transmission.cascade
+	#stat.fun						<- max
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)
+	thresh.brl						<- 0.1
+	thresh.bs						<- 0.7
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")	
+	tip.color	<- rep('black',Ntip(ph))
+	tip.color[ grepl('^PG14|^R[0-9]',ph$tip.label) ]	<- 'DarkRed'
+	tmp			<- paste(outdir,"/", gsub('\\.newick',paste('_gd',100*thresh.brl,'bs',thresh.bs*100,'\\.pdf',sep=''), infile), sep='')
+	invisible(hivc.clu.plot(ph, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=tmp, pdf.scaley=25, show.tip.label=TRUE, pdf.width=10))
+	
+	ph.gdtr							<- cophenetic.phylo(ph)
+	ph.mrca							<- mrca(ph)
+	save(ph, dist.brl, ph.gdtr, ph.mrca, file=paste(indir,'/',gsub('\\.newick','\\.rda',infile),sep=''))
 	
 	#	
 	#pdf(file=paste(indir,'/',gsub('\\.newick','\\.pdf',infile),sep=''), w=10, h=250)
