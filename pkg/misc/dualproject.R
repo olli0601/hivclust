@@ -546,7 +546,7 @@ project.dualinfecions.phylotypes.pipeline.160110<- function()
 		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
 		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		no.trees		<- '-T'
-		HPC.LOAD		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
+		HPC.LOAD		<<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
 	}
 	#
 	#	set up all temporary files and create bash commands
@@ -561,7 +561,7 @@ project.dualinfecions.phylotypes.pipeline.160110<- function()
 	if(no.trees=='-T')
 	{
 		invisible(pty.cmd[,	{					
-					cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=0, hpc.q=NA, hpc.mem="1800mb",  hpc.nproc=1)
+					cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
 					cat(cmd)
 					outdir		<- file.path(HOME,"ptyruns")
 					outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
