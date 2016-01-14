@@ -551,7 +551,7 @@ project.dualinfecions.phylotypes.pipeline.160110<- function()
 	#
 	#	set up all temporary files and create bash commands
 	#
-	if(1)
+	if(0)
 	{
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml,
 										data.dir=pty.data.dir, work.dir=file.path(HOME,"ptyruns"), out.dir=file.path(HOME,"phylotypes"),
@@ -562,11 +562,10 @@ project.dualinfecions.phylotypes.pipeline.160110<- function()
 	{
 		invisible(pty.cmd[,	{					
 					cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
-					cat(cmd)
+					#cat(cmd)
 					outdir		<- file.path(HOME,"ptyruns")
 					outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 					hivc.cmd.hpccaller(outdir, outfile, cmd)
-					stop()
 				}, by='PTY_RUN'])
 	}
 	if(0)
