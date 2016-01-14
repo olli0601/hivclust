@@ -459,7 +459,8 @@ pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='
 	tmp		<- gsub('_bam.txt','',basename(file.bam))	
 	cmd		<- paste(cmd, 'for file in RAxML_bestTree\\.*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
 	cmd		<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',tmp,'_}"\ndone\n',sep='')
-	cmd		<- paste(cmd, 'mv ',tmp,'*tree ',tmp,'*fasta "',out.dir,'"\n',sep='')
+	cmd		<- paste(cmd, 'mv ',tmp,'*tree "',out.dir,'"\n',sep='')
+	cmd		<- paste(cmd, 'mv ',tmp,'*fasta "',out.dir,'"\n',sep='')
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
 	cmd
@@ -518,7 +519,7 @@ pty.cmdwrap <- function(pty.runs, si, pty.args)
 										prog=pty.args[['prog']], prog.raxml=pty.args[['raxml']], prog.mafft=pty.args[['mafft']], 
 										merge.threshold=pty.args[['merge.threshold']], min.read.count=pty.args[['min.read.count']], quality.trim.ends=pty.args[['quality.trim.ends']], min.internal.quality=pty.args[['min.internal.quality']], merge.paired.reads=pty.args[['merge.paired.reads']],no.trees=pty.args[['no.trees']],
 										out.dir=pty.args[['out.dir']])
-				cat(cmd)
+				#cat(cmd)
 				list(CMD= cmd)				
 			},by='PTY_RUN']
 	pty.cmd
@@ -541,7 +542,7 @@ project.dualinfecions.phylotypes.pipeline.160110<- function()
 		raxml			<- 'raxml'
 		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
 		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
-		no.trees		<- '-T 2'
+		no.trees		<- '-T'
 		HPC.LOAD		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
 	}
 	#
@@ -553,18 +554,32 @@ project.dualinfecions.phylotypes.pipeline.160110<- function()
 										data.dir=pty.data.dir, work.dir=file.path(HOME,"ptyruns"), out.dir=file.path(HOME,"phylotypes"),
 										merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300 )		
 		pty.cmd				<- pty.cmdwrap(pty.runs, si, pty.args)		
+	}
+	if(no.trees=='-T')
+	{
+		invisible(pty.cmd[,	{					
+					cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=0, hpc.q=NA, hpc.mem="1800mb",  hpc.nproc=1)
+					cat(cmd)
+					outdir		<- file.path(HOME,"ptyruns")
+					outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+					hivc.cmd.hpccaller(outdir, outfile, cmd)
+					stop()
+				}, by='PTY_RUN'])
+	}
+	if(0)
+	{
+		#
+		#	add HPC header and submit
+		#
+		invisible(pty.cmd[,	{
+							#cmd		<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
+							cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=2)
+							outdir		<- file.path(HOME,"ptyruns")
+							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							hivc.cmd.hpccaller(outdir, outfile, cmd)
+							stop()
+						}, by='PTY_RUN'])
 	}	
-	#
-	#	add HPC header and submit
-	#
-	invisible(pty.cmd[,	{
-				#cmd		<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
-				cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=2)
-				outdir		<- file.path(HOME,"ptyruns")
-				outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-				hivc.cmd.hpccaller(outdir, outfile, cmd)
-				stop()
-			}, by='PTY_RUN'])
 }
 
 pty.get.taxa.combinations<- function(pty.taxan, pty.sel.n)
