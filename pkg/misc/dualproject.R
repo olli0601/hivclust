@@ -4,7 +4,8 @@ project.dual<- function()
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
-	project.dualinfecions.phylotypes.pipeline.160110()
+	#project.dualinfecions.phylotypes.pipeline.160110()
+	project.dualinfecions.phylotypes.pipeline.examl.160110()
 }
 
 project.dual.distances.231015<- function()
@@ -22,7 +23,7 @@ project.dual.distances.231015<- function()
 	}		
 }
 
-project.dual.examl.231015<- function()
+project.dual.examl.231015<- function() 
 {
 	require(big.phylo)
 	#indir		<- paste(HOME,"alignments_151023",sep='/')
@@ -528,7 +529,39 @@ pty.cmdwrap <- function(pty.runs, si, pty.args)
 	pty.cmd
 }	
 
-project.dualinfecions.phylotypes.pipeline.160110<- function() 
+project.dualinfecions.phylotypes.pipeline.examl.160110<- function() 
+{
+	require(big.phylo)
+	#
+	#	input args
+	#	(used function project.dualinfecions.phylotypes.pipeline.fasta.160110 to create all fasta files)
+	#
+	indir		<- file.path(HOME,"phylotypes")
+	infiles		<- data.table(FILE=list.files(indir, pattern='fasta$'))
+	infiles[, PTY_RUN:= sapply(strsplit(FILE,'_'),'[[',1)]
+	
+	args.examl	<- "-f d -D -m GAMMA"
+	bs.to		<- 49
+	bs.n		<- 50
+	
+	exa.cmd		<- infiles[,{
+				infile		<- sub("\\.[^.]*$", "", FILE) 
+				cmd			<- cmd.examl.bootstrap.on.one.machine(indir, infile, bs.from=0, bs.to=bs.to, bs.n=bs.n, outdir=indir, opt.bootstrap.by="nucleotide", args.examl=args.examl, verbose=1)
+				list(CMD=cmd)
+			}, by=c('PTY_RUN','FILE')]
+	exa.cmd		<- exa.cmd[, list(CMD=paste(CMD,collapse='\n\n',sep='')), by='PTY_RUN']
+	# submit
+	invisible(exa.cmd[,	{
+						cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=10, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
+						#cmd		<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
+						outdir		<- file.path(HOME,"ptyruns")
+						outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+						hivc.cmd.hpccaller(outdir, outfile, cmd)
+						stop()
+					}, by='PTY_RUN'])
+}
+
+project.dualinfecions.phylotypes.pipeline.fasta.160110<- function() 
 {
 	#
 	#	input args
@@ -551,7 +584,7 @@ project.dualinfecions.phylotypes.pipeline.160110<- function()
 	#
 	#	set up all temporary files and create bash commands
 	#
-	if(0)
+	if(1)
 	{
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml,
 										data.dir=pty.data.dir, work.dir=file.path(HOME,"ptyruns"), out.dir=file.path(HOME,"phylotypes"),
