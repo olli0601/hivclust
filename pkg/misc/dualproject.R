@@ -557,7 +557,6 @@ project.dualinfecions.phylotypes.pipeline.examl.160110<- function()
 						outdir		<- file.path(HOME,"ptyruns")
 						outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 						hivc.cmd.hpccaller(outdir, outfile, cmd)
-						stop()
 					}, by='PTY_RUN'])
 }
 
