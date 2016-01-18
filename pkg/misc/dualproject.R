@@ -764,7 +764,7 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 		pat.stats <- rbind(pat.stats, c(id, window, num.leaves, num.reads, monophyletic,
 						mean.size, coeff.of.var.size,root.to.tip))
 	}
-	}
+	
 	
 	
 	#
