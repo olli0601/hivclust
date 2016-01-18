@@ -883,7 +883,7 @@ project.dualinfecions.phylotypes.pipeline.fasta.160110<- function()
 	if(no.trees=='-T')
 	{
 		invisible(pty.c[,	{					
-					cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
+					cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeelab", hpc.mem="4800mb",  hpc.nproc=1)
 					#cat(cmd)
 					outdir		<- file.path(HOME,"ptyruns")
 					outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
