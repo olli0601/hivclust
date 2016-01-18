@@ -4,8 +4,8 @@ project.dual<- function()
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
-	project.dualinfecions.phylotypes.pipeline.fasta.160110()
-	#project.dualinfecions.phylotypes.pipeline.examl.160110()
+	#project.dualinfecions.phylotypes.pipeline.fasta.160110()
+	project.dualinfecions.phylotypes.pipeline.examl.160110()
 }
 
 project.dual.distances.231015<- function()
@@ -461,8 +461,9 @@ pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='
 	cmd		<- paste(cmd, '--x-raxml',prog.raxml,'--x-mafft',prog.mafft,'\n')
 	tmp		<- gsub('_bam.txt','',basename(file.bam))	
 	cmd		<- paste(cmd, 'for file in RAxML_bestTree\\.*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
+	cmd		<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')	
 	cmd		<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',tmp,'_}"\ndone\n',sep='')
-	cmd		<- paste(cmd, 'mv ',tmp,'*tree "',out.dir,'"\n',sep='')
+	cmd		<- paste(cmd, 'mv ',tmp,'*tree "',out.dir,'"\n',sep='')	
 	cmd		<- paste(cmd, 'mv ',tmp,'*fasta "',out.dir,'"\n',sep='')
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
@@ -705,15 +706,12 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 	pty.stat[, IND:= gsub('_read.*','',BAM)]
 	#	extract number of identical reads from read name 
 	pty.stat[, READ_N:= as.integer(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]
+	#	get number of reads per individual
+	pty.stat			<- merge(pty.stat,pty.stat[, list(IND_N=sum(READ_N)),by=c('FILE','IND')],by=c('FILE','IND'))
 	#	check if reads from same individual are monophyletic
-	infiles[,{										
-				ph		<- pty.ph[[FILE]]
-				
-				tmp		<- node.depth.edgelength(ph)[1:Ntip(ph)]
-				list(BAM=ph$tip.label, HEIGHT=tmp)
-			}, by='FILE']
-
-	#	TODO change bootstrap code to return data tree too
+	pty.stat			<- merge(pty.stat, pty.stat[,	list(MONOPH=is.monophyletic(pty.ph[[FILE]], BAM)), by=c('FILE','IND')], by=c('FILE','IND'))
+	set(pty.stat, NULL, 'MONOPH', pty.stat[, factor(MONOPH, levels=c(FALSE,TRUE),labels=c('N','Y'))])
+	
 	
 	
 	infiles				<- merge(infiles, pty.stat[, list(HMX= max(HEIGHT)), by='FILE'], by='FILE')
@@ -820,12 +818,12 @@ project.dualinfecions.phylotypes.pipeline.examl.160110<- function()
 	infiles[, PTY_RUN:= sapply(strsplit(FILE,'_'),'[[',1)]
 	
 	args.examl	<- "-f d -D -m GAMMA"
-	bs.to		<- 49
-	bs.n		<- 50
+	bs.to		<- 19
+	bs.n		<- 20
 	
-	exa.cmd		<- infiles[,{
-				infile		<- sub("\\.[^.]*$", "", FILE) 
-				cmd			<- cmd.examl.bootstrap.on.one.machine(indir, infile, bs.from=0, bs.to=bs.to, bs.n=bs.n, outdir=indir, opt.bootstrap.by="nucleotide", args.examl=args.examl, verbose=1)
+	exa.cmd		<- infiles[,{				 
+				cmd			<- cmd.strip.gaps(file.path(indir,FILE), strip.max.len=350)
+				cmd			<- paste(cmd, cmd.examl.bootstrap.on.one.machine(indir, sub("\\.[^.]*$", "", FILE), bs.from=0, bs.to=bs.to, bs.n=bs.n, outdir=indir, opt.bootstrap.by="nucleotide", args.examl=args.examl, verbose=1), sep='\n')
 				list(CMD=cmd)
 			}, by=c('PTY_RUN','FILE')]
 	exa.cmd		<- exa.cmd[, list(CMD=paste(CMD,collapse='\n\n',sep='')), by='PTY_RUN']
