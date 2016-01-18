@@ -4,8 +4,8 @@ project.dual<- function()
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
-	#project.dualinfecions.phylotypes.pipeline.160110()
-	project.dualinfecions.phylotypes.pipeline.examl.160110()
+	project.dualinfecions.phylotypes.pipeline.fasta.160110()
+	#project.dualinfecions.phylotypes.pipeline.examl.160110()
 }
 
 project.dual.distances.231015<- function()
@@ -438,7 +438,7 @@ project.dualinfecions.phylotypes.setup.ZA.160110<- function()
 	
 }
 
-pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees='',out.dir='.')
+pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees='',keep.overhangs='',out.dir='.')
 {	
 	stopifnot(is.character(file.bam),is.character(file.ref),is.numeric(window.coord), !length(window.coord)%%2)
 	#	create local tmp dir
@@ -456,6 +456,8 @@ pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='
 	cmd		<- paste(cmd, '-Q1', quality.trim.ends, '-Q2',min.internal.quality, merge.paired.reads)
 	if(nchar(no.trees))		
 		cmd	<- paste(cmd, no.trees)	
+	if(nchar(keep.overhangs))
+		cmd	<- paste(cmd, keep.overhangs)
 	cmd		<- paste(cmd, '--x-raxml',prog.raxml,'--x-mafft',prog.mafft,'\n')
 	tmp		<- gsub('_bam.txt','',basename(file.bam))	
 	cmd		<- paste(cmd, 'for file in RAxML_bestTree\\.*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
@@ -521,13 +523,290 @@ pty.cmdwrap <- function(pty.runs, si, pty.args)
 				windows		<- as.vector(rbind( windows,windows-1+pty.win ))
 				cmd			<- pty.cmd(	file.bam, file.ref, window.coord=windows, 
 										prog=pty.args[['prog']], prog.raxml=pty.args[['raxml']], prog.mafft=pty.args[['mafft']], 
-										merge.threshold=pty.args[['merge.threshold']], min.read.count=pty.args[['min.read.count']], quality.trim.ends=pty.args[['quality.trim.ends']], min.internal.quality=pty.args[['min.internal.quality']], merge.paired.reads=pty.args[['merge.paired.reads']],no.trees=pty.args[['no.trees']],
+										merge.threshold=pty.args[['merge.threshold']], min.read.count=pty.args[['min.read.count']], quality.trim.ends=pty.args[['quality.trim.ends']], min.internal.quality=pty.args[['min.internal.quality']], 
+										merge.paired.reads=pty.args[['merge.paired.reads']], no.trees=pty.args[['no.trees']], keep.overhangs=pty.args[['keep.overhangs']],
 										out.dir=pty.args[['out.dir']])
 				#cat(cmd)
 				list(CMD= cmd)				
 			},by='PTY_RUN']
 	pty.cmd
 }	
+
+project.dualinfecions.phylotypes.test<- function()
+{
+	tfd	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/phylotypes'
+	tfd	<- '~/duke/2016_PANGEAphylotypes/phylotypes'
+	tf	<- data.table(FILE=list.files(tfd, pattern='^ptyr1_*'))
+	tf	<- subset(tf, !grepl('fasta2',FILE))
+	tf[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	tf[, W_FROM:=gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE)))] 
+	tf[, W_TO:=gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE)))]
+	tf[, Q1:=2]
+	set(tf, tf[, which(grepl('Q1-30',FILE))], 'Q1', 30)
+	invisible(	tf[,{
+						system(paste("sed 's/<unknown description>//' ",file.path(tfd,FILE)," > ",file.path(tfd,paste(FILE,'2',sep='')),sep=''))
+					}	, by='FILE']	)
+	
+	
+	tmp	<- tf[, list(BAM= rownames(read.dna(file.path(tfd,paste(FILE,'2',sep='')),format='fasta'))), by='FILE']
+	tf	<- merge(tf, tmp, by='FILE')	
+	tf[, FILE_ID:= gsub('_read.*','',BAM)]	
+	tf	<- merge(unique(subset(pty.runs, select=c( TAXA ,FILE_ID))), tf, by='FILE_ID')
+	tmp	<- tf[, list(BAM_N=length(BAM)), by=c('W_FROM','Q1','FILE_ID')]
+	tmp	<- dcast.data.table(tmp, W_FROM+FILE_ID~Q1, value.var='BAM_N')
+	setnames(tmp, c('2','30'), c('Q1_2','Q1_30'))
+	subset(tmp, Q1_2<Q1_30)
+	
+	ggplot(tmp, aes(x=as.numeric(W_FROM),y=BAM_N,colour=FILE_ID,group=FILE_ID)) + geom_line() + facet_grid(~Q1)
+	#no R8_RES486_S8_L001 at all!
+
+	load("/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
+}
+
+project.dualinfecions.phylotypes.mltrees.160115<- function() 
+{
+	require(ggtree)
+	require(phytools)
+	
+	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )
+	tmp				<- subset(si, select=c(SANGER_ID,PANGEA_ID))
+	set(tmp, NULL, 'SANGER_ID', tmp[, gsub('-','_',SANGER_ID)])
+	set(tmp, NULL, 'PANGEA_ID', tmp[, gsub('-','_',PANGEA_ID)])
+	setnames(tmp, c('SANGER_ID','PANGEA_ID'),c('FILE_ID','TAXA'))
+	pty.runs		<- merge(pty.runs, tmp, by='TAXA',all.x=1)
+	tmp				<- pty.runs[, which(is.na(FILE_ID))]
+	set(pty.runs, tmp, 'FILE_ID', pty.runs[tmp, TAXA])
+	
+	indir.tr		<- file.path(HOME,"phylotypes_160115")	
+	#	collect ML tree files
+	infiles		<- data.table(FILE=list.files(indir.tr, 'newick$'))
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	infiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
+	infiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]
+	infiles[, IDX:=seq_len(nrow(infiles))]	
+	infiles		<- subset(infiles, W_FROM<9000)
+	#
+	infiles[, table(PTY_RUN)]
+	#	raw trees w/o any attributes
+	pty.ph		<- lapply( seq_len(nrow(infiles)), function(i)
+			{				
+				ph			<- read.tree(file.path(indir.tr,infiles[i, FILE]))
+				#	node labels
+				tmp				<- ph$node.label
+				tmp[which(tmp=='Root'|tmp=='')]	<- '0'
+				ph$node.label	<- as.numeric(tmp)
+				ph
+			})
+	names(pty.ph)<- infiles[, FILE]	
+	#
+	#	determine root for each run: find taxon with largest distance from BAM of select individuals
+	#
+	pty.root	<- lapply(infiles[, unique(PTY_RUN)], function(ptyr){	
+			#print(ptyr)	
+				#ptyr<- 14
+				tmp			<- subset(infiles, PTY_RUN==ptyr)[,FILE]
+				phs			<- lapply(tmp, function(x) pty.ph[[x]])	
+				names(phs)	<- tmp
+				#get patristic distances between target and fill
+				#if no target, select target_ind with lowest taxon index (just makes an unambiguous selection when windows are considered one by one)
+				phpd		<- do.call('rbind',lapply(seq_along(phs),function(i){
+							#i			<- 1
+							ph			<- phs[[i]]							
+							phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
+							phb			<- merge(phb, pty.runs[pty.runs$PTY_RUN==ptyr,], by='FILE_ID', all=1)
+							phgd		<- cophenetic.phylo(ph)
+							tmp			<- subset(phb, !FILL & !is.na(BAM))[, BAM]
+							if(length(tmp)==0)
+							{
+								tmp		<- subset(phb, !is.na(BAM))[, FILE_ID[which.min(TX_IDX)]]
+								tmp		<- subset(phb, !is.na(BAM) & FILE_ID==tmp)[, BAM]
+							}								
+							tmp			<- phgd[ tmp, setdiff(rownames(phgd), tmp), drop=FALSE]			
+							ans			<- as.data.table(melt(tmp, value.name='PATR'))
+							setnames(ans, c('Var1','Var2'), c('TARGET','FILL'))
+							ans[, FILE:= names(phs)[i]]	
+							ans[, IDX:=i]							
+							ans							
+						}))
+		#print(phpd[, unique(IDX)])				
+				phpd[, FILL_IND:= gsub('_read.*','',FILL)]				
+		#print(phpd)		
+				#	try consider as root only individual present across all BAM files
+				tmp		<- phpd[, list(FILL_IND_N=length(FILL)), by=c('FILL_IND','FILE')]
+				tmp		<- dcast.data.table(tmp, FILE~FILL_IND, value.var='FILL_IND_N')
+				tmp		<- apply(tmp[,-1, with=FALSE], 2, function(x) !any(is.na(x))	)
+				tmp		<- data.table(FILL_IND=names(tmp)[tmp])
+				if(nrow(tmp)==0)	# 	may be empty
+				{
+					print(PTY_RUN)
+					stop()
+				}				
+				tmp		<- merge(phpd, tmp, by='FILL_IND')
+				#	select individual with average largest distance
+				tmp		<- tmp[, list(PATR= median(PATR)), by='FILL_IND']	
+				root	<- tmp[which.max(PATR),][,FILL_IND]
+				ans		<- subset(phpd, FILL_IND==root)[, list(ROOT=FILL[which.max(PATR)]), by=c('IDX','FILE')]
+				tmp		<- ans[, list(CHECK= ROOT%in%phs[[IDX]]$tip.label) , by='IDX']
+				stopifnot( tmp[, all(CHECK)] )		
+				ans[, IDX:=NULL]
+				ans[, PTY_RUN:= ptyr]
+				ans
+			})
+	pty.root	<- do.call('rbind',pty.root)
+	infiles		<- merge(infiles,pty.root, by=c('FILE','PTY_RUN'))
+	#
+	#	root and ladderize trees
+	#
+	for(i in seq_along(pty.ph))
+	{
+		#print(i)
+		#i<- 44
+		#i<- 1
+		root			<- subset(infiles, FILE==names(pty.ph)[i])[, ROOT]
+		ph				<- pty.ph[[i]]
+		tmp										<- which(ph$tip.label==root)
+		ph										<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
+		ph$node.label[ph$node.label=='Root']	<- 0
+		ph$node.label							<- as.numeric(ph$node.label)			
+		ph				<- ladderize(ph)
+		phb				<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))
+		#	group edges by individual				
+		tmp				<- lapply( phb[, unique(FILE_ID)], function(x)	subset(phb, FILE_ID==x)[, BAM]	)
+		names(tmp)		<- phb[, unique(FILE_ID)]
+		ph				<- groupOTU(ph, tmp, group='INDIVIDUAL')		
+		z	<- merge(data.table(FROM=ph$edge[,1],IDX=ph$edge[,2]), phb, by='IDX', all=1)
+		z[, GROUP:= attr(ph,'INDIVIDUAL')[1:nrow(ph$edge)]]
+		z	<- unique(subset(z, !is.na(FILE_ID), select=c(FILE_ID, GROUP)))
+		attr(ph,'INDIVIDUAL')	<- factor(attr(ph,'INDIVIDUAL'), levels=c(0,z[,as.character(GROUP)]), labels=c('not characterized',z[,FILE_ID]))
+		#	group edges by FILL
+		tmp				<- as.numeric(gsub('ptyr','',regmatches(names(pty.ph)[i], regexpr('ptyr[0-9]+',names(pty.ph)[i]))))
+		phb				<- merge(phb, subset(pty.runs, PTY_RUN==tmp), by='FILE_ID')
+		set(phb, NULL, 'FILL', phb[, factor(FILL, levels=c(0,1), labels=c('target','filler'))])
+		tmp				<- lapply( phb[, unique(FILL)], function(x)	subset(phb, FILL==x)[, BAM]	)
+		names(tmp)		<- phb[, unique(FILL)]
+		ph				<- groupOTU(ph, tmp, group='TYPE')				
+		z	<- merge(data.table(FROM=ph$edge[,1],IDX=ph$edge[,2]), phb, by='IDX', all=1)
+		z[, GROUP:= attr(ph,'TYPE')[1:nrow(ph$edge)]]
+		z	<- unique(subset(z, !is.na(FILE_ID), select=c(FILL, GROUP)))
+		attr(ph,'TYPE')	<- factor(attr(ph,'TYPE'), levels=c(0,z[,as.character(GROUP)]), labels=c('not characterized',z[,as.character(FILL)]))
+		pty.ph[[i]]		<- ph
+	}		
+	#
+	#	get statistics
+	#
+	#	node heights
+	tmp					<- infiles[,{										
+										ph		<- pty.ph[[FILE]]
+										tmp		<- node.depth.edgelength(ph)[1:Ntip(ph)]
+										list(BAM=ph$tip.label, HEIGHT=tmp)
+									}, by='FILE']
+	pty.stat			<- merge(infiles, tmp, by='FILE')
+	#	extract individual from read name
+	pty.stat[, IND:= gsub('_read.*','',BAM)]
+	#	extract number of identical reads from read name 
+	pty.stat[, READ_N:= as.integer(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]
+	#	check if reads from same individual are monophyletic
+	infiles[,{										
+				ph		<- pty.ph[[FILE]]
+				
+				tmp		<- node.depth.edgelength(ph)[1:Ntip(ph)]
+				list(BAM=ph$tip.label, HEIGHT=tmp)
+			}, by='FILE']
+
+	#	TODO change bootstrap code to return data tree too
+	
+	
+	infiles				<- merge(infiles, pty.stat[, list(HMX= max(HEIGHT)), by='FILE'], by='FILE')
+	
+	
+	# For each patient: record whether his/her tips are monophyletic, find the
+	# pairwise patristic distances between the tips - the 'cophenetic distances' -
+	# and characterise those distances. 
+	dummy.p.value<-0
+	
+	for (i in 1:num.ids) {
+		id <- ids[i]
+		num.leaves <- length(patient.tips[[id]])
+		num.reads<-0
+		for (tip in patient.tips[[id]]) num.reads <- num.reads + as.numeric(unlist(strsplit(tip,"count_"))[2])
+		if (num.leaves>0) {
+			monophyletic <- as.numeric(is.monophyletic(tree, patient.tips[[id]]))
+			if (num.leaves > 1) {
+				subtree <- drop.tip(phy=tree,
+						tip=tree$tip.label[!(tree$tip.label %in% patient.tips[[id]])])
+				subtree.dist.matrix <- cophenetic(subtree)
+				subtree.dist <- subtree.dist.matrix[lower.tri(subtree.dist.matrix)]
+				mean.size <- mean(subtree.dist)
+				variance <- var(subtree.dist)
+				coeff.of.var.size <- ifelse(num.leaves > 2, sqrt(variance)/mean.size, 0)
+				## Distances are not weighted for the number of reads for each tip. 
+				## Corrections are included because mean and variance of distance matrices
+				## include zeros on diagonal, but shouldn't.
+				#subtree.dist.cf <- as.vector(subtree.dist.matrix)
+				#mean.size.cf <- mean(subtree.dist.cf)/(1-1/num.leaves)
+				#variance.cf <- var(subtree.dist.cf)*(1+1/num.leaves)-mean.size.cf^2/num.leaves
+				#cat("CF mean & var: ", mean.size.cf, variance.cf, '\n')
+				#cat("CW mean & var: ", mean.size.cw, variance.cw, '\n')
+				#cat('\n')
+			} else {
+				mean.size <- NA
+				coeff.of.var.size <- NA
+			}
+			root.to.tip<-0
+			for (i in 1:length(subtree$tip.label)) root.to.tip<-root.to.tip+nodeheight(subtree,i)
+			root.to.tip<-root.to.tip/length(subtree$tip.label)
+		} else {
+			monophyletic<-NA
+			mean.size<-NA
+			coeff.of.var.size<-NA
+			root.to.tip<-NA
+		}
+		pat.stats <- rbind(pat.stats, c(id, window, num.leaves, num.reads, monophyletic,
+						mean.size, coeff.of.var.size,root.to.tip))
+	}
+	}
+	
+	
+	#
+	#	plot trees
+	#
+	require(gridExtra)
+	require(colorspace)
+	setkey(infiles, PTY_RUN, W_FROM)	
+	for(ptyr in infiles[, unique(PTY_RUN)])
+	{
+		tmp			<- subset(infiles, PTY_RUN==ptyr)
+		#	title
+		tmp[, TITLE:=paste('run',PTY_RUN,', window [',W_FROM,',',W_TO,']',sep='')]	
+		phs			<- lapply(tmp[, FILE], function(x) pty.ph[[x]])
+		names(phs)	<- tmp[, TITLE] 
+		#	colours	
+		tmp2		<- unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))
+		col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))
+		names(col)	<- tmp2	
+		phps		<- lapply(seq_along(phs), function(i){
+					max.node.height	<- tmp[i,][, HMX]
+					p				<- ggtree(phs[[i]], aes(color=INDIVIDUAL, linetype=TYPE)) + 
+							geom_nodepoint(size=phs[[i]]$node.label/100*3) +
+							geom_text(aes(label=label), size=2,  hjust=-.25) + 
+							scale_color_manual(values=col, guide = FALSE) +											 
+							scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
+							theme_tree2() +
+							theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +
+							labs(x='subst/site', title=names(phs)[i])
+					p
+				})	
+		file	<- file.path( indir.tr, tmp[1,gsub('newick','pdf',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE))] )
+		pdf(file=file, w=120, h=40)
+		tmp	 	<- matrix(seq(1, 2*ceiling(length(phps)/2)), ncol=ceiling(length(phps)/2), nrow=2)
+		grid.newpage()
+		pushViewport(viewport(layout = grid.layout(nrow(tmp), ncol(tmp))))
+		for(i in seq_along(phps))
+			print(phps[[i]], vp = viewport(layout.pos.row=which(tmp==i, arr.ind=TRUE)[1,'row'], layout.pos.col=which(tmp==i, arr.ind=TRUE)[1,'col']))	
+		dev.off()	
+	}
+		
+}
 
 project.dualinfecions.phylotypes.pipeline.examl.160110<- function() 
 {
@@ -568,14 +847,16 @@ project.dualinfecions.phylotypes.pipeline.fasta.160110<- function()
 	#
 	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )	
 	pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
-	pty.prog			<- '/Users/Oliver/Dropbox\\ \\(Infectious\\ Disease\\)/PhylotypesCode/phylotypes.py'
+	work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/ptyruns'
+	pty.prog			<- '/Users/Oliver/Dropbox\\ \\(Infectious\\ Disease\\)/PhylotypesCode_localcopy_160118/phylotypes.py'
 	raxml				<- 'raxmlHPC-AVX'
-	no.trees			<- ''
+	no.trees			<- '-T'
 	#	on HPC
 	if(1)
 	{
 		raxml			<- 'raxml'
 		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
+		work.dir		<- file.path(HOME,"ptyruns")
 		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		no.trees		<- '-T'
 		HPC.LOAD		<<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
@@ -583,16 +864,25 @@ project.dualinfecions.phylotypes.pipeline.fasta.160110<- function()
 	#
 	#	set up all temporary files and create bash commands
 	#
-	if(1)
+	#	run 160115	window length 300
+	if(0)
 	{
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml,
-										data.dir=pty.data.dir, work.dir=file.path(HOME,"ptyruns"), out.dir=file.path(HOME,"phylotypes"),
-										merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300 )		
-		pty.cmd				<- pty.cmdwrap(pty.runs, si, pty.args)		
+										data.dir=pty.data.dir, work.dir=work.dir, out.dir=file.path(HOME,"phylotypes"),
+										merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300, keep.overhangs='' )		
+		pty.c				<- pty.cmdwrap(pty.runs, si, pty.args)		
+	}
+	#	run 160118	window length 60 & Q1 18 & keep overhangs
+	if(1)
+	{		
+		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml,
+										data.dir=pty.data.dir, work.dir=work.dir, out.dir=file.path(HOME,"phylotypes"),
+										merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs' )		
+		pty.c				<- pty.cmdwrap(pty.runs, si, pty.args)		
 	}
 	if(no.trees=='-T')
 	{
-		invisible(pty.cmd[,	{					
+		invisible(pty.c[,	{					
 					cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
 					#cat(cmd)
 					outdir		<- file.path(HOME,"ptyruns")
@@ -605,7 +895,7 @@ project.dualinfecions.phylotypes.pipeline.fasta.160110<- function()
 		#
 		#	add HPC header and submit
 		#
-		invisible(pty.cmd[,	{
+		invisible(pty.c[,	{
 							#cmd		<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
 							cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=2)
 							outdir		<- file.path(HOME,"ptyruns")
