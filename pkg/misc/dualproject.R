@@ -4,9 +4,9 @@ project.dual<- function()
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
-	#project.dualinfecions.phylotypes.pipeline.fasta.160110()
+	project.dualinfecions.phylotypes.pipeline.fasta.160110()
 	#project.dualinfecions.phylotypes.pipeline.examl.160110()
-	project.dualinfecions.phylotypes.evaluatereads.150119()
+	#project.dualinfecions.phylotypes.evaluatereads.150119()
 }
 
 project.dual.distances.231015<- function()
