@@ -5,7 +5,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#project.dualinfecions.phylotypes.pipeline.fasta.160110()
-	project.dualinfecions.phylotypes.pipeline.examl.160110()
+	#project.dualinfecions.phylotypes.pipeline.examl.160110()
+	project.dualinfecions.phylotypes.evaluatereads.150119()
 }
 
 project.dual.distances.231015<- function()
@@ -578,7 +579,7 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 	tmp				<- pty.runs[, which(is.na(FILE_ID))]
 	set(pty.runs, tmp, 'FILE_ID', pty.runs[tmp, TAXA])
 	
-	indir.tr		<- file.path(HOME,"phylotypes_160115")	
+	indir.tr		<- file.path(HOME,"phylotypes_160119")	
 	#	collect ML tree files
 	infiles		<- data.table(FILE=list.files(indir.tr, 'newick$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
@@ -593,6 +594,8 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 			{				
 				ph			<- read.tree(file.path(indir.tr,infiles[i, FILE]))
 				#	node labels
+				if(is.null(ph$node.label))
+					ph$node.label	<- rep('0',Nnode(ph))
 				tmp				<- ph$node.label
 				tmp[which(tmp=='Root'|tmp=='')]	<- '0'
 				ph$node.label	<- as.numeric(tmp)
@@ -771,6 +774,7 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 	require(gridExtra)
 	require(colorspace)
 	setkey(infiles, PTY_RUN, W_FROM)	
+	infiles			<- subset(infiles, PTY_RUN==1)
 	for(ptyr in infiles[, unique(PTY_RUN)])
 	{
 		tmp			<- subset(infiles, PTY_RUN==ptyr)
@@ -786,7 +790,7 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 					max.node.height	<- tmp[i,][, HMX]
 					p				<- ggtree(phs[[i]], aes(color=INDIVIDUAL, linetype=TYPE)) + 
 							geom_nodepoint(size=phs[[i]]$node.label/100*3) +
-							geom_text(aes(label=label), size=2,  hjust=-.25) + 
+							geom_tiplab(size=1.2,  hjust=-.1) +							 
 							scale_color_manual(values=col, guide = FALSE) +											 
 							scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
 							theme_tree2() +
@@ -795,15 +799,124 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 					p
 				})	
 		file	<- file.path( indir.tr, tmp[1,gsub('newick','pdf',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE))] )
-		pdf(file=file, w=120, h=40)
+		if(0)
+		{
+			pdf(file=file, w=120, h=40)	#for win=300
+			tmp	 	<- matrix(seq(1, 2*ceiling(length(phps)/2)), ncol=ceiling(length(phps)/2), nrow=2)
+			grid.newpage()
+			pushViewport(viewport(layout = grid.layout(nrow(tmp), ncol(tmp))))
+			for(i in seq_along(phps))
+				print(phps[[i]], vp = viewport(layout.pos.row=which(tmp==i, arr.ind=TRUE)[1,'row'], layout.pos.col=which(tmp==i, arr.ind=TRUE)[1,'col']))	
+			dev.off()			
+		}
+		if(1)
+		{
+			tmp		<- seq_len(ceiling(length(phps)/10))		
+			for(i in tmp)
+			{			
+				pdf(file=gsub('pdf',paste(i,'.pdf',sep=''),file), w=20, h=40)		#for win=60
+				grid.newpage()
+				pushViewport(viewport(layout=grid.layout(2, 5)))
+				z	<- intersect(seq.int((i-1)*10+1, i*10), seq_len(length(phps)))
+				for(j in z)
+					print(phps[[j]], vp = viewport(layout.pos.row=(j+1)%%2+1, layout.pos.col=(j-1)%%5+1))
+				dev.off()	
+			}
+		}
+		
+		
+		
+		
+		
 		tmp	 	<- matrix(seq(1, 2*ceiling(length(phps)/2)), ncol=ceiling(length(phps)/2), nrow=2)
 		grid.newpage()
 		pushViewport(viewport(layout = grid.layout(nrow(tmp), ncol(tmp))))
 		for(i in seq_along(phps))
 			print(phps[[i]], vp = viewport(layout.pos.row=which(tmp==i, arr.ind=TRUE)[1,'row'], layout.pos.col=which(tmp==i, arr.ind=TRUE)[1,'col']))	
-		dev.off()	
+		dev.off()
+		
+		ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + 
+				geom_nodepoint(size=ph$node.label/100*3) +
+				#geom_text(aes(label=label), size=1.5,  hjust=-.1) +
+				geom_tiplab(size=1.2,  hjust=-.1) +
+				scale_color_manual(values=col, guide = FALSE) +											 
+				scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
+				theme_tree2() +
+				theme(legend.position="bottom") + ggplot2::xlim(0, 0.3) +
+				labs(x='subst/site')
 	}
 		
+}
+
+project.dualinfecions.phylotypes.evaluatereads.150119<- function()
+{
+	require(big.phylo)
+	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
+	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )
+	
+	indir			<- file.path(HOME,"phylotypes_160119")
+	infiles			<- data.table(FILE=list.files(indir, pattern='fasta$'))
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	infiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
+	infiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]	
+	#strip.max.len	<- 350
+	
+	for(ptyr in infiles[, unique(PTY_RUN)])
+	{
+		seqd	<- subset(infiles, PTY_RUN==ptyr)[,{
+					seq		<- read.dna(file.path(indir,FILE),format='fasta')
+					#seq		<- seq.strip.gap(seq, strip.max.len=strip.max.len)
+					tmp		<- rownames(seq)
+					seqd	<- data.table(READ=tmp, IND= gsub('_read.*','',tmp)) 
+					seqd[, READ_N:=as.integer(gsub('_count_','',regmatches(tmp,regexpr('_count_[0-9]+',tmp))))]			
+					tmp		<- as.character(seq)
+					seqd[, FIRST:= apply( tmp, 1, function(x) which(x!='-')[1] )]
+					seqd[, LAST:= ncol(tmp)-apply( tmp, 1, function(x) which(rev(x)!='-')[1] ) + 1L]
+					seqd[, LEN:= LAST-FIRST+1L]
+					seqd	<- merge(seqd, seqd[, list(UNIQUE_N=length(READ)),by='IND'], by='IND')
+					seqd[, TOTAL_N:= nrow(seqd)]
+					seqd
+				},by='FILE']
+		seqd	<- merge(infiles, seqd, by='FILE')
+		tmp		<- subset(si, select=c(SANGER_ID, PANGEA_ID))
+		set(tmp, NULL, 'PANGEA_ID', tmp[, gsub('-','_',PANGEA_ID)])
+		setnames(tmp, c('PANGEA_ID','SANGER_ID'), c('TAXA','IND'))
+		seqd	<- merge(seqd, tmp, by='IND',all.x=1)
+		tmp		<- seqd[, which(is.na(TAXA))]
+		set(seqd, tmp, 'TAXA', seqd[tmp, IND])
+		seqd	<- merge(pty.runs, seqd, by=c('PTY_RUN','TAXA'))
+		set(seqd, NULL, 'FILL', seqd[, factor(FILL, levels=c(0,1), labels=c('candidate','filler'))])
+		save(seqd, file=file.path(indir,paste('pty',ptyr,'_evaluate.rda',sep='')))		
+		seqd	<- NULL
+	}
+	
+	if(0)
+	{
+		#	number of unique reads per window and individual
+		setkey(seqd, PTY_RUN, W_FROM, IND)
+		tmp		<- subset(unique(seqd),FILL=='candidate')[, list(CAND_N=length(IND)), by=c('PTY_RUN','W_FROM')]
+		ggplot(tmp, aes(x=W_FROM, y=CAND_N)) + geom_step() +
+				scale_x_continuous(breaks=seq(0,10000,500)) +			
+				labs(x='window start', y='candidate individuals\n(#)') +
+				facet_grid(PTY_RUN~.) + theme_bw()
+		ggsave(file=file.path(indir,paste('pty_candidate_individuals.pdf')), w=10, h=4)
+		
+		tmp		<- unique(seqd)
+		tmp[, IND_L:= paste('(',substring(FILL,1,1),') ',IND,sep='')]
+		ggplot(tmp,aes(x=W_FROM, y=UNIQUE_N, fill=IND_L, alpha=FILL)) + geom_bar(stat='identity', colour='black') + theme_bw() +
+				scale_x_continuous(breaks=seq(0,10000,500)) +
+				scale_fill_discrete(guide=FALSE) +
+				scale_alpha_manual(values=c('candidate'=1, 'filler'=0.2))+
+				labs(x='window start', y='unique reads\n(#)', fill='individuals')
+		ggsave(file=file.path(indir,'pty_unique_reads.pdf'), w=10, h=4)
+		
+		tmp		<- subset(unique(seqd), FILL=='candidate')[, list(TOTAL_N=sum(UNIQUE_N)), by=c('PTY_RUN','IND')]
+		ggplot(tmp, aes(x=IND, y=TOTAL_N)) + geom_bar(stat='identity') +
+				labs(x='candidate individuals', y='sum of unique reads\n(#)') + theme_bw() +facet_grid(PTY_RUN~.) 
+		ggsave(file=file.path(indir,'pty_reads_from_candidate.pdf'), w=4, h=4)
+		
+	}
+	
 }
 
 project.dualinfecions.phylotypes.pipeline.examl.160110<- function() 
@@ -878,11 +991,19 @@ project.dualinfecions.phylotypes.pipeline.fasta.160110<- function()
 		pty.c				<- pty.cmdwrap(pty.runs, si, pty.args)		
 	}
 	#	run 160118	window length 60 & Q1 18 & keep overhangs
-	if(1)
+	if(0)
 	{		
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml,
 										data.dir=pty.data.dir, work.dir=work.dir, out.dir=file.path(HOME,"phylotypes"),
 										merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs' )		
+		pty.c				<- pty.cmdwrap(pty.runs, si, pty.args)		
+	}
+	#	run 160119	window length 60 & Q1 18 & keep overhangs & merge.threshold=3
+	if(1)
+	{		
+		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml,
+										data.dir=pty.data.dir, work.dir=work.dir, out.dir=file.path(HOME,"phylotypes"),
+										merge.threshold=3, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs' )		
 		pty.c				<- pty.cmdwrap(pty.runs, si, pty.args)		
 	}
 	if(no.trees=='-T')
