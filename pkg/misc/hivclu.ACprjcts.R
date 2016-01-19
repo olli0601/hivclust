@@ -1,4 +1,21 @@
 ######################################################################################
+project.AC.cleanalignment<- function()
+{
+	sx				<- read.dna("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/AC_Geneious1012Seq.gag_nef.fasta", format='fasta')
+	sxd				<- data.table(TAXA= rownames(sx))
+	set(sxd, NULL, 'TAXA', sxd[, gsub('_$','',TAXA)])
+	set(sxd, NULL, 'TAXA', sxd[, gsub(' ','R',TAXA)])
+	tmp				<- sxd[, which(duplicated(TAXA))]
+	set(sxd, tmp, 'TAXA', sxd[tmp, paste(TAXA,'-R',sep='')])
+	rownames(sx)	<- sxd[, TAXA]
+	
+	
+	tmp	<- sxd[, which(grepl('AF411967',TAXA))]
+	sx	<- sx[ -tmp[-1], ]
+	write.dna(sx, file="~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/AC_Geneious1012Seq.gag_nef.OR.fasta", format='fasta')
+	seq.write.dna.phylip(sx, file="~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/AC_Geneious1012Seq.gag_nef.OR.phylip")
+}
+######################################################################################
 project.ACpolext.rmDRM.150913<- function()
 {
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150831'

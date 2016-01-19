@@ -4,8 +4,8 @@ project.dual<- function()
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
-	project.dualinfecions.phylotypes.pipeline.fasta.160110()
-	#project.dualinfecions.phylotypes.pipeline.examl.160110()
+	#project.dualinfecions.phylotypes.pipeline.fasta.160110()
+	project.dualinfecions.phylotypes.pipeline.examl.160110()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()
 }
 
@@ -848,18 +848,14 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 		
 }
 
-project.dualinfecions.phylotypes.evaluatereads.150119<- function()
+pty.evaluate.fasta<- function(indir, si)
 {
 	require(big.phylo)
-	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
-	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )
-	
-	indir			<- file.path(HOME,"phylotypes_160119")
 	infiles			<- data.table(FILE=list.files(indir, pattern='fasta$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 	infiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
 	infiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]	
-	#strip.max.len	<- 350
+	strip.max.len	<- 350
 	
 	for(ptyr in infiles[, unique(PTY_RUN)])
 	{
@@ -889,32 +885,62 @@ project.dualinfecions.phylotypes.evaluatereads.150119<- function()
 		save(seqd, file=file.path(indir,paste('pty',ptyr,'_evaluate.rda',sep='')))		
 		seqd	<- NULL
 	}
+}
+
+project.dualinfecions.phylotypes.evaluatereads.150119<- function()
+{
+	
+	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
+	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )	
+	indir			<- file.path(HOME,"phylotypes_160119")
+	pty.evaluate.fasta(indir, si)
 	
 	if(0)
 	{
-		#	number of unique reads per window and individual
-		setkey(seqd, PTY_RUN, W_FROM, IND)
-		tmp		<- subset(unique(seqd),FILL=='candidate')[, list(CAND_N=length(IND)), by=c('PTY_RUN','W_FROM')]
+		require(zoo)
+		infiles	<- list.files(indir, pattern='rda$')
+		seqd	<- do.call('rbind',lapply(seq_along(infiles),function(i){
+					load(file.path(indir,infiles[i]))
+					tmp		<- seqd[, list(LEN_MED=as.numeric(median(LEN)), LEN_QL=as.numeric(quantile(LEN,p=0.025)), LEN_QU=as.numeric(quantile(LEN,p=0.975))), by=c('PTY_RUN','IND','W_FROM')]
+					tmp[, LEN_MED_RM:=tmp[, rollapply(LEN_MED, width=10, FUN=mean, align="center", partial=TRUE)]]
+					setkey(seqd, PTY_RUN, W_FROM, IND)
+					seqd	<- unique(seqd)
+					seqd	<- merge(seqd, tmp, by=c('PTY_RUN','IND','W_FROM'))
+					seqd
+				}))
+		seqd[, IND_L:= paste('(',substring(FILL,1,1),') ',IND,sep='')]
+		#
+		#	number of unique reads per window and individual		
+		tmp		<- subset(seqd,FILL=='candidate')[, list(CAND_N=length(IND)), by=c('PTY_RUN','W_FROM')]
 		ggplot(tmp, aes(x=W_FROM, y=CAND_N)) + geom_step() +
 				scale_x_continuous(breaks=seq(0,10000,500)) +			
 				labs(x='window start', y='candidate individuals\n(#)') +
-				facet_grid(PTY_RUN~.) + theme_bw()
-		ggsave(file=file.path(indir,paste('pty_candidate_individuals.pdf')), w=10, h=4)
+				facet_grid(PTY_RUN~., scales='free_y') + theme_bw()
+		ggsave(file=file.path(indir,paste('pty_candidate_individuals.pdf')), w=10, h=80,limitsize = FALSE)
 		
-		tmp		<- unique(seqd)
-		tmp[, IND_L:= paste('(',substring(FILL,1,1),') ',IND,sep='')]
-		ggplot(tmp,aes(x=W_FROM, y=UNIQUE_N, fill=IND_L, alpha=FILL)) + geom_bar(stat='identity', colour='black') + theme_bw() +
+		
+		ggplot(seqd,aes(x=W_FROM, y=UNIQUE_N, fill=IND_L, colour=FILL, alpha=FILL)) + geom_bar(stat='identity') + theme_bw() +
 				scale_x_continuous(breaks=seq(0,10000,500)) +
 				scale_fill_discrete(guide=FALSE) +
+				scale_colour_manual(values=c('candidate'='black', 'filler'='transparent'), guide=FALSE) +
 				scale_alpha_manual(values=c('candidate'=1, 'filler'=0.2))+
-				labs(x='window start', y='unique reads\n(#)', fill='individuals')
-		ggsave(file=file.path(indir,'pty_unique_reads.pdf'), w=10, h=4)
+				labs(x='window start', y='unique reads\n(#)', fill='individuals') +
+				facet_grid(PTY_RUN~., scales='free_y') + theme_bw()
+		ggsave(file=file.path(indir,'pty_unique_reads.pdf'), w=10, h=80,limitsize = FALSE)
 		
-		tmp		<- subset(unique(seqd), FILL=='candidate')[, list(TOTAL_N=sum(UNIQUE_N)), by=c('PTY_RUN','IND')]
-		ggplot(tmp, aes(x=IND, y=TOTAL_N)) + geom_bar(stat='identity') +
-				labs(x='candidate individuals', y='sum of unique reads\n(#)') + theme_bw() +facet_grid(PTY_RUN~.) 
-		ggsave(file=file.path(indir,'pty_reads_from_candidate.pdf'), w=4, h=4)
-		
+		tmp		<- subset(seqd, FILL=='candidate')[, list(TOTAL_N=sum(UNIQUE_N)), by=c('PTY_RUN','IND')]
+		ggplot(tmp, aes(y=IND, yend=IND, x=0, xend=TOTAL_N, colour=factor(TOTAL_N<1e2, levels=c(TRUE,FALSE),labels=c('<100','>=100')))) + geom_segment(size=3) +
+				labs(y='candidate individuals', x='sum of unique reads\n(#)', colour='') + theme_bw() +
+				scale_colour_brewer(palette='Set1') + facet_grid(PTY_RUN~., scales='free_y', space='free_y') +
+				theme(legend.position='bottom')
+		ggsave(file=file.path(indir,'pty_reads_from_candidate.pdf'), w=5, h=30, limitsize = FALSE)
+				
+		ggplot(seqd, aes(x=W_FROM, y=LEN_MED_RM, alpha=FILL, colour=IND_L, group=IND_L)) + 
+				geom_line() + theme_bw() + scale_x_continuous(breaks=seq(0,10000,500)) +
+				scale_alpha_manual(values=c('candidate'=1, 'filler'=0.2))+
+				labs(x='window start', y='median read length\n(rolling mean over 10 windows)') + 
+				facet_grid(PTY_RUN~., scales='free_y') + guides(colour=FALSE) 
+		ggsave(file=file.path(indir,'pty_read_lengths.pdf'), w=10, h=60, limitsize = FALSE)
 	}
 	
 }
@@ -926,35 +952,53 @@ project.dualinfecions.phylotypes.pipeline.examl.160110<- function()
 	#	input args
 	#	(used function project.dualinfecions.phylotypes.pipeline.fasta.160110 to create all fasta files)
 	#
+	#indir		<- "/Users/Oliver/duke/2016_PANGEAphylotypes/phylotypes"
 	indir		<- file.path(HOME,"phylotypes")
 	infiles		<- data.table(FILE=list.files(indir, pattern='fasta$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
-	infiles		<- subset(infiles, PTY_RUN<10)
-	
+	infiles		<- subset(infiles, PTY_RUN%in%c(15,17,22))	
 	args.examl	<- "-f d -D -m GAMMA"
-	bs.to		<- 4
-	bs.n		<- 5
-	
-	invisible(exa.cmd		<- infiles[,{				 
-				cmd			<- cmd.strip.gaps(file.path(indir,FILE), strip.max.len=350)
-				cmd			<- paste(cmd, cmd.examl.bootstrap.on.one.machine(indir, sub("\\.[^.]*$", "", FILE), bs.from=0, bs.to=bs.to, bs.n=bs.n, outdir=indir, opt.bootstrap.by="nucleotide", args.examl=args.examl, verbose=1), sep='\n')
-				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
-				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
-				outdir		<- file.path(HOME,"ptyruns")
-				outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-				hivc.cmd.hpccaller(outdir, outfile, cmd)
-				#list(CMD=cmd)
-				NULL
-			}, by=c('PTY_RUN','FILE')])
-	#exa.cmd		<- exa.cmd[, list(CMD=paste(CMD,collapse='\n\n',sep='')), by='PTY_RUN']
-	# submit
-	#invisible(exa.cmd[,	{
-	#					cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
-	#					#cmd		<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
-	#					outdir		<- file.path(HOME,"ptyruns")
-	#					outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-	#					hivc.cmd.hpccaller(outdir, outfile, cmd)
-	#				}, by='PTY_RUN'])
+	#bs.to		<- 4;	bs.n<- 5
+	#
+	#	bootstrap on one machine version
+	#
+	if(0)
+	{
+		invisible(infiles[,{				 
+							cmd			<- cmd.strip.gaps(file.path(indir,FILE), strip.max.len=350)
+							#cmd			<- paste(cmd, cmd.examl(indir, sub("\\.[^.]*$", "", FILE), args.examl=args.examl), sep='\n')
+							cmd			<- paste(cmd, cmd.examl.bootstrap.on.one.machine(indir, sub("\\.[^.]*$", "", FILE), bs.from=0, bs.to=bs.to, bs.n=bs.n, outdir=indir, opt.bootstrap.by="nucleotide", args.examl=args.examl, verbose=1), sep='\n')
+							cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=3, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
+							#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
+							outdir		<- file.path(HOME,"ptyruns")
+							outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							hivc.cmd.hpccaller(outdir, outfile, cmd)
+							#list(CMD=cmd)
+							NULL
+						}, by=c('PTY_RUN','FILE')])
+	}
+	#
+	#	no bootstrap version
+	#
+	if(1)
+	{
+		exa.n.per.run	<- 7
+		exa.cmd			<- infiles[,{				 
+					cmd			<- cmd.strip.gaps(file.path(indir,FILE), strip.max.len=350)
+					cmd			<- paste(cmd, cmd.examl.single(indir, sub("\\.[^.]*$", "", FILE), args.examl=args.examl), sep='')					
+					list(CMD=cmd)					
+				}, by=c('PTY_RUN','FILE')]
+		#exa.cmd[1, cat(CMD)]
+		exa.cmd[, RUN_ID:= ceiling(seq_len(nrow(exa.cmd))/exa.n.per.run)]
+		invisible(exa.cmd[,	{
+					cmd			<- paste(CMD,collapse='\n',sep='\n')		
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
+					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
+					outdir		<- file.path(HOME,"ptyruns")
+					outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+					hivc.cmd.hpccaller(outdir, outfile, cmd)
+				}, by='RUN_ID'])
+	}	
 }
 
 project.dualinfecions.phylotypes.pipeline.fasta.160110<- function() 
