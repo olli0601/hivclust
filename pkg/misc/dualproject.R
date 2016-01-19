@@ -865,7 +865,7 @@ project.dualinfecions.phylotypes.evaluatereads.150119<- function()
 	{
 		seqd	<- subset(infiles, PTY_RUN==ptyr)[,{
 					seq		<- read.dna(file.path(indir,FILE),format='fasta')
-					#seq		<- seq.strip.gap(seq, strip.max.len=strip.max.len)
+					seq		<- seq.strip.gap(seq, strip.max.len=strip.max.len)
 					tmp		<- rownames(seq)
 					seqd	<- data.table(READ=tmp, IND= gsub('_read.*','',tmp)) 
 					seqd[, READ_N:=as.integer(gsub('_count_','',regmatches(tmp,regexpr('_count_[0-9]+',tmp))))]			
