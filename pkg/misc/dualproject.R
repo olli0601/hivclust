@@ -5,8 +5,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#project.dualinfecions.phylotypes.pipeline.fasta.160110()
-	project.dualinfecions.phylotypes.pipeline.examl.160110()
-	#project.dualinfecions.phylotypes.evaluatereads.150119()
+	#project.dualinfecions.phylotypes.pipeline.examl.160110()
+	project.dualinfecions.phylotypes.evaluatereads.150119()
 }
 
 project.dual.distances.231015<- function()
@@ -892,7 +892,7 @@ project.dualinfecions.phylotypes.evaluatereads.150119<- function()
 	
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
 	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )	
-	indir			<- file.path(HOME,"phylotypes_160119")
+	indir			<- file.path(HOME,"phylotypes")
 	pty.evaluate.fasta(indir, si)
 	
 	if(0)
