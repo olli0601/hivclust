@@ -815,27 +815,33 @@ project.dualinfecions.phylotypes.pipeline.examl.160110<- function()
 	#
 	indir		<- file.path(HOME,"phylotypes")
 	infiles		<- data.table(FILE=list.files(indir, pattern='fasta$'))
-	infiles[, PTY_RUN:= gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1))]
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 	infiles		<- subset(infiles, PTY_RUN<10)
 	
 	args.examl	<- "-f d -D -m GAMMA"
 	bs.to		<- 4
 	bs.n		<- 5
 	
-	exa.cmd		<- infiles[,{				 
+	invisible(exa.cmd		<- infiles[,{				 
 				cmd			<- cmd.strip.gaps(file.path(indir,FILE), strip.max.len=350)
 				cmd			<- paste(cmd, cmd.examl.bootstrap.on.one.machine(indir, sub("\\.[^.]*$", "", FILE), bs.from=0, bs.to=bs.to, bs.n=bs.n, outdir=indir, opt.bootstrap.by="nucleotide", args.examl=args.examl, verbose=1), sep='\n')
-				list(CMD=cmd)
-			}, by=c('PTY_RUN','FILE')]
-	exa.cmd		<- exa.cmd[, list(CMD=paste(CMD,collapse='\n\n',sep='')), by='PTY_RUN']
+				cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
+				#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
+				outdir		<- file.path(HOME,"ptyruns")
+				outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+				hivc.cmd.hpccaller(outdir, outfile, cmd)
+				#list(CMD=cmd)
+				NULL
+			}, by=c('PTY_RUN','FILE')])
+	#exa.cmd		<- exa.cmd[, list(CMD=paste(CMD,collapse='\n\n',sep='')), by='PTY_RUN']
 	# submit
-	invisible(exa.cmd[,	{
-						cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
-						#cmd		<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
-						outdir		<- file.path(HOME,"ptyruns")
-						outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-						hivc.cmd.hpccaller(outdir, outfile, cmd)
-					}, by='PTY_RUN'])
+	#invisible(exa.cmd[,	{
+	#					cmd			<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
+	#					#cmd		<- hivc.cmd.hpcwrapper(CMD, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
+	#					outdir		<- file.path(HOME,"ptyruns")
+	#					outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+	#					hivc.cmd.hpccaller(outdir, outfile, cmd)
+	#				}, by='PTY_RUN'])
 }
 
 project.dualinfecions.phylotypes.pipeline.fasta.160110<- function() 
