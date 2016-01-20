@@ -5,8 +5,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#project.dualinfecions.phylotypes.pipeline.fasta.160110()
-	project.dualinfecions.phylotypes.pipeline.examl.160110()
-	#project.dualinfecions.phylotypes.evaluatereads.150119()
+	#project.dualinfecions.phylotypes.pipeline.examl.160110()
+	project.dualinfecions.phylotypes.evaluatereads.150119()
 }
 
 project.dual.distances.231015<- function()
@@ -579,7 +579,7 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 	tmp				<- pty.runs[, which(is.na(FILE_ID))]
 	set(pty.runs, tmp, 'FILE_ID', pty.runs[tmp, TAXA])
 	
-	indir.tr		<- file.path(HOME,"phylotypes_160119")	
+	indir.tr		<- file.path(HOME,"phylotypes_160120")	
 	#	collect ML tree files
 	infiles		<- data.table(FILE=list.files(indir.tr, 'newick$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
@@ -848,7 +848,7 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 		
 }
 
-pty.evaluate.fasta<- function(indir, si)
+pty.evaluate.fasta<- function(indir, pty.runs, si)
 {
 	require(big.phylo)
 	infiles			<- data.table(FILE=list.files(indir, pattern='fasta$'))
@@ -893,7 +893,7 @@ project.dualinfecions.phylotypes.evaluatereads.150119<- function()
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
 	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )	
 	indir			<- file.path(HOME,"phylotypes")
-	pty.evaluate.fasta(indir, si)
+	pty.evaluate.fasta(indir, pty.runs, si)
 	
 	if(0)
 	{
