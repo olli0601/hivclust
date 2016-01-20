@@ -991,11 +991,15 @@ hivc.pipeline.various<- function()
 		project.Gates()
 		quit("no")
 	}	
-	if(1)
+	if(0)
 	{
-		project.London.FirstExaml.151202()
+		project.London.FirstExaml.151202()		
 		quit("no")
 	}
+	if(1)
+	{
+		project.dualinfecions.phylotypes.evaluatereads.150119()
+	}	
 	if(0)
 	{
 		#project.hivc.examl.median.brl()

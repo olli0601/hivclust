@@ -6,7 +6,17 @@ project.dual<- function()
 	#project.dual.examl.231015()
 	#project.dualinfecions.phylotypes.pipeline.fasta.160110()
 	#project.dualinfecions.phylotypes.pipeline.examl.160110()
-	project.dualinfecions.phylotypes.evaluatereads.150119()
+	#project.dualinfecions.phylotypes.evaluatereads.150119()	
+	if(1)
+	{
+		cmd			<- hivc.cmd.various()
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=3, hpc.mem="5000mb")
+		cat(cmd)		
+		outdir		<- file.path(HOME,"ptyruns")
+		outfile		<- paste("pv",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		quit("no")	
+	}			
 }
 
 project.dual.distances.231015<- function()
@@ -661,9 +671,11 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 	#
 	#	root and ladderize trees
 	#
+	pty.ph.cp	<- copy(pty.ph)
+	#	pty.ph	<- copy(pty.ph.cp)
 	for(i in seq_along(pty.ph))
 	{
-		#print(i)
+		print(i)
 		#i<- 44
 		#i<- 1
 		root			<- subset(infiles, FILE==names(pty.ph)[i])[, ROOT]
@@ -859,7 +871,9 @@ pty.evaluate.fasta<- function(indir, pty.runs, si)
 	
 	for(ptyr in infiles[, unique(PTY_RUN)])
 	{
+		cat('\n\n\n\n\t\tRUN\t\t',ptyr,'\n\n\n\n')
 		seqd	<- subset(infiles, PTY_RUN==ptyr)[,{
+					cat('\n',FILE)
 					seq		<- read.dna(file.path(indir,FILE),format='fasta')
 					seq		<- seq.strip.gap(seq, strip.max.len=strip.max.len)
 					tmp		<- rownames(seq)
