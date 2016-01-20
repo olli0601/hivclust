@@ -5,8 +5,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#project.dualinfecions.phylotypes.pipeline.fasta.160110()
-	#project.dualinfecions.phylotypes.pipeline.examl.160110()
-	project.dualinfecions.phylotypes.evaluatereads.150119()
+	project.dualinfecions.phylotypes.pipeline.examl.160110()
+	#project.dualinfecions.phylotypes.evaluatereads.150119()
 }
 
 project.dual.distances.231015<- function()
@@ -992,7 +992,7 @@ project.dualinfecions.phylotypes.pipeline.examl.160110<- function()
 		exa.cmd[, RUN_ID:= ceiling(seq_len(nrow(exa.cmd))/exa.n.per.run)]
 		invisible(exa.cmd[,	{
 					cmd			<- paste(CMD,collapse='\n',sep='\n')		
-					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
+					cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=20, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1)
 					#cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
 					outdir		<- file.path(HOME,"ptyruns")
 					outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
