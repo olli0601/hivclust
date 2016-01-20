@@ -46,7 +46,7 @@ CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
 #HOME		<<- "/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	#! quotes switch off tilde expansion
 #HOME        <<- "/work/or105/ACpolext"
-#HOME		<<- "/Users/Oliver/duke/2013_HIV_Hue/UKCA_1309"
+#HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
 #HOME		<<- "/work/or105/UKCA_1309"
 #HOME		<<- "/Users/Stephane/Desktop/CASCADE_phylo/hivclust"
 #HOME		<<- "/home/koelle/or7/phylody"
@@ -396,7 +396,7 @@ if(length(args))
 					PROPS.ESTIMATE			= "hivc.prog.props_univariate",
 					AGE.ESTIMATE			= "age.props_univariate",
 					BETAREG.NUMBERS			= "project.athena.Fisheretal.numbers",
-					VARIOUS					= "project.dual"
+					VARIOUS					= "hivc.pipeline.various"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)
@@ -409,7 +409,7 @@ if(length(args))
 	argv<<- args
 }
 ###############################################################################
-stop()
+#stop()
 if(HIVC.DEBUG)	options(error= my.dumpframes)	
 cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	

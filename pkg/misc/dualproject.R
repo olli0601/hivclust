@@ -594,8 +594,7 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 	infiles		<- data.table(FILE=list.files(indir.tr, 'newick$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 	infiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
-	infiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]
-	infiles[, IDX:=seq_len(nrow(infiles))]	
+	infiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]		
 	infiles		<- subset(infiles, W_FROM<9000)
 	#
 	infiles[, table(PTY_RUN)]
@@ -611,13 +610,21 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 				ph$node.label	<- as.numeric(tmp)
 				ph
 			})
-	names(pty.ph)<- infiles[, FILE]	
+	names(pty.ph)<- infiles[, FILE]
+	#
+	#	rm trees with just one individual
+	#
+	infiles[, IND_N:= sapply(seq_along(pty.ph), function(i)  length(unique(gsub('_read.*','',pty.ph[[i]]$tip.label)))		)]
+	infiles			<- subset(infiles, IND_N>1)
+	infiles[, IDX:=seq_len(nrow(infiles))]
+	pty.ph			<- lapply( infiles[, FILE], function(x)	pty.ph[[x]]		)
+	names(pty.ph)	<- infiles[, FILE]	
 	#
 	#	determine root for each run: find taxon with largest distance from BAM of select individuals
 	#
 	pty.root	<- lapply(infiles[, unique(PTY_RUN)], function(ptyr){	
 			#print(ptyr)	
-				#ptyr<- 14
+				#ptyr<- 15
 				tmp			<- subset(infiles, PTY_RUN==ptyr)[,FILE]
 				phs			<- lapply(tmp, function(x) pty.ph[[x]])	
 				names(phs)	<- tmp
@@ -635,7 +642,8 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 								tmp		<- subset(phb, !is.na(BAM))[, FILE_ID[which.min(TX_IDX)]]
 								tmp		<- subset(phb, !is.na(BAM) & FILE_ID==tmp)[, BAM]
 							}								
-							tmp			<- phgd[ tmp, setdiff(rownames(phgd), tmp), drop=FALSE]			
+							tmp			<- phgd[ tmp, setdiff(rownames(phgd), tmp), drop=FALSE]
+							stopifnot(ncol(tmp)>0)								
 							ans			<- as.data.table(melt(tmp, value.name='PATR'))
 							setnames(ans, c('Var1','Var2'), c('TARGET','FILL'))
 							ans[, FILE:= names(phs)[i]]	
@@ -671,13 +679,13 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 	#
 	#	root and ladderize trees
 	#
-	pty.ph.cp	<- copy(pty.ph)
+	pty.ph.cp						<- copy(pty.ph)	
 	#	pty.ph	<- copy(pty.ph.cp)
 	for(i in seq_along(pty.ph))
 	{
 		print(i)
 		#i<- 44
-		#i<- 1
+		#i<- 5
 		root			<- subset(infiles, FILE==names(pty.ph)[i])[, ROOT]
 		ph				<- pty.ph[[i]]
 		tmp										<- which(ph$tip.label==root)
@@ -786,9 +794,10 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 	require(gridExtra)
 	require(colorspace)
 	setkey(infiles, PTY_RUN, W_FROM)	
-	infiles			<- subset(infiles, PTY_RUN==1)
+	#infiles			<- subset(infiles, PTY_RUN==1)
 	for(ptyr in infiles[, unique(PTY_RUN)])
 	{
+		#ptyr<- 15
 		tmp			<- subset(infiles, PTY_RUN==ptyr)
 		#	title
 		tmp[, TITLE:=paste('run',PTY_RUN,', window [',W_FROM,',',W_TO,']',sep='')]	
@@ -835,27 +844,29 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 				dev.off()	
 			}
 		}
+		if(0)	#devel
+		{
+			tmp	 	<- matrix(seq(1, 2*ceiling(length(phps)/2)), ncol=ceiling(length(phps)/2), nrow=2)
+			grid.newpage()
+			pushViewport(viewport(layout = grid.layout(nrow(tmp), ncol(tmp))))
+			for(i in seq_along(phps))
+				print(phps[[i]], vp = viewport(layout.pos.row=which(tmp==i, arr.ind=TRUE)[1,'row'], layout.pos.col=which(tmp==i, arr.ind=TRUE)[1,'col']))	
+			dev.off()
+			
+			ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + 
+					geom_nodepoint(size=ph$node.label/100*3) +
+					#geom_text(aes(label=label), size=1.5,  hjust=-.1) +
+					geom_tiplab(size=1.2,  hjust=-.1) +
+					scale_color_manual(values=col, guide = FALSE) +											 
+					scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
+					theme_tree2() +
+					theme(legend.position="bottom") + ggplot2::xlim(0, 0.3) +
+					labs(x='subst/site')
+		}
 		
 		
 		
 		
-		
-		tmp	 	<- matrix(seq(1, 2*ceiling(length(phps)/2)), ncol=ceiling(length(phps)/2), nrow=2)
-		grid.newpage()
-		pushViewport(viewport(layout = grid.layout(nrow(tmp), ncol(tmp))))
-		for(i in seq_along(phps))
-			print(phps[[i]], vp = viewport(layout.pos.row=which(tmp==i, arr.ind=TRUE)[1,'row'], layout.pos.col=which(tmp==i, arr.ind=TRUE)[1,'col']))	
-		dev.off()
-		
-		ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + 
-				geom_nodepoint(size=ph$node.label/100*3) +
-				#geom_text(aes(label=label), size=1.5,  hjust=-.1) +
-				geom_tiplab(size=1.2,  hjust=-.1) +
-				scale_color_manual(values=col, guide = FALSE) +											 
-				scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
-				theme_tree2() +
-				theme(legend.position="bottom") + ggplot2::xlim(0, 0.3) +
-				labs(x='subst/site')
 	}
 		
 }
@@ -864,6 +875,7 @@ pty.evaluate.fasta<- function(indir, pty.runs, si)
 {
 	require(big.phylo)
 	infiles			<- data.table(FILE=list.files(indir, pattern='fasta$'))
+	infiles			<- subset(infiles, !grepl('*',FILE,fixed=1))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 	infiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
 	infiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]	
