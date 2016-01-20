@@ -10,7 +10,7 @@ project.dual<- function()
 	if(1)
 	{
 		cmd			<- hivc.cmd.various()
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=3, hpc.mem="5000mb")
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeph', hpc.walltime=3, hpc.mem="3600mb")
 		cat(cmd)		
 		outdir		<- file.path(HOME,"ptyruns")
 		outfile		<- paste("pv",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
