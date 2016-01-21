@@ -46,6 +46,20 @@ project.ACpolext.rmDRM.150913<- function()
 	save(seq, nodr.info, file= paste(indir, '/', gsub('13.09.15.aln\\.fasta','alnnoDRM_150913\\.R',infile), sep=''))
 }
 ######################################################################################
+project.ACpolext.rmDRM.160120<- function()
+{
+	require(big.phylo)
+	infile				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160120/ZA_aln4_160120.fasta'
+	acxs				<- read.dna(file=infile, format='fasta')
+	tmp					<- which(grepl("B.FR.K03455.1983",rownames(acxs)))
+	rownames(acxs)[tmp]	<- 'HXB2'
+	tmp					<- big.phylo:::seq.rm.drugresistance(acxs)
+	nodr.info			<- tmp$nodr.info
+	seq					<- tmp$nodr.seq
+	write.dna(seq, file= gsub('aln4','aln4noDRM',infile), format='fasta', colsep='', nbcol=-1)
+	save(seq, nodr.info, file= gsub('aln4','aln4noDRM',infile))
+}
+######################################################################################
 project.ACpolext.rmDRM.150907<- function()
 {
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150831'
@@ -169,12 +183,14 @@ project.ACpolext.trees.inspect<- function()
 ######################################################################################
 project.ACpolext.examl<- function()
 {	  	
+	require(big.phylo)
 	indir		<- DATA
 	infile		<- "ZA.SubC.12294.alnnoDRM"	
-	signat.in   <- signat.out   <- '150913'
+	infile		<- "ZA_aln4noDRM_160120"
+	#signat.in   <- signat.out   <- '150913'
 	#	ExaML bootstrap args
-	bs.from		<- 151
-	bs.to		<- 200
+	bs.from		<- 0
+	bs.to		<- 2
 	bs.n		<- 500
 	outdir		<- indir
 	
@@ -183,16 +199,16 @@ project.ACpolext.examl<- function()
 	#args.examl	<- "-f d -m GAMMA"		#	 -- ran for weeks
 	#args.examl	<- "-f o -D -m GAMMA"	#	 -- not followed up until 'default' worked
 	args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours	
-	cmd			<- hivc.cmd.examl.bootstrap(indir, infile, signat.in, signat.out, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
+	cmd			<- cmd.examl.bootstrap(indir, infile, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
 	dummy		<- lapply(cmd, function(x)
 			{				
-				#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
-				#x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeph", hpc.mem="1800mb", hpc.nproc=1)
-				x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
+				#x		<- cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+				#x		<- cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeph", hpc.mem="1800mb", hpc.nproc=1)
+				x		<- cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
 				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 				outfile	<- paste("exa",signat,sep='.')
 				cat(x)
-				hivc.cmd.hpccaller(outdir, outfile, x)
+				cmd.hpccaller(outdir, outfile, x)
 				Sys.sleep(1)
 			})	
 }
