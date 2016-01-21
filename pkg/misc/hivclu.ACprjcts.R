@@ -56,7 +56,7 @@ project.ACpolext.rmDRM.160120<- function()
 	tmp					<- big.phylo:::seq.rm.drugresistance(acxs)
 	nodr.info			<- tmp$nodr.info
 	seq					<- tmp$nodr.seq
-	write.dna(seq, file= gsub('aln4','aln4noDRM',infile), format='fasta', colsep='', nbcol=-1)
+	write.dna(seq, file= gsub('aln4','aln4noDRM',infile), format='fasta')
 	save(seq, nodr.info, file= gsub('aln4','aln4noDRM',infile))
 }
 ######################################################################################
