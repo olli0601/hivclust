@@ -3,8 +3,8 @@ project.dual<- function()
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
-	#project.dual.examl.231015()
-	pty.pipeline.fasta()
+	project.dual.examl.231015()
+	#pty.pipeline.fasta()
 	#project.dualinfecions.phylotypes.pipeline.examl.160110()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()
 	
@@ -46,12 +46,12 @@ project.dual.examl.231015<- function()
 	#infiles		<- list.files(indir, pattern='PANGEA_HIV_n5003_Imperial_.*\\.R')	
 	infiles		<- 'PANGEA_HIV_n5003_Imperial_v160110_BW.R'
 	infiles		<- 'PANGEA_HIV_n5003_Imperial_v160110_UG.R'
-	infiles		<- 'PANGEA_HIV_n5003_Imperial_v160110_ZA.R'
+	#infiles		<- 'PANGEA_HIV_n5003_Imperial_v160110_ZA.R'
 	
 	for(i in seq_along(infiles))
 	{
-		bs.from		<- 0
-		bs.to		<- 0
+		bs.from		<- 359
+		bs.to		<- 360
 		bs.n		<- 500
 		outdir		<- indir
 		infile		<- gsub(paste('\\.R',sep=''),'',infiles[i])
