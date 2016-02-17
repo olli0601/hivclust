@@ -854,7 +854,7 @@ hivc.pipeline.ages<- function()
 		method.lRNA.supp			<- 100
 		method.use.AcuteSpec		<- 1
 		method.minQLowerU			<- 0.148	#0.194 0.148 0.109
-		method.thresh.pcoal			<- 0.2
+		method.thresh.pcoal			<- 0.1		#0.2
 		method.PDT					<- 'SEQ'
 		#method.Acute				<- 'empirical'
 		method.Acute				<- 'higher'
@@ -862,13 +862,13 @@ hivc.pipeline.ages<- function()
 		#method.Acute				<- 'central'
 		method.minLowerUWithNegT	<- 1
 		method.cut.brl				<- Inf
-		method.thresh.bs			<- 0.8
+		method.thresh.bs			<- 0.7		#0.8
 		
 		# use to pre-compute tables mem 130 GB		
 		#method.risk				<- c( 	'm5A.tp1.clu.adj' )
 		#method.risk				<- c( 	'm5B.tp1.clu.adj' )
 		#method.risk				<- c( 	'm5C.tp1.clu.adj' )
-		method.risk				<- c( 	'm5D.tp1.clu.adj' )
+		method.risk					<- c( 	'm5D.tp1.clu.adj' )
 		#method.risk				<- c( 	'm5E.tp1.clu.adj' )
 		#method.risk				<- c( 	'm5F.tp1.clu.adj' )
 		dummy	<- sapply(method.risk, function(x)

@@ -60,6 +60,20 @@ project.ACpolext.rmDRM.160120<- function()
 	save(seq, nodr.info, file= gsub('aln4','aln4noDRM',infile))
 }
 ######################################################################################
+project.ACpolext.rmDRM.160209<- function()
+{
+	require(big.phylo)
+	infile				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_16442_20160208_aln.fasta'
+	acxs				<- read.dna(file=infile, format='fasta')
+	tmp					<- which(grepl("B.FR.K03455.1983",rownames(acxs)))
+	rownames(acxs)[tmp]	<- 'HXB2'
+	tmp					<- big.phylo:::seq.rm.drugresistance(acxs)
+	nodr.info			<- tmp$nodr.info
+	seq					<- tmp$nodr.seq
+	write.dna(seq, file= gsub('ViroIntro_','ViroIntro_noDRM_',infile), format='fasta')
+	save(seq, nodr.info, file= gsub('fasta','rda',gsub('ViroIntro_','ViroIntro_noDRM_',infile)))
+}
+######################################################################################
 project.ACpolext.rmDRM.150907<- function()
 {
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150831'
