@@ -109,6 +109,11 @@ project.dual.alignments.160110<- function()
 	seq				<- sq[ subset(sqi, SITE=='UG' | PNG=='N')[, TAXA], ]	
 	write.dna( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_UG.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
 	save( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_UG.R',sep=''))
+	seq				<- as.character(seq)
+	seq[seq=='?']	<- '-'
+	seq				<- as.DNAbin(seq)
+	write.dna( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_UG_NoQ.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
+	save( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_UG_NoQ.R',sep=''))
 	seq		<- sq[ subset(sqi, SITE=='BW' | PNG=='N')[, TAXA], ]
 	write.dna( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_BW.fasta',sep=''), format='fasta', colsep='', nbcol=-1)	
 	save( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_BW.R',sep=''))	
@@ -1391,34 +1396,6 @@ project.dualinfecions.NJExaTrees.160110<- function()
 	infile		<- "ExaML_result.PANGEAconsensuses_2015-09_Imperial_UG_151023.finaltree.040"
 	ph			<- read.tree( paste(indir,'/',infile,sep='') )	
 	#	no branch lengths??
-	
-	#
-	#	UG consensus BEST tree
-	#
-	infile		<- "PANGEAconsensuses_2015-09_Imperial_UG_examlbs100_151023.newick"
-	ph			<- read.tree( paste(indir,'/',infile,sep='') )	
-	#	drop a few bizarre tips
-	#ph			<- drop.tip(ph, c('PG14-BW000365-S06313','PG14-BW000374-S06322','PG14-BW000057-S01150-R2','PG14-BW000064-S01157-R2','PG14-BW000059-S01152-R2','PG14-BW000058-S01151-R2','PG14-BW000062-S01155-R2','PG14-BW000063-S01156-R2'))
-	#	reroot at SIV		
-	tmp			<- which(ph$tip.label=='CPZ.TZ.06.SIVcpzTAN13.JQ768416')
-	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])	
-	ph 			<- ladderize( ph )
-	ph.node.bs						<- ph$node.label
-	ph.node.bs[ph.node.bs=='Root']	<- NA
-	ph.node.bs						<- as.numeric(ph.node.bs)
-	ph.node.bs[is.na(ph.node.bs)]	<- 0
-	ph$node.label					<- ph.node.bs / 100
-	ph$node.label[ph$node.label>1]	<- 1	
-	stat.fun						<- hivc.clu.min.transmission.cascade
-	#stat.fun						<- max
-	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)	
-	clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")	
-	tip.color	<- rep('black',Ntip(ph))
-	tip.color[ grepl('PG14',ph$tip.label) ]	<- 'DarkRed'
-	file		<- paste(outdir,"/", gsub('\\.newick',paste('_gd',100*thresh.brl,'bs',thresh.bs*100,'\\.pdf',sep=''), infile), sep='')
-	hivc.clu.plot(ph, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=file, pdf.scaley=50, show.tip.label=TRUE, pdf.width=30)	
-	save(ph, dist.brl, file=paste(indir,'/',gsub('\\.newick','\\.R',infile),sep=''))
-	
 	#
 	#	ZA consensus BEST tree
 	#	

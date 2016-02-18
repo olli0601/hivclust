@@ -6458,7 +6458,7 @@ age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study,
 	save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', method, 'STRAT_',gsub('\\.clu\\.adj','',gsub('\\.tp[0-9]','',method.risk)),'.R',sep='')
 	save(YX, X.clu, X.seq, X.msm, file=save.file)
 #STOP1		
-stop()
+#stop()
 	#
 	#	compute sampling and censoring tables/models that are needed for adjustments
 	#

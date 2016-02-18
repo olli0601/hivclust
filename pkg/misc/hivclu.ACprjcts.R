@@ -149,6 +149,20 @@ project.ACpolext.rmDRM.150907<- function()
 	save(seq, file=paste(outdir, '/', gsub('\\.fasta','\\.R',outfile), sep=''))	
 }
 ######################################################################################
+project.ACpolext.intros<- function()
+{	  	
+	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209'
+	#	David's FastTree2 + LSD tree
+	infile		<- 'ViroIntro_noDRM_16442_20160208_F2_LSD.nex'
+	ph			<- read.nexus(file.path(indir, infile))
+	phd			<- data.table(TAXA=ph$tip.label)
+	phd[, LOC:= sapply(strsplit(TAXA,'_'),'[[',1)]
+	phd[, LOCL:= factor(LOC, 	levels=c('AC','AO','BW','CAP','CD','CM','MW','MZ','SZ','TZ','ZA','ZM','ZW'),
+								labels=c('Africa Centre','Angola','Botswana','CAPRISA','DR Congo','Cameroon','Malawi','Mozambique','Swaziland','Tanzania','South Africa','Zambia','Zimbabwe'))]
+	phd[, SEQYR:= as.numeric(regmatches(TAXA,regexpr('[0-9]+$',TAXA)))]		
+	
+}
+######################################################################################
 project.ACpolext.trees.inspect<- function()
 {	  	
 	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150913'
