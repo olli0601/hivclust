@@ -429,6 +429,10 @@ age.explore.Recipient.bias<- function()
 	cluphy.info
 	ri.ALLMSM
 	ri.CLU
+	indir		<- '~/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
+	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C1V100bInfs0.7T7STRAT_m5D.R'
+	outfile.pdf	<- paste(indir, '/', gsub('\\.R',paste('_Rec_by_AgeC_','160217','.pdf',sep=''),infile), sep='')
+	outfile.pdf	<- paste(indir, '/', gsub('\\.R',paste('_Rec_by_AgeC_','160223_C1s70','.pdf',sep=''),infile), sep='')
 	
 	tmp3	<- YX[, list(tna=length(unique(t))), by=c('Patient','AgeC')]
 	tmp3	<- merge(tmp3, YX[, list(AnyPos_T1=AnyPos_T1[1], tn=length(unique(t))), by=c('Patient')], by=c('Patient'))
@@ -464,27 +468,28 @@ age.explore.Recipient.bias<- function()
 	YXar	<- rbind(YXar, tmp2)
 	#	add distribution among clustering recently infected
 	tmp3	<- copy(ri.CLU)	
-	tmp3[, Clustering_BS80GDInfC80:='Y']	
+	tmp3[, Clustering:='Y']	
 	tmp		<- merge(tmp, tmp3, by='Patient', all.x=1)
-	set(tmp, tmp[, which(is.na(Clustering_BS80GDInfC80))],'Clustering_BS80GDInfC80', 'N')
-	tmp2	<- subset(tmp, Recent=='Y' & Clustering_BS80GDInfC80=='Y')[, list(TYPE='Recently Infected Clustering_BS80_BRLInf_CLRH80', N= length(Patient)), by=c('tmidC2','AgeC')]
+	set(tmp, tmp[, which(is.na(Clustering))],'Clustering', 'N')
+	tmp2	<- subset(tmp, Recent=='Y' & Clustering=='Y')[, list(TYPE='Recently Infected Clustering', N= length(Patient)), by=c('tmidC2','AgeC')]
 	tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
 	YXar	<- rbind(YXar, tmp2)	
 	YXar[, P:=N/Ntp]
 	#	plot
 	YXplot	<- copy(YXar)
-	set(YXplot, NULL, 'TYPE', YXplot[, factor(TYPE, levels=c('Recipient','Recently Infected Clustering_BS80_BRLInf_CLRH80','Recently Infected Sequenced','Recently infected','Diagnosed'), labels=c('Recipient MSM\n(of whom sources were characterised)','Recently infected\nIn phylo cluster\nBS=80% GD=Inf Coal=80%','Recently infected\nwith a sequence','Recently infected\n(population)','Newly diagnosed MSM\n(population)') )])
+	#set(YXplot, NULL, 'TYPE', YXplot[, factor(TYPE, levels=c('Recipient','Recently Infected Clustering','Recently Infected Sequenced','Recently infected','Diagnosed'), labels=c('Recipient MSM\n(of whom sources were characterised)','Recently infected\nIn phylo cluster\nBS=80% GD=Inf Coal=80%','Recently infected\nwith a sequence','Recently infected\n(population)','Newly diagnosed MSM\n(population)') )])
+	set(YXplot, NULL, 'TYPE', YXplot[, factor(TYPE, levels=c('Recipient','Recently Infected Clustering','Recently Infected Sequenced','Recently infected','Diagnosed'), labels=c('Recipient MSM\n(of whom sources were characterised)','Recently infected\nIn phylo cluster\nBS=70% GD=Inf Coal=90%','Recently infected\nwith a sequence','Recently infected\n(population)','Newly diagnosed MSM\n(population)') )])
 	set(YXplot, NULL, 'tmidC2', YXplot[, factor(as.character(tmidC2, levels=c('2004-2007','2008-2020'),labels=c('2004-2007\n(time of diagnosis)','2008-2010\n(time of diagnosis)')))])
 	ggplot(YXplot, aes(y=100*P, x=AgeC, fill=TYPE)) +
 			geom_bar(stat='identity',position='dodge', colour='black', width=0.8) + 
 			facet_grid(~tmidC2) + 
-			scale_y_continuous(expand=c(0,0), limit=c(0,24)) +
+			scale_y_continuous(expand=c(0,0), limit=c(0,25)) +
 			#scale_fill_manual(values=c('Newly diagnosed MSM\n(population)'="#FEB24C", 'Recipient MSM\n(of whom sources could be characterised)'="#E31A1C")) +
 			scale_fill_brewer(palette='Pastel1') +
 			coord_flip() +
 			theme_bw() + theme(legend.position='bottom') +
 			labs(x='Age group\n(years)\n', y='%', fill='', title='Study population\n')			
-	ggsave(file=paste(indir, '/', gsub('\\.R',paste('_Rec_by_AgeC_','160217','.pdf',sep=''),infile), sep=''), w=8.5, h=6)
+	ggsave(file=outfile.pdf, w=8.5, h=6)
 	#
 	#	superspreaders
 	#

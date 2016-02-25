@@ -854,7 +854,7 @@ hivc.pipeline.ages<- function()
 		method.lRNA.supp			<- 100
 		method.use.AcuteSpec		<- 1
 		method.minQLowerU			<- 0.148	#0.194 0.148 0.109
-		method.thresh.pcoal			<- 0.1		#0.2
+		method.thresh.pcoal			<- 0.3		#0.2
 		method.PDT					<- 'SEQ'
 		#method.Acute				<- 'empirical'
 		method.Acute				<- 'higher'
