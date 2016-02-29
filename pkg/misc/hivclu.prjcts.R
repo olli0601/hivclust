@@ -975,7 +975,267 @@ project.hivc.Excel2dataframe.AllPatientCovariates.checkPosSeqT<- function()
 	tmp2		<- merge(tmp2, df.viro,by='Patient')
 }
 ######################################################################################
-project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, verbose=1, resume=0)
+project.WTprop.160228<- function()
+{	
+	require(data.table)
+	indir		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+	infile		<- file.path(indir,"ATHENA_1502_All_PatientKeyCovariates.R")
+	load(infile)	
+	df			<- subset(df.all, Trm%in%c('MSM','BI'))
+	#	convert dates to numeric
+	set(df, NULL, "DateBorn", df[,hivc.db.Date2numeric( DateBorn )])
+	set(df, NULL, "DateLastContact", df[,hivc.db.Date2numeric( DateLastContact )])	
+	set(df, NULL, "DateDied", df[,hivc.db.Date2numeric( DateDied )])
+	set(df, NULL, "NegT", df[,hivc.db.Date2numeric( NegT )])
+	set(df, NULL, "NegT_Crude", df[,hivc.db.Date2numeric( NegT_Crude )])
+	set(df, NULL, "AnyPos_T1", df[,hivc.db.Date2numeric( AnyPos_T1 )])
+	set(df, NULL, "GGD_RecordTime", df[,hivc.db.Date2numeric( GGD_RecordTime )])
+	set(df, NULL, "T0", df[,hivc.db.Date2numeric( T0 )])
+	set(df, NULL, "DateInCare", df[,hivc.db.Date2numeric( DateInCare )])
+	set(df, NULL, "FirstMed", df[,hivc.db.Date2numeric( FirstMed )])
+	set(df, NULL, "PoslRNA_T1", df[,hivc.db.Date2numeric( PoslRNA_T1 )])
+	set(df, NULL, "PoslRNAg500_T1", df[,hivc.db.Date2numeric( PoslRNAg500_T1 )])	
+	set(df, NULL, "PosCD4_T1", df[,hivc.db.Date2numeric( PosCD4_T1 )])
+	set(df, NULL, "AnyT_T1", df[,hivc.db.Date2numeric( AnyT_T1 )])
+	set(df, NULL, "AnyT_T1_Crude", df[,hivc.db.Date2numeric( AnyT_T1_Crude )])
+	set(df, NULL, "DateAIDS", df[,hivc.db.Date2numeric( DateAIDS )])
+	set(df, NULL, "PosSeqT", df[,hivc.db.Date2numeric( PosSeqT )])
+	#	age at diagnosis
+	set(df, NULL, "Age_AnyPosT1", df[, AnyPos_T1-DateBorn])	
+	#	reduce to patients with one sequence
+	df[, DUMMY:=seq_len(nrow(df))]
+	tmp			<- df[, list(DUMMY=ifelse(all(is.na(PosSeqT)), DUMMY, DUMMY[which.min(PosSeqT)] )), by='Patient']
+	df			<- merge(df, tmp, by=c('Patient','DUMMY'))
+	df[,DUMMY:=NULL]
+	#	define Amsterdam
+	df[, AMST:='N']
+	set(df, df[, which( Region_AnyPosT1=='Amst')], 'AMST', 'Y')
+	set(df, df[, which( is.na(Region_AnyPosT1))], 'AMST', 'Maybe')
+	#	define time period
+	
+	
+	#	TODO resolve 501 ??
+	df[, table(Region_now, useNA='if')]
+}
+######################################################################################
+project.hivc.Excel2dataframe.CombinedTable.160227<- function(dir.name= DATA, verbose=1, resume=0)
+{	
+	require(data.table)			
+	#	CONSTANTS
+	resume			<- 0
+	verbose			<- 1	
+	#
+	#	INPUT FILES generated with "project.hivc.Excel2dataframe.XXX"
+	#	
+	dir.name		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+	file.seq		<- paste(dir.name,"ATHENA_1502_All_Sequences.R",sep='/')
+	file.patient	<- paste(dir.name,"ATHENA_1502_All_Patient.R",sep='/')		
+	file.primoSHM	<- paste(dir.name,"ATHENA_1501_PrimoSHM.csv",sep='/')
+	file.viro		<- paste(dir.name,"ATHENA_1502_All_Viro.R",sep='/')
+	file.immu		<- paste(dir.name,"ATHENA_1502_All_Immu.R",sep='/')
+	file.treatment	<- paste(dir.name,"ATHENA_1502_All_Regimens.R",sep='/')
+	file.ggd		<- paste(dir.name,"ATHENA_1502_All_Region_GGD.R",sep='/')
+	file.out		<- paste(dir.name,"ATHENA_1502_All_PatientKeyCovariates.R",sep='/')
+			
+	if(resume)												#//load if there is R Master data.table
+	{
+		options(show.error.messages = FALSE)		
+		readAttempt	<-try(suppressWarnings(load(file.out)))
+		if(!inherits(readAttempt, "try-error"))	cat(paste("\nresume file",file.out))
+		if(!inherits(readAttempt, "try-error"))	str(df.all)
+		options(show.error.messages = TRUE)		
+	}
+	if(!resume || inherits(readAttempt, "try-error"))		#else generate R Master data.table
+	{
+		#
+		#	start with sequences
+		#
+		load(file.seq)			
+		df		<- do.call('rbind',lapply( seq_along(df),	function(i)
+						{
+							z	<- data.table(df[[i]][,	c("Patient","DateRes","Subtype","SampleCode")], key="SampleCode")
+							z[, GENE:=names(df)[i]]
+							z
+						}))
+		df		<- dcast.data.table(df, Patient+DateRes+Subtype+SampleCode~GENE, value.var='GENE')
+		set(df, NULL, "SampleCode", gsub(' ','', df[, SampleCode]))
+		setnames(df, c("SampleCode","DateRes"), c("FASTASampleCode","PosSeqT"))
+		#set(df, NULL, "FASTASampleCode", factor(df[,FASTASampleCode]))
+		#set(df, NULL, "Patient", factor(df[,Patient]))		
+		df.all	<- subset(df, select=c(FASTASampleCode,Patient,Subtype,PosSeqT))
+		cat(paste("\nnumber of sequences found, n=", nrow(df.all)))
+		#
+		# add Patient data
+		#
+		cat(paste("\nadding patient data"))
+		load(file.patient)		
+		stopifnot( !length(setdiff( df.all[, unique(Patient)], df[, unique(Patient)] ))	)
+		df[, Subtype:=NULL]		
+		df.all	<- merge(df, df.all, all.x=1, by="Patient", allow.cartesian=TRUE)
+		setnames(df.all, c("MyDateNeg1","MyDatePos1"), c("NegT","PosT"))
+		set(df.all, NULL, c('Acute_Spec_1','Acute_Spec_2','Acute_Spec_3','Acute_Spec_4'), NULL)
+		#	reset PosT_Acc=='No' conservatively to end of year / month
+		df.all[, PosT_Crude:= PosT]	
+		df.all	<- hivc.db.reset.inaccuratePosT(df.all, nacc.dy.dy= 30, nacc.mody.mo= 11, nacc.mody.dy= 31, verbose=1)
+		#	reset NegT_Acc=='No' conservatively to start of year / month
+		df.all[, NegT_Crude:= NegT]
+		df.all	<- hivc.db.reset.inaccurateNegT(df.all)		
+		#
+		#	check for clashes in NegT and PosT
+		# 	add viro data to check PosT and NegT
+		#
+		load(file.viro)	
+		tmp		<- subset(df, select=c(Patient, PoslRNA_T1, lRNA_T1))
+		setkey(tmp, Patient)		
+		df.all	<- merge(df.all, unique(tmp), by='Patient', all.x=1)
+		load(file.treatment)
+		tmp		<- subset(df, select=c(Patient, AnyT_T1))				
+		setkey(tmp, Patient)
+		df.all	<- merge(df.all, unique(tmp), by='Patient', all.x=1)
+		tmp		<- subset(df.all, !is.na(PosT) & !is.na(NegT) & PosT<NegT)
+		cat("\nchecking manually clashes in NegT and PosT, n=", nrow(tmp))		
+		#	wrong NegT	M28679 M30745 M31091 M31091	
+		set(df.all, df.all[, which(Patient%in%c('M28679','M30745','M31091','M31091'))],'NegT',NA_integer_)
+		set(df.all, df.all[, which(Patient%in%c('M28679','M30745','M31091','M31091'))],'NegT_Acc',NA_character_)
+		df.all	<- df.all[, setdiff( colnames(df.all), c("PoslRNA_T1","lRNA_T1")), with=FALSE]
+		#
+		#	set AnyPos_T1
+		#
+		# 	add preliminary AnyPos_T1	-- since PosT conservative we are good to set irrespective of PosT_Acc
+		tmp		<- df.all[, {
+								z		<- NA_real_
+								if( any(!is.na(PosSeqT)) )
+									z	<- min(PosSeqT, na.rm=TRUE)
+								list(AnyPos_T1=z)	
+							},by='Patient']
+		df.all	<- merge(df.all, tmp, by='Patient')
+		tmp		<- which( df.all[, !is.na(PosT) & ( is.na(PosSeqT) | PosT<AnyPos_T1 ) ] )
+		cat(paste("\nbuilding prel AnyPos_T1. Number of entries with !is.na(PosT) & ( is.na(PosSeqT) | PosT<AnyPos_T1 ), n=",length(tmp)))
+		set(df.all, tmp, "AnyPos_T1", df.all[tmp, PosT])
+		tmp		<- which( df.all[, !is.na(AnyT_T1) & !is.na(AnyPos_T1) & AnyT_T1<AnyPos_T1 ] )
+		cat(paste("\nbuilding prel AnyPos_T1. Number of entries with !is.na(AnyT_T1) & !is.na(AnyPos_T1) & AnyT_T1<AnyPos_T1 ), n=",length(tmp)))
+		set(df.all, tmp, "AnyPos_T1", df.all[tmp, AnyT_T1])		
+		tmp		<- df.all[, which(!is.na(AnyT_T1) & is.na(AnyPos_T1)) ] 
+		cat(paste("\nbuilding prel AnyPos_T1. Number of entries with !is.na(AnyT_T1) & is.na(AnyPos_T1), n=",length(tmp)))
+		set(df.all, tmp, "AnyPos_T1", df.all[tmp, AnyT_T1])						
+		#	check for invalid NegT and set to NA 
+		#	-- we would only know that NegT is before AnyPosT and this is not helpful
+		df.all	<- hivc.db.resetNegTbyAnyPosT(df.all)				
+		#
+		#	add first RNA Virology date
+		#
+		cat(paste("\nadding virology data"))
+		load(file.viro)
+		#	calculate first RNA above log10(500)
+		tmp		<- df[, {
+					ans	<- NA_real_
+					z	<- which(RNA>500)
+					if(length(z))
+						ans	<- PosRNA[min(z)]
+					list(PoslRNAg500_T1=ans)
+				}, by='Patient']
+		setkey(df, Patient)		
+		tmp		<- merge(unique(df), tmp, by='Patient')
+		df.all	<- merge(df.all, subset(tmp, select=c(Patient, PoslRNA_T1, lRNA_T1,PoslRNAg500_T1)), by='Patient')		
+		tmp		<-  df.all[, which(!is.na(PoslRNA_T1) & lRNA_T1>log10(500) &  PoslRNA_T1<AnyPos_T1 ) ]
+		cat(paste("\nbuilding prel AnyPos_T1. Number of entries with !is.na(PoslRNA_T1) & lRNA_T1>log10(500) &  PoslRNA_T1<AnyPos_T1, n=",length(tmp)))
+		set(df.all, tmp, "AnyPos_T1", df.all[tmp, PoslRNA_T1])
+		tmp		<-  df.all[, which(!is.na(PoslRNA_T1) & lRNA_T1<=log10(500) &  !is.na(PoslRNAg500_T1) & PoslRNAg500_T1<AnyPos_T1 ) ]
+		cat(paste("\nbuilding prel AnyPos_T1. Number of entries with !is.na(PoslRNA_T1) & lRNA_T1<=log10(500) &  !is.na(PoslRNAg500_T1) & PoslRNAg500_T1<AnyPos_T1, n=",length(tmp)))
+		set(df.all, tmp, "AnyPos_T1", df.all[tmp, PoslRNAg500_T1])		
+		#		
+		#	checking manually NegT>PosRNA
+		#
+		tmp		<- subset(df.all, NegT>AnyPos_T1)[, unique(Patient)]
+		set(df.all, df.all[, which(Patient%in%tmp)], 'NegT', NA_integer_)
+		set(df.all, df.all[, which(Patient%in%tmp)], 'NegT_Acc', NA_character_)
+		#
+		#	add Treatment dates
+		#
+		cat(paste("\nadding treatment data"))
+		load(file.treatment)				
+		tmp			<- subset(df, select=c(Patient, AnyT_T1, AnyT_T1_Acc, AnyT_T1_Crude, TrI.n, TrI.p ))
+		setkey(tmp, Patient)
+		df.all[, AnyT_T1:=NULL]
+		df.all		<- merge(df.all, unique(tmp), all.x=1, by="Patient")
+		#
+		#	add CD4 count data
+		#
+		cat(paste("\nadding CD4 data"))
+		load(file.immu)		
+		if(length(which(df[,is.na(PosCD4_T1)])))	stop("unexpected NA in PosCD4_T1")
+		if(length(which(df[, is.na(PosCD4)]))) stop("unexpected NA in PosCD4")
+		if(length(which(df[, is.na(CD4)]))) stop("unexpected NA in CD4")
+		df.all[, idx:= seq_len(nrow(df.all))]
+		df.cross	<- merge( subset(df.all, select=c(idx,FASTASampleCode,Patient,AnyPos_T1,PosT,PosSeqT,PoslRNA_T1,NegT,NegT_Acc)), subset(df, select=c(Patient,PosCD4,CD4)), allow.cartesian=T, by="Patient" )
+		# 	ignore CD4 entries where NegT>PosCD4
+		df.cross	<- hivc.db.resetCD4byNegT(df.cross, with.NegT_Acc.No=1, verbose=1)
+		#	compute CD4_T1 and CD4_TS -- do not use on df[,CD4_T1] because some CD4 measurements might correspond to healthy patients
+		#	ignore CD4 entries with CD4>500 and PosCD4<AnyPos_T1
+		tmp		<- hivc.db.getCD4.T1andTS(df.cross, CD4.HIVNeg.min= 500)
+		tmp		<- subset(tmp, select=c(idx, PosCD4_T1, CD4_T1))
+		df.all	<- merge(df.all, tmp, by="idx", all.x=1)
+		# manually checked remaining PosCD4_T1 < AnyPos_T1
+		tmp		<-  df.all[, which(!is.na(PosCD4_T1) & PosCD4_T1<AnyPos_T1 ) ]
+		cat(paste("\nbuilding prel AnyPos_T1. Number of patients with !is.na(PosCD4_T1) & PosCD4_T1<AnyPos_T1, n=",df.all[tmp,][, length(unique(Patient))]))
+		print( subset(df.all, PosCD4_T1<AnyPos_T1) )
+		set(df.all, tmp, "AnyPos_T1", df.all[tmp, PosCD4_T1])
+		#				
+		#	reset Acute fields
+		#
+		df.all[, DUMMY:= df.all[, as.numeric(difftime(AnyPos_T1, NegT, units="days"))/365]]				
+		tmp		<- df.all[, which(!is.na(DUMMY) & DUMMY<=1)]		
+		set( df.all, tmp, 'Acute_Spec', 'NEGTEST_le12m' )
+		set(df.all, df.all[, which(Acute_Spec%in%c('CLIN','LAB','NEGTEST_le12m'))], 'isAcute', 'Yes')				
+		df.all[, DUMMY:=NULL]
+		df.all[, idx:=NULL]
+		#
+		#	add participation in primo-SHM
+		#
+		df.pr	<- as.data.table(read.csv(file.primoSHM, stringsAsFactors=FALSE, header=FALSE, col.names='Patient'))
+		df.pr[, PrimoSHM:='Yes']
+		df.all	<- merge(df.all, df.pr, by='Patient', all.x=1)
+		set(df.all, df.all[, which(is.na(PrimoSHM))], 'PrimoSHM', 'No' )
+		set(df.all, NULL, 'PrimoSHM', df.all[, factor(PrimoSHM, levels=c('No','Yes'), labels=c('No','Yes'))])
+		#
+		#	get GGD at time of diagnosis
+		#
+		load(file.ggd)		
+		tmp		<- subset(df, select=c(Patient, GGD_Reg))
+		setkey(tmp, Patient, GGD_Reg)
+		tmp		<- df[, {
+						list(GGD_Reg=GGD_Reg, GGD_Last=c(GGD_Reg[-1]-1, as.Date('2015-05-01')))
+					}, by='Patient']
+		df		<- merge(df, tmp, by=c('Patient','GGD_Reg'))		
+		tmp		<- subset(df.all, select=c(Patient, AnyPos_T1))
+		tmp		<- merge(unique(tmp), df, by='Patient', allow.cartesian=TRUE)
+		setkey(tmp, Patient, GGD_Reg)
+		tmp		<- tmp[,	{
+								z		<- which(GGD_Reg<=AnyPos_T1 & AnyPos_T1<GGD_Last)
+								z2		<- 'At_Diag'
+								if(length(z)==0)
+								{
+									z	<- which.min(difftime(GGD_Reg, AnyPos_T1))
+									z2	<- 'Earliest_After_Diag'
+								}
+								list(RegionGGD_AnyPosT1_Type=z2, GGD_RecordTime=GGD_Reg[z[1]], Region_AnyPosT1=Region[z[1]], GGD_AnyPosT1=GGD[z[1]])
+							} , by='Patient']		
+		df.all	<- merge(df.all, tmp, by='Patient', all.x=1)
+		#
+		#	re-arrange cols
+		#
+		df.all	<- df.all[, c(	"Patient", "DateBorn", "Sex", "CountryBorn", "RegionOrigin", "DateLastContact", "DateDied", "isDead","Region_now","GGD_now",      
+								"NegT","NegT_Acc","NegT_Crude","ACS",
+								"AnyPos_T1","CountryInfection","Trm","isAcute","Acute_Spec","RegionGGD_AnyPosT1_Type","GGD_RecordTime","Region_AnyPosT1","GGD_AnyPosT1",
+								"T0", "DateInCare", "FirstMed","PoslRNA_T1", "lRNA_T1","PoslRNAg500_T1","PosCD4_T1","CD4_T1",
+								"AnyT_T1","AnyT_T1_Acc","AnyT_T1_Crude","PrimoSHM","TrI.n","TrI.p","DateAIDS",					
+								"PosSeqT","FASTASampleCode","Subtype"), with=FALSE]          
+		if(verbose)	cat(paste("\nsave to file",file.out))
+		save(df.all,file=file.out)
+	}	
+}
+######################################################################################
+project.hivc.Excel2dataframe.CombinedTable.130301<- function(dir.name= DATA, verbose=1, resume=0)
 {	
 	require(data.table)		
 	
@@ -1364,230 +1624,627 @@ project.hivc.Excel2dataframe.AllPatientCovariates<- function(dir.name= DATA, ver
 	}
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
+project.hivc.Excel2dataframe.Regimen.160227<- function()
 {
-	file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
-	file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
-	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')	
-	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
-	
-	load(file.viro)
-	df.viro		<- subset(df, select=c(Patient, PosRNA, lRNA))
-	
-	NA.time			<- c("01/01/1911","01/11/1911","11/11/1911")	
-	MAX.time		<- c("")
-	TR.notyet		<- "30/03/2013"
-	TR.failure 		<- c(21, 31 ) 							#viro failure
-	TR.immufailure	<- c(32, 35)							#either immu failure or new CDC-B/C event
-	TR.toxicity  	<- c(24, 34) 							#toxicity
+	#	BASIC VARIABLE DEFINITIONS		
+	TR.failure 		<- c(21, 31 ) 								#viro failure
+	TR.immufailure	<- c(32, 35)								#either immu failure or new CDC-B/C event
+	TR.toxicity  	<- c(24, 34) 								#toxicity
 	TR.adherence	<- c(47)
-	TR.patrel		<- c(23, 33, 42, 43)					#either patient s decision, desired pregnancy or pregnancy
-	#read REGIMEN csv data file and preprocess	
-	df				<- read.csv(file, stringsAsFactors=FALSE)							
-	
-	date.var		<- c("T0","StartTime","StopTime")		
-	for(x in date.var)
-	{
-		cat(paste("\nprocess Time", x))
-		nok.idx			<- which( df[,x]==NA.time[1] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[1],", n=", length(nok.idx), "set to NA"))
-		if(length(nok.idx))	
-			df[nok.idx,x]	<- NA
-		nok.idx			<- which( df[,x]==NA.time[2] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[2],", n=", length(nok.idx), "set to NA"))
-		if(length(nok.idx))
-			df[nok.idx,x]	<- NA
-		nok.idx			<- which( df[,x]==NA.time[3] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[3],", n=", length(nok.idx), "set to NA"))
-		if(length(nok.idx))
-			df[nok.idx,x]	<- NA			
-		nok.idx			<- which( df[,x]==MAX.time[1] )
-		if(verbose)	cat(paste("\nentries with format ",MAX.time[1],", n=", length(nok.idx), "set to max time 01/01/2999"))
-		if(length(nok.idx))
-			df[nok.idx,x]	<- TR.notyet
-		df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
-	}
-	TR.notyet				<- as.Date(TR.notyet, format="%d/%m/%Y")
-	
-	df						<- data.table(df, key="Patient")
-	set(df, NULL, 'Patient', df[, as.character(Patient)])
-	setnames(df, "T0","HAART_T1")
-	#set(df,NULL,"Patient",factor(df[,Patient]))
-	if(verbose)	cat(paste("\nnumber of entries, n=",nrow(df)))
-	#	fix entry 	M17493  1996-01-01 manually
-	tmp						<- which(df[, Patient=="M17493" & StartTime=="1996-01-01"])
-	if(verbose)	cat(paste("\nfix entry 	M17493  1996-01-01 manually to somewhere in 1996"))
-	set(df, tmp, "StartTime", as.Date("1996-07-01"))		
-	#	fix entry 	M41688  2011-01-01 manually
-	tmp						<- which(df[, Patient=="M41688" & StartTime=="2011-01-01"])
-	if(verbose)	cat(paste("\nfix entry 	M41688  2011-01-01 manually to 2011-11-01 (Ard)"))
-	set(df, tmp, "StartTime", as.Date("2011-11-01"))	
-	set(df, which(df[, Patient=="M41688"]), "HAART_T1", as.Date("2011-11-01"))		
-	#	fix entry 	M41688  2011-08-23 manually
-	tmp						<- which(df[, Patient=="M42092" & StartTime=="2011-08-23"])
-	if(verbose)	cat(paste("\nfix entry 	M42092  2011-08-23 to 2012-08-23"))
-	set(df, tmp, "StartTime", as.Date("2012-08-23"))
-	set(df, tmp, "HAART_T1", as.Date("2012-08-23"))
-	#	fix entry 	M41688  2010-10-23 manually
-	tmp						<- which(df[, Patient=="M42186" & StartTime=="2010-10-23"])
-	if(verbose)	cat(paste("\nfix entry 	M42186  2010-10-23 to 2012-10-23"))
-	set(df, tmp, "StartTime", as.Date("2012-10-23"))
-	set(df, tmp, "HAART_T1", as.Date("2012-10-23"))		
-	#	fix entry 	M37531  2006-08-15 manually
-	tmp						<- which(df[, Patient=="M37531" & StartTime=="2006-08-15"])
-	if(verbose)	cat(paste("\nfix entry 	M37531  2006-08-15 to 2008-08-15"))
-	set(df, tmp, "StartTime", as.Date("2008-08-15"))
-	tmp						<- which(df[, Patient=="M37531"])
-	set(df, tmp, "HAART_T1", as.Date("2008-08-15"))				
-	#	set potentially inaccurate StartTime	
-	tmp																										<- rep(0, nrow(df))
-	tmp[is.na(df[,StartTime])]																				<- NA
-	tmp[which( df[, !is.na(StartTime) & as.POSIXlt(StartTime)$mday==15] )]									<- 1
-	tmp[which( df[, !is.na(StartTime) & as.POSIXlt(StartTime)$mon==6 & as.POSIXlt(StartTime)$mday==1 ] )]	<- 2
-	if(verbose) cat(paste("\nnumber of inaccurate StartTime entries, n=",length(tmp[na.omit(tmp>0)])))
-	df[,StartTime_Acc:= factor(tmp,levels=c(0,1,2),labels=c("Acc","NAccD","NAccMD"))]
-	#	set potentially inaccurate StopTime
-	tmp																										<- rep(0, nrow(df))
-	tmp[is.na(df[,StopTime])]																				<- NA
-	tmp[which( df[, !is.na(StopTime) & as.POSIXlt(StopTime)$mday==15] )]									<- 1
-	tmp[which( df[, !is.na(StopTime) & as.POSIXlt(StopTime)$mon==6 & as.POSIXlt(StopTime)$mday==1 ] )]		<- 2
-	if(verbose) cat(paste("\nnumber of inaccurate StopTime entries, n=",length(tmp[na.omit(tmp>0)])))
-	df[,StopTime_Acc:= factor(tmp,levels=c(0,1,2),labels=c("Acc","NAccD","NAccMD"))]
+	TR.patrel		<- c(23, 33, 42, 43)						#either patient s decision, desired pregnancy or pregnancy
+	date.var		<- c("StartTime","StopTime")
+	date.format		<- '%Y-%m-%d'
+	TR.notyet		<- as.Date("2016-01-01")	#set stop time for ongoing ART episodes
+	verbose			<- 1
 	#
-	#	removing Patients not on treatment
+	#	INPUT FILE
+	#
+	dir.name		<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'
+	file			<- file.path(dir.name, 'ATHENA_1502_All_Regimens.csv')
+	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
+	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
+	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')	
+	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')	
+	#load(file.viro)
+	#df.viro		<- subset(df, select=c(Patient, PosRNA, lRNA))
+	#
+	#	read REGIMEN csv data file and preprocess
+	#
+	df		<- as.data.table(read.csv(file, stringsAsFactors=FALSE))	
+	set(df, NULL,'StartTime', df[, as.Date(StartTime, format=date.format)])	
+	set(df, NULL,'StopTime', df[, as.Date(StopTime, format=date.format)])
+	#	check no old legacy codes for missing dates
+	#	Ard now does not report 19xx, so checking for incorrect entries is a pain	
+	#stopifnot( df[, !any(StopTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")))] )	
+	#stopifnot( df[, !any(StartTime%in%c("1911-01-01","1911-11-01","1911-11-11"))] )	
+	#	remove patients with empty fields
+	tmp		<- df[, which(is.na(StopTime) & is.na(StartTime))]
+	cat('\nRemove patients with no StartTime and no StopTime, n=', length(tmp))
+	df		<- subset(df, !is.na(StopTime) | !is.na(StartTime))
+	#	set stop times for ongoing ART episodes
+	tmp		<- df[, which(is.na(StopTime))]
+	cat('\nPatients with no StopTime: ART ongoing. Set to StopTime ',as.character(TR.notyet),', n=', length(tmp))
+	set(df, tmp, 'StopTime', TR.notyet)
+	cat(paste("\nnumber of entries, n=",nrow(df)))
+	#
+	#	Manual curations discussed with Ard (I think these are fixed)
+	# 
+	tmp						<- which(df[, Patient=="M18204" & StartTime=="1997-02-15"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M18204  1997-02-15"))
+		set(df, tmp, "StopTime", as.Date("1999-03-15"))				
+	}
+	tmp						<- which(df[, Patient=="M29191" & StartTime=="2009-07-01"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M29191  2009-07-01"))
+		set(df, tmp, "StopTime", as.Date("2010-06-04"))				
+	}
+	tmp						<- which(df[, Patient=="M33034" & StartTime=="2006-11-18"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M33034  2008-07-01"))
+		set(df, tmp, "StopTime", as.Date("2008-06-15"))				
+	}
+	tmp						<- which(df[, Patient=="M35936" & StartTime=="2011-02-15"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M35936  2011-07-01"))
+		set(df, tmp, "StopTime", as.Date("2011-04-29"))				
+	}
+	tmp						<- which(df[, Patient=="M37778" & StartTime=="2012-05-02"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M37778  2012-07-01"))
+		set(df, tmp, "StopTime", as.Date("2012-06-20"))				
+	}
+	tmp						<- which(df[, Patient=="M41695" & StartTime=="2012-06-28"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M41695  2013-07-01"))
+		set(df, tmp, "StopTime", as.Date("2013-05-21"))				
+	}
+	tmp						<- which(df[, Patient=="M29531" & StartTime=="1997-07-01"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M29531  1997-07-01"))
+		set(df, tmp, "StartTime", as.Date("1997-05-30"))				
+	}
+	tmp						<- which(df[, Patient=="M33706" & StartTime=="2008-12-23"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M33706  2010-07-01"))
+		set(df, tmp, "StopTime", as.Date("2010-11-15"))				
+	}
+	tmp						<- which(df[, Patient=="M33706" & StartTime=="2010-07-01" & StopTime=="2011-07-01"])
+	if(length(tmp))
+	{
+		cat(paste("\nrm double entry 	M33706  2010-07-01"))
+		set(df, tmp, c("StartTime",'StopTime'), NA_real_)				
+	}
+	tmp						<- which(df[, Patient=="M33706" & StartTime=="2010-11-15" & StopTime=="2011-07-01"])
+	if(length(tmp))
+	{
+		cat(paste("\nrm double entry part 1 	M33706  2010-11-15"))
+		set(df, tmp, "StopTime", as.Date("2011-01-17"))								
+	}
+	tmp						<- which(df[, Patient=="M33706" & StartTime=="2011-07-01" & StopTime=="2011-01-17"])
+	if(length(tmp))
+	{
+		cat(paste("\nrm double entry part 2 	M33706  2011-07-01"))	
+		set(df, tmp, c("StartTime",'StopTime'), NA_real_)				
+	}	
+	tmp						<- which(df[, Patient=="M15834" & StartTime=="1998-06-26"])
+	if(length(tmp))
+	{
+		cat(paste("\nrm double entry 	M15834  1998-06-26"))
+		set(df, tmp, c("StartTime",'StopTime'), NA_real_)				
+	}
+	tmp						<- which(df[, Patient=="M17493" & StartTime=="1996-01-01"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M17493  1996-01-01 manually to somewhere in 1996"))
+		set(df, tmp, "StartTime", as.Date("1996-07-01"))				
+	}	
+	tmp						<- which(df[, Patient=="M41688" & StartTime=="2011-01-01"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M41688  2011-01-01 manually to 2011-11-01 (Ard)"))
+		set(df, tmp, "StartTime", as.Date("2011-11-01"))
+	}				
+	tmp						<- which(df[, Patient=="M42092" & StartTime=="2011-08-23"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M42092  2011-08-23 to 2012-08-23"))
+		set(df, tmp, "StartTime", as.Date("2012-08-23"))
+	}	
+	tmp						<- which(df[, Patient=="M42186" & StartTime=="2010-10-23"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M42186  2010-10-23 to 2012-10-23"))
+		set(df, tmp, "StartTime", as.Date("2012-10-23"))
+	}				
+	tmp						<- which(df[, Patient=="M37531" & StartTime=="2006-08-15"])
+	if(length(tmp))
+	{
+		cat(paste("\nfix entry 	M37531  2006-08-15 to 2008-08-15"))
+		set(df, tmp, "StartTime", as.Date("2008-08-15"))
+	}
+	tmp						<- which(df[, Patient=="M15834" & StartTime=="1998-06-26"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M15834  1911-11-11 to 1998-05-18"))
+		set(df, tmp, "StopTime", as.Date("1997-12-08")+difftime( as.Date("1998-05-18"),as.Date("1997-12-08"), units='days' ))
+	}
+	tmp						<- which(df[, Patient=="M11814" & StartTime=="1996-12-15"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M11814  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("1996-12-15")+difftime( as.Date("1998-10-30"),as.Date("1996-12-15"), units='days' ) )
+	}
+	df		<- subset(df, !is.na(StopTime) | !is.na(StartTime))
+	#
+	#	set potentially inaccurate StartTime
+	#
+	df[, StartTime_Acc:='Acc'] 
+	set(df, df[, which(is.na(StartTime))], 'StartTime_Acc', NA_character_)
+	set(df, df[, which(!is.na(StartTime) & as.POSIXlt(StartTime)$mday==15)], 'StartTime_Acc', "NAccD")
+	set(df, df[, which(!is.na(StartTime) & as.POSIXlt(StartTime)$mon==6 & as.POSIXlt(StartTime)$mday==1)], 'StartTime_Acc', "NAccMD")
+	set(df, df[, which(StartTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")))], 'StartTime_Acc', "NAccYMD")
+	cat('\nNumber inaccurate StartTimes:')
+	df[, table(StartTime_Acc)]	
+	#
+	#	set potentially inaccurate StopTime
+	#
+	df[, StopTime_Acc:='Acc'] 
+	set(df, df[, which(is.na(StopTime))], 'StopTime_Acc', NA_character_)
+	set(df, df[, which(!is.na(StopTime) & as.POSIXlt(StopTime)$mday==15)], 'StopTime_Acc', "NAccD")
+	set(df, df[, which(!is.na(StopTime) & as.POSIXlt(StopTime)$mon==6 & as.POSIXlt(StopTime)$mday==1)], 'StopTime_Acc', "NAccMD")
+	set(df, df[, which(StopTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")))], 'StopTime_Acc', "NAccYMD")
+	cat('\nNumber inaccurate StopTimes:')
+	df[, table(StopTime_Acc)]
+	#
+	#	handle Ard's bogus values	#0: manual curation
+	#		
+	tmp		<- which(df[, Patient=="M26087" & StartTime=="2005-05-09" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M26087  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("2008-12-09"))
+	}
+	tmp		<- which(df[, Patient=="M17324" & StartTime=="1993-02-10" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M17324  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("1995-03-15"))
+	}
+	tmp		<- which(df[, Patient=="M17324" & StartTime=="1995-03-15" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M17324  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("1996-04-17"))
+	}
+	tmp		<- which(df[, Patient=="M17324" & StartTime=="1996-04-17" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M17324  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("1996-10-14"))
+	}
+	tmp		<- which(df[, Patient=="M25962" & StartTime=="1996-07-01" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M25962  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("1999-04-15"))
+	}
+	tmp		<- which(df[, Patient=="M25962" & StartTime=="1999-04-15" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M25962  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("2003-03-20"))
+	}
+	tmp		<- which(df[, Patient=="M26044" & StartTime=="2008-04-01" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M26044  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("2008-09-25"))
+	}
+	tmp		<- which(df[, Patient=="M26044" & StartTime=="2008-09-25" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M26044  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("2009-05-07"))
+	}
+	tmp		<- which(df[, Patient=="M31241" & StartTime=="1989-09-15" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M31241  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("1994-01-15"))
+	}
+	tmp		<- which(df[, Patient=="M31241" & StartTime=="1994-01-15" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M31241  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("1996-02-16"))
+	}
+	tmp		<- which(df[, Patient=="M33356" & StartTime=="1991-07-01" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M33356  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("1994-07-01"))
+	}
+	tmp		<- which(df[, Patient=="M33356" & StartTime=="1994-07-01" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M33356  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("2005-07-01"))
+	}
+	tmp		<- which(df[, Patient=="M39099" & StartTime=="2002-07-01" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M39099  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("2004-12-15"))
+	}
+	tmp		<- which(df[, Patient=="M39099" & StartTime=="2004-12-15" & StopTime=="1911-11-11"])
+	if(length(tmp))
+	{		 
+		cat(paste("\nfix entry 	M39099  1911-11-11"))
+		set(df, tmp, "StopTime", as.Date("2010-09-08"))
+	}	
+	#
+	#	handle Ard's bogus values	#1
+	#
+	setkey(df, Patient, StopTime)
+	tmp		<- c( 	df[, which(is.na(StartTime) & StopTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")))],
+					df[, which(StartTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")) & StopTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")))]	)
+	if(length(tmp))
+	{
+		cat('\nremove bogus entries with NA StartTime and "1911-01-01","1911-11-01","1911-11-11" StopTime, n=', length(tmp))
+		set(df, tmp, 'StopTime', NA_real_)
+	}
+	df		<- subset(df, !is.na(StopTime))
+	#
+	#	handle Ard's bogus values	#2: set bogus values for last episodes to StartTime+1
+	#
+	df[, DUMMY:=seq_len(nrow(df))]
+	tmp		<- df[, list(N=length(which(StopTime=="1911-11-11"))), by='Patient']	
+	tmp		<- merge(subset(tmp, N>=1), df, by='Patient')
+	tmp2	<- tmp[, {
+				z		<- as.character(StartTime[ which(StopTime=="1911-11-11") ])
+				z		<- z[ z==as.character(max( max(StartTime), max(StopTime) )) ]
+				if(length(z)==0)
+					z	<- NA_character_
+				list(StartTime=z)
+			}, by='Patient']
+	tmp2	<- subset(tmp2, !is.na(StartTime))
+	for(i in seq_len(nrow(tmp2)))
+	{
+		cat('\nSet 1911-11-11 of',tmp2[i,Patient],'to',as.character(tmp2[i,as.Date(StartTime)+1]))
+		z	<- df[, which(Patient==tmp2[i,Patient] & StartTime==tmp2[i,StartTime])]
+		stopifnot(length(z)==1)
+		set(df, z, 'StopTime', tmp2[i,as.Date(StartTime)+1])		
+	}
+	#
+	#	handle Ard's bogus values	#3: remove 1911-11-11 pairs by midpoint 
+	#
+	tmp		<- df[, list(Start_N=length(which(StartTime=="1911-11-11")), Stop_N=length(which(StopTime=="1911-11-11"))), by='Patient']		
+	tmp		<- merge(subset(tmp, Start_N==1 & Stop_N%in%c(1,2)), df, by='Patient')
+	tmp		<- tmp[, {
+				z		<- StartTime[ which(StopTime=="1911-11-11") ]
+				zz		<- which(StartTime=="1911-11-11")
+				if(length(zz)>0)
+				{
+					z	<- z[ which.min(difftime(StopTime[zz], z, units='days')) ]					
+				}
+				if(length(zz)==0)
+				{
+					z	<- NA_character_
+					zz	<- NA_integer_
+				}
+				list(StartTime=z, StopTime=StopTime[zz], IDX1=DUMMY[z==StartTime], IDX2=DUMMY[zz])
+			}, by='Patient']
+	for(i in seq_len(nrow(tmp)))
+	{
+		z	<- difftime(tmp[i, as.Date(StopTime)], tmp[i, as.Date(StartTime)], units='days')/2
+		stopifnot(z>0)
+		z	<- tmp[i, as.Date(StartTime)]+z
+		cat('\nSet 1911-11-11 of',tmp[i,Patient],'to',as.character(z))
+		set(df, tmp[i,IDX1], 'StopTime',z)
+		set(df, tmp[i,IDX2], 'StartTime',z)				
+	}
+	#
+	#	handle Ard's bogus values	#4: set 1911-11-11 to next StartTime (only after #2)
+	#	
+	tmp		<- df[, list(Start_N=length(which(StartTime=="1911-11-11")), Stop_N=length(which(StopTime=="1911-11-11"))), by='Patient']
+	stopifnot( !nrow(subset(tmp, Stop_N>1)) )
+	tmp		<- merge(subset(tmp, Start_N==0 & Stop_N==1), df, by='Patient')
+	tmp		<- tmp[, {
+				z	<- which(StopTime=="1911-11-11")
+				zz	<- sort(StartTime)
+				list(IDX1=DUMMY[z], StopTime=zz[ which(zz==StartTime[z])+1L ])		
+			}, by='Patient']
+	for(i in seq_len(nrow(tmp)))
+	{		
+		cat('\nSet 1911-11-11 of',tmp[i,Patient],'to',tmp[i,as.character(StopTime)])
+		stopifnot( df[tmp[i,IDX1],StartTime]<=tmp[i,StopTime])
+		set(df, tmp[i,IDX1], 'StopTime',tmp[i,StopTime])			
+	}
+	tmp		<- df[, list(Start_N=length(which(StartTime=="1911-11-11")), Stop_N=length(which(StopTime=="1911-11-11"))), by='Patient']
+	stopifnot( !nrow(subset(tmp, Stop_N>0)) )
+	df[, DUMMY:=NULL]
+	#
+	#	removing Patients not on treatment (this should be legacy)
 	#
 	tmp						<- which(df[, is.na(StartTime) & StopTime==TR.notyet & NoDrug==0])
-	if(verbose)	cat(paste("\nnumber of entries with is.na(StartTime) & StopTime==TR.notyet & NoDrug==0",length(tmp),"SETTING TO NA"))
-	set(df, tmp, "StopTime", NA)
+	if(length(tmp))
+	{
+		cat("\nnumber of entries with is.na(StartTime) & StopTime==TR.notyet & NoDrug==0",length(tmp),"Set StopTime to NA")
+		set(df, tmp, "StopTime", NA)		
+	}
 	tmp						<- which(df[, StartTime==TR.notyet & StopTime==TR.notyet])
-	if(verbose)	cat(paste("\nnumber of entries with StartTime==TR.notyet & StopTime==TR.notyet",length(tmp),"SETTING TO NA"))
-	set(df, tmp, "StartTime", NA)
-	set(df, tmp, "StopTime", NA)
+	if(length(tmp))
+	{		
+		cat("\nnumber of entries with StartTime==TR.notyet & StopTime==TR.notyet",length(tmp),"Set StartTime and StopTime to NA")
+		set(df, tmp, "StartTime", NA)
+		set(df, tmp, "StopTime", NA)
+	}
 	tmp						<- which(df[, StartTime==TR.notyet])
-	if(verbose)	cat(paste("\nnumber of entries with StartTime==TR.notyet & StopTime!=TR.notyet",length(tmp),"MISCLASSIFIED StartTime - setting to NA"))
-	set(df, tmp, "StartTime", NA)		
+	if(length(tmp))
+	{		
+		cat("\nnumber of entries with StartTime==TR.notyet & StopTime!=TR.notyet",length(tmp),"Misclassified StartTime. Set to NA")
+		set(df, tmp, "StartTime", NA)
+	}	
 	df						<- subset(df, !is.na(StopTime))
-	if(verbose)	cat(paste("\nnumber of entries with !is.na(StartTime) & !is.na(StopTime), n=",nrow(df)))
-	#	check NoDrug==0 entries
-	if(verbose)	cat(paste("\nnumber of patients with is.na(NoDrug), n=",nrow(subset( df[, list(select=any(is.na(NoDrug))), by='Patient'], select))))
+	#
+	#	check patients with all NoDrug==NA (legacy)
+	#
+	tmp			<- nrow(subset( df[, list(select=any(is.na(NoDrug))), by='Patient'], select))
+	cat("\nnumber of patients with is.na(NoDrug), n=", tmp)
+	stopifnot( !length(tmp)	)
+	#
 	#	remove patients for which all periods have NoDrug==0
-	tmp						<- df[,  list(select=!all(NoDrug==0)) , by='Patient']
-	if(verbose)	cat(paste("\nnumber of patients with all(NoDrug==0), n=",nrow(subset(tmp, !select))))
-	df						<- merge( df, subset(tmp, select, Patient), by='Patient')
-	#	sort by Patient and StopTime 
-	setkey(df, Patient, StopTime)
-	#	for each patient find first periods with NoDrug>0
-	tmp						<- subset( df[, list( select= which(NoDrug>0)[1]>1 ), by='Patient'], select)[, Patient]
-	if(verbose)	cat(paste("\nnumber of patients with ! NoDrug>0 as first StartTime for any patient, n=",length(tmp)))	
-	tmp						<- df[, list( StopTime= StopTime[ seq.int( which(NoDrug>0)[1], length(NoDrug)) ] ), by='Patient']
-	if(verbose)	cat(paste("\nnumber of entries with NoDrug>0 as first StartTime for any patient, n=",nrow(tmp)))
-	df						<- merge(df, tmp, by=c('Patient','StopTime'))	
-	tmp						<- merge( df, subset( df[,list(check= any( is.na(StartTime) & NoDrug==0) ), by='Patient'], check, Patient), by='Patient') 
-	if(verbose)	cat(paste("\nnumber of entries with NoDrug==0 and is.na StartTime, n=",nrow(tmp)))
+	#
+	tmp			<- df[,  list(select=!all(NoDrug==0)) , by='Patient']	
+	cat("\nPatients with all(NoDrug==0). Remove. n=",nrow(subset(tmp, !select)))
+	df			<- merge( df, subset(tmp, select, Patient), by='Patient')
+	#
+	#	for each patient find first ART period with NoDrug>0 and keep only these
+	#
+	setkey(df, Patient, StopTime)	
+	tmp			<- subset( df[, list( select= which(NoDrug>0)[1]>1 ), by='Patient'], select)[, Patient]
+	cat(paste("\nPatients with NoDrug==0 in first episode(s). Remove these episodes. n=",length(tmp)))		
+	df[, DUMMY:= seq_len(nrow(df))]
+	tmp			<- df[, {					#need some akward code since StopTimes are not yet unique
+				z<- seq.int( which(NoDrug>0)[1], length(NoDrug))
+				list( DUMMY= DUMMY[z] )
+			}, by='Patient']
+	df			<- df[tmp[, DUMMY],]
+	df[, DUMMY:=NULL]
+	#	check that no NoDrug==0 at start
+	tmp			<- subset( df[,list(check= any( is.na(StartTime) & NoDrug==0) ), by='Patient'], check, Patient)
+	stopifnot( !nrow(tmp)	)
+	tmp			<- subset( df[,list(check= NoDrug[1]==0 ), by='Patient'], check, Patient)
+	stopifnot( !nrow(tmp)	)	
+	#
+	#	check Ards bogus values #5: set dangling StartTime to StopTime-1
+	#
+	tmp		<- df[, which(StartTime=="1911-11-11")]
+	for( i in tmp)
+		set(df, i, 'StartTime', df[i,StopTime-1])	
+	#
+	#	fix StartTime > StopTime: check if StopTime is StartTime
+	#	
+	tmp		<- data.table(IDX=which(df[, StartTime>StopTime]))	
+	cat(paste("\nnumber of entries with StartTime>StopTime, n=",nrow(tmp)))
+	df[, DUMMY:=seq_len(nrow(df))]
+	tmp[, Patient:= df[tmp[,IDX],Patient]]
+	tmp[, StartTime:= df[tmp[,IDX],StartTime]]
+	tmp[, StopTime:= df[tmp[,IDX],StopTime]]
+	for(i in seq_len(nrow(tmp)))
+		if(nrow(subset(df, Patient==tmp[i,Patient] & StartTime==tmp[i,StopTime] & StopTime==tmp[i,StartTime])))
+		{
+			cat('\nStopTime is StartTime for patient',tmp[i,Patient])
+			set(df, tmp[i,IDX], c('StartTime','StopTime'), NA_real_)
+		}
+	df		<- subset(df, !is.na(StartTime) | !is.na(StopTime))
+	df[, DUMMY:=seq_len(nrow(df))]
+	#
+	#	fix StartTime > StopTime: fix inaccurate StopTime
+	#		
+	tmp		<- data.table(IDX=which(df[, StartTime>StopTime]))	
+	cat(paste("\nnumber of entries with StartTime>StopTime, n=",nrow(tmp)))	
+	tmp[, Patient:= df[tmp[,IDX],Patient]]
+	tmp[, StartTime_Acc:=df[tmp[,IDX],StartTime_Acc]]
+	tmp[, StopTime_Acc:=df[tmp[,IDX],StopTime_Acc]]	
+	stopifnot( !nrow(subset(tmp,  StartTime_Acc=='Acc' & StopTime_Acc=='Acc')))	
+	tmp2	<- merge(subset(tmp,  StartTime_Acc!='NAccMD'), df, by='Patient')	
+	tmp2	<- tmp2[, list(Start_N=length(which(StartTime==StopTime[IDX==DUMMY])), Stop_N=length(which(StopTime==StopTime[IDX==DUMMY]))), by=c('Patient','IDX')]
+	stopifnot( !nrow(subset(tmp2, Start_N>1))	)
+	tmp2	<- merge(subset(tmp2, Start_N>0), df, by='Patient')
+	tmp2	<- tmp2[, {
+				z		<- StopTime[ IDX==DUMMY ]				# that s the inaccurate query time to be changed, eg 2003-07-01
+				zz		<- which(StartTime==z)
+				stopifnot(length(zz)==1)						# below we only compare just one start time 
+				z		<- StartTime[ which(StopTime==z) ]		# that s the start times of all stop times that equal the query time
+				stopifnot(length(z)>0)	
+				z		<- z[ z<StopTime[zz] ]					
+				stopifnot(length(z)>0)
+				z		<- as.character( z[ which.min(difftime(StopTime[zz], z, units='days')) ] )									
+				list(StartTime=z, StopTime=StopTime[zz], IDX1=DUMMY[z==StartTime], IDX2=DUMMY[zz])
+			}, by=c('Patient','IDX')]
+	for(i in seq_len(nrow(tmp2)))
+	{
+		cat('\nSet',as.character( df[tmp2[i,IDX1],StopTime] ), as.character( df[tmp2[i,IDX2],StartTime] ),'of',tmp2[i,Patient])
+		z	<- difftime(tmp2[i, as.Date(StopTime)], tmp2[i, as.Date(StartTime)], units='days')/2
+		stopifnot(z>0)
+		z	<- tmp2[i, as.Date(StartTime)]+z
+		stopifnot( df[tmp2[i,IDX1],StopTime]==df[tmp2[i,IDX2],StartTime], df[tmp2[i,IDX1],StopTime_Acc!='Acc'], df[tmp2[i,IDX2],StartTime_Acc!='Acc'] )		
+		set(df, tmp2[i,IDX1], 'StopTime',z)
+		set(df, tmp2[i,IDX2], 'StartTime',z)				
+	}
+	#
+	#	fix StartTime > StopTime: fix dangling inaccurate StopTimes of StartTime>StopTime 
+	#			
+	tmp		<- data.table(IDX=which(df[, StartTime>StopTime]))	
+	cat(paste("\nnumber of entries with StartTime>StopTime, n=",nrow(tmp)))	
+	tmp[, Patient:= df[tmp[,IDX],Patient]]
+	tmp[, StartTime_Acc:=df[tmp[,IDX],StartTime_Acc]]
+	tmp[, StopTime_Acc:=df[tmp[,IDX],StopTime_Acc]]	
+	tmp2	<- merge(subset(tmp,  StartTime_Acc!='NAccMD'), df, by=c('Patient','StartTime_Acc','StopTime_Acc'))
+	tmp2	<- tmp2[, list(Start_N=length(which(StartTime==StopTime[IDX==DUMMY])), Stop_N=length(which(StopTime==StopTime[IDX==DUMMY]))), by=c('Patient','IDX')]
+	stopifnot( !nrow(subset(tmp2, Start_N>0))	)	
+	tmp2	<- merge(tmp2, df, by='Patient')
+	tmp2	<- tmp2[, {
+				z		<- StopTime[ IDX==DUMMY ]
+				z		<- which(StopTime==z)
+				zz		<- sort(StartTime)
+				if( which(zz==StartTime[z])<length(zz))
+					ans	<- zz[ which(zz==StartTime[z])+1L ]		#set to next start time
+				if( which(zz==StartTime[z])==length(zz))
+					ans	<- zz[length(zz)]+1
+				list(IDX1=DUMMY[z], StopTime=ans)		
+			}, by='Patient']
+	for(i in seq_len(nrow(tmp2)))
+	{		
+		cat('\nSet ',as.character( df[tmp2[i,IDX1],StopTime] ),'of',tmp2[i,Patient],'to',tmp2[i,as.character(StopTime)])
+		stopifnot( df[tmp2[i,IDX1],StartTime]<=tmp2[i,StopTime])
+		set(df, tmp2[i,IDX1], 'StopTime',tmp2[i,StopTime])			
+	}
+	#
+	#	fix StartTime > StopTime: fix inaccurate StartTime
+	#		
+	tmp		<- data.table(IDX=which(df[, StartTime>StopTime]))	
+	cat(paste("\nnumber of entries with StartTime>StopTime, n=",nrow(tmp)))	
+	tmp[, Patient:= df[tmp[,IDX],Patient]]
+	tmp[, StartTime_Acc:=df[tmp[,IDX],StartTime_Acc]]
+	tmp[, StopTime_Acc:=df[tmp[,IDX],StopTime_Acc]]	
+	stopifnot( !nrow(subset(tmp,  StartTime_Acc=='Acc' & StopTime_Acc=='Acc')))	
+	tmp2	<- merge(subset(tmp,  StopTime_Acc!='NAccMD'), df, by='Patient')	
+	tmp2	<- tmp2[, list(Start_N=length(which(StartTime==StartTime[IDX==DUMMY])), Stop_N=length(which(StopTime==StartTime[IDX==DUMMY]))), by=c('Patient','IDX')]
+	stopifnot( !nrow(subset(tmp2, Start_N>1)), !nrow(subset(tmp2, Start_N==0))	)
+	tmp2	<- merge(subset(tmp2, Stop_N>0), df, by='Patient')
+	stopifnot( !nrow(subset(tmp2, Start_N>1)), !nrow(subset(tmp2, Start_N==0))	)
+	tmp2	<- tmp2[, {				
+				z		<- StartTime[ IDX==DUMMY ]
+				zz		<- which(StartTime==z)
+				stopifnot(length(zz)==1)	
+				z		<- StartTime[ which(StopTime==z) ]
+				stopifnot(length(z)>0)	
+				z		<- z[ z<StopTime[zz] ]					
+				stopifnot(length(z)>0)				
+				z		<- as.character( z[ which.min(difftime(StopTime[zz], z, units='days')) ] )									
+				list(StartTime=z, StopTime=StopTime[zz], IDX1=DUMMY[z==StartTime], IDX2=DUMMY[zz])
+			}, by=c('Patient','IDX')]
+	for(i in seq_len(nrow(tmp2)))
+	{
+		cat('\nSet',as.character( df[tmp2[i,IDX1],StopTime] ), as.character( df[tmp2[i,IDX2],StartTime] ),'of',tmp2[i,Patient])
+		z	<- difftime(tmp2[i, as.Date(StopTime)], tmp2[i, as.Date(StartTime)], units='days')/2
+		stopifnot(z>0)
+		z	<- tmp2[i, as.Date(StartTime)]+z
+		stopifnot( df[tmp2[i,IDX1],StopTime]==df[tmp2[i,IDX2],StartTime], df[tmp2[i,IDX1],StopTime_Acc!='Acc'], df[tmp2[i,IDX2],StartTime_Acc!='Acc'] )		
+		set(df, tmp2[i,IDX1], 'StopTime',z)
+		set(df, tmp2[i,IDX2], 'StartTime',z)				
+	}
+	#
+	#	fix StartTime > StopTime: fix inaccurate StartTime
+	#		
+	tmp		<- data.table(IDX=which(df[, StartTime>StopTime]))
+	stopifnot( !nrow(tmp))	
+	df[, DUMMY:=NULL]
 	#
 	#	remove duplicate entries
 	#
 	setkey(df, Patient, StartTime, StopTime)
 	tmp		<- which(duplicated(df))
-	if(verbose)	cat(paste("\nnumber of duplicate entries with key  Patient, StartTime, StopTime, n=",nrow(tmp)))
-	df		<- unique(df)
-	#M15198 1998-05-28 1996-08-22 1998-02-24
-	#M15198 1998-05-28 1996-08-22 1998-07-01
-	#M17774 1997-03-30 2013-03-30 1996-08-26
-	#M17774 1997-03-30 2013-03-30 1998-06-21
-	tmp						<- which(df[, Patient=="M15198" & StartTime=="1998-07-01"])
-	if(verbose)	cat(paste("\nrm entry 	M15198 1998-05-28 1996-08-22 1998-07-01"))
-	df						<- subset(df, !(Patient=="M15198" & StartTime=="1998-07-01"))
+	if(length(tmp))
+	{
+		cat("\nnumber of duplicate entries with key  Patient, StartTime, StopTime, n=",nrow(tmp))
+		df		<- unique(df)		
+	}
 	#
-	#	fix StartTime>StopTime
+	#	remove equal entries
 	#	
-	tmp		<- which(df[,StartTime>StopTime])	
-	if(verbose)	cat(paste("\nnumber of entries with StartTime>StopTime, n=",length(tmp)))
-	tmp		<- cbind( tmp, sapply(tmp,function(x)		which(df[, Patient==df[x,Patient] & StopTime==df[x,StartTime]])	) )		#second col contains StopTime
+	tmp			<- df[, which(StartTime==StopTime)]
+	if(length(tmp))
+	{
+		cat("\nrm entries with StartTime==StopTime, n=",length(tmp))
+		df		<- df[-tmp,]		
+	}
+	#	
+	#	should have manually fixed double entries (these were just 6)
+	#
+	setkey(df, Patient, StopTime)
+	tmp		<- data.table(IDX=which(duplicated(df)))	
+	tmp[, Patient:= df[tmp[,IDX],Patient]]
+	stopifnot( !nrow(tmp) )
+	#
+	#	see if we can merge consecutive NoDrug==0 periods
+	#
+	df[, DUMMY:= seq_len(nrow(df))]
+	tmp		<- unique(subset(df, NoDrug==0, Patient))
+	tmp		<- merge(tmp, df, by='Patient')	
+	tmp		<- tmp[,	{
+				z		<- which(NoDrug==0)
+				ans		<- NA_integer_
+				if(length(z)>1)
+					ans	<- DUMMY[ z[ which(diff(z)==1)+1L ] ]
+				list(IDX=ans)
+			} ,by='Patient']
+	tmp		<- subset(tmp, !is.na(IDX))	
+	cat("\nnumber of no drug episodes with follow up no drug episodes, n=",nrow(tmp))
 	for(i in seq_len(nrow(tmp)))
 	{
-		if(verbose)	cat(paste("\nprocess",df[tmp[i,1],Patient]))
-		if(df[tmp[i,1],StartTime_Acc=="Acc"])			#set StartTime_Acc=="NAccD"
-		{
-			set(df,tmp[i,1],"StartTime_Acc","NAccD")			
-			set(df,tmp[i,2],"StopTime_Acc","NAccD")			
-		}
-		if(df[tmp[i,1],StartTime_Acc=="NAccD"])			#reset StopTime		StartTime_Acc=="NAccD"
-		{
-			z		<- as.POSIXlt(df[tmp[i,2],StopTime])
-			z$mday	<- 1
-			z		<- as.Date(z)
-			z		<- max( df[tmp[i,2],StartTime],z )
-			set(df,tmp[i,1],"StartTime",z)
-			set(df,tmp[i,2],"StopTime",z)
-		}
-		if(df[tmp[i,1],StartTime]>df[tmp[i,1],StopTime])
-		{
-			set(df,tmp[i,1],"StartTime_Acc","NAccMD")			
-			set(df,tmp[i,2],"StopTime_Acc","NAccMD")
-		}
-		if(df[tmp[i,1],StartTime_Acc=="NAccMD"])		#set to midpoint
-		{
-			z<- df[tmp[i,2],StartTime] + difftime(df[tmp[i,1],StopTime],df[tmp[i,2],StartTime],units="days") / 2
-			set(df,tmp[i,1],"StartTime",z)
-			set(df,tmp[i,2],"StopTime",z)
-		}		
+		cat('\nmerge no drug episodes for patient', tmp[i, Patient])
+		stopifnot(df[tmp[i,IDX]-1L, Patient]==df[tmp[i,IDX], Patient],  df[tmp[i,IDX], NoDrug]==0,  df[tmp[i,IDX]-1L, NoDrug]==0)
+		set(df, tmp[i,IDX], 'StartTime', df[tmp[i,IDX]-1L, StartTime])
+		set(df, tmp[i,IDX], 'StartTime_Acc', df[tmp[i,IDX]-1L, StartTime_Acc])
+		set(df, tmp[i,IDX]-1L, c('StartTime','StopTime'), NA_real_)
 	}
-	#	see if we can merge consecutive NoDrug==0 periods	
-	df.nodrug		<- subset(df, NoDrug==0)
-	if(verbose)	cat(paste("\nnumber of entries with NoDrug==0, n=",nrow(tmp)))
-	tmp				<- df.nodrug[, {
-										if(length(StartTime)>1)
-										{
-											tmp			<- StopTime[-length(StopTime)] != StartTime[-1]
-											StartTime	<- StartTime[c(TRUE,tmp)]
-											StopTime	<- StopTime[c(tmp,TRUE)]					
-										}
-										else
-										{
-											StartTime	<- StartTime
-											StopTime	<- StopTime
-										}
-										list(StartTime=StartTime, StopTime=StopTime)
-									} ,by='Patient']
-	if(verbose)	cat(paste("\nnumber of merged entries with NoDrug==0, n=",nrow(tmp)))						
+	df[, DUMMY:=NULL]
+	df		<- subset(df, !is.na(StartTime) | !is.na(StopTime))
 	#
 	#	TR.interrupted
 	#
-	if(nrow(df[which(is.na(df[,NoDrug]) & StartTime!=TR.notyet),])) stop("unexpected NA in NoDrug when on treatment")
+	if(nrow(df[which(is.na(df[,NoDrug]) & StartTime!=TR.notyet),])) 
+		stop("unexpected NA in NoDrug when on treatment")
 	tmp								<- rep(0, nrow(df))
 	tmp[ which( df[,NoDrug==0] ) ]	<- 1
 	df[, TrI:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
 	#
 	#	process treatment change reasons
 	#
-	if(any(!is.na(df[, Reason7])))	stop("unexpected !NA after Reason7")
-	df.TrCh.noreason		<- which( df[, is.na(Reason1)&is.na(Reason2)&is.na(Reason3)&is.na(Reason4)&is.na(Reason5)&is.na(Reason6)&(NoDrug!=0) ] )
+	if(any(!is.na(df[, Reason9])))	stop("unexpected !NA after Reason7")
+	df.TrCh.noreason	<-  df[, which(is.na(Reason1)&is.na(Reason2)&is.na(Reason3)&is.na(Reason4)&is.na(Reason5)&is.na(Reason6)&is.na(Reason7)&is.na(Reason8)&(NoDrug!=0)) ] 
 	#	TR.addition
 	tmp	<- na.omit(c( 	df[df.TrCh.noreason, AZT]<=df[df.TrCh.noreason+1, AZT] &
-				df[df.TrCh.noreason, ddI]<=df[df.TrCh.noreason+1, ddI] &
-				df[df.TrCh.noreason, ddC]<=df[df.TrCh.noreason+1, ddC] &
-				df[df.TrCh.noreason, d4T]<=df[df.TrCh.noreason+1, d4T] &
-				df[df.TrCh.noreason, dTC]<=df[df.TrCh.noreason+1, dTC] &
-				df[df.TrCh.noreason, IDV]<=df[df.TrCh.noreason+1, IDV] & 
-				df[df.TrCh.noreason, SAQ]<=df[df.TrCh.noreason+1, SAQ] &
-				df[df.TrCh.noreason, RTV]<=df[df.TrCh.noreason+1, RTV] &
-				df[df.TrCh.noreason, NVP]<=df[df.TrCh.noreason+1, NVP] &
-				df[df.TrCh.noreason, EFV]<=df[df.TrCh.noreason+1, EFV] &
-				df[df.TrCh.noreason, ETR]<=df[df.TrCh.noreason+1, ETR] &
-				df[df.TrCh.noreason, RPV]<=df[df.TrCh.noreason+1, RPV] &
-				df[df.TrCh.noreason, NFV]<=df[df.TrCh.noreason+1, NFV] &
-				df[df.TrCh.noreason, ABC]<=df[df.TrCh.noreason+1, ABC] &
-				df[df.TrCh.noreason, LPV]<=df[df.TrCh.noreason+1, LPV] &
-				df[df.TrCh.noreason, ATV]<=df[df.TrCh.noreason+1, ATV] &
-				df[df.TrCh.noreason, ENF]<=df[df.TrCh.noreason+1, ENF] &
-				df[df.TrCh.noreason, TDF]<=df[df.TrCh.noreason+1, TDF] &
-				df[df.TrCh.noreason, TPV]<=df[df.TrCh.noreason+1, TPV] &
-				df[df.TrCh.noreason, FPV]<=df[df.TrCh.noreason+1, FPV] &
-				df[df.TrCh.noreason, FTC]<=df[df.TrCh.noreason+1, FTC] &
-				df[df.TrCh.noreason, DRV]<=df[df.TrCh.noreason+1, DRV] &
-				df[df.TrCh.noreason, MVC]<=df[df.TrCh.noreason+1, MVC] &
-				df[df.TrCh.noreason, RAL]<=df[df.TrCh.noreason+1, RAL]		))	
+						df[df.TrCh.noreason, DDI]<=df[df.TrCh.noreason+1, DDI] &
+						df[df.TrCh.noreason, DDC]<=df[df.TrCh.noreason+1, DDC] &
+						df[df.TrCh.noreason, D4T]<=df[df.TrCh.noreason+1, D4T] &
+						df[df.TrCh.noreason, DTC]<=df[df.TrCh.noreason+1, DTC] &
+						df[df.TrCh.noreason, ABC]<=df[df.TrCh.noreason+1, ABC] &
+						df[df.TrCh.noreason, TDF]<=df[df.TrCh.noreason+1, TDF] &
+						df[df.TrCh.noreason, FTC]<=df[df.TrCh.noreason+1, FTC] &
+						df[df.TrCh.noreason, SQV]<=df[df.TrCh.noreason+1, SQV] &
+						df[df.TrCh.noreason, IDV]<=df[df.TrCh.noreason+1, IDV] & 
+						df[df.TrCh.noreason, RTV]<=df[df.TrCh.noreason+1, RTV] &
+						df[df.TrCh.noreason, NFV]<=df[df.TrCh.noreason+1, NFV] &
+						df[df.TrCh.noreason, LPV]<=df[df.TrCh.noreason+1, LPV] &
+						df[df.TrCh.noreason, FPV]<=df[df.TrCh.noreason+1, FPV] &
+						df[df.TrCh.noreason, ATV]<=df[df.TrCh.noreason+1, ATV] &
+						df[df.TrCh.noreason, TPV]<=df[df.TrCh.noreason+1, TPV] &
+						df[df.TrCh.noreason, DRV]<=df[df.TrCh.noreason+1, DRV] &
+						df[df.TrCh.noreason, NVP]<=df[df.TrCh.noreason+1, NVP] &
+						df[df.TrCh.noreason, EFV]<=df[df.TrCh.noreason+1, EFV] &
+						df[df.TrCh.noreason, ETR]<=df[df.TrCh.noreason+1, ETR] &
+						df[df.TrCh.noreason, RPV]<=df[df.TrCh.noreason+1, RPV] &				
+						df[df.TrCh.noreason, DOR]<=df[df.TrCh.noreason+1, DOR] &
+						df[df.TrCh.noreason, ENF]<=df[df.TrCh.noreason+1, ENF] &
+						df[df.TrCh.noreason, RAL]<=df[df.TrCh.noreason+1, RAL] &
+						df[df.TrCh.noreason, MVC]<=df[df.TrCh.noreason+1, MVC] &
+						df[df.TrCh.noreason, EVG]<=df[df.TrCh.noreason+1, EVG] &
+						df[df.TrCh.noreason, DTG]<=df[df.TrCh.noreason+1, DTG] &
+						df[df.TrCh.noreason, COBI]<=df[df.TrCh.noreason+1, COBI] 
+						))	
 	#tmp						<- df[df.TrCh.noreason, NoDrug+1]==df[df.TrCh.noreason+1, NoDrug]	
 	df[, TrCh.addition:=0]
 	set(df, df.TrCh.noreason[tmp], 'TrCh.addition', 1)
@@ -1596,35 +2253,39 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 	#	TR.failure
 	tmp						<-	rep(0, nrow(df))
 	tmp[ df.TrCh.noreason ]	<- NA
-	tmp[ which(df[, Reason1%in%TR.failure | Reason2%in%TR.failure | Reason3%in%TR.failure | Reason4%in%TR.failure | Reason5%in%TR.failure | Reason6%in%TR.failure ]) ]<- 1
+	tmp[ which(df[, Reason1%in%TR.failure | Reason2%in%TR.failure | Reason3%in%TR.failure | Reason4%in%TR.failure | Reason5%in%TR.failure | Reason6%in%TR.failure | Reason7%in%TR.failure | Reason8%in%TR.failure ]) ]<- 1
 	df[, TrCh.failure:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
 	#	TR.immufailure
 	tmp						<-	rep(0, nrow(df))
 	tmp[ df.TrCh.noreason ]	<- NA
-	tmp[ which(df[, Reason1%in%TR.immufailure | Reason2%in%TR.immufailure | Reason3%in%TR.immufailure | Reason4%in%TR.immufailure | Reason5%in%TR.immufailure | Reason6%in%TR.immufailure ]) ]<- 1
+	tmp[ which(df[, Reason1%in%TR.immufailure | Reason2%in%TR.immufailure | Reason3%in%TR.immufailure | Reason4%in%TR.immufailure | Reason5%in%TR.immufailure | Reason6%in%TR.immufailure | Reason7%in%TR.immufailure | Reason8%in%TR.immufailure ]) ]<- 1
 	df[, TrCh.immufailure:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]	
 	#	TR.toxicity
 	tmp						<-	rep(0, nrow(df))
 	tmp[ df.TrCh.noreason ]	<- NA
-	tmp[ which(df[, Reason1%in%TR.toxicity | Reason2%in%TR.toxicity | Reason3%in%TR.toxicity | Reason4%in%TR.toxicity | Reason5%in%TR.toxicity | Reason6%in%TR.toxicity ]) ]<- 1
+	tmp[ which(df[, Reason1%in%TR.toxicity | Reason2%in%TR.toxicity | Reason3%in%TR.toxicity | Reason4%in%TR.toxicity | Reason5%in%TR.toxicity | Reason6%in%TR.toxicity | Reason7%in%TR.toxicity | Reason8%in%TR.toxicity]) ]<- 1
 	df[, TrCh.toxicity:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]		
 	#	TR.adherence
 	tmp						<-	rep(0, nrow(df))
 	tmp[ df.TrCh.noreason ]	<- NA
-	tmp[ which(df[, Reason1%in%TR.adherence | Reason2%in%TR.adherence | Reason3%in%TR.adherence | Reason4%in%TR.adherence | Reason5%in%TR.adherence | Reason6%in%TR.adherence ]) ]<- 1
+	tmp[ which(df[, Reason1%in%TR.adherence | Reason2%in%TR.adherence | Reason3%in%TR.adherence | Reason4%in%TR.adherence | Reason5%in%TR.adherence | Reason6%in%TR.adherence | Reason7%in%TR.adherence | Reason8%in%TR.adherence]) ]<- 1
 	df[, TrCh.adherence:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
 	#	TR.patient related
 	tmp						<-	rep(0, nrow(df))
 	tmp[ df.TrCh.noreason ]	<- NA
-	tmp[ which(df[, Reason1%in%TR.patrel | Reason2%in%TR.patrel | Reason3%in%TR.patrel | Reason4%in%TR.patrel | Reason5%in%TR.patrel | Reason6%in%TR.patrel ]) ]<- 1
+	tmp[ which(df[, Reason1%in%TR.patrel | Reason2%in%TR.patrel | Reason3%in%TR.patrel | Reason4%in%TR.patrel | Reason5%in%TR.patrel | Reason6%in%TR.patrel | Reason7%in%TR.patrel | Reason8%in%TR.patrel]) ]<- 1
 	df[, TrCh.patrel:= factor(tmp,levels=c(0,1),labels=c("No","Yes"))]
 	#
-	#	get 1st sort by Patient, 2nd sort by StopTime -> treatment history by Patient is now in order
+	#	set last stop time to start time - 1
 	#
-	setkey(df, StopTime)
-	setkey(df, Patient)	
-	#subset( df,StartTime_Acc=="NAccMD" & StopTime_Acc!="NAccMD")
-	#subset( df, Patiet=="M10027")		
+	df[, DUMMY:=seq_len(nrow(df))]
+	tmp	<- df[, {
+				ans		<- NA_integer_
+				if(length(StartTime)>1)
+					ans	<- DUMMY[ 1L+which(StartTime[-1]!=StopTime[-length(StopTime)]+1) ]
+				list(IDX=ans)
+			} , by='Patient']
+	set(df, tmp[,IDX]-1L, 'StopTime', df[tmp[,IDX],StartTime]-1)	
 	#
 	#	simple statistics of Patient history: number of treatment interruptions, total length of interruption in months and proportion of treatment interruption in treatment history 		
 	#
@@ -1634,41 +2295,39 @@ project.hivc.Excel2dataframe.Regimen<- function(dir.name= DATA, verbose=1)
 				z		<- subset(x, TrI=="Yes")
 				list( 	TrI.n		= nrow(z), 
 						TrI.mo		= as.numeric(sum(z[,difftime(StopTime,StartTime,units="days")/30])), 
-						TrI.p		= as.numeric(sum(z[,difftime(StopTime,StartTime,units="days")/30])) / as.numeric(sum(x[,difftime(StopTime,StartTime,units="days")/30])), 
-						HAART_T1	= HAART_T1[1], 
+						TrI.p		= as.numeric(sum(z[,difftime(StopTime,StartTime,units="days")/30])) / as.numeric(sum(x[,difftime(StopTime,StartTime,units="days")/30])), 						 
 						AnyT_T1		= subset(x, TrI=="No")[,StartTime][1], 
 						AnyT_T1_Acc	= subset(x, TrI=="No")[,StartTime_Acc][1]		)																					
-			}, by=Patient]
-	if( nrow(subset(tmp,!is.na(HAART_T1) & HAART_T1<AnyT_T1)) )	stop("found AnyT_T1 that is older than HAART_T1")		
-	df		<- merge(subset(tmp,select=c(Patient,AnyT_T1,AnyT_T1_Acc,TrI.n, TrI.mo, TrI.p)), df, all.y=1,by="Patient")
+			}, by='Patient']			
+	df		<- merge(subset(tmp,select=c(Patient,AnyT_T1,AnyT_T1_Acc,TrI.n, TrI.mo, TrI.p)), df, all.y=1, by="Patient")
 	#
 	#	reset AnyT_T1 conservatively
 	#
-	nacc				<- which(df[,AnyT_T1_Acc=="NAccD"])		
-	tmp					<- as.POSIXlt(df[nacc,AnyT_T1] )
-	tmp$mday			<- 30
-	set(df, nacc, "AnyT_T1", as.Date(tmp))
-	nacc				<- which(df[,AnyT_T1_Acc=="NAccMD"])
-	tmp					<- as.POSIXlt(df[nacc,AnyT_T1] )
-	tmp$mday			<- 31
-	tmp$mon				<- 11
-	set(df, nacc, "AnyT_T1", as.Date(tmp))		
+	if(0)
+	{
+		df[, AnyT_T1_Crude:=AnyT_T1]
+		df	<- hivc.db.reset.ARTStartFromAccurate(df, col='AnyT_T1')		
+	}
 	#	add largest lRNA at least 3 months after therapy start.
-	tmp					<- subset(df, select=c(Patient, AnyT_T1)) 
-	setkey(tmp, Patient)
-	tmp					<- merge(unique(tmp), df.viro, by='Patient')	
-	tmp					<- merge(subset(df, select=c(Patient, AnyT_T1, StartTime, StopTime)), subset(tmp, difftime(PosRNA, AnyT_T1, units='days')>90,select=c(Patient, PosRNA, lRNA)), by='Patient', allow.cartesian=TRUE)
-	tmp					<- subset(tmp, (StartTime<=PosRNA & PosRNA<=StopTime))
-	tmp					<- tmp[, {
-										z<- which.max(lRNA)
-										list(AnyT_T1=AnyT_T1[z], PosRNA.mx= PosRNA[z], lRNA.mx=lRNA[z])
-									}, by=c('Patient','StartTime','StopTime')]
-	df					<- merge( df, subset(tmp, select=c(Patient, StartTime, StopTime, PosRNA.mx, lRNA.mx)), by=c('Patient','StartTime','StopTime'), all.x=TRUE)
-	#	set failure by viral load during treatment period
-	df[, TrVL.failure:=factor( df[, lRNA.mx>3], levels=c(FALSE, TRUE), labels=c('No','Yes'))]	
-	#subset(df, TrVL.failure=='No' & TrCh.failure=='Yes')	viro failure can be indicated for VL < 1e3
-	#subset(df, TrVL.failure=='No' & TrCh.failure=='Yes' & lRNA.mx<log10(200), select=c(Patient, StartTime, StopTime, AnyT_T1, PosRNA.mx, lRNA.mx))	#some are really suspicious!
+	if(0)
+	{
+		tmp					<- subset(df, select=c(Patient, AnyT_T1)) 
+		setkey(tmp, Patient)
+		tmp					<- merge(unique(tmp), df.viro, by='Patient')	
+		tmp					<- merge(subset(df, select=c(Patient, AnyT_T1, StartTime, StopTime)), subset(tmp, difftime(PosRNA, AnyT_T1, units='days')>90,select=c(Patient, PosRNA, lRNA)), by='Patient', allow.cartesian=TRUE)
+		tmp					<- subset(tmp, (StartTime<=PosRNA & PosRNA<=StopTime))
+		tmp					<- tmp[, {
+					z<- which.max(lRNA)
+					list(AnyT_T1=AnyT_T1[z], PosRNA.mx= PosRNA[z], lRNA.mx=lRNA[z])
+				}, by=c('Patient','StartTime','StopTime')]
+		df					<- merge( df, subset(tmp, select=c(Patient, StartTime, StopTime, PosRNA.mx, lRNA.mx)), by=c('Patient','StartTime','StopTime'), all.x=TRUE)
+		#	set failure by viral load during treatment period
+		df[, TrVL.failure:=factor( df[, lRNA.mx>3], levels=c(FALSE, TRUE), labels=c('No','Yes'))]	
+		#subset(df, TrVL.failure=='No' & TrCh.failure=='Yes')	viro failure can be indicated for VL < 1e3
+		#subset(df, TrVL.failure=='No' & TrCh.failure=='Yes' & lRNA.mx<log10(200), select=c(Patient, StartTime, StopTime, AnyT_T1, PosRNA.mx, lRNA.mx))	#some are really suspicious!		
+	}
 	#
+	df[, DUMMY:=NULL]
 	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')
 	if(verbose) cat(paste("\nsave to", file))
 	save(df, file=file)
@@ -2000,11 +2659,256 @@ project.hivc.Excel2dataframe.CD4.process.NA<- function( df, NA.time=c("","01/01/
 	df
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
+project.hivc.Excel2dataframe.GGD.160227<- function()
+{
+	#	INPUT FILE NAMES
+	dir.name	<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'	
+	file		<- paste(dir.name,"ATHENA_1502_All_Region_GGD.csv",sep='/')
+	df			<- read.csv(file, stringsAsFactors=FALSE)
+	df			<- hivc.db.reset.Date(df, col="DateReg", NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.format="%Y-%m-%d")
+	df			<- data.table(df, key="Patient")
+	setnames(df, "DateReg","GGD_Reg")
+	set(df, NULL, 'Region', df[, factor(Region, levels=c('AMSTERDAM','ROTTERDAM','REST'), labels=c('Amst','Rott','Other'))])
+	set(df, NULL, 'GGD', 	df[, factor(GGD, 	levels=c(111, 		 			706, 				1009, 		 		1106,			1406, 				1906, 
+														 2006, 		 			2106, 				2209, 				2406, 			2506, 				2707, 
+														 3109, 					3406, 				3606, 				3906, 			4106, 				4506, 
+														 4607, 					4810, 				5006, 				5206, 			5406, 				5608, 
+														 6011, 					6106, 				7206, 				7306), 
+												labels=c('Groningen',			'Drenthe',			'IJsselland',		'Twente',		'Gelre_IJssel',		'Hulpverlening_Gelderland_Midden',
+														 'Rivierenland',		'Nijmegen', 		'Flevoland',		'Utrecht',		'Midden_Nederland',	'Hollands_Noorden',
+														 'Kennemerland',		'Amsterdam',		'Gooi_Vechtstreek',	'Den_Haag',		'Zuid_Holland_West','Hollands_Midden',
+														 'Rotterdam_Rijnmond',	'Zuid_Holland_Zuid','Zeeland',			'West_Brabant',	'Hart_voor_Brabant', 'Brabant_Zuidoost',
+														 'Limburg-Noord',		'Zuid_Limburg',		'Fryslan',			'Zaanstreek_Waterland'))])
+	df			<- subset(df, !(is.na(GGD_Reg) & is.na(GGD)))
+	#	remove duplicates
+	set(df, df[, which(Patient=='M30073' & GGD_Reg=='2005-04-08' & is.na(Region))], 'GGD_Reg', NA_real_)
+	df			<- subset(df, !is.na(GGD_Reg))
+	setkey(df, Patient, GGD_Reg)
+	tmp		<- data.table(IDX=which(duplicated(df)))
+	tmp[, Patient:=df[tmp[,IDX],Patient]]
+	print( merge(df, tmp, by='Patient') )
+	set(df, tmp[, unique(IDX)], 'GGD_Reg', NA_real_)
+	df			<- subset(df, !is.na(GGD_Reg))
+	#	
+	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
+	if(verbose) cat(paste("\nsave to", file))
+	save(df, file=file)
+}
+######################################################################################
+project.hivc.Excel2dataframe.CD4.160227<- function()
+{
+	#	TODO check with Ard that max source should be kept?
+	verbose			<- 1
+	
+	#	INPUT FILE NAMES
+	dir.name		<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'	
+	file			<- paste(dir.name,"ATHENA_1502_All_Immu.csv",sep='/')
+	#
+	#	read CD4 csv data file and preprocess
+	#
+	df				<- read.csv(file, stringsAsFactors=FALSE)		
+	df				<- hivc.db.reset.Date(df, col="DateImm", NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.format="%Y-%m-%d")
+	df		<- data.table(df, key="Patient")
+	setnames(df, "DateImm","PosCD4")
+	#
+	#	data corrections from Ard
+	#
+	tmp		<- df[, which( Patient=="M11392" & PosCD4=="2000-10-30" & CD4A==3001)]
+	if(verbose) cat(paste("\nnumber of entries with corrected CD4 units Patient=='M11392' & CD4A>3001, n=",length(tmp),"double entry, remove"))
+	set(df, tmp, "CD4A", NA)	
+	tmp		<- df[, which( Patient=="M26334" & PosCD4=="2008-09-11" & CD4A==2230)]
+	if(verbose) cat(paste("\nnumber of entries with corrected CD4 units Patient==M26334 & PosCD4==2008-09-11 & CD4A==2230, n=",length(tmp),"double entry, remove"))
+	set(df, tmp, "CD4A", NA)		
+	tmp		<- df[, which( 	Patient=='M26293' & PosCD4=='2003-09-12' & CD4A==800)]
+	if(verbose) cat(paste("\nnumber of entries with corrected PosCD4  Patient=='M26293' & PosCD4=='2003-09-12' & CD4A==800, n=",length(tmp),"set to 16/9/2003"))
+	set(df, tmp, "PosCD4", as.Date('2003-09-16'))
+	tmp		<- df[, which( 	Patient=='M11233' & PosCD4=='2001-01-10' & CD4A==24)]
+	if(verbose) cat(paste("\nnumber of entries with corrected PosCD4  Patient=='M11233' & PosCD4=='2001-01-10' & CD4A==24, n=",length(tmp),"set to 25/4/1996"))
+	set(df, tmp, "PosCD4", as.Date('1996-04-25'))
+	tmp		<- df[, which( 	Patient=='M13124' & PosCD4=='1998-08-07')]
+	if(verbose) cat(paste("\nnumber of entries with corrected PosCD4  Patient=='M13124' & PosCD4=='1998-08-07', n=",length(tmp),"set to 7/9/1998"))
+	set(df, tmp, "PosCD4", as.Date('1998-09-07'))	
+	tmp		<- df[, which( 	Patient=='M13124' & PosCD4=='2001-09-14')]
+	if(verbose) cat(paste("\nnumber of entries with corrected PosCD4  Patient=='M13124' & PosCD4=='2001-09-14', n=",length(tmp),"set to 14/9/2000"))
+	set(df, tmp, "PosCD4", as.Date('2000-09-14'))
+	tmp		<- df[, which(	Patient=="M10544" & PosCD4=="2003-02-17" & CD4A==850	|
+							Patient=="M11099" & PosCD4=="1997-12-30" & CD4A==1240	|
+							Patient=="M11133" & PosCD4=="2003-06-16" & CD4A==170	|
+							Patient=="M11137" & PosCD4=="2003-06-25" & CD4A==460	|
+							Patient=="M11167" & PosCD4=="2006-09-04" & CD4A==400	|	
+							Patient=="M11351" & PosCD4=="1996-10-08" & CD4A==150	|
+							Patient=="M11713" & PosCD4=="1996-07-03" & CD4A==0.37	|
+							Patient=="M12577" & PosCD4=="2000-09-25" & CD4A==210	|
+							Patient=="M12884" & PosCD4=="1997-11-04" & CD4A==350	|
+							Patient=="M13051" & PosCD4=="1998-06-08" & CD4A==460	|
+							Patient=="M13124" & PosCD4=="2001-10-09" & CD4A==1.17	|
+							Patient=="M13124" & PosCD4=="2003-02-12" & CD4A==0.74	|
+							Patient=="M13124" & PosCD4=="2003-03-21" & CD4A==0.59	|
+							Patient=="M13124" & PosCD4=="2003-06-17" & CD4A==0.61	|
+							Patient=="M13126" & PosCD4=="2001-01-08" & CD4A==0.5	|
+							Patient=="M13126" & PosCD4=="2001-03-05" & CD4A==0.43	|
+							Patient=="M13126" & PosCD4=="2003-01-17" & CD4A==0.48	|
+							Patient=="M13126" & PosCD4=="2003-04-28" & CD4A==0.48	|
+							Patient=="M13126" & PosCD4=="2003-07-24" & CD4A==0.46	|	#no CD4 anymore at 24/7/2003, delete both
+							Patient=="M13126" & PosCD4=="2003-07-24" & CD4A==460	|
+							Patient=="M13298" & PosCD4=="1997-12-11" & CD4A==760	|
+							Patient=="M14834" & PosCD4=="1998-12-10" & CD4A==990	|
+							Patient=="M14945" & PosCD4=="2000-09-20" & CD4A==1620	|
+							Patient=="M14986" & PosCD4=="2001-03-29" & CD4A==640	|
+							Patient=="M14995" & PosCD4=="1999-01-12" & CD4A==370	|
+							Patient=="M15071" & PosCD4=="1999-10-12" & CD4A==100	|
+							Patient=="M15234" & PosCD4=="1998-09-02" & CD4A==25		|
+							Patient=="M15234" & PosCD4=="1998-11-04" & CD4A==32		|
+							Patient=="M15234" & PosCD4=="1998-12-16" & CD4A==35		|
+							Patient=="M16018" & PosCD4=="1998-09-09" & CD4A==1400	|
+							Patient=="M16570" & PosCD4=="2003-06-17" & CD4A==280	|
+							Patient=="M16622" & PosCD4=="2000-09-27" & CD4A==100	|
+							Patient=="M17154" & PosCD4=="2011-01-05" & CD4A==495	|
+							Patient=="M17819" & PosCD4=="2000-03-15" & CD4A==1010	|
+							Patient=="M17951" & PosCD4=="1999-07-22" & CD4A==530	|
+							Patient=="M18712" & PosCD4=="2000-07-31" & CD4A==600	|
+							Patient=="M25530" & PosCD4=="2002-04-09" & CD4A==59		|
+							Patient=="M25530" & PosCD4=="2002-04-19" & CD4A==66		|	
+							Patient=="M28189" & PosCD4=="2007-09-04" & CD4A==31		|
+							Patient=="M30605" & PosCD4=="2011-08-22" & CD4A==83		|
+							Patient=="M31573" & PosCD4=="2011-03-24" & CD4A==0		|	#import from hospital db, remove unlikely entry
+							Patient=="M33353" & PosCD4=="2006-03-22" & CD4A==101	|
+							Patient=="M33924" & PosCD4=="2007-11-01" & CD4A==0		|
+							Patient=="M37294" & PosCD4=="2011-07-18" & CD4A==820	|
+							Patient=="M39055" & PosCD4=="2012-02-06" & CD4A==6850	|
+							Patient=="M36408" & PosCD4=="2011-12-09" & CD4A==3701		#unclear
+					)]
+	cat(paste("\nnumber of entries with incorrect CD4  should be 45, n=",length(tmp),"set to NA"))	
+	set(df, tmp, "CD4A", NA)
+	df		<- subset(df, !is.na(CD4A))
+	cat(paste("\nnumber of entries read, n=",nrow(df)))	
+	#
+	#	if duplicate per day, keep those with higher Source variable
+	#	
+	df[, DUMMY:= seq_len(nrow(df))]
+	tmp		<- df[, list(N=list(length(CD4A))), by=c('Patient','PosCD4')]	
+	tmp		<- merge(subset(tmp, N>1), df, by=c('Patient','PosCD4'))
+	tmp		<- tmp[, list(IDX=DUMMY[which(Source!=max(Source))]), by=c('Patient','PosCD4')]
+	cat('\nremoving day duplicates with lower Source, n=', nrow(tmp))
+	set(df, tmp[,IDX], 'PosCD4', NA_real_)
+	set(df, NULL, 'DUMMY', NULL)
+	df		<- subset(df, !is.na(PosCD4))	
+	#
+	#	remove identical entries
+	#
+	setkey(df, Patient, PosCD4, CD4A)
+	df		<- unique(df)
+	#
+	#	adjust likely wrong units > 20000
+	#
+	tmp		<- df[, which( CD4A>20000)]
+	cat(paste("\nnumber of entries with likely wrong CD4 units > 20000, n=",length(tmp),"DIVIDE BY 1e3"))
+	#print(df[tmp,])
+	set(df, tmp, "CD4A", round(df[tmp, CD4A]*1e-3,d=0))
+	#	adjust likely wrong units > 10000
+	cat(paste("\npatient M11368"))
+	tmp		<- df[, which( CD4A>10000 & Patient=="M11368")]
+	set(df, tmp, "CD4A", round(df[tmp, CD4A]*1e-3,d=0))
+	cat(paste("\npatient M32958"))
+	tmp		<- df[, which( Patient=="M32958" & PosCD4<="2010-05-03")]
+	set(df, tmp, "CD4A", round(df[tmp, CD4A]*1e-1,d=0))
+	cat(paste("\npatient M20633"))
+	tmp		<- df[, which( Patient=="M20633" & CD4A>5000)]
+	set(df, tmp, "CD4A", round(df[tmp, CD4A]*1e-3,d=0))
+	tmp		<- df[, which( CD4A>3000)]
+	cat(paste("\nnumber of entries with likely wrong CD4 units > 3000, n=",length(tmp),"DIVIDE BY 10"))
+	#print(df[tmp,])
+	set(df, tmp, "CD4A", round(df[tmp, CD4A]*1e-1,d=0))
+	#
+	#	remove too small entries and digit entries
+	#	
+	df		<- subset(df, CD4A>10)		
+	df		<- subset(df, (CD4A%%1)==0 )
+	#
+	#	remove duplicate entries 
+	#
+	setkey(df, Patient, PosCD4)
+	df		<- df[, list(CD4A=round(mean(CD4A)), Source=Source[1] ), by=c('Patient','PosCD4')]	
+	#
+	#	remove consecutive jumps >1e3 
+	#
+	setkey(df, Patient, PosCD4)
+	tmp		<- subset( df[, {  tmp<- which( length(CD4A)>1 & diff(CD4A)>1000 ); list(PosCD4=ifelse(length(tmp), as.character(PosCD4[tmp+1]), NA_character_), CD4A=ifelse(length(tmp), CD4A[tmp+1], NA_real_)) }, by='Patient'], !is.na(PosCD4))
+	cat(paste("\nnumber of consecutive jumps >1e3 DELETE n=",nrow(tmp)))
+	tmp		<- sapply(seq_len(nrow(tmp)), function(i)		df[,which(Patient==tmp[i,Patient] & PosCD4==tmp[i,PosCD4] & CD4A==tmp[i,CD4A])])
+	df		<- df[-tmp,]
+	#
+	#	remove consecutive jumps >7e2 within 60days 
+	#
+	tmp		<- subset( df[, {  tmp<- which( length(CD4A)>1 & diff(CD4A)>700 & difftime(PosCD4[-1],PosCD4[-length(PosCD4)],units='days')<60 ); list(PosCD4=ifelse(length(tmp), as.character(PosCD4[tmp+1]), NA_character_), CD4A=ifelse(length(tmp), CD4A[tmp+1], NA_real_)) }, by='Patient'], !is.na(PosCD4))
+	cat(paste("\nnumber of consecutive jumps >7e2 within 60days DELETE n=",nrow(tmp)))
+	tmp		<- sapply(seq_len(nrow(tmp)), function(i)		df[,which(Patient==tmp[i,Patient] & PosCD4==tmp[i,PosCD4] & CD4A==tmp[i,CD4A])])
+	df		<- df[-tmp,]
+	#
+	#	check above 1700 manually
+	#
+	tmp<- merge(df, subset(df, CD4A>1700, Patient), by="Patient")
+	setkey(tmp, Patient, PosCD4)
+	tmp<- tmp[,	{
+					z<- which(CD4A>1700)
+					list(PosCD4_T1= min(PosCD4), CD4_T1= CD4A[1], CD4.med= median(CD4A), CD4.q= quantile(CD4A, p=0.9), CD4.h=CD4A[z], PosCD4=PosCD4[z])
+			},by="Patient"]	
+	#leave those with high CD4 at start for now
+	tmp		<- subset(tmp, CD4_T1!=CD4.h)	 	
+	#leave those with last non-zero digit for now
+	tmp		<- subset(tmp, ((CD4.h/10)%%1)==0 )		
+	#	divide by 10
+	#subset(tmp, CD4.q*3<CD4.h)
+	z		<- df[, which( CD4A>1700 & Patient%in%subset(tmp, CD4.q*3<CD4.h)[,Patient])]
+	set(df, z, 'CD4A', df[z,CD4A]/10)
+	tmp		<- subset(tmp, CD4.q*3>=CD4.h)
+	#	remove
+	z		<- df[, which( CD4A>1700 & Patient%in%subset(tmp, CD4.q*2<CD4.h)[,Patient])]
+	df		<- df[-z]
+	tmp		<- subset(tmp, CD4.q*2>=CD4.h)
+	#	remove
+	z		<- df[, which( CD4A>1700 & Patient%in%subset(tmp, CD4.q<CD4.h & CD4.q<1200)[,Patient])]
+	df		<- df[-z]
+	tmp		<- subset(tmp, !(CD4.q<CD4.h & CD4.q<1200))
+	cat(paste("\nstill high entries NOT DELETED n=",nrow(tmp)))
+	#	divide by 10
+	tmp		<- which(df[, Patient%in%c("M10212","M14927","M15431","M15519","M20720","M26334","M27643","M27571") & CD4A>1700])
+	cat(paste("\nnumber of entries with likely wrong CD4 units > 1700  M10212 M27571 M14927  M15431  M15519  M20720  M26334  M27643, n=",length(tmp),"DIVIDE BY 10"))
+	set(df, tmp, "CD4A", round(df[tmp, CD4A]*1e-1,d=0))
+	cat(paste("\npatient M17554"))
+	tmp		<- which(df[, Patient=="M17554" & CD4A%in%c(2760,2170)])
+	set(df, tmp, "CD4A", round(df[tmp, CD4A]*1e-1,d=0))
+	cat(paste("\npatient M17554"))
+	tmp		<- which(df[, Patient=="1500" & CD4A%in%c(1500)])
+	set(df, tmp, "CD4A", round(df[tmp, CD4A]*1e-1,d=0))
+	#	set to NA
+	tmp		<- which(df[, Patient%in%c("M12953","M13340","M26537","M26669","M35668") & CD4A>1900])
+	cat(paste("\nnumber of entries with likely wrong CD4 units > 1900  M12953   M13340  M26537  M26669  M35668, n=",length(tmp),"SET to NA"))
+	set(df, tmp, "CD4A", NA)
+	tmp		<- which(df[, Patient%in%c("M15743") & CD4A>2500])
+	cat(paste("\nnumber of entries with likely wrong CD4 units > 2500  M15743, n=",length(tmp),"SET to NA"))
+	set(df, tmp, "CD4A", NA)
+	tmp		<- which(df[, Patient%in%c("M30155") & CD4A>1000])
+	cat(paste("\nnumber of entries with likely wrong CD4 units > 1000  M30155, n=",length(tmp),"SET to NA"))
+	set(df, tmp, "CD4A", NA)
+	#
+	df		<- subset(df, !is.na(CD4A))
+	cat(paste("\nnumber of entries with !is.na(PosCD4), n=",nrow(df)))
+	#
+	df		<- df[, 	{
+							z<- which.min(PosCD4)
+							list(PosCD4=PosCD4, CD4=CD4A, PosCD4_T1=PosCD4[z], CD4_T1=CD4A[z] ) 	
+						},by=Patient]
+	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
+	if(verbose) cat(paste("\nsave to", file))
+	save(df, file=file)		
+}
+######################################################################################
+project.hivc.Excel2dataframe.CD4.130301<- function(dir.name= DATA, verbose=1)
 {
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu.csv",sep='/')
 	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.csv",sep='/')
-			
+	
 	verbose			<- 1
 	#read CD4 csv data file and preprocess
 	df				<- read.csv(file, stringsAsFactors=FALSE)											
@@ -2020,9 +2924,9 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	#	update CD4 measurements	
 	#
 	tmp				<- ifelse(	!grepl('AllMSM',file),	
-								paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.csv",sep='/'),
-								paste(dir.name,"derived/ATHENA_2013_03_Immu.csv",sep='/')
-								)
+			paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.csv",sep='/'),
+			paste(dir.name,"derived/ATHENA_2013_03_Immu.csv",sep='/')
+	)
 	df.up		<- read.csv(tmp, stringsAsFactors=FALSE)
 	df.up		<- project.hivc.Excel2dataframe.CD4.process.NA( df.up, NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.var=c("DateImm") )
 	df.up		<- data.table(df.up, key="Patient")
@@ -2039,9 +2943,9 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	if(grepl('AllMSM',file))	#just to make sure we can use same code in both cases
 		setnames(df.up, c('Source'), c('Source.y'))	
 	df.up		<- df.up[, {
-								tmp	<- which(Source.y==max(Source.y))
-								list(CD4A=CD4A[tmp], Source=Source.y[tmp])	
-							}, by=c('Patient','PosCD4')]
+				tmp	<- which(Source.y==max(Source.y))
+				list(CD4A=CD4A[tmp], Source=Source.y[tmp])	
+			}, by=c('Patient','PosCD4')]
 	df			<- merge( unique(subset(df, select=Patient)), df.up, by='Patient' )			
 	#	remove identical entries
 	setkey(df, Patient, PosCD4, CD4A)
@@ -2097,8 +3001,8 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	tmp<- merge(df, subset(df, CD4A>1700, Patient), by="Patient")
 	setkey(tmp, Patient, PosCD4)
 	tmp<- tmp[,	{
-					z<- which(CD4A>1700)
-					list(PosCD4_T1= min(PosCD4), CD4_T1= CD4A[1], CD4.med= median(CD4A), CD4.q= quantile(CD4A, p=0.9), CD4.h=CD4A[z], PosCD4=PosCD4[z])
+				z<- which(CD4A>1700)
+				list(PosCD4_T1= min(PosCD4), CD4_T1= CD4A[1], CD4.med= median(CD4A), CD4.q= quantile(CD4A, p=0.9), CD4.h=CD4A[z], PosCD4=PosCD4[z])
 			},by="Patient"]	
 	#leave those with high CD4 at start for now
 	tmp		<- subset(tmp, CD4_T1!=CD4.h)	 	
@@ -2143,9 +3047,9 @@ project.hivc.Excel2dataframe.CD4<- function(dir.name= DATA, verbose=1)
 	if(verbose) cat(paste("\nnumber of entries with !is.na(PosCD4), n=",nrow(df)))
 	#
 	df		<- df[, 	{
-							z<- which.min(PosCD4)
-							list(PosCD4=PosCD4, CD4=CD4A, PosCD4_T1=PosCD4[z], CD4_T1=CD4A[z] ) 	
-						},by=Patient]
+				z<- which.min(PosCD4)
+				list(PosCD4=PosCD4, CD4=CD4A, PosCD4_T1=PosCD4[z], CD4_T1=CD4A[z] ) 	
+			},by=Patient]
 	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
 	if(verbose) cat(paste("\nsave to", file))
 	save(df, file=file)		
@@ -2176,33 +3080,6 @@ project.hivc.Excel2dataframe.CD4.checkVersions<- function()
 	tmp					<- subset( tmp, CD4.x!=CD4.y )	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Viro.process.NA<- function(df, NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.var=c("DateRNA")	)
-{
-	for(x in date.var)
-	{
-		cat(paste("\nprocess Time", x))
-		nok.idx			<- which( df[,x]==NA.time[1] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[1],", n=", length(nok.idx)))
-		#if(verbose && length(nok.idx))	cat(paste("\nentries with format ",NA.time[1],", Patient", paste(df[nok.idx,"Patient"],collapse=', ')))			
-		if(length(nok.idx))	
-			df[nok.idx,x]	<- NA
-		nok.idx			<- which( df[,x]==NA.time[2] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[2],", n=", length(nok.idx)))
-		if(length(nok.idx))
-			df[nok.idx,x]	<- NA
-		nok.idx			<- which( df[,x]==NA.time[3] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[3],", n=", length(nok.idx)))
-		if(length(nok.idx))
-			df[nok.idx,x]	<- NA
-		nok.idx			<- which( df[,x]==NA.time[4] )
-		if(verbose)	cat(paste("\nentries with format ",NA.time[4],", n=", length(nok.idx)))
-		if(length(nok.idx))
-			df[nok.idx,x]	<- NA
-		df[,x]			<- as.Date(df[,x], format="%d/%m/%Y")	
-	}		
-	df
-}
-######################################################################################
 #	QC corrections from Ard
 project.hivc.Excel2dataframe.Viro.process.QC.Corrections<- function(df)
 {
@@ -2214,18 +3091,18 @@ project.hivc.Excel2dataframe.Viro.process.QC.Corrections<- function(df)
 	df
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Viro<- function()		
+project.hivc.Excel2dataframe.Viro.130301<- function()		
 {
-	if(1)
+	if(0)
 	{
 		file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
 		file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro.csv",sep='/')			
 	}
-	if(1)
+	if(0)
 	{
 		file.treatment		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.R",sep='/')
 		file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.csv",sep='/')		
-	}
+	}	
 	
 	verbose				<- 1
 	dir.name			<- DATA
@@ -2619,7 +3496,497 @@ project.hivc.Excel2dataframe.Viro<- function()
 	save(df, file=file)	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21, verbose=1)
+project.hivc.Excel2dataframe.Viro.160227<- function()		
+{
+	#	CONSTANTS
+	RNA.min					<- 50	#400	#seems to be standard value
+	RNA.min.b4T				<- 400
+	RNA.stdvl.udetect.aTS	<- 1e3
+	RNA.max					<- 5e6
+	lRNA.min.infectious		<- log10(1e4)
+	lRNA.min.early			<- log10(1e5)
+	lRNA.max.b4early		<- log10(2e4)
+	verbose					<- 1	
+	DB.locktime				<- as.Date("2015-05-01")
+	
+	#	INPUT FILE NAMES
+	dir.name		<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'
+	file.treatment	<- paste(dir.name,"ATHENA_1502_All_Regimens.R",sep='/')
+	file			<- file.path(dir.name, 'ATHENA_1502_All_Viro.csv')		
+	
+	#	load ART data
+	load(file.treatment)
+	df.treat			<- subset(df, select=c(Patient, StartTime, StopTime, AnyT_T1, AnyT_T1_Acc, StartTime_Acc, StopTime_Acc, TrI, TrCh.failure, TrCh.adherence, TrCh.patrel))
+	#
+	#	read VIROLOGY csv data file and preprocess
+	#
+	df				<- read.csv(file, stringsAsFactors=FALSE)
+	df				<- hivc.db.reset.Date(df, col="DateRNA", NA.time=c("","1911-01-01","1911-11-11","1923-06-24"), date.format="%Y-%m-%d")
+	df				<- data.table(df, key="Patient")
+	set(df, NULL, 'Undetectable', df[, factor(Undetectable, levels=c(0,1,2),labels=c("No","Yes","LargerThan"))])
+	setnames(df, "DateRNA","PosRNA")	
+	#
+	#	Manual Corrections checked with Ard
+	#
+	tmp		<-  df[, which(Patient=="M32210" & PosRNA=="2010-05-10")]
+	if(length(tmp))
+	{
+		cat('\nFix M32210 2010-05-10')
+		set(df,tmp,"PosRNA", 50.)
+		set(df,tmp,"Undetectable", 'No')		
+	}
+	tmp		<- df[, which( Patient=="M36914" & PosRNA=="2010-04-12")]
+	{
+		cat('\nDelete M36914 2010-04-12')		
+		set(df,tmp,"PosRNA", NA_real_)	
+	}
+	set(df, df[, which(Patient=='M12818' & PosRNA=='1996-09-18')], 'RNA', 400)
+	set(df, df[, which(Patient=='M32210' & PosRNA=='2010-10-05')], 'RNA', 50)
+	set(df, df[, which(Patient=='M36914' & PosRNA=='2010-12-04')], 'RNA', 0)	
+	df				<- subset(df, !is.na(RNA) & !is.na(PosRNA) & !is.na(RNA))
+	cat("\nnumber of entries read, n=",nrow(df))	
+	#
+	#	if duplicate per day, keep those with higher Source variable
+	#	
+	df[, DUMMY:= seq_len(nrow(df))]
+	tmp		<- df[, list(N=list(length(RNA))), by=c('Patient','PosRNA')]	
+	tmp		<- merge(subset(tmp, N>1), df, by=c('Patient','PosRNA'))
+	tmp		<- tmp[, list(IDX=DUMMY[which(Source!=max(Source))]), by=c('Patient','PosRNA')]
+	cat('\nremoving day duplicates with lower Source, n=', nrow(tmp))
+	set(df, tmp[,IDX], 'PosRNA', NA_real_)
+	set(df, NULL, 'DUMMY', NULL)
+	df		<- subset(df, !is.na(PosRNA))	
+	#
+	#	Handle duplicates with Undetectable Yes/No: rm undetectables='yes'
+	#
+	df[, DUMMY:= seq_len(nrow(df))]
+	tmp		<- df[, list(N=length(RNA), ND=length(unique(Undetectable)) ), by=c('Patient','PosRNA')]
+	tmp		<- merge(subset(tmp, N>1 & ND>1), df, by=c('Patient','PosRNA'))
+	tmp		<- subset(tmp, Undetectable=='Yes')
+	cat("\nFound duplicate entries, one of which is undetectable. Remove Undetectable one, n=",nrow(tmp))
+	set(df, tmp[, DUMMY], 'PosRNA', NA_real_) 
+	set(df, NULL, 'DUMMY', NULL)
+	df		<- subset(df, !is.na(PosRNA))	
+	#	
+	#	remove identical entries
+	#
+	setkey(df, Patient, PosRNA, RNA)
+	df		<- unique(df)
+	#
+	#	checking manually NegT>PosRNA
+	#
+	cat(paste("\nset entry Patient=='M38400' & as.character(PosRNA)=='2005-11-24' to NA -- seems unlikely"))
+	#print( subset(df, Patient=="M38400") )
+	tmp		<- df[, which( Patient=="M38400" & PosRNA=="2005-11-24")]
+	cat(paste("\nsetting number of entries to NA, n=",length(tmp)))
+	set(df,tmp,"PosRNA",NA)		
+	cat(paste("\nset entry Patient=='M36146' & as.character(PosRNA)=='2005-11-19' to NA -- seems unlikely"))
+	#print( subset(df, Patient=="M36146") )
+	tmp		<- df[, which( Patient=="M36146" & PosRNA=="2005-11-19")] 
+	cat(paste("\nsetting number of entries to NA, n=",length(tmp)))
+	set(df,tmp,"PosRNA",NA)
+	#print( subset(df, Patient=="M12735") )
+	tmp		<- df[, which( Patient=="M12735" & PosRNA=="1986-04-29")] 
+	set(df,tmp,"PosRNA",NA)		
+	#print( subset(df, Patient=="M29967") )
+	tmp		<- df[, which( Patient=="M29967" & PosRNA=="1998-07-09")]
+	set(df,tmp,"PosRNA",NA)		
+	df		<- subset(df, !is.na(PosRNA) & !is.na(RNA))		
+	#
+	#	combine Undetectable=="LargerThan" with Undetectable=="No"
+	#
+	tmp		<- which(df[, Undetectable=="LargerThan"])
+	cat(paste("\nsetting Undetectable=='LargerThan' to Undetectable=='No', n=",length(tmp)))
+	set(df, tmp,"Undetectable", "No")
+	stopifnot(!any(df[,is.na(Undetectable)]))		
+	set(df, NULL, "Undetectable",factor(as.numeric(df[,Undetectable]), levels=c(1,2),labels=c("No","Yes")))
+	#
+	#	remove RNA values that are probably real but have wrong units
+	#
+	df		<- merge( df, unique(subset(df.treat, select=c(Patient, AnyT_T1))), by='Patient', all.x=1 )
+	tmp		<- df[, which((is.na(AnyT_T1) | difftime(AnyT_T1, PosRNA, units='days')>=0) & ((RNA%%1)!=0) ) ]
+	cat(paste("\nremove RNA values with .XXX before ART start, n=",length(tmp)))
+	#print(df[tmp,])
+	set(df, tmp, 'RNA', NA_real_)
+	df		<- subset(df, !is.na(RNA))
+	#
+	#	remove RNA values < 400 if undetectable and before ART start 
+	#	
+	tmp		<- df[, which(Undetectable=='Yes' & RNA<RNA.min.b4T & (is.na(AnyT_T1) | difftime(AnyT_T1, PosRNA, units='days')>0) )]
+	cat(paste("\nremove RNA values < ",RNA.min.b4T," if undetectable and before ART start, n=",length(tmp)))
+	#print(df[tmp,][, Patient])
+	set(df, tmp, 'RNA', NA_real_)
+	df		<- subset(df, !is.na(RNA))
+	#
+	#	remove RNA values < 400 if detectable and before ART start 
+	#	
+	tmp		<- df[, which(Undetectable=='No' & RNA<RNA.min.b4T & (is.na(AnyT_T1) | difftime(AnyT_T1, PosRNA, units='days')>0) )]
+	cat(paste("\nremove RNA values < 400 if detectable and before ART start, n=",length(tmp)))
+	#print(df[tmp,][, Patient])
+	set(df, tmp, 'RNA', NA_real_)
+	df		<- subset(df, !is.na(RNA))
+	#	
+	#	remove undetectable & 1e3<RNA<1e4 after treatment start to RNA
+	#	
+	tmp		<- which( df[, Undetectable=="Yes" & RNA>RNA.stdvl.udetect.aTS & RNA<1e4 & difftime(PosRNA, AnyT_T1, units='days')>=0] )
+	cat(paste("\nremove Undetectable=='Yes' and 1e3<RNA<1e4 and PosRNA>AnyT_T1', n=",length(tmp)))
+	#print(df[tmp,])
+	set(df, tmp, 'RNA', NA_real_)
+	df		<- subset(df, !is.na(RNA))	
+	#
+	#	set undetectable & RNA<1e3 after treatment start to RNA
+	#	
+	tmp		<- which( df[, Undetectable=="Yes" & RNA<=RNA.stdvl.udetect.aTS & difftime(PosRNA, AnyT_T1, units='days')>=0] )
+	cat(paste("\nsetting Undetectable=='Yes' and RNA<1e3 and PosRNA>AnyT_T1 to Undetectable=='No' and RNA, n=",length(tmp)))
+	set(df,tmp,"Undetectable","No")
+	#
+	#	set undetectable & RNA>1e4 after treatment start to RNA
+	#	
+	tmp		<- which( df[, Undetectable=="Yes" & RNA>=1e4 & difftime(PosRNA, AnyT_T1, units='days')>=0] )
+	cat(paste("\nsetting Undetectable=='Yes' and RNA>1e4 and PosRNA>AnyT_T1 to Undetectable=='No' and RNA, n=",length(tmp)))
+	#print(df[tmp,])
+	set(df,tmp,"Undetectable","No")	
+	#
+	#	remove undetectable RNA (before treatment start) that are before the first detectable RNA
+	#
+	tmp		<- df[, list(select= !all(Undetectable=='Yes')), by='Patient']
+	cat(paste("\nPatients with all Undetectable RNA, DELETE n=",nrow(subset(tmp, !select))))
+	df		<- merge( df, subset(tmp, select, Patient), by='Patient' )
+	df		<- df[,  {
+				tmp<- seq.int(which(Undetectable=='No')[1], length(Undetectable)) 
+				lapply(.SD,'[',tmp)
+			},by='Patient']
+	cat(paste("\nnumber of entries after removing undetectable RNA before any detectable RNA, n=",nrow(df)))
+	cat(paste("\nnumber of remaining undetectable RNA, n=",df[,length(which(Undetectable=='Yes'))]))
+	#M38913, M38722, M38411, M37285, M37211, M35710, M33521, M31924, M28495, M15900
+	# 	remove further suspicious entries
+	tmp		<- df[, which(Patient=='M38913' & PosRNA==as.Date("2010-07-01"))]	
+	tmp		<- c(tmp, df[, which(Patient=='M38722' & PosRNA==as.Date("2010-05-11"))])
+	tmp		<- c(tmp, df[, which(Patient=='M37211' & PosRNA==as.Date("2009-08-18"))])
+	tmp		<- c(tmp, df[, which(Patient=='M33521' & PosRNA==as.Date("2006-12-18"))])
+	tmp		<- c(tmp, df[, which(Patient=='M15900' & PosRNA==as.Date("1997-01-13"))])
+	set(df, tmp, 'RNA', NA_real_)
+	df		<- subset(df, !is.na(RNA))
+	#
+	#	remove undetectable if RNA<1e3 before ART
+	#
+	tmp		<- df[, which(Undetectable=='Yes' & RNA<=1e3 & (is.na(AnyT_T1) | difftime(AnyT_T1,PosRNA,units='days')>0 ) ) ]
+	cat(paste("\nremove undetectable RNA with RNA<1e3 before ART start, n=",length(tmp)))
+	#print(df[tmp,], n=300)
+	set(df, tmp, 'RNA', NA_real_)
+	df		<- subset(df, !is.na(RNA))
+	#
+	#	remove undetectable if RNA<1e3 before ART
+	#	
+	tmp		<- df[, which(Undetectable=='Yes' & RNA<=1e4 & (is.na(AnyT_T1) | difftime(AnyT_T1,PosRNA,units='days')>0 ) ) ]
+	cat(paste("\nremove undetectable RNA with 1e3<RNA<1e4 before ART start, n=",length(tmp)))
+	#print(df[tmp,], n=300)
+	set(df, tmp, 'RNA', NA_real_)
+	df		<- subset(df, !is.na(RNA))
+	cat(paste("\nnumber of remaining undetectable RNA, n=",df[,length(which(Undetectable=='Yes'))]))
+	#
+	#	check remaining undetectable manually
+	#	
+	cat(paste("\nCheck these measurements manually -- keeping all"))
+	print(subset(df, Undetectable=='Yes'))
+	tmp		<- df[, which(Undetectable=='Yes')]
+	set(df,tmp,"Undetectable","No")	
+	#
+	#	set RNA<RNA.min to RNA.min
+	#		
+	tmp<- which( df[, RNA<RNA.min] )
+	cat(paste("\nsetting RNA<RNA.min to RNA.min=",RNA.min,", n=",length(tmp)))		
+	set(df,tmp,"RNA",RNA.min)
+	#
+	#	wrong units ? adjust manually
+	#				
+	tmp		<- which(df[, Patient%in%c("M11314","M11331","M40782","M14759") & RNA>5e6])
+	cat(paste("\nnumber of entries with likely wrong RNA units > 5e6  -- M11314  M11331  M40782  M14759, n=",length(tmp),"SET to 5e6"))
+	#print(df[tmp,], n=300)
+	set(df, tmp, "RNA", 5e6)
+	#
+	tmp		<- which(df[, Patient=="M27377" & PosRNA>"2007-08-11"])
+	cat(paste("\nnumber of entries with likely wrong RNA units -- patient M27377 after 2007-08-11, n=",length(tmp),"DIV by 1e3"))
+	#print(df[tmp,], n=300)
+	set(df, tmp, "RNA", df[tmp,RNA]*1e-3)
+	#
+	tmp		<- which(df[, Patient%in%c("M13134","M18385","M18767","M20308","M35814","M35852","M36515","M41877") & RNA>1e6])
+	cat(paste("\nnumber of entries with likely wrong RNA units > 1e6  -- M13134  M18385  M18767  M20308  M35814  M35852  M36515  M41877, n=",length(tmp),"DIV by 10"))
+	#print(df[tmp,], n=300)
+	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)
+	#
+	tmp		<- which(df[, Patient%in%c("M38031") & RNA>1e5])
+	cat(paste("\nnumber of entries with likely wrong RNA units > 1e5  -- M38031, n=",length(tmp),"DIV by 10"))
+	#print(df[tmp,], n=300)
+	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)
+	#
+	tmp		<- which(df[, Patient%in%c("M38036","M33131","M33668","M34200","M34302","M20350") & RNA>1e6])
+	cat(paste("\nnumber of entries with likely wrong RNA units > 1e6  -- M38036  M33131  M33668  M34200  M34302 M20350, n=",length(tmp),"DIV by 100"))
+	#print(df[tmp,], n=300)
+	set(df, tmp, "RNA", df[tmp,RNA]*1e-2)
+	#
+	tmp		<- which(df[, Patient%in%c("M11995","M13266","M14486","M15621","M16588") & RNA>5e6])
+	cat(paste("\nnumber of entries with likely wrong RNA units > 5e6  -- M11995 M13266 M14486 M15621 M16588, n=",length(tmp),"DIV by 10"))
+	#print(df[tmp,], n=300)
+	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)		
+	#
+	tmp		<- which(df[, Patient%in%c("M16570") & RNA>2e6])
+	cat(paste("\nnumber of entries with likely wrong RNA units > 2e6  -- M16570, n=",length(tmp),"DIV by 10"))
+	#print(df[tmp,], n=300)
+	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)
+	#
+	tmp		<- which(df[, Patient%in%c("M17655","M37746","M30733","M27377") & RNA>2e6])
+	cat(paste("\nnumber of entries with likely wrong RNA units > 2e6  -- M17655 M37746 M30733 M27377, n=",length(tmp),"NA"))
+	#print(df[tmp,], n=300)
+	set(df, tmp, "RNA", NA)
+	#
+	tmp		<- which(df[, Patient%in%c("M17554") & RNA>1e6])
+	cat(paste("\nnumber of entries with likely wrong RNA units > 1e6  -- M17554, n=",length(tmp),"DIV by 100"))
+	#print(df[tmp,], n=300)
+	set(df, tmp, "RNA", df[tmp,RNA]*1e-2)
+	#
+	tmp		<- which(df[, Patient%in%c("M10607","M10969","M11428","M28707","M31388","M31455","M32401","M32877","M33406","M33839","M33918","M34062","M35280","M30788") & RNA>=1e6])
+	cat(paste("\nnumber of entries with likely wrong RNA units > 1e6  -- M10607 M10969 M11428 M28707 M31388 M31455 M32401 M32877 M33406 M33839 M33918 M34062 M35280  M30788, n=",length(tmp),"DIV by 10"))
+	#print(df[tmp,], n=300)
+	set(df, tmp, "RNA", df[tmp,RNA]*1e-1)
+	#
+	#	take geom mean on remaining duplicate entries
+	#
+	setkey(df, Patient, PosRNA)
+	df		<- df[, list(RNA=as.integer(round(exp(mean(log(RNA))))), Source=Source[1], Undetectable=Undetectable[1], AnyT_T1=AnyT_T1[1] ), by=c('Patient','PosRNA')]
+	#
+	# 	double check entries manually in range >5e6
+	#
+	tmp		<- merge(unique(subset(df, RNA>5e6 & PosRNA>AnyT_T1, Patient)), df, by="Patient")
+	tmp		<- df[, which(Patient%in%c("M12736","M27885","M14799","M12612") & RNA>5e6)]
+	print(df[tmp,], n=300)
+	set(df, tmp, "RNA", NA_integer_)	
+	# double check entries manually in range >5e6		
+	tmp		<- merge(subset(df, RNA>5e6, c(Patient,PosRNA)), df.treat, by="Patient")
+	tmp		<- tmp[, 	{
+				z<- which( difftime(StopTime,PosRNA,units="days")>0 )
+				z<- z[1]
+				list(PosRNA=PosRNA[z], StartTime=StartTime[z], StopTime=StopTime[z], TrI=TrI[z], TrCh.failure=TrCh.failure[z], TrCh.adherence=TrCh.adherence[z], TrCh.patrel=TrCh.patrel[z])				
+			}, by="Patient"]
+	setnames(tmp, "PosRNA","PosRNAh")
+	tmp		<- merge(tmp, df,by="Patient")		
+	tmp[, print(data.table(Patient,RNA,PosRNA,PosRNAh,StartTime,StopTime,TrI,TrCh.failure,TrCh.adherence,TrCh.patrel)), by="Patient"]
+	#
+	# double check entries manually in range >RNA<5e6 & RNA>2e6
+	#		
+	tmp		<- merge(subset(df, RNA<5e6 & RNA>2e6, c(Patient,PosRNA)), df.treat, by="Patient")
+	tmp		<- tmp[, 	{
+				z<- which( difftime(StopTime,PosRNA,units="days")>0 )
+				z<- z[1]
+				list(PosRNA=PosRNA[z], StartTime=StartTime[z], StopTime=StopTime[z], TrI=TrI[z], TrCh.failure=TrCh.failure[z], TrCh.adherence=TrCh.adherence[z], TrCh.patrel=TrCh.patrel[z])				
+			}, by="Patient"]
+	setnames(tmp, "PosRNA","PosRNAh")
+	tmp		<- merge(tmp, df,by="Patient")		
+	tmp[, print(data.table(Patient,RNA,PosRNA,PosRNAh,StartTime,StopTime,TrI,TrCh.failure,TrCh.adherence,TrCh.patrel)), by="Patient"]
+	#
+	tmp		<- which(df[, Patient=="M12612" & PosRNA=="1996-06-13"])
+	cat(paste("\nset  M12612 1996-06-13 to NA, n=",length(tmp)))
+	set(df, tmp, "RNA", NA)
+	tmp		<- which(df[, Patient=="M17044" & PosRNA=="2004-07-19"])
+	cat(paste("\nset  M17044 2004-07-19 to NA, n=",length(tmp)))
+	set(df, tmp, "RNA", NA)
+	#
+	#	set RNA>RNA.max to RNA.max
+	#		
+	tmp		<- which(df[, RNA>RNA.max])
+	cat(paste("\nsetting RNA>RNA.max to RNA.max, n=",length(tmp)))
+	set(df, tmp, "RNA", RNA.max)		
+	#
+	df		<- subset(df,!is.na(RNA), select=c(Patient, PosRNA, RNA))
+	cat(paste("\nentries with !is.na(RNA), n=",nrow(df)))	
+	df[,"lRNA":=round(log10( df[,RNA] ), d=3)]		
+	#	
+	#	compute several statistics on lRNA life history
+	#	PoslRNA_T1		time of first lRNA
+	#	lRNA_T1			first lRNA 
+	#	lRNA.i 			proportion of time spent above 'lRNA.min.infectious'
+	#	lRNA.hb4tr_LT 	last time of lRNA above 'lRNA.min.early'
+	#	lRNA.early		is there increasing lRNA before treatment 
+	#	
+	df					<- df[, {		
+									z<- which.min(PosRNA)
+									list(PosRNA=PosRNA, RNA=RNA, lRNA=lRNA, PoslRNA_T1=PosRNA[z], lRNA_T1=lRNA[z])
+								}, by=Patient]
+	tmp					<- subset(df.treat,select=c(Patient,AnyT_T1))
+	setkey(tmp,Patient)		 
+	df					<- merge(df, unique(tmp), all.x=1, by="Patient")
+	set(df, which(df[,is.na(AnyT_T1)]),"AnyT_T1", DB.locktime)		#only need AnyT_T1 for internal calculations
+	df[, lRNA.infectious:=lRNA>=lRNA.min.infectious]
+	df[, lRNA.high.b4tr	:=lRNA>=lRNA.min.early & PosRNA<AnyT_T1]
+	
+	tmp	<- df[,		{
+						z				<- data.table(PosRNA, StopRNA=c(PosRNA[-1],DB.locktime), lRNA, AnyT_T1, lRNA.infectious, lRNA.high.b4tr)
+						p.infectious	<- z[,as.numeric(difftime(StopRNA, PosRNA,units="days")/30)]							#difftime between subsequent PosRNA
+						p.infectious	<- sum(p.infectious[ which(z[,lRNA.infectious]) ]) / sum(p.infectious)	#prop of time in lRNA.infectious
+						lt.highb4tr		<- subset(z,lRNA.high.b4tr)
+						if(nrow(lt.highb4tr))
+							lt.highb4tr	<- lt.highb4tr[,StopRNA][nrow(lt.highb4tr)]	#last time before tr that VL was high
+						else
+							lt.highb4tr	<- as.Date(NA)
+						if(!is.na(lt.highb4tr) && lt.highb4tr>AnyT_T1[1])
+							lt.highb4tr	<- AnyT_T1[1]
+						early			<- ifelse(	any(lRNA.high.b4tr)  && any( lRNA[seq_len( which(lRNA.high.b4tr)[1] )]<lRNA.max.b4early )	,TRUE,FALSE)
+						list(lRNA.i= p.infectious, lRNA.hb4tr_LT=lt.highb4tr, lRNA.early= early )										
+					}, by="Patient"]
+	df	<- merge(subset(df,select=c(Patient, PosRNA, RNA, lRNA, PoslRNA_T1, lRNA_T1)), subset(tmp,select=c(Patient,lRNA.i,lRNA.early)), all.x=1, by="Patient")
+	
+	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
+	if(verbose) cat(paste("\nsave to", file))
+	save(df, file=file)	
+}
+######################################################################################
+project.hivc.Excel2dataframe.Patients.160227<- function()
+{
+	#	CONSTANTS
+	NA.Acute			<- c(NA,9)
+	NA.CountryInfection	<- c(NA,"")
+	NA.CountryBorn		<- c(NA,"",'XX')
+	NA.RegionOrigin		<- c(NA,"",'XX')
+	NA.Subtype			<- c(NA,"")
+	NA.time				<- c("","1911-01-01","1911-11-11")		
+	date.format			<- "%Y-%m-%d"
+	#	INPUT
+	dir.name			<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+	file				<- file.path(dir.name, "ATHENA_1502_All_Patient.csv")
+	outfile				<- gsub('csv','R',file)
+	#
+	#	read PATIENT csv data file	
+	#
+	df			<- read.csv(file, stringsAsFactors=FALSE)
+	#
+	#	reset Dates
+	#
+	df			<- hivc.db.reset.Date(df, 	col=c("DateBorn","MyDateNeg1","MyDatePos1","DateDied","DateLastContact","DateAIDS","FirstMed","DateInCare","T0"), 
+											NA.time=c("","1911-01-01","1911-11-11"), 
+											date.format="%Y-%m-%d")
+	#
+	#	rename columns
+	#
+	df			<- as.data.table(df)	
+	setnames(df, c("MyDateNeg1_Acc","MyDatePos1_Acc","Acute","Transmission","Reg_Last_Reason","ACS_ID"), c("NegT_Acc","PosT_Acc","isAcute","Trm","GGD_LastCh","ACS"))
+	#
+	#	set factors
+	#
+	set(df, which( df[,isAcute%in%NA.Acute] ), "isAcute", NA )		
+	set(df, NULL, "isAcute", factor(df[,isAcute], levels=c(0,1,2), labels=c("No","Yes","Maybe")) )
+	set(df, NULL, "Sex", factor(df[,Sex], levels=c(1,2), labels=c("M","F")))
+	set(df, which( df[,Subtype%in%NA.Subtype] ), "Subtype", NA_character_ )
+	set(df, NULL, "Subtype", factor(df[,Subtype]))
+	set(df, which( df[,CountryBorn%in%NA.CountryBorn] ), "CountryBorn", NA_character_ )	
+	set(df, NULL, "CountryBorn", factor(df[,CountryBorn]))
+	set(df, which( df[,CountryInfection%in%NA.CountryInfection] ), "CountryInfection", NA_character_ )		
+	set(df, NULL, "CountryInfection", factor(df[,CountryInfection]))
+	set(df, which( df[,RegionOrigin%in%NA.RegionOrigin] ), "RegionOrigin", NA_character_ )	
+	set(df, NULL, "RegionOrigin", factor(df[,RegionOrigin]))
+	set(df, NULL, 'Region_first', df[, factor(Region_first, levels=c('AMSTERDAM','ROTTERDAM','REST'), labels=c('Amst','Rott','Other'))])
+	set(df, NULL, 'Region_now', df[, factor(Region_now, levels=c('AMSTERDAM','ROTTERDAM','REST'), labels=c('Amst','Rott','Other'))])
+	set(df, NULL, 'GGD_first', 	df[, factor(GGD_first, 	levels=c(111, 		 			706, 				1009, 		 		1106,			1406, 				1906, 
+																2006, 		 			2106, 				2209, 				2406, 			2506, 				2707, 
+																3109, 					3406, 				3606, 				3906, 			4106, 				4506, 
+																4607, 					4810, 				5006, 				5206, 			5406, 				5608, 
+																6011, 					6106, 				7206, 				7306), 
+														labels=c('Groningen',			'Drenthe',			'IJsselland',		'Twente',		'Gelre_IJssel',		'Hulpverlening_Gelderland_Midden',
+																'Rivierenland',		'Nijmegen', 		'Flevoland',		'Utrecht',		'Midden_Nederland',	'Hollands_Noorden',
+																'Kennemerland',		'Amsterdam',		'Gooi_Vechtstreek',	'Den_Haag',		'Zuid_Holland_West','Hollands_Midden',
+																'Rotterdam_Rijnmond',	'Zuid_Holland_Zuid','Zeeland',			'West_Brabant',	'Hart_voor_Brabant', 'Brabant_Zuidoost',
+																'Limburg-Noord',		'Zuid_Limburg',		'Fryslan',			'Zaanstreek_Waterland'))])
+	set(df, NULL, 'GGD_now', 	df[, factor(GGD_now, 	levels=c(111, 		 			706, 				1009, 		 		1106,			1406, 				1906, 
+																2006, 		 			2106, 				2209, 				2406, 			2506, 				2707, 
+																3109, 					3406, 				3606, 				3906, 			4106, 				4506, 
+																4607, 					4810, 				5006, 				5206, 			5406, 				5608, 
+																6011, 					6106, 				7206, 				7306), 
+														labels=c('Groningen',			'Drenthe',			'IJsselland',		'Twente',		'Gelre_IJssel',		'Hulpverlening_Gelderland_Midden',
+																'Rivierenland',		'Nijmegen', 		'Flevoland',		'Utrecht',		'Midden_Nederland',	'Hollands_Noorden',
+																'Kennemerland',		'Amsterdam',		'Gooi_Vechtstreek',	'Den_Haag',		'Zuid_Holland_West','Hollands_Midden',
+																'Rotterdam_Rijnmond',	'Zuid_Holland_Zuid','Zeeland',			'West_Brabant',	'Hart_voor_Brabant', 'Brabant_Zuidoost',
+																'Limburg-Noord',		'Zuid_Limburg',		'Fryslan',			'Zaanstreek_Waterland'))])	
+	set(df, df[, which(Trm==900)], 'Trm', NA_integer_)
+	set(df, NULL, "Trm", factor(df[, Trm], 	levels= c(	100, 	110, 	150, 	200,  202, 		300,  	400,  		450,  		600,  	620, 		800),
+											labels= c(	'MSM',	'BI',	'SXCH',	'HET','HETfa',	'IDU',	'BLOOD',	'NEEACC',	'PREG',	'BREAST',	'OTH')))
+	set(df, NULL, 'RegionOrigin', df[, factor(RegionOrigin, levels=c('AUS',		'Car',		'EUC',			'EUO',				'EUW',		'Lat',					'NAM',						'NL',	'OAP',				'SSA',					'ZAz'),
+															labels=c('Austr_NZ','Caribbean','Central_EU',	'Eastern_EU_stans',	'Western_EU','Latin_South_America',	'North_Africa_Middle_East',	'NL',	'Oceania_Pacific',	'Sub_Saharan_Africa',	'Sout_SouthEast_Asia'))])
+	set(df, NULL, 'isDead', df[, factor(is.na(DateDied), levels=c(TRUE,FALSE), labels=c("No","Yes"))] )
+	set(df, NULL, "NegT_Acc", factor(df[,NegT_Acc], levels=c(0,1), labels=c("No","Yes")))
+	set(df, NULL, "PosT_Acc", factor(df[,PosT_Acc], levels=c(0,1), labels=c("No","Yes")))
+	
+	#
+	#	process Acute fields
+	#
+	tmp	<- df[, {
+				tmp		<- NA_character_
+				z		<- Acute_Spec_1%in%c(1L,2L) | Acute_Spec_2%in%c(1L,2L) | Acute_Spec_3%in%c(1L,2L) | Acute_Spec_4%in%c(1L,2L)
+				if(!is.na(z) & z)
+					tmp	<- 'LAB'
+				z		<- Acute_Spec_1%in%c(3L,4L,8L,9L) | Acute_Spec_2%in%c(3L,4L,8L,9L) | Acute_Spec_3%in%c(3L,4L,8L,9L) | Acute_Spec_4%in%c(3L,4L,8L,9L)
+				if(is.na(tmp) & !is.na(z) & z)
+					tmp	<- 'SYM'
+				list(Acute_Spec=tmp)
+			}, by='Patient']
+	df	<- merge(df, tmp, by='Patient')
+	set(df, NULL, 'Acute_Spec', df[, factor(Acute_Spec)])
+	setkey(df,Patient)
+	str(df)
+	#
+	#	reset NegT date (checked w Ard)
+	#
+	tmp	<- df[, which(Patient=='M40895' & MyDateNeg1=='2011-04-06')]	
+ 	set(df, tmp, 'MyDateNeg1', as.Date('2010-04-06'))
+	set(df, tmp, 'NegT_Acc', 'No')
+	tmp	<- df[, which(Patient=='M29536' & MyDateNeg1=='1994-07-07')]	
+	set(df, tmp, 'MyDateNeg1', as.Date('1994-07-02'))	
+	tmp	<- df[, which(Patient=='M14759' & MyDateNeg1=='1991-09-15')]
+	set(df, tmp, 'MyDateNeg1', as.Date('1991-08-015'))	
+	tmp	<- df[, which(Patient=='M29967' & MyDateNeg1=='2000-07-15')]
+	set(df, tmp, 'MyDateNeg1', NA)
+	set(df, tmp, 'NegT_Acc', NA_character_)	
+	tmp	<- df[, which(Patient=='M30654' & MyDateNeg1=='2004-05-15')]
+	set(df, tmp, 'MyDateNeg1', NA)
+	set(df, tmp, 'NegT_Acc', NA_character_)	
+	tmp	<- df[, which(Patient=='M35339' & MyDateNeg1=='2007-08-15')]
+	set(df, tmp, 'MyDateNeg1', NA)
+	set(df, tmp, 'NegT_Acc', NA_character_)
+	tmp	<- df[, which(Patient=='M35513' & MyDateNeg1=='2007-10-15')]
+	set(df, tmp, 'MyDateNeg1', NA)
+	set(df, tmp, 'NegT_Acc', NA_character_)	
+	#df[, table(is.na(isAcute), Acute_Spec)]; subset(df, is.na(isAcute) & !is.na(Acute_Spec))
+	#df[, table(isAcute, Acute_Spec, useNA='if')]
+	#
+	#	reset isAcute
+	#
+	tmp	<- df[, which(Acute_Spec=='SYM' & is.na(isAcute))]
+	cat(paste('\nFound entries with AcuteSpec and is.na(isAcute), n=', length(tmp)))
+	set(df, tmp, 'isAcute', 'Maybe') 
+	tmp	<- df[, which(Acute_Spec=='LAB' & is.na(isAcute))]
+	cat(paste('\nFound entries with AcuteSpec and is.na(isAcute), n=', length(tmp)))
+	set(df, tmp, 'isAcute', 'Yes') 	
+	tmp	<- df[, which(Acute_Spec=='LAB' & isAcute=='No')]
+	cat(paste('\nFound entries with AcuteSpec and isAcute==No, n=', length(tmp)))
+	set(df, tmp, 'isAcute', 'Yes') 
+	tmp	<- df[, which(Acute_Spec=='SYM' & isAcute=='No')]
+	cat(paste('\nFound entries with AcuteSpec and isAcute==No, n=', length(tmp)))
+	set(df, tmp, 'isAcute', 'Maybe') 
+	#	reset AcuteSpec
+	tmp	<- df[, which(is.na(Acute_Spec) & isAcute=='Yes')]
+	cat(paste('\nFound entries with is.na(Acute_Spec) and isAcute==Yes, n=', length(tmp)))
+	set(df, tmp, 'Acute_Spec', 'CLIN')
+	tmp	<- df[, which(Acute_Spec=='SYM' & isAcute=='Yes')]
+	cat(paste('\nFound entries with Acute_Spec==SYM and isAcute==Yes, n=', length(tmp)))
+	set(df, tmp, 'Acute_Spec', 'CLIN') 	
+	tmp	<- df[, which(is.na(Acute_Spec) & isAcute=='Maybe')]
+	cat(paste('\nFound entries with is.na(Acute_Spec) and isAcute==Maybe, n=', length(tmp)))
+	set(df, tmp, 'Acute_Spec', 'SYM') 
+	#
+	#
+	cat("\nsave to", outfile)	
+	save(df, file=outfile)	
+}
+######################################################################################
+project.hivc.Excel2dataframe.Patients.130301<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 {
 	if(1)
 	{
@@ -2779,7 +4146,7 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	
 	#reset NegT date
 	tmp	<- df[, which(Patient=='M40895' & MyDateNeg1=='2011-04-06')]	
- 	set(df, tmp, 'MyDateNeg1', as.Date('2010-04-06'))
+	set(df, tmp, 'MyDateNeg1', as.Date('2010-04-06'))
 	set(df, tmp, 'NegT_Acc', 'No')
 	tmp	<- df[, which(Patient=='M29536' & MyDateNeg1=='1994-07-07')]	
 	set(df, tmp, 'MyDateNeg1', as.Date('1994-07-02'))	
@@ -2824,7 +4191,7 @@ project.hivc.Excel2dataframe.Patients<- function(dir.name= DATA, min.seq.len=21,
 	tmp	<- df[, which(is.na(Acute_Spec) & isAcute=='Maybe')]
 	cat(paste('\nFound entries with is.na(Acute_Spec) and isAcute==Maybe, n=', length(tmp)))
 	set(df, tmp, 'Acute_Spec', 'SYM') 
-	 	
+	
 	if(verbose) cat(paste("\nsave to", paste(substr(file.update, 1, nchar(file.update)-3),'R',sep='')))	
 	save(df, file=paste(substr(file.update, 1, nchar(file.update)-3),'R',sep=''))	
 }

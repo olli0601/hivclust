@@ -19,33 +19,29 @@ hivc.db.resetNegTbyPoslRNA_T1<- function(df.all,verbose=1)
 ######################################################################################
 hivc.db.resetNegTbyAnyPosT<- function(df.all,verbose=1)
 {	
-	tmp		<- which(df.all[, NegT_Acc=="Yes" & NegT>AnyPos_T1])
-	if(verbose) cat(paste("\nnumber of seq with NegT_Acc=='Yes' & NegT> pos test or pos seq, n=",length(tmp)))
-	if(verbose) print(as.character(unique(df.all[tmp,Patient])))
+	tmp		<- df.all[, which(NegT_Acc=="Yes" & NegT>AnyPos_T1)]
+	cat(paste("\nnumber of seq with NegT_Acc=='Yes' & NegT> pos test or pos seq, n=",length(tmp)))
+	print(as.character(unique(df.all[tmp,Patient])))
+	set(df.all, tmp, "NegT", NA_real_)
+	set(df.all, tmp, "NegT_Acc", NA_character_)
+	tmp		<- df.all[, which(NegT_Acc=="No" & NegT>AnyPos_T1)]
+	cat(paste("\nnumber of seq with NegT_Acc=='No' & NegT> pos test or pos seq, n=",length(tmp)))
+	print(as.character(unique(df.all[tmp,Patient])))
 	set(df.all, tmp, "NegT", NA)
-	tmp2	<- as.character(df.all[,NegT_Acc])
-	tmp2[tmp]<- NA
-	set(df.all, NULL, "NegT_Acc", as.factor(tmp2))		
-	tmp		<- which(df.all[, NegT_Acc=="No" & NegT>AnyPos_T1])
-	if(verbose) cat(paste("\nnumber of seq with NegT_Acc=='No' & NegT> pos test or pos seq, n=",length(tmp)))
-	if(verbose) print(as.character(unique(df.all[tmp,Patient])))
-	set(df.all, tmp, "NegT", NA)
-	tmp2	<- as.character(df.all[,NegT_Acc])
-	tmp2[tmp]<- NA
-	set(df.all, NULL, "NegT_Acc", as.factor(tmp2))
+	set(df.all, tmp, "NegT_Acc", NA_character_)
 	df.all
 }		
 ######################################################################################
 hivc.db.resetCD4byNegT<- function(df.cross, with.NegT_Acc.No=0, verbose=1)
 {
-	tmp			<- which(df.cross[,NegT_Acc=="Yes" & 	NegT>PosCD4])
+	tmp			<- df.cross[, which(NegT_Acc=="Yes" & 	NegT>PosCD4)]
 	if(verbose)		cat(paste("\nnumber of entries with NegT_Acc=='Yes' & 	NegT>PosCD4, n=", length(tmp),"SETTING CD4 to NA"))
 	set(df.cross, tmp, "PosCD4", NA)
 	set(df.cross, tmp, "CD4", NA)
 	df.cross	<- subset(df.cross,!is.na(CD4))
 	if(!with.NegT_Acc.No)
 		return(df.cross)
-	tmp			<- which(df.cross[,NegT_Acc=="No" & 	NegT>PosCD4])
+	tmp			<- df.cross[,which(NegT_Acc=="No" & 	NegT>PosCD4)]
 	if(verbose)		cat(paste("\nnumber of entries with NegT_Acc=='No' & 	NegT>PosCD4, n=", length(tmp),"SETTING CD4 to NA"))
 	set(df.cross, tmp, "PosCD4", NA)
 	set(df.cross, tmp, "CD4", NA)
@@ -125,7 +121,6 @@ hivc.db.getlRNA.T1andTS<- function(df.cross, lRNA.bTS.quantile= 0.75, lRNA.aTS.q
 						lRNA_aTS		= lRNA_aTS,
 						lRNAi_bTS		= lRNAi_bTS,
 						lRNAi_aTS		= lRNAi_aTS,
-						lRNA.hb4tr_LT	= lRNA.hb4tr_LT[1], 
 						lRNA.early		= lRNA.early[1]				) 							 	
 			},by=idx]
 	if(verbose)	cat(paste("\nnumber of seq with PosCD4_T1 CD4_T1  PosCD4_TS CD4_TS is n=",nrow(ans)))
@@ -433,6 +428,38 @@ hivc.db.getplot.livingbyexposure<- function(df, plot.file, plot.file.p, plot.yla
 		dev.off()
 	}
 	list(t.living=t.living,p.living=p.living)
+}
+######################################################################################
+hivc.db.reset.Date<- function(df, col, NA.time, date.format="%Y-%m-%d")
+{
+	for(x in col)
+	{
+		cat(paste("\nprocess column", x))
+		for(y in NA.time)
+		{			
+			nok.idx				<- which( df[,x]==y )
+			cat(paste("\nentries with format ",y,", n=", length(nok.idx)))						
+			if(length(nok.idx))	
+				df[nok.idx,x]	<- NA			
+		}
+		df[,x]	<- as.Date(df[,x], format=date.format)	
+	}		
+	df
+}
+######################################################################################
+hivc.db.reset.ARTStartFromAccurate<- function(df, col="AnyT_T1")
+{
+	nacc				<- which(df[, AnyT_T1_Acc=="NAccD"])		
+	tmp					<- as.POSIXlt(unclass(df[nacc, col, with=FALSE])[[col]])
+	tmp$mon				<- tmp$mon+1
+	tmp$mday			<- 1
+	set(df, nacc, col, as.Date(tmp))
+	nacc				<- which(df[, AnyT_T1_Acc%in%c("NAccMD","NAccYMD")])
+	tmp					<- as.POSIXlt(unclass(df[nacc, col, with=FALSE])[[col]])
+	tmp$mday			<- 31
+	tmp$mon				<- 11
+	set(df, nacc, col, as.Date(tmp))
+	df
 }
 ######################################################################################
 hivc.db.Date2numeric<- function( x )

@@ -32,18 +32,18 @@ age.props_univariate<- function()
 		method.nodectime		<- 'any'
 		method.risk				<- 'm5D.tp4'
 		method.Acute			<- 'higher'	#'central'#'empirical'
-		method.minQLowerU		<- 0.148
+		method.minQLowerU		<- 0.148	# min MAE out of all tried
 		method.use.AcuteSpec	<- 1
 		method.brl.bwhost		<- 2
 		method.lRNA.supp		<- 100
 		#method.thresh.pcoal	<- 0.2
-		method.thresh.pcoal		<- 0.1		# try lower to see if bias reduced
+		method.thresh.pcoal		<- 0.3		# min MAE out of all tried
 		method.minLowerUWithNegT<- 1
 		method.cut.brl			<- Inf		#does not make a difference because compatibility test kills these anyway
 		method.tpcut			<- 7
 		method.PDT				<- 'SEQ'	# 'PDT'	
 		#method.thresh.bs		<- 0.8
-		method.thresh.bs		<- 0.7		# try lower to see if bias reduced
+		method.thresh.bs		<- 0.7		# min MAE out of all tried
 		method.realloc			<- NA
 		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
 		infiletree				<- paste(infile,"examlbs500",sep="_")
@@ -425,71 +425,234 @@ age.props_univariate<- function()
 ######################################################################################
 age.explore.Recipient.bias<- function()
 {
-	YX
-	cluphy.info
-	ri.ALLMSM
-	ri.CLU
-	indir		<- '~/duke/2013_HIV_NL/ATHENA_2013/data/tpairs_age'
-	infile		<- 'ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Ac=MY_D=35_sasky_2011_Wed_Dec_18_11:37:00_2013_3pa1H1.48C1V100bInfs0.7T7STRAT_m5D.R'
-	outfile.pdf	<- paste(indir, '/', gsub('\\.R',paste('_Rec_by_AgeC_','160217','.pdf',sep=''),infile), sep='')
-	outfile.pdf	<- paste(indir, '/', gsub('\\.R',paste('_Rec_by_AgeC_','160223_C1s70','.pdf',sep=''),infile), sep='')
+	#	setup runs that I looked at
+	din		<- rbind( 	as.data.table(expand.grid( 	method.cut.brl=Inf,
+							method.minQLowerU=0.148,
+							method.thresh.bs=c(0.7,0.8,0.85),
+							method.thresh.pcoal= c(0.1,0.2,0.3)	)),
+						as.data.table(expand.grid( 	method.cut.brl=Inf,
+							method.minQLowerU=c(0.109,0.194),
+							method.thresh.bs=0.8,
+							method.thresh.pcoal= 0.2	))	)
+	dout	<- vector('list',nrow(din))
+	for(i in seq_len(nrow(din)))
+	{		
+		cat('\nprocess row',i)
+		#	
+		#	read data.. ..this will take a while of initializations to use the file naming that grew over the years..
+		#	
+		indir					<- paste(DATA,"fisheretal_data",sep='/')		
+		indircov				<- paste(DATA,"fisheretal_data",sep='/')
+		outdir					<- paste(DATA,"tpairs_age",sep='/')
+		infile.cov.study		<- "ATHENA_2013_03_AllSeqPatientCovariates"
+		infile.viro.study		<- paste(indircov,"ATHENA_2013_03_Viro.R",sep='/')
+		infile.immu.study		<- paste(indircov,"ATHENA_2013_03_Immu.R",sep='/')
+		infile.treatment.study	<- paste(indircov,"ATHENA_2013_03_Regimens.R",sep='/')	
+		infile.cov.all			<- "ATHENA_2013_03_AllSeqPatientCovariates_AllMSM"
+		infile.viro.all			<- paste(indircov,"ATHENA_2013_03_Viro_AllMSM.R",sep='/')
+		infile.immu.all			<- paste(indircov,"ATHENA_2013_03_Immu_AllMSM.R",sep='/')
+		infile.treatment.all	<- paste(indircov,"ATHENA_2013_03_Regimens_AllMSM.R",sep='/')	
+		infile.trm.model		<- NA
+		t.period				<- 1/8
+		t.recent.startctime		<- hivc.db.Date2numeric(as.Date("1996-07-15"))
+		t.recent.startctime		<- floor(t.recent.startctime) + floor( (t.recent.startctime%%1)*100 %/% (t.period*100) ) * t.period
+		t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
+		t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+		resume					<- 1
+		verbose					<- 1	
+		method					<- '3p'
+		method.recentctime		<- '2011-01-01'
+		method.nodectime		<- 'any'
+		method.risk				<- 'm5D.tp4'
+		method.Acute			<- 'higher'	#'central'#'empirical'
+		method.minQLowerU		<- din$method.minQLowerU[i]
+		method.use.AcuteSpec	<- 1
+		method.brl.bwhost		<- 2
+		method.lRNA.supp		<- 100
+		method.thresh.pcoal		<- din$method.thresh.pcoal[i]
+		method.minLowerUWithNegT<- 1
+		method.cut.brl			<- din$method.cut.brl[i]		
+		method.tpcut			<- 7
+		method.PDT				<- 'SEQ'		
+		method.thresh.bs		<- din$method.thresh.bs[i]	
+		method.realloc			<- NA
+		infile					<- "ATHENA_2013_03_-DR-RC-SH+LANL_Sequences"
+		infiletree				<- paste(infile,"examlbs500",sep="_")
+		insignat				<- "Wed_Dec_18_11:37:00_2013"							
+		clu.infilexml.opt		<- "clrh80"
+		clu.infilexml.template	<- "sasky_sdr06fr"	
+		outfile					<- paste(infile,'_Ac=MY_D=35_sasky',sep='')
+		clu.infile			<- infile
+		clu.indir			<- indir
+		clu.insignat		<- insignat	
+		t.recent.endctime	<- hivc.db.Date2numeric(as.Date(method.recentctime))	
+		t.recent.endctime	<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period	
+		outfile				<- paste( outfile, ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')), sep='')	
+		clu.infilexml.opt	<- paste(clu.infilexml.opt,'_bs',method.thresh.bs,'_brl1000',sep='')
+		infile.trm.model	<- paste(indircov,"TchainBelgium_set7_pol_GA11emodel_nA_INFO.R",sep='/')
+		if(method.nodectime=='any')
+			method				<- paste(method,'a',sep='')
+		if(method.use.AcuteSpec==1)
+			method				<- paste(method, method.use.AcuteSpec, sep='')
+		if(method.Acute=='higher')
+		{
+			dur.Acute			<- c(Yes= 5.28*30, Maybe=5.28*30)
+			method				<- paste(method,'H',sep='')
+		}		
+		if(method.minQLowerU!=0.01)
+			method				<- paste(method, method.minQLowerU*10,sep='')	
+		if(method.minQLowerU==0)
+			method				<- paste(method,'m',sep='')
+		if(method.thresh.pcoal!=0.5)
+			method				<- paste(method,'C',method.thresh.pcoal*10,sep='')	
+		if(method.lRNA.supp<1e3)
+			method				<- paste(method,'V',method.lRNA.supp,sep='')
+		if(!method.minLowerUWithNegT)
+			method				<- paste(method,'N',method.minLowerUWithNegT,sep='')
+		if(method.cut.brl!=0.08)
+			method				<- paste(method,'b',method.cut.brl,sep='')	
+		if(method.thresh.bs!=0.8)
+			method				<- paste(method,'s',method.thresh.bs,sep='')
+		if(method.tpcut==7)
+		{
+			tp.cut				<- c(-Inf, 2006.5, 2008, 2009.5, 2010, 2010.5, 2011)
+			method				<- paste(method,'T',method.tpcut,sep='')
+		}			
+		adjust.AcuteByNegT		<- 1
+		any.pos.grace.yr		<- Inf	
+		method.lRNA.supp		<- log10(method.lRNA.supp)	
+		#	get df.all.allmsm	YX	ri.ALLMSM	ri.CLU
+		tmp				<- project.athena.Fisheretal.select.denominator(	indir, infile, insignat, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infiletree=infiletree, 
+				adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=1/12, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec, 
+				thresh.bs=method.thresh.bs, t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime)	
+		df.all			<- tmp$df.all	
+		df.denom.CLU	<- tmp$df.select
+		df.denom.SEQ	<- tmp$df.select.SEQ	
+		ri.CLU			<- unique(subset(df.denom.CLU, select=Patient))
+		ri.SEQ			<- unique(subset(df.denom.SEQ, select=Patient))
+		df.viro			<- tmp$df.viro
+		df.immu			<- tmp$df.immu
+		df.treatment	<- tmp$df.treatment	
+		clumsm.subtrees	<- tmp$clumsm.subtrees
+		clumsm.info		<- tmp$clumsm.info
+		clumsm.ph		<- tmp$clumsm.ph
+		setkey(clumsm.info, cluster)	
+		#
+		#	get data relating to full population (MSM including those without seq)
+		#	this merges the patients with HIV 1 B sequences and the MSM patients without a sequence 
+		tmp					<- project.athena.Fisheretal.select.denominator(	indir, infile, insignat, indircov, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, 
+				infiletree=NULL, adjust.AcuteByNegT=adjust.AcuteByNegT, adjust.NegT4Acute=NA, adjust.NegTByDetectability=1/12, adjust.minSCwindow=0.25, adjust.AcuteSelect=c('Yes','Maybe'), use.AcuteSpec=method.use.AcuteSpec,
+				t.recent.endctime=t.recent.endctime, t.recent.startctime=t.recent.startctime,
+				df.viro.part=df.viro, df.immu.part=df.immu, df.treatment.part=df.treatment, df.all.part=df.all)	
+		df.all.allmsm		<- tmp$df.all
+		df.viro.allmsm		<- tmp$df.viro
+		df.immu.allmsm		<- tmp$df.immu
+		df.treatment.allmsm	<- tmp$df.treatment
+		tmp					<- tmp$df.select.SEQ	
+		setkey(tmp, Patient)
+		ri.ALLMSM			<- unique(tmp)
+		#	load precomputed YX
+		save.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX', method.PDT, method,'.R',sep='')
+		tmp				<- project.athena.Fisheretal.YX.part2(	YX.part1, df.all, df.treatment, df.viro, predict.t2inf, t2inf.args, indir, insignat, indircov, infile.cov.study, infiletree, infile.trm.model, outdir, outfile, cluphy=cluphy, cluphy.info=cluphy.info, cluphy.map.nodectime=cluphy.map.nodectime, df.tpairs.4.rawbrl=df.tpairs, dur.Acute=dur.Acute,
+								rm.zero.score=TRUE, any.pos.grace.yr=any.pos.grace.yr, thresh.pcoal=method.thresh.pcoal, cut.brl=method.cut.brl, brl.bwhost.multiplier=method.brl.bwhost, method.minLowerUWithNegT=method.minLowerUWithNegT, lRNA.supp=method.lRNA.supp, tp.cut=tp.cut,
+								t.period=t.period, save.file=save.file, resume=1, method=method, save.all=FALSE)
+		YX				<- copy(tmp$YX)
+		YX				<-	stratificationmodel.Age_2833384348.Stage_UAE_UAC_UC_D_TS_TO_F(YX, lRNA.supp=method.lRNA.supp)
+		gc()
+		#	
+		#	do calculations!
+		#
+		tmp3	<- YX[, list(tna=length(unique(t))), by=c('Patient','AgeC')]
+		tmp3	<- merge(tmp3, YX[, list(AnyPos_T1=AnyPos_T1[1], tn=length(unique(t))), by=c('Patient')], by=c('Patient'))
+		tmp3[, tmidC2:= cut(AnyPos_T1, breaks=c(-Inf, 2008, Inf), labels=c('2004-2007','2008-2010'))]
+		tmp3	<- merge(tmp3,tmp3[, list(nRec=length(unique(Patient))), by='tmidC2'],by='tmidC2')
+		set(tmp3, NULL, 'AgeC', tmp3[, factor(as.character(AgeC), levels=c('(-1,28]','(28,33]','(33,38]','(38,43]','(43,48]','(48,100]'), labels=c('16-27','28-32','33-37','38-42','43-47','48-80'))])
+		YXar	<- copy(tmp3)
+		setkey(YXar, tmidC2, Patient, AgeC)
+		YXar	<- unique(subset(YXar, select=c(tmidC2, Patient, AgeC, tn, tna, nRec)))
+		set(YXar, NULL, 'tna', YXar[, tna/tn])
+		YXar	<- YXar[, list(TYPE='Recipient', N= sum(tna), Ntp=nRec[1]), by=c('tmidC2','AgeC')]
+		#	add distribution among new diagnoses
+		tmp		<- subset(df.all.allmsm, AnyPos_T1>2004 & AnyPos_T1<2011 & Trm%in%c('MSM','BI'), c(Patient, AnyPos_T1, DateBorn, PosSeqT))
+		setkey(tmp, Patient)
+		tmp		<- unique(tmp)
+		tmp[, Age:=AnyPos_T1-DateBorn]
+		tmp[, tmidC2:= cut(AnyPos_T1, breaks=c(-Inf, 2008, Inf), labels=c('2004-2007','2008-2010'))]
+		tmp[, AgeC:= cut(Age, breaks=c(-Inf, 28, 33, 38, 43, 48, Inf), labels=c('16-27','28-32','33-37','38-42','43-47','48-80'))]
+		tmp2	<- tmp[, list(TYPE='Diagnosed', N= length(Patient)), by=c('tmidC2','AgeC')]
+		tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
+		YXar	<- rbind(YXar, tmp2)
+		#	add distribution among recently infected
+		tmp3	<- copy(ri.ALLMSM)	
+		tmp3[, Recent:='Y']	
+		tmp		<- merge(tmp, unique(subset(tmp3, select=c(Patient,Recent))), by='Patient', all.x=1)
+		set(tmp, tmp[, which(is.na(Recent))],'Recent', 'N')
+		tmp2	<- subset(tmp, Recent=='Y')[, list(TYPE='Recently infected', N= length(Patient)), by=c('tmidC2','AgeC')]
+		tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
+		YXar	<- rbind(YXar, tmp2)
+		#	add distribution among sequenced recently infected
+		tmp2	<- subset(tmp, Recent=='Y' & !is.na(PosSeqT))[, list(TYPE='Recently Infected Sequenced', N= length(Patient)), by=c('tmidC2','AgeC')]	
+		tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
+		YXar	<- rbind(YXar, tmp2)
+		#	add distribution among clustering recently infected
+		tmp3	<- copy(ri.CLU)	
+		tmp3[, Clustering:='Y']	
+		tmp		<- merge(tmp, tmp3, by='Patient', all.x=1)
+		set(tmp, tmp[, which(is.na(Clustering))],'Clustering', 'N')
+		tmp2	<- subset(tmp, Recent=='Y' & Clustering=='Y')[, list(TYPE='Recently Infected Clustering', N= length(Patient)), by=c('tmidC2','AgeC')]
+		tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
+		YXar	<- rbind(YXar, tmp2)	
+		YXar[, P:=N/Ntp]
+		
+		YXar[, method.minQLowerU:=din$method.minQLowerU[i]]
+		YXar[, method.thresh.pcoal:=din$method.thresh.pcoal[i]]		
+		YXar[, method.cut.brl:=din$method.cut.brl[i]]		
+		YXar[, method.thresh.bs:=din$method.thresh.bs[i]]	
+		dout[[i]]<- copy(YXar)
+		YXar	<- NULL
+		gc()
+	}
+	YXar		<- do.call('rbind', dout)
+	YXar[, TITLE:= paste('PT=',method.minQLowerU*100,' CO=',method.thresh.pcoal*100,'\nBRL=',method.cut.brl,' BS=',method.thresh.bs*100, sep='')]
 	
-	tmp3	<- YX[, list(tna=length(unique(t))), by=c('Patient','AgeC')]
-	tmp3	<- merge(tmp3, YX[, list(AnyPos_T1=AnyPos_T1[1], tn=length(unique(t))), by=c('Patient')], by=c('Patient'))
-	tmp3[, tmidC2:= cut(AnyPos_T1, breaks=c(-Inf, 2008, Inf), labels=c('2004-2007','2008-2010'))]
-	tmp3	<- merge(tmp3,tmp3[, list(nRec=length(unique(Patient))), by='tmidC2'],by='tmidC2')
-	set(tmp3, NULL, 'AgeC', tmp3[, factor(as.character(AgeC), levels=c('(-1,28]','(28,33]','(33,38]','(38,43]','(43,48]','(48,100]'), labels=c('16-27','28-32','33-37','38-42','43-47','48-80'))])
-	YXar	<- copy(tmp3)
-	setkey(YXar, tmidC2, Patient, AgeC)
-	YXar	<- unique(subset(YXar, select=c(tmidC2, Patient, AgeC, tn, tna, nRec)))
-	set(YXar, NULL, 'tna', YXar[, tna/tn])
-	YXar	<- YXar[, list(TYPE='Recipient', N= sum(tna), Ntp=nRec[1]), by=c('tmidC2','AgeC')]
-	#	add distribution among new diagnoses
-	tmp		<- subset(df.all.allmsm, AnyPos_T1>2004 & AnyPos_T1<2011 & Trm%in%c('MSM','BI'), c(Patient, AnyPos_T1, DateBorn, PosSeqT))
-	setkey(tmp, Patient)
-	tmp		<- unique(tmp)
-	tmp[, Age:=AnyPos_T1-DateBorn]
-	tmp[, tmidC2:= cut(AnyPos_T1, breaks=c(-Inf, 2008, Inf), labels=c('2004-2007','2008-2010'))]
-	tmp[, AgeC:= cut(Age, breaks=c(-Inf, 28, 33, 38, 43, 48, Inf), labels=c('16-27','28-32','33-37','38-42','43-47','48-80'))]
-	tmp2	<- tmp[, list(TYPE='Diagnosed', N= length(Patient)), by=c('tmidC2','AgeC')]
-	tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
-	YXar	<- rbind(YXar, tmp2)
-	#	add distribution among recently infected
-	tmp3	<- copy(ri.ALLMSM)	
-	tmp3[, Recent:='Y']	
-	tmp		<- merge(tmp, unique(subset(tmp3, select=c(Patient,Recent))), by='Patient', all.x=1)
-	set(tmp, tmp[, which(is.na(Recent))],'Recent', 'N')
-	tmp2	<- subset(tmp, Recent=='Y')[, list(TYPE='Recently infected', N= length(Patient)), by=c('tmidC2','AgeC')]
-	tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
-	YXar	<- rbind(YXar, tmp2)
-	#	add distribution among sequenced recently infected
-	tmp2	<- subset(tmp, Recent=='Y' & !is.na(PosSeqT))[, list(TYPE='Recently Infected Sequenced', N= length(Patient)), by=c('tmidC2','AgeC')]	
-	tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
-	YXar	<- rbind(YXar, tmp2)
-	#	add distribution among clustering recently infected
-	tmp3	<- copy(ri.CLU)	
-	tmp3[, Clustering:='Y']	
-	tmp		<- merge(tmp, tmp3, by='Patient', all.x=1)
-	set(tmp, tmp[, which(is.na(Clustering))],'Clustering', 'N')
-	tmp2	<- subset(tmp, Recent=='Y' & Clustering=='Y')[, list(TYPE='Recently Infected Clustering', N= length(Patient)), by=c('tmidC2','AgeC')]
-	tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
-	YXar	<- rbind(YXar, tmp2)	
-	YXar[, P:=N/Ntp]
-	#	plot
-	YXplot	<- copy(YXar)
-	#set(YXplot, NULL, 'TYPE', YXplot[, factor(TYPE, levels=c('Recipient','Recently Infected Clustering','Recently Infected Sequenced','Recently infected','Diagnosed'), labels=c('Recipient MSM\n(of whom sources were characterised)','Recently infected\nIn phylo cluster\nBS=80% GD=Inf Coal=80%','Recently infected\nwith a sequence','Recently infected\n(population)','Newly diagnosed MSM\n(population)') )])
-	set(YXplot, NULL, 'TYPE', YXplot[, factor(TYPE, levels=c('Recipient','Recently Infected Clustering','Recently Infected Sequenced','Recently infected','Diagnosed'), labels=c('Recipient MSM\n(of whom sources were characterised)','Recently infected\nIn phylo cluster\nBS=70% GD=Inf Coal=90%','Recently infected\nwith a sequence','Recently infected\n(population)','Newly diagnosed MSM\n(population)') )])
+	#	plot overall
+	YXplot	<- copy(YXar)	
+	set(YXplot, NULL, 'TYPE', YXplot[, factor(TYPE, levels=c('Recipient','Recently Infected Clustering','Recently Infected Sequenced','Recently infected','Diagnosed'), labels=c('Recipient MSM\n(of whom sources were characterised)','Recently infected\nIn phylo cluster','Recently infected\nwith a sequence','Recently infected\n(population)','Newly diagnosed MSM\n(population)') )])
 	set(YXplot, NULL, 'tmidC2', YXplot[, factor(as.character(tmidC2, levels=c('2004-2007','2008-2020'),labels=c('2004-2007\n(time of diagnosis)','2008-2010\n(time of diagnosis)')))])
 	ggplot(YXplot, aes(y=100*P, x=AgeC, fill=TYPE)) +
 			geom_bar(stat='identity',position='dodge', colour='black', width=0.8) + 
-			facet_grid(~tmidC2) + 
+			facet_grid(TITLE~tmidC2) + 
 			scale_y_continuous(expand=c(0,0), limit=c(0,25)) +
 			#scale_fill_manual(values=c('Newly diagnosed MSM\n(population)'="#FEB24C", 'Recipient MSM\n(of whom sources could be characterised)'="#E31A1C")) +
 			scale_fill_brewer(palette='Pastel1') +
 			coord_flip() +
 			theme_bw() + theme(legend.position='bottom') +
-			labs(x='Age group\n(years)\n', y='%', fill='', title='Study population\n')			
-	ggsave(file=outfile.pdf, w=8.5, h=6)
+			labs(x='Age group\n(years)\n', y='%', fill='', title='Study population\n')
+	ggsave(file=file.path(outdir, 'm5D_Recipient_selection_bias.pdf'), w=8.5, h=30)
+	#	calculate bias relative to recently infected in <28
+	tmp			<- subset(YXar, TYPE%in%c('Recently infected','Recipient'))
+	tmp			<- dcast.data.table(tmp, tmidC2+AgeC+method.minQLowerU+method.thresh.pcoal+method.cut.brl+method.thresh.bs~TYPE, value.var='P')
+	setnames(tmp, 'Recently infected', 'Recently_infected')	
+	tmp[, D:= Recipient-Recently_infected]
+	
+	df			<- tmp[, {
+				list(TYPE='overall', MAE=mean(abs(D)))
+			}, by=c('method.minQLowerU','method.thresh.pcoal','method.cut.brl','method.thresh.bs','tmidC2')]	
+	df			<- rbind(df, subset(tmp, AgeC=='16-27')[, {
+				list(TYPE='16-27', MAE=mean(abs(D)))
+			}, by=c('method.minQLowerU','method.thresh.pcoal','method.cut.brl','method.thresh.bs','tmidC2')])
+	setkey(df, TYPE, tmidC2, MAE)		
+	#	OK, that s cool!
+	#	subset(df, method.minQLowerU==0.148 & method.thresh.pcoal==0.3 & method.cut.brl==Inf & method.thresh.bs==0.7)
+	#	BS=70% COAL=30% BRL=Inf PT=0.148 is the unanimous winner
+	#	with 		
+	#				TYPE  MAE
+	#	2004-2007   16-27 0.01081351
+	#	2008-2010   16-27 0.01808061
+	#	2004-2007 overall 0.01544217
+	#	2008-2010 overall 0.01000173
+	save(YXar, df, file=file.path(outdir, 'm5D_Recipient_selection_bias.rda'))
+		
 	#
 	#	superspreaders
 	#
