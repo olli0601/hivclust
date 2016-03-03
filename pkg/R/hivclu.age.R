@@ -433,7 +433,11 @@ age.explore.Recipient.bias<- function()
 						as.data.table(expand.grid( 	method.cut.brl=Inf,
 							method.minQLowerU=c(0.109,0.194),
 							method.thresh.bs=0.8,
-							method.thresh.pcoal= 0.2	))	)
+							method.thresh.pcoal= 0.2	)),
+						as.data.table(expand.grid( 	method.cut.brl=Inf,
+							method.minQLowerU=c(0.109,0.194),
+							method.thresh.bs=c(0.7, 0.85),
+							method.thresh.pcoal= 0.3	)))
 	dout	<- vector('list',nrow(din))
 	for(i in seq_len(nrow(din)))
 	{		
@@ -628,7 +632,7 @@ age.explore.Recipient.bias<- function()
 			coord_flip() +
 			theme_bw() + theme(legend.position='bottom') +
 			labs(x='Age group\n(years)\n', y='%', fill='', title='Study population\n')
-	ggsave(file=file.path(outdir, 'm5D_Recipient_selection_bias.pdf'), w=8.5, h=30)
+	ggsave(file=file.path(outdir, 'm5D_Recipient_selection_bias.pdf'), w=10, h=35)
 	#	calculate bias relative to recently infected in <28
 	tmp			<- subset(YXar, TYPE%in%c('Recently infected','Recipient'))
 	tmp			<- dcast.data.table(tmp, tmidC2+AgeC+method.minQLowerU+method.thresh.pcoal+method.cut.brl+method.thresh.bs~TYPE, value.var='P')

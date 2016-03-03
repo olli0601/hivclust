@@ -978,10 +978,11 @@ project.hivc.Excel2dataframe.AllPatientCovariates.checkPosSeqT<- function()
 project.WTprop.160228<- function()
 {	
 	require(data.table)
+	require(ggplot2)
 	indir		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
 	infile		<- file.path(indir,"ATHENA_1502_All_PatientKeyCovariates.R")
 	load(infile)	
-	df			<- subset(df.all, Trm%in%c('MSM','BI'))
+	df			<- copy(df.all)
 	#	convert dates to numeric
 	set(df, NULL, "DateBorn", df[,hivc.db.Date2numeric( DateBorn )])
 	set(df, NULL, "DateLastContact", df[,hivc.db.Date2numeric( DateLastContact )])	
@@ -990,7 +991,6 @@ project.WTprop.160228<- function()
 	set(df, NULL, "NegT_Crude", df[,hivc.db.Date2numeric( NegT_Crude )])
 	set(df, NULL, "AnyPos_T1", df[,hivc.db.Date2numeric( AnyPos_T1 )])
 	set(df, NULL, "GGD_RecordTime", df[,hivc.db.Date2numeric( GGD_RecordTime )])
-	set(df, NULL, "T0", df[,hivc.db.Date2numeric( T0 )])
 	set(df, NULL, "DateInCare", df[,hivc.db.Date2numeric( DateInCare )])
 	set(df, NULL, "FirstMed", df[,hivc.db.Date2numeric( FirstMed )])
 	set(df, NULL, "PoslRNA_T1", df[,hivc.db.Date2numeric( PoslRNA_T1 )])
@@ -1000,6 +1000,15 @@ project.WTprop.160228<- function()
 	set(df, NULL, "AnyT_T1_Crude", df[,hivc.db.Date2numeric( AnyT_T1_Crude )])
 	set(df, NULL, "DateAIDS", df[,hivc.db.Date2numeric( DateAIDS )])
 	set(df, NULL, "PosSeqT", df[,hivc.db.Date2numeric( PosSeqT )])
+	#	redefine RegionOrigin
+	set(df, df[, which(RegionOrigin%in%c("Central_EU"))], "RegionOrigin", "Eastern_EU_stans")
+	set(df, NULL, "RegionOrigin", df[, factor(RegionOrigin)])
+	#	redefine Tansmission
+	set(df, df[, which(Trm%in%c("MSM",'BI'))], "Trm", "MSM")
+	set(df, df[, which(Trm%in%c("HET",'HETfa'))], "Trm", "HET")
+	set(df, df[, which(Trm%in%c("IDU","BLOOD","NEEACC","PREG","BREAST","SXCH"))], "Trm", "OTH")
+	set(df, df[,which(is.na(Trm))], "Trm", "Unknown")
+	set(df, NULL, "Trm", df[, factor(Trm)])
 	#	age at diagnosis
 	set(df, NULL, "Age_AnyPosT1", df[, AnyPos_T1-DateBorn])	
 	#	reduce to patients with one sequence
@@ -1012,10 +1021,76 @@ project.WTprop.160228<- function()
 	set(df, df[, which( Region_AnyPosT1=='Amst')], 'AMST', 'Y')
 	set(df, df[, which( is.na(Region_AnyPosT1))], 'AMST', 'Maybe')
 	#	define time period
+	set(df, NULL, 'TP', df[, cut(AnyPos_T1, breaks=c(-Inf, 2010, 2011, 2012, 2013, 2014, 2015, 2016), labels=c('<2010','2010','2011','2012','2013','2014','2015'))])
+	#	define young
+	set(df, NULL, 'YOUNG', df[, cut(Age_AnyPosT1, breaks=c(0,28,100), labels=c('16-27','28-80'))])
+	#	define migrant
+	set(df, NULL, 'MIGRANT', df[, RegionOrigin])
+	#
+	df			<- subset(df, !is.na(AnyPos_T1))
+	
+	#
+	#	proportion of migrants in Amsterdam diagnosed early
+	#
+	pea		<- subset(df, !is.na(isAcute) & AMST=='Y' & MIGRANT!='NL' & TP!='<2010' )[, list(PROP_EARLY=mean(isAcute=='Yes')), by="Trm"]
+	#
+	#	proportion of migrants in Amsterdam diagnosed late, of those with a first CD4 count in the first year after diagnosis and not on ART before 
+	#	with first CD4<350
+	#
+	pla		<- subset(df, AMST=='Y' & MIGRANT!='NL' & TP!='<2010' & !is.na(PosCD4_T1) & AnyPos_T1+1>PosCD4_T1 & PosCD4_T1<=AnyT_T1)[, list(PROP_LATE=mean(CD4_T1<=350)), by='Trm']
+	#
+	#	migrants in Amsterdam by nationality and risk group
+	#
+	subset(df, AMST=='Y' & MIGRANT!='NL' & TP!='<2010')[, table(RegionOrigin, interaction(Trm, Sex))]
+
+	tmp		<- subset(df, AMST=='Y' & MIGRANT!='NL' & Trm=='MSM' & AnyPos_T1>2000)
+	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2000, 2016, 2))]]
+	tmp		<- tmp[, list(DIAG_N=length(Patient)), by=c('YR','RegionOrigin')]	
+	dcast.data.table(tmp, YR~RegionOrigin, value.var='DIAG_N')
+	ggplot( tmp, aes(x=YR, y=DIAG_N, group=RegionOrigin, colour=RegionOrigin)) + geom_step() + theme_bw() +
+			labs(x='', y='new diagnoses MSM\nin Amsterdam')
+	#
+	#	migrants in NL by nationality and risk group
+	#
+	subset(df, MIGRANT!='NL' & TP!='<2010')[, table(RegionOrigin, interaction(Trm, Sex))]
+	
+	tmp		<- subset(df, MIGRANT!='NL' & Trm=='MSM' & AnyPos_T1>2000)
+	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2000, 2016, 2))]]
+	tmp		<- tmp[, list(DIAG_N=length(Patient)), by=c('YR','RegionOrigin')]	
+	dcast.data.table(tmp, YR~RegionOrigin, value.var='DIAG_N')
+	ggplot( tmp, aes(x=YR, y=DIAG_N, group=RegionOrigin, colour=RegionOrigin)) + geom_step() + theme_bw() +
+			labs(x='', y='new diagnoses MSM\nin Amsterdam')
 	
 	
-	#	TODO resolve 501 ??
-	df[, table(Region_now, useNA='if')]
+	# 	for each time period: 
+	#	new diagnoses (all; MSM; MSM/young-old; HET/young-old; Migrant; Migrant/young-old)	
+	tmp			<- subset(df, TP!='<2010')
+	tmp[, TP:='2010-15']
+	tmp			<- rbind(df, tmp)	
+	tmp[, {
+				z			<- list()
+				z[['Reg_NA']]							<- length(which(AMST=='Maybe'))
+				z[['A']]									<- length(which(AMST=='Y'))
+				z[['A_MSM']]							<- length(which(AMST=='Y' & Trm%in%c('MSM','BI')))
+				z[['A_MSM_16-27']]				<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & YOUNG=='16-27'))
+				z[['A_MSM_28-80']]				<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & YOUNG=='28-80'))
+				z[['A_HET']]							<- length(which(AMST=='Y' & Trm%in%c('HET','HETfa')))
+				z[['A_Migrant']]						<- length(which(AMST=='Y' & MIGRANT!='NL'))
+				z[['A_Migrant_M']]					<- length(which(AMST=='Y' & MIGRANT!='NL' & Sex=='M'))
+				z[['A_Migrant_F']]					<- length(which(AMST=='Y' & MIGRANT!='NL' & Sex=='F'))
+				z[['A_Migrant_MSM']]			<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL'))
+				z[['A_Migrant_MSM_1Y']]		<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & isAcute=='Yes'))
+				z[['A_Migrant_MSM_1YE']]	<- round( length(which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')) * subset(pea, Trm=='MSM')[, PROP_EARLY], d=0 )
+				z[['A_Migrant_HET']]				<- length(which(AMST=='Y' & Trm%in%c('HET','HETfa') & MIGRANT!='NL'))
+				z[['A_Migrant_16-27']]			<- length(which(AMST=='Y' & MIGRANT!='NL' & YOUNG=='16-27'))
+				z[['A_Migrant_28-80']]			<- length(which(AMST=='Y' & MIGRANT!='NL' & YOUNG=='28-80'))
+				z[['A_NL_16-27']]					<- length(which(AMST=='Y' & MIGRANT=='NL' & YOUNG=='16-27'))
+				z[['A_NL_28-80']]					<- length(which(AMST=='Y' & MIGRANT=='NL' & YOUNG=='28-80'))
+				z
+			}, by='TP']
+	
+
+	
 }
 ######################################################################################
 project.hivc.Excel2dataframe.CombinedTable.160227<- function(dir.name= DATA, verbose=1, resume=0)
@@ -1227,7 +1302,7 @@ project.hivc.Excel2dataframe.CombinedTable.160227<- function(dir.name= DATA, ver
 		df.all	<- df.all[, c(	"Patient", "DateBorn", "Sex", "CountryBorn", "RegionOrigin", "DateLastContact", "DateDied", "isDead","Region_now","GGD_now",      
 								"NegT","NegT_Acc","NegT_Crude","ACS",
 								"AnyPos_T1","CountryInfection","Trm","isAcute","Acute_Spec","RegionGGD_AnyPosT1_Type","GGD_RecordTime","Region_AnyPosT1","GGD_AnyPosT1",
-								"T0", "DateInCare", "FirstMed","PoslRNA_T1", "lRNA_T1","PoslRNAg500_T1","PosCD4_T1","CD4_T1",
+								"DateInCare", "FirstMed","PoslRNA_T1", "lRNA_T1","PoslRNAg500_T1","PosCD4_T1","CD4_T1",
 								"AnyT_T1","AnyT_T1_Acc","AnyT_T1_Crude","PrimoSHM","TrI.n","TrI.p","DateAIDS",					
 								"PosSeqT","FASTASampleCode","Subtype"), with=FALSE]          
 		if(verbose)	cat(paste("\nsave to file",file.out))
