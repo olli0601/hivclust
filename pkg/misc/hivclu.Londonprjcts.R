@@ -22,9 +22,9 @@ project.London.FirstExaml.151202<- function()
 	indir		<- DATA
 	infile		<- "subUKogC_noDRM"				#TODO: use fasta instead of R	
 	#	ExaML bootstrap args
-	bs.from		<- 0		# 0 is the actual data alignment
-	bs.to		<- 50
-	bs.n		<- 50		# optional
+	bs.from		<- 51		# 0 is the actual data alignment
+	bs.to		<- 51
+	bs.n		<- 100		# optional
 	outdir		<- indir
 	
 	# arguments for ExaML parser to create binaries

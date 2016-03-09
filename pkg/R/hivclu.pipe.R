@@ -991,12 +991,12 @@ hivc.pipeline.various<- function()
 		project.Gates()
 		quit("no")
 	}	
-	if(0)
+	if(1)
 	{
 		project.London.FirstExaml.151202()		
 		quit("no")
 	}
-	if(1)
+	if(0)
 	{
 		project.dualinfecions.phylotypes.evaluatereads.150119()
 	}	

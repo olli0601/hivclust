@@ -975,12 +975,136 @@ project.hivc.Excel2dataframe.AllPatientCovariates.checkPosSeqT<- function()
 	tmp2		<- merge(tmp2, df.viro,by='Patient')
 }
 ######################################################################################
+project.WTprop.ATHENAmobility.160309<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	indir		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+	infile.main	<- file.path(indir,"ATHENA_1502_All_PatientKeyCovariates.R")
+	infile.ggd	<- file.path(indir,"ATHENA_1502_All_Region_GGD_v02.R")
+	outdir		<- "/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_GuidingTransmissionElimination"
+	
+	load(infile.main)
+	df.all		<- subset(df.all, select=c(Patient, DateBorn, Sex, CountryBorn, CountryInfection, Region_RegT1, Region_now, RegionOrigin, Trm, DateLastContact, DateDied, isDead, AnyPos_T1, PosSeqT))
+	set(df.all, NULL, "DateBorn", df.all[,hivc.db.Date2numeric( DateBorn )])
+	set(df.all, NULL, "DateLastContact", df.all[,hivc.db.Date2numeric( DateLastContact )])	
+	set(df.all, NULL, "DateDied", df.all[,hivc.db.Date2numeric( DateDied )])
+	set(df.all, NULL, "AnyPos_T1", df.all[,hivc.db.Date2numeric( AnyPos_T1 )])
+	set(df.all, df.all[, which(is.na(DateDied))], 'DateDied', 2015+5/12)
+	#time since diagnosis
+	set(df.all, NULL, 'TsD', df.all[, DateDied-AnyPos_T1])	
+	#	age at diagnosis
+	set(df.all, NULL, "Age_AnyPosT1", df.all[, AnyPos_T1-DateBorn])		
+	#	redefine RegionOrigin
+	set(df.all, df.all[, which(RegionOrigin%in%c("Central_EU"))], "RegionOrigin", "Eastern_EU_stans")
+	set(df.all, df.all[, which(RegionOrigin%in%c("Austr_NZ","Sout_SouthEast_Asia","Oceania_Pacific","North_Africa_Middle_East"))], "RegionOrigin", "Other")	
+	set(df.all, NULL, "RegionOrigin", df.all[, factor(RegionOrigin)])
+	#	redefine Tansmission
+	set(df.all, df.all[, which(Trm%in%c("MSM",'BI'))], "Trm", "MSM")
+	set(df.all, df.all[, which(Trm%in%c("HET",'HETfa'))], "Trm", "HET")
+	set(df.all, df.all[, which(Trm%in%c("IDU","BLOOD","NEEACC","PREG","BREAST","SXCH"))], "Trm", "OTH")
+	set(df.all, df.all[,which(is.na(Trm))], "Trm", "Unknown")		
+	set(df.all, df.all[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	set(df.all, df.all[, which(Trm=='HET' & Sex=='F')], 'Trm', 'HETF')
+	set(df.all, NULL, "Trm", df.all[, factor(Trm)])	
+	#	reduce to patients with one sequence
+	df.all[, DUMMY:=seq_len(nrow(df.all))]
+	tmp			<- df.all[, list(DUMMY=ifelse(all(is.na(PosSeqT)), DUMMY, DUMMY[which.min(PosSeqT)] )), by='Patient']
+	df.all		<- merge(df.all, tmp, by=c('Patient','DUMMY'))
+	df.all[, DUMMY:=NULL]
+	df.all[, PosSeqT:=NULL]
+	#	define Amsterdam
+	df.all[, AMST:= NA_character_]
+	set(df.all, df.all[, which( Region_RegT1=='Amst')], 'AMST', 'Y')
+	set(df.all, df.all[, which( Region_RegT1!='Amst')], 'AMST', 'N')
+	set(df.all, df.all[, which( is.na(Region_RegT1) & Region_now=='Amst')], 'AMST', 'Y')
+	set(df.all, df.all[, which( is.na(Region_RegT1) & Region_now!='Amst')], 'AMST', 'N')
+	set(df.all, df.all[, which( !is.na(CountryInfection) & CountryInfection!='NL')], 'AMST', 'N')	
+	stopifnot( !nrow(subset(df.all, is.na(AMST) & AnyPos_T1>2010)) )
+	#	define time period
+	set(df.all, NULL, 'TP', df.all[, cut(AnyPos_T1, breaks=c(-Inf, 2010, 2011, 2012, 2013, 2014, 2015, 2016), labels=c('<2010','2010','2011','2012','2013','2014','2015'))])
+	#	define young
+	set(df.all, NULL, 'YOUNG', df.all[, cut(Age_AnyPosT1, breaks=c(0,28,100), labels=c('16-27','28-80'))])
+	#	define migrant
+	set(df.all, NULL, 'MIGRANT', df.all[, RegionOrigin])
+	#
+	#
+	#
+	load(infile.ggd)
+	set(df, NULL, "GGD_Reg", df[,hivc.db.Date2numeric( GGD_Reg )])	
+	tmp			<- subset(df, !is.na(GGD))[, list(GGD_N=length(GGD_Reg)), by='Patient']
+	df			<- merge(df.all, tmp, by='Patient', all.x=1)
+	#
+	#	mobile with GGD_N>1 of those diagnosed since 2010 (numbers small, may not be all transmitters)
+	#
+	tmp			<- subset(df, !is.na(MIGRANT) & Trm%in%c('HETF','HETM','MSM') & AnyPos_T1>=2010)	
+	tmp[, table(GGD_N, useNA='if')]
+	tmp[, list(Patient_N=length(Patient), GGD_CH_ATLEAST_ONCE=mean(GGD_N>1, na.rm=TRUE) ), by='MIGRANT']
+	tmp2		<- tmp[, list(Patient_N=length(Patient), GGD_CH_ATLEAST_ONCE=mean(GGD_N>1, na.rm=TRUE) ), by=c('MIGRANT','Trm')]
+	setkey(tmp2, MIGRANT, Trm)
+	tmp2
+	#
+	#	mobile with GGD_N>1 of those diagnosed since 2001 (perhaps including all transmitters..)
+	#
+	tmp			<- subset(df, !is.na(MIGRANT) & Trm%in%c('HETF','HETM','MSM') & AnyPos_T1>=2001 & AMST=='Y')	
+	tmp[, table(GGD_N, useNA='if')]
+	tmp[, list(Patient_N=length(Patient), GGD_CH_ATLEAST_ONCE=mean(GGD_N>1, na.rm=TRUE) ), by='MIGRANT']
+	tmp2		<- tmp[, list(Patient_N=length(Patient), GGD_CH_ATLEAST_ONCE=mean(GGD_N>1, na.rm=TRUE) ), by=c('MIGRANT','Trm')]
+	setkey(tmp2, MIGRANT, Trm)
+	ggplot(tmp2, aes(x=Trm, fill=MIGRANT, y=GGD_CH_ATLEAST_ONCE)) +
+		theme_bw() + theme(legend.position='bottom') +
+		geom_bar(stat='identity', position=position_dodge(width=0.9)) +
+		geom_text(aes(label=round(Patient_N*GGD_CH_ATLEAST_ONCE)), position=position_dodge(width=0.9), vjust=-0.25) +
+		scale_y_continuous(labels=percent) +
+		scale_fill_brewer(palette='Dark2') +				
+		labs(x='\nDiagnosed in Amsterdam after 2000', y='At least 1 GGD change\n', fill='Region of Origin')
+	ggsave(file=file.path(outdir, 'ATHENA0502_NewDiag0114AMST_GGDCH_by_regionorigin.pdf'), w=8, h=4)
+	#
+	#	mobile with GGD_N>1 of those diagnosed since 2001 (perhaps including all transmitters..)
+	#
+	tmp			<- subset(df, !is.na(MIGRANT) & !is.na(AMST) & Trm%in%c('HETF','HETM','MSM') & AnyPos_T1>=2001)
+	set(tmp, NULL, 'MIGRANT', tmp[,factor(as.character(MIGRANT)=='NL', levels=c(TRUE,FALSE), labels=c('Dutch origin','Migrant'))])
+	set(tmp, NULL, 'AMST', tmp[,factor(as.character(AMST), levels=c('Y','N'), labels=c('First registered in Amsterdam','First registered outside Amsterdam'))])
+	tmp			<- tmp[, list(Patient_N=length(Patient), GGD_CH_ATLEAST_ONCE=mean(GGD_N>1, na.rm=TRUE) ), by=c('MIGRANT','Trm','AMST')]
+	setkey(tmp, MIGRANT, Trm, AMST)
+	ggplot(tmp, aes(x=Trm, fill=MIGRANT, y=GGD_CH_ATLEAST_ONCE)) +
+			theme_bw() + theme(legend.position='bottom') +
+			geom_bar(stat='identity', position=position_dodge(width=0.9)) +
+			geom_text(aes(label=round(Patient_N*GGD_CH_ATLEAST_ONCE)), position=position_dodge(width=0.9), vjust=-0.25) +
+			scale_y_continuous(labels=percent, limits=c(0,0.3)) +
+			scale_fill_manual(values=c('Dutch origin'="#41B6C4", 'Migrant'="#FE9929")) +	
+			facet_grid(~AMST) +
+			labs(x='\nDiagnosed in the Netherlands since 2001', y='At least 1 GGD change\n', fill='Region of Origin')
+	ggsave(file=file.path(outdir, 'ATHENA0502_NewDiag0114AMST_GGDCH_by_Amsterdam.pdf'), w=8, h=4)
+	#
+	#	mobile with GGD_N>1 of those diagnosed since 2010 (perhaps including all transmitters..)
+	#
+	tmp			<- subset(df, !is.na(MIGRANT) & !is.na(AMST) & Trm%in%c('HETF','HETM','MSM') & AnyPos_T1>=2010)
+	set(tmp, NULL, 'MIGRANT', tmp[,factor(as.character(MIGRANT)=='NL', levels=c(TRUE,FALSE), labels=c('Dutch origin','Migrant'))])
+	set(tmp, NULL, 'AMST', tmp[,factor(as.character(AMST), levels=c('Y','N'), labels=c('First registered in Amsterdam','First registered outside Amsterdam'))])
+	tmp			<- tmp[, list(Patient_N=length(Patient), GGD_CH_ATLEAST_ONCE=mean(GGD_N>1, na.rm=TRUE) ), by=c('MIGRANT','Trm','AMST')]
+	setkey(tmp, MIGRANT, Trm, AMST)
+	ggplot(tmp, aes(x=Trm, fill=MIGRANT, y=GGD_CH_ATLEAST_ONCE)) +
+			theme_bw() + theme(legend.position='bottom') +
+			geom_bar(stat='identity', position=position_dodge(width=0.9)) +
+			geom_text(aes(label=round(Patient_N*GGD_CH_ATLEAST_ONCE)), position=position_dodge(width=0.9), vjust=-0.25) +
+			scale_y_continuous(labels=percent, limits=c(0,0.3)) +
+			scale_fill_manual(values=c('Dutch origin'="#41B6C4", 'Migrant'="#FE9929")) +	
+			facet_grid(~AMST) +
+			labs(x='\nDiagnosed in the Netherlands since 2010', y='At least 1 GGD change\n', fill='Region of Origin')
+	ggsave(file=file.path(outdir, 'ATHENA0502_NewDiag1014AMST_GGDCH_by_Amsterdam.pdf'), w=8, h=4)
+	
+}
+######################################################################################
 project.WTprop.160228<- function()
 {	
 	require(data.table)
+	require(scales)
 	require(ggplot2)
 	indir		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
 	infile		<- file.path(indir,"ATHENA_1502_All_PatientKeyCovariates.R")
+	outdir		<- "/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_GuidingTransmissionElimination"
 	load(infile)	
 	df			<- copy(df.all)
 	#	convert dates to numeric
@@ -1002,6 +1126,7 @@ project.WTprop.160228<- function()
 	set(df, NULL, "PosSeqT", df[,hivc.db.Date2numeric( PosSeqT )])
 	#	redefine RegionOrigin
 	set(df, df[, which(RegionOrigin%in%c("Central_EU"))], "RegionOrigin", "Eastern_EU_stans")
+	set(df, df[, which(RegionOrigin%in%c("Austr_NZ","Sout_SouthEast_Asia","Oceania_Pacific","North_Africa_Middle_East"))], "RegionOrigin", "Other")	
 	set(df, NULL, "RegionOrigin", df[, factor(RegionOrigin)])
 	#	redefine Tansmission
 	set(df, df[, which(Trm%in%c("MSM",'BI'))], "Trm", "MSM")
@@ -1017,9 +1142,13 @@ project.WTprop.160228<- function()
 	df			<- merge(df, tmp, by=c('Patient','DUMMY'))
 	df[,DUMMY:=NULL]
 	#	define Amsterdam
-	df[, AMST:='N']
-	set(df, df[, which( Region_AnyPosT1=='Amst')], 'AMST', 'Y')
-	set(df, df[, which( is.na(Region_AnyPosT1))], 'AMST', 'Maybe')
+	df[, AMST:= NA_character_]
+	set(df, df[, which( Region_RegT1=='Amst')], 'AMST', 'Y')
+	set(df, df[, which( Region_RegT1!='Amst')], 'AMST', 'N')
+	set(df, df[, which( is.na(Region_RegT1) & Region_now=='Amst')], 'AMST', 'Y')
+	set(df, df[, which( is.na(Region_RegT1) & Region_now!='Amst')], 'AMST', 'N')
+	set(df, df[, which( !is.na(CountryInfection) & CountryInfection!='NL')], 'AMST', 'N')	
+	stopifnot( !nrow(subset(df, is.na(AMST) & AnyPos_T1>2010)) )	
 	#	define time period
 	set(df, NULL, 'TP', df[, cut(AnyPos_T1, breaks=c(-Inf, 2010, 2011, 2012, 2013, 2014, 2015, 2016), labels=c('<2010','2010','2011','2012','2013','2014','2015'))])
 	#	define young
@@ -1027,8 +1156,103 @@ project.WTprop.160228<- function()
 	#	define migrant
 	set(df, NULL, 'MIGRANT', df[, RegionOrigin])
 	#
-	df			<- subset(df, !is.na(AnyPos_T1))
-	
+	df			<- subset(df, !is.na(AnyPos_T1))	
+	#
+	#	proportion of early/late/unknown early by migrants and Dutch origin in the NL
+	#
+	tmp		<- subset(df, !is.na(MIGRANT) & Trm%in%c('HET','MSM') & TP!='<2010' )
+	set(tmp, NULL, 'MIGRANT', tmp[,factor(as.character(MIGRANT)=='NL', levels=c(TRUE,FALSE), labels=c('Dutch origin','Migrant'))])
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])
+	tmp[, STAGE:=NA_character_]
+	set(tmp, tmp[, which(isAcute=='Yes')], 'STAGE', 'Acute')
+	set(tmp, tmp[, which(!is.na(PosCD4_T1) & AnyPos_T1+1>PosCD4_T1 & PosCD4_T1-1/12<=AnyT_T1 & CD4_T1<350)], 'STAGE', 'Late')
+	set(tmp, tmp[, which(is.na(STAGE) & is.na(isAcute))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE) & is.na(PosCD4_T1))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE) & !is.na(PosCD4_T1) & (AnyPos_T1+1<=PosCD4_T1 | PosCD4_T1-1/12>AnyT_T1))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE))], 'STAGE', 'NoInd')
+	set(tmp, NULL, 'STAGE', tmp[, factor(STAGE, levels=c('Acute','NoInd','Late','Incomplete'), labels=c('Confirmed recent infection','No indication for recent infection\nor late presentation','Late presenter','Incomplete data'))])	
+	col		<- c("#66C2A5", "#FC8D62", "#8DA0CB", "grey80")  
+	ggplot(tmp, aes(x=MIGRANT, fill=STAGE)) + geom_bar(position='fill') +
+			facet_grid(~Trm) + theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=col) +
+			scale_y_continuous(labels=percent) +
+			labs(x='', y='New HIV diagnoses in the Netherlands\n2010-2014', fill='Infection stage\nat diagnosis') +
+			guides(fill=guide_legend(nrow=2,byrow=TRUE))
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag1014NL_PropsEarlyLate1.pdf'), w=8, h=5)
+	#
+	#	proportion of early/late/unknown early by migrants and Dutch origin in Amsterdam
+	#
+	tmp		<- subset(df, !is.na(MIGRANT) & AMST=='Y' & Trm%in%c('HET','MSM') & TP!='<2010' )
+	set(tmp, NULL, 'MIGRANT', tmp[,factor(as.character(MIGRANT)=='NL', levels=c(TRUE,FALSE), labels=c('Dutch origin','Migrant'))])
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])
+	tmp[, STAGE:=NA_character_]
+	set(tmp, tmp[, which(isAcute=='Yes')], 'STAGE', 'Acute')
+	set(tmp, tmp[, which(!is.na(PosCD4_T1) & AnyPos_T1+1>PosCD4_T1 & PosCD4_T1-1/12<=AnyT_T1 & CD4_T1<350)], 'STAGE', 'Late')
+	set(tmp, tmp[, which(is.na(STAGE) & is.na(isAcute))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE) & is.na(PosCD4_T1))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE) & !is.na(PosCD4_T1) & (AnyPos_T1+1<=PosCD4_T1 | PosCD4_T1-1/12>AnyT_T1))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE))], 'STAGE', 'NoInd')
+	set(tmp, NULL, 'STAGE', tmp[, factor(STAGE, levels=c('Acute','NoInd','Late','Incomplete'), labels=c('Confirmed recent infection','No indication for recent infection\nor late presentation','Late presenter','Incomplete data'))])	
+	col		<- c("#66C2A5", "#FC8D62", "#8DA0CB", "grey80")  
+	ggplot(tmp, aes(x=MIGRANT, fill=STAGE)) + geom_bar(position='fill') +
+			facet_grid(~Trm) + theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=col) +
+			scale_y_continuous(labels=percent) +
+			labs(x='', y='New HIV diagnoses in Amsterdam\n2010-2014', fill='Infection stage\nat diagnosis') +
+			guides(fill=guide_legend(nrow=2,byrow=TRUE))
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag1014AMST_PropsEarlyLate1.pdf'), w=8, h=5)
+	#
+	#	proportion of early/late/unknown early by migrant origin 2010-2014 in the Netherlands
+	#
+	tmp			<- subset(df, !is.na(MIGRANT) & Trm%in%c('MSM','HET') & AnyPos_T1>2010 & AnyPos_T1<2015)	
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])
+	set(tmp, NULL, 'MIGRANT', tmp[, factor(as.character(MIGRANT), 	levels=rev(c("NL","Western_EU", "Latin_South_America", "Eastern_EU_stans", "Caribbean", "Sub_Saharan_Africa", "Other")),
+																	labels=rev(c("Dutch origin","Western Europe", "Latin & South America", "Eastern Europe", "Caribbean", "Sub-Saharan Africa", "Other")))])
+	tmp[, STAGE:=NA_character_]
+	set(tmp, tmp[, which(isAcute=='Yes')], 'STAGE', 'Acute')
+	set(tmp, tmp[, which(!is.na(PosCD4_T1) & AnyPos_T1+1>PosCD4_T1 & PosCD4_T1-1/12<=AnyT_T1 & CD4_T1<350)], 'STAGE', 'Late')
+	set(tmp, tmp[, which(is.na(STAGE) & is.na(isAcute))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE) & is.na(PosCD4_T1))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE) & !is.na(PosCD4_T1) & (AnyPos_T1+1<=PosCD4_T1 | PosCD4_T1-1/12>AnyT_T1))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE))], 'STAGE', 'NoInd')
+	set(tmp, NULL, 'STAGE', tmp[, factor(STAGE, levels=c('Acute','NoInd','Late','Incomplete'), labels=c('Confirmed recent infection','No indication for recent infection\nor late presentation','Late presenter','Incomplete data'))])	
+	col		<- c("#66C2A5", "#FC8D62", "#8DA0CB", "grey80")  
+	ggplot(tmp, aes(x=MIGRANT, fill=STAGE)) + geom_bar(position='fill') +
+			theme_bw() + theme(legend.position='bottom') +
+			coord_flip() + facet_grid(~Trm) + 
+			scale_fill_manual(values=col) +
+			scale_y_continuous(labels=percent) +
+			labs(x='', y='\nNew HIV diagnoses in the Netherlands\n2010-2014', fill='Infection stage\nat diagnosis') +
+			guides(fill=guide_legend(nrow=2,byrow=TRUE))
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag1014NL_PropEarlyLateByOrigin1.pdf'), w=9.5, h=4)
+	#
+	#	proportion of early/late/unknown early by migrant origin 2010-2014 in Amsterdam
+	#
+	tmp			<- subset(df, !is.na(MIGRANT) & AMST=='Y' & Trm%in%c('MSM','HET') & AnyPos_T1>2010 & AnyPos_T1<2015)	
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])
+	set(tmp, NULL, 'MIGRANT', tmp[, factor(as.character(MIGRANT), 	levels=rev(c("NL","Western_EU", "Latin_South_America", "Eastern_EU_stans", "Caribbean", "Sub_Saharan_Africa", "Other")),
+							labels=rev(c("Dutch origin","Western Europe", "Latin & South America", "Eastern Europe", "Caribbean", "Sub-Saharan Africa", "Other")))])
+	tmp[, STAGE:=NA_character_]
+	set(tmp, tmp[, which(isAcute=='Yes')], 'STAGE', 'Acute')
+	set(tmp, tmp[, which(!is.na(PosCD4_T1) & AnyPos_T1+1>PosCD4_T1 & PosCD4_T1-1/12<=AnyT_T1 & CD4_T1<350)], 'STAGE', 'Late')
+	set(tmp, tmp[, which(is.na(STAGE) & is.na(isAcute))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE) & is.na(PosCD4_T1))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE) & !is.na(PosCD4_T1) & (AnyPos_T1+1<=PosCD4_T1 | PosCD4_T1-1/12>AnyT_T1))], 'STAGE', 'Incomplete')
+	set(tmp, tmp[, which(is.na(STAGE))], 'STAGE', 'NoInd')
+	set(tmp, NULL, 'STAGE', tmp[, factor(STAGE, levels=c('Acute','NoInd','Late','Incomplete'), labels=c('Confirmed recent infection','No indication for recent infection\nor late presentation','Late presenter','Incomplete data'))])	
+	col		<- c("#66C2A5", "#FC8D62", "#8DA0CB", "grey80")  
+	ggplot(tmp, aes(x=MIGRANT, fill=STAGE)) + geom_bar(position='fill') +
+			theme_bw() + theme(legend.position='bottom') +
+			coord_flip() + facet_grid(~Trm) + 
+			scale_fill_manual(values=col) +
+			scale_y_continuous(labels=percent) +
+			labs(x='', y='\nNew HIV diagnoses in Amsterdam\n2010-2014', fill='Infection stage\nat diagnosis') +
+			guides(fill=guide_legend(nrow=2,byrow=TRUE))
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag1014AMST_PropEarlyLateByOrigin1.pdf'), w=9.5, h=4)	
 	#
 	#	proportion of migrants in Amsterdam diagnosed early
 	#
@@ -1039,27 +1263,112 @@ project.WTprop.160228<- function()
 	#
 	pla		<- subset(df, AMST=='Y' & MIGRANT!='NL' & TP!='<2010' & !is.na(PosCD4_T1) & AnyPos_T1+1>PosCD4_T1 & PosCD4_T1<=AnyT_T1)[, list(PROP_LATE=mean(CD4_T1<=350)), by='Trm']
 	#
-	#	migrants in Amsterdam by nationality and risk group
+	#	number new diagnoses in Amsterdam by Trm and MIGRANT
 	#
+	#	table
 	subset(df, AMST=='Y' & MIGRANT!='NL' & TP!='<2010')[, table(RegionOrigin, interaction(Trm, Sex))]
-
-	tmp		<- subset(df, AMST=='Y' & MIGRANT!='NL' & Trm=='MSM' & AnyPos_T1>2000)
+	#	table by year
+	tmp		<- subset(df, AMST=='Y' & Trm=='MSM' & AnyPos_T1>2000)
 	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2000, 2016, 2))]]
 	tmp		<- tmp[, list(DIAG_N=length(Patient)), by=c('YR','RegionOrigin')]	
 	dcast.data.table(tmp, YR~RegionOrigin, value.var='DIAG_N')
-	ggplot( tmp, aes(x=YR, y=DIAG_N, group=RegionOrigin, colour=RegionOrigin)) + geom_step() + theme_bw() +
-			labs(x='', y='new diagnoses MSM\nin Amsterdam')
+	#	plot by year
+	tmp			<- subset(df, !is.na(MIGRANT) &  AMST=='Y' & Trm%in%c('MSM','HET') & AnyPos_T1>2001 & AnyPos_T1<2015)	
+	set(tmp, NULL, 'MIGRANT', tmp[,factor(as.character(MIGRANT)=='NL', levels=c(TRUE,FALSE), labels=c('Dutch origin','Migrant'))])
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])	
+	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2001, 2015, 2), labels=c('2001-2002','2003-2004','2005-2006','2007-2008','2009-2010','2011-2012','2013-2014'))]]
+	tmp			<- tmp[, list(DIAG_N=length(Patient)), by=c('YR','MIGRANT','Trm')]
+	col			<- c("#CC4C02","#225EA8","#238443")
+	names(col)	<- tmp[, levels(Trm)]
+	ggplot( tmp, aes(x=YR, y=DIAG_N, group=interaction(MIGRANT,Trm), fill=Trm, alpha=MIGRANT)) + 
+			geom_bar(stat='identity', position='dodge') +  
+			scale_fill_manual(values=col) +
+			scale_alpha_manual(values=c('Dutch origin'=0.5, 'Migrant'=1)) +			
+			labs(x='', y='new HIV diagnoses\nin Amsterdam', fill='Colour:', alpha='Translucency:') + 
+			theme_bw() + theme(legend.position='bottom')
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag0114AMST_Total1.pdf'), w=8, h=5)
 	#
-	#	migrants in NL by nationality and risk group
+	#	number new diagnoses in NL by Trm and MIGRANT
 	#
-	subset(df, MIGRANT!='NL' & TP!='<2010')[, table(RegionOrigin, interaction(Trm, Sex))]
-	
+	#	table by sex
+	subset(df, MIGRANT!='NL' & TP!='<2010')[, table(MIGRANT, interaction(Trm, Sex))]
+	#	table by year
 	tmp		<- subset(df, MIGRANT!='NL' & Trm=='MSM' & AnyPos_T1>2000)
-	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2000, 2016, 2))]]
-	tmp		<- tmp[, list(DIAG_N=length(Patient)), by=c('YR','RegionOrigin')]	
-	dcast.data.table(tmp, YR~RegionOrigin, value.var='DIAG_N')
-	ggplot( tmp, aes(x=YR, y=DIAG_N, group=RegionOrigin, colour=RegionOrigin)) + geom_step() + theme_bw() +
-			labs(x='', y='new diagnoses MSM\nin Amsterdam')
+	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2001, 2017, 2))]]
+	tmp		<- tmp[, list(DIAG_N=length(Patient)), by=c('YR','MIGRANT')]	
+	dcast.data.table(tmp, YR~MIGRANT, value.var='DIAG_N')
+	#	plot by year
+	tmp			<- subset(df, !is.na(MIGRANT) &  Trm%in%c('MSM','HET') & AnyPos_T1>2001 & AnyPos_T1<2015)	
+	set(tmp, NULL, 'MIGRANT', tmp[,factor(as.character(MIGRANT)=='NL', levels=c(TRUE,FALSE), labels=c('Dutch origin','Migrant'))])
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])	
+	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2001, 2015, 2), labels=c('2001-2002','2003-2004','2005-2006','2007-2008','2009-2010','2011-2012','2013-2014'))]]
+	tmp			<- tmp[, list(DIAG_N=length(Patient)), by=c('YR','MIGRANT','Trm')]
+	col			<- c("#CC4C02","#225EA8","#238443")
+	names(col)	<- tmp[, levels(Trm)]
+	ggplot( tmp, aes(x=YR, y=DIAG_N, group=interaction(MIGRANT,Trm), fill=Trm, alpha=MIGRANT)) + 
+			geom_bar(stat='identity', position='dodge') +  
+			scale_fill_manual(values=col) +
+			scale_alpha_manual(values=c('Dutch origin'=0.5, 'Migrant'=1)) +			
+			labs(x='', y='new HIV diagnoses\nin the Netherlands', fill='Colour:', alpha='Translucency:') + 
+			theme_bw() + theme(legend.position='bottom')
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag0114NL_Total1.pdf'), w=8, h=5)
+	#
+	#	migrant origin 2010-2014 in the Netherlands
+	#
+	tmp			<- subset(df, !is.na(MIGRANT) & MIGRANT!='NL' & Trm%in%c('MSM','HET') & AnyPos_T1>2001 & AnyPos_T1<2015)	
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2001, 2015, 2), labels=c('2001-2002','2003-2004','2005-2006','2007-2008','2009-2010','2011-2012','2013-2014'))]]
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])	
+	set(tmp, NULL, 'MIGRANT', tmp[, factor(as.character(MIGRANT), 	levels=c("Western_EU", "Latin_South_America", "Eastern_EU_stans", "Caribbean", "Sub_Saharan_Africa", "Other"),
+																	labels=c("Western Europe", "Latin & South America", "Eastern Europe", "Caribbean", "Sub-Saharan Africa", "Other"))])
+	ggplot(tmp, aes(x=YR, fill=MIGRANT)) + geom_bar(position='fill') +
+			theme_bw() + theme(legend.position='bottom') +
+			coord_flip() + facet_grid(~Trm) +
+			scale_y_continuous(labels=percent) +
+			scale_alpha_manual(values=c('Heterosexual women'=0.4, 'Heterosexual men'=0.7, 'MSM'=1)) +
+			scale_fill_brewer(palette='Spectral') +	
+			labs(x='', fill='Region of origin', y='\nNew HIV diagnoses among migrants in the Netherlands') 
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag0114NL_PropOrigin1.pdf'), w=8, h=3.5)
+	#
+	#	migrant origin 2010-2014 in Amsterdam
+	#
+	tmp			<- subset(df, !is.na(MIGRANT) & AMST=='Y' & MIGRANT!='NL' & Trm%in%c('MSM','HET') & AnyPos_T1>2001 & AnyPos_T1<2015)	
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2001, 2015, 2), labels=c('2001-2002','2003-2004','2005-2006','2007-2008','2009-2010','2011-2012','2013-2014'))]]
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])	
+	set(tmp, NULL, 'MIGRANT', tmp[, factor(as.character(MIGRANT), 	levels=c("Western_EU", "Latin_South_America", "Eastern_EU_stans", "Caribbean", "Sub_Saharan_Africa", "Other"),
+							labels=c("Western Europe", "Latin & South America", "Eastern Europe", "Caribbean", "Sub-Saharan Africa", "Other"))])
+	ggplot(tmp, aes(x=YR, fill=MIGRANT)) + geom_bar(position='fill') +
+			theme_bw() + theme(legend.position='bottom') +
+			coord_flip() + facet_grid(~Trm) +
+			scale_y_continuous(labels=percent) +
+			scale_alpha_manual(values=c('Heterosexual women'=0.4, 'Heterosexual men'=0.7, 'MSM'=1)) +
+			scale_fill_brewer(palette='Spectral') +	
+			labs(x='', fill='Region of origin', y='\nNew HIV diagnoses among migrants in Amsterdam') 
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag0114AMST_PropOrigin1.pdf'), w=8, h=3.5)
+	#
+	#	migrant age 2001-2014 in NL
+	#
+	tmp			<- subset(df, !is.na(MIGRANT) & !is.na(MIGRANT) & Trm%in%c('MSM','HET') & AnyPos_T1>2001 & AnyPos_T1<2015)
+	set(tmp, NULL, 'MIGRANT', tmp[,factor(as.character(MIGRANT)=='NL', levels=c(TRUE,FALSE), labels=c('Dutch origin','Migrant'))])
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2001, 2015, 2), labels=c('2001-2002','2003-2004','2005-2006','2007-2008','2009-2010','2011-2012','2013-2014'))]]
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])	
+	
+	set(tmp, AGE:= cut(Age_AnyPosT1, breaks=c(0,28,38,48,59,100), labels=''))
+	set(tmp, NULL, 'MIGRANT', tmp[, factor(as.character(MIGRANT), 	levels=c("Western_EU", "Latin_South_America", "Eastern_EU_stans", "Caribbean", "Sub_Saharan_Africa", "Other"),
+							labels=c("Western Europe", "Latin & South America", "Eastern Europe", "Caribbean", "Sub-Saharan Africa", "Other"))])
+	ggplot(tmp, aes(x=YR, fill=MIGRANT)) + geom_bar(position='fill') +
+			theme_bw() + theme(legend.position='bottom') +
+			coord_flip() + facet_grid(~Trm) +
+			scale_y_continuous(labels=percent) +
+			scale_alpha_manual(values=c('Heterosexual women'=0.4, 'Heterosexual men'=0.7, 'MSM'=1)) +
+			scale_fill_brewer(palette='Spectral') +	
+			labs(x='', fill='Region of origin', y='\nNew HIV diagnoses among migrants in Amsterdam') 
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag0114AMST_PropOrigin1.pdf'), w=8, h=3.5)
+	
 	
 	
 	# 	for each time period: 
@@ -1093,7 +1402,7 @@ project.WTprop.160228<- function()
 	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CombinedTable.160227<- function(dir.name= DATA, verbose=1, resume=0)
+project.hivc.Excel2dataframe.CombinedTable.160227<- function()
 {	
 	require(data.table)			
 	#	CONSTANTS
@@ -1109,7 +1418,7 @@ project.hivc.Excel2dataframe.CombinedTable.160227<- function(dir.name= DATA, ver
 	file.viro		<- paste(dir.name,"ATHENA_1502_All_Viro.R",sep='/')
 	file.immu		<- paste(dir.name,"ATHENA_1502_All_Immu.R",sep='/')
 	file.treatment	<- paste(dir.name,"ATHENA_1502_All_Regimens.R",sep='/')
-	file.ggd		<- paste(dir.name,"ATHENA_1502_All_Region_GGD.R",sep='/')
+	file.ggd		<- paste(dir.name,"ATHENA_1502_All_Region_GGD_v02.R",sep='/')
 	file.out		<- paste(dir.name,"ATHENA_1502_All_PatientKeyCovariates.R",sep='/')
 			
 	if(resume)												#//load if there is R Master data.table
@@ -1212,10 +1521,11 @@ project.hivc.Excel2dataframe.CombinedTable.160227<- function(dir.name= DATA, ver
 		setkey(df, Patient)		
 		tmp		<- merge(unique(df), tmp, by='Patient')
 		df.all	<- merge(df.all, subset(tmp, select=c(Patient, PoslRNA_T1, lRNA_T1,PoslRNAg500_T1)), by='Patient')		
-		tmp		<-  df.all[, which(!is.na(PoslRNA_T1) & lRNA_T1>log10(500) &  PoslRNA_T1<AnyPos_T1 ) ]
+		tmp		<-  df.all[, which(!is.na(PoslRNA_T1) & lRNA_T1>log10(500) &  ( is.na(AnyPos_T1) | PoslRNA_T1<AnyPos_T1 )) ]
+		
 		cat(paste("\nbuilding prel AnyPos_T1. Number of entries with !is.na(PoslRNA_T1) & lRNA_T1>log10(500) &  PoslRNA_T1<AnyPos_T1, n=",length(tmp)))
 		set(df.all, tmp, "AnyPos_T1", df.all[tmp, PoslRNA_T1])
-		tmp		<-  df.all[, which(!is.na(PoslRNA_T1) & lRNA_T1<=log10(500) &  !is.na(PoslRNAg500_T1) & PoslRNAg500_T1<AnyPos_T1 ) ]
+		tmp		<-  df.all[, which(!is.na(PoslRNA_T1) & lRNA_T1<=log10(500) &  !is.na(PoslRNAg500_T1) & ( is.na(AnyPos_T1) | PoslRNAg500_T1<AnyPos_T1 )) ]
 		cat(paste("\nbuilding prel AnyPos_T1. Number of entries with !is.na(PoslRNA_T1) & lRNA_T1<=log10(500) &  !is.na(PoslRNAg500_T1) & PoslRNAg500_T1<AnyPos_T1, n=",length(tmp)))
 		set(df.all, tmp, "AnyPos_T1", df.all[tmp, PoslRNAg500_T1])		
 		#		
@@ -1251,7 +1561,7 @@ project.hivc.Excel2dataframe.CombinedTable.160227<- function(dir.name= DATA, ver
 		tmp		<- subset(tmp, select=c(idx, PosCD4_T1, CD4_T1))
 		df.all	<- merge(df.all, tmp, by="idx", all.x=1)
 		# manually checked remaining PosCD4_T1 < AnyPos_T1
-		tmp		<-  df.all[, which(!is.na(PosCD4_T1) & PosCD4_T1<AnyPos_T1 ) ]
+		tmp		<-  df.all[, which(!is.na(PosCD4_T1) & (is.na(AnyPos_T1) | PosCD4_T1<AnyPos_T1) ) ]
 		cat(paste("\nbuilding prel AnyPos_T1. Number of patients with !is.na(PosCD4_T1) & PosCD4_T1<AnyPos_T1, n=",df.all[tmp,][, length(unique(Patient))]))
 		print( subset(df.all, PosCD4_T1<AnyPos_T1) )
 		set(df.all, tmp, "AnyPos_T1", df.all[tmp, PosCD4_T1])
@@ -1293,19 +1603,31 @@ project.hivc.Excel2dataframe.CombinedTable.160227<- function(dir.name= DATA, ver
 									z	<- which.min(difftime(GGD_Reg, AnyPos_T1))
 									z2	<- 'Earliest_After_Diag'
 								}
-								list(RegionGGD_AnyPosT1_Type=z2, GGD_RecordTime=GGD_Reg[z[1]], Region_AnyPosT1=Region[z[1]], GGD_AnyPosT1=GGD[z[1]])
-							} , by='Patient']		
+								list(Region_RegT1=Region_RegT1, RegionGGD_AnyPosT1_Type=z2, GGD_RecordTime=GGD_Reg[z[1]], Region_AnyPosT1=Region[z[1]], GGD_AnyPosT1=GGD[z[1]])
+							} , by='Patient']	
+		#	
+		stopifnot( !nrow(subset(tmp, RegionGGD_AnyPosT1_Type=='At_Diag' & (Region_RegT1=='Amst' & Region_RegT1!='Amst') | (Region_RegT1!='Amst' & Region_RegT1=='Amst'))) )
+		z		<- tmp[, which(is.na(Region_RegT1))]
+		set(tmp, z, 'Region_RegT1', tmp[z, GGD_AnyPosT1])
+		set(tmp, tmp[, which(Region_RegT1%in%c('Groningen','Drenthe','Fryslan'))], 'Region_RegT1', 'North')
+		set(tmp, tmp[, which(Region_RegT1%in%c('IJsselland','Twente','Gelre_IJssel','Hulpverlening_Gelderland_Midden','Flevoland',"Rivierenland","Nijmegen","Midden_Nederland"))], 'Region_RegT1', 'East')		
+		set(tmp, tmp[, which(Region_RegT1%in%c('Amsterdam'))], 'Region_RegT1', 'Amst')
+		set(tmp, tmp[, which(Region_RegT1%in%c('Utrecht','Gooi_Vechtstreek','Zuid_Holland_Zuid','Zeeland','Rotterdam_Rijnmond','Den_Haag','Hollands_Midden','Kennemerland','Zaanstreek_Waterland','Hollands_Noorden',"Zuid_Holland_West"))], 'Region_RegT1', 'West')
+		set(tmp, tmp[, which(Region_RegT1%in%c('West_Brabant','Hart_voor_Brabant','Brabant_Zuidoost','Limburg-Noord','Zuid_Limburg'))], 'Region_RegT1', 'South')
+		set(tmp, NULL, 'Region_RegT1', tmp[, factor(as.character(Region_RegT1))])		
+		cat('\nPatients with no entry in GGD file', setdiff( df.all[, Patient], tmp[, Patient] ))		
 		df.all	<- merge(df.all, tmp, by='Patient', all.x=1)
 		#
 		#	re-arrange cols
 		#
 		df.all	<- df.all[, c(	"Patient", "DateBorn", "Sex", "CountryBorn", "RegionOrigin", "DateLastContact", "DateDied", "isDead","Region_now","GGD_now",      
 								"NegT","NegT_Acc","NegT_Crude","ACS",
-								"AnyPos_T1","CountryInfection","Trm","isAcute","Acute_Spec","RegionGGD_AnyPosT1_Type","GGD_RecordTime","Region_AnyPosT1","GGD_AnyPosT1",
+								"AnyPos_T1","CountryInfection","Trm","isAcute","Acute_Spec","RegionGGD_AnyPosT1_Type","GGD_RecordTime","Region_AnyPosT1","GGD_AnyPosT1","Region_RegT1",
 								"DateInCare", "FirstMed","PoslRNA_T1", "lRNA_T1","PoslRNAg500_T1","PosCD4_T1","CD4_T1",
 								"AnyT_T1","AnyT_T1_Acc","AnyT_T1_Crude","PrimoSHM","TrI.n","TrI.p","DateAIDS",					
 								"PosSeqT","FASTASampleCode","Subtype"), with=FALSE]          
 		if(verbose)	cat(paste("\nsave to file",file.out))
+		stopifnot( !nrow(subset(df.all, is.na(AnyPos_T1))) )
 		save(df.all,file=file.out)
 	}	
 }
@@ -1728,10 +2050,6 @@ project.hivc.Excel2dataframe.Regimen.160227<- function()
 	df		<- as.data.table(read.csv(file, stringsAsFactors=FALSE))	
 	set(df, NULL,'StartTime', df[, as.Date(StartTime, format=date.format)])	
 	set(df, NULL,'StopTime', df[, as.Date(StopTime, format=date.format)])
-	#	check no old legacy codes for missing dates
-	#	Ard now does not report 19xx, so checking for incorrect entries is a pain	
-	#stopifnot( df[, !any(StopTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")))] )	
-	#stopifnot( df[, !any(StartTime%in%c("1911-01-01","1911-11-01","1911-11-11"))] )	
 	#	remove patients with empty fields
 	tmp		<- df[, which(is.na(StopTime) & is.na(StartTime))]
 	cat('\nRemove patients with no StartTime and no StopTime, n=', length(tmp))
@@ -1970,14 +2288,19 @@ project.hivc.Excel2dataframe.Regimen.160227<- function()
 	#	handle Ard's bogus values	#1
 	#
 	setkey(df, Patient, StopTime)
-	tmp		<- c( 	df[, which(is.na(StartTime) & StopTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")))],
-					df[, which(StartTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")) & StopTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")))]	)
+	tmp		<- c( 	df[, which(is.na(StartTime) & StopTime%in%as.Date(c("1911-01-01","1911-07-01","1911-11-01","1911-11-11")))],
+					df[, which(StartTime%in%as.Date(c("1911-01-01","1911-07-01","1911-11-01","1911-11-11")) & StopTime%in%as.Date(c("1911-01-01","1911-11-01","1911-11-11")))]	)
 	if(length(tmp))
 	{
-		cat('\nremove bogus entries with NA StartTime and "1911-01-01","1911-11-01","1911-11-11" StopTime, n=', length(tmp))
+		cat('\nremove bogus entries with NA StartTime and "1911-01-01","1911-11-01","1911-07-01","1911-11-11" StopTime, n=', length(tmp))
 		set(df, tmp, 'StopTime', NA_real_)
 	}
 	df		<- subset(df, !is.na(StopTime))
+	#
+	#	set all bogus values to 1911-11-11 for simplicity
+	#
+	set(df, df[,which(StartTime%in%as.Date(c("1911-01-01","1911-07-01","1911-11-01")))], 'StartTime',as.Date("1911-11-11"))
+	set(df, df[,which(StopTime%in%as.Date(c("1911-01-01","1911-07-01","1911-11-01")))], 'StopTime',as.Date("1911-11-11")) 
 	#
 	#	handle Ard's bogus values	#2: set bogus values for last episodes to StartTime+1
 	#
@@ -2378,11 +2701,8 @@ project.hivc.Excel2dataframe.Regimen.160227<- function()
 	#
 	#	reset AnyT_T1 conservatively
 	#
-	if(0)
-	{
-		df[, AnyT_T1_Crude:=AnyT_T1]
-		df	<- hivc.db.reset.ARTStartFromAccurate(df, col='AnyT_T1')		
-	}
+	df[, AnyT_T1_Crude:=AnyT_T1]
+	df	<- hivc.db.reset.ARTStartFromAccurate(df, col='AnyT_T1')			
 	#	add largest lRNA at least 3 months after therapy start.
 	if(0)
 	{
@@ -2738,11 +3058,11 @@ project.hivc.Excel2dataframe.GGD.160227<- function()
 {
 	#	INPUT FILE NAMES
 	dir.name	<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'	
-	file		<- paste(dir.name,"ATHENA_1502_All_Region_GGD.csv",sep='/')
+	file		<- paste(dir.name,"ATHENA_1502_All_Region_GGD_v02.csv",sep='/')
 	df			<- read.csv(file, stringsAsFactors=FALSE)
 	df			<- hivc.db.reset.Date(df, col="DateReg", NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.format="%Y-%m-%d")
 	df			<- data.table(df, key="Patient")
-	setnames(df, "DateReg","GGD_Reg")
+	setnames(df, c("DateReg","HospitalRegion"),c("GGD_Reg","Region_RegT1"))
 	set(df, NULL, 'Region', df[, factor(Region, levels=c('AMSTERDAM','ROTTERDAM','REST'), labels=c('Amst','Rott','Other'))])
 	set(df, NULL, 'GGD', 	df[, factor(GGD, 	levels=c(111, 		 			706, 				1009, 		 		1106,			1406, 				1906, 
 														 2006, 		 			2106, 				2209, 				2406, 			2506, 				2707, 
@@ -2754,7 +3074,13 @@ project.hivc.Excel2dataframe.GGD.160227<- function()
 														 'Kennemerland',		'Amsterdam',		'Gooi_Vechtstreek',	'Den_Haag',		'Zuid_Holland_West','Hollands_Midden',
 														 'Rotterdam_Rijnmond',	'Zuid_Holland_Zuid','Zeeland',			'West_Brabant',	'Hart_voor_Brabant', 'Brabant_Zuidoost',
 														 'Limburg-Noord',		'Zuid_Limburg',		'Fryslan',			'Zaanstreek_Waterland'))])
-	df			<- subset(df, !(is.na(GGD_Reg) & is.na(GGD)))
+	set(df, NULL, 'Region_RegT1', df[, factor(Region_RegT1, levels=c(1,		2,		3,		4,		 5,		  6), 
+															labels=c('Amst','North','East',	'South', 'West', 'Curuacao'))])					 
+	#	exclude patients with all missing entries
+	tmp			<- subset(df, !(!is.na(Region_RegT1) | !is.na(GGD_Reg) | !is.na(GGD) | !is.na(Region)))
+	cat('\npatient with no info on GGD/Region', tmp[, Patient])	
+	df			<- subset(df, !is.na(Region_RegT1) | !is.na(GGD_Reg) | !is.na(GGD) | !is.na(Region))
+	
 	#	remove duplicates
 	set(df, df[, which(Patient=='M30073' & GGD_Reg=='2005-04-08' & is.na(Region))], 'GGD_Reg', NA_real_)
 	df			<- subset(df, !is.na(GGD_Reg))
@@ -2762,11 +3088,11 @@ project.hivc.Excel2dataframe.GGD.160227<- function()
 	tmp		<- data.table(IDX=which(duplicated(df)))
 	tmp[, Patient:=df[tmp[,IDX],Patient]]
 	print( merge(df, tmp, by='Patient') )
-	set(df, tmp[, unique(IDX)], 'GGD_Reg', NA_real_)
-	df			<- subset(df, !is.na(GGD_Reg))
+	set(df, tmp[, unique(IDX)], 'Patient', NA_character_)
+	df			<- subset(df, !is.na(Patient))
 	#	
 	file		<- paste(substr(file, 1, nchar(file)-3),'R',sep='')	
-	if(verbose) cat(paste("\nsave to", file))
+	cat(paste("\nsave to", file))
 	save(df, file=file)
 }
 ######################################################################################
@@ -2782,8 +3108,8 @@ project.hivc.Excel2dataframe.CD4.160227<- function()
 	#	read CD4 csv data file and preprocess
 	#
 	df				<- read.csv(file, stringsAsFactors=FALSE)		
-	df				<- hivc.db.reset.Date(df, col="DateImm", NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.format="%Y-%m-%d")
-	df		<- data.table(df, key="Patient")
+	df				<- hivc.db.reset.Date(df, col="DateImm", NA.time=c("","1911-01-01","1911-11-11","1923-06-24"), date.format="%Y-%m-%d")
+	df				<- data.table(df, key="Patient")
 	setnames(df, "DateImm","PosCD4")
 	#
 	#	data corrections from Ard

@@ -37,7 +37,7 @@ require(data.table)
 require(grid)
 require(reshape2)
 require(ggplot2)
-require(hivclust)
+#require(hivclust)
 
 
 CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"

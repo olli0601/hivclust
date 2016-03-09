@@ -1,4 +1,30 @@
 ######################################################################################
+project.Rakai.checkMissingRakai.150307<- function()
+{
+	png.f	<- '~/Dropbox (Infectious Disease)/PANGEA_data/2016-01-20_PANGEA_stats_by_sample.csv'	
+	#infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/CheckPangeaId.csv'
+	#infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/CheckPangeaId2.csv'
+	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/SequenceDataNOTAvailable_Documented.csv'
+	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/SequenceDataAvailable_NotDocumented.csv'
+	
+	#
+	#
+	#
+	dpng	<- as.data.table(read.csv(png.f))
+	setnames(dpng, 'ProjectID', 'PANGEA_ID')
+	df		<- as.data.table(read.csv(infile))
+	setnames(df, 'x', 'PANGEA_ID')
+	df		<- merge(dpng, df, by='PANGEA_ID')	
+	write.csv(df, row.names=FALSE, file=gsub('.csv','_info.csv',infile))
+	
+	png.f	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/PANGEA_orig/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda'
+	load(png.f)	#sq, sqi, si
+	set(si, NULL, 'PANGEA_ID', si[, regmatches(PANGEA_ID, regexpr('PG[0-9]+-[^-]+',PANGEA_ID))])
+	merge(si, df, by='PANGEA_ID')
+	
+	
+}
+######################################################################################
 project.Rakai.processRegion1PANGEAalignment.151129<- function()
 {
 	susa.f	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151129.fasta'
