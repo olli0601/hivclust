@@ -1093,10 +1093,401 @@ project.WTprop.ATHENAmobility.160309<- function()
 			scale_fill_manual(values=c('Dutch origin'="#41B6C4", 'Migrant'="#FE9929")) +	
 			facet_grid(~AMST) +
 			labs(x='\nDiagnosed in the Netherlands since 2010', y='At least 1 GGD change\n', fill='Region of Origin')
-	ggsave(file=file.path(outdir, 'ATHENA0502_NewDiag1014AMST_GGDCH_by_Amsterdam.pdf'), w=8, h=4)
+	ggsave(file=file.path(outdir, 'ATHENA0502_NewDiag114AMST_GGDCH_by_Amsterdam.pdf'), w=8, h=4)
 	
 }
 ######################################################################################
+project.WTprop.160618<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	indir		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+	infile		<- file.path(indir,"ATHENA_1502_All_PatientKeyCovariates.R")
+	outdir		<- "/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_GuidingTransmissionElimination"
+	load(infile)	
+	df			<- copy(df.all)
+	#	convert dates to numeric
+	set(df, NULL, "DateBorn", df[,hivc.db.Date2numeric( DateBorn )])
+	set(df, NULL, "DateLastContact", df[,hivc.db.Date2numeric( DateLastContact )])	
+	set(df, NULL, "DateDied", df[,hivc.db.Date2numeric( DateDied )])
+	set(df, NULL, "NegT", df[,hivc.db.Date2numeric( NegT )])
+	set(df, NULL, "NegT_Crude", df[,hivc.db.Date2numeric( NegT_Crude )])
+	set(df, NULL, "AnyPos_T1", df[,hivc.db.Date2numeric( AnyPos_T1 )])
+	set(df, NULL, "GGD_RecordTime", df[,hivc.db.Date2numeric( GGD_RecordTime )])
+	set(df, NULL, "DateInCare", df[,hivc.db.Date2numeric( DateInCare )])
+	set(df, NULL, "FirstMed", df[,hivc.db.Date2numeric( FirstMed )])
+	set(df, NULL, "PoslRNA_T1", df[,hivc.db.Date2numeric( PoslRNA_T1 )])
+	set(df, NULL, "PoslRNAg500_T1", df[,hivc.db.Date2numeric( PoslRNAg500_T1 )])	
+	set(df, NULL, "PosCD4_T1", df[,hivc.db.Date2numeric( PosCD4_T1 )])
+	set(df, NULL, "AnyT_T1", df[,hivc.db.Date2numeric( AnyT_T1 )])
+	set(df, NULL, "AnyT_T1_Crude", df[,hivc.db.Date2numeric( AnyT_T1_Crude )])
+	set(df, NULL, "DateAIDS", df[,hivc.db.Date2numeric( DateAIDS )])
+	set(df, NULL, "PosSeqT", df[,hivc.db.Date2numeric( PosSeqT )])
+	#	redefine RegionOrigin
+	set(df, df[, which(RegionOrigin%in%c("Central_EU"))], "RegionOrigin", "Eastern_EU_stans")
+	set(df, df[, which(RegionOrigin%in%c("Austr_NZ","Sout_SouthEast_Asia","Oceania_Pacific","North_Africa_Middle_East"))], "RegionOrigin", "Other")	
+	set(df, NULL, "RegionOrigin", df[, factor(RegionOrigin)])
+	#	redefine Tansmission
+	set(df, df[, which(Trm%in%c("MSM",'BI'))], "Trm", "MSM")
+	set(df, df[, which(Trm%in%c("HET",'HETfa'))], "Trm", "HET")
+	set(df, df[, which(Trm%in%c("IDU","BLOOD","NEEACC","PREG","BREAST","SXCH"))], "Trm", "OTH")
+	set(df, df[,which(is.na(Trm))], "Trm", "Unknown")
+	set(df, NULL, "Trm", df[, factor(Trm)])
+	#	age at diagnosis
+	set(df, NULL, "Age_AnyPosT1", df[, AnyPos_T1-DateBorn])	
+	#	reduce to patients with one sequence
+	df[, DUMMY:=seq_len(nrow(df))]
+	tmp			<- df[, list(DUMMY=ifelse(all(is.na(PosSeqT)), DUMMY, DUMMY[which.min(PosSeqT)] )), by='Patient']
+	df			<- merge(df, tmp, by=c('Patient','DUMMY'))
+	df[,DUMMY:=NULL]
+	#	define Amsterdam
+	df[, AMST:= NA_character_]
+	set(df, df[, which( Region_RegT1=='Amst')], 'AMST', 'Y')
+	set(df, df[, which( Region_RegT1!='Amst')], 'AMST', 'N')
+	set(df, df[, which( is.na(Region_RegT1) & Region_now=='Amst')], 'AMST', 'Y')
+	set(df, df[, which( is.na(Region_RegT1) & Region_now!='Amst')], 'AMST', 'N')
+	set(df, df[, which( !is.na(CountryInfection) & CountryInfection!='NL')], 'AMST', 'N')	
+	stopifnot( !nrow(subset(df, is.na(AMST) & AnyPos_T1>2010)) )	
+	#	define time period
+	set(df, NULL, 'TP', df[, cut(AnyPos_T1, breaks=c(-Inf, 2010, 2011, 2012, 2013, 2014, 2015, 2016), labels=c('<2010','2010','2011','2012','2013','2014','2015'))])
+	#	define young
+	set(df, NULL, 'YOUNG', df[, cut(Age_AnyPosT1, breaks=c(0,28,100), labels=c('16-27','28-80'))])
+	#	define migrant
+	set(df, NULL, 'MIGRANT', df[, RegionOrigin])
+	#
+	df			<- subset(df, !is.na(AnyPos_T1))	
+	#
+	#	proportion of migrants in Amsterdam diagnosed early
+	#
+	pea		<- subset(df, !is.na(isAcute) & AMST=='Y' & MIGRANT!='NL' & TP!='<2010' )[, list(PROP_EARLY=mean(isAcute=='Yes')), by="Trm"]
+	pead	<- subset(df, !is.na(isAcute) & AMST=='Y' & MIGRANT=='NL' & TP!='<2010' )[, list(PROP_EARLY=mean(isAcute=='Yes')), by="Trm"]
+	peo		<- subset(df, !is.na(isAcute) & AMST=='N' & MIGRANT!='NL' & TP!='<2010' )[, list(PROP_EARLY=mean(isAcute=='Yes')), by="Trm"]
+	peod	<- subset(df, !is.na(isAcute) & AMST=='N' & MIGRANT=='NL' & TP!='<2010' )[, list(PROP_EARLY=mean(isAcute=='Yes')), by="Trm"]
+	#
+	#	proportion of migrants in Amsterdam diagnosed late, of those with a first CD4 count in the first year after diagnosis and not on ART before 
+	#	with first CD4<350
+	#
+	pla		<- subset(df, AMST=='Y' & MIGRANT!='NL' & TP!='<2010' & !is.na(PosCD4_T1) & AnyPos_T1+1>PosCD4_T1 & PosCD4_T1<=AnyT_T1)[, list(PROP_LATE=mean(CD4_T1<=350)), by='Trm']
+	#
+	#	numbers of sequences and isAcute
+	tmp			<- subset(df, TP!='<2010' & TP!='2015')
+	tmp[, ADJ:=1]
+	tmp2		<- subset(df, TP=='2014')
+	tmp2[, ADJ:=0.85]
+	tmp2[, TP:='2015']
+	tmp			<- rbind(tmp, tmp2)
+	tmp2[, ADJ:=0.87^2]
+	tmp2[, TP:='2016']
+	tmp			<- rbind(tmp, tmp2)
+	tmp2[, ADJ:=0.87^3]
+	tmp2[, TP:='2017']
+	tmp			<- rbind(tmp, tmp2)
+	tmp2[, ADJ:=0.87^4]
+	tmp2[, TP:='2018']
+	tmp			<- rbind(tmp, tmp2)
+	tmp			<- tmp[, {
+				z										<- list()	
+				z[['A_Migrant_Any_Any_MSM']]			<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+				z[['O_Migrant_Any_Any_MSM']]			<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+				z[['A_Dutch_Any_Any_MSM']]				<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				z[['O_Dutch_Any_Any_MSM']]				<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				
+				z[['A_Migrant_Seq_Any_MSM']]			<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & !is.na(PosSeqT))])
+				z[['O_Migrant_Seq_Any_MSM']]			<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & !is.na(PosSeqT))])
+				z[['A_Dutch_Seq_Any_MSM']]				<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & !is.na(PosSeqT))])
+				z[['O_Dutch_Seq_Any_MSM']]				<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & !is.na(PosSeqT))])
+				
+				z[['A_Migrant_Any_Rec_MSM']]			<- z[['A_Migrant_Any_Any_MSM']] * subset(pea, Trm=='MSM')[, PROP_EARLY]	#sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & isAcute=='Yes')])
+				z[['O_Migrant_Any_Rec_MSM']]			<- z[['O_Migrant_Any_Any_MSM']]	* subset(peo, Trm=='MSM')[, PROP_EARLY]#sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & isAcute=='Yes')])
+				z[['A_Dutch_Any_Rec_MSM']]				<- z[['A_Dutch_Any_Any_MSM']] * subset(pead, Trm=='MSM')[, PROP_EARLY]	#sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & isAcute=='Yes')])
+				z[['O_Dutch_Any_Rec_MSM']]				<- z[['O_Dutch_Any_Any_MSM']] * subset(peod, Trm=='MSM')[, PROP_EARLY]	#sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & isAcute=='Yes')])
+				
+				
+				z[['A_Migrant_Seq_Rec_MSM']]			<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['O_Migrant_Seq_Rec_MSM']]			<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['A_Dutch_Seq_Rec_MSM']]				<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['O_Dutch_Seq_Rec_MSM']]				<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				
+				z[['A_Migrant_Any_Any_HET']]			<- sum(ADJ[which(AMST=='Y' & Trm=='HET' & MIGRANT!='NL')])
+				z[['O_Migrant_Any_Any_HET']]			<- sum(ADJ[which(AMST=='N' & Trm=='HET'& MIGRANT!='NL')])
+				z[['A_Dutch_Any_Any_HET']]				<- sum(ADJ[which(AMST=='Y' & Trm=='HET'& MIGRANT=='NL')])
+				z[['O_Dutch_Any_Any_HET']]				<- sum(ADJ[which(AMST=='N' & Trm=='HET'& MIGRANT=='NL')])
+				
+				z[['A_Migrant_Seq_Any_HET']]			<- sum(ADJ[which(AMST=='Y' & Trm=='HET'& MIGRANT!='NL' & !is.na(PosSeqT))])
+				z[['O_Migrant_Seq_Any_HET']]			<- sum(ADJ[which(AMST=='N' & Trm=='HET'& MIGRANT!='NL' & !is.na(PosSeqT))])
+				z[['A_Dutch_Seq_Any_HET']]				<- sum(ADJ[which(AMST=='Y' & Trm=='HET'& MIGRANT=='NL' & !is.na(PosSeqT))])
+				z[['O_Dutch_Seq_Any_HET']]				<- sum(ADJ[which(AMST=='N' & Trm=='HET'& MIGRANT=='NL' & !is.na(PosSeqT))])
+				
+				z[['A_Migrant_Any_Rec_HET']]			<- z[['A_Migrant_Any_Any_HET']]	* subset(pea, Trm=='HET')[, PROP_EARLY]#sum(ADJ[which(AMST=='Y' & MIGRANT!='NL' & isAcute=='Yes')])
+				z[['O_Migrant_Any_Rec_HET']]			<- z[['O_Migrant_Any_Any_HET']]	* subset(peo, Trm=='HET')[, PROP_EARLY]#sum(ADJ[which(AMST=='N' & MIGRANT!='NL' & isAcute=='Yes')])
+				z[['A_Dutch_Any_Rec_HET']]				<- z[['A_Dutch_Any_Any_HET']]	* subset(pead, Trm=='HET')[, PROP_EARLY]#sum(ADJ[which(AMST=='Y' & MIGRANT=='NL' & isAcute=='Yes')])
+				z[['O_Dutch_Any_Rec_HET']]				<- z[['O_Dutch_Any_Any_HET']]	* subset(peod, Trm=='HET')[, PROP_EARLY]#sum(ADJ[which(AMST=='N' & MIGRANT=='NL' & isAcute=='Yes')])
+				
+				
+				z[['A_Migrant_Seq_Rec_HET']]			<- sum(ADJ[which(AMST=='Y' & Trm=='HET'& MIGRANT!='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['O_Migrant_Seq_Rec_HET']]			<- sum(ADJ[which(AMST=='N' & Trm=='HET'& MIGRANT!='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['A_Dutch_Seq_Rec_HET']]				<- sum(ADJ[which(AMST=='Y' & Trm=='HET'& MIGRANT=='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['O_Dutch_Seq_Rec_HET']]				<- sum(ADJ[which(AMST=='N' & Trm=='HET'& MIGRANT=='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				
+				z
+			}, by='TP']
+	cnt			<- melt(tmp, id.vars='TP')
+	cnt[, LOC:= factor(substr(variable, 1, 1), levels=c('A','O'), labels=c('Amst','Other'))]
+	cnt[, ORIGIN:= cnt[, sapply(strsplit(as.character(variable), '_'), '[[', 2)]]
+	cnt[, SEQ:= cnt[, sapply(strsplit(as.character(variable), '_'), '[[', 3)]]	
+	cnt[, REC:= cnt[, sapply(strsplit(as.character(variable), '_'), '[[', 4)]]
+	cnt[, TRM:= cnt[, sapply(strsplit(as.character(variable), '_'), '[[', 5)]]
+	#set(cnt, NULL, 'value', cnt[, round(value)])
+	set(cnt, NULL, 'variable', NULL)
+	#	aggregate
+	cnt			<- rbind(	subset(cnt, TP%in%c('2010','2011','2012','2013','2014'))[, list(TP='2010-2014', value=round(sum(value))), by=c('LOC','ORIGIN','SEQ','REC','TRM')],
+							subset(cnt, TP%in%c('2015','2016','2017','2018'))[, list(TP='2015-2018', value=round(sum(value))), by=c('LOC','ORIGIN','SEQ','REC','TRM')],
+							subset(cnt, !TP%in%c('<2010'))[, list(TP='2010-2018', value=round(sum(value))), by=c('LOC','ORIGIN','SEQ','REC','TRM')]	
+							)
+	set(cnt, NULL, 'TP', cnt[, factor(TP, levels=c('2010-2014','2015-2018','2010-2018'))])	
+
+	dcast.data.table(subset(cnt, REC=='Any' & SEQ=='Any' & LOC=='Amst'), TP+ORIGIN~TRM, value.var='value')
+	dcast.data.table(subset(cnt, REC=='Rec' & SEQ=='Any' & LOC=='Amst'), TP+ORIGIN~TRM, value.var='value')
+		
+	#
+	# 	expected number of recipients and actual transmission pairs captured, 2010-2018:
+	#	baseline:
+	if(1)
+	{
+		m.A			<- 0.99 * 0.9*(0.7*.99+.3*.45)
+		m.O			<- 0.45 * 0.9*(0.3*.99+.7*.45)		
+	}
+	#	rather than RITA, let s get 50% coverage outside Amsterdam
+	if(0)
+	{
+		m.A			<- 0.95 * 0.9*(0.7*.95+.3*.5)
+		m.O			<- 0.5 * 0.9*(0.3*.95+.7*.5)		
+	}
+	#	for young, let s get 75% coverage outside Amsterdam
+	if(0)
+	{
+		m.A			<- 0.95 * 0.9*(0.7*.95+.3*.75)
+		m.O			<- 0.75 * 0.9*(0.3*.95+.7*.75)		
+	}
+	tmp			<- subset(df, TP!='<2010' & TP!='2015')
+	tmp[, ADJ:=1]
+	tmp2		<- subset(df, TP=='2014')
+	tmp2[, ADJ:=0.85]
+	tmp2[, TP:='2015']
+	tmp			<- rbind(tmp, tmp2)
+	tmp2[, ADJ:=0.87^2]
+	tmp2[, TP:='2016']
+	tmp			<- rbind(tmp, tmp2)
+	tmp2[, ADJ:=0.87^3]
+	tmp2[, TP:='2017']
+	tmp			<- rbind(tmp, tmp2)
+	tmp2[, ADJ:=0.87^4]
+	tmp2[, TP:='2018']
+	tmp			<- rbind(tmp, tmp2)
+	tmp			<- tmp[, {
+				z			<- list()												
+				z[['A_NL_MSM_ALL_1YE']]				<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+				z[['A_NL_HETM_ALL_1YE']]			<- sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+				z[['A_NL_HETF_ALL_1YE']]			<- sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+				z[['A_Migrant_ALL_MSM_1YE']]		<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+				z[['A_Migrant_HETM_ALL_1YE']]		<- sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+				z[['A_Migrant_HETF_ALL_1YE']]		<- sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+				
+				z[['A_NL_MSM_ALL_1Y']]				<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				z[['A_NL_HETM_ALL_1Y']]				<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+				z[['A_NL_HETF_ALL_1Y']]				<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+				z[['A_Migrant_MSM_ALL_1Y']]			<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+				z[['A_Migrant_HETM_ALL_1Y']]		<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				z[['A_Migrant_HETF_ALL_1Y']]		<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				
+				z[['A_NL_MSM_28_1YE']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+				z[['A_NL_HETM_28_1YE']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+				z[['A_NL_HETF_28_1YE']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+				z[['A_Migrant_28_MSM_1YE']]			<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+				z[['A_Migrant_HETM_28_1YE']]		<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+				z[['A_Migrant_HETF_28_1YE']]		<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+				
+				z[['A_NL_MSM_28_1Y']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				z[['A_NL_HETM_28_1Y']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+				z[['A_NL_HETF_28_1Y']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+				z[['A_Migrant_MSM_28_1Y']]			<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+				z[['A_Migrant_HETM_28_1Y']]			<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				z[['A_Migrant_HETF_28_1Y']]			<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				
+				if(1)	#since recently infected, in-country infection more likely
+				{
+					z[['A_NL_MSM_ALL_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+					z[['A_NL_HETM_ALL_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+					z[['A_NL_HETF_ALL_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+					z[['A_Migrant_MSM_ALL_PE']]		<- m.A*sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+					z[['A_Migrant_HETM_ALL_PE']]	<- m.A*sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					z[['A_Migrant_HETF_ALL_PE']]	<- m.A*sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					
+					z[['A_NL_MSM_ALL_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) 
+					z[['A_NL_HETM_ALL_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+					z[['A_NL_HETF_ALL_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+					z[['A_Migrant_MSM_ALL_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETM_ALL_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETF_ALL_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					
+					z[['A_NL_MSM_28_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+					z[['A_NL_HETM_28_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+					z[['A_NL_HETF_28_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+					z[['A_Migrant_MSM_28_PE']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+					z[['A_Migrant_HETM_28_PE']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					z[['A_Migrant_HETF_28_PE']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					
+					z[['A_NL_MSM_28_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) 
+					z[['A_NL_HETM_28_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+					z[['A_NL_HETF_28_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+					z[['A_Migrant_MSM_28_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETM_28_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETF_28_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+				}
+				if(0)	#prob in-country infection from aMASE
+				{
+					z[['A_NL_MSM_ALL_PE']]			<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+					z[['A_NL_HETM_ALL_PE']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+					z[['A_NL_HETF_ALL_PE']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+					z[['A_Migrant_MSM_ALL_PE']]		<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+					z[['A_Migrant_HETM_ALL_PE']]	<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					z[['A_Migrant_HETF_ALL_PE']]	<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					
+					z[['A_NL_MSM_ALL_P']]			<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) 
+					z[['A_NL_HETM_ALL_P']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+					z[['A_NL_HETF_ALL_P']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+					z[['A_Migrant_MSM_ALL_P']]		<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETM_ALL_P']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETF_ALL_P']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					
+					z[['A_NL_MSM_28_PE']]			<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+					z[['A_NL_HETM_28_PE']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+					z[['A_NL_HETF_28_PE']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+					z[['A_Migrant_MSM_28_PE']]		<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+					z[['A_Migrant_HETM_28_PE']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					z[['A_Migrant_HETF_28_PE']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					
+					z[['A_NL_MSM_28_P']]			<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) 
+					z[['A_NL_HETM_28_P']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+					z[['A_NL_HETF_28_P']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+					z[['A_Migrant_MSM_28_P']]		<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETM_28_P']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETF_28_P']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+				}				
+				#z[['O']]						<- sum(ADJ[which(AMST=='N')])				
+				z[['O_NL_MSM_ALL_1YE']]				<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+				z[['O_NL_HETM_ALL_1YE']]			<- sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+				z[['O_NL_HETF_ALL_1YE']]			<- sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+				z[['O_Migrant_MSM_ALL_1YE']]		<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+				z[['O_Migrant_HETM_ALL_1YE']]		<- sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+				z[['O_Migrant_HETF_ALL_1YE']]		<- sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+				
+				z[['O_NL_MSM_ALL_1Y']]				<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				z[['O_NL_HETM_ALL_1Y']]				<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+				z[['O_NL_HETF_ALL_1Y']]				<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+				z[['O_Migrant_MSM_ALL_1Y']]			<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+				z[['O_Migrant_HETM_ALL_1Y']]		<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				z[['O_Migrant_HETF_ALL_1Y']]		<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				
+				z[['O_NL_MSM_28_1YE']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+				z[['O_NL_HETM_28_1YE']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+				z[['O_NL_HETF_28_1YE']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+				z[['O_Migrant_MSM_28_1YE']]			<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+				z[['O_Migrant_HETM_28_1YE']]		<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+				z[['O_Migrant_HETF_28_1YE']]		<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+				
+				z[['O_NL_MSM_28_1Y']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				z[['O_NL_HETM_28_1Y']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+				z[['O_NL_HETF_28_1Y']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+				z[['O_Migrant_MSM_28_1Y']]			<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+				z[['O_Migrant_HETM_28_1Y']]			<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				z[['O_Migrant_HETF_28_1Y']]			<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				
+				if(1)	#since recently infected, in-country infection more likely
+				{
+					z[['O_NL_MSM_ALL_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+					z[['O_NL_HETM_ALL_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+					z[['O_NL_HETF_ALL_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+					z[['O_Migrant_MSM_ALL_PE']]		<- m.O*sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+					z[['O_Migrant_HETM_ALL_PE']]	<- m.O*sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					z[['O_Migrant_HETF_ALL_PE']]	<- m.O*sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					
+					z[['O_NL_MSM_ALL_P']]			<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+					z[['O_NL_HETM_ALL_P']]			<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])
+					z[['O_NL_HETF_ALL_P']]			<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])								
+					z[['O_Migrant_MSM_ALL_P']]		<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+					z[['O_Migrant_HETM_ALL_P']]		<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					z[['O_Migrant_HETF_ALL_P']]		<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					
+					z[['O_NL_MSM_28_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+					z[['O_NL_HETM_28_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+					z[['O_NL_HETF_28_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+					z[['O_Migrant_MSM_28_PE']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+					z[['O_Migrant_HETM_28_PE']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					z[['O_Migrant_HETF_28_PE']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					
+					z[['O_NL_MSM_28_P']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+					z[['O_NL_HETM_28_P']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])
+					z[['O_NL_HETF_28_P']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])								
+					z[['O_Migrant_MSM_28_P']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+					z[['O_Migrant_HETM_28_P']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					z[['O_Migrant_HETF_28_P']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+				}				
+				if(0)	#prob in-country infection from aMASE
+				{
+					z[['O_NL_MSM_ALL_PE']]			<- 0.5*0.54*sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+					z[['O_NL_HETM_ALL_PE']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+					z[['O_NL_HETF_ALL_PE']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+					z[['O_Migrant_MSM_ALL_PE']]		<- 0.5*0.54*sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+					z[['O_Migrant_HETM_ALL_PE']]	<- 0.5*0.36*sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					z[['O_Migrant_HETF_ALL_PE']]	<- 0.5*0.36*sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					
+					z[['O_NL_MSM_ALL_P']]			<- 0.5*0.54*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+					z[['O_NL_HETM_ALL_P']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])
+					z[['O_NL_HETF_ALL_P']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])								
+					z[['O_Migrant_MSM_ALL_P']]		<- 0.5*0.54*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+					z[['O_Migrant_HETM_ALL_P']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					z[['O_Migrant_HETF_ALL_P']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					
+					z[['O_NL_MSM_28_PE']]			<- 0.5*0.54*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+					z[['O_NL_HETM_28_PE']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+					z[['O_NL_HETF_28_PE']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+					z[['O_Migrant_MSM_28_PE']]		<- 0.5*0.54*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+					z[['O_Migrant_HETM_28_PE']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					z[['O_Migrant_HETF_28_PE']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					
+					z[['O_NL_MSM_28_P']]			<- 0.5*0.54*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+					z[['O_NL_HETM_28_P']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])
+					z[['O_NL_HETF_28_P']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])								
+					z[['O_Migrant_MSM_28_P']]		<- 0.5*0.54*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+					z[['O_Migrant_HETM_28_P']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					z[['O_Migrant_HETF_28_P']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])					
+				}				
+				z
+			}, by='TP']
+	cnt			<- melt(tmp, id.vars='TP')
+	cnt[, LOC:= factor(substr(variable, 1, 1), levels=c('A','O'), labels=c('Amst','Other'))]
+	cnt[, WHAT:= regmatches(variable,regexpr('[^_]*$', variable))]
+	cnt[, add_RITA:= factor(grepl('1YE|PE', WHAT), levels=c(TRUE,FALSE), labels=c('Y','N'))]
+	set(cnt, NULL, 'WHAT', cnt[, factor(grepl('1Y',WHAT), levels=c(TRUE,FALSE),labels=c('recent', 'pair'))])	
+	set(cnt, NULL, 'YOUNG', cnt[, factor(grepl('28',variable), levels=c(TRUE,FALSE),labels=c('<28', 'all'))])	
+	cnt[, TRM:= cnt[, sapply(strsplit(as.character(variable), '_'), '[[', 3)]]
+	cnt[, MIGRANT:= cnt[, factor(sapply(strsplit(as.character(variable), '_'), '[[', 2), levels=c('Migrant','NL'), labels=c('Y','N'))]]	
+	
+	subset(cnt, add_RITA=='Y' & YOUNG=='all' & LOC=='Amst' & WHAT=='pair')[, list(SC='RITA_1018', N=round(sum(value))), by=c('WHAT','YOUNG','MIGRANT','TRM','LOC')]
+	
+	
+	cnt			<- rbind( 	subset(cnt,SC_RITA_1016=='Y')[, list(SC='RITA_1016', N=round(sum(value))), by=c('WHAT','YOUNG','MIGRANT','TRM','LOC')],
+			subset(cnt,SC_RITA_1315=='Y')[, list(SC='RITA_1315', N=round(sum(value))), by=c('WHAT','YOUNG','MIGRANT','TRM','LOC')]	)
+	setkey(cnt, SC, WHAT, MIGRANT, TRM, LOC)				
+	dcast.data.table( subset(cnt, WHAT=='pair' & YOUNG=='all' & SC=='RITA_1016'), MIGRANT+LOC~TRM, value.var='N')
+	dcast.data.table( subset(cnt, WHAT=='pair' & YOUNG=='all' & SC=='RITA_1315'), MIGRANT+LOC~TRM, value.var='N')
+	dcast.data.table( subset(cnt, WHAT=='pair' & YOUNG=='<28' & SC=='RITA_1016'), MIGRANT+LOC~TRM, value.var='N')
+	dcast.data.table( subset(cnt, WHAT=='pair' & YOUNG=='<28' & SC=='RITA_1315'), MIGRANT+LOC~TRM, value.var='N')
+}
+######################################################################################
+
 project.WTprop.160228<- function()
 {	
 	require(data.table)
@@ -1257,6 +1648,9 @@ project.WTprop.160228<- function()
 	#	proportion of migrants in Amsterdam diagnosed early
 	#
 	pea		<- subset(df, !is.na(isAcute) & AMST=='Y' & MIGRANT!='NL' & TP!='<2010' )[, list(PROP_EARLY=mean(isAcute=='Yes')), by="Trm"]
+	pead	<- subset(df, !is.na(isAcute) & AMST=='Y' & MIGRANT=='NL' & TP!='<2010' )[, list(PROP_EARLY=mean(isAcute=='Yes')), by="Trm"]
+	peo		<- subset(df, !is.na(isAcute) & AMST=='N' & MIGRANT!='NL' & TP!='<2010' )[, list(PROP_EARLY=mean(isAcute=='Yes')), by="Trm"]
+	peod	<- subset(df, !is.na(isAcute) & AMST=='N' & MIGRANT=='NL' & TP!='<2010' )[, list(PROP_EARLY=mean(isAcute=='Yes')), by="Trm"]
 	#
 	#	proportion of migrants in Amsterdam diagnosed late, of those with a first CD4 count in the first year after diagnosis and not on ART before 
 	#	with first CD4<350
@@ -1351,25 +1745,58 @@ project.WTprop.160228<- function()
 	#
 	#	migrant age 2001-2014 in NL
 	#
-	tmp			<- subset(df, !is.na(MIGRANT) & !is.na(MIGRANT) & Trm%in%c('MSM','HET') & AnyPos_T1>2001 & AnyPos_T1<2015)
-	set(tmp, NULL, 'MIGRANT', tmp[,factor(as.character(MIGRANT)=='NL', levels=c(TRUE,FALSE), labels=c('Dutch origin','Migrant'))])
-	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
-	tmp[, YR:= tmp[, cut(AnyPos_T1, breaks=seq(2001, 2015, 2), labels=c('2001-2002','2003-2004','2005-2006','2007-2008','2009-2010','2011-2012','2013-2014'))]]
-	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])	
-	
-	set(tmp, AGE:= cut(Age_AnyPosT1, breaks=c(0,28,38,48,59,100), labels=''))
-	set(tmp, NULL, 'MIGRANT', tmp[, factor(as.character(MIGRANT), 	levels=c("Western_EU", "Latin_South_America", "Eastern_EU_stans", "Caribbean", "Sub_Saharan_Africa", "Other"),
-							labels=c("Western Europe", "Latin & South America", "Eastern Europe", "Caribbean", "Sub-Saharan Africa", "Other"))])
-	ggplot(tmp, aes(x=YR, fill=MIGRANT)) + geom_bar(position='fill') +
+	require(viridis)
+	tmp			<- subset(df, !is.na(MIGRANT) & Trm%in%c('MSM','HET') & AnyPos_T1>2010 & AnyPos_T1<2015)	
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')	
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])		
+	set(tmp, NULL, 'AGE', tmp[,cut(Age_AnyPosT1, breaks=c(0,28,38,48,58,100), labels=c('<28 yrs','28-37 yrs','38-47 yrs','48-57 yrs','>57 yrs'))])	
+	set(tmp, NULL, 'MIGRANT', tmp[, factor(as.character(MIGRANT), 	levels=rev(c("NL","Western_EU", "Latin_South_America", "Eastern_EU_stans", "Caribbean", "Sub_Saharan_Africa", "Other")),
+																	labels=rev(c("Dutch origin","Western Europe", "Latin & South America", "Eastern Europe", "Caribbean", "Sub-Saharan Africa", "Other")))])
+	ggplot(tmp, aes(x=MIGRANT, fill=AGE)) + geom_bar(position='fill') +
 			theme_bw() + theme(legend.position='bottom') +
 			coord_flip() + facet_grid(~Trm) +
 			scale_y_continuous(labels=percent) +
 			scale_alpha_manual(values=c('Heterosexual women'=0.4, 'Heterosexual men'=0.7, 'MSM'=1)) +
-			scale_fill_brewer(palette='Spectral') +	
-			labs(x='', fill='Region of origin', y='\nNew HIV diagnoses among migrants in Amsterdam') 
-	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag0114AMST_PropOrigin1.pdf'), w=8, h=3.5)
-	
-	
+			#scale_fill_brewer(palette='Spectral') +	
+			scale_fill_viridis(option="viridis", discrete=TRUE) +
+			labs(x='', fill='Age at diagnosis among\nnew diagnoses in the Netherlands,   \n2010-2014', y='') 
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag1014NL_PropAgeByOrigin.pdf'), w=10, h=3.5)
+	#
+	#	migrant age 2001-2014 in Amsterdam
+	#	
+	tmp			<- subset(df, AMST=='Y' & !is.na(MIGRANT) & Trm%in%c('MSM','HET') & AnyPos_T1>2010 & AnyPos_T1<2015)	
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')	
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])		
+	set(tmp, NULL, 'AGE', tmp[,cut(Age_AnyPosT1, breaks=c(0,28,38,48,58,100), labels=c('<28 yrs','28-37 yrs','38-47 yrs','48-57 yrs','>57 yrs'))])	
+	set(tmp, NULL, 'MIGRANT', tmp[, factor(as.character(MIGRANT), 	levels=rev(c("NL","Western_EU", "Latin_South_America", "Eastern_EU_stans", "Caribbean", "Sub_Saharan_Africa", "Other")),
+							labels=rev(c("Dutch origin","Western Europe", "Latin & South America", "Eastern Europe", "Caribbean", "Sub-Saharan Africa", "Other")))])
+	ggplot(tmp, aes(x=MIGRANT, fill=AGE)) + geom_bar(position='fill') +
+			theme_bw() + theme(legend.position='bottom') +
+			coord_flip() + facet_grid(~Trm) +
+			scale_y_continuous(labels=percent) +
+			scale_alpha_manual(values=c('Heterosexual women'=0.4, 'Heterosexual men'=0.7, 'MSM'=1)) +
+			#scale_fill_brewer(palette='Spectral') +	
+			scale_fill_viridis(option="viridis", discrete=TRUE) +
+			labs(x='', fill='Age at diagnosis among\nnew diagnoses in Amsterdam,   \n2010-2014', y='') 
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag1014AMST_PropAgeByOrigin.pdf'), w=10, h=3.5)
+	#
+	#	subtype B in the Netherlands
+	#
+	tmp			<- subset(df, !is.na(Subtype) & !is.na(MIGRANT) & Trm%in%c('MSM','HET') & AnyPos_T1>2010 & AnyPos_T1<2015)	
+	set(tmp, tmp[, which(Trm=='HET' & Sex=='M')], 'Trm', 'HETM')
+	set(tmp, NULL, 'Subtype', tmp[, factor(Subtype=='B', levels=c(TRUE, FALSE), labels=c('B','non-B'))])	
+	set(tmp, NULL, 'Trm', tmp[, factor(Trm, levels=c('HET','HETM','MSM'), labels=c('Heterosexual women','Heterosexual men', 'MSM'))])		
+	set(tmp, NULL, 'AGE', tmp[,cut(Age_AnyPosT1, breaks=c(0,28,38,48,58,100), labels=c('<28 yrs','28-37 yrs','38-47 yrs','48-57 yrs','>57 yrs'))])	
+	set(tmp, NULL, 'MIGRANT', tmp[, factor(as.character(MIGRANT), 	levels=rev(c("NL","Western_EU", "Latin_South_America", "Eastern_EU_stans", "Caribbean", "Sub_Saharan_Africa", "Other")),
+																	labels=rev(c("Dutch origin","Western Europe", "Latin & South America", "Eastern Europe", "Caribbean", "Sub-Saharan Africa", "Other")))])
+	ggplot(tmp, aes(x=MIGRANT, fill=Subtype)) + geom_bar(position='fill') +
+			theme_bw() + theme(legend.position='bottom') +
+			coord_flip() + facet_grid(~Trm) +
+			scale_y_continuous(labels=percent) +			
+			scale_fill_manual(values=c('B'="#66C2A5", 'non-B'="#F46D43")) +	
+			#scale_fill_viridis(option="magma", discrete=TRUE) +
+			labs(x='', fill='Subtype distribution among\nnew diagnoses in the Netherlands,\n2010-2014', y='') 
+	ggsave(file=file.path(outdir,'ATHENA1502_NewDiag1014NL_PropSubtypeByOrigin.pdf'), w=10, h=3.5)
 	
 	# 	for each time period: 
 	#	new diagnoses (all; MSM; MSM/young-old; HET/young-old; Migrant; Migrant/young-old)	
@@ -1379,27 +1806,346 @@ project.WTprop.160228<- function()
 	tmp[, {
 				z			<- list()
 				z[['Reg_NA']]							<- length(which(AMST=='Maybe'))
-				z[['A']]									<- length(which(AMST=='Y'))
+				z[['Migrant_1YNAM']]					<- length(which(MIGRANT!='NL' & (is.na(isAcute) | isAcute=='Maybe')))
+				z[['A']]								<- length(which(AMST=='Y'))
 				z[['A_MSM']]							<- length(which(AMST=='Y' & Trm%in%c('MSM','BI')))
-				z[['A_MSM_16-27']]				<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & YOUNG=='16-27'))
-				z[['A_MSM_28-80']]				<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & YOUNG=='28-80'))
+				z[['A_MSM_16-27']]						<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & YOUNG=='16-27'))
+				z[['A_MSM_28-80']]						<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & YOUNG=='28-80'))
+				z[['A_MSM_Migrant_16-27']]				<- length(which(AMST=='Y' & MIGRANT!='NL'& Trm%in%c('MSM','BI') & YOUNG=='16-27'))
+				z[['A_MSM_Migrant_28-80']]				<- length(which(AMST=='Y' & MIGRANT!='NL'& Trm%in%c('MSM','BI') & YOUNG=='28-80'))
+				z[['A_MSM_NL_16-27']]					<- length(which(AMST=='Y' & MIGRANT=='NL'& Trm%in%c('MSM','BI') & YOUNG=='16-27'))
+				z[['A_MSM_NL_28-80']]					<- length(which(AMST=='Y' & MIGRANT=='NL'& Trm%in%c('MSM','BI') & YOUNG=='28-80'))				
 				z[['A_HET']]							<- length(which(AMST=='Y' & Trm%in%c('HET','HETfa')))
 				z[['A_Migrant']]						<- length(which(AMST=='Y' & MIGRANT!='NL'))
-				z[['A_Migrant_M']]					<- length(which(AMST=='Y' & MIGRANT!='NL' & Sex=='M'))
-				z[['A_Migrant_F']]					<- length(which(AMST=='Y' & MIGRANT!='NL' & Sex=='F'))
-				z[['A_Migrant_MSM']]			<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL'))
-				z[['A_Migrant_MSM_1Y']]		<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & isAcute=='Yes'))
-				z[['A_Migrant_MSM_1YE']]	<- round( length(which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')) * subset(pea, Trm=='MSM')[, PROP_EARLY], d=0 )
-				z[['A_Migrant_HET']]				<- length(which(AMST=='Y' & Trm%in%c('HET','HETfa') & MIGRANT!='NL'))
-				z[['A_Migrant_16-27']]			<- length(which(AMST=='Y' & MIGRANT!='NL' & YOUNG=='16-27'))
-				z[['A_Migrant_28-80']]			<- length(which(AMST=='Y' & MIGRANT!='NL' & YOUNG=='28-80'))
-				z[['A_NL_16-27']]					<- length(which(AMST=='Y' & MIGRANT=='NL' & YOUNG=='16-27'))
-				z[['A_NL_28-80']]					<- length(which(AMST=='Y' & MIGRANT=='NL' & YOUNG=='28-80'))
+				z[['A_Migrant_M']]						<- length(which(AMST=='Y' & MIGRANT!='NL' & Sex=='M'))
+				z[['A_Migrant_F']]						<- length(which(AMST=='Y' & MIGRANT!='NL' & Sex=='F'))
+				z[['A_Migrant_1YNAM']]					<- length(which(AMST=='Y' & MIGRANT!='NL' & (is.na(isAcute) | isAcute=='Maybe')))
+				z[['A_Migrant_MSM']]					<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL'))				
+				z[['A_Migrant_MSM_1Y']]					<- length(which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & isAcute=='Yes'))
+				z[['A_Migrant_MSM_1YE']]				<- round( length(which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')) * subset(pea, Trm=='MSM')[, PROP_EARLY], d=0 )
+				z[['A_Migrant_HET']]					<- length(which(AMST=='Y' & Trm%in%c('HET','HETfa') & MIGRANT!='NL'))
+				z[['A_Migrant_16-27']]					<- length(which(AMST=='Y' & MIGRANT!='NL' & YOUNG=='16-27'))
+				z[['A_Migrant_28-80']]					<- length(which(AMST=='Y' & MIGRANT!='NL' & YOUNG=='28-80'))
+				z[['A_NL_16-27']]						<- length(which(AMST=='Y' & MIGRANT=='NL' & YOUNG=='16-27'))
+				z[['A_NL_28-80']]						<- length(which(AMST=='Y' & MIGRANT=='NL' & YOUNG=='28-80'))
 				z
 			}, by='TP']
-	
+	#
+	#	numbers of sequences and isAcute
+	tmp			<- subset(df, TP!='<2010' & TP!='2015')
+	tmp[, ADJ:=1]
+	tmp2		<- subset(df, TP=='2014')
+	tmp2[, ADJ:=0.8]
+	tmp2[, TP:='2015']
+	tmp			<- rbind(tmp, tmp2)
+	tmp2[, ADJ:=0.8]
+	tmp2[, TP:='2016']
+	tmp			<- rbind(tmp, tmp2)
+	tmp			<- tmp[, {
+				z										<- list()	
+				z[['A_Migrant_Any_Any_MSM']]			<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+				z[['O_Migrant_Any_Any_MSM']]			<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+				z[['A_Dutch_Any_Any_MSM']]				<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				z[['O_Dutch_Any_Any_MSM']]				<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				
+				z[['A_Migrant_Seq_Any_MSM']]			<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & !is.na(PosSeqT))])
+				z[['O_Migrant_Seq_Any_MSM']]			<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & !is.na(PosSeqT))])
+				z[['A_Dutch_Seq_Any_MSM']]				<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & !is.na(PosSeqT))])
+				z[['O_Dutch_Seq_Any_MSM']]				<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & !is.na(PosSeqT))])
+				
+				z[['A_Migrant_Any_Rec_MSM']]			<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & isAcute=='Yes')])
+				z[['O_Migrant_Any_Rec_MSM']]			<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & isAcute=='Yes')])
+				z[['A_Dutch_Any_Rec_MSM']]				<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & isAcute=='Yes')])
+				z[['O_Dutch_Any_Rec_MSM']]				<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & isAcute=='Yes')])
+								
+				z[['A_Migrant_Seq_Rec_MSM']]			<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['O_Migrant_Seq_Rec_MSM']]			<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['A_Dutch_Seq_Rec_MSM']]				<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['O_Dutch_Seq_Rec_MSM']]				<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				
+				z[['A_Migrant_Any_Any_Any']]			<- sum(ADJ[which(AMST=='Y' & MIGRANT!='NL')])
+				z[['O_Migrant_Any_Any_Any']]			<- sum(ADJ[which(AMST=='N' & MIGRANT!='NL')])
+				z[['A_Dutch_Any_Any_Any']]				<- sum(ADJ[which(AMST=='Y' & MIGRANT=='NL')])
+				z[['O_Dutch_Any_Any_Any']]				<- sum(ADJ[which(AMST=='N' & MIGRANT=='NL')])
+				
+				z[['A_Migrant_Seq_Any_Any']]			<- sum(ADJ[which(AMST=='Y' & MIGRANT!='NL' & !is.na(PosSeqT))])
+				z[['O_Migrant_Seq_Any_Any']]			<- sum(ADJ[which(AMST=='N' & MIGRANT!='NL' & !is.na(PosSeqT))])
+				z[['A_Dutch_Seq_Any_Any']]				<- sum(ADJ[which(AMST=='Y' & MIGRANT=='NL' & !is.na(PosSeqT))])
+				z[['O_Dutch_Seq_Any_Any']]				<- sum(ADJ[which(AMST=='N' & MIGRANT=='NL' & !is.na(PosSeqT))])
+				
+				z[['A_Migrant_Any_Rec_Any']]			<- sum(ADJ[which(AMST=='Y' & MIGRANT!='NL' & isAcute=='Yes')])
+				z[['O_Migrant_Any_Rec_Any']]			<- sum(ADJ[which(AMST=='N' & MIGRANT!='NL' & isAcute=='Yes')])
+				z[['A_Dutch_Any_Rec_Any']]				<- sum(ADJ[which(AMST=='Y' & MIGRANT=='NL' & isAcute=='Yes')])
+				z[['O_Dutch_Any_Rec_Any']]				<- sum(ADJ[which(AMST=='N' & MIGRANT=='NL' & isAcute=='Yes')])
+				
+				
+				z[['A_Migrant_Seq_Rec_Any']]			<- sum(ADJ[which(AMST=='Y' & MIGRANT!='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['O_Migrant_Seq_Rec_Any']]			<- sum(ADJ[which(AMST=='N' & MIGRANT!='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['A_Dutch_Seq_Rec_Any']]				<- sum(ADJ[which(AMST=='Y' & MIGRANT=='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				z[['O_Dutch_Seq_Rec_Any']]				<- sum(ADJ[which(AMST=='N' & MIGRANT=='NL' & !is.na(PosSeqT) & isAcute=='Yes')])
+				
+				z
+			}, by='TP']
+	cnt			<- melt(tmp, id.vars='TP')
+	cnt[, LOC:= factor(substr(variable, 1, 1), levels=c('A','O'), labels=c('Amst','Other'))]
+	cnt[, ORIGIN:= cnt[, sapply(strsplit(as.character(variable), '_'), '[[', 2)]]
+	cnt[, SEQ:= cnt[, sapply(strsplit(as.character(variable), '_'), '[[', 3)]]	
+	cnt[, REC:= cnt[, sapply(strsplit(as.character(variable), '_'), '[[', 4)]]
+	cnt[, TRM:= cnt[, sapply(strsplit(as.character(variable), '_'), '[[', 5)]]
+	set(cnt, NULL, 'value', cnt[, round(value)])
+	set(cnt, NULL, 'variable', NULL)
+	cnt			<- rbind(cnt, cnt[, list(TP='2010-2016', value=sum(value)), by=c('LOC','ORIGIN','SEQ','REC','TRM')], use.names=TRUE)	
 
+	#	tables for Amsterdam
+	tmp			<- merge( 	dcast.data.table(subset(cnt, REC=='Any' & TRM=='Any' & LOC=='Amst'), TP~SEQ+ORIGIN, value.var='value'),
+							dcast.data.table(subset(cnt, SEQ=='Any' & TRM=='Any' & LOC=='Amst'), TP~REC+ORIGIN, value.var='value'),
+							by=c('TP','Any_Dutch','Any_Migrant'))
+	tmp[, Seq_Dutch_P:= round(Seq_Dutch/Any_Dutch, d=2)]
+	tmp[, Seq_Migrant_P:= round(Seq_Migrant/Any_Migrant, d=2)]
+	tmp[, Rec_Dutch_P:= round(Rec_Dutch/Any_Dutch, d=2)]
+	tmp[, Rec_Migrant_P:= round(Rec_Migrant/Any_Migrant, d=2)]
+	tmp[, LOC:='Amsterdam']
+	ans			<- subset(tmp, select=c(LOC, TP, Any_Dutch, Any_Migrant, Seq_Dutch, Seq_Dutch_P, Seq_Migrant, Seq_Migrant_P, Rec_Dutch, Rec_Dutch_P, Rec_Migrant, Rec_Migrant_P))
+	#	tables for Netherlands
+	tmp			<- merge( 	dcast.data.table(subset(cnt, REC=='Any' & TRM=='Any' & LOC=='Other'), TP~SEQ+ORIGIN, value.var='value'),
+							dcast.data.table(subset(cnt, SEQ=='Any' & TRM=='Any' & LOC=='Other'), TP~REC+ORIGIN, value.var='value'),
+							by=c('TP','Any_Dutch','Any_Migrant'))
+	tmp[, Seq_Dutch_P:= round(Seq_Dutch/Any_Dutch, d=2)]
+	tmp[, Seq_Migrant_P:= round(Seq_Migrant/Any_Migrant, d=2)]
+	tmp[, Rec_Dutch_P:= round(Rec_Dutch/Any_Dutch, d=2)]
+	tmp[, Rec_Migrant_P:= round(Rec_Migrant/Any_Migrant, d=2)]
+	tmp[, LOC:='Other']	
+	ans			<- rbind( ans, subset(tmp, select=c(LOC, TP, Any_Dutch, Any_Migrant, Seq_Dutch, Seq_Dutch_P, Seq_Migrant, Seq_Migrant_P, Rec_Dutch, Rec_Dutch_P, Rec_Migrant, Rec_Migrant_P)) )
 	
+	write.csv(ans, row.names=FALSE, file=file.path(outdir,'ATHENA1502_Diagnoses.csv'))
+	
+	#
+	# 	expected number of recipients and actual transmission pairs captured, 2010-2016:
+	#	baseline:
+	if(0)
+	{
+		m.A			<- 0.95 * 0.9*(0.7*.95+.3*.35)
+		m.O			<- 0.35 * 0.9*(0.3*.95+.7*.35)		
+	}
+	#	rather than RITA, let s get 50% coverage outside Amsterdam
+	if(0)
+	{
+		m.A			<- 0.95 * 0.9*(0.7*.95+.3*.5)
+		m.O			<- 0.5 * 0.9*(0.3*.95+.7*.5)		
+	}
+	#	for young, let s get 75% coverage outside Amsterdam
+	if(1)
+	{
+		m.A			<- 0.95 * 0.9*(0.7*.95+.3*.75)
+		m.O			<- 0.75 * 0.9*(0.3*.95+.7*.75)		
+	}
+	tmp			<- subset(df, TP!='<2010' & TP!='2015')
+	tmp[, ADJ:=1]
+	tmp2		<- subset(df, TP=='2014')
+	tmp2[, ADJ:=0.8]
+	tmp2[, TP:='2015']
+	tmp			<- rbind(tmp, tmp2)
+	tmp2[, ADJ:=0.8]
+	tmp2[, TP:='2016']
+	tmp			<- rbind(tmp, tmp2)
+	tmp			<- tmp[, {
+				z			<- list()												
+				z[['A_NL_MSM_ALL_1YE']]				<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+				z[['A_NL_HETM_ALL_1YE']]			<- sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+				z[['A_NL_HETF_ALL_1YE']]			<- sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+				z[['A_Migrant_ALL_MSM_1YE']]		<- sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+				z[['A_Migrant_HETM_ALL_1YE']]		<- sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+				z[['A_Migrant_HETF_ALL_1YE']]		<- sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+				
+				z[['A_NL_MSM_ALL_1Y']]				<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				z[['A_NL_HETM_ALL_1Y']]				<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+				z[['A_NL_HETF_ALL_1Y']]				<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+				z[['A_Migrant_MSM_ALL_1Y']]			<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+				z[['A_Migrant_HETM_ALL_1Y']]		<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				z[['A_Migrant_HETF_ALL_1Y']]		<- sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				
+				z[['A_NL_MSM_28_1YE']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+				z[['A_NL_HETM_28_1YE']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+				z[['A_NL_HETF_28_1YE']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+				z[['A_Migrant_28_MSM_1YE']]			<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+				z[['A_Migrant_HETM_28_1YE']]		<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+				z[['A_Migrant_HETF_28_1YE']]		<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+				
+				z[['A_NL_MSM_28_1Y']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				z[['A_NL_HETM_28_1Y']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+				z[['A_NL_HETF_28_1Y']]				<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+				z[['A_Migrant_MSM_28_1Y']]			<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+				z[['A_Migrant_HETM_28_1Y']]			<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				z[['A_Migrant_HETF_28_1Y']]			<- sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				
+				if(1)	#since recently infected, in-country infection more likely
+				{
+					z[['A_NL_MSM_ALL_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+					z[['A_NL_HETM_ALL_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+					z[['A_NL_HETF_ALL_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+					z[['A_Migrant_MSM_ALL_PE']]		<- m.A*sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+					z[['A_Migrant_HETM_ALL_PE']]	<- m.A*sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					z[['A_Migrant_HETF_ALL_PE']]	<- m.A*sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					
+					z[['A_NL_MSM_ALL_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) 
+					z[['A_NL_HETM_ALL_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+					z[['A_NL_HETF_ALL_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+					z[['A_Migrant_MSM_ALL_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETM_ALL_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETF_ALL_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					
+					z[['A_NL_MSM_28_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+					z[['A_NL_HETM_28_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+					z[['A_NL_HETF_28_PE']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+					z[['A_Migrant_MSM_28_PE']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+					z[['A_Migrant_HETM_28_PE']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					z[['A_Migrant_HETF_28_PE']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					
+					z[['A_NL_MSM_28_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) 
+					z[['A_NL_HETM_28_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+					z[['A_NL_HETF_28_P']]			<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+					z[['A_Migrant_MSM_28_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETM_28_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETF_28_P']]		<- m.A*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+				}
+				if(0)	#prob in-country infection from aMASE
+				{
+					z[['A_NL_MSM_ALL_PE']]			<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+					z[['A_NL_HETM_ALL_PE']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+					z[['A_NL_HETF_ALL_PE']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+					z[['A_Migrant_MSM_ALL_PE']]		<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+					z[['A_Migrant_HETM_ALL_PE']]	<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					z[['A_Migrant_HETF_ALL_PE']]	<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					
+					z[['A_NL_MSM_ALL_P']]			<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) 
+					z[['A_NL_HETM_ALL_P']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+					z[['A_NL_HETF_ALL_P']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+					z[['A_Migrant_MSM_ALL_P']]		<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETM_ALL_P']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETF_ALL_P']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					
+					z[['A_NL_MSM_28_PE']]			<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(pead, Trm=='MSM')[, PROP_EARLY]
+					z[['A_NL_HETM_28_PE']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]
+					z[['A_NL_HETF_28_PE']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(pead, Trm=='HET')[, PROP_EARLY]				
+					z[['A_Migrant_MSM_28_PE']]		<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(pea, Trm=='MSM')[, PROP_EARLY]
+					z[['A_Migrant_HETM_28_PE']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					z[['A_Migrant_HETF_28_PE']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(pea, Trm=='HET')[, PROP_EARLY]
+					
+					z[['A_NL_MSM_28_P']]			<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) 
+					z[['A_NL_HETM_28_P']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+					z[['A_NL_HETF_28_P']]			<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+					z[['A_Migrant_MSM_28_P']]		<- 0.95*0.54*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETM_28_P']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+					z[['A_Migrant_HETF_28_P']]		<- 0.95*0.36*sum(ADJ[which(AMST=='Y' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+				}				
+				#z[['O']]						<- sum(ADJ[which(AMST=='N')])				
+				z[['O_NL_MSM_ALL_1YE']]				<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+				z[['O_NL_HETM_ALL_1YE']]			<- sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+				z[['O_NL_HETF_ALL_1YE']]			<- sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+				z[['O_Migrant_MSM_ALL_1YE']]		<- sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+				z[['O_Migrant_HETM_ALL_1YE']]		<- sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+				z[['O_Migrant_HETF_ALL_1YE']]		<- sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+				
+				z[['O_NL_MSM_ALL_1Y']]				<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				z[['O_NL_HETM_ALL_1Y']]				<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+				z[['O_NL_HETF_ALL_1Y']]				<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+				z[['O_Migrant_MSM_ALL_1Y']]			<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+				z[['O_Migrant_HETM_ALL_1Y']]		<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				z[['O_Migrant_HETF_ALL_1Y']]		<- sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				
+				z[['O_NL_MSM_28_1YE']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+				z[['O_NL_HETM_28_1YE']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+				z[['O_NL_HETF_28_1YE']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+				z[['O_Migrant_MSM_28_1YE']]			<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+				z[['O_Migrant_HETM_28_1YE']]		<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+				z[['O_Migrant_HETF_28_1YE']]		<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+				
+				z[['O_NL_MSM_28_1Y']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+				z[['O_NL_HETM_28_1Y']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 
+				z[['O_NL_HETF_28_1Y']]				<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) 				
+				z[['O_Migrant_MSM_28_1Y']]			<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) 
+				z[['O_Migrant_HETM_28_1Y']]			<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				z[['O_Migrant_HETF_28_1Y']]			<- sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) 
+				
+				if(1)	#since recently infected, in-country infection more likely
+				{
+					z[['O_NL_MSM_ALL_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+					z[['O_NL_HETM_ALL_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+					z[['O_NL_HETF_ALL_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+					z[['O_Migrant_MSM_ALL_PE']]		<- m.O*sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+					z[['O_Migrant_HETM_ALL_PE']]	<- m.O*sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					z[['O_Migrant_HETF_ALL_PE']]	<- m.O*sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					
+					z[['O_NL_MSM_ALL_P']]			<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+					z[['O_NL_HETM_ALL_P']]			<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])
+					z[['O_NL_HETF_ALL_P']]			<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])								
+					z[['O_Migrant_MSM_ALL_P']]		<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+					z[['O_Migrant_HETM_ALL_P']]		<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					z[['O_Migrant_HETF_ALL_P']]		<- m.O*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					
+					z[['O_NL_MSM_28_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+					z[['O_NL_HETM_28_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+					z[['O_NL_HETF_28_PE']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+					z[['O_Migrant_MSM_28_PE']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+					z[['O_Migrant_HETM_28_PE']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					z[['O_Migrant_HETF_28_PE']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					
+					z[['O_NL_MSM_28_P']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+					z[['O_NL_HETM_28_P']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])
+					z[['O_NL_HETF_28_P']]			<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])								
+					z[['O_Migrant_MSM_28_P']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+					z[['O_Migrant_HETM_28_P']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					z[['O_Migrant_HETF_28_P']]		<- m.O*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+				}				
+				if(0)	#prob in-country infection from aMASE
+				{
+					z[['O_NL_MSM_ALL_PE']]			<- 0.5*0.54*sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+					z[['O_NL_HETM_ALL_PE']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+					z[['O_NL_HETF_ALL_PE']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+					z[['O_Migrant_MSM_ALL_PE']]		<- 0.5*0.54*sum(ADJ[which(AMST=='N' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+					z[['O_Migrant_HETM_ALL_PE']]	<- 0.5*0.36*sum(ADJ[which(AMST=='N' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					z[['O_Migrant_HETF_ALL_PE']]	<- 0.5*0.36*sum(ADJ[which(AMST=='N' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					
+					z[['O_NL_MSM_ALL_P']]			<- 0.5*0.54*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+					z[['O_NL_HETM_ALL_P']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])
+					z[['O_NL_HETF_ALL_P']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])								
+					z[['O_Migrant_MSM_ALL_P']]		<- 0.5*0.54*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+					z[['O_Migrant_HETM_ALL_P']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					z[['O_Migrant_HETF_ALL_P']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					
+					z[['O_NL_MSM_28_PE']]			<- 0.5*0.54*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT=='NL')]) * subset(peod, Trm=='MSM')[, PROP_EARLY]
+					z[['O_NL_HETM_28_PE']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]
+					z[['O_NL_HETF_28_PE']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')]) * subset(peod, Trm=='HET')[, PROP_EARLY]								
+					z[['O_Migrant_MSM_28_PE']]		<- 0.5*0.54*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Trm%in%c('MSM','BI') & MIGRANT!='NL')]) * subset(peo, Trm=='MSM')[, PROP_EARLY]
+					z[['O_Migrant_HETM_28_PE']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					z[['O_Migrant_HETF_28_PE']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')]) * subset(peo, Trm=='HET')[, PROP_EARLY]
+					
+					z[['O_NL_MSM_28_P']]			<- 0.5*0.54*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT=='NL')])
+					z[['O_NL_HETM_28_P']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])
+					z[['O_NL_HETF_28_P']]			<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT=='NL')])								
+					z[['O_Migrant_MSM_28_P']]		<- 0.5*0.54*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Trm%in%c('MSM','BI') & MIGRANT!='NL')])
+					z[['O_Migrant_HETM_28_P']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='M' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])
+					z[['O_Migrant_HETF_28_P']]		<- 0.5*0.36*sum(ADJ[which(AMST=='N' & YOUNG=='16-27' & isAcute=='Yes' & Sex=='F' & Trm%in%c('HET','HETfa') & MIGRANT!='NL')])					
+				}				
+				z
+			}, by='TP']
+	cnt			<- melt(tmp, id.vars='TP')
+	cnt[, LOC:= factor(substr(variable, 1, 1), levels=c('A','O'), labels=c('Amst','Other'))]
+	cnt[, WHAT:= regmatches(variable,regexpr('[^_]*$', variable))]
+	cnt[, add_RITA:= factor(grepl('1YE|PE', WHAT), levels=c(TRUE,FALSE), labels=c('Y','N'))]
+	set(cnt, NULL, 'WHAT', cnt[, factor(grepl('1Y',WHAT), levels=c(TRUE,FALSE),labels=c('recent', 'pair'))])	
+	set(cnt, NULL, 'YOUNG', cnt[, factor(grepl('28',variable), levels=c(TRUE,FALSE),labels=c('<28', 'all'))])	
+	cnt[, TRM:= cnt[, sapply(strsplit(as.character(variable), '_'), '[[', 3)]]
+	cnt[, MIGRANT:= cnt[, factor(sapply(strsplit(as.character(variable), '_'), '[[', 2), levels=c('Migrant','NL'), labels=c('Y','N'))]]	
+	cnt[, SC_RITA_1016:= add_RITA]
+	cnt[, SC_RITA_1315:= factor( (TP%in%c('2010','2011','2012','2016') & add_RITA=='N') |  (TP%in%c('2013','2014','2015') & add_RITA=='Y'), levels=c(TRUE,FALSE), labels=c('Y','N'))]
+	cnt			<- rbind( 	subset(cnt,SC_RITA_1016=='Y')[, list(SC='RITA_1016', N=round(sum(value))), by=c('WHAT','YOUNG','MIGRANT','TRM','LOC')],
+							subset(cnt,SC_RITA_1315=='Y')[, list(SC='RITA_1315', N=round(sum(value))), by=c('WHAT','YOUNG','MIGRANT','TRM','LOC')]	)
+	setkey(cnt, SC, WHAT, MIGRANT, TRM, LOC)				
+	dcast.data.table( subset(cnt, WHAT=='pair' & YOUNG=='all' & SC=='RITA_1016'), MIGRANT+LOC~TRM, value.var='N')
+	dcast.data.table( subset(cnt, WHAT=='pair' & YOUNG=='all' & SC=='RITA_1315'), MIGRANT+LOC~TRM, value.var='N')
+	dcast.data.table( subset(cnt, WHAT=='pair' & YOUNG=='<28' & SC=='RITA_1016'), MIGRANT+LOC~TRM, value.var='N')
+	dcast.data.table( subset(cnt, WHAT=='pair' & YOUNG=='<28' & SC=='RITA_1315'), MIGRANT+LOC~TRM, value.var='N')
 }
 ######################################################################################
 project.hivc.Excel2dataframe.CombinedTable.160227<- function()

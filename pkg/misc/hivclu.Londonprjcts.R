@@ -20,10 +20,11 @@ project.London.FirstExaml.151202<- function()
 	indir		<- '~/Dropbox (Infectious Disease)/2016_LondonMSM'	#TODO: currently no whitespace or brackets in file name: escape all files with ""
 	indir		<- '/Users/Oliver/duke/2015_various'
 	indir		<- DATA
-	infile		<- "subUKogC_noDRM"				#TODO: use fasta instead of R	
+	infile		<- "subUKogC_noDRM"				#TODO: use fasta instead of R
+	infile		<- "algd_ValidPanel-TN_RT_withoutDRM"
 	#	ExaML bootstrap args
-	bs.from		<- 51		# 0 is the actual data alignment
-	bs.to		<- 51
+	bs.from		<- 0		# 0 is the actual data alignment
+	bs.to		<- 0
 	bs.n		<- 100		# optional
 	outdir		<- indir
 	

@@ -1,4 +1,143 @@
 ######################################################################################
+project.ACdata.size.proposal.160404<- function()
+{
+	#	get seroconverters M/F; last neg test; first pos test; second available DBS; bounded ID		
+	indir	<- '/Users/Oliver/duke/20160_AC/original_160212'
+	load(file.path(indir,'RD05-99_ACDIS_HIV_All_Curated.rda'))
+	#
+	#	individuals with at least one pos result
+	#
+	tmp		<- ahiv[, list(Pos=any(!is.na(HIVResult) & HIVResult=='Pos')), by='IIntId']
+	hivp	<- merge(subset(tmp, Pos, IIntId), ahiv, by='IIntId')	#	12719 individuals that tested positive
+	#
+	#	individuals in 2014 that were first pos
+	#	
+	tmp		<- hivp[, list(FirstPos=min(VisitDate[!is.na(HIVResult) & HIVResult=='Pos'])), by='IIntId']
+	tmp[, table(floor(FirstPos))]
+	#
+	#	individuals with at least one DBS eligible for sequencing (ignoring VL>10,000)
+	#
+	hivps	<- unique(subset(hivp, HIVResult=='Pos' & (floor(VisitDate)>=2011 | floor(VisitDate)==2008 | floor(VisitDate)==2009), c(IIntId)))
+	hivps[, SEQ_TdO:='Y']
+		
+	indir	<- '/Users/Oliver/duke/20160_AC/original_160212'
+	load(file.path(indir,'RD02-01_ACDIS_Demography_Curated.rda'))
+	apos	<- subset(adem, !is.na(FirstHIVPositive), c(IIntId, LastHIVNegative, FirstHIVPositive, ObservationStart, Died))
+	apos[, POSYR:= floor(FirstHIVPositive)]	
+	tmp		<- subset(apos, Died==1, c(IIntId, ObservationStart))
+	setnames(tmp, 'ObservationStart', 'DiedBy')
+	apos	<- merge(apos, tmp, by='IIntId', all.x=1)
+	apos	<- merge(apos, hivps, by='IIntId', all.x=1)	
+	setkey(apos, IIntId)
+	apos	<- unique(apos)
+	apos[, DIEDYR:= floor(DiedBy)]
+	#
+	#	build epidemic characteristics
+	#
+	p.VLok	<- 0.6
+	p.SQok	<- 0.75
+	p.ADJn	<- 0.95
+	epi		<- apos[,  list(DIAG=length(IIntId)), by='POSYR']
+	tmp		<- subset(apos, !is.na(DiedBy))[,  list(DIED=length(IIntId)), by='DIEDYR']
+	setnames(epi, 'POSYR', 'YR')
+	setnames(tmp, 'DIEDYR', 'YR')
+	epi		<- merge(epi, tmp, by='YR')
+	epi[, DIAG_ALIVE:= cumsum(DIAG)-cumsum(DIED)]
+	tmp		<- do.call('rbind',lapply( epi[, unique(YR)], function(yr)
+			{
+				data.table(	YR=yr, 
+							DIAG_ALIVE_SEQ_ALL	= round(p.SQok*nrow(subset(apos, SEQ_TdO=='Y' & POSYR<=yr & (is.na(DIEDYR) | DIEDYR>yr)))),
+							DIAG_ALIVE_SEQ_VL	= round(p.SQok*p.VLok*nrow(subset(apos, SEQ_TdO=='Y' & POSYR<=yr & (is.na(DIEDYR) | DIEDYR>yr)))))
+			}))
+	epi		<- merge(epi, tmp, by='YR', all.x=1)	
+	epi[, PREV_RES:= 65e3*seq(0.2,0.3, length.out=14)]
+	epi[, SEQ_DIAG_VL:=  DIAG_ALIVE_SEQ_VL/(DIAG_ALIVE*p.SQok*p.VLok)]
+	epi[, SEQ_DIAG_ALL:=  DIAG_ALIVE_SEQ_ALL/(DIAG_ALIVE*p.SQok)]
+	epi[, SEQ_COV_VL:=  DIAG_ALIVE_SEQ_VL/PREV_RES]
+	epi[, SEQ_COV_ALL:=  DIAG_ALIVE_SEQ_ALL/PREV_RES]
+	#
+	#	seropos and seroconverters with migration background
+	#
+	indir	<- '/Users/Oliver/duke/20160_AC/original_160212'
+	plotdir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_GuidingTransmissionElimination/figures'
+	load(file.path(indir,'RD02-01_ACDIS_Demography_Curated.rda'))
+	amp		<- subset(adem, !is.na(FirstHIVPositive))
+	tmp		<- amp[, {
+				ans	<- NA_real_
+				z	<- which(EpisodeType!='resident')
+				if(length(z))
+					ans	<- FirstHIVPositive[1]-max(ObservationEnd[z])
+				list(Dt_LastNR_FirstPos= ans)
+			}, by='IIntId']
+	amp		<- merge(amp, tmp, by='IIntId')
+	#	define FirstObservation
+	tmp		<- amp[, list(FirstObservation=min(ObservationStart), LastObservation=max(ObservationEnd)), by='IIntId']
+	amp		<- merge(amp, tmp, by='IIntId')
+	#	define infection type
+	amp[, InfectionType:=MigrantType]	
+	set(amp, amp[, which(MigrantType!='resident' & Dt_LastNR_FirstPos>3)], 'InfectionType', 'resident')
+	set(amp, amp[, which(FirstHIVPositive<FirstObservation)], 'InfectionType', 'PosBeforeObs')
+	set(amp, amp[, which(FirstHIVPositive>LastObservation)], 'InfectionType', 'PosAfterObs')
+	
+	amsc	<- subset(amp, !is.na(LastHIVNegative))
+	amsp	<- subset(amp, is.na(LastHIVNegative))
+	amp		<- unique(subset(amp, select=c(IIntId, MigrantType, InfectionType, FirstHIVPositive)))
+	amsc	<- unique(subset(amsc, select=c(IIntId, MigrantType, InfectionType, LastHIVNegative, FirstHIVPositive)))
+	amsp	<- unique(subset(amsp, select=c(IIntId, MigrantType, InfectionType, FirstHIVPositive)))
+	
+	amp[, table(floor(FirstHIVPositive), InfectionType)]
+	subset(amp, FirstHIVPositive>2006 & FirstHIVPositive<2015)[, table(InfectionType)]
+	subset(amp, FirstHIVPositive>2006 & FirstHIVPositive<2015)[, list(N=length(IIntId)), by='InfectionType']
+	
+	
+	alm		<- subset(amp, InfectionType%in%c('in_migrant','migrating_resident','resident'))
+	set(alm, alm[, which(InfectionType%in%c('in_migrant','migrating_resident'))], 'InfectionType', 'Labour migrant')
+	set(alm, alm[, which(InfectionType%in%c('resident'))], 'InfectionType', 'Resident')
+	alm[, FirstHIVPositive_Yr:= floor(FirstHIVPositive)]
+	
+	ggplot(subset(alm, FirstHIVPositive_Yr>2005 & FirstHIVPositive_Yr<2015), aes(x=factor(FirstHIVPositive_Yr), fill=InfectionType)) + 
+			geom_bar(position='dodge', width=0.8 ) +
+			scale_y_continuous(breaks=seq(0,600,100)) +
+			scale_fill_manual(values=c('Resident'="#92C5DE",'Labour migrant'="#5E4FA2")) +
+			labs(x='', y='new HIV diagnoses\nat the KZN surveillance site\n', fill='') + 
+			theme_bw() + theme(legend.position='bottom')
+	ggsave(file.path(plotdir, 'RD02-01_ACDIS_Demography_PosLabourMigrants.pdf'), w=6, h=4)		
+	 
+	#amsp[, table(floor(FirstHIVPositive), InfectionType)]
+	#amsc[, table(floor(FirstHIVPositive), InfectionType)]
+	d.start	<- 326
+	seq		<- subset(alm, InfectionType=='Labour migrant' & FirstHIVPositive_Yr>2010)[, list(ND= length(IIntId)), by='FirstHIVPositive_Yr']	
+	setkey(seq, FirstHIVPositive_Yr)
+	seq		<- rbind(seq, data.table(FirstHIVPositive_Yr=2016, ND=d.start))	
+	seq		<- rbind(seq, data.table(FirstHIVPositive_Yr=seq(2017,2021), ND= round( d.start * p.ADJn^seq(1,5,1)) ))
+	
+	seq[, VLok:= c( rep(0.6, 5), 0.6*(0.95^(1:6)))]
+	seq[, EXTRA:= c(rep(0, 6), rep(1, 5))]
+	seq[, NS:= round( ND*VLok*0.85 + ND*EXTRA*(1-VLok)*0.5 )]
+	seq[, sum(ND)]
+	seq[, sum(NS)]
+	
+	seq		<- subset(amp, FirstHIVPositive>2011)[, list(	YR=seq(2011,2020,1), 
+															N=length(IIntId)/5, 
+															ADJ=c(rep(1,5),p.ADJn^seq(1,5,1))) , by=c('InfectionType')]
+	set(seq, NULL, 'N', seq[, N*ADJ])
+	set(seq, NULL, 'TO_SEQUENCE', seq[, N*p.VLok])
+	set(seq, NULL, 'SEQU_OK', seq[, N*p.VLok*p.SQok])
+	tmp		<- seq[, which(YR>2015)]
+	seq[, COST:=0]
+	set(seq, tmp, 'COST', seq[tmp, TO_SEQUENCE*70])
+	seq		<- subset(seq, InfectionType%in%c('migrating_resident','in_migrant'))
+	seq		<- seq[, list(N=round(sum(N)), TO_SEQUENCE=round(sum(TO_SEQUENCE)), SEQU_OK=round(sum(SEQU_OK)), COST=round(sum(COST))), by='YR']
+	seq[, sum(N)]
+	seq[, sum(TO_SEQUENCE)]
+	seq[, sum(SEQU_OK)]
+	seq[, sum(COST)]
+	#
+	#	
+	#
+	
+}
+######################################################################################
 project.ACdata.size.proposal.160223<- function()
 {
 	#	get seroconverters M/F; last neg test; first pos test; second available DBS; bounded ID		
@@ -148,6 +287,37 @@ project.ACdata.size.proposal.160223<- function()
 	
 }
 ######################################################################################
+project.ACdata.size.proposal<- function()
+{
+	indir	<- '/Users/Oliver/duke/20160_AC/Adrian_160317'
+	load(file=file.path(indir, 'ACDIS_Dobra_MigrantSeroconverters.rda'))
+	
+	unique(subset(amig, Province!='KZN', c(IIntID, EarliestHIVPositive)))
+	unique(subset(amig, Province=='KZN', c(IIntID, EarliestHIVPositive)))
+	
+	unique(subset(amig, select=c(IIntID, Province, EarliestHIVPositive)))
+	
+	amig[, , by='IIntID']
+}
+######################################################################################
+project.ACdata.rda.basic.Migrants_Dobra.160405<- function()
+{
+	indir	<- '/Users/Oliver/duke/20160_AC/Adrian_160317'
+	amig	<- as.data.table(read.csv(file.path(indir,'OliverRatmannData.txt'), stringsAsFactors=FALSE))
+	#	Sex	
+	set(amig, NULL, 'Sex', amig[, factor(Sex, levels=c(1,2),labels=c('M','F'))])
+	#	dates into numerical format	
+	set(amig, NULL, 'ObservationStart', amig[, hivc.db.Date2numeric(ObservationStart)])
+	set(amig, NULL, 'ObservationEnd', amig[, hivc.db.Date2numeric(ObservationEnd)])	
+	set(amig, NULL, 'EarliestHIVPositive', amig[, hivc.db.Date2numeric(EarliestHIVPositive)])
+	set(amig, NULL, 'LatestHIVNegative', amig[, hivc.db.Date2numeric(LatestHIVNegative)])
+	set(amig, NULL, 'EarliestHIVNegative', amig[, hivc.db.Date2numeric(EarliestHIVNegative)])
+	#	Province	
+	set(amig, NULL, 'Province', amig[, factor(Province, 	levels=c(1,				2,				3,				4,				5,		6,				7,			8,				9),
+															labels=c('Western_Cape','Eastern_Cape',	'Northern_Cape','Free_State',	'KZN',	'North_West',	'Gauteng',	'Mpumalanga',	'Limpopo'))])
+	save(amig, file=file.path(indir, 'ACDIS_Dobra_MigrantSeroconverters.rda'))								
+}
+######################################################################################
 project.ACdata.rda.basic.HIV_Individuals.160224<- function()
 {
 	#	HIV INDIVIDUALS
@@ -287,6 +457,34 @@ project.ACdata.rda.curate<- function()
 	#
 	tmp		<- adem[, which(LatestHIVNegative<EarliestHIVNegative)]
 	set(adem, tmp, 'EarliestHIVNegative', adem[tmp, LatestHIVNegative])
+	#
+	#	add MigrantType
+	#
+	tmp		<- adem[, list(MIGRANT= any(EpisodeType!='resident')), by='IIntId']
+	tmp		<- merge(adem, subset(tmp, MIGRANT, IIntId), by='IIntId')
+	setkey(tmp, IIntId, ObservationStart, Episode)
+	tmp		<- tmp[, 	{
+				ans	<- 'migrating_resident'
+				z	<- which(EpisodeType!='resident')
+				zz	<- which(EpisodeType=='resident')
+				if( !length(zz) )
+					ans	<- 'permanent_migrant'
+				if( ans=='migrating_resident' && all(min(zz)>z) )
+					ans	<- 'in_migrant'
+				if( ans=='migrating_resident' && all(min(z)>zz) )
+					ans	<- 'out_resident'				
+				list(MigrantType=ans)
+			}, by='IIntId']
+	adem	<- merge(adem, tmp, by='IIntId', all.x=1)
+	set(adem, adem[, which(is.na(MigrantType))], 'MigrantType','resident')
+	#
+	#	fix EpisodeType 'not resident before resident'
+	#
+	tmp		<- adem[, list(NRR=any(EpisodeType=='not_resident') & MigrantType=='in_migrant'), by='IIntId']	
+	tmp		<- unique(subset(tmp, NRR, IIntId))
+	tmp2	<- adem[, which(IIntId%in%tmp$IIntId & EpisodeType=='not_resident')]
+	cat('\nCurate EpisodeType to "not_resident_before_resident", n=', length(tmp2))
+	set(adem, tmp2, 'EpisodeType', 'not_resident_before_resident')	
 	#
 	tmp		<- subset(adem, !is.na(LatestHIVNegative) & is.na(LastHIVNegative))[, unique(IIntId)]
 	cat('\nWarning: Individuals with no Neg test but LatestHIVNegative in Demography', tmp)
@@ -608,6 +806,160 @@ project.ACpolext.intros<- function()
 	phd[, LOCL:= factor(LOC, 	levels=c('AC','AO','BW','CAP','CD','CM','MW','MZ','SZ','TZ','ZA','ZM','ZW'),
 								labels=c('Africa Centre','Angola','Botswana','CAPRISA','DR Congo','Cameroon','Malawi','Mozambique','Swaziland','Tanzania','South Africa','Zambia','Zimbabwe'))]
 	phd[, SEQYR:= as.numeric(regmatches(TAXA,regexpr('[0-9]+$',TAXA)))]		
+	
+}
+######################################################################################
+project.ACpolext.ViralIntros.160329<- function()
+{	  	
+	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209'
+	infile		<- file.path(indir,'ViroIntro_noDRM_16442_20160208_ft2.newick.rda')
+	load(infile)
+	set(phd, NULL, 'TAXA', phd[, gsub('._','_',TAXA, fixed=1)])
+	#
+	#	get locations
+	#
+	phd[, TIP.CLR:=NULL]
+	phd[, AC:= grepl('^AC_',TAXA)]
+	phd[, CAPR:= grepl('cap',TAXA)]
+	phd[, OTHER_ZA:= grepl('ZA\\.|za\\.',TAXA)]
+	phd[, ZA:= AC|CAPR|OTHER_ZA]
+	phd[, LOC:= 'foreign']
+	set(phd, phd[, which(AC)],'LOC','AC')
+	set(phd, phd[, which(CAPR|OTHER_ZA)],'LOC','other')
+	tmp	<- phd[, which(grepl('^C\\.', TAXA))]
+	phd[, GENBANK:=NA_character_]
+	set(phd, tmp, 'GENBANK', phd[tmp, sapply( strsplit(TAXA, '\\.'), function(x) rev(x)[1] )])
+	set(phd, tmp, 'GENBANK', phd[tmp, sapply(strsplit(GENBANK,'_'),'[[',1)])
+	tmp	<- phd[, which(grepl('^[0-9]+',TAXA))]
+	set(phd, tmp, 'LOC', phd[tmp, gsub('ZA\\.','',regmatches(TAXA,regexpr('ZA\\.[A-Za-z]+',TAXA)))] )
+	set(phd, NULL, 'LOC', phd[, factor(LOC, levels=c('AC','EC',				'foreign','FS',			'GT',		'LP',		'MP',			'NC',			'NL',		'other','Pr',			'WC'),		#NL: WENTWORTH HOSPITAL Durban
+											labels=c('AC', 'Eastern_Cape',	'foreign','Free_State',	'Gauteng',	'Limpopo',	'Mpumalanga',	'Northern_Cape','Durban',	'other','Pretoria',		'WC'))])
+	set(phd, phd[, which(LOC=='WC')], 'LOC', 'Western_Cape')
+	set(phd, phd[, which(LOC=='Pretoria')], 'LOC', 'Gauteng')
+	set(phd, phd[, which(LOC=='Durban')], 'LOC', 'KZN')
+	set(phd, phd[, which(CAPR)], 'LOC', 'KZN')
+	#				
+	#	try resolve 'other' - suspect many are from LANL
+	#
+	pl		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150830_original/ZA.LANL.seq2402.csv', stringsAsFactors=FALSE))
+	setnames(pl, c('X','Place.of.sampling'), c('GENBANK','SITE'))
+	set(pl, NULL, 'GENBANK', pl[, regmatches(GENBANK,regexpr('^[^\\.]+',GENBANK))])
+	pl[, LOC_UP:=NA_character_]
+	set(pl, pl[, which(grepl('Cape',SITE))], 'LOC_UP', 'Western_Cape')
+	set(pl, pl[, which(grepl('KZN|Durban',SITE))], 'LOC_UP', 'KZN')
+	set(pl, pl[, which(grepl('Gauteng|Pretoria|Johannesburg|PASER|Soweto',SITE))], 'LOC_UP', 'Gauteng')
+	set(pl, pl[, which(grepl('Mapumalanga',SITE))], 'LOC_UP', 'Mpumalanga')
+	set(pl, pl[, which(grepl('WC',SITE))], 'LOC_UP', 'Western_Cape')
+	#	subset(pl, is.na(LOC))[, table(SITE)]
+	set(pl, pl[, which(is.na(LOC_UP))], 'LOC_UP', 'other')	
+	phd		<- merge(phd, subset(pl, select=c(GENBANK,LOC_UP)), by='GENBANK', all.x=1)
+	#	300 cases that cannot be resolved further
+	#	write.csv(subset(phd, is.na(LOC_UP) & !is.na(GENBANK) & LOC!='foreign'), file='/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanCheck.csv')
+	#	write.csv(subset(phd, LOC=='other'), file='/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanCheck2.csv')
+	#	Eduan helped
+	#
+	pl		<- as.data.table(read.csv('/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanChecked.csv', stringsAsFactors=FALSE))
+	setnames(pl, 'X.2', 'LOC_UPP')
+	set(pl, NULL, 'LOC_UPP', pl[, factor(LOC_UPP, 	levels=c('Gauteng','KwaZulu-Natal',	'Unknown',	'WesternCape'),
+													labels=c('Gauteng','KZN',			'other',	'Western_Cape'))])
+	phd		<- merge(phd, subset(pl, select=c(TAXA, LOC_UPP)), by='TAXA', all.x=1)
+	#	resolve	
+	tmp		<- phd[, which(!is.na(LOC_UP))]
+	set(phd, tmp, 'LOC',  phd[tmp, LOC_UP])
+	tmp		<- phd[, which(!is.na(LOC_UPP))]
+	set(phd, tmp, 'LOC',  phd[tmp, LOC_UPP])
+	set(phd, NULL, 'LOC_UPP', NULL)	
+	#	375 cases with known GENBANK that cannot be resolved further
+	pl		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanCheck2_EW.csv', stringsAsFactors=FALSE))
+	setnames(pl, 'X.2', 'LOC_UPP')
+	set(pl, NULL, 'LOC_UPP', pl[, factor(LOC_UPP, 	levels=c('Gauteng','KwaZulu-Natal',	'Unknown',	'WesternCape'),
+													labels=c('Gauteng','KZN',			'other',	'Western_Cape'))])
+	phd		<- merge(phd, subset(pl, select=c(TAXA, LOC_UPP)), by='TAXA', all.x=1)
+	tmp		<- phd[, which(!is.na(LOC_UPP))]
+	set(phd, tmp, 'LOC',  phd[tmp, LOC_UPP])
+	set(phd, NULL, 'LOC_UPP', NULL)	
+	#	
+	#
+	#	
+	phd[, YR:=sapply( strsplit(TAXA,'_'), function(x) rev(x)[1] )] 
+	set(phd, phd[, which(YR=='HXB2' | YR=='1036621')],'YR', '')
+	set(phd, NULL, 'YR', phd[, as.numeric(YR)])
+	#	clean up
+	set(phd, NULL, c('GENBANK','LOC_UP'), NULL)
+	set(phd, NULL, 'LOC_LEG', phd[, factor(as.character(LOC), 	levels=c("AC", "KZN", "Eastern_Cape", "Free_State", "Gauteng", "Limpopo", "Mpumalanga", "Northern_Cape", "Western_Cape", "other", "foreign" ),
+																labels=c("Africa Centre", "KwaZulu-Natal", "Eastern Cape", "Free State", "Gauteng", "Limpopo", "Mpumalanga", "Northern Cape", "Western Cape", "Unknown", "Foreign" ))])
+	ggplot(phd, aes(x=YR, fill=LOC_LEG)) + geom_bar(show.legend = FALSE) +
+			scale_fill_brewer(palette='Spectral') +
+			facet_wrap(~LOC_LEG, ncol=4) + labs(x='') +
+			theme_bw() + theme(legend.position='bottom')
+	ggsave(file=file.path(indir, 'ViroIntro_noDRM_16442_20160208_SamplingLocationByYear.pdf'), w=10, h=8)		
+	
+	ggplot(phd, aes(x=1, fill=LOC_LEG)) + geom_bar(position='fill', colour='black') +
+			scale_fill_brewer(palette='Spectral') +
+			scale_y_continuous(breaks=seq(0,1,0.1), labels = scales::percent) +
+			labs(x='', y='', fill='sampling location') +
+			theme_bw() + theme(axis.ticks.x=element_blank(), axis.text.x=element_blank())
+	ggsave(file=file.path(indir, 'ViroIntro_noDRM_16442_20160208_SamplingLocation.pdf'), w=5, h=6)
+	
+	
+	pdinf	<- data.table(  LOC_LEG=c("AC", "KZN", "Eastern_Cape", "Free_State", "Gauteng", "Limpopo", "Mpumalanga", "Northern_Cape", "Western_Cape", "North_West", "other", "foreign" ),
+							INF=c(NA_real_, 100787, 47464, 23104, 68618, 29599, 28809, 3177, 12585, 29106, NA_real_, NA_real_))
+	set(pdinf, NULL, 'LOC_LEG', pdinf[, factor(as.character(LOC_LEG), 	levels=c("AC", "KZN", "Eastern_Cape", "Free_State", "Gauteng", "Limpopo", "Mpumalanga", "Northern_Cape", "Western_Cape", "North_West", "other", "foreign" ),
+																		labels=c("Africa Centre", "KwaZulu-Natal", "Eastern Cape", "Free State", "Gauteng", "Limpopo", "Mpumalanga", "Northern Cape", "Western Cape", "North West", "Unknown", "Foreign" ))])
+	pdinf[, WHAT:='Estimated new infections\nSouth Africa, 2010']
+	ggplot(pdinf, aes(x=1, y=INF, fill=LOC_LEG)) + geom_bar(position='stack', colour='black', stat='identity') +
+							scale_fill_brewer(palette='Spectral') +
+							scale_y_continuous(breaks=seq(0,4e5,5e4), expand=c(0,0)) +
+							scale_x_discrete(expand=c(0,0)) +
+							labs(x='', y='', fill='sampling location') +
+							theme_bw() + theme(axis.ticks.x=element_blank(), axis.text.x=element_blank()) +
+							facet_grid(~WHAT)
+	ggsave(file=file.path(indir, 'ViroIntro_noDRM_16442_20160208_Infections2010.pdf'), w=5, h=5)				
+	phdp	<- subset(phd, !LOC_LEG%in%c("Unknown", "Foreign"))
+	set(phdp, 1L, 'LOC_LEG', 'North West')
+	set(phdp, NULL, 'LOC_LEG', phdp[, factor(as.character(LOC_LEG), 	levels=c("Africa Centre", "KwaZulu-Natal", "Eastern Cape", "Free State", "Gauteng", "Limpopo", "Mpumalanga", "Northern Cape", "Western Cape", "North West", "Unknown", "Foreign" ),
+																		labels=c("Africa Centre", "KwaZulu-Natal", "Eastern Cape", "Free State", "Gauteng", "Limpopo", "Mpumalanga", "Northern Cape", "Western Cape", "North West", "Unknown", "Foreign" ))])	
+	set(phdp, phdp[, which(LOC_LEG=='Africa Centre')], 'LOC_LEG', 'KwaZulu-Natal')	
+	phdp[, WHAT:='Sequence\nsampling location']
+	ggplot(phdp, aes(x=1, fill=LOC_LEG)) + geom_bar(position='stack', colour='black') +
+			scale_fill_brewer(palette='Spectral') +
+			scale_y_continuous(breaks=seq(0,15e3,2e3), expand=c(0,0)) +
+			scale_x_discrete(expand=c(0,0)) +
+			labs(x='', y='', fill='sampling location') +
+			theme_bw() + theme(axis.ticks.x=element_blank(), axis.text.x=element_blank()) +
+			facet_grid(~WHAT)
+	ggsave(file=file.path(indir, 'ViroIntro_noDRM_16442_20160208_SamplingLocationSA.pdf'), w=5, h=5)
+	
+	#
+	#	get genetic distances along tree
+	#
+	ph.gdtr		<- cophenetic.phylo(ph)
+	ph.gdf		<- as.data.table(melt(ph.gdtr,value.name="GD"))
+	setnames(ph.gdf, c('Var1','Var2'),c('TAXA','TAXA2'))
+	ph.gdf		<- subset(ph.gdf, TAXA!=TAXA2)
+	setkey(ph.gdf, TAXA, GD)		
+	ph.gdf		<- subset(ph.gdf, GD<0.1)				#	keep only pairs less than 0.1 subst/site apart
+	ph.gdf		<- subset(ph.gdf, grepl('^AC_',TAXA))	#	keep only pairs with first taxon from AC
+	#
+	#	get pairs with shortest distance
+	#
+	ph.gdfm		<- ph.gdf[, {
+				z	<- which.min(GD)
+				list(TAXA2=TAXA2[z], GD=GD[z])
+			}, by='TAXA']
+	setnames(ph.gdfm, c('TAXA','TAXA2'), c('TAXA_AC','TAXA'))
+	ph.gdfm		<- merge(ph.gdfm, subset(phd, select=c(TAXA, LOC)), by='TAXA')
+	ph.gdfm[, table(LOC)]
+	ph.gdfm[, table(LOC, GD<0.07)]
+	
+	tmp			<- data.table(TX_IDX=seq_len(Ntip(ph)), TAXA= ph$tip.label)
+	tmp			<- merge(tmp, sqi,by='TAXA')
+	tmp			<- subset(tmp, SITE=='UG')
+	tmp[, DUMMY:=NULL]
+	ph.gdf		<- merge(ph.gdf, subset(tmp, select=TAXA), by='TAXA')
+	ph.gdf		<- merge(ph.gdf, data.table(TAXA2=tmp[,TAXA]), by='TAXA2')
+	ph.gdf		<- subset(ph.gdf, TAXA!=TAXA2)
+	setkey(ph.gdf, TAXA, GD)	
 	
 }
 ######################################################################################

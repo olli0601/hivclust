@@ -923,7 +923,8 @@ project.athena.Fisheretal.composition.prop.overall<- function()
 	method.DATING	<- 'sasky'	
 	stat.select		<- 'P.raw.e0cp'
 	outfile			<- infile
-	method.BRL		<- '3pa1H1.94C2V100bInfT7' 	
+	method.BRL		<- '3pa1H1.94C2V100bInfT7'
+	method.BRL		<- '3pa1H1.48C2V100bInfT7'
 	factors			<- project.athena.Fisheretal.sensitivity.factor.legend('m2Awmx.wtn.tp')			
 	method.RISK		<- 'm2Awmx.wtn.tp'
 	#
@@ -945,9 +946,9 @@ project.athena.Fisheretal.composition.prop.overall<- function()
 			#scale_fill_brewer(palette='PRGn',name='from cascade stage') + scale_colour_manual(name='from cascade stage', values = rep('black',11)) +					
 			#guides(colour=FALSE, fill = guide_legend(override.aes = list(size=5))) +
 			theme_bw() + theme(strip.text=element_text(size=14), axis.text=element_text(size=14), axis.title=element_text(size=14), legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,0,-5,0),"mm"), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.7)) + #coord_flip() +
-			geom_bar(stat='identity',binwidth=1, position='dodge') + geom_errorbar(aes(ymin=100*l95.bs, ymax=100*u95.bs), width=0.3, position=position_dodge(width=0.9)) +	
-			facet_grid(.~FCT)
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150504_PropOverall.pdf'		
+			geom_bar(stat='identity', position='dodge') + geom_errorbar(aes(ymin=100*l95.bs, ymax=100*u95.bs), width=0.3, position=position_dodge(width=0.9)) 
+	
+	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/160603_PropOverall.pdf'		
 	ggsave(file=file, w=5, h=3.5)		
 }
 ######################################################################################
@@ -2544,9 +2545,10 @@ project.athena.Fisheretal.composition.probtranspairs.table<- function()
 	indir	<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal'
 	files	<- data.table(	file.MSM=list.files(indir, pattern='*tATHENAmsm.R$'),
 							file.SEQ=list.files(indir, pattern='*tATHENAseq.R$'),
-							file.YX=list.files(indir, pattern='*YXSEQ*'))
+							file.YX=list.files(indir, pattern='*YXSEQ.*T7.R$'))
 					
-	files	<- files[grepl('YXSEQ3pa1H1.48C2V100bInfT7', file.YX) | grepl('H1.48C3.*bInfT7', file.YX) | grepl('H1.48C1.*bInfT7', file.YX) | grepl('H1.48C2.*bInfs0.7T7', file.YX) | grepl('H1.48C2.*bInfs0.85T7', file.YX), ]
+	#files	<- files[grepl('YXSEQ3pa1H1.48C1V100bInfT7', file.YX) | grepl('H1.48C3.*bInfT7', file.YX) | grepl('H1.48C1.*bInfT7', file.YX) | grepl('H1.48C2.*bInfs0.7T7', file.YX) | grepl('H1.48C2.*bInfs0.85T7', file.YX), ]
+	files	<- files[grepl('YXSEQ3pa1H1.48C[1-3]V100bInfT7', file.YX) ]
 	files[, method:= files[,regmatches(file.MSM,regexpr('3pa[^_]+', file.MSM))]]
 	
 	ans.n	<- lapply(seq_len(nrow(files)), function(i)
