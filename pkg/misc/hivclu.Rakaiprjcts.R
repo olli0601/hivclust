@@ -20,10 +20,246 @@ project.Rakai.checkMissingRakai.150307<- function()
 	png.f	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/PANGEA_orig/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda'
 	load(png.f)	#sq, sqi, si
 	set(si, NULL, 'PANGEA_ID', si[, regmatches(PANGEA_ID, regexpr('PG[0-9]+-[^-]+',PANGEA_ID))])
-	merge(si, df, by='PANGEA_ID')
+	merge(si, df, by='PANGEA_ID')		
+}
+
+RakaiCirc.prepare.seqinfo<- function()
+{
+	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	indir.historicseq	<- "~/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree"
+	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	#
+	#	prepare RCCS data (need towards end)
+	#	
+	load(infile)
+	#	a bit of clean up 
+	rd		<- as.data.table(rccsData)
+	setnames(rd, colnames(rd), gsub('\\.','_',toupper(colnames(rd))))	
+	for(x in colnames(rd))
+		if(class(rd[[x]])=='Date')
+			set(rd, NULL, x, hivc.db.Date2numeric(rd[[x]]))
+	#	make shorter
+	setnames(rd, 'RCCS_STUDYID', 'RID')
+	setnames(rd, 'PANGEA_ID', 'PID')
+	#
+	#	read all processed RCCS sequences 
+	#	
+	rs		<- data.table(FILE=list.files(indir.historicseq, full.names=TRUE, pattern='Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region[0-9].rda'))
+	rs[, GENE_REGION:= regmatches(FILE, regexpr('Region[0-9]', FILE))]		
+	tmp		<- lapply(subset(rs, GENE_REGION%in%c('Region1','Region2','Region3'))[, FILE], function(z){
+				load(z)
+				z2	<- subset(as.data.table(pangeaMetaData), select=c(RCCS_studyid, visit, date, seqid, CometSubtype, Pangea.id))
+				z2[, SEQTYPE:='PANGEA']
+				z2[, GENE_REGION:= regmatches(z, regexpr('Region[0-9]', z))]
+				z2
+			})
+	tmp2	<- lapply(subset(rs, GENE_REGION%in%c('Region1','Region4'))[, FILE], function(z){
+				load(z)
+				z2	<- subset(as.data.table(rakhistMetaData), select=c(RCCS_studyid, visit, date, seqid, CometSubtype))
+				z2[, SEQTYPE:='HISTORIC']
+				z2[, GENE_REGION:= regmatches(z, regexpr('Region[0-9]', z))]
+				z2
+			})
+	rs		<- do.call('rbind',tmp) 
+	tmp2	<- do.call('rbind',tmp2)
+	rs		<- rbind(rs, tmp2, use.names=TRUE, fill=TRUE)	
+	setnames(rs, colnames(rs), gsub('\\.','_',toupper(colnames(rs))))
+	setnames(rs, c('RCCS_STUDYID','PANGEA_ID'), c('RID','PID'))
+	set(rs, NULL, 'DATE', hivc.db.Date2numeric(rs[['DATE']]))
+	rs		<- subset(rs, !is.na(RID))		
+	#	add unprocessed but shipped PANGEA sequences
+	tmp		<- subset(rd, !is.na(PID), select=c(RID, VISIT, DATE, PID))
+	tmp2	<- setdiff(tmp[, PID], subset(rs, !is.na(PID))[, unique(PID)])
+	cat('\nWarning: Found PANGEA sequences not in rd (error)? n=', length(setdiff(subset(rs, !is.na(PID))[, unique(PID)], tmp[, PID] )))	
+	cat('\nWarning: PANGEA sequences not yet processed n=', length(tmp2))	
+	setkey(tmp, RID)	
+	#	TODO out of curiosity why are these 349 duplicated?
+	cat('\nFound participants with more than one PANGEA sequence. n=',tmp[duplicated(tmp),][, length(unique(RID))],'\nids=',tmp[duplicated(tmp),][, paste(unique(RID), collapse=' ')])
+	#	TODO there are 2674 unprocessed PANGEA sequences
+	tmp		<- merge(tmp, data.table(PID=tmp2), by='PID')	
+	tmp[, SEQTYPE:='PANGEA_not_yet_processed']	
+	rs		<- rbind(rs, tmp, fill=TRUE, use.names=TRUE)
+	#
+	#	save to file
+	#
+	save(rs, file=file.path(wdir,'RCCS_SeqInfo_160816.rda'))
+}
+
+RakaiCirc.dev160815<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
 	
+	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"	
+	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	load(infile)
+	#	a bit of clean up 
+	rd		<- as.data.table(rccsData)
+	setnames(rd, colnames(rd), gsub('\\.','_',toupper(colnames(rd))))	
+	for(x in colnames(rd))
+		if(class(rd[[x]])=='Date')
+			set(rd, NULL, x, hivc.db.Date2numeric(rd[[x]]))
+	rh		<- as.data.table(rccsHistory)
+	setnames(rh, colnames(rh), gsub('\\.','_',toupper(colnames(rh))))
+	#rd[, table(VISIT)]
+	#	make shorter
+	setnames(rd, 'RCCS_STUDYID', 'RID')
+	setnames(rd, 'PANGEA_ID', 'PID')
+	setnames(rd, 'STUDYID', 'SID')
+	setnames(rh, 'RCCS_STUDYID', 'RID')	
+	#	data checks
+	setkey(rh, VISIT, RID)
+	stopifnot(nrow(rh)==nrow(unique(rh)))
+	#	define circumcision	
+	set(rh, rh[, which(!CIRC%in%c(1,2))], 'CIRC', NA_integer_)
+	set(rh, NULL, 'CIRC', rh[, factor(CIRC, levels=c(1,2), labels=c('Y','N'))])
+	#	TODO Warning: found 1 female circumcised A006734
+	tmp		<- rh[, which(CIRC=='Y' & SEX=='F')]
+	cat('\nWarning: found female circumcised',rh[tmp, paste(RID, collapse=' ')])
+	set(rh, tmp, 'CIRC', NA_integer_)		
+	#
+	#	make individual timeline over visits
+	#
+	rt		<- rbind( subset(rh, select=c(RID, VISIT)), subset(rd, select=c(RID, VISIT)) )
+	setkey(rt, RID, VISIT)
+	rt		<- unique(rt)		
+	cat('\nall visit data', nrow(rt), '\tall data in history',nrow(rh))
+	rt[, ROUND:=VISIT]
+	set(rt, rt[, which(ROUND==15.1)], 'ROUND', 15)
+	#	expand to all possible rounds after entry into cohort
+	tmp		<- as.data.table(expand.grid(RID=rt[, unique(RID)], ROUND=rt[, seq.int(1,max(ROUND))]))
+	rt		<- merge(rt, tmp, by=c('RID','ROUND'),all=1)	
+	#	add basic demographic data
+	tmp		<- subset(rd, select=c(RID, SEX, RELIGION, CAUSE_OF_DEATH, BIRTHDATE, LASTNEGDATE, FIRSTPOSDATE, EST_DATEDIED))
+	setkey(tmp, RID)
+	tmp		<- unique(tmp)
+	set(tmp, tmp[, which(is.na(RELIGION))], 'RELIGION', 'missing')
+	set(tmp, NULL, 'SEX', tmp[, factor(SEX, levels=c('M','F'), labels=c('male','female'))])
+	rt		<- merge(tmp, rt, by='RID')
+	#	add start and end of visit rounds	
+	tmp		<- rd[, list(ROUND_ST= round(min(DATE),d=1), ROUND_E= round(max(DATE),d=1) ), by='VISIT']
+	setnames(tmp, 'VISIT','ROUND')
+	#	TODO: rounds are overlapping? Here, I cut the end times of each period so that the periods do not overlap (hack).
+	setkey(tmp, ROUND)
+	set(tmp, NULL, 'ROUND_E2', c(tmp[, ROUND_ST-.1][-1], Inf) )
+	tmp2	<- tmp[, which(ROUND_E2<ROUND_E)]
+	set(tmp, tmp2, 'ROUND_E', tmp[tmp2,ROUND_E2])
+	set(tmp, NULL, 'ROUND_E2', NULL)
+	#	TODO: confirm no data from round 5?
+	tmp		<- rbind(tmp, data.table(ROUND=5, ROUND_ST=1998.4, ROUND_E=1999.2))	
+	rt		<- merge(rt, tmp, by='ROUND')
+	setkey(rt, RID, ROUND)
+	#	delete rounds before diagnosis or known visit
+	rt		<- subset(rt, !is.na(VISIT) | (is.na(VISIT) & FIRSTPOSDATE<ROUND_E))
+	stopifnot( nrow(subset(rt[, all(is.na(VISIT)), by=RID], V1))==0 )
+	#	delete rounds after recorded death event
+	rt		<- subset(rt, is.na(EST_DATEDIED) | (!is.na(EST_DATEDIED) & ROUND_ST<EST_DATEDIED))
+	stopifnot( nrow(subset(rt[, all(is.na(VISIT)), by=RID], V1))==0 )
+	#	define missing rounds as 
+	#		'no_follow_up'			temporarily not in follow up, visits before and after the current round
+	#		'before_first_visit'	already estimated to be HIV+, first visit after the current round
+	#		'no_obs_est_died'		after last visit, estimated to have died in the current round
+	#		'not_seen_again'		after last visit and no record of death
+	tmp		<- rt[, list(ROUND_FIRST_ST=min(ROUND_ST[!is.na(VISIT)]), ROUND_LAST_E=max(ROUND_E[!is.na(VISIT)])), by='RID']	
+	rt		<- merge(rt, tmp, by='RID')
+	set(rt, NULL, 'VISIT', rt[, as.character(VISIT)])
+	set(rt, rt[, which(is.na(VISIT) & ROUND_ST>ROUND_FIRST_ST & ROUND_E<ROUND_LAST_E)], 'VISIT', 'no_follow_up')	
+	set(rt, rt[, which(is.na(VISIT) & ROUND_ST<ROUND_FIRST_ST)], 'VISIT', 'before_first_visit')
+	set(rt, rt[, which(is.na(VISIT) & ROUND_E==ROUND_LAST_E)], 'VISIT', 'no_obs_est_died')
+	set(rt, rt[, which(is.na(VISIT) & ROUND_E>ROUND_LAST_E)], 'VISIT', 'not_seen_again')
+	stopifnot( nrow(subset(rt, is.na(VISIT)))==0 )
+	#	define first circumcision 
+	tmp		<- subset(rh, CIRC=='Y')[, list(FIRSTCIRC_V= min(VISIT) ), by='RID']
+	tmp2	<- subset(rh, CIRC=='N')[, list(LASTNOTCIRC_V= max(VISIT) ), by='RID']
+	tmp		<- merge(tmp, tmp2, by='RID', all=1)	
+	#	TODO individuals with conflicting circumcision data. For now ignore conflicts (hack).
+	tmp2	<- subset(tmp, FIRSTCIRC_V<=LASTNOTCIRC_V)
+	write.csv(tmp2, row.names=FALSE, file=file.path(wdir, 'check_conflictingCircumcisionStatus.csv'))
+	cat('\nWarning: Found conflicting circumcision data for n=',nrow(tmp2))
+	set(tmp, tmp[, which(FIRSTCIRC_V<=LASTNOTCIRC_V)], 'LASTNOTCIRC_V', NA_real_)
+	#	define ever circumcised and all missing
+	tmp2	<- rh[, list(EVERCIRC=as.integer(any(CIRC=='Y', na.rm=1)), NODATA=all(is.na(CIRC))), by='RID']
+	tmp		<- merge(tmp, tmp2, by='RID', all=1)	
+	set(tmp, tmp[, which(NODATA)], 'EVERCIRC', 2L)
+	#	tmp[, table(EVERCIRC, NODATA, useNA='if')]
+	set(tmp, NULL, 'EVERCIRC', tmp[, factor(EVERCIRC, levels=c(0,1,2), labels=c('N','Y','missing_all'))])
+	set(tmp, NULL, 'NODATA', NULL)
+	rt		<- merge(rt, tmp, by='RID')
+	#	define circumcision timeline
+	rt[, CIRC:=NA_character_]	
+	set(rt, rt[, which(FIRSTCIRC_V<=ROUND)], 'CIRC', 'Y')
+	set(rt, rt[, which(ROUND<=LASTNOTCIRC_V)], 'CIRC', 'N')
+	set(rt, rt[, which(EVERCIRC=='missing_all')], 'CIRC', 'missing_all')
+	set(rt, rt[, which(EVERCIRC=='N')], 'CIRC', 'N')
+	set(rt, rt[, which(is.na(CIRC) & FIRSTCIRC_V>ROUND)], 'CIRC', 'missing_before_circ')
+	set(rt, rt[, which(is.na(CIRC) & LASTNOTCIRC_V<ROUND)], 'CIRC', 'missing_after_notcirc')
+	stopifnot( nrow(subset(rt, is.na(CIRC)))==0 )
+	set(rt, NULL, c('FIRSTCIRC_V','LASTNOTCIRC_V'), NULL)
+	#
+	#	add first sequences
+	#	
+	#	load sequence info
+	#	(if not exist, run RakaiCirc.prepare.seqinfo)
+	load(file.path(wdir,'RCCS_SeqInfo_160816.rda'))	
+	#	TODO: has not visit: E21593M2
+	rs		<- subset(rs, !is.na(VISIT))	
+	tmp		<- rs[, {
+				z<- which.min(DATE)
+				list(VISIT=VISIT[z], DATE=DATE[z], SEQ_HIST= any(SEQTYPE=='HISTORIC'), SEQ_PANGEA_NOW= any(SEQTYPE=='PANGEA'), SEQ_PANGEA_FUTURE= any(SEQTYPE=='PANGEA_not_yet_processed'), SEQ_NOW_GAG= any(GENE_REGION=='Region1'))
+			}, by=RID]
+	#	complete to all available RIDs
+	tmp		<- merge(unique(subset(rt, select=RID)), tmp, all.x=1)
+	tmp[, SEQ_TYPE:= 'no_seq']
+	set(tmp, tmp[, which(SEQ_HIST & !SEQ_PANGEA_NOW & !SEQ_PANGEA_FUTURE)], 'SEQ_TYPE', "hist_only")
+	set(tmp, tmp[, which(SEQ_PANGEA_NOW | SEQ_PANGEA_FUTURE)], 'SEQ_TYPE', "pangea")
+	set(tmp, tmp[, which(SEQ_HIST & (SEQ_PANGEA_NOW | SEQ_PANGEA_FUTURE))], 'SEQ_TYPE', "hist_pangea")
+	tmp[, SEQ_NOW:= factor(!is.na(SEQ_HIST) & (SEQ_HIST | SEQ_PANGEA_NOW), levels=c(TRUE,FALSE), labels=c('Y','N'))]
+	set(tmp, NULL, 'SEQ_NOW_GAG', tmp[, factor(!is.na(SEQ_NOW_GAG) & SEQ_NOW_GAG, levels=c(TRUE,FALSE), labels=c('Y','N'))])
+	set(tmp, NULL, c('VISIT','SEQ_HIST','SEQ_PANGEA_NOW','SEQ_PANGEA_FUTURE'), NULL)
+	setnames(tmp, 'DATE', 'FIRST_SEQ_DATE')
+	rt		<- merge(rt, tmp, by='RID')
+	
+	
+	#	plot total circumcision by year among individuals in follow up
+	ggplot(rt, aes(x=factor(ROUND_ST), fill=CIRC)) + geom_bar() + 
+			theme_bw() +
+			theme(legend.position='bottom') +
+			scale_y_continuous(breaks=seq(0,1e4, 5e2)) +
+			facet_grid(SEX~.) +
+			labs(x='\nsurvey rounds\n(start date)', y='HIV infected RCCS participants\n(reported alive, incl temporary loss to follow-up)\n', fill='Circumcision\nstatus')
+	ggsave(file.path(wdir, 'RCCSinf_by_circ.pdf'), w=10, h=8)
+	#	plot proportion circumcision by year among individuals in follow up
+	ggplot(subset(rt, SEX=='male'), aes(x=factor(ROUND_ST), fill=CIRC)) + geom_bar(position='fill') + 
+			theme_bw() +
+			theme(legend.position='bottom') +
+			scale_y_continuous(breaks=seq(0,1, 0.1), labels = scales::percent) +
+			labs(x='\nsurvey rounds\n(start date)', y='HIV infected male RCCS participants\n(reported alive, incl temporary loss to follow-up)\n', fill='Circumcision\nstatus')
+	ggsave(file.path(wdir, 'RCCSinf_by_circ_proportions_men.pdf'), w=10, h=5)	
+	#	plot sequence coverage among HIV infected participants
+	tmp		<- copy(rt)
+	tmp[, DUMMY:= as.integer(SEQ_TYPE!='no_seq')]
+	set(tmp, tmp[, which(SEQ_NOW_GAG=='Y')], 'DUMMY', 2L)
+	set(tmp, NULL, 'DUMMY', tmp[, as.character(factor(DUMMY, levels=c(0L,1L, 2L), labels=c('No sequence','sequence available','sequence forthcoming')))])
+	ggplot(tmp, aes(x=factor(ROUND_ST), fill=DUMMY)) + geom_bar() + 
+			theme_bw() +
+			theme(legend.position='bottom') +
+			scale_y_continuous(breaks=seq(0,1e4, 5e2)) +
+			labs(x='\nsurvey rounds\n(start date)', y='HIV infected RCCS participants\n(reported alive, incl temporary loss to follow-up)\n', fill='Sequence\nstatus')
+	ggsave(file.path(wdir, 'RCCSinf_by_sequence_coverage.pdf'), w=10, h=5)
+	#	plot circumcised by religion
+	tmp		<- subset(rt, EVERCIRC=='Y')
+	ggplot(tmp, aes(x=factor(ROUND_ST), fill=RELIGION)) + geom_bar(position='fill') + 
+			theme_bw() +
+			theme(legend.position='bottom') +
+			scale_y_continuous(breaks=seq(0,1, 0.1), labels = scales::percent) +
+			scale_fill_brewer(palette='Set2') +
+			labs(x='\nsurvey rounds\n(start date)', y='circumcised male \nHIV infected RCCS participants\n(reported alive, incl temporary loss to follow-up)\n', fill='Faith')
+	ggsave(file.path(wdir, 'RCCScircmen_by_religion_proportions.pdf'), w=10, h=5)	
 	
 }
+
+
 ######################################################################################
 project.Rakai.processRegion1PANGEAalignment.151129<- function()
 {
