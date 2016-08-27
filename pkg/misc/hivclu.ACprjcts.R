@@ -645,6 +645,188 @@ project.ACdata.csv.to.rda.160223<- function()
 	save( alb, file=gsub('csv','rda',gsub(' ','_',file)))
 }
 ######################################################################################
+project.BWdata.csv.to.rda.PANGEA.160817<- function()
+{
+	indir	<- '/Users/Oliver/duke/2016_AC/PANGEA_160817'
+	#
+	#	save data sets as rda
+	#	
+	infile	<- file.path(indir, '29-06-2016_botswana.csv')
+	#	read data sets
+	bwp		<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
+	setnames(bwp, 	c("seqs", "seq_length_nt", "bw_community", "gender", "age", "art", "viral_load", "cd4", "date_hiv_test","vl_date","cd4_date"),
+					c("SEQID", "SEQ_LEN", "LOC", "SEX", "AGE", "CURRENTLYONART", "RECENTVL", "RECENTCD4COUNT", "FIRSTPOSDATE", "RECENTVLDATE", "RECENTCD4DATE"))
+	#	convert dates
+	set(bwp, NULL, 'RECENTCD4DATE', bwp[, as.Date(RECENTCD4DATE, format="%m/%d/%y")])
+	set(bwp, NULL, 'RECENTVLDATE', bwp[, as.Date(RECENTVLDATE, format="%m/%d/%y")])
+	set(bwp, NULL, "FIRSTPOSDATE", bwp[, as.Date(FIRSTPOSDATE, format="%m/%d/%Y")])
+	for(x in colnames(bwp))
+		if(class(bwp[[x]])=='Date')
+			set(bwp, NULL, x, hivc.db.Date2numeric(bwp[[x]]))
+	#	convert other strings
+	set(bwp, NULL, "PANGEAID", bwp[, gsub('-S[0-9]+','',SEQID)])
+	set(bwp, NULL, "COHORT", 'BW-Mochudi')
+	set(bwp, NULL, "SEQ_LEN", bwp[, as.numeric(gsub(',','',SEQ_LEN))])		
+	set(bwp, bwp[, which(SEX=='UNK')], 'SEX', NA_character_)
+	set(bwp, bwp[, which(AGE=='UNK')], 'AGE', NA_character_)
+	set(bwp, NULL, "AGE", bwp[, as.numeric(AGE)])
+	set(bwp, NULL, 'CURRENTLYONART', bwp[, as.character(factor(CURRENTLYONART, levels=c('No','Yes'), labels=c('N','Y')))])
+	set(bwp, bwp[, which(RECENTCD4COUNT=='UNK')], 'RECENTCD4COUNT', NA_character_)
+	set(bwp, bwp[, which(RECENTVL=='UNK')], 'RECENTVL', NA_character_)
+	#	check unique	-- the meta data is fine, there are just a few sequence replicates
+	#setkey(bwp, SEQID)
+	#merge(bwp,subset(bwp[duplicated(bwp),], select=SEQID),by='SEQID')
+	set(bwp, NULL, 'SEQ_LEN', NULL)
+	#	set sampling date
+	#	from Vlad: for people on ART the sampling date is the date of household visit (DBS)
+	#			   for ART-naïve people, it could be either a date of HIV testing in household (DBS), or the date of clinic visit (normally within 2 weeks after household visit, but in few cases it took longer)
+	bwp[, SAMPLEDATE:= FIRSTPOSDATE]	
+	tmp		<- bwp[, which(is.na(FIRSTPOSDATE))]
+	set(bwp, tmp, 'SAMPLEDATE', bwp[tmp, RECENTVLDATE])
+	tmp		<- bwp[, which(CURRENTLYONART=='N' & !is.na(RECENTVLDATE) & !is.na(FIRSTPOSDATE))]
+	set(bwp, tmp, 'SAMPLEDATE', bwp[tmp, (FIRSTPOSDATE+RECENTVLDATE)/2])
+	#
+	bwp		<- subset(unique(bwp), select=c(COHORT,PANGEAID,SEQID,LOC,SEX,AGE,SAMPLEDATE,FIRSTPOSDATE,CURRENTLYONART,RECENTVL,RECENTVLDATE, RECENTCD4COUNT, RECENTCD4DATE))
+	save(bwp, file=file.path(indir,'160817_PANGEA_BW_corevariables_n373.rda'))
+}
+######################################################################################
+project.ACdata.csv.to.rda.PANGEA.160817<- function()
+{
+	require(foreign)
+	#
+	indir	<- '/Users/Oliver/duke/2016_AC/PANGEA_160817'
+	#
+	#	save data sets as rda
+	#	
+	infile.tasp.core		<- file.path(indir, 'AfricaCentre_CoreVariables_TasP.csv')
+	infile.tasp.desirable	<- file.path(indir, 'AfricaCentre_DesirableVariables_TasP.csv')
+	infile.preart.clinic	<- file.path(indir, 'PC01-01_Pangea_Pre-ART_Clinical_Data.csv')
+	infile.preart.lab		<- file.path(indir, 'PL01-02 Pangea Pre-ART Lab Data.csv')
+	infile.res.cohort		<- file.path(indir, 'PR01-01_Pangea_RES_Cohort_ClinicalData.csv')
+	infile.res.lab			<- file.path(indir, 'PR01-02 Pangea RES Lab Data.dta')
+	#
+	#	read data sets
+	#	
+	acp.tasp	<- as.data.table(read.csv(infile.tasp.core, stringsAsFactors=FALSE))	
+	acp.res		<- as.data.table(read.csv(infile.res.cohort, stringsAsFactors=FALSE, strip.white=TRUE))	
+	acp.preart	<- as.data.table(read.csv(infile.preart.clinic, stringsAsFactors=FALSE, strip.white=TRUE))
+	acp.reslab	<- as.data.table(read.dta(infile.res.lab))
+	#
+	#	TASP: focus on basic demographic data only
+	#	
+	acp	<- subset(acp.tasp, select=c("Cohort", "SampleIdentifier", "PANGEAID", "ClusterName", "Dateofbirth", "Gender","SampleDate", "ReasonforSampling", "PrevARTuse","CurrentlyonART", "ARTRegimen", "RecentCD4Count", "RecentCD4CountDate", "RecentVL", "RecentVLDate", "Circumcised", "LastKnownNegStatusDate", "FirstHIVPosTestDate", "LastNumSexualPartners"))
+	setnames(acp, c("SampleIdentifier", 'Dateofbirth', "ClusterName", "Gender","ReasonforSampling","ARTRegimen","LastKnownNegStatusDate","FirstHIVPosTestDate","RecentCD4CountDate"), c('STUDY_ID','DOB', 'LOC', 'SEX',"ReasonSampling","LatestARTRegimen","LastNegDate","FirstPosDate","RecentCD4Date"))
+	setnames(acp, colnames(acp), gsub('\\.','_',toupper(colnames(acp))))
+	#	fix Dateofbirth
+	set(acp, NULL, 'DOB', acp[, paste(substr(DOB,1,4),'-',substr(DOB,5,6),'-',substr(DOB,7,8),sep='')])
+	#	convert dates
+	set(acp, NULL, 'DOB', acp[, as.Date(DOB, format="%Y-%m-%d")])
+	set(acp, NULL, 'SAMPLEDATE', acp[, as.Date(SAMPLEDATE, format="%Y-%m-%d")])
+	set(acp, NULL, 'RECENTCD4DATE', acp[, as.Date(RECENTCD4DATE, format="%Y-%m-%d")])
+	set(acp, NULL, 'RECENTVLDATE', acp[, as.Date(RECENTVLDATE, format="%Y-%m-%d")])
+	set(acp, NULL, "FIRSTPOSDATE", acp[, as.Date(FIRSTPOSDATE, format="%Y-%m-%d")])
+	set(acp, NULL, 'LASTNEGDATE', acp[, as.Date(LASTNEGDATE, format="%Y-%m-%d")])	
+	for(x in colnames(acp))
+		if(class(acp[[x]])=='Date')
+			set(acp, NULL, x, hivc.db.Date2numeric(acp[[x]]))
+	#	convert numeric codes
+	set(acp, NULL, 'PREVARTUSE', acp[, as.character(factor(PREVARTUSE, levels=c(1,2), labels=c('Y','N')))])
+	set(acp, NULL, 'CURRENTLYONART', acp[, as.character(factor(CURRENTLYONART, levels=c(1,2), labels=c('Y','N')))])
+	set(acp, NULL, 'CIRCUMCISED', acp[, as.character(factor(CIRCUMCISED, levels=c(1,2), labels=c('Y','N')))])
+	#
+	#	RESISTANCE COHORT: add basic demographic data
+	#	
+	tmp	<- subset(acp.res, select=c("SpecimenID", "PangeaID", "DateOfBirth", "Sex", "SpecimenDate", "ReasonSampling", "PrevARTUse","DateOfInitiation","CurrentlyOnART", "LatestHIVDrugRegimen", "LatestHIVDrugRegimenDateStarted", "RecentCD4Count", "RecentCD4CountDate", "RecentVL", "RecentVLDate", "Circumcised", "LastNegDate", "FirstPosDate"))
+	setnames(tmp, c('DateOfBirth',"SpecimenID","SpecimenDate","LatestHIVDrugRegimen","LatestHIVDrugRegimenDateStarted","RecentCD4CountDate","DateOfInitiation"), c('DOB',"STUDY_ID","SAMPLEDATE","LatestARTRegimen","LatestARTRegimenStarted","RecentCD4Date","ARTStart"))
+	setnames(tmp, colnames(tmp), gsub('\\.','_',toupper(colnames(tmp))))
+	set(tmp, NULL, 'COHORT', 'AC_Resistance')
+	#	TODO SEX is missing
+	#	TODO SAMPLEDATE, DOB, ARTSTART is corrupted
+	set(tmp, NULL, 'SAMPLEDATE', tmp[, as.numeric(substr(SAMPLEDATE, 7,10))+.5])
+	set(tmp, NULL, 'DOB', tmp[, as.numeric(substr(DOB, 7,10))+.5])
+	set(tmp, NULL, 'ARTSTART', tmp[, as.numeric(substr(ARTSTART, 7,10))+.5])
+	#	clean up dates
+	set(tmp, NULL, 'RECENTCD4DATE', tmp[, gsub(' 00:00:00.000','',RECENTCD4DATE)])	
+	set(tmp, NULL, 'RECENTVLDATE', tmp[, gsub(' 00:00:00.000','',RECENTVLDATE)])
+	set(tmp, NULL, 'LASTNEGDATE', tmp[, gsub(' 00:00:00.000','',LASTNEGDATE)])
+	set(tmp, NULL, 'FIRSTPOSDATE', tmp[, gsub(' 00:00:00.000','',FIRSTPOSDATE)])
+	set(tmp, NULL, 'LATESTARTREGIMENSTARTED', tmp[, gsub(' 00:00:00.000','',LATESTARTREGIMENSTARTED)])	
+	#	convert dates
+	set(tmp, NULL, 'RECENTCD4DATE', tmp[, as.Date(RECENTCD4DATE, format="%Y/%m/%d")])	
+	set(tmp, NULL, 'RECENTVLDATE', tmp[, as.Date(RECENTVLDATE, format="%Y/%m/%d")])
+	set(tmp, NULL, 'LASTNEGDATE', tmp[, as.Date(LASTNEGDATE, format="%Y/%m/%d")])
+	set(tmp, NULL, 'FIRSTPOSDATE', tmp[, as.Date(FIRSTPOSDATE, format="%Y/%m/%d")])
+	set(tmp, NULL, 'LATESTARTREGIMENSTARTED', tmp[, as.Date(LATESTARTREGIMENSTARTED, format="%Y/%m/%d")])
+	for(x in colnames(tmp))
+		if(class(tmp[[x]])=='Date')
+			set(tmp, NULL, x, hivc.db.Date2numeric(tmp[[x]]))
+	#	convert numeric codes
+	set(tmp, NULL, 'REASONSAMPLING', tmp[, as.character(factor(REASONSAMPLING, levels=c(1), labels=c('VBL')))])
+	set(tmp, NULL, 'PREVARTUSE', tmp[, as.character(factor(PREVARTUSE, levels=c(0,1), labels=c('N','Y')))])
+	set(tmp, NULL, 'CURRENTLYONART', tmp[, as.character(factor(CURRENTLYONART, levels=c(0,1), labels=c('N_Deceased','Y')))])
+	set(tmp, NULL, 'CIRCUMCISED', tmp[, as.character(factor(CIRCUMCISED, levels=c(0,1), labels=c('N','Y')))])	
+	#	clean up lab data
+	setnames(acp.reslab, colnames(acp.reslab), gsub('\\.','_',toupper(colnames(acp.reslab))))
+	setnames(acp.reslab, 'SPECIMENID', 'STUDY_ID')
+	set(acp.reslab, NULL, 'TESTDATE', hivc.db.Date2numeric(acp.reslab[['TESTDATE']]))
+	#	get lab data closest to sample date
+	tmp2	<- merge(acp.reslab, subset(tmp, select=c(STUDY_ID, SAMPLEDATE)), by='STUDY_ID')
+	tmp		<- merge(tmp, subset(tmp2, !is.na(VIRALLOAD))[, {
+				z	<- which.min(abs(SAMPLEDATE-TESTDATE))
+				list(RECENTVLDATE_NEW=TESTDATE[z], RECENTVL_NEW=VIRALLOAD[z])
+			},by='STUDY_ID'],by='STUDY_ID',all.x=1)
+	tmp		<- merge(tmp, subset(tmp2, !is.na(CD4COUNT))[, {
+					z	<- which.min(abs(SAMPLEDATE-TESTDATE))
+					list(RECENTCD4DATE_NEW=TESTDATE[z], RECENTCD4COUNT_NEW=CD4COUNT[z])
+				},by='STUDY_ID'],by='STUDY_ID',all.x=1)
+	stopifnot( nrow(tmp)==tmp[, length(which( is.na(RECENTVLDATE) | abs(SAMPLEDATE-RECENTVLDATE_NEW)<=abs(SAMPLEDATE-RECENTVLDATE)))] )	
+	stopifnot( nrow(tmp)==tmp[, length(which( is.na(RECENTCD4DATE) | abs(SAMPLEDATE-RECENTCD4DATE_NEW)<=abs(SAMPLEDATE-RECENTCD4DATE)))] )
+	set(tmp, NULL, c('RECENTCD4COUNT','RECENTCD4DATE','RECENTVL','RECENTVLDATE'), NULL)
+	setnames(tmp, c('RECENTVLDATE_NEW','RECENTVL_NEW','RECENTCD4DATE_NEW','RECENTCD4COUNT_NEW'), c('RECENTVLDATE','RECENTVL','RECENTCD4DATE','RECENTCD4COUNT'))	
+	acp	<- rbind(acp, tmp, use.names=TRUE, fill=TRUE)
+	#
+	#	PREART COHORT: add basic demographic data
+	#	
+	tmp	<- subset(acp.preart, select=c("SpecimenID", "PangeaID", "DateOfBirth", "Sex", "SpecimenDate", "ReasonSampling", "PrevARTUse", "CurrentlyOnART", "DateOfInitiation", "LatestHIVDrugRegimenDateStarted", "LatestHIVDrugRegimen", "RecentCD4Count", "RecentCD4CountDate", "RecentVL", "RecentVLDate", "Circumcised", "LastNegDate", "FirstPosDate")) 
+	setnames(tmp, c('DateOfBirth',"SpecimenID","SpecimenDate","LatestHIVDrugRegimen","LatestHIVDrugRegimenDateStarted","RecentCD4CountDate","DateOfInitiation"), c('DOB',"STUDY_ID","SAMPLEDATE","LatestARTRegimen","LatestARTRegimenStarted","RecentCD4Date","ARTStart"))
+	setnames(tmp, colnames(tmp), gsub('\\.','_',toupper(colnames(tmp))))
+	set(tmp, NULL, 'COHORT', 'AC_PreART')
+	#	TODO SAMPLEDATE missing
+	#	TODO DOB ARTSTART is corrupted	
+	set(tmp, NULL, 'DOB', tmp[, as.numeric(substr(DOB, 7,10))+.5])
+	set(tmp, NULL, 'ARTSTART', tmp[, as.numeric(substr(ARTSTART, 7,10))+.5])
+	#	clean up dates
+	set(tmp, NULL, 'RECENTCD4DATE', tmp[, gsub(' 00:00:00.000','',RECENTCD4DATE)])	
+	set(tmp, NULL, 'RECENTVLDATE', tmp[, gsub(' 00:00:00.000','',RECENTVLDATE)])
+	set(tmp, NULL, 'LASTNEGDATE', tmp[, gsub(' 00:00:00.000','',LASTNEGDATE)])
+	set(tmp, NULL, 'FIRSTPOSDATE', tmp[, gsub(' 00:00:00.000','',FIRSTPOSDATE)])
+	set(tmp, NULL, 'LATESTARTREGIMENSTARTED', tmp[, as.Date(LATESTARTREGIMENSTARTED, format="%Y/%m/%d")])
+	#	convert dates
+	set(tmp, NULL, 'RECENTCD4DATE', tmp[, as.Date(RECENTCD4DATE, format="%Y/%m/%d")])	
+	set(tmp, NULL, 'RECENTVLDATE', tmp[, as.Date(RECENTVLDATE, format="%Y/%m/%d")])
+	set(tmp, NULL, 'LASTNEGDATE', tmp[, as.Date(LASTNEGDATE, format="%Y/%m/%d")])
+	set(tmp, NULL, 'FIRSTPOSDATE', tmp[, as.Date(FIRSTPOSDATE, format="%Y/%m/%d")])
+	set(tmp, NULL, 'LATESTARTREGIMENSTARTED', tmp[, as.Date(LATESTARTREGIMENSTARTED, format="%Y/%m/%d")])
+	for(x in colnames(tmp))
+		if(class(tmp[[x]])=='Date')
+			set(tmp, NULL, x, hivc.db.Date2numeric(tmp[[x]]))
+	#	convert numeric codes
+	set(tmp, NULL, 'SEX', tmp[, as.character(factor(SEX, levels=c(1,2), labels=c('F','M')))])
+	set(tmp, NULL, 'REASONSAMPLING', tmp[, as.character(factor(REASONSAMPLING, levels=c(1), labels=c('VBA')))])
+	set(tmp, NULL, 'PREVARTUSE', tmp[, as.character(factor(PREVARTUSE, levels=c(0,1), labels=c('N','Y')))])
+	set(tmp, NULL, 'CURRENTLYONART', tmp[, as.character(factor(CURRENTLYONART, levels=c(0,1), labels=c('N_Deceased','Y')))])
+	set(tmp, NULL, 'CIRCUMCISED', tmp[, as.character(factor(CIRCUMCISED, levels=c(0,1), labels=c('N','Y')))])
+	acp	<- rbind(acp, tmp, use.names=TRUE, fill=TRUE)
+	setkey(acp, PANGEAID)
+	acp	<- unique(acp)
+	
+	set(acp, acp[, which(!is.finite(RECENTCD4COUNT))], 'RECENTCD4COUNT', NA_real_)
+	#	TODO there are a few duplicates ?
+	#	merge(acp, subset(acp[duplicated(PANGEAID),], select=c(PANGEAID)), by='PANGEAID')
+	save(acp, file=file.path(indir,'160817_PANGEA_AC_corevariables_n2940.rda'))
+	
+}
+######################################################################################
 project.AC.cleanalignment<- function()
 {
 	sx				<- read.dna("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/AC_Geneious1012Seq.gag_nef.fasta", format='fasta')

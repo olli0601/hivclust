@@ -1613,39 +1613,45 @@ hivc.clu.plot.tiplabels<- function (tip, text, col, xx=NULL, adj = c(-0.05, 0.5)
 	text(coord["xx",], coord["yy",], text, cex=cex)
 }
 ######################################################################################
-hivc.clu.plot<- function(	ph, clu, edge.col.basic="black", show.node.label= T, show.tip.label=F, file=NULL,  
+hivc.clu.plot<- function(	ph, clu=NULL, edge.col.basic="black", show.node.label= T, show.tip.label=F, file=NULL,  
 							highlight.edge.of.tiplabel=NULL, highlight.edge.of.tiplabel.col="red", 
 							highlight.cluster=NULL, highlight.cluster.col="red",							
 							pdf.scaley=10, pdf.width= 7, pdf.height=pdf.scaley*7, pdf.off=1, pdf.xlim=NULL,
 							cex.nodelabel=0.5, cex.edge.incluster=1, cex.edge.outcluster= cex.edge.incluster/3, no.margin=T, ...)
 {
 	require(colorspace)	
-	clu.edge							<- clu[ ph$edge[,1] ]
-	clu.edge							<- clu.edge+1				#set col index for non-clustering edges to 1
-	clu.edge[is.na(clu.edge)]			<- 1
-	#cols.n								<- length(unique(clu.edge))-1	
-	#cols								<- c("black",rainbow_hcl(cols.n, start = 30, end = 300))	
-	clu.edge.col						<- rep(edge.col.basic, nrow(ph$edge))	#cols[clu.edge]
-	clu.edge.col[clu.edge==1]			<- "grey50" 
-	if(!is.null(highlight.cluster))
+	clu.edge.col	<- 'black'
+	clu.edge.width	<- cex.edge.outcluster 
+	clu.edge.lty	<- 1
+	if(!is.null(clu))
 	{
-		if(length(highlight.cluster.col)==1)
-			highlight.cluster.col<- rep(highlight.cluster.col,length(highlight.cluster))
-		for(i in seq_along(highlight.cluster))
-			clu.edge.col[clu.edge%in%(highlight.cluster[[i]]+1)]<- 	highlight.cluster.col[i]	
-	}	
-	if(!is.null(highlight.edge.of.tiplabel))
-	{
-		highlight.edge<- lapply(highlight.edge.of.tiplabel, function(x)		which( ph$edge[,2]%in%which( grepl(x, ph$tip.label, fixed=1) ) ) )					
-		if(length(highlight.edge.of.tiplabel.col)==1)
-			highlight.edge.of.tiplabel.col	<- rep(highlight.edge, length(highlight.edge.of.tiplabel.col) )		
-		for(i in seq_along(highlight.edge))
-			clu.edge.col[highlight.edge[[i]]]		<- highlight.edge.of.tiplabel.col[i]		
-	}	
-	clu.edge.width						<- rep(cex.edge.outcluster, length(clu.edge))
-	clu.edge.width[clu.edge!=1]			<- cex.edge.incluster
-	clu.edge.lty						<- rep(1, length(clu.edge))
-	clu.edge.lty[clu.edge!=1]			<- 1
+		clu.edge							<- clu[ ph$edge[,1] ]
+		clu.edge							<- clu.edge+1				#set col index for non-clustering edges to 1
+		clu.edge[is.na(clu.edge)]			<- 1
+		#cols.n								<- length(unique(clu.edge))-1	
+		#cols								<- c("black",rainbow_hcl(cols.n, start = 30, end = 300))	
+		clu.edge.col						<- rep(edge.col.basic, nrow(ph$edge))	#cols[clu.edge]
+		clu.edge.col[clu.edge==1]			<- "grey50" 
+		if(!is.null(highlight.cluster))
+		{
+			if(length(highlight.cluster.col)==1)
+				highlight.cluster.col<- rep(highlight.cluster.col,length(highlight.cluster))
+			for(i in seq_along(highlight.cluster))
+				clu.edge.col[clu.edge%in%(highlight.cluster[[i]]+1)]<- 	highlight.cluster.col[i]	
+		}	
+		if(!is.null(highlight.edge.of.tiplabel))
+		{
+			highlight.edge<- lapply(highlight.edge.of.tiplabel, function(x)		which( ph$edge[,2]%in%which( grepl(x, ph$tip.label, fixed=1) ) ) )					
+			if(length(highlight.edge.of.tiplabel.col)==1)
+				highlight.edge.of.tiplabel.col	<- rep(highlight.edge, length(highlight.edge.of.tiplabel.col) )		
+			for(i in seq_along(highlight.edge))
+				clu.edge.col[highlight.edge[[i]]]		<- highlight.edge.of.tiplabel.col[i]		
+		}	
+		clu.edge.width						<- rep(cex.edge.outcluster, length(clu.edge))
+		clu.edge.width[clu.edge!=1]			<- cex.edge.incluster
+		clu.edge.lty						<- rep(1, length(clu.edge))
+		clu.edge.lty[clu.edge!=1]			<- 1		
+	}
 	if(class(file)=="character")
 		pdf(file,width=pdf.width,height=pdf.height)
 	if(no.margin) 	par(mar=c(0,0,0,0))

@@ -991,7 +991,7 @@ hivc.pipeline.various<- function()
 		project.Gates()
 		quit("no")
 	}	
-	if(1)
+	if(0)
 	{
 		project.London.FirstExaml.151202()		
 		quit("no")
@@ -1000,9 +1000,9 @@ hivc.pipeline.various<- function()
 	{
 		project.dualinfecions.phylotypes.evaluatereads.150119()
 	}	
-	if(0)
+	if(1)
 	{
-		#project.hivc.examl.median.brl()
+		# RUN VARIOUS
 		cmd			<- hivc.cmd.various()
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=71, hpc.mem="95000mb")
 		cat(cmd)		
