@@ -443,6 +443,12 @@ RakaiCirc.various<- function()
 	wdir	<- '/work/or105/Gates_2014/Rakai'
 	load(file.path(wdir,'RCCS_PhInfo_160825.rda'))
 	
+	#	add index for speed
+	tmp			<- data.table(SEQIDc=rownames(sq), IDX=seq_len(nrow(sq)))
+	gdgag		<- merge(tmp, gdgag, by='SEQIDc')
+	setnames(tmp, c('SEQIDc','IDX'), c('SEQIDc2','IDX2'))
+	gdgag		<- merge(tmp, gdgag, by='SEQIDc2')
+	#	
 	tmp			<- (as.character(sq)!='-')
 	setkey(gdgag, IDX, IDX2)
 	tmp2		<- gdgag[, list(OVERLAP= sum(apply(tmp[c(IDX,IDX2),],2,all)) ), by=c('IDX','IDX2')]
