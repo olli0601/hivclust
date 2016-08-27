@@ -101,7 +101,7 @@ default.fun		<- "hivc.pipeline.various"
 #cat(paste("is.loaded('tipcr')->",is.loaded("tipc_tabulate_after_sample"),'\n'))
 ###############################################################################
 function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$", all.files = FALSE,
-		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.ACprjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.Londonprjcts.R",sep='/'),paste(CODE.HOME,"misc","dualproject.R",sep='/'),paste(CODE.HOME,"misc","gcproject2013.R",sep='/'))
+		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.Rakaiprjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.ACprjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.Londonprjcts.R",sep='/'),paste(CODE.HOME,"misc","dualproject.R",sep='/'),paste(CODE.HOME,"misc","gcproject2013.R",sep='/'))
 sapply(function.list,function(x){ print(x); source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE) })
 ###############################################################################	
 if(0)
