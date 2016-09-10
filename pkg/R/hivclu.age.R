@@ -3282,7 +3282,7 @@ adjust.dev.Age_283338etc.Stage_UAC_UAE_UC_D_TS_TO_F<- function()
 	md				<- tmp$fit
 	
 	#n.smooth		<- 100; use.obs.pseqnc	<- 0
-	n.smooth		<- 50; use.obs.pseqnc	<- 0
+	n.smooth		<- 50; use.obs.pseqnc	<- 0; suffix<- '160810'
 	pfile			<- paste(indir,'/', gsub('\\.R','',infile),'_',suffix,'_',n.smooth,'_',use.obs.pseqnc, sep='')	
 	YXm				<- miss.smoothing.160810(YXc, mp, mma, mmb, md, rltvp, rltvd, rltvm, pfile=pfile, use.obs.pseqnc=use.obs.pseqnc, n.smooth=n.smooth)
 	YXm				<- merge(YXm, unique(subset(YXc, select=c(Patient, AnyPos_T1, t.period))), by='Patient')
@@ -7576,6 +7576,121 @@ stratificationmodel.Age_253045.Stage_UAE_UAC_UC_DAC_D_T_F<- function(YX.m5)
 	YX.m5
 }
 ######################################################################################
+recipients.repr.160907<- function()
+{
+	quantiles	<- c(0,0.025,0.25,0.5,0.75,0.975,1)
+	#
+	#	all diag
+	#
+	df.ad	<- subset(df.all.allmsm, AnyPos_T1<2011 & AnyPos_T1>=2004 & Trm%in%c('MSM','BI')) 
+	setkey(df.ad, Patient)
+	df.ad	<- unique(df.ad)	
+	df.ad[, AgeT:= AnyPos_T1-DateBorn]	
+	df.ad[, t.period:=cut(AnyPos_T1, breaks=c(2003,2008,2012), labels=c('<2008','>=2008'))]
+	#	all rec
+	df.ar	<- subset(df.all.allmsm, isAcute=='Yes' & AnyPos_T1<2011 & AnyPos_T1>=2004 & Trm%in%c('MSM','BI')) 
+	setkey(df.ar, Patient)
+	df.ar	<- unique(df.ar)	
+	df.ar[, AgeT:= AnyPos_T1-DateBorn]	
+	df.ar[, t.period:=cut(AnyPos_T1, breaks=c(2003,2008,2012), labels=c('<2008','>=2008'))]
+	#	rec w pr transmitter
+	df.rr	<- merge(df.ar, unique(subset(YXc, select=Patient)), by='Patient')
+	df.rr[, round(table(Acute_Spec, useNA='if')/nrow(df.rr), d=2)]
+	df.rr[, t.period:=cut(AnyPos_T1, breaks=c(2003,2008,2012), labels=c('<2008','>=2008'))]
+	
+	df.adi	<- project.athena.Fisheretal.composition.recipients.repr.info(df.ad, quantiles)
+	df.ari	<- project.athena.Fisheretal.composition.recipients.repr.info(df.ar, quantiles)
+	df.rri	<- project.athena.Fisheretal.composition.recipients.repr.info(df.rr, quantiles)
+	
+	df.rr[, round(table(cut(AgeT, breaks=c(0,28, 33, 38, 43, 48, 80))) / nrow(df.rr) *100, d=1) ]
+	df.ad[, round(table(cut(AgeT, breaks=c(0,28, 33, 38, 43, 48, 80))) / nrow(df.ad) *100, d=1) ]
+	#	re-format all recent
+	ans			<- dcast.data.table(df.ari, t.period~STAT, value.var='AgeT')
+	ans[, STAT:='AgeT']
+	ans[, DATA:='All']
+	tmp			<- dcast.data.table(df.ari, t.period~STAT, value.var='CD4_T1')
+	tmp[, STAT:='CD4_T1']
+	tmp[, DATA:='All']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.ari, t.period~STAT, value.var='lRNA_T1')
+	tmp[, STAT:='lRNA_T1']
+	tmp[, DATA:='All']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.ari, t.period~STAT, value.var='NegT12P')
+	tmp[, STAT:='NegT12P']
+	tmp[, DATA:='All']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.ari, t.period~STAT, value.var='INFNL')
+	tmp[, STAT:='INFNL']
+	tmp[, DATA:='All']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.ari, t.period~STAT, value.var='HAmst')
+	tmp[, STAT:='HAMST']
+	tmp[, DATA:='All']
+	ans			<- rbind(ans, tmp)		
+	#	re-format those with prob transm
+	tmp			<- dcast.data.table(df.rri, t.period~STAT, value.var='AgeT')
+	tmp[, STAT:='AgeT']
+	tmp[, DATA:='wProb']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.rri, t.period~STAT, value.var='CD4_T1')
+	tmp[, STAT:='CD4_T1']
+	tmp[, DATA:='wProb']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.rri, t.period~STAT, value.var='lRNA_T1')
+	tmp[, STAT:='lRNA_T1']
+	tmp[, DATA:='wProb']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.rri, t.period~STAT, value.var='NegT12P')
+	tmp[, STAT:='NegT12P']
+	tmp[, DATA:='wProb']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.rri, t.period~STAT, value.var='INFNL')
+	tmp[, STAT:='INFNL']
+	tmp[, DATA:='wProb']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.rri, t.period~STAT, value.var='HAmst')
+	tmp[, STAT:='HAMST']
+	tmp[, DATA:='wProb']
+	ans			<- rbind(ans, tmp)		
+	#	re-format diagnosed
+	tmp			<- dcast.data.table(df.adi, t.period~STAT, value.var='AgeT')
+	tmp[, STAT:='AgeT']
+	tmp[, DATA:='Diag']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.adi, t.period~STAT, value.var='CD4_T1')
+	tmp[, STAT:='CD4_T1']
+	tmp[, DATA:='Diag']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.adi, t.period~STAT, value.var='lRNA_T1')
+	tmp[, STAT:='lRNA_T1']
+	tmp[, DATA:='Diag']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.adi, t.period~STAT, value.var='NegT12P')
+	tmp[, STAT:='NegT12P']
+	tmp[, DATA:='Diag']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.adi, t.period~STAT, value.var='INFNL')
+	tmp[, STAT:='INFNL']
+	tmp[, DATA:='Diag']
+	ans			<- rbind(ans, tmp)
+	tmp			<- dcast.data.table(df.adi, t.period~STAT, value.var='HAmst')
+	tmp[, STAT:='HAMST']
+	tmp[, DATA:='Diag']
+	ans			<- rbind(ans, tmp)	
+	#levels(ans$t.period)
+	tmp			<- c("Overall","(1996,2006]","(2006,2008]","(2008,2010]","(2010,2011]")
+	set(ans, NULL, 't.period', ans[, factor(as.character(t.period), levels=tmp, labels=tmp)])
+	#ans[, unique(DATA)]
+	tmp			<- c("wProb","All","Diag")
+	set(ans, NULL, 'DATA', ans[, factor(DATA, levels=tmp, labels=tmp)])
+	setkey(ans, STAT, t.period, DATA)
+	
+	ans			<- subset(ans, select=c("STAT","t.period","DATA","0.025","0.25","mean","0.75","0.975"))
+	file		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_RecipMSMRepresentative.csv'
+	write.csv(ans, file=file, eol="\r\n", row.names=FALSE)
+}
+######################################################################################
 recipients.adjust.160811<- function(YXc, df.all.allmsm, ri.ALLMSM, pfile=NA)
 {
 	YXar	<- YXc[, list(tna=length(unique(t))), by=c('Patient','AgeC')]
@@ -7604,15 +7719,21 @@ recipients.adjust.160811<- function(YXc, df.all.allmsm, ri.ALLMSM, pfile=NA)
 	YXar	<- rbind(YXar, tmp2)
 	#	add distribution among recently infected
 	tmp2	<- merge(tmp, unique(subset(ri.ALLMSM, select=Patient)), by='Patient')
-	tmp2	<- tmp[, list(TYPE='Recently infected', N= length(Patient)), by=c('tmidC2','AgeC')]
+	tmp2	<- tmp2[, list(TYPE='Recently infected', N= length(Patient)), by=c('tmidC2','AgeC')]
+	tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
+	YXar	<- rbind(YXar, tmp2)
+	#	add distribution among recently infected and sequenced
+	tmp2	<- merge(tmp, unique(subset(ri.SEQ, select=Patient)), by='Patient')
+	tmp2	<- tmp2[, list(TYPE='Recently infected & sequenced', N= length(Patient)), by=c('tmidC2','AgeC')]
 	tmp2	<- merge(tmp2, tmp2[, list(Ntp=sum(N)),by='tmidC2'], by='tmidC2')
 	YXar	<- rbind(YXar, tmp2)	
+	
 	YXar[, P:=N/Ntp]
 	#	plot
 	if(!is.na(pfile))
 	{
 		YXplot	<- copy(YXar)
-		set(YXplot, NULL, 'TYPE', YXplot[, factor(TYPE, levels=c('Recipient','Recently infected','Sampled','Diagnosed'), labels=c('Recipient MSM\n(of whom sources could be characterised)','Recently infected','Newly diagnosed MSM\nwith a sequence','Newly diagnosed MSM\n(population)') )])
+		set(YXplot, NULL, 'TYPE', YXplot[, factor(TYPE, levels=c('Recipient','Recently infected','Sampled','Recently infected & sequenced','Diagnosed'), labels=c('Recipient MSM\n(of whom sources could be characterised)','Recently infected','Newly diagnosed MSM\nwith a sequence','Recently infected MSM\nwith a sequence','Newly diagnosed MSM\n(population)') )])
 		set(YXplot, NULL, 'tmidC2', YXplot[, factor(as.character(tmidC2, levels=c('2004-2007','2008-2020'),labels=c('2004-2007\n(time of diagnosis)','2008-2010\n(time of diagnosis)')))])
 		ggplot(YXplot, aes(y=100*P, x=AgeC, fill=TYPE)) +
 				geom_bar(stat='identity',position='dodge', colour='black', width=0.8) + 
@@ -7624,7 +7745,15 @@ recipients.adjust.160811<- function(YXc, df.all.allmsm, ri.ALLMSM, pfile=NA)
 				theme_bw() + theme(legend.position='bottom') +
 				labs(x='Age group\n(years)\n', y='%', fill='', title='Study population\n')			
 		file	<- paste(pfile, '_RecbyAgeC.pdf', sep='')
-		ggsave(file=file, w=8.5, h=4)		
+		ggsave(file=file, w=8.5, h=4)	
+		
+		YXplot	<- subset(YXar, TYPE%in%c('Diagnosed','Recently infected & sequenced'))
+		set(YXplot, NULL, 'AgeC', YXplot[, factor(as.character(AgeC), levels=c('(-1,28]','(28,33]','(33,38]','(38,43]','(43,48]','(48,100]'), labels=c('16-27','28-32','33-37','38-42','43-47','48-80'))])
+		set(YXplot, NULL, 'P', YXplot[, round(P*100,d=1)])
+		set(YXplot, NULL, 'Ntp', YXplot[, as.double(Ntp)])
+		YXplot	<- dcast.data.table(melt(YXplot, id.vars=c('tmidC2','AgeC','TYPE')), TYPE+AgeC~tmidC2+variable, value.var='value')
+		file	<- paste(pfile, '_RecbyAgeC.csv', sep='')
+		write.csv(YXplot, row.names=FALSE, file=file)
 	}
 	#	calculate adjustments to transform the age distribution of the recipients to that of the newly diagnosed
 	YXar	<- dcast.data.table(YXar, tmidC2+AgeC~TYPE, value.var='P')

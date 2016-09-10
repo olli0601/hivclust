@@ -687,29 +687,29 @@ project.BWdata.csv.to.rda.PANGEA.160817<- function()
 	set(bwp, tmp, 'SAMPLEDATE', bwp[tmp, (FIRSTPOSDATE+RECENTVLDATE)/2])
 	#
 	bwp		<- subset(unique(bwp), select=c(COHORT,PANGEAID,SEQID,LOC,SEX,AGE,SAMPLEDATE,FIRSTPOSDATE,CURRENTLYONART,RECENTVL,RECENTVLDATE, RECENTCD4COUNT, RECENTCD4DATE))
-	save(bwp, file=file.path(indir,'160817_PANGEA_BW_corevariables_n373.rda'))
+	save(bwp, file=file.path(indir,'160826_PANGEA_BW_corevariables_n373.rda'))
 }
 ######################################################################################
 project.ACdata.csv.to.rda.PANGEA.160817<- function()
 {
 	require(foreign)
 	#
-	indir	<- '/Users/Oliver/duke/2016_AC/PANGEA_160817'
+	indir	<- '/Users/Oliver/duke/2016_AC/PANGEA_160826'
 	#
 	#	save data sets as rda
 	#	
 	infile.tasp.core		<- file.path(indir, 'AfricaCentre_CoreVariables_TasP.csv')
 	infile.tasp.desirable	<- file.path(indir, 'AfricaCentre_DesirableVariables_TasP.csv')
-	infile.preart.clinic	<- file.path(indir, 'PC01-01_Pangea_Pre-ART_Clinical_Data.csv')
-	infile.preart.lab		<- file.path(indir, 'PL01-02 Pangea Pre-ART Lab Data.csv')
-	infile.res.cohort		<- file.path(indir, 'PR01-01_Pangea_RES_Cohort_ClinicalData.csv')
+	infile.preart.clinic	<- file.path(indir, 'PC01-01 Pangea Pre-ART Clinical Data.dta')
+	infile.preart.lab		<- file.path(indir, 'PL01-02 Pangea Pre-ART Lab Data.dta')
+	infile.res.cohort		<- file.path(indir, 'PR01-01 Pangea RES Cohort Clinical Data.dta')
 	infile.res.lab			<- file.path(indir, 'PR01-02 Pangea RES Lab Data.dta')
 	#
 	#	read data sets
 	#	
 	acp.tasp	<- as.data.table(read.csv(infile.tasp.core, stringsAsFactors=FALSE))	
-	acp.res		<- as.data.table(read.csv(infile.res.cohort, stringsAsFactors=FALSE, strip.white=TRUE))	
-	acp.preart	<- as.data.table(read.csv(infile.preart.clinic, stringsAsFactors=FALSE, strip.white=TRUE))
+	acp.res		<- as.data.table(read.dta(infile.res.cohort)) 
+	acp.preart	<- as.data.table(read.dta(infile.preart.clinic))
 	acp.reslab	<- as.data.table(read.dta(infile.res.lab))
 	#
 	#	TASP: focus on basic demographic data only
@@ -740,31 +740,16 @@ project.ACdata.csv.to.rda.PANGEA.160817<- function()
 	setnames(tmp, c('DateOfBirth',"SpecimenID","SpecimenDate","LatestHIVDrugRegimen","LatestHIVDrugRegimenDateStarted","RecentCD4CountDate","DateOfInitiation"), c('DOB',"STUDY_ID","SAMPLEDATE","LatestARTRegimen","LatestARTRegimenStarted","RecentCD4Date","ARTStart"))
 	setnames(tmp, colnames(tmp), gsub('\\.','_',toupper(colnames(tmp))))
 	set(tmp, NULL, 'COHORT', 'AC_Resistance')
-	#	TODO SEX is missing
-	#	TODO SAMPLEDATE, DOB, ARTSTART is corrupted
-	set(tmp, NULL, 'SAMPLEDATE', tmp[, as.numeric(substr(SAMPLEDATE, 7,10))+.5])
-	set(tmp, NULL, 'DOB', tmp[, as.numeric(substr(DOB, 7,10))+.5])
-	set(tmp, NULL, 'ARTSTART', tmp[, as.numeric(substr(ARTSTART, 7,10))+.5])
-	#	clean up dates
-	set(tmp, NULL, 'RECENTCD4DATE', tmp[, gsub(' 00:00:00.000','',RECENTCD4DATE)])	
-	set(tmp, NULL, 'RECENTVLDATE', tmp[, gsub(' 00:00:00.000','',RECENTVLDATE)])
-	set(tmp, NULL, 'LASTNEGDATE', tmp[, gsub(' 00:00:00.000','',LASTNEGDATE)])
-	set(tmp, NULL, 'FIRSTPOSDATE', tmp[, gsub(' 00:00:00.000','',FIRSTPOSDATE)])
-	set(tmp, NULL, 'LATESTARTREGIMENSTARTED', tmp[, gsub(' 00:00:00.000','',LATESTARTREGIMENSTARTED)])	
+	set(tmp, NULL, 'SEX', tmp[, as.character(factor(as.character(SEX), levels=c('Male','Female'), labels=c('M','F')))])	
 	#	convert dates
-	set(tmp, NULL, 'RECENTCD4DATE', tmp[, as.Date(RECENTCD4DATE, format="%Y/%m/%d")])	
-	set(tmp, NULL, 'RECENTVLDATE', tmp[, as.Date(RECENTVLDATE, format="%Y/%m/%d")])
-	set(tmp, NULL, 'LASTNEGDATE', tmp[, as.Date(LASTNEGDATE, format="%Y/%m/%d")])
-	set(tmp, NULL, 'FIRSTPOSDATE', tmp[, as.Date(FIRSTPOSDATE, format="%Y/%m/%d")])
-	set(tmp, NULL, 'LATESTARTREGIMENSTARTED', tmp[, as.Date(LATESTARTREGIMENSTARTED, format="%Y/%m/%d")])
 	for(x in colnames(tmp))
 		if(class(tmp[[x]])=='Date')
 			set(tmp, NULL, x, hivc.db.Date2numeric(tmp[[x]]))
 	#	convert numeric codes
-	set(tmp, NULL, 'REASONSAMPLING', tmp[, as.character(factor(REASONSAMPLING, levels=c(1), labels=c('VBL')))])
-	set(tmp, NULL, 'PREVARTUSE', tmp[, as.character(factor(PREVARTUSE, levels=c(0,1), labels=c('N','Y')))])
+	set(tmp, NULL, 'REASONSAMPLING', tmp[, as.character(factor(as.character(REASONSAMPLING), levels=c('VBL'), labels=c('VBL')))])
+	set(tmp, NULL, 'PREVARTUSE', tmp[, as.character(factor(as.character(PREVARTUSE), levels=c('No','Yes'), labels=c('N','Y')))])
 	set(tmp, NULL, 'CURRENTLYONART', tmp[, as.character(factor(CURRENTLYONART, levels=c(0,1), labels=c('N_Deceased','Y')))])
-	set(tmp, NULL, 'CIRCUMCISED', tmp[, as.character(factor(CIRCUMCISED, levels=c(0,1), labels=c('N','Y')))])	
+	set(tmp, NULL, 'CIRCUMCISED', tmp[, as.character(factor(as.character(CIRCUMCISED), levels=c('No','Yes'), labels=c('N','Y')))])	
 	#	clean up lab data
 	setnames(acp.reslab, colnames(acp.reslab), gsub('\\.','_',toupper(colnames(acp.reslab))))
 	setnames(acp.reslab, 'SPECIMENID', 'STUDY_ID')
@@ -791,31 +776,16 @@ project.ACdata.csv.to.rda.PANGEA.160817<- function()
 	setnames(tmp, c('DateOfBirth',"SpecimenID","SpecimenDate","LatestHIVDrugRegimen","LatestHIVDrugRegimenDateStarted","RecentCD4CountDate","DateOfInitiation"), c('DOB',"STUDY_ID","SAMPLEDATE","LatestARTRegimen","LatestARTRegimenStarted","RecentCD4Date","ARTStart"))
 	setnames(tmp, colnames(tmp), gsub('\\.','_',toupper(colnames(tmp))))
 	set(tmp, NULL, 'COHORT', 'AC_PreART')
-	#	TODO SAMPLEDATE missing
-	#	TODO DOB ARTSTART is corrupted	
-	set(tmp, NULL, 'DOB', tmp[, as.numeric(substr(DOB, 7,10))+.5])
-	set(tmp, NULL, 'ARTSTART', tmp[, as.numeric(substr(ARTSTART, 7,10))+.5])
-	#	clean up dates
-	set(tmp, NULL, 'RECENTCD4DATE', tmp[, gsub(' 00:00:00.000','',RECENTCD4DATE)])	
-	set(tmp, NULL, 'RECENTVLDATE', tmp[, gsub(' 00:00:00.000','',RECENTVLDATE)])
-	set(tmp, NULL, 'LASTNEGDATE', tmp[, gsub(' 00:00:00.000','',LASTNEGDATE)])
-	set(tmp, NULL, 'FIRSTPOSDATE', tmp[, gsub(' 00:00:00.000','',FIRSTPOSDATE)])
-	set(tmp, NULL, 'LATESTARTREGIMENSTARTED', tmp[, as.Date(LATESTARTREGIMENSTARTED, format="%Y/%m/%d")])
 	#	convert dates
-	set(tmp, NULL, 'RECENTCD4DATE', tmp[, as.Date(RECENTCD4DATE, format="%Y/%m/%d")])	
-	set(tmp, NULL, 'RECENTVLDATE', tmp[, as.Date(RECENTVLDATE, format="%Y/%m/%d")])
-	set(tmp, NULL, 'LASTNEGDATE', tmp[, as.Date(LASTNEGDATE, format="%Y/%m/%d")])
-	set(tmp, NULL, 'FIRSTPOSDATE', tmp[, as.Date(FIRSTPOSDATE, format="%Y/%m/%d")])
-	set(tmp, NULL, 'LATESTARTREGIMENSTARTED', tmp[, as.Date(LATESTARTREGIMENSTARTED, format="%Y/%m/%d")])
 	for(x in colnames(tmp))
 		if(class(tmp[[x]])=='Date')
 			set(tmp, NULL, x, hivc.db.Date2numeric(tmp[[x]]))
 	#	convert numeric codes
-	set(tmp, NULL, 'SEX', tmp[, as.character(factor(SEX, levels=c(1,2), labels=c('F','M')))])
-	set(tmp, NULL, 'REASONSAMPLING', tmp[, as.character(factor(REASONSAMPLING, levels=c(1), labels=c('VBA')))])
-	set(tmp, NULL, 'PREVARTUSE', tmp[, as.character(factor(PREVARTUSE, levels=c(0,1), labels=c('N','Y')))])
-	set(tmp, NULL, 'CURRENTLYONART', tmp[, as.character(factor(CURRENTLYONART, levels=c(0,1), labels=c('N_Deceased','Y')))])
-	set(tmp, NULL, 'CIRCUMCISED', tmp[, as.character(factor(CIRCUMCISED, levels=c(0,1), labels=c('N','Y')))])
+	set(tmp, NULL, 'SEX', tmp[, as.character(factor(as.character(SEX), levels=c('Male','Female'), labels=c('M','F')))])
+	set(tmp, NULL, 'REASONSAMPLING', tmp[, as.character(factor(as.character(REASONSAMPLING), levels=c('VBL'), labels=c('VBL')))])
+	set(tmp, NULL, 'PREVARTUSE', tmp[, as.character(factor(as.character(PREVARTUSE), levels=c('No','Yes'), labels=c('N','Y')))])	
+	set(tmp, NULL, 'CURRENTLYONART', tmp[, as.character(factor(as.character(CURRENTLYONART), levels=c('N_Deceased','Y'), labels=c('N_Deceased','Y')))])
+	set(tmp, NULL, 'CIRCUMCISED', tmp[, as.character(factor(as.character(CIRCUMCISED), levels=c('No','Yes'), labels=c('N','Y')))])	
 	acp	<- rbind(acp, tmp, use.names=TRUE, fill=TRUE)
 	setkey(acp, PANGEAID)
 	acp	<- unique(acp)
@@ -823,7 +793,7 @@ project.ACdata.csv.to.rda.PANGEA.160817<- function()
 	set(acp, acp[, which(!is.finite(RECENTCD4COUNT))], 'RECENTCD4COUNT', NA_real_)
 	#	TODO there are a few duplicates ?
 	#	merge(acp, subset(acp[duplicated(PANGEAID),], select=c(PANGEAID)), by='PANGEAID')
-	save(acp, file=file.path(indir,'160817_PANGEA_AC_corevariables_n2940.rda'))
+	save(acp, file=file.path(indir,'160826_PANGEA_AC_corevariables_n2940.rda'))
 	
 }
 ######################################################################################
