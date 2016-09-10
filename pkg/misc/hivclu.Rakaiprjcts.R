@@ -115,8 +115,7 @@ RakaiCouples<- function()
 	tmp[,{
 				#TAXA<- 'PG14-UG500310-S02314'
 				z	<- subset(tmp2, TAXA1==TAXA & is.finite(PD) & PD>0)
-				subset(z, !is.na(PTY_RUN))
-				]
+				subset(z, !is.na(PTY_RUN))				
 			}, by='TAXA1']
 	
 	
