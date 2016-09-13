@@ -768,17 +768,19 @@ RakaiCirc.circ.dev160907<- function()
 	#
 	infiles	<- data.table(	F_TRM= c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w200/RCCS_160902_w200_trmStats.rda',
 										'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w220/RCCS_160902_w220_trmStats.rda',
-										'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250/RCCS_160902_w250_trmStats.rda'
+										'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250/RCCS_160902_w250_trmStats.rda',
+										'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trmStats.rda',
+										'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w280/RCCS_160902_w280_trmStats.rda'
 							))
 	infiles[, F_PH:= gsub('trmStats.rda','trees.rda', F_TRM)]
 	infiles[, DIR:= dirname(F_TRM)]
 	infiles[, RUN:= gsub('_trmStats.rda','',basename(F_TRM))]				
 	#
 	#	for each run: get list of pairs
-	#
+	#	
 	rp		<- infiles[, {
-				#F_TRM	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250/RCCS_160902_w250_trmStats.rda'
-				#F_PH	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250/RCCS_160902_w250_trees.rda'
+				#F_TRM	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trmStats.rda'
+				#F_PH	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trees.rda'
 				load(F_TRM)	#loads df
 				dlkl	<- copy(df)
 				load(F_PH)	#loads phs and dfr
@@ -826,18 +828,19 @@ RakaiCirc.circ.dev160907<- function()
 				rp		<- merge(rp, tmp, by='TR_SID')				
 				
 				rp
-			}, by=c('RUN','DIR')]
+			}, by=c('RUN','DIR','F_TRM','F_PH')]
 	#
 	#	for each run: plot pairs & trees	
 	#
 	setkey(rp, RUN, PAIR_ID, SID, TR_SID)
 	for( run in rp[, unique(RUN)] )
 	{		
-		#run		<- 'RCCS_160902_w200'
+		#run		<- 'RCCS_160902_w270'
 		dir		<- subset(rp, RUN==run)[1,DIR]
 		cat('\ndir is',dir,'\trun is',run)
-		rpok	<- subset(rp, RUN==run & TR_SEX=='M')	
-		rpff	<- subset(rp, RUN==run & TR_SEX=='F')
+		df		<- subset(rp, RUN==run)
+		rpok	<- subset(df, TR_SEX=='M')	
+		rpff	<- subset(df, TR_SEX=='F')
 		rpoku	<- unique(rpok)
 		rpffu	<- unique(rpff)
 		
@@ -880,36 +883,55 @@ RakaiCirc.circ.dev160907<- function()
 				scale_fill_manual(values=c('1 ancestral to 2'="#9E0142",'2 ancestral to 1'="#F46D43",'1, 2 are siblings'="#ABDDA4",'1, 2 are intermingled'="#3288BD",'1, 2 are disconnected'='grey50')) +
 				theme_bw() + theme(legend.position='top') +
 				guides(fill=guide_legend(ncol=2))
-		ggsave(file=file.path(dir, paste(run,'_RCCS_lkltransmissionpairs_femalefemale_discsiblt',100*select.discsib,'.pdf',sep='')), w=15, h=max(3,0.2*nrow(tmp)), limitsize = FALSE)	
-		#
-		#	re-examine phylogenies
-		#	
-		if(0)
-		{
-			setkey(rpok, PAIR_ID, SID, TR_SID)
-			rpoku	<- unique(rpok)
-			invisible(sapply(seq_len(nrow(rpoku)), function(ii)
-							{
-								pair.id		<- rpoku[ii, PAIR_ID]
-								pty.run		<- rpoku[ii, PTY_RUN]
-								dfs			<- subset(dfr, PTY_RUN==pty.run, select=c(PTY_RUN, W_FROM, W_TO, IDX))
-								dfs[, TITLE:= dfs[, paste('pair', pair.id, 'ids', rpoku[ii, TR_SID], rpoku[ii, SID], '\nrun', pty.run, '\nwindow', W_FROM,'-', W_TO)]]			
-								plot.file	<- file.path(dir, paste(run,'_RCCS_lkltransmissionpairs_withfemaleseroconverter_discsiblt65_pair',pair.id,'.pdf',sep=''))			
-								invisible(phsc.plot.selected.pairs(phs, dfs, rpoku[ii, TR_SID], rpoku[ii, SID], plot.file=plot.file, pdf.h=50, pdf.rw=10))
-							}))
-			
-			tmp		<- copy(rpffu)
-			invisible(sapply(seq_len(nrow(tmp)), function(ii)
-							{
-								pair.id		<- tmp[ii, PAIR_ID]
-								pty.run		<- tmp[ii, PTY_RUN]
-								dfs			<- subset(dfr, PTY_RUN==pty.run, select=c(PTY_RUN, W_FROM, W_TO, IDX))
-								dfs[, TITLE:= dfs[, paste('pair', pair.id, 'ids', tmp[ii, TR_SID], tmp[ii, SID], '\nrun', pty.run, '\nwindow', W_FROM,'-', W_TO)]]			
-								plot.file	<- file.path(dir, paste(run,'_RCCS_lkltransmissionpairs_femalefemale_discsiblt65_pair',pair.id,'.pdf',sep=''))			
-								invisible(phsc.plot.selected.pairs(phs, dfs, tmp[ii, TR_SID], tmp[ii, SID], plot.file=plot.file, pdf.h=50, pdf.rw=10))
-							}))
-		}
+		ggsave(file=file.path(dir, paste(run,'_RCCS_lkltransmissionpairs_femalefemale_discsiblt',100*select.discsib,'.pdf',sep='')), w=15, h=max(3,0.2*nrow(tmp)), limitsize = FALSE)				
 	}
+	#
+	#	re-examine phylogenies
+	#
+	setkey(rp, RUN, PAIR_ID, SID, TR_SID)
+	for( run in rp[, unique(RUN)] )
+	{
+		dir		<- subset(rp, RUN==run)[1,DIR]
+		cat('\ndir is',dir,'\trun is',run)
+		df		<- subset(rp, RUN==run)
+		rpok	<- subset(df, TR_SEX=='M')	
+		rpff	<- subset(df, TR_SEX=='F')
+		rpoku	<- unique(rpok)
+		rpffu	<- unique(rpff)
+		rpffu	<- merge(rpffu, rpffu[, list(SID=SID[1],TR_SID=TR_SID[1]), by='PAIR_ID'], by=c('PAIR_ID','SID','TR_SID'))	
+		rpffu	<- subset(rpffu, RID!=TR_RID)		
+		
+		load( df[1, F_PH] )	#loads phs and dfr
+		setkey(rpok, PAIR_ID, SID, TR_SID)
+		rpoku	<- unique(rpok)
+		invisible(sapply(seq_len(nrow(rpoku)), function(ii)
+						{								
+							pair.id		<- rpoku[ii, PAIR_ID]
+							pty.run		<- rpoku[ii, PTY_RUN]
+							dfs			<- subset(dfr, PTY_RUN==pty.run, select=c(PTY_RUN, W_FROM, W_TO, IDX))
+							dfs[, TITLE:= dfs[, paste('pair', pair.id, 'ids', rpoku[ii, TR_SID], rpoku[ii, SID], '\nrun', pty.run, '\nwindow', W_FROM,'-', W_TO)]]			
+							plot.file	<- file.path(dir, paste(run,'_RCCS_lkltransmissionpairs_withfemaleseroconverter_discsiblt65_pair',pair.id,'.pdf',sep=''))			
+							invisible(phsc.plot.selected.pairs(phs, dfs, rpoku[ii, TR_SID], rpoku[ii, SID], plot.file=plot.file, pdf.h=50, pdf.rw=10))
+						}))		
+		tmp		<- copy(rpffu)
+		invisible(sapply(seq_len(nrow(tmp)), function(ii)
+						{
+							pair.id		<- tmp[ii, PAIR_ID]
+							pty.run		<- tmp[ii, PTY_RUN]
+							dfs			<- subset(dfr, PTY_RUN==pty.run, select=c(PTY_RUN, W_FROM, W_TO, IDX))
+							dfs[, TITLE:= dfs[, paste('pair', pair.id, 'ids', tmp[ii, TR_SID], tmp[ii, SID], '\nrun', pty.run, '\nwindow', W_FROM,'-', W_TO)]]			
+							plot.file	<- file.path(dir, paste(run,'_RCCS_lkltransmissionpairs_femalefemale_discsiblt65_pair',pair.id,'.pdf',sep=''))			
+							invisible(phsc.plot.selected.pairs(phs, dfs, tmp[ii, TR_SID], tmp[ii, SID], plot.file=plot.file, pdf.h=50, pdf.rw=10))
+						}))
+	}
+
+	
+	#	the 200 + 270 phylogenies look identical!?!?!
+	subset(rp, grepl('w270',RUN) & PAIR_ID==3)
+	subset(dfr, grepl('w270',RUN), select=c(PTY_RUN, W_FROM, W_TO, IDX))
+	
+	subset(rp, grepl('w200',RUN) & PAIR_ID==5)
+	
 }	
 
 RakaiCirc.circ.dev160901<- function()

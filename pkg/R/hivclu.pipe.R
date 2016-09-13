@@ -1005,6 +1005,7 @@ hivc.pipeline.various<- function()
 		# RUN VARIOUS
 		cmd			<- hivc.cmd.various()
 		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=71, hpc.mem="95000mb")
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5000mb")
 		cat(cmd)		
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("vrs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
