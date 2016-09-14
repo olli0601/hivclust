@@ -635,6 +635,7 @@ RakaiCirc.various<- function()
 		require(ape)
 		require(data.table)
 		
+		wdir	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
 		wdir	<- '/work/or105/Gates_2014/Rakai'
 		infile	<- file.path(wdir, "PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda")
 		load(infile)
@@ -643,16 +644,18 @@ RakaiCirc.various<- function()
 		sq[sq=='?']	<- '-'
 		sq			<- as.DNAbin(sq)
 		sq.gd		<- dist.dna(sq, pairwise.deletion=TRUE)
-		sq.gd		<- as.data.table(melt(as.matrix(sq.gd)))
-		setnames(sq.gd, c('Var1','Var2','value'), c('TAXA1','TAXA2','PD'))
+		sq.gd		<- as.data.table(melt(as.matrix(sq.gd), varnames=c('TAXA1','TAXA2')))
+		setnames(sq.gd, 'value', 'PD')
 		sq.gd		<- subset(sq.gd, TAXA1!=TAXA2)
 		set(sq.gd, NULL, 'TAXA1', sq.gd[, as.character(TAXA1)])
 		set(sq.gd, NULL, 'TAXA2', sq.gd[, as.character(TAXA2)])		
-		#	add overlap		
-		tmp			<- (as.character(sq)!='-')	
+		#	add overlap	
 		setkey(sq.gd, TAXA1, TAXA2)
-		tmp2		<- sq.gd[, list(OVERLAP= sum(apply(tmp[c(TAXA1, TAXA2),],2,all)) ), by=c('TAXA1','TAXA2')]
-		sq.gd		<- merge(sq.gd, tmp2, by=c('SEQIDc','SEQIDc2'))
+		tmp			<- as.character(sq)
+		tmp			<- !( tmp=='-' | tmp=='?' | tmp=='n' )
+		tmp[]		<- as.integer(tmp) 
+		tmp2		<- sq.gd[, list(OVERLAP= sum(bitwAnd(tmp[TAXA1,], tmp[TAXA2,])) ), by=c('TAXA1','TAXA2')]	
+		sq.gd		<- merge(sq.gd, tmp2, by=c('TAXA1','TAXA2'))
 		
 		save(sq.gd, file=gsub('\\.rda','_gd.rda',infile))		
 	}

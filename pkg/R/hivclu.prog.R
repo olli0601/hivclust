@@ -4728,6 +4728,41 @@ hivc.prog.BEAST.generate.xml<- function()
 			})		
 }
 ######################################################################################
+hivc.prog.get.genetic.overlap<- function()
+{
+	require(argparse)	
+	require(ape)
+	require(data.table)
+	#	read args
+	arg_parser = ArgumentParser(description="Get overlap.")
+	arg_parser$add_argument("-i","--inputFile", action='store', help="Sequence alignment file name.")	
+	arg_parser$add_argument("-bn","--batchn", action='store', default=1L, help="Number of batches.")
+	arg_parser$add_argument("-bi","--batchi", action='store', default=1L, help="Current batch id.")
+	args 					<- arg_parser$parse_args()
+	batchn	 				<- args$batchn	
+	batchi	 				<- args$batchi
+	inputFile				<- args$inputFile		
+	#	read sequences	
+	sq		<- read.dna(inputFile, format='fasta')
+	dfo		<- as.data.table(t(combn(rownames(sq),2)))
+	setnames(dfo, c('V1','V2'), c('TAXA1','TAXA2'))
+	#	prepare and select batch
+	dfo[, BATCH:= seq_len(nrow(dfo))%%batchn+1L]
+	#	by default, BATCH is always 1 and batchi is 1, so nothing is discarded:
+	dfo		<- subset(dfo, BATCH==batchi)
+	setkey(dfo, TAXA1, TAXA2)
+	sq		<- sq[ dfo[, unique(c(TAXA1, TAXA2))], ]
+	#	get overlap
+	tmp		<- as.character(sq)
+	tmp		<- !( tmp=='-' | tmp=='?' | tmp=='n' )
+	tmp[]	<- as.integer(tmp) 
+	dfo		<- dfo[, list(OVERLAP= sum(bitwAnd(tmp[TAXA1,],tmp[TAXA2,]))), by=c('BATCH','TAXA1','TAXA2')]
+	#	if no subset was taken, remove batch id
+	if(batchn==1)	set(dfo, NULL, 'BATCH', NULL)
+	#	save
+	save(dfo, file=paste(inputFile,'.gd\\.rda',sep=''))	
+}
+######################################################################################
 hivc.prog.get.geneticdist<- function()
 {
 	library(bigmemory)
