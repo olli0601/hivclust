@@ -36,7 +36,7 @@ project.examl.Bezemer.141104<- function()
 project.examl.ATHENA1610.161102<- function()
 {
 	require(big.phylo)
-	indir		<- DATA
+	indir		<- '/work/or105/ATHENA_2016/data/examl'
 	infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta"	
 	#	ExaML bootstrap args
 	bs.from		<- 0
