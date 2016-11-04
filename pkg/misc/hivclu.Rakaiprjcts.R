@@ -1340,35 +1340,70 @@ RakaiCouples.process.couples.161027<- function()
 	tmp		<- as.matrix(cophenetic.phylo(ph))
 	max( tmp['15758_1_76.bam_read_7_count_1', grepl('15758_1_76', colnames(tmp))] )
 	
-	dr		<- merge(subset(dtrees, PTY_RUN==66, c(W_FROM, IDX)), subset(df, select=c(ID1, W_FROM, ROGUE1)),by='W_FROM')
-	dr		<- dr[, {
+	#	collect branch lengths from individuals that I classified manually
+	tmp		<- merge(subset(dtrees, PTY_RUN==66, c(W_FROM, IDX)), subset(df, select=c(ID1, W_FROM, ROGUE1)),by='W_FROM')
+	setnames(tmp, c('ID1','ROGUE1'), c('ID','ROGUE'))
+	dr		<- tmp[, {
 				#	IDX<- 26801; ID1<- '15778_1_82'
 				ph	<- phs[[ IDX ]]
-				tmp	<- ph$tip.label[!grepl(ID1,ph$tip.label)]
-				ph	<- drop.tip(ph,tmp)
+				z	<- ph$tip.label[!grepl(ID,ph$tip.label)]
+				ph	<- drop.tip(ph,z)
 				list(BRL=ph$edge.length) 
-			}, by=c('W_FROM','ID1','ROGUE1')]
-	
-	tmp		<- subset(dr, W_FROM%in%c('1100','1200'))
-	ggplot(tmp, aes(x=BRL)) + geom_histogram() +facet_grid(~W_FROM)
-	
+			}, by=c('W_FROM','ID','ROGUE')]	
+	tmp		<- merge(subset(dtrees, PTY_RUN==66, c(W_FROM, IDX)), subset(df, select=c(ID2, W_FROM, ROGUE2)),by='W_FROM')
+	setnames(tmp, c('ID2','ROGUE2'), c('ID','ROGUE'))
+	tmp		<- tmp[, {
+				#	IDX<- 26801; ID1<- '15778_1_82'
+				ph	<- phs[[ IDX ]]
+				z	<- ph$tip.label[!grepl(ID,ph$tip.label)]
+				ph	<- drop.tip(ph,z)
+				list(BRL=ph$edge.length) 
+			}, by=c('W_FROM','ID','ROGUE')]
+	dr		<- rbind(dr, tmp)	
+	#	calculate prob that the max BRL is > x under the "null" that all distances are from the same distribution
+	#	using Weibull as "null" model because (1) for x positive and (2) it is easy to calculate 1-CDF(max X_i))
 	require(fitdistrplus)
-	library(ADGofTest)
-	require(VGAM)
-	z			<- subset(tmp, W_FROM=='1100' & BRL>1e-5)[,BRL]
-	z			<- subset(tmp, W_FROM=='1200' & BRL>1e-5)[,BRL]
-	mle.w		<- fitdist(z, 'frechet')	
-	denscomp(mle.w, addlegend=FALSE, xlab='weibull')
-	qqcomp(mle.w, addlegend=FALSE, main='weibull')
-	ad.test(z, pweibull, shape=mle.w$estimate['shape'], scale=mle.w$estimate['scale'])
+	dp		<- dr[, {
+				x			<- max(BRL)
+				p			<- NA_real_
+				z			<- BRL[ BRL>1e-5 ]
+				if(length(z)<=1)
+					cat('\n', W_FROM, ID)
+				if(length(z)>5)
+				{	
+					cat('\n', W_FROM, ID)
+					w.mle		<- fitdist(z, 'weibull')	
+					#	denscomp(w.mle, addlegend=FALSE, xlab='weibull') 	#use this to compare fit to data
+					w.k			<- w.mle$estimate['shape']
+					w.l			<- w.mle$estimate['scale']				
+					p			<- 1 - ( 1 - exp( -( max(z)/w.l )^w.k ) )^length(z)					
+				}
+				list(P=p, BRL.mx=max(BRL))
+			}, by=c('W_FROM','ID','ROGUE')]
 	
-	
-	tmp			<- subset(Y.rawbrl.linked, dt>=1 & b4T=='both')		
-	mle.exp		<- fitdist(tmp[,brl], 'exp')
-	mle.ga		<- fitdist(tmp[,brl], 'gamma')
-	mle.ln		<- fitdist(tmp[,brl], 'lnorm')
-	mle.w		<- fitdist(tmp[,brl], 'weibull')
-	
+	require(gamlss)
+	dp		<- dr[, {
+				x			<- max(BRL)
+				p			<- NA_real_
+				z			<- BRL[ BRL>1e-5 ]
+				if(length(z)>3)	# don't think makes sense to fit Weibull to 3 data points
+				{	
+					# cat('\n', W_FROM, ID) # for debugging
+					w		<- gamlss(data=data.table(BRL=z), formula=BRL~1, family=WEI, trace=FALSE)
+					w.l		<- exp(coef(w, what='mu'))
+					w.k		<- exp(coef(w, what='sigma'))
+					p			<- 1 - ( 1 - exp( -( max(z)/w.l )^w.k ) )^length(z)					
+				}
+				list(P=p, BRL.mx=max(BRL))
+			}, by=c('W_FROM','ID','ROGUE')]	
+	dp[, BRL.mx.c:= cut(BRL.mx, breaks=c(0,0.04,Inf), labels=c('<4%','>=4%'))]		
+	subset(dp, !is.na(P))[, table(ROGUE, BRL.mx.c)]
+	subset(dp, !is.na(P))[, table(ROGUE, P<.05)]
+	subset(dp, !is.na(P))[, table(ROGUE, P<.0001)]	
+	ggplot(subset(dp, !is.na(P)), aes(x=factor(ROGUE), y=P)) + 
+			geom_boxplot() + 
+			facet_grid(.~BRL.mx.c) +
+			labs(x='manual classification rogues',y='prob that max BRL is > observed max\nunder Weibull model')
 	
 	#
 	#	inspect couple K061956:J061939 ( M:15103_1_74 F:15861_1_22 run:91 )
@@ -1392,8 +1427,6 @@ RakaiCouples.process.couples.161027<- function()
 	set(df, NULL, 'ID1', df[, gsub('\\.bam','',ID1)])
 	set(df, NULL, 'ID2', df[, gsub('\\.bam','',ID2)])
 	setnames(df, colnames(df), gsub('_rerun','',gsub('couples_','',gsub('Rakai_ptoutput_','',colnames(df)))))
-	
-	
 }
 
 

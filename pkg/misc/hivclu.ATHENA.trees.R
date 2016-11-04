@@ -64,11 +64,58 @@ project.examl.ATHENA1610.161102.B.isolate.clade.alignments<- function()
 	write.dna(seq.b3, gsub('B','B_sub3',infile.B), format='fasta', colsep='', nbcol=-1)
 }
 ######################################################################################
+project.examl.ATHENA1610.161102.process.after.first.tree<- function()
+{
+	#	aim is to remove taxa from alignment that are odd in tree
+	require(big.phylo)
+	require(phytools)
+	infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.finaltree.000"
+	ph			<- read.tree(infile.tree)	
+	tmp			<- which(grepl('HXB2',ph$tip.label))
+	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])	
+	ph			<- ladderize(ph)
+	
+	phd			<- data.table(TAXA= ph$tip.label)
+	phd[, NL:= !grepl('LANL',TAXA)]
+	phd[, TIP.CLR:= 'black']
+	set(phd, phd[, which(NL)], 'TIP.CLR','red')
+	
+	pdf(file=paste(infile.tree,'.pdf',sep=''), width=40, height=800)
+	plot(ph, tip.color= phd[, TIP.CLR], cex=0.5, adj=.05)
+	dev.off()	
+	
+	load(infile.info)
+	#	odd taxa
+	dodd	<- data.table(FASTASampleCode= c("21444311", #CPX??
+		"M4330616072013", #long branch 
+		"R07-03480", "M4213909122011","M4532929042015", #BF?	
+		"M4536216042015", "M4579808092015", "M4546917032015", #long branch
+		"131028040783PR", # very long branch
+		"2006G020", #F1? --> there are a bunch of other LANL sequences around that which we may want to remove too
+		"M4334603092013", #D ?
+		"M4416814022014","21531193","150518055302","150515000202"))
+	dodd	<- merge(ds, dodd, by='FASTASampleCode', all.y=1)	
+	dodd	<- subset(dodd, SUBTYPE!='B'|SUBTYPE_C!='B'|SEQ_L<500)
+	#	taxa to remove from alignment
+	tmp		<- c( dodd[, FASTASampleCode] , c("LANL.D.UG.2008.CP076303105.HQ995281", "LANL.19B.CU.2010.CUPL1081.JN000053", "LANL.19_cpx.CU.2010.CUPL1073.JN000045", "LANL.19_cpx.CU.2009.AIDS-RP28.KP688103", "LANL.19_cpx.CU.2009.MCB1.HQ108364",
+		"LANL.05_DF.TG.2006.06TG.HT156.FM955743", 'LANL.06_cpx.BF.2003.ORAV203.GU207150', 'LANL.06_cpx.BF.2003.ORAV210.GU207132', 'LANL.F1.RO.2011.F1_DU2837_2011.KJ194766', 'LANL.F1.RO.-.SR7.JX966533',
+		'LANL.01_AE.TH.-.045133.AF191195','LANL.01_AE.TH.-.GEN5WK4.AF191204','LANL.01_AE.TH.-.GEN5WK1.AF191203',
+		'LANL.F1.RO.2012.F1_ND1088_2012.KJ194679','LANL.F1.ES.2010.X2922_3s_nfl.KJ883142','LANL.F1.ES.2009.X2687_1.GU326171','LANL.F1.ES.2010.X3079_2i_nfl.KJ883146'))
+	#
+	infile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
+	seq.b		<- read.dna(infile, format='fa')
+	stopifnot( length(setdiff( tmp, rownames(seq.b)))==0 )	
+	seq.b		<- seq.b[setdiff( rownames(seq.b), tmp ),]
+	#
+	write.dna(seq.b, gsub('subtype','noROGUE_subtype',infile), format='fasta', colsep='', nbcol=-1)
+}
+######################################################################################
 project.examl.ATHENA1610.161102<- function()
 {
 	require(big.phylo)
 	indir		<- '/work/or105/ATHENA_2016/data/examl'
-	infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub1.fasta"
+	infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta"
 	#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub2.fasta"
 	#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub3.fasta"
 	#	ExaML bootstrap args
