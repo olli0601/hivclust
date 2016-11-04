@@ -2845,7 +2845,7 @@ project.hivc.Excel2dataframe.CD4.161027<- function()
 	verbose			<- 1
 	
 	#	INPUT FILE NAMES	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original/SHM_1602_161013_OR_ALL_Immu.csv'
+	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Immu.csv'
 	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_CD4.rda'
 	#
 	#	read CD4 csv data file and preprocess
@@ -4158,9 +4158,8 @@ project.hivc.Excel2dataframe.Regimen.161027<- function()
 	verbose			<- 1
 	#
 	#	INPUT FILE
-	#
-	dir.name		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original'
-	file			<- file.path(dir.name, 'SHM_1602_161013_OR_ALL_Regimens.xlsx')
+	#	
+	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Regimens.xlsx'
 	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_ART.rda'
 	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
 	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
@@ -4190,61 +4189,11 @@ project.hivc.Excel2dataframe.Regimen.161027<- function()
 	# 
 	tmp		<- which(df[, Patient=="M46130" & StopTime=="1985-07-01"])
 	set(df, tmp, "StartTime", NA_real_)	
-	tmp		<- which(df[, Patient=="M28820" & StopTime=="2005-07-01"])
-	set(df, tmp, "StartTime", NA_real_)	
-	tmp		<- which(df[, Patient=="M34942" & StopTime=="2011-07-01"])
-	set(df, tmp, "StartTime", NA_real_)	
-	tmp		<- which(df[, Patient=="M37844" & StopTime=="2014-07-01"])
-	set(df, tmp, "StartTime", NA_real_)	
-	tmp		<- which(df[, Patient=="M10544" & StopTime=="2004-07-01"])
-	set(df, tmp, "StartTime", NA_real_)		
-	tmp		<- which(df[, Patient=="M41393" & StartTime=="2013-07-01"])
-	if(length(tmp))
-	{		 
-		cat(paste("\nfix entry 	M41393  2013-07-01"))
-		set(df, tmp, "StartTime", as.Date("2013-04-06"))
-	}
-	tmp		<- which(df[, Patient=="M38112" & StopTime=="2013-07-01"])
-	if(length(tmp))
-	{		 
-		cat(paste("\nfix entry 	M38112  2013-07-01"))
-		set(df, tmp, "StopTime", TR.notyet)
-	}
-	tmp		<- which(df[, Patient=="M38112" & StopTime=="2013-07-01"])
-	if(length(tmp))
-	{		 
-		cat(paste("\nfix entry 	M38112  2013-07-01"))
-		set(df, tmp, "StopTime", TR.notyet)
-	}
-	tmp		<- which(df[, Patient=="M13092" & StopTime=="2004-07-01"])
-	if(length(tmp))
-	{		 
-		cat(paste("\nfix entry 	M13092  2004-07-01"))
-		set(df, tmp, "StopTime", as.Date("2004-07-02"))
-	}
-	tmp						<- which(df[, Patient=="M37711" & StartTime=="2010-07-01"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M37711  2010-07-01"))
-		set(df, tmp, "StopTime", TR.notyet)				
-	}
 	tmp						<- which(df[, Patient=="M35950" & StartTime=="2011-07-01"])
 	if(length(tmp))
 	{
 		cat(paste("\nfix entry 	M35950  2011-07-01"))
 		set(df, tmp, "StopTime", TR.notyet)				
-	}
-	tmp						<- which(df[, Patient=="M33023" & StartTime=="2010-07-01"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M33023  2010-07-01"))
-		set(df, tmp, "StopTime", TR.notyet)				
-	}
-	tmp						<- which(df[, Patient=="M18204" & StartTime=="1997-02-15"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M18204  1997-02-15"))
-		set(df, tmp, "StopTime", as.Date("1999-03-15"))				
 	}
 	tmp						<- which(df[, Patient=="M29191" & StartTime=="2009-07-01"])
 	if(length(tmp))
@@ -4258,12 +4207,6 @@ project.hivc.Excel2dataframe.Regimen.161027<- function()
 		cat(paste("\nfix entry 	M33034  2008-07-01"))
 		set(df, tmp, "StopTime", as.Date("2008-06-15"))				
 	}
-	tmp						<- which(df[, Patient=="M35936" & StartTime=="2011-02-15"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M35936  2011-07-01"))
-		set(df, tmp, "StopTime", as.Date("2011-04-29"))				
-	}
 	tmp						<- which(df[, Patient=="M37778" & StartTime=="2012-05-02"])
 	if(length(tmp))
 	{
@@ -4276,71 +4219,11 @@ project.hivc.Excel2dataframe.Regimen.161027<- function()
 		cat(paste("\nfix entry 	M41695  2013-07-01"))
 		set(df, tmp, "StopTime", as.Date("2013-05-21"))				
 	}
-	tmp						<- which(df[, Patient=="M29531" & StartTime=="1997-07-01"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M29531  1997-07-01"))
-		set(df, tmp, "StartTime", as.Date("1997-05-30"))				
-	}
-	tmp						<- which(df[, Patient=="M33706" & StartTime=="2008-12-23"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M33706  2010-07-01"))
-		set(df, tmp, "StopTime", as.Date("2010-11-15"))				
-	}
-	tmp						<- which(df[, Patient=="M33706" & StartTime=="2010-07-01" & StopTime=="2011-07-01"])
-	if(length(tmp))
-	{
-		cat(paste("\nrm double entry 	M33706  2010-07-01"))
-		set(df, tmp, c("StartTime",'StopTime'), NA_real_)				
-	}
-	tmp						<- which(df[, Patient=="M33706" & StartTime=="2010-11-15" & StopTime=="2011-07-01"])
-	if(length(tmp))
-	{
-		cat(paste("\nrm double entry part 1 	M33706  2010-11-15"))
-		set(df, tmp, "StopTime", as.Date("2011-01-17"))								
-	}
-	tmp						<- which(df[, Patient=="M33706" & StartTime=="2011-07-01" & StopTime=="2011-01-17"])
-	if(length(tmp))
-	{
-		cat(paste("\nrm double entry part 2 	M33706  2011-07-01"))	
-		set(df, tmp, c("StartTime",'StopTime'), NA_real_)				
-	}	
 	tmp						<- which(df[, Patient=="M15834" & StartTime=="1998-06-26"])
 	if(length(tmp))
 	{
 		cat(paste("\nrm double entry 	M15834  1998-06-26"))
 		set(df, tmp, c("StartTime",'StopTime'), NA_real_)				
-	}
-	tmp						<- which(df[, Patient=="M17493" & StartTime=="1996-01-01"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M17493  1996-01-01 manually to somewhere in 1996"))
-		set(df, tmp, "StartTime", as.Date("1996-07-01"))				
-	}	
-	tmp						<- which(df[, Patient=="M41688" & StartTime=="2011-01-01"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M41688  2011-01-01 manually to 2011-11-01 (Ard)"))
-		set(df, tmp, "StartTime", as.Date("2011-11-01"))
-	}				
-	tmp						<- which(df[, Patient=="M42092" & StartTime=="2011-08-23"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M42092  2011-08-23 to 2012-08-23"))
-		set(df, tmp, "StartTime", as.Date("2012-08-23"))
-	}	
-	tmp						<- which(df[, Patient=="M42186" & StartTime=="2010-10-23"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M42186  2010-10-23 to 2012-10-23"))
-		set(df, tmp, "StartTime", as.Date("2012-10-23"))
-	}				
-	tmp						<- which(df[, Patient=="M37531" & StartTime=="2006-08-15"])
-	if(length(tmp))
-	{
-		cat(paste("\nfix entry 	M37531  2006-08-15 to 2008-08-15"))
-		set(df, tmp, "StartTime", as.Date("2008-08-15"))
 	}
 	tmp						<- which(df[, Patient=="M15834" & StartTime=="1998-06-26"])
 	if(length(tmp))
@@ -4632,7 +4515,7 @@ project.hivc.Excel2dataframe.Regimen.161027<- function()
 	tmp		<- merge(subset(df, select=c(Patient, StopTime)), tmp, by='Patient')
 	tmp		<- tmp[, list(OddStopTime=OddStopTime[1], DUMMY=DUMMY[1], LAST=max(StopTime)<=OddStopTime[1]), by='Patient']
 	tmp		<- subset(tmp, LAST)
-	#write.csv(tmp, file='~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/check/check_inaccurateStopTime_equal_StartTime_and_Last.csv')
+	#write.csv(tmp, file='~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/check/check_inaccurateStopTime_equal_StartTime_and_Last_2.csv')
 	for(i in seq_len(nrow(tmp)))
 	{
 		set(df, tmp[i,DUMMY], 'StopTime', TR.notyet)
@@ -5321,7 +5204,7 @@ project.hivc.Excel2dataframe.GGD.160227<- function()
 project.hivc.Excel2dataframe.GGD.161027<- function()
 {
 	#	INPUT FILE NAMES
-	file		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original/SHM_1602_161013_OR_ALL_Region_GGD.csv'		
+	file		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Region_GGD.csv'		
 	outfile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Region_GGD.rda'
 	
 	df			<- read.csv(file, stringsAsFactors=FALSE)

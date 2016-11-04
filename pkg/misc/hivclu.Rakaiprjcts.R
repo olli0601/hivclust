@@ -1300,30 +1300,100 @@ RakaiCouples.process.couples.161027<- function()
 	#
 	#	inspect rogue case by window
 	#
-	infiles	<- data.table(F= c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr66_trmStatsPerWindow.rda',
-								'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr66_trmStatsPerWindow.rda',
-								'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr66_trmStatsPerWindow.rda'))
-	infiles[, RUN:=gsub('_rerun','',gsub('couples_','',gsub('Rakai_ptoutput_','',infiles[, basename(dirname(F))])))]	
+	dr		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161027/couple_374_rogues_OR.csv'))
+	setnames(dr, c('window.start','J110207','G105508'), c('W_FROM','15778_1_82','15758_1_76'))
+	tmp		<- melt(subset(dr, select=c('W_FROM','15778_1_82','15758_1_76')), id.vars='W_FROM',value.name='BRL',variable.name='ID')  
+	dr		<- melt(subset(dr, select=c('W_FROM','rogue_15778_1_82','rogue_15758_1_76')), id.vars='W_FROM',value.name='ROGUE',variable.name='ID')
+	set(dr, NULL, 'ID', dr[, gsub('rogue_','',ID)])
+	dr		<- merge(tmp, dr, by=c('W_FROM','ID'))
 	
+	infiles<- c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr66_trmStatsPerWindow.rda',
+					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr66_trmStatsPerWindow.rda',
+					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr66_trmStatsPerWindow.rda'	)
 	id.m	<- '15778_1_82'
-	id.f	<- '15758_1_76'
+	id.f	<- '15758_1_76'	
+	df		<- phsc.get.assignments.by.window.for.couple(id1=paste(id.m,'.bam',sep=''), id2=paste(id.f,'.bam',sep=''), infiles)
+	set(df, NULL, 'ID1', df[, gsub('\\.bam','',ID1)])
+	set(df, NULL, 'ID2', df[, gsub('\\.bam','',ID2)])
+	setnames(df, colnames(df), gsub('_rerun','',gsub('couples_','',gsub('Rakai_ptoutput_','',colnames(df)))))
 	
-	df		<- infiles[, {
-				#load( '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr66_trmStatsPerWindow.rda' )
-				load(F)
-				df		<- subset(window.table, (pat.1==paste(id.m,'.bam',sep='') & pat.2==paste(id.f,'.bam',sep='')) | (pat.1==paste(id.f,'.bam',sep='') & pat.2==paste(id.m,'.bam',sep='')))
-				setnames(df, c('pat.1','pat.2','type'), c('ID1','ID2','TYPE'))
-				set(df, NULL, 'ID1', df[, gsub('\\.bam','',ID1)])
-				set(df, NULL, 'ID2', df[, gsub('\\.bam','',ID2)])
-				set(df, NULL, 'SOURCE_FILE', NULL)
-				set(df, df[, which(is.na(TYPE))], 'TYPE', 'disconnected')
-				set(df, df[, which(ID1==id.m & TYPE=='trans')], 'TYPE', 'trans_mf')
-				set(df, df[, which(ID1==id.f & TYPE=='trans')], 'TYPE', 'trans_fm')
-				set(df, NULL, 'ID1', id.m)
-				set(df, NULL, 'ID2', id.f)
-				df
-			}, by='RUN']
-	setkey(df, ID1, ID2, RUN, W_FROM)
+	setnames(dr, c('ID','BRL','ROGUE'), c('ID1','BRL1','ROGUE1'))
+	df		<- merge(df,dr,by=c('ID1','W_FROM'))
+	setnames(dr, c('ID1','BRL1','ROGUE1'), c('ID2','BRL2','ROGUE2'))
+	df		<- merge(df,dr,by=c('ID2','W_FROM'))
+	df		<- subset(df, !is.na(BRL1) & !is.na(BRL2) & !is.na(ROGUE1) & !is.na(ROGUE2))
+	#
+	#	branches among rogues and non rogues
+	#
+	tmp		<- subset(df, select=c(BRL1,ROGUE1))
+	setnames(tmp, c('BRL1','ROGUE1'), c('BRL','ROGUE'))
+	tmp2	<- subset(df, select=c(BRL2,ROGUE2))
+	setnames(tmp2, c('BRL2','ROGUE2'), c('BRL','ROGUE'))	
+	tmp		<- rbind(tmp, tmp2)
+	ggplot(tmp, aes(x=BRL, fill=factor(ROGUE))) + geom_histogram() + facet_grid(~ROGUE)
+	
+	subset(df, (BRL1>0.05 & !ROGUE1) | (BRL2>0.05 & !ROGUE2))
+	subset(df, (BRL1<0.07 & ROGUE1) | (BRL2<0.07 & ROGUE2))
+	#	calculate patristic distance..
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d200_phscout.rda')
+	ph		<- phs[[ subset(dtrees, PTY_RUN==66 & W_FROM==1225)[, IDX] ]]
+	tmp		<- as.matrix(cophenetic.phylo(ph))
+	max( tmp['15758_1_76.bam_read_7_count_1', grepl('15758_1_76', colnames(tmp))] )
+	
+	dr		<- merge(subset(dtrees, PTY_RUN==66, c(W_FROM, IDX)), subset(df, select=c(ID1, W_FROM, ROGUE1)),by='W_FROM')
+	dr		<- dr[, {
+				#	IDX<- 26801; ID1<- '15778_1_82'
+				ph	<- phs[[ IDX ]]
+				tmp	<- ph$tip.label[!grepl(ID1,ph$tip.label)]
+				ph	<- drop.tip(ph,tmp)
+				list(BRL=ph$edge.length) 
+			}, by=c('W_FROM','ID1','ROGUE1')]
+	
+	tmp		<- subset(dr, W_FROM%in%c('1100','1200'))
+	ggplot(tmp, aes(x=BRL)) + geom_histogram() +facet_grid(~W_FROM)
+	
+	require(fitdistrplus)
+	library(ADGofTest)
+	require(VGAM)
+	z			<- subset(tmp, W_FROM=='1100' & BRL>1e-5)[,BRL]
+	z			<- subset(tmp, W_FROM=='1200' & BRL>1e-5)[,BRL]
+	mle.w		<- fitdist(z, 'frechet')	
+	denscomp(mle.w, addlegend=FALSE, xlab='weibull')
+	qqcomp(mle.w, addlegend=FALSE, main='weibull')
+	ad.test(z, pweibull, shape=mle.w$estimate['shape'], scale=mle.w$estimate['scale'])
+	
+	
+	tmp			<- subset(Y.rawbrl.linked, dt>=1 & b4T=='both')		
+	mle.exp		<- fitdist(tmp[,brl], 'exp')
+	mle.ga		<- fitdist(tmp[,brl], 'gamma')
+	mle.ln		<- fitdist(tmp[,brl], 'lnorm')
+	mle.w		<- fitdist(tmp[,brl], 'weibull')
+	
+	
+	#
+	#	inspect couple K061956:J061939 ( M:15103_1_74 F:15861_1_22 run:91 )
+	#
+	infiles<- c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr91_trmStatsPerWindow.rda',
+					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr91_trmStatsPerWindow.rda',
+					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr91_trmStatsPerWindow.rda'	)
+	id.m	<- '15103_1_74'
+	id.f	<- '15861_1_22'	
+	df		<- phsc.get.assignments.by.window.for.couple(id1=paste(id.m,'.bam',sep=''), id2=paste(id.f,'.bam',sep=''), infiles)
+	set(df, NULL, 'ID1', df[, gsub('\\.bam','',ID1)])
+	set(df, NULL, 'ID2', df[, gsub('\\.bam','',ID2)])
+	setnames(df, colnames(df), gsub('_rerun','',gsub('couples_','',gsub('Rakai_ptoutput_','',colnames(df)))))
+
+	infiles<- c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr62_trmStatsPerWindow.rda',
+					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr62_trmStatsPerWindow.rda',
+					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr62_trmStatsPerWindow.rda'	)
+	id.m	<- '15861_1_26'
+	id.f	<- '15861_1_22'	
+	df		<- phsc.get.assignments.by.window.for.couple(id1=paste(id.m,'.bam',sep=''), id2=paste(id.f,'.bam',sep=''), infiles)
+	set(df, NULL, 'ID1', df[, gsub('\\.bam','',ID1)])
+	set(df, NULL, 'ID2', df[, gsub('\\.bam','',ID2)])
+	setnames(df, colnames(df), gsub('_rerun','',gsub('couples_','',gsub('Rakai_ptoutput_','',colnames(df)))))
+	
+	
 }
 
 

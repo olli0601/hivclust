@@ -33,11 +33,44 @@ project.examl.Bezemer.141104<- function()
 			})	
 }
 ######################################################################################
+project.examl.ATHENA1610.161102.B.isolate.clade.alignments<- function()
+{
+	#1- run FastTree on subtype B alignment
+	#2- select two large clades in FigTree
+	#3- now split alignment
+	infile.c1	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_clade1.nexus"
+	infile.c2	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_clade2.nexus"
+	infile.B	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta"
+	infile.D	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_D.fasta"
+	
+	seq.b		<- read.dna(infile, format='fa')
+	ph.c1		<- read.nexus(infile.c1)
+	ph.c2		<- read.nexus(infile.c2)
+	
+	seq.b1		<- seq.b[gsub("'",'',ph.c1$tip.label),]
+	seq.b2		<- seq.b[gsub("'",'',ph.c2$tip.label),]
+	seq.b3		<- seq.b[setdiff( rownames(seq.b), c(rownames(seq.b1),rownames(seq.b2)) ),]
+	stopifnot( nrow(seq.b1)+nrow(seq.b2)+nrow(seq.b3)==nrow(seq.b) )
+	
+	#4- add D outgroup sequence
+	seq.D		<- read.dna(infile.D, format='fa')
+	seq.b1		<- rbind(seq.b1,seq.D["LANL.D.BR.1996.patient_96BRRJ100.DQ141203",])
+	seq.b2		<- rbind(seq.b2,seq.D["LANL.D.BR.1996.patient_96BRRJ100.DQ141203",])
+	seq.b3		<- rbind(seq.b3,seq.D["LANL.D.BR.1996.patient_96BRRJ100.DQ141203",])
+	
+	#	save
+	write.dna(seq.b1, gsub('B','B_sub1',infile.B), format='fasta', colsep='', nbcol=-1)
+	write.dna(seq.b2, gsub('B','B_sub2',infile.B), format='fasta', colsep='', nbcol=-1)
+	write.dna(seq.b3, gsub('B','B_sub3',infile.B), format='fasta', colsep='', nbcol=-1)
+}
+######################################################################################
 project.examl.ATHENA1610.161102<- function()
 {
 	require(big.phylo)
 	indir		<- '/work/or105/ATHENA_2016/data/examl'
-	infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta"	
+	infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub1.fasta"
+	#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub2.fasta"
+	#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub3.fasta"
 	#	ExaML bootstrap args
 	bs.from		<- 0
 	bs.to		<- 0
