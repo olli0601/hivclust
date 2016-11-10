@@ -64,6 +64,78 @@ project.examl.ATHENA1610.161102.B.isolate.clade.alignments<- function()
 	write.dna(seq.b3, gsub('B','B_sub3',infile.B), format='fasta', colsep='', nbcol=-1)
 }
 ######################################################################################
+project.examl.ATHENA1610.LSD.prepare.dates.161110<- function()
+{
+	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000"
+	outfile.dates	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_Dates.csv"
+	#
+	#	prepare csv file with sampling times for all taxa
+	#
+	load(infile.info)
+	#	process ATHENA dates
+	lsdi		<- subset(ds, select=c(FASTASampleCode, PosSeqT))
+	setnames(lsdi, c('FASTASampleCode','PosSeqT'), c('TAXA','DATE'))
+	set(lsdi, NULL, 'DATE', lsdi[, hivc.db.Date2numeric(DATE)])
+	#	process LANL dates
+	tmp			<- unique(subset(db, select=TAXA_L))
+	tmp[, DATE:=tmp[, sapply( strsplit(TAXA_L,'.',fixed=TRUE), function(x) x[[3]])]]
+	#tmp[, table(DATE, useNA='if')]
+	set(tmp, tmp[, which(DATE=='-')], 'DATE', NA_character_)
+	set(tmp, NULL, 'DATE', tmp[, as.numeric(DATE)])
+	set(tmp, NULL, 'TAXA_L', tmp[, gsub('_(stripped)', '', TAXA_L, fixed=TRUE)])
+	set(tmp, NULL, 'TAXA_L', tmp[, paste('LANL.',TAXA_L,sep='')])
+	setnames(tmp, c('TAXA_L','DATE'), c('TAXA','DATE'))
+	#
+	lsdi		<- rbind(lsdi, tmp)
+	#	duplicate HXB2
+	tmp			<- lsdi[which(grepl('HXB2',TAXA)),]
+	set(tmp, NULL, 'TAXA', 'HXB2')
+	lsdi		<- rbind(lsdi, tmp)
+	write.csv(lsdi, file=outfile.dates, row.names=FALSE)
+}
+######################################################################################
+project.examl.ATHENA1610.LSD.run.161110<- function()
+{
+	require(big.phylo)
+	#	on MAC
+	if(0)
+	{
+		infile.dates	<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_Dates.csv"	
+		indir.tree		<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed"
+		outdir			<- dirname(infile.dates)
+	}
+	#	on HPC
+	if(1)
+	{
+		infile.dates	<- "/work/or105/ATHENA_2016/data/lsd/ATHENA_1610_Sequences_LANL_Dates.csv"
+		indir.tree		<- "/work/or105/ATHENA_2016/data/examl"
+		outdir			<- "/work/or105/ATHENA_2016/data/lsd"		
+	}
+	run.lsd				<- 0
+	ali.len				<- 1289	
+	#
+	infile.tree			<- data.table(FT=list.files(indir.tree, pattern='^ExaML_result.*finaltree\\.[0-9]+$', full.names=TRUE))
+	infile.tree[, FD:= file.path(outdir,basename(paste(FT, '.lsd.dates', sep='')))]
+	infile.tree[, FL:= file.path(outdir,basename(paste(FT, '.lsd', sep='')))]
+	#	
+	dlsd	<- infile.tree[, {
+				cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE)
+				cmd			<- paste(cmd, cmd.lsd(FT, FD, ali.len, outfile=FL), sep='\n')
+				list(CMD=cmd)
+			}, by='FT']	
+	#dlsd[1, cat(CMD)]
+	dlsd[, {
+				x		<- cmd.hpcwrapper(CMD, hpc.walltime=100, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
+				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+				outfile	<- paste("lsd",signat,sep='.')
+				cat(x)
+				cmd.hpccaller(outdir, outfile, x)
+				Sys.sleep(1)
+				stop()
+			}, by='FT']
+}
+######################################################################################
 project.examl.ATHENA1610.161102.process.after.first.tree<- function()
 {
 	#	aim is to remove taxa from alignment that are odd in tree
@@ -109,9 +181,58 @@ project.examl.ATHENA1610.161102.process.after.first.tree<- function()
 	seq.b		<- seq.b[setdiff( rownames(seq.b), tmp ),]
 	#
 	write.dna(seq.b, gsub('subtype','noROGUE_subtype',infile), format='fasta', colsep='', nbcol=-1)
+	
+	#
+	#	generate pdf for tree number 2
+	#
+	require(big.phylo)
+	require(phytools)
+	infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000"
+	
+	ph			<- read.tree(infile.tree)		
+	#ph$tip.label[ which(grepl('LANL',ph$tip.label)) ]	
+	tmp			<- which(grepl('HXB2',ph$tip.label))
+	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])	
+	ph			<- ladderize(ph)
+	phd			<- data.table(TAXA= ph$tip.label)
+	phd[, NL:= !grepl('LANL',TAXA)]
+	phd[, TIP.CLR:= 'black']
+	set(phd, phd[, which(NL)], 'TIP.CLR','red')
+	
+	pdf(file=paste(infile.tree,'.pdf',sep=''), width=40, height=800)
+	plot(ph, tip.color= phd[, TIP.CLR], cex=0.5, adj=.05)
+	dev.off()	
+	
+	load(infile.info)
+	dodd	<- data.table(FASTASampleCode= c("21532360", "M3656124112008", "M4414807042014", #long branch
+				"M4595123112015",
+				"21552782","R10-24464","21537053","150515000202",
+				"LANL.56_cpx.FR.2010.patient_B.KC852172","LANL.56_cpx.FR.2010.patient_C.KC852174","LANL.56_cpx.FR.2010.URF5_patient_A.JN882655",#long branch
+				"R08-05623","R08-03756","2004G030","R12-15425","R08-21316","2010G216","2001G047","2008G208",	#recombinants?
+				"M4546917032015","M4579808092015"))
+	dodd	<- merge(ds, dodd, by='FASTASampleCode', all.y=1)	
+	
+	dodd	<- subset(dodd, SUBTYPE!='B'|SUBTYPE_C!='B'|is.na(Patient))
+	tmp		<- dodd[, FASTASampleCode]
+	#
+	infile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
+	seq.b		<- read.dna(infile, format='fa')
+	stopifnot( length(setdiff( tmp, rownames(seq.b)))==0 )
+	seq.b		<- seq.b[setdiff( ph$tip.label, tmp ),]
+	#
+	write.dna(seq.b, gsub('subtype','noROGUE_subtype',infile), format='fasta', colsep='', nbcol=-1)
+	
 }
 ######################################################################################
 project.examl.ATHENA1610.161102<- function()
+{
+	require(big.phylo)
+	#project.examl.ATHENA1610.examl.run.161102()
+	project.examl.ATHENA1610.LSD.run.161110()	
+}
+######################################################################################
+project.examl.ATHENA1610.examl.run.161102<- function()
 {
 	require(big.phylo)
 	indir		<- '/work/or105/ATHENA_2016/data/examl'

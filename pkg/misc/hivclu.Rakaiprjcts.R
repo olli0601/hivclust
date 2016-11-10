@@ -1429,6 +1429,475 @@ RakaiCouples.process.couples.161027<- function()
 	setnames(df, colnames(df), gsub('_rerun','',gsub('couples_','',gsub('Rakai_ptoutput_','',colnames(df)))))
 }
 
+RakaiCouples.process.couples.161107<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	setkey(rp, COUPID)
+	unique(rp)[, table(COUP_SC)]
+	#	total of couples with assigned SANGER_ID in RCCS
+	#   F->M    M->F seroinc seropos 
+	# 	10      19      52     266 	
+	tmp		<- merge(unique(rp), unique(subset(pty.runs, COUPID!='Other', COUPID)), by='COUPID')	
+	tmp[, table(COUP_SC)]
+	#	total of couples with SANGER_ID for which I have data
+	#	F->M    M->F seroinc seropos 
+	#	7       19   50      251 			total: 327
+	
+	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161027_w270d200_r004_mr1_phscout.rda')
+	dwin[, RUN:= 'mr1']
+	dwin[, min(ID1_R)]
+	#
+	#	for each run: save trm assignments for couples
+	#
+	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107', pattern='_phscout.rda', full.names=TRUE))	
+	infiles[, DIR:= dirname(FILE)]
+	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
+	infiles	<- subset(infiles, grepl('d50',RUN))
+	invisible(infiles[, {
+				#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161027_w270d20_r004_mr1_phscout.rda'
+				cat('\n',FILE)
+				load(FILE)	#loads phs dtrms dtrees dwin
+				#
+				#	extract couples transmissions summary
+				#
+				#	check
+				tmp		<- dtrms[, list(CH=WIN_TOTAL-sum(WIN_OF_TYPE)), by=c('PTY_RUN','ID1','ID2')]
+				stopifnot( tmp[, all(CH==0)] )
+				#	add zeros
+				tmp		<- dcast.data.table(dtrms, PAIR_ID~TYPE, value.var='WIN_OF_TYPE')
+				set(tmp, tmp[, which(is.na(disconnected))], 'disconnected', 0)
+				set(tmp, tmp[, which(is.na(int))], 'int', 0)
+				set(tmp, tmp[, which(is.na(unint))], 'unint', 0)
+				set(tmp, tmp[, which(is.na(cher))], 'cher', 0)
+				set(tmp, tmp[, which(is.na(trans_12))], 'trans_12', 0)
+				set(tmp, tmp[, which(is.na(trans_21))], 'trans_21', 0)
+				tmp		<- melt.data.table(tmp, id.vars='PAIR_ID', value.name='WIN_OF_TYPE', variable.name='TYPE')								
+				dtrms	<- merge(unique(subset(dtrms, select=c(PAIR_ID, ID1, ID2, ID1_R, ID1_L, ID2_R, ID2_L, PTY_RUN, WIN_TOTAL, SCORE))), tmp, by='PAIR_ID')
+				#	double the likely pairs (preserving the inferred direction), so that all get matched with the pairs in rp
+				tmp		<- copy(dtrms)
+				setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+				set(tmp, tmp[, which(TYPE=='trans_12')], 'TYPE', 'trans')
+				set(tmp, tmp[, which(TYPE=='trans_21')], 'TYPE', 'trans_12')
+				set(tmp, tmp[, which(TYPE=='trans')], 'TYPE', 'trans_21')
+				dtrms	<- rbind(tmp, dtrms)
+				#	select couples; first individual is always male	
+				setnames(dtrms, c('ID1','ID2'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+				set(dtrms, dtrms[, which(TYPE=='trans_12')], 'TYPE', 'trans_mf')
+				set(dtrms, dtrms[, which(TYPE=='trans_21')], 'TYPE', 'trans_fm')
+				set(dtrms, NULL, 'TYPE', dtrms[, as.character(TYPE)])
+				dtrms	<- merge(dtrms, rp, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+				#	
+				dtrms[, WIN_OF_TYPE_P:=WIN_OF_TYPE/WIN_TOTAL]
+				set(dtrms, NULL, 'RUN', RUN)
+				save(dtrms, file=gsub('phscout.rda','trmsout.rda',FILE))
+				#
+				#	extract couples transmissions assignments per window
+				#
+				#	double the likely pairs (preserving the inferred direction), so that all get matched with the pairs in rp
+				tmp		<- copy(dwin)
+				setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+				set(tmp, tmp[, which(TYPE=='trans_12')], 'TYPE', 'trans')
+				set(tmp, tmp[, which(TYPE=='trans_21')], 'TYPE', 'trans_12')
+				set(tmp, tmp[, which(TYPE=='trans')], 'TYPE', 'trans_21')
+				dwin	<- rbind(tmp, dwin)
+				#	select couples; first individual is always male	
+				setnames(dwin, c('ID1','ID2'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+				set(dwin, dwin[, which(TYPE=='trans_12')], 'TYPE', 'trans_mf')
+				set(dwin, dwin[, which(TYPE=='trans_21')], 'TYPE', 'trans_fm')
+				set(dwin, NULL, 'TYPE', dwin[, as.character(TYPE)])
+				dwin	<- merge(dwin, rp, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+				set(dwin, NULL, 'RUN', RUN)
+				save(dwin, file=gsub('phscout.rda','trmwout.rda',FILE))				
+			}, by=c('RUN','DIR','FILE')])
+	#		
+	#	load transmission summary assignments		
+	#		
+	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107', pattern='_trmsout.rda', full.names=TRUE))	
+	infiles[, DIR:= dirname(FILE)]
+	infiles[, RUN:= gsub('_trmsout.rda','',basename(FILE))]					
+	rps		<- infiles[, {
+				load(FILE)
+				dtrms
+			}, by=c('DIR','FILE')]
+	save(rps, file= '~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161107_w270_trms_assignments.rda')
+	#		
+	#	load transmission window assignments		
+	#		
+	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107', pattern='_trmwout.rda', full.names=TRUE))	
+	infiles[, DIR:= dirname(FILE)]
+	infiles[, RUN:= gsub('_trmwout.rda','',basename(FILE))]					
+	rpw		<- infiles[, {
+				load(FILE)
+				dwin
+			}, by=c('DIR','FILE')]
+	save(rpw, file= '~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161107_w270_trmw_assignments.rda')	
+}
+
+RakaiCouples.analyze.couples.161107.trmw<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161107_w270_trmw_assignments.rda')
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161107_w270_d200_r004_mr1", "RCCS_161107_w270_d50_r004_mr1", "RCCS_161107_w270_d20_r004_mr1", "RCCS_161107_w270_d50_r004_mr20", "RCCS_161107_w270_d50_r004_mr30", "RCCS_161107_w270_d50_r004_mr40", "RCCS_161107_w270_d50_r004_mr50", "RCCS_161107_w270_d50_r004_mr100") )
+	#
+	set(rpw, NULL, 'RUN', rpw[, factor(RUN, levels=c( 	"RCCS_161107_w270_d20_r004_mr1","RCCS_161107_w270_d50_r004_mr1","RCCS_161107_w270_d200_r004_mr1",
+														"RCCS_161107_w270_d50_r004_mr20","RCCS_161107_w270_d50_r004_mr30","RCCS_161107_w270_d50_r004_mr40","RCCS_161107_w270_d50_r004_mr50","RCCS_161107_w270_d50_r004_mr100"))])
+	rpw[, table(RUN, useNA='if')]
+	#
+	#	for each run: plot pairs	
+	#	
+	#	define plotting order: largest number of trm assignments
+	tmp		<- rpw[, list( WIN_TR=length(which(grepl('trans',TYPE))) ), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
+	tmp		<- tmp[order(-WIN_TR),]
+	tmp[, PLOT_ID:=seq_len(nrow(tmp))]	
+	#	define label
+	tmp		<- merge(tmp, rp, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))	
+	tmp[, LABEL:= factor(PLOT_ID, levels=PLOT_ID, labels=paste('Pair ', COUPID,' -type=', COUP_SC, ' -phsc.run=',PTY_RUN, '\nPerson M ', MALE_RID, ' ', MALE_SANGER_ID,' -loc:',MALE_REGION,',',MALE_COMM_NUM,',',MALE_HH_NUM,' -birth:',MALE_BIRTHDATE,' -neg:',MALE_LASTNEGDATE,' -pos:',MALE_FIRSTPOSDATE,' -seq:',MALE_SEQDATE,
+							'\n<->', 
+							'\nPerson F ', FEMALE_RID, ' ', FEMALE_SANGER_ID,' -loc:',FEMALE_REGION,',',FEMALE_COMM_NUM,',',FEMALE_HH_NUM,' -birth:',FEMALE_BIRTHDATE,' -neg:',FEMALE_LASTNEGDATE,' -pos:',FEMALE_FIRSTPOSDATE,' -seq:',FEMALE_SEQDATE,																				
+							'\n',sep=''))]
+	tmp		<- merge(subset(tmp, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, LABEL)), rpw, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, levels=c('trans_mf','trans_fm','unint','int','cher','disconnected'), labels=c('M transmit to F','F transmit to M','M, F are unint','M, F are intermingled','M, F are a cherry','M, F are disconnected'))])
+	rpwp	<- subset(tmp, select=c(RUN, PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, COUP_SC, LABEL, W_FROM,  W_TO, TYPE, ID1_R, ID1_L, ID2_R, ID2_L ))
+	tmp		<- rpwp[, list(	ID_R_MIN=min(ID1_R, ID2_R),
+							ID_R_MAX=max(ID1_R, ID2_R)), by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','W_FROM')]
+	rpwp	<- merge(rpwp, tmp, by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','W_FROM'))
+	set(rpwp, NULL, 'RUN', rpwp[, gsub('_','\n',gsub('w270_','',gsub('RCCS_','',as.character(RUN))))])
+	set(rpwp, NULL, 'RUN', rpwp[, factor(RUN, levels=c(	"161107\nd200\nr004\nmr1", "161107\nd50\nr004\nmr1", "161107\nd20\nr004\nmr1",   
+														"161107\nd50\nr004\nmr20","161107\nd50\nr004\nmr30","161107\nd50\nr004\nmr40","161107\nd50\nr004\nmr50","161107\nd50\nr004\nmr100"))])
+	
+	run		<- 'RCCS_161107_w270_dxxx'
+	dir		<- rpw$DIR[1]
+	#	F->M
+	tmp		<- subset(rpwp, COUP_SC=='F->M')
+	p		<- lapply(tmp[, unique(LABEL)], function(label)
+				{
+					p	<- ggplot(subset(tmp, LABEL==label), aes(x=W_FROM)) +			
+							geom_bar(aes(y=ID_R_MAX, colour=TYPE), stat='identity', fill='transparent') +
+							geom_bar(aes(y=ID_R_MIN, fill=TYPE), stat='identity', colour='transparent') +
+							labs(x='window start', y='number of reads', fill='topology of clades\nbetween patient pairs', colour='topology of clades\nbetween patient pairs') +
+							scale_fill_manual(values=c('M transmit to F'="#9E0142",'F transmit to M'="#F46D43",'M, F are a cherry'="#ABDDA4",'M, F are intermingled'="#3288BD",'M, F are unint'="blue",'M, F are disconnected'='grey50')) +
+							scale_colour_manual(values=c('M transmit to F'="#9E0142",'F transmit to M'="#F46D43",'M, F are a cherry'="#ABDDA4",'M, F are intermingled'="#3288BD",'M, F are unint'="blue",'M, F are disconnected'='grey50')) +
+							scale_x_continuous(breaks=seq(0,1e4,250), limits=c(tmp[, min(W_FROM)], tmp[, max(W_FROM)])) +
+							scale_y_log10(breaks=c(10,100,1000,1e4,1e5)) +
+							theme_bw() + theme(legend.position='top') +
+							facet_grid(RUN~LABEL) +
+							guides(fill=guide_legend(ncol=2)) 
+					p
+				})
+	pdf(file=file.path(dir, paste(run,'-phsc-windowassignments_F2M.pdf',sep='')), w=25, h=1*tmp[, length(unique(RUN))])
+	for(i in seq_along(p))	print(p[[i]])
+	dev.off()
+	#	M->F
+	tmp		<- subset(rpwp, COUP_SC=='M->F')
+	p		<- lapply(tmp[, unique(LABEL)], function(label)
+			{
+				p	<- ggplot(subset(tmp, LABEL==label), aes(x=W_FROM)) +			
+						geom_bar(aes(y=ID_R_MAX, colour=TYPE), stat='identity', fill='transparent') +
+						geom_bar(aes(y=ID_R_MIN, fill=TYPE), stat='identity', colour='transparent') +
+						labs(x='window start', y='number of reads', fill='topology of clades\nbetween patient pairs', colour='topology of clades\nbetween patient pairs') +
+						scale_fill_manual(values=c('M transmit to F'="#9E0142",'F transmit to M'="#F46D43",'M, F are a cherry'="#ABDDA4",'M, F are intermingled'="#3288BD",'M, F are unint'="blue",'M, F are disconnected'='grey50')) +
+						scale_colour_manual(values=c('M transmit to F'="#9E0142",'F transmit to M'="#F46D43",'M, F are a cherry'="#ABDDA4",'M, F are intermingled'="#3288BD",'M, F are unint'="blue",'M, F are disconnected'='grey50')) +
+						scale_x_continuous(breaks=seq(0,1e4,250), limits=c(tmp[, min(W_FROM)], tmp[, max(W_FROM)])) +
+						scale_y_log10(breaks=c(10,100,1000,1e4,1e5)) +
+						theme_bw() + theme(legend.position='top') +
+						facet_grid(RUN~LABEL) +
+						guides(fill=guide_legend(ncol=2)) 
+				p
+			})
+	pdf(file=file.path(dir, paste(run,'-phsc-windowassignments_M2F.pdf',sep='')), w=25, h=1*tmp[, length(unique(RUN))])
+	for(i in seq_along(p))	print(p[[i]])
+	dev.off()
+	
+}
+
+RakaiCouples.analyze.couples.161107.trms<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161107_w270_trms_assignments.rda')
+	rps		<- subset(rps, RUN%in%c("RCCS_161107_w270_d200_r004_mr1", "RCCS_161107_w270_d50_r004_mr1", "RCCS_161107_w270_d20_r004_mr1", "RCCS_161107_w270_d50_r004_mr20", "RCCS_161107_w270_d50_r004_mr30", "RCCS_161107_w270_d50_r004_mr40", "RCCS_161107_w270_d50_r004_mr50", "RCCS_161107_w270_d50_r004_mr100") )    
+	rpsn	<- copy(rps)	
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_assignments.rda')	
+	rps		<- rbind(rpsn, rps, fill=TRUE, use.names=TRUE)	
+	#
+	rps[, length(unique(COUPID)), by='RUN']
+	#
+	set(rps, NULL, 'RUN', rps[, factor(RUN, levels=c(	"RCCS_161007_w270",
+														"RCCS_161107_w270_d200_r004_mr1","RCCS_161107_w270_d50_r004_mr1","RCCS_161107_w270_d20_r004_mr1",
+														"RCCS_161107_w270_d50_r004_mr20","RCCS_161107_w270_d50_r004_mr30","RCCS_161107_w270_d50_r004_mr40","RCCS_161107_w270_d50_r004_mr50","RCCS_161107_w270_d50_r004_mr100"))])
+	#
+	#	for each run: plot pairs	
+	#	
+	run		<- 'RCCS_161107_w270_dxxx'
+	dir		<- rps$DIR[1]
+	rpp		<- subset(rps, RUN==rps$RUN[1])
+	setkey(rpp, MALE_SANGER_ID, FEMALE_SANGER_ID, PAIR_ID)
+	tmp		<- unique(rpp)	
+	tmp[, PLOT_ID:= as.numeric(gsub('-','\\.',PAIR_ID))]
+	tmp		<- tmp[order(-PLOT_ID),]
+	tmp[, LABEL:= factor(PLOT_ID, levels=PLOT_ID, labels=paste('Pair', PAIR_ID,' -type=', COUP_SC, ' -phsc.run=',PTY_RUN, '\nPerson M ', MALE_RID, ' ', MALE_SANGER_ID,' -loc:',MALE_REGION,',',MALE_COMM_NUM,',',MALE_HH_NUM,' -birth:',MALE_BIRTHDATE,' -neg:',MALE_LASTNEGDATE,' -pos:',MALE_FIRSTPOSDATE,' -seq:',MALE_SEQDATE,
+							'\n<->', 
+							'\nPerson F ', FEMALE_RID, ' ', FEMALE_SANGER_ID,' -loc:',FEMALE_REGION,',',FEMALE_COMM_NUM,',',FEMALE_HH_NUM,' -birth:',FEMALE_BIRTHDATE,' -neg:',FEMALE_LASTNEGDATE,' -pos:',FEMALE_FIRSTPOSDATE,' -seq:',FEMALE_SEQDATE,																				
+							'\n',sep=''))]
+	tmp		<- merge(subset(tmp, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, LABEL)), rps, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, levels=c('trans_mf','trans_fm','unint','int','cher','disconnected'), labels=c('M transmit to F','F transmit to M','M, F are unint','M, F are intermingled','M, F are a cherry','M, F are disconnected'))])
+	tmp		<- subset(tmp, select=c(RUN, PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, COUP_SC, WIN_OF_TYPE_P, WIN_TOTAL, TYPE, LABEL))
+	tmp[, WIN_OF_TYPE_N:=WIN_OF_TYPE_P*WIN_TOTAL]
+	setkey(tmp, COUP_SC, LABEL, RUN, TYPE)
+	#	F->M
+	tmp2	<- subset(tmp, COUP_SC=='F->M')
+	ggplot(tmp2, aes(x=RUN, y=WIN_OF_TYPE_N, fill=TYPE)) +
+			geom_bar(stat='identity', position='stack') +
+			coord_flip() +
+			labs(x='', y='number of read windows', fill='topology of clades\nbetween patient pairs') +
+			scale_fill_manual(values=c('M transmit to F'="#9E0142",'F transmit to M'="#F46D43",'M, F are a cherry'="#ABDDA4",'M, F are intermingled'="#3288BD",'M, F are unint'="blue",'M, F are disconnected'='grey50')) +				
+			theme_bw() + theme(legend.position='top') +
+			facet_wrap(~COUP_SC+LABEL, ncol=1) +
+			guides(fill=guide_legend(ncol=2))
+	ggsave(file=file.path(dir, paste(run,'-phsc-serodiscpairs_F2M.pdf',sep='')), w=25, h=max(4,0.23*nrow(tmp2)), limitsize = FALSE)
+	#	M->F
+	tmp2	<- subset(tmp, COUP_SC=='M->F')
+	ggplot(tmp2, aes(x=RUN, y=WIN_OF_TYPE_N, fill=TYPE)) +
+			geom_bar(stat='identity', position='stack') +
+			coord_flip() +
+			labs(x='', y='number of read windows', fill='topology of clades\nbetween patient pairs') +
+			scale_fill_manual(values=c('M transmit to F'="#9E0142",'F transmit to M'="#F46D43",'M, F are a cherry'="#ABDDA4",'M, F are intermingled'="#3288BD",'M, F are unint'="blue",'M, F are disconnected'='grey50')) +				
+			theme_bw() + theme(legend.position='top') +
+			facet_wrap(~COUP_SC+LABEL, ncol=1) +
+			guides(fill=guide_legend(ncol=2))
+	ggsave(file=file.path(dir, paste(run,'-phsc-serodiscpairs_M2F.pdf',sep='')), w=25, h=max(4,0.23*nrow(tmp2)), limitsize = FALSE)
+	#	seroinc
+	tmp2	<- subset(tmp, COUP_SC=='seroinc')
+	ggplot(tmp2, aes(x=RUN, y=WIN_OF_TYPE_N, fill=TYPE)) +
+			geom_bar(stat='identity', position='stack') +
+			coord_flip() +
+			labs(x='', y='number of read windows', fill='topology of clades\nbetween patient pairs') +
+			scale_fill_manual(values=c('M transmit to F'="#9E0142",'F transmit to M'="#F46D43",'M, F are a cherry'="#ABDDA4",'M, F are intermingled'="#3288BD",'M, F are unint'="blue",'M, F are disconnected'='grey50')) +				
+			theme_bw() + theme(legend.position='top') +
+			facet_wrap(~COUP_SC+LABEL, ncol=1) +
+			guides(fill=guide_legend(ncol=2))
+	ggsave(file=file.path(dir, paste(run,'-phsc-serodiscpairs_SeroInc.pdf',sep='')), w=25, h=max(4,0.23*nrow(tmp2)), limitsize = FALSE)
+	#	seropos
+	tmp2	<- subset(tmp, COUP_SC=='seropos')
+	ggplot(tmp2, aes(x=RUN, y=WIN_OF_TYPE_N, fill=TYPE)) +
+			geom_bar(stat='identity', position='stack') +
+			coord_flip() +
+			labs(x='', y='number of read windows', fill='topology of clades\nbetween patient pairs') +
+			scale_fill_manual(values=c('M transmit to F'="#9E0142",'F transmit to M'="#F46D43",'M, F are a cherry'="#ABDDA4",'M, F are intermingled'="#3288BD",'M, F are unint'="blue",'M, F are disconnected'='grey50')) +				
+			theme_bw() + theme(legend.position='top') +
+			facet_wrap(~COUP_SC+LABEL, ncol=1) +
+			guides(fill=guide_legend(ncol=2))
+	ggsave(file=file.path(dir, paste(run,'-phsc-serodiscpairs_SeroPos.pdf',sep='')), w=25, h=max(4,0.23*nrow(tmp2)), limitsize = FALSE)
+	#
+	#	plot evidence for or against transmission
+	#
+	rps[, WIN_OF_TYPE_N:= WIN_OF_TYPE_P*WIN_TOTAL]
+	rpa		<- subset(rps, COUP_SC=='F->M')[, list(ANY_ANC= sum(WIN_OF_TYPE_N[TYPE=='trans_fm'|TYPE=='trans_mf'|TYPE=='int']), CHER=WIN_OF_TYPE_N[TYPE=='cher'], NO_ANC=sum(WIN_OF_TYPE_N[TYPE=='disconnected'|TYPE=='unint'])), by=c('RUN','PTY_RUN','COUPID','PAIR_ID','MALE_SANGER_ID','FEMALE_SANGER_ID','COUP_SC')]
+	tmp		<- subset(rps, COUP_SC=='M->F')[, list(ANY_ANC= sum(WIN_OF_TYPE_N[TYPE=='trans_mf'|TYPE=='trans_mf'|TYPE=='int']), CHER=WIN_OF_TYPE_N[TYPE=='cher'], NO_ANC=sum(WIN_OF_TYPE_N[TYPE=='disconnected'|TYPE=='unint'])), by=c('RUN','PTY_RUN','COUPID','PAIR_ID','MALE_SANGER_ID','FEMALE_SANGER_ID','COUP_SC')]
+	rpa		<- rbind(rpa, tmp, use.names=TRUE)
+	rpa[, WIN_TRM:= ANY_ANC]
+	rpa		<- melt(rpa, measure.vars=c('ANY_ANC', 'NO_ANC','CHER'))
+	set(rpa, rpa[, which(variable=='ANY_ANC')], 'variable', 'transmission assignments or intermingled')
+	set(rpa, rpa[, which(variable=='NO_ANC')], 'variable', 'unint or disconnected')
+	set(rpa, rpa[, which(variable=='CHER')], 'variable', 'cherry')
+	setkey(rpa, PAIR_ID)	
+	tmp		<- unique(subset(rpa, RUN=='RCCS_161107_w270_d200_r004_mr1'))[order(-WIN_TRM),][, list(COUPID=COUPID, MALE_SANGER_ID=MALE_SANGER_ID, FEMALE_SANGER_ID=FEMALE_SANGER_ID, PTY_RUN=PTY_RUN, CLASS_RANK=seq_along(PAIR_ID)) ]
+	set(tmp, NULL, 'CLASS_RANK', tmp[, factor(CLASS_RANK, levels=CLASS_RANK, labels=paste(COUPID, ' ( M:', MALE_SANGER_ID,' F:',FEMALE_SANGER_ID, ' run:', PTY_RUN, ' )', sep=''))])
+	rpa		<- merge(rpa, tmp, by=c('PTY_RUN','COUPID','MALE_SANGER_ID','FEMALE_SANGER_ID'))	
+	setkey(rpa, variable, CLASS_RANK)	
+	ggplot(rpa, aes(x=CLASS_RANK, y=value, fill=variable)) + 
+			geom_bar(stat='identity',position='stack') +
+			scale_fill_brewer(palette='Set2') +
+			theme_bw() + theme(legend.position='bottom',axis.text.x = element_text(angle = 90, hjust = 1)) +
+			facet_grid(~RUN) +
+			coord_flip() +
+			labs(	x= '\nsequence pairs of couples', 
+					y='number of windows\n',
+					colour='phyloscanner\ntransmission assignments',
+					title='\nphyloscanner transmission assignments\nto RCCS serodiscordant couples\nin which the uninfected partner is infected during follow-up\n')
+	ggsave(file=file.path(dir, paste(run,'-phsc-serodiscpairs-number_trmpair_windows.pdf',sep='')), w=35, h=10)
+	#
+	#	define three transmission evidence groups manually
+	#	
+	rpi	<- subset(rpa, RUN=='RCCS_161107_w270_d200_r004_mr1', c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID))
+	setkey(rpi, CLASS_RANK)
+	tmp	<- as.data.table(matrix( c('5','15861_1_13','15861_1_18',
+				'118','15097_1_88','15714_1_60',
+				'56','15743_1_11','16002_1_5',
+				'62','15777_1_41','15977_1_69',
+				'7','16057_1_2','15834_1_58',
+				'1','15861_1_13','15861_1_18',
+				'111','16057_1_2','15834_1_58',
+				'7','15861_1_13','15103_1_68',
+				'8','15949_1_52','15714_1_60',
+				'37','15950_1_6','15950_1_16',
+				'10','16002_1_17','15758_1_66',
+				'81','16035_1_3','15758_1_83',
+				'105','16035_1_3','15758_1_83',
+				'32','15861_1_13','15103_1_68'), ncol=3, byrow=TRUE, dimnames=list(c(),c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))))
+	tmp[, CLASS_OR:= 'OR_disconnected']	
+	tmp2	<- as.data.table(matrix( c('66','15778_1_82','15758_1_76',
+				'71','16005_1_55','16005_1_54',
+				'11','16056_1_74','15736_1_34',				
+				'10','15861_1_26','15080_1_12',
+				'12','15861_1_20','15861_1_24',
+				'64','16005_1_55','15097_1_82',
+				'97','16005_1_55','15097_1_82',				
+				'80','15080_1_3','15758_1_66'), ncol=3, byrow=TRUE, dimnames=list(c(),c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))))
+	tmp2[, CLASS_OR:= 'OR_ambiguous']
+	tmp		<- rbind(tmp, tmp2)
+	tmp2	<- as.data.table(matrix( c('110','15806_1_32','15806_1_27',
+				'78','16016_1_43','16017_1_42',
+				'62','15861_1_26','15861_1_22',
+				'42','16056_1_73','15736_1_7',
+				'102','15736_1_20','15880_1_7',
+				'26','15805_1_22','15805_1_23',
+				'98','15964_1_3','15758_1_84',
+				'91','15103_1_74','15861_1_22',
+				'93','15804_1_81','15804_1_60',
+				'77','15804_1_53','15804_1_57',
+				'16','15097_1_51','15805_1_23',
+				'80','15103_1_74','15080_1_12'), ncol=3, byrow=TRUE, dimnames=list(c(),c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))))
+	tmp2[, CLASS_OR:= 'OR_transmission']
+	tmp		<- rbind(tmp, tmp2)
+	set(tmp, NULL, 'PTY_RUN', tmp[, as.integer(PTY_RUN)])
+	rpi		<- unique(merge(rpi, tmp, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')))
+	rps		<- merge(rps, rpi, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'), all.x=1)
+	#
+	#	get false pos and true pos for the two unambiguous groups	
+	#
+	stopifnot( nrow(subset(rps, (COUP_SC=='F->M'|COUP_SC=='M->F') & is.na(CLASS_OR)))==0 )
+	tmp		<- subset(rps, (COUP_SC=='F->M'|COUP_SC=='M->F') & CLASS_OR=='OR_disconnected')
+	rpb		<- tmp[, list(	POT_FP= sum(WIN_OF_TYPE_N[TYPE=='trans_fm'|TYPE=='trans_mf'|TYPE=='int']), 
+							POT_TN=sum(WIN_OF_TYPE_N[TYPE=='disconnected'|TYPE=='unint']),
+							POT_TP=0,
+							POT_FN=0), by=c('RUN','PTY_RUN','COUPID','PAIR_ID','MALE_SANGER_ID','FEMALE_SANGER_ID','COUP_SC')]
+	tmp		<- subset(rps, (COUP_SC=='F->M'|COUP_SC=='M->F') & CLASS_OR=='OR_transmission')
+	tmp		<- tmp[, list(	POT_TP= sum(WIN_OF_TYPE_N[TYPE=='trans_fm'|TYPE=='trans_mf'|TYPE=='int']), 
+							POT_FN=sum(WIN_OF_TYPE_N[TYPE=='disconnected'|TYPE=='unint']),
+							POT_FP=0,
+							POT_TN=0), by=c('RUN','PTY_RUN','COUPID','PAIR_ID','MALE_SANGER_ID','FEMALE_SANGER_ID','COUP_SC')]
+	rpb		<- rbind(rpb, tmp, fill=TRUE, use.names=TRUE)
+	rpb[, TOTAL:= POT_FP+POT_FN+POT_TP+POT_TN]
+	#	by choice of the three groups, there are only TN and TPs.. ..so this is not interesting here.
+	rpb[, Maj_Class:= NA_character_]
+	set(rpb, rpb[, which(POT_FP<POT_TN)], 'Maj_Class', 'TN')
+	set(rpb, rpb[, which(POT_FP>=POT_TN)], 'Maj_Class', 'FP')
+	set(rpb, rpb[, which(POT_TP>POT_FN)], 'Maj_Class', 'TP')
+	set(rpb, rpb[, which(POT_TP<=POT_FN)], 'Maj_Class', 'FN')					
+	#
+	#
+	tmp		<- melt(rpb, id.vars=c('RUN','PTY_RUN','COUPID','PAIR_ID','MALE_SANGER_ID','FEMALE_SANGER_ID','COUP_SC','TOTAL'), measure.vars=c('POT_FP','POT_FN'))	
+	tmp		<- tmp[, list(Potential_False_Class= sum(value), Potential_True_Class= sum(TOTAL)-sum(value) ), by=c('RUN','variable')]	
+	set(tmp, tmp[,which(variable=='POT_FP')], 'variable', 'Manually identified unlinked pair')
+	set(tmp, tmp[,which(variable=='POT_FN')], 'variable', 'Manually identified trm pair')	
+	tmp[, Total_Class:= Potential_False_Class+Potential_True_Class]
+	
+	ggplot( tmp, aes(x=RUN, y=Potential_False_Class/Total_Class, fill=variable) ) + 
+			geom_bar(stat='identity') + 
+			scale_fill_brewer(palette='Set1') +
+			scale_y_continuous(breaks=seq(0,1,0.02), labels=percent) +
+			theme_bw() + theme(legend.position='bottom',axis.text.x = element_text(angle = 90, hjust = 1)) +
+			facet_grid(~variable) +
+			coord_flip() +
+			labs(	y= '\nproportion of "likely false" window assignments\ne.g. % of windows from manually identified trm pairs that are falsely classified as unlinked', 
+					x='run\n',
+					colour='',
+					title='\nphyloscanner transmission assignments\nto RCCS serodiscordant couples\nin which the uninfected partner is infected during follow-up\n')	
+	ggsave(file=file.path(dir, paste(run,'-phsc-serodiscpairs-number_trmpair_windows_falsepos.pdf',sep='')), w=10, h=5)
+	#	number of couples with less than 5 trm assignments
+	tmp		<- unique(subset(rpb, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID)))
+	tmp2	<- unique(subset(rpb, select=RUN))
+	tmp[, D:=1]
+	tmp2[, D:=1]
+	tmp		<- merge(tmp, tmp2, by='D', allow.cartesian=TRUE)
+	tmp[, D:=NULL]
+	tmp		<- merge(tmp, rpb, by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'), all.x=1)
+	set(tmp, tmp[, which(is.na(TOTAL))], 'TOTAL', 0)	
+	tmp		<- subset(tmp, TOTAL<5)[, list(WIN_L_FIVE=length(PAIR_ID)), by='RUN']	
+	setkey(tmp, RUN)
+	#	also track pairs that cannot be any longer classified
+	
+	#
+	#	plot number of directional trm assignments in only possible direction 
+	#	
+	rpa		<- subset(rps, COUP_SC=='F->M')[, list(IN_DIR= sum(WIN_OF_TYPE_N[TYPE=='trans_fm']), AGAINST_DIR=sum(WIN_OF_TYPE_N[TYPE=='trans_mf'])), by=c('RUN','PTY_RUN','COUPID','PAIR_ID','MALE_SANGER_ID','FEMALE_SANGER_ID','COUP_SC')]
+	tmp		<- subset(rps, COUP_SC=='M->F')[, list(IN_DIR= sum(WIN_OF_TYPE_N[TYPE=='trans_mf']), AGAINST_DIR=sum(WIN_OF_TYPE_N[TYPE=='trans_fm'])), by=c('RUN','PTY_RUN','COUPID','PAIR_ID','MALE_SANGER_ID','FEMALE_SANGER_ID','COUP_SC')]
+	rpa		<- rbind(rpa, tmp, use.names=TRUE)
+	rpa[, WIN_TRM:= IN_DIR+AGAINST_DIR]
+	rpa		<- melt(rpa, measure.vars=c('IN_DIR', 'AGAINST_DIR'))
+	set(rpa, rpa[, which(variable=='IN_DIR')], 'variable', 'trm assignment in the only epidemiologically possible direction')
+	set(rpa, rpa[, which(variable=='AGAINST_DIR')], 'variable', 'trm assignment against the only epidemiologically possible direction')	
+	setkey(rpa, PAIR_ID)		
+	tmp		<- unique(subset(rpa, RUN==rpa$RUN[1]))[order(-WIN_TRM),][, list(COUPID=COUPID, MALE_SANGER_ID=MALE_SANGER_ID, FEMALE_SANGER_ID=FEMALE_SANGER_ID, PTY_RUN=PTY_RUN, CLASS_RANK=seq_along(PAIR_ID)) ]
+	set(tmp, NULL, 'CLASS_RANK', tmp[, factor(CLASS_RANK, levels=CLASS_RANK, labels=paste(COUPID, ' ( M:', MALE_SANGER_ID,' F:',FEMALE_SANGER_ID, ' run:', PTY_RUN, ' )', sep=''))])
+	rpa		<- merge(rpa, tmp, by=c('PTY_RUN','COUPID','MALE_SANGER_ID','FEMALE_SANGER_ID'))	
+	setkey(rpa, variable, CLASS_RANK)	
+	ggplot(rpa, aes(x=CLASS_RANK, y=value, fill=variable)) + 
+			geom_bar(stat='identity',position='stack') +
+			scale_fill_brewer(palette='Set1') +
+			theme_bw() + theme(legend.position='bottom',axis.text.x = element_text(angle = 90, hjust = 1)) +
+			facet_grid(~RUN) +
+			coord_flip() +
+			labs(	x= '\nsequence pairs of couples', 
+					y='number of transmission windows with direction\n',
+					colour='phyloscanner\ntransmission assignments',
+					title='\nphyloscanner transmission assignments\nto RCCS serodiscordant couples\nin which the uninfected partner is infected during follow-up\n')
+	ggsave(file=file.path(dir, paste(run,'-phsc-serodiscpairs-number_trmdir_windows.pdf',sep='')), w=35, h=10)
+	#
+	#	get false pos and true pos for the manual classification group
+	#
+	tmp		<- unique(subset(rps, RUN=='RCCS_161107_w270_d20_r004_mr100' & CLASS_OR=='OR_transmission',c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')))
+	rpa		<- merge(rpa, tmp, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))	
+	tmp		<- rpa[, {
+							list( TRM_OK_MAJ= as.integer(sum(value[variable=='trm assignment in the only epidemiologically possible direction'])>sum(value[variable!='trm assignment in the only epidemiologically possible direction'])), 
+								  TRM_OK_66pc= as.integer(sum(value[variable=='trm assignment in the only epidemiologically possible direction']) / sum(value) >= 2/3))
+						}, by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
+	rpa		<- merge(rpa, tmp, by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))	
+	tmp		<- rpa[, {
+				tmp	<- sum(value[variable=='trm assignment in the only epidemiologically possible direction'])				
+				list(	V=	c( tmp / (sum(WIN_TRM)/2), 1 - tmp / (sum(WIN_TRM)/2), (sum(TRM_OK_MAJ)/2) / (length(TRM_OK_MAJ)/2), 1 - (sum(TRM_OK_MAJ)/2) / (length(TRM_OK_MAJ)/2), (sum(TRM_OK_66pc)/2) / (length(TRM_OK_66pc)/2), 1-(sum(TRM_OK_66pc)/2) / (length(TRM_OK_66pc)/2)),
+						TYPE= c('TP', 'FP', 'TP', 'FP', 'TP', 'FP'),
+						RULE= c('by window', 'by window', 'by majority rule', 'by majority rule', 'by 66% majority', 'by 66% majority')
+						)
+			}, by=c('RUN')]	
+	ggplot( tmp, aes(x=RUN, y=V, fill= TYPE) ) + 
+			geom_bar(stat='identity', position='stack') + 
+			scale_fill_brewer(palette='Set1') +
+			scale_y_continuous(breaks=seq(0,1,0.1), labels=percent) +
+			theme_bw() + theme(legend.position='bottom',axis.text.x = element_text(angle = 90, hjust = 1)) +
+			coord_flip() +
+			labs(	y= '\nproportion of "false positives" and "false negatives"', 
+					x='run\n',
+					colour='',
+					title='\nphyloscanner transmission assignments\nto RCCS serodiscordant couples\nin which the uninfected partner is infected during follow-up\n') +
+			facet_grid(~RULE)
+	ggsave(file=file.path(dir, paste(run,'-phsc-serodiscpairs-number_trm_windows_falsepos.pdf',sep='')), w=14, h=6)
+	
+	tmp		<- unique(subset(rpa, !TRM_OK_66pc, c('RUN','PTY_RUN','COUPID','MALE_SANGER_ID','FEMALE_SANGER_ID')))
+	setkey(tmp, RUN)
+	#
+	#
+	#
+	#
+}
 
 RakaiCouples.process.couples.160930<- function()
 {
