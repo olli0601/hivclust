@@ -101,8 +101,8 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 	#	on MAC
 	if(0)
 	{
-		infile.dates	<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_Dates.csv"	
-		indir.tree		<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed"
+		infile.dates	<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees/ATHENA_1610_Sequences_LANL_Dates.csv"	
+		indir.tree		<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees"
 		outdir			<- dirname(infile.dates)
 	}
 	#	on HPC
@@ -112,27 +112,32 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 		indir.tree		<- "/work/or105/ATHENA_2016/data/examl"
 		outdir			<- "/work/or105/ATHENA_2016/data/lsd"		
 	}
-	run.lsd				<- 0
-	ali.len				<- 1289	
+	run.lsd					<- 0
+	ali.len					<- 1289	
+	exclude.missing.dates	<- FALSE
+	root					<- 'HXB2'
+	#lsd.args				<- '-v 2 -c -b 10 -r as'	# extremely slow ..
+	lsd.args				<- '-v 2 -c -b 10'			# root at HXB2 and keep the root there
 	#
 	infile.tree			<- data.table(FT=list.files(indir.tree, pattern='^ExaML_result.*finaltree\\.[0-9]+$', full.names=TRUE))
 	infile.tree[, FD:= file.path(outdir,basename(paste(FT, '.lsd.dates', sep='')))]
+	infile.tree[, FT_PRUNED:= file.path(outdir,basename(gsub('\\.finaltree', '_OnlyDates.finaltree', FT)))]
 	infile.tree[, FL:= file.path(outdir,basename(paste(FT, '.lsd', sep='')))]
 	#	
 	dlsd	<- infile.tree[, {
-				cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE)
-				cmd			<- paste(cmd, cmd.lsd(FT, FD, ali.len, outfile=FL), sep='\n')
+				cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, root=root, exclude.missing.dates=exclude.missing.dates, outfile.tree=FT_PRUNED)
+				cmd			<- paste(cmd, cmd.lsd(FT_PRUNED, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
 				list(CMD=cmd)
 			}, by='FT']	
 	#dlsd[1, cat(CMD)]
 	dlsd[, {
-				x		<- cmd.hpcwrapper(CMD, hpc.walltime=100, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
+				x		<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
 				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 				outfile	<- paste("lsd",signat,sep='.')
 				cat(x)
 				cmd.hpccaller(outdir, outfile, x)
 				Sys.sleep(1)
-				stop()
+				#stop()
 			}, by='FT']
 }
 ######################################################################################
