@@ -127,13 +127,15 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 	infile.tree[, FL:= file.path(outdir,basename(paste(FT, '.lsd', sep='')))]
 	#	
 	dlsd	<- infile.tree[, {
-				cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, root=root, exclude.missing.dates=exclude.missing.dates, outfile.tree=FT_PRUNED)
-				cmd			<- paste(cmd, cmd.lsd(FT_PRUNED, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
+				#cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, root=root, exclude.missing.dates=exclude.missing.dates, outfile.tree=FT_PRUNED)
+				#cmd		<- paste(cmd, cmd.lsd(FT_PRUNED, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
+				cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, exclude.missing.dates=FALSE)
+				cmd			<- paste(cmd, cmd.lsd(FT, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
 				list(CMD=cmd)
 			}, by='FT']	
 	#dlsd[1, cat(CMD)]
 	dlsd[, {
-				x		<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
+				x		<- cmd.hpcwrapper(CMD, hpc.walltime=120, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
 				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 				outfile	<- paste("lsd",signat,sep='.')
 				cat(x)
