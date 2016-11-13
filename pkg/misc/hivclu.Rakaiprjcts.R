@@ -1876,28 +1876,26 @@ RakaiCouples.analyze.couples.161110.trmw<- function()
 	rpc		<- merge(rpi, subset(rpw, TYPE=='cher' & RUN=='RCCS_161110_w270_d50_r004_mr20_mt2'), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
 	tmp		<- subset(rpc, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, W_FROM, W_TO))
 	tmp		<- melt(tmp, measure.vars=c('MALE_SANGER_ID','FEMALE_SANGER_ID'), value.name='ID')
-	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_d50_r004_mr20_mt2_phscout.rda')
-	
-	ph		<- phs[[ subset(dtrees, PTY_RUN==109 & W_FROM==6025)[, IDX] ]]
-	tmp		<- subset(melt(subset(rpi, PTY_RUN==109 & MALE_SANGER_ID=='15777_1_29'), id.vars='PTY_RUN', value.name='ID', measure.vars=c('MALE_SANGER_ID','FEMALE_SANGER_ID')), select=ID)
-	tmp		<- rbind(tmp, data.table(ID=c('15880_1_37','16034_1_73','15878_1_75')))
-	 
+	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_d50_r004_mr20_mt2_phscout.rda')	
 	require(gamlss)
 	dr		<- tmp[, {
-				
-				
-				#ID<- '5777_1_29'
+				pty_run	<- PTY_RUN
+				w_from	<- W_FROM
+				id		<- ID
+				z		<- subset(dtrees, PTY_RUN==pty_run & W_FROM==w_from)[, IDX]
+				cat('\nRun',pty_run,'Window',w_from,'ID',id,'tree index',z)
+				ph		<- phs[[ z ]]				
 				#	collect branch lengths
-				z	<- ph$tip.label[!grepl(ID, ph$tip.label)]
+				z	<- ph$tip.label[!grepl(id, ph$tip.label)]
 				z	<- drop.tip(ph,z,root.edge=0)	
 				brls<- z$edge.length
-				z	<- getMRCA(ph, which(grepl(ID, ph$tip.label)))
+				#	get length of root edge
+				z	<- getMRCA(ph, which(grepl(id, ph$tip.label)))
 				rl	<- ph$edge.length[ which(ph$edge[,2]==z) ]
-				
+				#
 				p	<- NA_real_		# this will be the tail area probability Pr(Wei>rl)
-				print(ID)
-				print(brls)
-				brls<- brls[ brls>1e-5 ]				
+				brls<- brls[ brls>1e-5 ]		
+				cat('\nNumber branch lengths >1e-5',length(brls))
 				if(length(brls)>3)	# don't think makes sense to fit Weibull to 3 data points
 				{	
 					#cat('\n', W_FROM, ID) # for debugging		
@@ -1909,7 +1907,20 @@ RakaiCouples.analyze.couples.161110.trmw<- function()
 					p		<- pweibull(rl, w.k, scale=w.l, lower.tail=FALSE)					
 				}				
 				list(ROOTL=rl, ROOTL_P=p) 
-			}, by=c('PTY_RUN','MALE_SANGER_ID')]
+			}, by=c('PTY_RUN','W_FROM','W_TO','variable','ID')]
+	dr[, variable:=NULL]
+	setnames(dr, c('ID','ROOTL','ROOTL_P'), c('MALE_SANGER_ID','MALE_ROOTL','MALE_ROOTL_P'))
+	rpc		<- merge(rpc, dr, by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID'))
+	setnames(dr, c('MALE_SANGER_ID','MALE_ROOTL','MALE_ROOTL_P'), c('FEMALE_SANGER_ID','FEMALE_ROOTL','FEMALE_ROOTL_P'))
+	rpc		<- merge(rpc, dr, by=c('PTY_RUN','W_FROM','W_TO','FEMALE_SANGER_ID'))
+	tmp		<- rpc[, list(CHERRY_P= max(MALE_ROOTL_P, FEMALE_ROOTL_P)), by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID','FEMALE_SANGER_ID')]
+	rpc		<- merge(rpc, tmp, by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	rpc[, LEGEND:= paste(COUPID,MALE_SANGER_ID,FEMALE_SANGER_ID,sep=' ')]
+	ggplot(rpc, aes(x=W_FROM, y=CHERRY_P, colour=LEGEND)) + 
+			geom_point() + 
+			geom_hline(aes(yintercept=0.5)) +
+			facet_grid(~CLASS_OR) + theme_bw()
+	ggsave(file=file.path(dir, paste(run,'-phsc-windowassignments_SEROINC_cherries_WeibullP.pdf',sep='')), w=10, h=5)
 	
 	
 	

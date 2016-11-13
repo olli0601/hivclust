@@ -115,9 +115,11 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 	run.lsd					<- 0
 	ali.len					<- 1289	
 	exclude.missing.dates	<- FALSE
-	root					<- 'HXB2'
+	#root					<- 'HXB2'
 	#lsd.args				<- '-v 2 -c -b 10 -r as'	# extremely slow ..
 	lsd.args				<- '-v 2 -c -b 10'			# root at HXB2 and keep the root there
+	root					<- NA
+	lsd.args				<- '-v 2 -c -b 10 -r a'	
 	#
 	infile.tree			<- data.table(FT=list.files(indir.tree, pattern='^ExaML_result.*finaltree\\.[0-9]+$', full.names=TRUE))
 	infile.tree[, FD:= file.path(outdir,basename(paste(FT, '.lsd.dates', sep='')))]
@@ -137,7 +139,7 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 				cat(x)
 				cmd.hpccaller(outdir, outfile, x)
 				Sys.sleep(1)
-				#stop()
+				stop()
 			}, by='FT']
 }
 ######################################################################################
