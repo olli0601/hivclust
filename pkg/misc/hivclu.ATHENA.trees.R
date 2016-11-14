@@ -112,13 +112,9 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 		indir.tree		<- "/work/or105/ATHENA_2016/data/examl"
 		outdir			<- "/work/or105/ATHENA_2016/data/lsd"		
 	}
-	run.lsd					<- 0
-	ali.len					<- 1289	
-	exclude.missing.dates	<- FALSE
-	#root					<- 'HXB2'
+	ali.len					<- 1289			
 	#lsd.args				<- '-v 2 -c -b 10 -r as'	# extremely slow ..
-	lsd.args				<- '-v 2 -c -b 10'			# root at HXB2 and keep the root there
-	root					<- NA
+	lsd.args				<- '-v 2 -c -b 10'			# root at HXB2 and keep the root there	
 	lsd.args				<- '-v 2 -c -b 10 -r a'	
 	#
 	infile.tree			<- data.table(FT=list.files(indir.tree, pattern='^ExaML_result.*finaltree\\.[0-9]+$', full.names=TRUE))
@@ -129,8 +125,8 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 	dlsd	<- infile.tree[, {
 				#cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, root=root, exclude.missing.dates=exclude.missing.dates, outfile.tree=FT_PRUNED)
 				#cmd		<- paste(cmd, cmd.lsd(FT_PRUNED, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
-				cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, exclude.missing.dates=FALSE)
-				cmd			<- paste(cmd, cmd.lsd(FT, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
+				cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, exclude.missing.dates=TRUE, outfile.tree=FT_PRUNED)
+				cmd			<- paste(cmd, cmd.lsd(FT_PRUNED, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
 				list(CMD=cmd)
 			}, by='FT']	
 	#dlsd[1, cat(CMD)]
