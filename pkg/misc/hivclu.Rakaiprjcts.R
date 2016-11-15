@@ -1847,23 +1847,17 @@ RakaiCouples.analyze.couples.161110.trmw<- function()
 	tmp		<- rbind(tmp, tmp2)
 	set(tmp, NULL, 'PTY_RUN', tmp[, as.integer(PTY_RUN)])
 	rpi		<- copy(tmp)
-	
-	tmp	<- as.data.table(matrix( c('15','16033_1_76','16033_1_60',
-							'7','16033_1_76','16033_1_60',
-							'67','15892_1_3','15892_1_1'), ncol=3, byrow=TRUE, dimnames=list(c(),c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))))
-	tmp[, CLASS_OR:= 'cherry_of_lkl_unlinked_pair']	
-	tmp2	<- as.data.table(matrix( c('20','16057_1_15','16057_1_16',
-							'99','15915_1_78','15915_1_64',
-							'109','15777_1_29','15777_1_21',
-							'120','16059_1_73','16059_1_53',							
-							'70','15835_1_21','15835_1_22'), ncol=3, byrow=TRUE, dimnames=list(c(),c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))))
-	tmp2[, CLASS_OR:= 'cherry_of_lkl_trm_pair']
-	tmp		<- rbind(tmp, tmp2)
-	set(tmp, NULL, 'PTY_RUN', tmp[, as.numeric(PTY_RUN)])	
-	
-	tmp		<- merge(rpi, subset(rpw, TYPE=='cher' & RUN=='RCCS_161110_w270_d50_r004_mr20_mt2'), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	tmp[, LEGEND:= paste(COUPID,MALE_SANGER_ID,FEMALE_SANGER_ID,sep=' ')]
-	ggplot(tmp, aes(x=W_FROM, y=PATRISTIC_DIST, colour=LEGEND)) + 
+	#
+	#	try genetic distance
+	#
+	rpd		<- merge(rpi, subset(rpw, TYPE=='cher' & RUN=='RCCS_161110_w270_d50_r004_mr20_mt2'), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	rpd		<- subset(rpd, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, W_FROM, W_TO, PATRISTIC_DIST, COUPID, CLASS_OR))
+	tmp		<- unique(subset(rpd, select=COUPID))
+	setkey(tmp, COUPID)
+	tmp[, COUPID_RNK:= seq_len(nrow(tmp))]
+	rpd		<- merge(rpd, tmp, by='COUPID')
+	rpd[, LEGEND:= paste(COUPID_RNK, ' ',COUPID, '(M:', MALE_SANGER_ID,' F:',FEMALE_SANGER_ID,')',sep='')]
+	ggplot(rpd, aes(x=W_FROM, y=PATRISTIC_DIST, colour=LEGEND)) + 
 			geom_point() + 
 			geom_hline(aes(yintercept=0.01)) +
 			geom_hline(aes(yintercept=0.02)) +
@@ -1871,10 +1865,9 @@ RakaiCouples.analyze.couples.161110.trmw<- function()
 			facet_grid(~CLASS_OR) + theme_bw()
 	ggsave(file=file.path(dir, paste(run,'-phsc-windowassignments_SEROINC_cherries_patristic.pdf',sep='')), w=10, h=5)
 	#
-	#	try Weibull?
-	#
-	rpc		<- merge(rpi, subset(rpw, TYPE=='cher' & RUN=='RCCS_161110_w270_d50_r004_mr20_mt2'), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	tmp		<- subset(rpc, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, W_FROM, W_TO))
+	#	try Weibull..
+	#	
+	tmp		<- subset(rpd, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, W_FROM, W_TO))
 	tmp		<- melt(tmp, measure.vars=c('MALE_SANGER_ID','FEMALE_SANGER_ID'), value.name='ID')
 	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_d50_r004_mr20_mt2_phscout.rda')	
 	require(gamlss)
@@ -1909,88 +1902,64 @@ RakaiCouples.analyze.couples.161110.trmw<- function()
 				list(ROOTL=rl, ROOTL_P=p) 
 			}, by=c('PTY_RUN','W_FROM','W_TO','variable','ID')]
 	dr[, variable:=NULL]
-	setnames(dr, c('ID','ROOTL','ROOTL_P'), c('MALE_SANGER_ID','MALE_ROOTL','MALE_ROOTL_P'))
-	rpc		<- merge(rpc, dr, by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID'))
+	setnames(dr, c('ID','ROOTL','ROOTL_P'), c('MALE_SANGER_ID','MALE_ROOTL','MALE_ROOTL_P'))	
+	rpd		<- merge(rpd, dr, by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID'))
 	setnames(dr, c('MALE_SANGER_ID','MALE_ROOTL','MALE_ROOTL_P'), c('FEMALE_SANGER_ID','FEMALE_ROOTL','FEMALE_ROOTL_P'))
-	rpc		<- merge(rpc, dr, by=c('PTY_RUN','W_FROM','W_TO','FEMALE_SANGER_ID'))
-	tmp		<- rpc[, list(CHERRY_P= max(MALE_ROOTL_P, FEMALE_ROOTL_P)), by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID','FEMALE_SANGER_ID')]
-	rpc		<- merge(rpc, tmp, by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	rpc[, LEGEND:= paste(COUPID,MALE_SANGER_ID,FEMALE_SANGER_ID,sep=' ')]
-	ggplot(rpc, aes(x=W_FROM, y=CHERRY_P, colour=LEGEND)) + 
-			geom_point() + 
-			geom_hline(aes(yintercept=0.5)) +
-			facet_grid(~CLASS_OR) + theme_bw()
-	ggsave(file=file.path(dir, paste(run,'-phsc-windowassignments_SEROINC_cherries_WeibullP.pdf',sep='')), w=10, h=5)
+	rpd		<- merge(rpd, dr, by=c('PTY_RUN','W_FROM','W_TO','FEMALE_SANGER_ID'))
+	tmp		<- rpd[, list(CHERRY_P= max(MALE_ROOTL_P, FEMALE_ROOTL_P)), by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID','FEMALE_SANGER_ID')]
+	rpd		<- merge(rpd, tmp, by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	#
+	#
+	#
+	tmp		<- subset(rpd, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, W_FROM, W_TO))
+	tmp		<- melt(tmp, measure.vars=c('MALE_SANGER_ID','FEMALE_SANGER_ID'), value.name='ID')
+	dr		<- tmp[, {
+				pty_run	<- PTY_RUN #<- 7
+				w_from	<- W_FROM #<- 1750
+				id		<- ID #<- '16033_1_76'
+				z		<- subset(dtrees, PTY_RUN==pty_run & W_FROM==w_from)[, IDX]
+				cat('\nRun',pty_run,'Window',w_from,'ID',id,'tree index',z)
+				ph		<- phs[[ z ]]				
+				#	collect branch lengths
+				z	<- ph$tip.label[!grepl(id, ph$tip.label)]
+				z	<- drop.tip(ph,z,root.edge=0)	
+				brls<- z$edge.length
+				#	get length of root edge
+				z	<- getMRCA(ph, which(grepl(id, ph$tip.label)))
+				rl	<- ph$edge.length[ which(ph$edge[,2]==z) ]
+				#	get empirical p-value
+				z	<- brls[ brls>1e-5 ]
+				p	<- length(which(z>=rl))	 / length(z)
+				list(ROOTL_EP=p, BRL_MAX=max(brls)) 
+			}, by=c('PTY_RUN','W_FROM','W_TO','variable','ID')]
+	dr[, variable:=NULL]
+	setnames(dr, c('ID','ROOTL_EP','BRL_MAX'), c('MALE_SANGER_ID','MALE_ROOTL_EP','MALE_BRL_MAX'))	
+	rpd		<- merge(rpd, dr, by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID'))
+	setnames(dr, c('MALE_SANGER_ID','MALE_ROOTL_EP','MALE_BRL_MAX'), c('FEMALE_SANGER_ID','FEMALE_ROOTL_EP','FEMALE_BRL_MAX'))
+	rpd		<- merge(rpd, dr, by=c('PTY_RUN','W_FROM','W_TO','FEMALE_SANGER_ID'))	
+	tmp		<- rpd[, list(	CHERRY_EP= max(MALE_ROOTL_EP, FEMALE_ROOTL_EP),
+							CHERRY_BRL_MAX=max(MALE_BRL_MAX,FEMALE_BRL_MAX)), by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID','FEMALE_SANGER_ID')]
+	rpd		<- merge(rpd, tmp, by=c('PTY_RUN','W_FROM','W_TO','MALE_SANGER_ID','FEMALE_SANGER_ID'))
 	
-	
-	
-	tmp		<- subset(dr, ID=='15880_1_37')
-	w		<- gamlss(data=tmp, formula=BRL~1, family=WEI, trace=0)
-	w.l		<- exp(coef(w, what='mu'))
-	w.k		<- exp(coef(w, what='sigma'))
-	pweibull(0.01851067, w.k, scale=w.l, lower.tail=FALSE)
-	
-	dp		<- dr[, {
-				x			<- max(BRL)
-				p			<- NA_real_
-				z			<- BRL[ BRL>1e-5 ]
-				if(length(z)>3)	# don't think makes sense to fit Weibull to 3 data points
-				{	
-					cat('\n', W_FROM, ID) # for debugging					 
-					w		<- gamlss(data=data.table(BRL=z), formula=BRL~1, family=WEI, trace=1)
-					w.l		<- exp(coef(w, what='mu'))
-					w.k		<- exp(coef(w, what='sigma'))
-					p			<- 1 - ( 1 - exp( -( max(z)/w.l )^w.k ) )^length(z)					
-				}
-				list(P=p, BRL.mx=max(BRL))
-			}, by=c('W_FROM','ID','ROGUE')]	
-	
-	#	calculate prob that the max BRL is > x under the "null" that all distances are from the same distribution
-	#	using Weibull as "null" model because (1) for x positive and (2) it is easy to calculate 1-CDF(max X_i))
-	require(fitdistrplus)
-	dp		<- dr[, {
-				x			<- max(BRL)
-				p			<- NA_real_
-				z			<- BRL[ BRL>1e-5 ]
-				if(length(z)<=1)
-					cat('\n', W_FROM, ID)
-				if(length(z)>5)
-				{	
-					cat('\n', W_FROM, ID)
-					w.mle		<- fitdist(z, 'weibull')	
-					#	denscomp(w.mle, addlegend=FALSE, xlab='weibull') 	#use this to compare fit to data
-					w.k			<- w.mle$estimate['shape']
-					w.l			<- w.mle$estimate['scale']				
-					p			<- 1 - ( 1 - exp( -( max(z)/w.l )^w.k ) )^length(z)					
-				}
-				list(P=p, BRL.mx=max(BRL))
-			}, by=c('W_FROM','ID','ROGUE')]
-	
-	require(gamlss)
-	dp		<- dr[, {
-				x			<- max(BRL)
-				p			<- NA_real_
-				z			<- BRL[ BRL>1e-5 ]
-				if(length(z)>3)	# don't think makes sense to fit Weibull to 3 data points
-				{	
-					cat('\n', W_FROM, ID) # for debugging					 
-					w		<- gamlss(data=data.table(BRL=z), formula=BRL~1, family=WEI, trace=1)
-					w.l		<- exp(coef(w, what='mu'))
-					w.k		<- exp(coef(w, what='sigma'))
-					p			<- 1 - ( 1 - exp( -( max(z)/w.l )^w.k ) )^length(z)					
-				}
-				list(P=p, BRL.mx=max(BRL))
-			}, by=c('W_FROM','ID','ROGUE')]	
-	dp[, BRL.mx.c:= cut(BRL.mx, breaks=c(0,0.04,Inf), labels=c('<4%','>=4%'))]		
-	subset(dp, !is.na(P))[, table(ROGUE, BRL.mx.c)]
-	subset(dp, !is.na(P))[, table(ROGUE, P<.05)]
-	subset(dp, !is.na(P))[, table(ROGUE, P<.0001)]	
-	ggplot(subset(dp, !is.na(P)), aes(x=factor(ROGUE), y=P)) + 
-			geom_boxplot() + 
-			facet_grid(.~BRL.mx.c) +
-			labs(x='manual classification rogues',y='prob that max BRL is > observed max\nunder Weibull model')
-	
-
+	tmp		<- subset(rpd, CHERRY_BRL_MAX<=.05) #exclude couples with super long internal branch lengths
+	tmp		<- melt(tmp, measure.vars=c('PATRISTIC_DIST','CHERRY_P','CHERRY_EP'), id.vars=c('W_FROM','LEGEND','MALE_SANGER_ID','FEMALE_SANGER_ID','PTY_RUN','CLASS_OR','COUPID_RNK'))
+	tmp		<- subset(tmp, variable!='CHERRY_P')
+	tmp		<- subset(tmp, !is.na(value))
+	set(tmp, NULL, 'variable', tmp[, factor(variable, 	levels=c('PATRISTIC_DIST','CHERRY_P','CHERRY_EP'),
+														labels=c('patristic distance\n(subst/site)','length of root edge < internal branch lengths\n(probability under fitted Weibull)','length of root edge < internal branch lengths\n(empirical probability)'))])				
+	ggplot(tmp, aes(x=W_FROM, y=value)) +
+			scale_y_continuous(breaks=seq(0,1,0.1), minor_breaks=seq(0,1,0.02)) +
+			geom_point(aes(colour=LEGEND), size=2) + geom_text(aes(label=COUPID_RNK), size=1) +			
+			#geom_hline(aes(yintercept=0.01)) +
+			#geom_hline(aes(yintercept=0.02)) +
+			#scale_y_log10(breaks=c(0.01, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.15, 0.2)) +
+			facet_grid(variable~CLASS_OR, scales='free_y') + theme_bw()
+	ggsave(file=file.path(dir, paste(run,'-phsc-windowassignments_SEROINC_cherries_metrics.pdf',sep='')), w=17, h=10)
+	#
+	#	some tables
+	#
+	subset(rpd, CHERRY_BRL_MAX<=.05)[, table(CLASS_OR, PATRISTIC_DIST<.02)]	
+	subset(rpd, CHERRY_BRL_MAX<=.05)[, table(CLASS_OR, CHERRY_EP>.5)]
 }
 
 RakaiCouples.analyze.couples.161107.trms<- function()

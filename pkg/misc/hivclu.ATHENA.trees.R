@@ -233,22 +233,42 @@ project.examl.ATHENA1610.161102.process.after.first.tree<- function()
 project.examl.ATHENA1610.161102<- function()
 {
 	require(big.phylo)
-	#project.examl.ATHENA1610.examl.run.161102()
-	project.examl.ATHENA1610.LSD.run.161110()	
+	project.examl.ATHENA1610.examl.run.161102()
+	#project.examl.ATHENA1610.LSD.run.161110()	
+}
+######################################################################################
+project.examl.ATHENA1610.examl.inspect.trees.161102<- function()
+{
+	indir	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees'
+	tmp		<- data.table(FT=list.files(indir, pattern='ExaML_result.*finaltree\\.[0-9]+$', full.names=TRUE))
+	tmp		<- tmp[, {
+				ph<- read.tree(FT)
+				list(NT=Ntip(ph))
+			}, by='FT']
 }
 ######################################################################################
 project.examl.ATHENA1610.examl.run.161102<- function()
 {
 	require(big.phylo)
-	indir		<- '/work/or105/ATHENA_2016/data/examl'
-	infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta"
-	#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub2.fasta"
-	#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub3.fasta"
+	if(0)	#	MAC
+	{
+		indir		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest'
+		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta"
+		outdir		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees'
+	}
+	if(1)	#	HPC
+	{
+		indir		<- '/work/or105/ATHENA_2016/data/examl'
+		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta"
+		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub2.fasta"
+		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub3.fasta"
+		outdir		<- indir
+	}
 	#	ExaML bootstrap args
 	bs.from		<- 0
 	bs.to		<- 0
 	bs.n		<- 500
-	outdir		<- indir
+	
 	
 	#args.parser	<- paste("-m DNA -q",PARTITION)
 	args.parser	<- paste("-m DNA")
@@ -258,7 +278,7 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 			{				
 				#x		<- cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
 				#x		<- cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeph", hpc.mem="1800mb", hpc.nproc=1)
-				x		<- cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
+				x		<- cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=8)
 				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 				outfile	<- paste("exa",signat,sep='.')
 				cat(x)
