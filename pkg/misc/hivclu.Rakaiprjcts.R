@@ -1726,6 +1726,116 @@ RakaiCouples.analyze.couples.161107.trmw<- function()
 	
 }
 
+RakaiCouples.analyze.couples.161110.bbm.model<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	#
+	#	plot how the variance changes with n and pi
+	#
+	
+	#	alpha, beta --> Inf
+	db	<- data.table(expand.grid(ptrue=seq(0.1, 0.9, 0.2), k=1, m=c(0.1, 1, 10, 100, 1000)))
+	db[, n:=1]
+	
+	#	plot out posterior
+	tmp	<- db[, list(	x=seq(0.01,0.99,0.01), 
+					y=dbeta(seq(0.01,0.99,0.01), k+m*ptrue, n-k+m*(1-ptrue))), by=c('ptrue','m')]
+	ggplot(tmp, aes(x=x, y=y)) + geom_line() + facet_grid(m~ptrue, scales='free_y')		
+}
+	
+RakaiCouples.analyze.couples.161110.bbmodel<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)	
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trmw_assignments.rda')
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161110_w270_d200_r004_mr1_mt1", "RCCS_161110_w270_d50_r004_mr1_mt1", "RCCS_161110_w270_d20_r004_mr1_mt1", "RCCS_161110_w270_d50_r004_mr20_mt2", "RCCS_161110_w270_d50_r004_mr30_mt2", "RCCS_161110_w270_d50_r004_mr40_mt2", "RCCS_161110_w270_d50_r004_mr50_mt2", "RCCS_161110_w270_d50_r004_mr100_mt2") )
+	#
+	set(rpw, NULL, 'RUN', rpw[, factor(RUN, levels=c( 	"RCCS_161110_w270_d20_r004_mr1_mt1","RCCS_161110_w270_d50_r004_mr1_mt1","RCCS_161110_w270_d200_r004_mr1_mt1",
+									"RCCS_161110_w270_d50_r004_mr20_mt2","RCCS_161110_w270_d50_r004_mr30_mt2","RCCS_161110_w270_d50_r004_mr40_mt2","RCCS_161110_w270_d50_r004_mr50_mt2","RCCS_161110_w270_d50_r004_mr100_mt2"))])
+	rpw[, table(RUN, useNA='if')]
+	rpw[, table(TYPE, useNA='if')]
+	rpw		<- subset(rpw, COUP_SC=='seroinc')
+	#
+	#	define TPAIR_TYPE
+	#
+	set(rpw, NULL, 'TPAIR_TYPE', NA_character_) 
+	set(rpw, rpw[, which(TYPE%in%c('trans_fm', 'trans_mf'))], 'TPAIR_TYPE', 'linked')		
+	set(rpw, rpw[, which(TYPE%in%c('disconnected', 'unint'))], 'TPAIR_TYPE', 'unlinked')
+	set(rpw, rpw[, which(TYPE%in%c('cher', 'int'))], 'TPAIR_TYPE', 'ambiguous')
+	stopifnot( rpw[, !any(is.na(TPAIR_TYPE))])
+	#	define effectively independent number of windows
+	#	select only W_FROM that are > W_TO	
+	tmp		<- rpw[, {
+				z		<- 1
+				repeat
+				{
+					zz		<- which(W_FROM>max(W_TO[z]))[1]
+					if(length(zz)==0 | is.na(zz))	break
+					z		<- c(z, zz)			
+				}
+				list(W_FROM=W_FROM[z], W_TO=W_TO[z])
+			}, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','RUN')]
+	tmp[, OVERLAP:= 0L]
+	rpw		<- merge(rpw, tmp, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','W_FROM','W_TO','RUN'), all.x=1 )
+	set(rpw, rpw[, which(is.na(OVERLAP))], 'OVERLAP', 1L)	
+	#	for each pair count windows by type (k) 
+	rplkl	<- rpw[, list(K=length(W_FROM)), by=c('TPAIR_TYPE','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','RUN')]
+	rplkl	<- dcast.data.table(rplkl, RUN+PTY_RUN+FEMALE_SANGER_ID+MALE_SANGER_ID~TPAIR_TYPE, value.var='K')
+	for(x in setdiff(colnames(rplkl),c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID')))
+		set(rplkl, which(is.na(rplkl[[x]])), x, 0L)
+	rplkl	<- melt(rplkl, id.vars=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID'), variable.name='TPAIR_TYPE', value.name='K')
+	#	for each pair count total windows (n) and effective windows (neff)	
+	tmp		<- rpw[, list(N=length(W_FROM), NEFF=sum(1-OVERLAP)), by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','RUN')]
+	rplkl	<- merge(rplkl, tmp, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','RUN'))
+	#	define effective number of windows of type
+	rplkl[, KEFF:= K/N*NEFF]	
+	#	add prior (equal probabilities to all types)
+	rplkl[, PRIOR:= 1L]
+	#	add posterior
+	rplkl[, POSTERIOR:= PRIOR+KEFF]
+	#
+	#	plot posterior densities
+	#
+
+
+
+	#
+	#	for each run: plot pairs	
+	#	
+	#	define plotting order: largest number of trm assignments
+	tmp		<- rpw[, list( WIN_TR=length(which(grepl('trans',TYPE))) ), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
+	tmp		<- tmp[order(-WIN_TR),]
+	tmp[, PLOT_ID:=seq_len(nrow(tmp))]	
+	#	define label
+	tmp		<- merge(tmp, rp, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))	
+	tmp[, LABEL:= factor(PLOT_ID, levels=PLOT_ID, labels=paste('Pair ', COUPID,' -type=', COUP_SC, ' -phsc.run=',PTY_RUN, '\nPerson M ', MALE_RID, ' ', MALE_SANGER_ID,' -loc:',MALE_REGION,',',MALE_COMM_NUM,',',MALE_HH_NUM,' -birth:',MALE_BIRTHDATE,' -neg:',MALE_LASTNEGDATE,' -pos:',MALE_FIRSTPOSDATE,' -seq:',MALE_SEQDATE,
+							'\n<->', 
+							'\nPerson F ', FEMALE_RID, ' ', FEMALE_SANGER_ID,' -loc:',FEMALE_REGION,',',FEMALE_COMM_NUM,',',FEMALE_HH_NUM,' -birth:',FEMALE_BIRTHDATE,' -neg:',FEMALE_LASTNEGDATE,' -pos:',FEMALE_FIRSTPOSDATE,' -seq:',FEMALE_SEQDATE,																				
+							'\n',sep=''))]
+	tmp		<- merge(subset(tmp, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, LABEL)), rpw, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, levels=c('trans_mf','trans_fm','unint','int','cher','disconnected'), labels=c('M transmit to F','F transmit to M','M, F are unint','M, F are intermingled','M, F are a cherry','M, F are disconnected'))])
+	rpwp	<- subset(tmp, select=c(RUN, PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, COUP_SC, LABEL, W_FROM,  W_TO, TYPE, ID1_R, ID1_L, ID2_R, ID2_L ))
+	tmp		<- rpwp[, list(	ID_R_MIN=min(ID1_R, ID2_R),
+					ID_R_MAX=max(ID1_R, ID2_R)), by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','W_FROM')]
+	rpwp	<- merge(rpwp, tmp, by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','W_FROM'))
+	set(rpwp, NULL, 'RUN', rpwp[, gsub('_','\n',gsub('w270_','',gsub('RCCS_','',as.character(RUN))))])
+	set(rpwp, NULL, 'RUN', rpwp[, factor(RUN, levels=c(	"161110\nd200\nr004\nmr1\nmt1", "161110\nd50\nr004\nmr1\nmt1", "161110\nd20\nr004\nmr1\nmt1",   
+									"161110\nd50\nr004\nmr20\nmt2","161110\nd50\nr004\nmr30\nmt2","161110\nd50\nr004\nmr40\nmt2","161110\nd50\nr004\nmr50\nmt2","161110\nd50\nr004\nmr100\nmt2"))])
+	
+	run		<- 'RCCS_161110_w270_dxxx'
+	dir		<- rpw$DIR[1]
+	#	SEROINC
+	tmp		<- subset(rpwp, COUP_SC=='seroinc')	
+}
+
 RakaiCouples.analyze.couples.161110.trmw<- function()
 {
 	require(data.table)

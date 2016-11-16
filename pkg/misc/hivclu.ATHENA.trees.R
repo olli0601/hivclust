@@ -233,8 +233,8 @@ project.examl.ATHENA1610.161102.process.after.first.tree<- function()
 project.examl.ATHENA1610.161102<- function()
 {
 	require(big.phylo)
-	project.examl.ATHENA1610.examl.run.161102()
-	#project.examl.ATHENA1610.LSD.run.161110()	
+	#project.examl.ATHENA1610.examl.run.161102()
+	project.examl.ATHENA1610.LSD.run.161110()	
 }
 ######################################################################################
 project.examl.ATHENA1610.examl.inspect.trees.161102<- function()
