@@ -141,7 +141,7 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 	}
 	ali.len					<- 1289			
 	lsd.args				<- '-v 2 -c -b 10 -r as'	# extremely slow ..
-	lsd.args				<- '-v 2 -c -b 10'			# root at HXB2 and keep the root there	
+	#lsd.args				<- '-v 2 -c -b 10'			# root at HXB2 and keep the root there	
 	#lsd.args				<- '-v 2 -c -b 10 -r a'	
 	#
 	infile.tree			<- data.table(FT=list.files(indir.tree, pattern='^ExaML_result.*finaltree\\.[0-9]+$', full.names=TRUE))
@@ -169,7 +169,51 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 }
 
 ######################################################################################
-project.examl.ATHENA1610.process.after.second.tree<- function()
+project.examl.ATHENA1610.examl.process.bstree<- function()
+{
+	#	aim is to remove taxa from alignment that are odd in tree
+	require(big.phylo)
+	require(phytools)
+	infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_examl_dtbs500.newick"	
+	ph			<- read.tree(infile.tree)
+	#	re-root at HXB2	
+	tmp			<- which(grepl('HXB2',ph$tip.label))
+	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
+	ph 			<- ladderize( ph )
+	#	process bootstrap support values	
+	ph.node.bs						<- as.numeric( ph$node.label )		
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph.node.bs						<- ph.node.bs/100
+	ph$node.label					<- ph.node.bs
+	
+	#
+	#read patristic distances
+	stat.fun						<- hivc.clu.min.transmission.cascade	
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)	
+	thresh.brl						<- 0.1
+	thresh.bs						<- 0.8
+	#produce clustering 
+	clustering						<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+	
+	tmp								<- paste(infile.tree,'.pdf',sep='')
+	hivc.clu.plot(ph, clustering[["clu.mem"]], file=tmp, pdf.off=0, pdf.width=10, pdf.height=200, show.node.label=TRUE,  cex.edge.incluster=1, highlight.edge.of.tiplabel=c("LANL"), highlight.edge.of.tiplabel.col= c("red") )
+	#hivc.clu.plot.tiplabels( seq_len(Ntip(ph)), matrix(df.seqinfo[,TXT], nrow=1,ncol=nrow(df.seqinfo)), matrix(df.seqinfo[,COL], nrow=1,ncol=nrow(df.seqinfo)), cex=0.05, adj=c(-2,0.5) )
+	dev.off()
+	
+	
+	#print(clustering)		
+	hivc.clu.plot(ph, clustering[["clu.mem"]], highlight.edge.of.tiplabel=c("LANL"), highlight.edge.of.tiplabel.col= c("red") )
+	#produce some tip states
+	ph.tip.state<- rep(1:20, each=ceiling( length( ph$tip.label )/20 ))[seq_len(Ntip(ph))]
+	states		<- data.table(state.text=1:20, state.col=rainbow(20))
+	states		<- states[ph.tip.state,]
+	hivc.clu.plot.tiplabels( seq_len(Ntip(ph)), matrix(states[,state.text], nrow=1,ncol=nrow(states)), matrix(states[,state.col], nrow=1,ncol=nrow(states)), cex=0.4, adj=c(-1,0.5) )
+	
+}
+
+######################################################################################
+project.examl.ATHENA1610.examl.process.after.second.tree<- function()
 {
 	#	aim is to remove taxa from alignment that are odd in tree
 	require(big.phylo)
@@ -213,7 +257,7 @@ project.examl.ATHENA1610.process.after.second.tree<- function()
 }
 
 ######################################################################################
-project.examl.ATHENA1610.process.after.first.tree<- function()
+project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 {
 	#	aim is to remove taxa from alignment that are odd in tree
 	require(big.phylo)
