@@ -1745,7 +1745,7 @@ RakaiCouples.analyze.couples.161110.bbm.model<- function()
 	ggplot(tmp, aes(x=x, y=y)) + geom_line() + facet_grid(m~ptrue, scales='free_y')		
 }
 	
-RakaiCouples.analyze.couples.161110.bbmodel<- function()
+RakaiCouples.analyze.couples.161110.bb.model<- function()
 {
 	require(data.table)
 	require(scales)
@@ -1771,6 +1771,21 @@ RakaiCouples.analyze.couples.161110.bbmodel<- function()
 	set(rpw, rpw[, which(TYPE%in%c('disconnected', 'unint'))], 'TPAIR_TYPE', 'unlinked')
 	set(rpw, rpw[, which(TYPE%in%c('cher', 'int'))], 'TPAIR_TYPE', 'ambiguous')
 	stopifnot( rpw[, !any(is.na(TPAIR_TYPE))])
+	
+	#	define plotting order: largest number of trm assignments
+	tmp		<- rpw[, list( WIN_TR=length(which(grepl('trans',TYPE))) ), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
+	tmp		<- tmp[order(-WIN_TR),]
+	tmp[, PLOT_ID:=seq_len(nrow(tmp))]	
+	#	define legend for couples
+	tmp		<- merge(tmp, rp, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	setkey(tmp, PLOT_ID)
+	tmp[, LABEL:= factor(PLOT_ID, levels=PLOT_ID, labels=paste('Pair ', COUPID,' -type=', COUP_SC, ' -phsc.run=',PTY_RUN, '\nPerson M ', MALE_RID, ' ', MALE_SANGER_ID,' -loc:',MALE_REGION,',',MALE_COMM_NUM,',',MALE_HH_NUM,' -birth:',MALE_BIRTHDATE,' -neg:',MALE_LASTNEGDATE,' -pos:',MALE_FIRSTPOSDATE,' -seq:',MALE_SEQDATE,
+							'\n<->', 
+							'\nPerson F ', FEMALE_RID, ' ', FEMALE_SANGER_ID,' -loc:',FEMALE_REGION,',',FEMALE_COMM_NUM,',',FEMALE_HH_NUM,' -birth:',FEMALE_BIRTHDATE,' -neg:',FEMALE_LASTNEGDATE,' -pos:',FEMALE_FIRSTPOSDATE,' -seq:',FEMALE_SEQDATE,																				
+							'\n',sep=''))]
+	tmp[, LABEL_SH:=tmp[, factor(PLOT_ID, levels=PLOT_ID, labels=paste(COUPID, ' ( M:', MALE_SANGER_ID,' F:',FEMALE_SANGER_ID, ' run:', PTY_RUN, ' )', sep=''))]]	
+	rpleg	<- subset(tmp, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, LABEL, LABEL_SH, PLOT_ID))
+	setkey(rpleg, LABEL)
 	#	define effectively independent number of windows
 	#	select only W_FROM that are > W_TO	
 	tmp		<- rpw[, {
@@ -1798,15 +1813,63 @@ RakaiCouples.analyze.couples.161110.bbmodel<- function()
 	#	define effective number of windows of type
 	rplkl[, KEFF:= K/N*NEFF]	
 	#	add prior (equal probabilities to all types)
-	rplkl[, PRIOR:= 1L]
+	rplkl[, DIR_PRIOR:= 1L]
 	#	add posterior
-	rplkl[, POSTERIOR:= PRIOR+KEFF]
+	rplkl[, DIR_PO:= DIR_PRIOR+KEFF]
+	#	add marginal posterior mean and 95%
+	tmp		<- rplkl[, {
+				alpha	<- DIR_PO
+				beta	<- sum(DIR_PO)-DIR_PO				
+				list(	TPAIR_TYPE=TPAIR_TYPE, BE_ALPHA=alpha, BE_BETA=beta, BE_MEAN=alpha/(alpha+beta), 
+						BE_QL=qbeta(0.025, alpha, beta), BE_QU=qbeta(0.975, alpha, beta),
+						BE_IL=qbeta(0.25, alpha, beta), BE_IU=qbeta(0.75, alpha, beta))	
+			}, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','RUN')]
+	rplkl	<- merge(rplkl, tmp, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','TPAIR_TYPE','RUN'))
 	#
 	#	plot posterior densities
+	#	
+	run		<- 'RCCS_161110_w270_dxxx'
+	dir		<- rpw$DIR[1]
+
+	rpwp	<- merge(rplkl, rpleg, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID'))
+	set(rpwp, NULL, 'RUN', rpwp[, gsub('_','\n',gsub('w270_','',gsub('RCCS_','',as.character(RUN))))])
+	set(rpwp, NULL, 'RUN', rpwp[, factor(RUN, levels=c(	"161110\nd200\nr004\nmr1\nmt1", "161110\nd50\nr004\nmr1\nmt1", "161110\nd20\nr004\nmr1\nmt1",   
+														"161110\nd50\nr004\nmr20\nmt2","161110\nd50\nr004\nmr30\nmt2","161110\nd50\nr004\nmr40\nmt2","161110\nd50\nr004\nmr50\nmt2","161110\nd50\nr004\nmr100\nmt2"))])
+	set(rpwp, NULL, 'TPAIR_TYPE', rplkl[, factor(as.character(TPAIR_TYPE), levels=c('linked','unlinked','ambiguous'))])
 	#
-
-
-
+	#	long plot
+	#
+	p		<- lapply(rpwp[, unique(LABEL)], function(label)
+			{
+				p	<- ggplot(subset(rpwp, LABEL==label), aes(x=TPAIR_TYPE, fill=TPAIR_TYPE)) + facet_grid(RUN~LABEL) +
+						geom_boxplot(aes(lower=BE_IL, middle=BE_MEAN, upper=BE_IU, ymin=BE_QL, ymax=BE_QU), stat="identity", show.legend=FALSE) +
+						scale_y_continuous(labels=percent, expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.2), minor_breaks=seq(0,1,0.1)) +
+						#scale_fill_manual(values=c('linked'="#9E0142",'ambiguous'="#3288BD",'unlinked'='grey50')) +
+						scale_fill_manual(values=c('linked'="#F46D43",'ambiguous'="#3288BD",'unlinked'='grey50')) +			
+						theme_bw() + coord_flip() +
+						labs(x='phyloscan classification (v16-11-16)\n(transmission pair)\n', y='\nposterior probability')
+				p
+			})
+	pdf(file=file.path(dir, paste(run,'-phsc-windowassignments_SEROINC_trmpairposterior.pdf',sep='')), w=10, h=0.8*rpwp[, length(unique(RUN))])
+	for(i in seq_along(p))	print(p[[i]])
+	dev.off()
+	#
+	#	small plot
+	#
+	tmp		<- subset(rpwp, RUN%in%c('161110\nd200\nr004\nmr1\nmt1','161110\nd50\nr004\nmr1\nmt1','161110\nd20\nr004\nmr1\nmt1','161110\nd50\nr004\nmr20\nmt2'))
+	tmp		<- subset(rpwp, RUN%in%c('161110\nd50\nr004\nmr20\nmt2'))
+	ggplot(tmp, aes(x=TPAIR_TYPE, fill=TPAIR_TYPE)) + 
+			facet_grid(LABEL_SH~RUN) +
+			geom_boxplot(aes(lower=BE_IL, middle=BE_MEAN, upper=BE_IU, ymin=BE_QL, ymax=BE_QU), stat="identity") +
+			scale_y_continuous(labels=percent, expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.2), minor_breaks=seq(0,1,0.1)) +
+			#scale_fill_manual(values=c('linked'="#9E0142",'ambiguous'="#3288BD",'unlinked'='grey50')) +
+			scale_fill_manual(values=c('linked'="#F46D43",'ambiguous'="#3288BD",'unlinked'='grey50')) +			
+			theme_bw() + coord_flip() + theme(legend.position='top', strip.text.y = element_text(angle=0)) +			
+			labs(x='sequence pairs of couples\n', fill='phyloscanner classification v16-11-16\n(transmission pair)\n', y='\nposterior probability')
+	ggsave(file=file.path(dir, paste(run,'-phsc-windowassignments_SEROINC_trmpairposterior_small.pdf',sep='')), w=10, h=30, limitsize = FALSE)
+	
+	
+	
 	#
 	#	for each run: plot pairs	
 	#	
