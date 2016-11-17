@@ -120,6 +120,12 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 					"M2567209052006", "M2567228072009","M2567209012007", "M2567203072007", "21412569"))
 	dodd	<- merge(ds, dodd, by='FASTASampleCode', all.y=1)	
 	
+	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000"
+	outfile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000"
+	ph				<- read.tree(infile.tree)
+	ph				<- drop.tip(ph, dodd[, FASTASampleCode])
+	write.tree(ph, file=outfile.tree)
+	
 }
 ######################################################################################
 project.examl.ATHENA1610.LSD.run.161110<- function()
@@ -140,14 +146,15 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 		outdir			<- "/work/or105/ATHENA_2016/data/lsd"		
 	}
 	ali.len					<- 1289			
-	lsd.args				<- '-v 2 -c -b 10 -r as'	# extremely slow ..
+	#lsd.args				<- '-v 2 -c -b 10 -r as'	# extremely slow ..
 	#lsd.args				<- '-v 2 -c -b 10'			# root at HXB2 and keep the root there	
-	#lsd.args				<- '-v 2 -c -b 10 -r a'	
+	lsd.args				<- '-v 2 -c -b 10 -r a'	
 	#
 	infile.tree			<- data.table(FT=list.files(indir.tree, pattern='^ExaML_result.*finaltree\\.[0-9]+$', full.names=TRUE))
 	infile.tree[, FD:= file.path(outdir,basename(paste(FT, '.lsd.dates', sep='')))]
 	infile.tree[, FT_PRUNED:= file.path(outdir,basename(gsub('\\.finaltree', '_OnlyDates.finaltree', FT)))]
-	infile.tree[, FL:= file.path(outdir,basename(paste(FT, '.lsd_ras', sep='')))]
+	infile.tree[, FL:= file.path(outdir,basename(paste(FT, '.lsd_ra', sep='')))]
+	infile.tree			<- subset(infile.tree, grepl('noROGUE2', FT))
 	#	
 	dlsd	<- infile.tree[, {
 				#cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, root=root, exclude.missing.dates=exclude.missing.dates, outfile.tree=FT_PRUNED)
@@ -192,7 +199,7 @@ project.examl.ATHENA1610.examl.process.bstree<- function()
 	stat.fun						<- hivc.clu.min.transmission.cascade	
 	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)	
 	thresh.brl						<- 0.1
-	thresh.bs						<- 0.8
+	thresh.bs						<- 0.7
 	#produce clustering 
 	clustering						<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
 	
@@ -342,8 +349,7 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 	stopifnot( length(setdiff( tmp, rownames(seq.b)))==0 )
 	seq.b		<- seq.b[setdiff( ph$tip.label, tmp ),]
 	#
-	write.dna(seq.b, gsub('subtype','noROGUE_subtype',infile), format='fasta', colsep='', nbcol=-1)
-	
+	write.dna(seq.b, gsub('subtype','noROGUE_subtype',infile), format='fasta', colsep='', nbcol=-1)	
 }
 ######################################################################################
 project.examl.ATHENA1610.161102<- function()
