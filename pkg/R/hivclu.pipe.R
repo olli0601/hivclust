@@ -1000,7 +1000,7 @@ hivc.pipeline.various<- function()
 	{
 		project.dualinfecions.phylotypes.evaluatereads.150119()
 	}	
-	if(1)
+	if(0)
 	{
 		# RUN VARIOUS
 		cmd			<- hivc.cmd.various()
@@ -1012,36 +1012,24 @@ hivc.pipeline.various<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		quit("no")		
 	}	
-	if(0)	#	run ExamML with partition for tree comparison
+	if(1)	#	run ExamML with partition for tree comparison
 	{		
-		indir.wgaps	<- '/Users/Oliver/git/HPTN071sim/treec150623/withgapstrees'
-		indir.wgaps	<- '/work/or105/Gates_2014/tree_comparison'
-		infiles		<- data.table(FILE=list.files(indir.wgaps, pattern='\\.R$'))
-		infiles[,SIGNAT:=infiles[, regmatches(FILE,regexpr('BWC.*|UGC.*', FILE))]]
-		tmp			<- infiles[, list(BASE=gsub(paste('_',SIGNAT,sep=''),'',FILE)), by='FILE']
-		infiles		<- merge(infiles, tmp, by='FILE')
-		set(infiles, NULL, 'SIGNAT', infiles[, gsub('\\.R','',SIGNAT)])
-		infiles[, PARTITION:= gsub('\\.R','_codon.txt',FILE)]
-		bs.from		<- 0
-		bs.to		<- 19
-		bs.n		<- 20
-		outdir		<- indir.wgaps
-		invisible(infiles[, {					
-							infile		<- BASE
-							signat.in	<- signat.out	<- SIGNAT
-							args.parser	<- paste("-m DNA -q",PARTITION)
-							cmd			<- hivc.cmd.examl.bootstrap(indir.wgaps, infile, signat.in, signat.out, bs.from=bs.from, bs.to=bs.to, prog.bscreate=PR.EXAML.BSCREATE, prog.parser= PR.EXAML.PARSER, prog.starttree= PR.EXAML.STARTTREE, prog.examl=PR.EXAML.EXAML, opt.bootstrap.by="codon", args.parser=args.parser, args.examl="-f o -m GAMMA", prog.supportadder=PR.EXAML.BS, tmpdir.prefix="examl")					
-							invisible(lapply(cmd, function(x)
-											{												
-												x		<- hivc.cmd.hpcwrapper(x, hpc.walltime=21, hpc.q="pqeelab", hpc.mem="950mb", hpc.nproc=1)
-												signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-												outfile	<- paste("ex",signat,sep='.')
-												#cat(x)
-												hivc.cmd.hpccaller(outdir, outfile, x)
-												Sys.sleep(1)
-											}))
-							NULL					
-						}, by='FILE'])				
+		require(big.phylo)		
+		#indir.wgaps	<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/running_gaps_simulations2'
+		indir.wgaps	<- '/work/or105/Gates_2014/tree_comparison/rungaps2'
+		infiles		<- data.table(FILE=list.files(indir.wgaps, pattern='\\.fa$'))
+		infiles[, PARTITION:= gsub('\\.fa','_gene.txt',FILE)]
+		outdir		<- indir.wgaps				
+		infiles[, {					
+					cmd		<- cmd.examl.single(indir.wgaps, FILE, outdir=outdir, args.parser=paste("-m DNA -q",PARTITION), args.examl="-m GAMMA -D", verbose=1)
+					cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=41, hpc.q="pqeelab", hpc.mem="2950mb", hpc.nproc=1)
+					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+					outfile	<- paste("ex",signat,sep='.')
+					cat(cmd)
+					#hivc.cmd.hpccaller(outdir, outfile, cmd)
+					Sys.sleep(1)
+					stop()
+				}, by='FILE']					
 	}
 		
 }
