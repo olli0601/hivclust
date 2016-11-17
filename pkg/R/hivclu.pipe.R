@@ -1017,8 +1017,8 @@ hivc.pipeline.various<- function()
 		require(big.phylo)		
 		#indir.wgaps	<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/running_gaps_simulations2'
 		indir.wgaps	<- '/work/or105/Gates_2014/tree_comparison/rungaps2'
-		infiles		<- data.table(FILE=list.files(indir.wgaps, pattern='\\.fa$'))
-		infiles[, PARTITION:= gsub('\\.fa','_gene.txt',FILE)]
+		infiles		<- data.table(FILE=list.files(indir.wgaps, pattern='\\.fasta$'))
+		infiles[, PARTITION:= gsub('\\.fasta','_gene.txt',FILE)]
 		outdir		<- indir.wgaps				
 		infiles[, {					
 					cmd		<- cmd.examl.single(indir.wgaps, FILE, outdir=outdir, args.parser=paste("-m DNA -q",PARTITION), args.examl="-m GAMMA -D", verbose=1)

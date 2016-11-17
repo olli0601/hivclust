@@ -102,6 +102,7 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 	require(big.phylo)
 	require(phytools)	
 	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000.lsd.date.newick"
+	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000.lsd_ra.date.newick"
 	ph			<- read.tree(infile.tree)	
 	ph			<- ladderize(ph)	
 	
@@ -113,7 +114,9 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 	pdf(file=paste(infile.tree,'.pdf',sep=''), width=40, height=800)
 	plot(ph, tip.color= phd[, TIP.CLR], cex=0.5, adj=.05)
 	dev.off()	
-	
+	#
+	#
+	#
 	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
 	load(infile.info)
 	dodd	<- data.table(FASTASampleCode= c("M4546917032015", "M4579808092015",  
@@ -125,7 +128,17 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 	ph				<- read.tree(infile.tree)
 	ph				<- drop.tip(ph, dodd[, FASTASampleCode])
 	write.tree(ph, file=outfile.tree)
-	
+	#
+	#	remove all 'singletons' defined by very long tip branches
+	#
+	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000"
+	ph				<- read.tree(infile.tree)	
+	ph				<- ladderize(ph)	
+	phd				<- data.table(TAXA= ph$tip.label)
+	phd[, BRL:=sapply( seq_len(Ntip(ph)), function(i)	ph$edge.length[ which(ph$edge[,2]==i) ] )]
+	ph				<- drop.tip(ph, subset(phd, BRL>0.1)[, TAXA])
+	outfile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000"
+	write.tree(ph, file=outfile.tree)
 }
 ######################################################################################
 project.examl.ATHENA1610.LSD.run.161110<- function()
@@ -154,7 +167,7 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 	infile.tree[, FD:= file.path(outdir,basename(paste(FT, '.lsd.dates', sep='')))]
 	infile.tree[, FT_PRUNED:= file.path(outdir,basename(gsub('\\.finaltree', '_OnlyDates.finaltree', FT)))]
 	infile.tree[, FL:= file.path(outdir,basename(paste(FT, '.lsd_ra', sep='')))]
-	infile.tree			<- subset(infile.tree, grepl('noROGUE2', FT))
+	infile.tree			<- subset(infile.tree, grepl('noROGUE3', FT))
 	#	
 	dlsd	<- infile.tree[, {
 				#cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, root=root, exclude.missing.dates=exclude.missing.dates, outfile.tree=FT_PRUNED)
