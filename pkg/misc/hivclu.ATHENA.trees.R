@@ -104,6 +104,7 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000.lsd.date.newick"
 	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000.lsd_ra.date.newick"
 	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000.lsd_ra.date.newick"
+	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B.finaltree.000.lsd_ra.date.newick"
 	ph			<- read.tree(infile.tree)	
 	ph			<- ladderize(ph)	
 	
@@ -143,6 +144,17 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 	write.tree(ph, file=outfile.tree)
 	#
 	#	remove all 'singletons' defined by very long tip branches >7.5%
+	#
+	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000"
+	ph				<- read.tree(infile.tree)	
+	ph				<- ladderize(ph)	
+	phd				<- data.table(TAXA= ph$tip.label)
+	phd[, BRL:=sapply( seq_len(Ntip(ph)), function(i)	ph$edge.length[ which(ph$edge[,2]==i) ] )]
+	ph				<- drop.tip(ph, subset(phd, BRL>0.075)[, TAXA])
+	outfile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B.finaltree.000"
+	write.tree(ph, file=outfile.tree)
+	#
+	#	remove all 'singletons' defined by very long tip branches >5%
 	#
 	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000"
 	ph				<- read.tree(infile.tree)	

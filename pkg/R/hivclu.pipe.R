@@ -1021,7 +1021,7 @@ hivc.pipeline.various<- function()
 		infiles[, PARTITION:= gsub('\\.fasta','_gene.txt',FILE)]
 		outdir		<- indir.wgaps				
 		infiles[, {					
-					cmd		<- cmd.examl.single(indir.wgaps, FILE, outdir=outdir, args.parser=paste("-m DNA -q",PARTITION), args.examl="-m GAMMA -D", verbose=1)
+					cmd		<- cmd.examl.single(indir.wgaps, FILE, outdir=outdir, args.parser=paste("-m DNA -q",PARTITION), args.examl="-m GAMMA -f d -D", verbose=1)
 					cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=41, hpc.q="pqeelab", hpc.mem="2950mb", hpc.nproc=1)
 					signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile	<- paste("ex",signat,sep='.')
