@@ -1038,14 +1038,18 @@ hivc.pipeline.various<- function()
 		indir.wgaps	<- '/work/or105/Gates_2014/tree_comparison/simpleGTR'
 		infiles		<- data.table(FILE=list.files(indir.wgaps, pattern='\\.fasta$'))
 		infiles[, PARTITION:= gsub('\\.fasta','_gene.txt',FILE)]
-		outdir		<- indir.wgaps				
+		outdir		<- indir.wgaps		
+		infiles		<- subset(infiles, !grepl('FULL',FILE))
 		infiles[, {					
 					for(i in 1:10)
 					{
-						cmd		<- cmd.examl.single(indir.wgaps, FILE, outdir=outdir, outfile=gsub('\\.fasta',paste('_REP',i,sep=''),FILE), args.parser=paste("-m DNA -q",PARTITION), args.examl="-m GAMMA -f d -D", verbose=1)
-						cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=41, hpc.q="pqeelab", hpc.mem="2950mb", hpc.nproc=1)
-						signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-						outfile	<- paste("ex",signat,sep='.')
+						args.parser		<- "-m DNA "
+						if(file.exists(file.path(indir.wgaps, PARTITION)))
+							args.parser	<- paste("-m DNA -q",PARTITION) 
+						cmd				<- cmd.examl.single(indir.wgaps, FILE, outdir=outdir, outfile=gsub('\\.fasta',paste('_REP',i,sep=''),FILE), args.parser=args.parser, args.examl="-m GAMMA -f d -D", verbose=1)
+						cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=41, hpc.q="pqeelab", hpc.mem="2950mb", hpc.nproc=1)
+						signat			<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+						outfile			<- paste("ex",signat,sep='.')
 						cat(cmd)
 						hivc.cmd.hpccaller(outdir, outfile, cmd)
 						Sys.sleep(1)
