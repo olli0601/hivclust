@@ -467,6 +467,27 @@ project.Sequences.addCOMET.161027<- function(dir.name= DATA)
 	#	save
 	save(seq, seq.b, seq.other, ds, file=outfile)
 }
+
+######################################################################################
+project.Sequences.align.161121<- function(dir.name= DATA)
+{
+	require(big.phylo)
+	#	add outgroup to subtype B sequences
+	file.new		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_sequences/LANL_outgroup_For_Subtype_B.fasta'
+	file.previous	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
+	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta'
+	scp				<- read.dna(file.previous, format='fa')	
+	sce				<- read.dna(file.new, format='fa')
+	tmp				<- which(grepl('HXB2',rownames(sce)))
+	rownames(sce)[tmp]	<- 'HXB2'
+	
+	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
+	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
+	#
+	#	cut ends manually and mask DRMs manually (easy on 8 seqs)
+	#
+}
+
 ######################################################################################
 project.Sequences.align.161027<- function(dir.name= DATA)
 {
