@@ -1012,7 +1012,7 @@ hivc.pipeline.various<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		quit("no")		
 	}	
-	if(1)	#	run ExamML with partition for tree comparison
+	if(0)	#	run ExamML with partition for tree comparison
 	{		
 		require(big.phylo)		
 		#indir.wgaps	<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/running_gaps_simulations2'
@@ -1029,6 +1029,28 @@ hivc.pipeline.various<- function()
 					#hivc.cmd.hpccaller(outdir, outfile, cmd)
 					Sys.sleep(1)
 					stop()
+				}, by='FILE']					
+	}
+	if(1)	#	run ExamML with partition for tree comparison in replicate of 10
+	{		
+		require(big.phylo)		
+		indir.wgaps	<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/simulations_simpleGTR'
+		indir.wgaps	<- '/work/or105/Gates_2014/tree_comparison/simpleGTR'
+		infiles		<- data.table(FILE=list.files(indir.wgaps, pattern='\\.fasta$'))
+		infiles[, PARTITION:= gsub('\\.fasta','_gene.txt',FILE)]
+		outdir		<- indir.wgaps				
+		infiles[, {					
+					for(i in 1:10)
+					{
+						cmd		<- cmd.examl.single(indir.wgaps, FILE, outdir=outdir, outfile=gsub('\\.fasta',paste('_REP',i,sep=''),FILE), args.parser=paste("-m DNA -q",PARTITION), args.examl="-m GAMMA -f d -D", verbose=1)
+						cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=41, hpc.q="pqeelab", hpc.mem="2950mb", hpc.nproc=1)
+						signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+						outfile	<- paste("ex",signat,sep='.')
+						cat(cmd)
+						hivc.cmd.hpccaller(outdir, outfile, cmd)
+						Sys.sleep(1)
+						#stop()	
+					}					
 				}, by='FILE']					
 	}
 		
