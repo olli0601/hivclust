@@ -1057,7 +1057,7 @@ hivc.pipeline.various<- function()
 					}					
 				}, by='FILE']					
 	}
-	if(0)	#	run ExamML with partition for prev unsuccessful runs
+	if(1)	#	run ExamML with partition for prev unsuccessful runs
 	{		
 		require(big.phylo)		
 		outdir		<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/simulations'
@@ -1080,7 +1080,7 @@ hivc.pipeline.various<- function()
 						#stop()						
 				}, by='IF']
 	}
-	if(1)	#	run ExamML with partition for prev unsuccessful runs
+	if(0)	#	run ExamML with partition for prev unsuccessful runs
 	{		
 		require(big.phylo)		
 		outdir		<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/simulations'
