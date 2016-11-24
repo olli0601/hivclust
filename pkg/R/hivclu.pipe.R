@@ -1078,7 +1078,7 @@ hivc.pipeline.various<- function()
 					hivc.cmd.hpccaller(outdir, outfile, cmd)
 					Sys.sleep(1)
 						#stop()						
-				}, by='FILE']
+				}, by='IF']
 	}
 	if(1)	#	run ExamML with partition for prev unsuccessful runs
 	{		
@@ -1104,7 +1104,7 @@ hivc.pipeline.various<- function()
 					hivc.cmd.hpccaller(outdir, outfile, cmd)
 					Sys.sleep(1)
 					#stop()						
-				}, by='FILE']
+				}, by='IF']
 	}
 	
 }
