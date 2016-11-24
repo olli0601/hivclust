@@ -174,7 +174,7 @@ SEXP hivc_clu_mintransmissioncascade(SEXP inbrlv)
 		for(i= nbrl, xd= REAL(inbrlv), yd=brlv;  	i; 		i--, *yd++= *xd++);
 		//set up array for triangular comparison
 		triangle= NEW_ARY(double*,3);
-		//set up fast indexing
+		//set up fast indexing for each column in original brl matrix
 		xbrlv= NEW_ARY(double*,nc-1);
 		for(i= nc-1, xd= brlv, ybrlv=xbrlv;  	i; 		i--)
 		{
@@ -213,6 +213,7 @@ SEXP hivc_clu_mintransmissioncascade(SEXP inbrlv)
 				{
 					/*  triangle coding is   0	1
 					 * 							2
+					 *	copy the largest brl among 0,1,2 into the triangle position with the lowest brl
 					 */
 					triangle[0]= xbrlv[i];
 					triangle[1]= xbrlv[i]+j;

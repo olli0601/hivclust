@@ -3669,9 +3669,7 @@ project.hivc.clustering<- function(dir.name= DATA)
 		#stat.fun						<- max
 		dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)
 		print(dist.brl)
-		thresh.brl						<- quantile(dist.brl,seq(0.1,1,by=0.05))["100%"]
-		print(quantile(dist.brl,seq(0.1,0.5,by=0.05)))
-		print(thresh.brl)
+		thresh.brl						<- quantile(dist.brl,seq(0.1,1,by=0.05))["80%"]
 		#produce clustering 
 		clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
 		print(clustering)		

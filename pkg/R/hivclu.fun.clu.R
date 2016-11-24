@@ -509,7 +509,7 @@ hivc.clu.clusterbythresh<- function(ph,thresh.brl=NULL,dist.brl=NULL,thresh.node
 	if(all( is.null(c(thresh.brl, thresh.nodesupport))) ) 		stop("all threshold criteria NULL - provide at least one")
 	if(!is.null(thresh.nodesupport) && is.null(nodesupport))	stop("node support threshold set but no node support values provided")
 	if(!is.null(thresh.brl) && is.null(dist.brl))				stop("branch length threshold set but no branch length distances provided")
-	if(!is.null(nodesupport) && any(nodesupport>1+EPS))			warning("Found nodesupport values above 1")
+	if(!is.null(nodesupport) && any(nodesupport>1+.Machine$double.eps))			warning("Found nodesupport values above 1")
 	if(is.null(thresh.brl))
 	{		
 		dist.brl			<- rep(1,Nnode(ph))
@@ -536,14 +536,13 @@ hivc.clu.clusterbythresh<- function(ph,thresh.brl=NULL,dist.brl=NULL,thresh.node
 #print( c(node,node-ntips, is.na(clu.mem[node]), thresh.brl, dist.brl[node-ntips], dist.brl[node-ntips]<=thresh.brl, thresh.nodesupport, nodesupport[node-ntips], nodesupport[node-ntips]<thresh.nodesupport) )
 		if(	node > ntips	&&											## skip leaves
 			is.na(clu.mem[node]) &&										## only consider unassigned nodes
-			nodesupport[node-ntips]>=thresh.nodesupport-EPS &&
-			dist.brl[node-ntips]<=thresh.brl+EPS
+			nodesupport[node-ntips]>=thresh.nodesupport-.Machine$double.eps &&
+			dist.brl[node-ntips]<=thresh.brl+.Machine$double.eps
 			)	 
 		{				
 #print(nodesupport[node-ntips]);print(c(node,i))			
 			clu.i 			<- clu.i+1
-			subtree 		<- graph.dfs(igraph.ph,node,neimode='out',unreachable=FALSE)$order
-			subtree 		<- subtree[! is.nan(subtree)]
+			subtree 		<- as.numeric(na.omit(graph.dfs(igraph.ph,node,neimode='out',unreachable=FALSE)$order))			
 			clu.mem[subtree]<- clu.i
 			clu.idx[node]	<- clu.i
 		}
@@ -1736,13 +1735,16 @@ hivc.clu.brdist.stats.subtree<- function(node, tree, distmat, eval.dist.btw="lea
 	require(geiger)	
 	if(eval.dist.btw=="leaf")
 	{
-		nlist	<- tips(tree,node)
-		foo 	<- distmat[nlist,nlist] 		
+		nlist	<- tips(tree,node)	#tips descending from node
+		foo 	<- distmat[nlist,nlist] #distances between these tips	
 	}
 	else if(eval.dist.btw=="all")
 	{
-		nlist	<- tips(tree,node)
-		elist 	<- tree$edge[which.edge(tree,nlist),2]
+		nlist	<- tips(tree,node)		
+		#which.edge returns all edges that belong to the subtree, 
+		#	then look for all 'end points' of these edges.
+		#	these are all the nodes in the subtree.
+		elist 	<- tree$edge[which.edge(tree,nlist),2]	
 		foo 	<- distmat[elist,elist] 	
 	}
 	else	
@@ -1763,7 +1765,9 @@ hivc.clu.brdist.stats<- function(tree, distmat=NULL, eval.dist.btw="leaf", stat.
 		else	stop("unrecognized eval.dist.btw")
 	}
 	ntips			<- Ntip(tree)
-	nint 			<- tree$Nnode 		## number of internal nodes
+	nint 			<- tree$Nnode 		#number of internal nodes
+	#	each subtree is defined by an inner node
+	#	calculate brl statistic in 'stat.fun' to each subtree defined by inner node
 	return(sapply(seq.int(ntips+1,ntips+nint), function(x) 		hivc.clu.brdist.stats.subtree(x,tree,distmat,eval.dist.btw=eval.dist.btw, stat.fun=stat.fun)		))	
 }
 ######################################################################################
