@@ -469,23 +469,38 @@ project.Sequences.addCOMET.161027<- function(dir.name= DATA)
 }
 
 ######################################################################################
-project.Sequences.align.161121<- function(dir.name= DATA)
+project.Sequences.addOutgroupToSubtypeB.161121<- function(dir.name= DATA)
 {
 	require(big.phylo)
-	#	add outgroup to subtype B sequences
-	file.new		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_sequences/LANL_outgroup_For_Subtype_B.fasta'
-	file.previous	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta'
-	scp				<- read.dna(file.previous, format='fa')	
-	sce				<- read.dna(file.new, format='fa')
-	tmp				<- which(grepl('HXB2',rownames(sce)))
-	rownames(sce)[tmp]	<- 'HXB2'
-	
-	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
-	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
-	#
-	#	cut ends manually and mask DRMs manually (easy on 8 seqs)
-	#
+	if(0)	#done once with some manual editing 
+	{
+		#	add outgroup to subtype B sequences
+		file.new		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_sequences/LANL_outgroup_For_Subtype_B.fasta'
+		file.previous	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_161102/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
+		outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta'
+		scp				<- read.dna(file.previous, format='fa')	
+		sce				<- read.dna(file.new, format='fa')
+		tmp				<- which(grepl('HXB2',rownames(sce)))
+		rownames(sce)[tmp]	<- 'HXB2'
+		
+		scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
+		write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
+		#
+		#	cut ends manually and mask DRMs manually (easy on 8 seqs)
+		#	
+	}
+	if(1)	#next iteration: simply copy from previous file
+	{
+		file.new		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta'
+		file.previous	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_161102/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta'
+		outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_wOutgroup.fasta'
+		scp				<- read.dna(file.previous, format='fa')
+		scp				<- scp[grepl('OUTGROUP',rownames(scp)),]
+		sce				<- read.dna(file.new, format='fa')
+		sce				<- sce[,1:1288]
+		sce				<- rbind(sce, scp)
+		write.dna(sce, file=outfile, format='fa', colsep='', nbcol=-1)
+	}
 }
 
 ######################################################################################
@@ -742,15 +757,15 @@ project.Sequences.align.161027<- function(dir.name= DATA)
 ######################################################################################
 project.Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 {	
-	file.seq.noDRM		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonaligned_noDRM.fasta'
-	file.info 			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_withCOMET_withLANL.rda'
+	file.seq.noDRM		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM.fasta'
+	file.info 			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_withCOMET_withLANL.rda'
 	s					<- read.dna(file.seq.noDRM, format='fa')
 	load(file.info)
 	#	141028040728 is pol but starting at pos 2550. Exclude.
 	ds					<- subset(ds,FASTASampleCode!='141028040728')
 	
 	#	B
-	tmp					<- subset(ds, SUBTYPE_C=='B'|SUBTYPE=='B')
+	tmp					<- subset(ds, SUBTYPE_C=='B')
 	tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
 	if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
 	seq					<- s[tmp[, FASTASampleCode],]
@@ -761,7 +776,7 @@ project.Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 	write.dna(seq, file=gsub('\\.fasta','_subtype_B.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
 	
 	#	A
-	tmp					<- subset(ds, SUBTYPE=='A'|SUBTYPE=='A1'|SUBTYPE_C=='A1'|SUBTYPE=='A2'|SUBTYPE_C=='A2')
+	tmp					<- subset(ds, SUBTYPE_C=='A1'|SUBTYPE_C=='A2')
 	tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
 	if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
 	seq					<- s[tmp[, FASTASampleCode],]
@@ -772,7 +787,7 @@ project.Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 	write.dna(seq, file=gsub('\\.fasta','_subtype_A.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
 	
 	#	C
-	tmp					<- subset(ds, SUBTYPE=='C'|SUBTYPE_C=='C')
+	tmp					<- subset(ds, SUBTYPE_C=='C')
 	tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
 	if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
 	tmp					<- subset(tmp, !FASTASampleCode%in%tmp2)
@@ -784,7 +799,7 @@ project.Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 	write.dna(seq, file=gsub('\\.fasta','_subtype_C.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
 	
 	#	D
-	tmp					<- subset(ds, SUBTYPE=='D'|SUBTYPE_C=='D'|SUBTYPE_C=='D-check')
+	tmp					<- subset(ds, SUBTYPE_C=='D')
 	tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
 	if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
 	tmp					<- subset(tmp, !FASTASampleCode%in%tmp2)
@@ -796,7 +811,7 @@ project.Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 	write.dna(seq, file=gsub('\\.fasta','_subtype_D.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
 	
 	#	F
-	tmp					<- subset(ds, SUBTYPE=='F1'|SUBTYPE_C=='F1'|SUBTYPE=='F2'|SUBTYPE_C=='F2')
+	tmp					<- subset(ds, SUBTYPE_C=='F1'|SUBTYPE_C=='F2')
 	tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
 	if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
 	tmp					<- subset(tmp, !FASTASampleCode%in%tmp2)
@@ -808,7 +823,7 @@ project.Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 	write.dna(seq, file=gsub('\\.fasta','_subtype_F.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
 	
 	#	G
-	tmp					<- subset(ds, SUBTYPE=='G'|SUBTYPE_C=='G')
+	tmp					<- subset(ds, SUBTYPE_C=='G')
 	tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
 	if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
 	tmp					<- subset(tmp, !FASTASampleCode%in%tmp2)
@@ -819,41 +834,47 @@ project.Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 	seq					<- rbind(seq, s[tmp2,])
 	write.dna(seq, file=gsub('\\.fasta','_subtype_G.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
 	
-	#	01_AE
-	tmp					<- subset(ds, SUBTYPE=='01_AE')
-	tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
-	if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
-	tmp					<- subset(tmp, !FASTASampleCode%in%tmp2)
-	seq					<- s[tmp[, FASTASampleCode],]
-	tmp2				<- merge(subset(tmp, select=FASTASampleCode), db, by='FASTASampleCode')
-	tmp2				<- intersect(rownames(s), tmp2[, paste('LANL.',gsub('_(stripped)','',TAXA_L,fixed=TRUE),sep='')])
-	tmp2				<- c(tmp2, 'HXB2')
-	seq					<- rbind(seq, s[tmp2,])
-	write.dna(seq, file=gsub('\\.fasta','_subtype_01AE.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
-	
-	#	02_AG
-	tmp					<- subset(ds, SUBTYPE=='02_AG')
-	tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
-	if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
-	tmp					<- subset(tmp, !FASTASampleCode%in%tmp2)
-	seq					<- s[tmp[, FASTASampleCode],]
-	tmp2				<- merge(subset(tmp, select=FASTASampleCode), db, by='FASTASampleCode')
-	tmp2				<- intersect(rownames(s), tmp2[, paste('LANL.',gsub('_(stripped)','',TAXA_L,fixed=TRUE),sep='')])
-	tmp2				<- c(tmp2, 'HXB2')
-	seq					<- rbind(seq, s[tmp2,])
-	write.dna(seq, file=gsub('\\.fasta','_subtype_02AG.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
-	
-	#	06_cpx
-	tmp					<- subset(ds, SUBTYPE=='06_cpx')
-	tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
-	if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
-	tmp					<- subset(tmp, !FASTASampleCode%in%tmp2)
-	seq					<- s[tmp[, FASTASampleCode],]
-	tmp2				<- merge(subset(tmp, select=FASTASampleCode), db, by='FASTASampleCode')
-	tmp2				<- intersect(rownames(s), tmp2[, paste('LANL.',gsub('_(stripped)','',TAXA_L,fixed=TRUE),sep='')])
-	tmp2				<- c(tmp2, 'HXB2')
-	seq					<- rbind(seq, s[tmp2,])
-	write.dna(seq, file=gsub('\\.fasta','_subtype_06CPX.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
+	#
+	#	dont do recombinants for now
+	#
+	if(0)
+	{
+		#	01_AE
+		tmp					<- subset(ds, SUBTYPE=='01_AE')
+		tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
+		if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
+		tmp					<- subset(tmp, !FASTASampleCode%in%tmp2)
+		seq					<- s[tmp[, FASTASampleCode],]
+		tmp2				<- merge(subset(tmp, select=FASTASampleCode), db, by='FASTASampleCode')
+		tmp2				<- intersect(rownames(s), tmp2[, paste('LANL.',gsub('_(stripped)','',TAXA_L,fixed=TRUE),sep='')])
+		tmp2				<- c(tmp2, 'HXB2')
+		seq					<- rbind(seq, s[tmp2,])
+		write.dna(seq, file=gsub('\\.fasta','_subtype_01AE.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
+		
+		#	02_AG
+		tmp					<- subset(ds, SUBTYPE=='02_AG')
+		tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
+		if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
+		tmp					<- subset(tmp, !FASTASampleCode%in%tmp2)
+		seq					<- s[tmp[, FASTASampleCode],]
+		tmp2				<- merge(subset(tmp, select=FASTASampleCode), db, by='FASTASampleCode')
+		tmp2				<- intersect(rownames(s), tmp2[, paste('LANL.',gsub('_(stripped)','',TAXA_L,fixed=TRUE),sep='')])
+		tmp2				<- c(tmp2, 'HXB2')
+		seq					<- rbind(seq, s[tmp2,])
+		write.dna(seq, file=gsub('\\.fasta','_subtype_02AG.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
+		
+		#	06_cpx
+		tmp					<- subset(ds, SUBTYPE=='06_cpx')
+		tmp2				<- setdiff(tmp[, FASTASampleCode], rownames(s))
+		if(length(tmp2))	cat('\ncannot find sequence',tmp2)	
+		tmp					<- subset(tmp, !FASTASampleCode%in%tmp2)
+		seq					<- s[tmp[, FASTASampleCode],]
+		tmp2				<- merge(subset(tmp, select=FASTASampleCode), db, by='FASTASampleCode')
+		tmp2				<- intersect(rownames(s), tmp2[, paste('LANL.',gsub('_(stripped)','',TAXA_L,fixed=TRUE),sep='')])
+		tmp2				<- c(tmp2, 'HXB2')
+		seq					<- rbind(seq, s[tmp2,])
+		write.dna(seq, file=gsub('\\.fasta','_subtype_06CPX.fasta',gsub('All_','',file.seq.noDRM)), format='fa', colsep='', nbcol=-1)
+	}
 }
 ######################################################################################
 project.Sequences.removeDRMs.161027<- function(dir.name= DATA)
