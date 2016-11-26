@@ -1063,7 +1063,7 @@ hivc.pipeline.various<- function()
 		outdir		<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/simulations'
 		outdir		<- '/work/or105/Gates_2014/tree_comparison/simpleGTR'
 		indir.wgaps	<- outdir
-		infiles		<- data.table(OF=c("161121_GTRFIXED2_FULL_SIMULATED_REP5", "161121_GTRFIXED3_FULL_SIMULATED_REP1", "161121_GTRFIXED3_FULL_SIMULATED_REP2", "161121_GTRFIXED3_FULL_SIMULATED_REP3", "161121_GTRFIXED3_FULL_SIMULATED_REP5"))
+		infiles		<- data.table(OF=c("161121_GTRFIXED2_FULL_SIMULATED_REP5", "161121_GTRFIXED3_FULL_SIMULATED_REP1", "161121_GTRFIXED3_FULL_SIMULATED_REP2", "161121_GTRFIXED3_FULL_SIMULATED_REP5"))
 		infiles[, IF:=paste(gsub('_REP[0-9]+','',OF),'.fasta',sep='')]
 		infiles[, PARTITION:= gsub('\\.fasta','_gene.txt',IF)]
 		infiles[, {					
@@ -1071,7 +1071,7 @@ hivc.pipeline.various<- function()
 					if(file.exists(file.path(indir.wgaps, PARTITION)))
 						args.parser	<- paste("-m DNA -q",PARTITION) 
 					cmd				<- cmd.examl.single(indir.wgaps, IF, outdir=outdir, outfile=OF, args.parser=args.parser, args.examl="-m GAMMA -f d -D", verbose=1)
-					cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=41, hpc.q="pqeelab", hpc.mem="5900mb", hpc.nproc=1)
+					cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=241, hpc.q="pqeelab", hpc.mem="5900mb", hpc.nproc=1)
 					signat			<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 					outfile			<- paste("ex",signat,sep='.')
 					cat(cmd)
