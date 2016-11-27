@@ -584,7 +584,7 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 	{
 		indir		<- '/work/or105/ATHENA_2016/data/examl'
 		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta"
-		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.fasta"
+		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.fasta"
 		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta"
 		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub2.fasta"
 		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub3.fasta"
@@ -592,10 +592,10 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 	}
 	
 	args.parser	<- paste("-m DNA")
-	if(0)
+	if(1)
 	{
 		inpartition	<- gsub('\\.fasta','_partition.txt',infile)
-		cat('DNA, p12=1-1287\\3,2-1287\\3\nDNA, p3=2-1287\\3\n', file=file.path(indir,inpartition))
+		cat('DNA, p12=1-1287\\3,2-1287\\3\nDNA, p3=3-1287\\3\n', file=file.path(indir,inpartition))
 		args.parser	<- paste("-m DNA -q",inpartition)
 	}
 	#	ExaML bootstrap args
