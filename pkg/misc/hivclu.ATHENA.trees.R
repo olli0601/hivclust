@@ -532,6 +532,25 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 	seq.b		<- seq.b[setdiff( ph$tip.label, tmp ),]
 	#
 	write.dna(seq.b, gsub('subtype','noROGUE_subtype',infile), format='fasta', colsep='', nbcol=-1)
+	#
+	#	read tree 4 (using latest COMET subtype assignments)
+	#
+	#infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.finaltree.000"
+	ph			<- read.tree(infile.tree)
+	tmp			<- which(grepl('OUTGROUP\\.D',ph$tip.label))
+	tmp			<- getMRCA(ph,tmp)
+	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])	
+	ph			<- ladderize(ph)
+	
+	phd			<- data.table(TAXA= ph$tip.label)
+	phd[, NL:= !grepl('LANL',TAXA)]
+	phd[, TIP.CLR:= 'black']
+	set(phd, phd[, which(NL)], 'TIP.CLR','red')
+	
+	pdf(file=paste(infile.tree,'.pdf',sep=''), width=40, height=800)
+	plot(ph, tip.color= phd[, TIP.CLR], cex=0.5, adj=.05)
+	dev.off()	
 
 }
 ######################################################################################
@@ -558,26 +577,31 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 	if(0)	#	MAC
 	{
 		indir		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest'
-		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta"
+		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta"
 		outdir		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees'
 	}
 	if(1)	#	HPC
 	{
 		indir		<- '/work/or105/ATHENA_2016/data/examl'
-		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta"
+		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.fasta"
 		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta"
 		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub2.fasta"
 		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub3.fasta"
 		outdir		<- indir
+	}
+	
+	args.parser	<- paste("-m DNA")
+	if(1)
+	{
+		inpartition	<- file.path(indir, gsub('\\.fasta','_partition.txt',infile))
+		cat('DNA, p12=1-1287\3,2-1287\3\nDNA, p3=2-1287\3\n', file=inpartition)
+		args.parser	<- paste("-m DNA -q",inpartition)
 	}
 	#	ExaML bootstrap args
 	bs.from		<- 0
 	bs.to		<- 0
 	bs.n		<- 500
 	
-	
-	#args.parser	<- paste("-m DNA -q",PARTITION)
-	args.parser	<- paste("-m DNA")
 	args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours	
 	cmd			<- cmd.examl.bootstrap(indir, infile, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="codon", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
 	dummy		<- lapply(cmd, function(x)
