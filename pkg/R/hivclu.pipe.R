@@ -1031,7 +1031,7 @@ hivc.pipeline.various<- function()
 					stop()
 				}, by='FILE']		
 	}
-	if(0)	#	run ExamML with partition for tree comparison in replicate of 10
+	if(1)	#	run ExamML with partition for tree comparison in replicate of 10
 	{		
 		require(big.phylo)		
 		indir.wgaps	<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/simulations_simpleGTR'
@@ -1039,15 +1039,17 @@ hivc.pipeline.various<- function()
 		infiles		<- data.table(FILE=list.files(indir.wgaps, pattern='\\.fasta$'))
 		infiles[, PARTITION:= gsub('\\.fasta','_gene.txt',FILE)]
 		outdir		<- indir.wgaps		
-		infiles		<- subset(infiles, !grepl('FULL',FILE))
+		infiles		<- subset(infiles, grepl('FULL',FILE))
 		infiles[, {					
 					for(i in 1:10)
 					{
 						args.parser		<- "-m DNA "
 						if(file.exists(file.path(indir.wgaps, PARTITION)))
-							args.parser	<- paste("-m DNA -q",PARTITION) 
-						cmd				<- cmd.examl.single(indir.wgaps, FILE, outdir=outdir, outfile=gsub('\\.fasta',paste('_REP',i,sep=''),FILE), args.parser=args.parser, args.examl="-m GAMMA -f d -D", verbose=1)
-						cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=41, hpc.q="pqeelab", hpc.mem="2950mb", hpc.nproc=1)
+							args.parser	<- paste("-m DNA -q",PARTITION)
+						#args.examl		<- "-m GAMMA -f d -D"
+						args.examl		<- "-m GTRGAMMA"
+						cmd				<- cmd.examl.single(indir.wgaps, FILE, outdir=outdir, outfile=gsub('\\.fasta',paste('_REP',i,sep=''),FILE), args.parser=args.parser, args.examl=args.examl, verbose=1)
+						cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=410, hpc.q="pqeelab", hpc.mem="5900mb", hpc.nproc=1)
 						signat			<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 						outfile			<- paste("ex",signat,sep='.')
 						cat(cmd)
@@ -1057,7 +1059,7 @@ hivc.pipeline.various<- function()
 					}					
 				}, by='FILE']					
 	}
-	if(1)	#	run ExamML with partition for prev unsuccessful runs
+	if(0)	#	run ExamML with partition for prev unsuccessful runs
 	{		
 		require(big.phylo)		
 		outdir		<- '~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/simulations'

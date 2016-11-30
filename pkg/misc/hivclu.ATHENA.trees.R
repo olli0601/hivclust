@@ -175,11 +175,13 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000.lsd_ra.date.newick"
 	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000.lsd_ra.date.newick"
 	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B.finaltree.000.lsd_ra.date.newick"
+	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.finaltree.000.lsd.date.newick"
+	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000.lsd.date.newick"
 	ph			<- read.tree(infile.tree)	
 	ph			<- ladderize(ph)	
 	
 	phd			<- data.table(TAXA= ph$tip.label)
-	phd[, NL:= !grepl('LANL',TAXA)]
+	phd[, NL:= !grepl('LANL|OUTGROUP',TAXA)]
 	phd[, TIP.CLR:= 'black']
 	set(phd, phd[, which(NL)], 'TIP.CLR','red')
 	
@@ -188,10 +190,16 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 	axisPhylo(1)
 	dev.off()	
 	#
-	#
+	#	inspect odd cases
 	#
 	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
 	load(infile.info)
+	subset(ds, FASTASampleCode%in%c('130130020669','140424041146'))	#--> no sampling dates!
+	
+	
+	
+	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
+	load(infile.info)	
 	dodd	<- data.table(FASTASampleCode= c("M4546917032015", "M4579808092015",  
 					"M2567209052006", "M2567228072009","M2567209012007", "M2567203072007", "21412569"))
 	dodd	<- merge(ds, dodd, by='FASTASampleCode', all.y=1)	
@@ -264,15 +272,15 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 	infile.tree[, FT_PRUNED:= file.path(outdir,basename(gsub('\\.finaltree', '_OnlyDates.finaltree', FT)))]
 	#infile.tree[, FL:= file.path(outdir,basename(paste(FT, '.lsd_ra', sep='')))]
 	infile.tree[, FL:= file.path(outdir,basename(paste(FT, '.lsd', sep='')))]
-	infile.tree			<- subset(infile.tree, grepl('noROGUE4', FT) & grepl('wOutgroup', FT))
+	infile.tree			<- subset(infile.tree, grepl('ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000$', FT))
 	#	
 	dlsd	<- infile.tree[, {
-				#cmd		<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, root=root, exclude.missing.dates=exclude.missing.dates, outfile.tree=FT_PRUNED)
-				#cmd		<- paste(cmd, cmd.lsd(FT_PRUNED, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
+				cmd		<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, root='OUTGROUP', exclude.missing.dates=FALSE, outfile.tree=FT_PRUNED)
+				cmd		<- paste(cmd, cmd.lsd(FT_PRUNED, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
 				#cmd		<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, exclude.missing.dates=TRUE, outfile.tree=FT_PRUNED)
 				#cmd		<- paste(cmd, cmd.lsd(FT_PRUNED, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
-				cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, exclude.missing.dates=FALSE)
-				cmd			<- paste(cmd, cmd.lsd(FT, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
+				#cmd			<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, exclude.missing.dates=FALSE)
+				#cmd			<- paste(cmd, cmd.lsd(FT, FD, ali.len, outfile=FL, pr.args=lsd.args), sep='\n')
 				list(CMD=cmd)
 			}, by='FT']	
 	#dlsd[1, cat(CMD)]
@@ -537,6 +545,7 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 	#
 	#infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
 	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.finaltree.000"
+	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000"
 	ph			<- read.tree(infile.tree)
 	tmp			<- which(grepl('OUTGROUP\\.D',ph$tip.label))
 	tmp			<- getMRCA(ph,tmp)
