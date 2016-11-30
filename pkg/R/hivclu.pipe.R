@@ -1047,7 +1047,7 @@ hivc.pipeline.various<- function()
 						if(file.exists(file.path(indir.wgaps, PARTITION)))
 							args.parser	<- paste("-m DNA -q",PARTITION)
 						#args.examl		<- "-m GAMMA -f d -D"
-						args.examl		<- "-m GTRGAMMA"
+						args.examl		<- "-m GAMMA"
 						cmd				<- cmd.examl.single(indir.wgaps, FILE, outdir=outdir, outfile=gsub('\\.fasta',paste('_REP',i,sep=''),FILE), args.parser=args.parser, args.examl=args.examl, verbose=1)
 						cmd				<- hivc.cmd.hpcwrapper(cmd, hpc.walltime=410, hpc.q="pqeelab", hpc.mem="5900mb", hpc.nproc=1)
 						signat			<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
