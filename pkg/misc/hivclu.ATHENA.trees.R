@@ -679,7 +679,7 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta"
 		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.fasta"
 		indir		<- '/work/or105/ATHENA_2016/data/other'
-		infile		<- "150701_Regional_TRAIN1_SIMULATED.fa"
+		infile		<- "150701_Regional_TRAIN1_SIMULATED.R"
 		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub2.fasta"
 		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub3.fasta"
 		outdir		<- indir
@@ -694,11 +694,11 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 	}
 	if(1)
 	{
-		args.parser	<- paste("-m DNA -q", gsub('\\.fa','_gene.txt',infile))
+		args.parser	<- paste("-m DNA -q", gsub('\\.fa|\\.R','_gene.txt',infile))
 	}
 	#	ExaML bootstrap args
 	bs.from		<- 0
-	bs.to		<- 499
+	bs.to		<- 0
 	bs.n		<- 500
 	
 	args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours	
