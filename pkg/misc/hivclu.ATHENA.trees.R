@@ -269,10 +269,10 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 	#
 	infile.tree			<- data.table(FT=list.files(indir.tree, pattern='^ExaML_result.*finaltree\\.[0-9]+$', full.names=TRUE))
 	infile.tree[, FD:= file.path(outdir,basename(paste(FT, '.lsd.dates', sep='')))]
-	infile.tree[, FT_PRUNED:= file.path(outdir,basename(gsub('\\.finaltree', '_OnlyDates.finaltree', FT)))]
+	infile.tree[, FT_PRUNED:= file.path(outdir,basename(gsub('\\.finaltree', '_RootD.finaltree', FT)))]
 	#infile.tree[, FL:= file.path(outdir,basename(paste(FT, '.lsd_ra', sep='')))]
 	infile.tree[, FL:= file.path(outdir,basename(paste(FT, '.lsd', sep='')))]
-	infile.tree			<- subset(infile.tree, grepl('ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000$', FT))
+	#infile.tree			<- subset(infile.tree, grepl('ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000$', FT))
 	#	
 	dlsd	<- infile.tree[, {
 				cmd		<- cmd.lsd.dates(infile.dates, FT, FD, run.lsd=FALSE, root='OUTGROUP', exclude.missing.dates=FALSE, outfile.tree=FT_PRUNED)
@@ -285,7 +285,8 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 			}, by='FT']	
 	#dlsd[1, cat(CMD)]
 	dlsd[, {
-				x		<- cmd.hpcwrapper(CMD, hpc.walltime=500, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
+				#x		<- cmd.hpcwrapper(CMD, hpc.walltime=500, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=1)
+				x		<- cmd.hpcwrapper(CMD, hpc.walltime=3, hpc.q=NA, hpc.mem="1800mb", hpc.nproc=1)
 				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 				outfile	<- paste("lsd",signat,sep='.')
 				cat(x)
@@ -566,8 +567,8 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 project.examl.ATHENA1610.161102<- function()
 {
 	require(big.phylo)
-	project.examl.ATHENA1610.examl.run.161102()
-	#project.examl.ATHENA1610.LSD.run.161110()	
+	#project.examl.ATHENA1610.examl.run.161102()
+	project.examl.ATHENA1610.LSD.run.161110()	
 }
 ######################################################################################
 project.examl.ATHENA1610.examl.inspect.trees.161102<- function()
