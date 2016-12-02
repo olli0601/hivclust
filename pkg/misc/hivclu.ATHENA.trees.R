@@ -686,15 +686,15 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 	}
 	
 	args.parser	<- paste("-m DNA")
-	if(1)
+	if(0)
 	{
 		inpartition	<- gsub('\\.fasta','_partition.txt',infile)
 		cat('DNA, p12=1-1287\\3,2-1287\\3\nDNA, p3=3-1287\\3\n', file=file.path(indir,inpartition))
-		args.parser	<- paste("-m DNA -q ", inpartition)
+		args.parser	<- paste("-m DNA -q", inpartition)
 	}
 	if(1)
 	{
-		args.parser	<- paste("-m DNA -q ", gsub('\\.fa','_gene.txt',infile))
+		args.parser	<- paste("-m DNA -q", gsub('\\.fa','_gene.txt',infile))
 	}
 	#	ExaML bootstrap args
 	bs.from		<- 0
