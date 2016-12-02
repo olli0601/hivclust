@@ -314,8 +314,8 @@ project.examl.ATHENA1610.TreeDater.run.161110<- function()
 	infile.tree[, {
 				#FI		<- '/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000'
 				cmd		<- cmd.treedater(FI, infile.dates, FO, root='OUTGROUP', ali.len=1289, omega0=1.7e-3)
-				#cat(cmd)
-				#stop()
+				cat(cmd)
+				stop()
 				x		<- cmd.hpcwrapper(cmd, hpc.walltime=300, hpc.q='pqeelab', hpc.mem="5600mb", hpc.nproc=1)
 				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 				outfile	<- paste("td",signat,sep='.')
@@ -649,9 +649,9 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 project.examl.ATHENA1610.161102<- function()
 {
 	require(big.phylo)
-	#project.examl.ATHENA1610.examl.run.161102()
+	project.examl.ATHENA1610.examl.run.161102()
 	#project.examl.ATHENA1610.LSD.run.161110()
-	project.examl.ATHENA1610.TreeDater.run.161110()
+	#project.examl.ATHENA1610.TreeDater.run.161110()
 }
 ######################################################################################
 project.examl.ATHENA1610.examl.inspect.trees.161102<- function()
@@ -678,7 +678,8 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 		indir		<- '/work/or105/ATHENA_2016/data/examl'
 		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta"
 		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.fasta"
-		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta"
+		indir		<- '/work/or105/ATHENA_2016/data/other'
+		infile		<- "150701_Regional_TRAIN1_SIMULATED.fa"
 		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub2.fasta"
 		#infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_sub3.fasta"
 		outdir		<- indir
@@ -689,11 +690,15 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 	{
 		inpartition	<- gsub('\\.fasta','_partition.txt',infile)
 		cat('DNA, p12=1-1287\\3,2-1287\\3\nDNA, p3=3-1287\\3\n', file=file.path(indir,inpartition))
-		args.parser	<- paste("-m DNA -q",inpartition)
+		args.parser	<- paste("-m DNA -q ", inpartition)
+	}
+	if(1)
+	{
+		args.parser	<- paste("-m DNA -q ", gsub('\\.fa','_gene.txt',infile))
 	}
 	#	ExaML bootstrap args
 	bs.from		<- 0
-	bs.to		<- 0
+	bs.to		<- 499
 	bs.n		<- 500
 	
 	args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours	
@@ -701,8 +706,8 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 	dummy		<- lapply(cmd, function(x)
 			{				
 				#x		<- cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
-				#x		<- cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeph", hpc.mem="1800mb", hpc.nproc=1)
-				x		<- cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=8)
+				x		<- cmd.hpcwrapper(x, hpc.walltime=71, hpc.q="pqeph", hpc.mem="3600mb", hpc.nproc=1)
+				#x		<- cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeelab", hpc.mem="5800mb", hpc.nproc=8)
 				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
 				outfile	<- paste("exa",signat,sep='.')
 				cat(x)
