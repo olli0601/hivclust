@@ -1307,9 +1307,10 @@ RakaiCouples.process.couples.161027<- function()
 	set(dr, NULL, 'ID', dr[, gsub('rogue_','',ID)])
 	dr		<- merge(tmp, dr, by=c('W_FROM','ID'))
 	
-	infiles<- c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr66_trmStatsPerWindow.rda',
-					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr66_trmStatsPerWindow.rda',
-					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr66_trmStatsPerWindow.rda'	)
+	#infiles<- c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr66_trmStatsPerWindow.rda',
+	#				'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr66_trmStatsPerWindow.rda',
+	#				'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr66_trmStatsPerWindow.rda'	)
+	infiles<- c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr66_trmStatsPerWindow.rda')
 	id.m	<- '15778_1_82'
 	id.f	<- '15758_1_76'	
 	df		<- phsc.get.assignments.by.window.for.couple(id1=paste(id.m,'.bam',sep=''), id2=paste(id.f,'.bam',sep=''), infiles)
@@ -1336,10 +1337,9 @@ RakaiCouples.process.couples.161027<- function()
 	subset(df, (BRL1<0.07 & ROGUE1) | (BRL2<0.07 & ROGUE2))
 	#	calculate patristic distance..
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d200_phscout.rda')
-	ph		<- phs[[ subset(dtrees, PTY_RUN==66 & W_FROM==1225)[, IDX] ]]
-	tmp		<- as.matrix(cophenetic.phylo(ph))
-	max( tmp['15758_1_76.bam_read_7_count_1', grepl('15758_1_76', colnames(tmp))] )
-	
+	#ph		<- phs[[ subset(dtrees, PTY_RUN==66 & W_FROM==1225)[, IDX] ]]
+	#tmp		<- as.matrix(cophenetic.phylo(ph))
+	#max( tmp['15758_1_76.bam_read_7_count_1', grepl('15758_1_76', colnames(tmp))] )
 	#	collect branch lengths from individuals that I classified manually
 	tmp		<- merge(subset(dtrees, PTY_RUN==66, c(W_FROM, IDX)), subset(df, select=c(ID1, W_FROM, ROGUE1)),by='W_FROM')
 	setnames(tmp, c('ID1','ROGUE1'), c('ID','ROGUE'))
@@ -1361,26 +1361,7 @@ RakaiCouples.process.couples.161027<- function()
 			}, by=c('W_FROM','ID','ROGUE')]
 	dr		<- rbind(dr, tmp)	
 	#	calculate prob that the max BRL is > x under the "null" that all distances are from the same distribution
-	#	using Weibull as "null" model because (1) for x positive and (2) it is easy to calculate 1-CDF(max X_i))
-	require(fitdistrplus)
-	dp		<- dr[, {
-				x			<- max(BRL)
-				p			<- NA_real_
-				z			<- BRL[ BRL>1e-5 ]
-				if(length(z)<=1)
-					cat('\n', W_FROM, ID)
-				if(length(z)>5)
-				{	
-					cat('\n', W_FROM, ID)
-					w.mle		<- fitdist(z, 'weibull')	
-					#	denscomp(w.mle, addlegend=FALSE, xlab='weibull') 	#use this to compare fit to data
-					w.k			<- w.mle$estimate['shape']
-					w.l			<- w.mle$estimate['scale']				
-					p			<- 1 - ( 1 - exp( -( max(z)/w.l )^w.k ) )^length(z)					
-				}
-				list(P=p, BRL.mx=max(BRL))
-			}, by=c('W_FROM','ID','ROGUE')]
-	
+	#	using Weibull as "null" model because (1) for x positive and (2) it is easy to calculate 1-CDF(max X_i))	
 	require(gamlss)
 	dp		<- dr[, {
 				x			<- max(BRL)
@@ -1389,13 +1370,46 @@ RakaiCouples.process.couples.161027<- function()
 				if(length(z)>3)	# don't think makes sense to fit Weibull to 3 data points
 				{	
 					cat('\n', W_FROM, ID) # for debugging					 
-					w		<- gamlss(data=data.table(BRL=z), formula=BRL~1, family=WEI, trace=1)
+					w		<- gamlss(formula=z~1, family=WEI, trace=1)
 					w.l		<- exp(coef(w, what='mu'))
 					w.k		<- exp(coef(w, what='sigma'))
 					p			<- 1 - ( 1 - exp( -( max(z)/w.l )^w.k ) )^length(z)					
 				}
 				list(P=p, BRL.mx=max(BRL))
 			}, by=c('W_FROM','ID','ROGUE')]	
+	#
+	#	define rogue as all reads that are not in largest subtree
+	#
+	require(phangorn)
+	tmp		<- merge(subset(dtrees, PTY_RUN==66, c(W_FROM, IDX)), subset(df, select=c(ID1, W_FROM, ROGUE1)),by='W_FROM')
+	setnames(tmp, c('ID1','ROGUE1'), c('ID','ROGUE'))
+	dst		<- tmp[, {
+				#	IDX<- 26817; ID<- '15778_1_82'
+				ph		<- phs[[ IDX ]]
+				tips.id	<- which(grepl(ID,ph$tip.label))
+				rogue	<- rep(FALSE, length(tips.id))
+				z		<- Ancestors(ph, tips.id)
+				#	along each path find last with taxa==ID only
+				z		<- sapply(seq_along(z), function(i){
+							zz	<- Descendants(ph, z[[i]], type="tips")							 
+							zzz	<- sapply(zz, function(x) all(grepl(ID,ph$tip.label[x])) )
+							zzz	<- which(zzz)
+							ifelse(length(zzz), z[[i]][zzz[1]], tips.id[i])							
+						})
+				z		<- unique(z)
+				#	determine number of reads in each tip
+				zz		<- sapply(Descendants(ph, z, type="tips"), function(x) sum(as.numeric(gsub('.*_count_([0-9]+)','\\1',ph$tip.label[x])))	)
+				if(length(zz)>1 && any(zz/sum(zz)<.01))
+				{
+					rogue.cl<- z[which( zz/sum(zz)<.01 )]
+					rogue.id<- unlist(Descendants(ph, rogue.cl, type="tips"))
+					rogue	<- sapply(tips.id, function(x) any(x==rogue.id))					
+				}
+				list(TAXA=ph$tip.label[tips.id], ROGUE=rogue)				
+			}, by=c('W_FROM','ID','LARGEST_SUBTREE_ROGUE')]	
+	#	
+	#
+
 	dp[, BRL.mx.c:= cut(BRL.mx, breaks=c(0,0.04,Inf), labels=c('<4%','>=4%'))]		
 	subset(dp, !is.na(P))[, table(ROGUE, BRL.mx.c)]
 	subset(dp, !is.na(P))[, table(ROGUE, P<.05)]

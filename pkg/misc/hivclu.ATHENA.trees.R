@@ -100,6 +100,49 @@ project.examl.ATHENA1610.LSD.prepare.dates.161110<- function()
 }
 
 ######################################################################################
+project.examl.ATHENA1610.LSD.check.dates<- function()
+{
+	#	aim is to remove taxa from alignment that are odd in tree
+	require(big.phylo)
+	require(phytools)
+	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
+	
+	#	collect dates
+	load(infile.info)
+	#	process ATHENA dates
+	lsdi		<- subset(ds, select=c(FASTASampleCode, PosSeqT))
+	setnames(lsdi, c('FASTASampleCode','PosSeqT'), c('TAXA','DATE'))
+	set(lsdi, NULL, 'DATE', lsdi[, hivc.db.Date2numeric(DATE)])
+	#	process LANL dates
+	tmp			<- unique(subset(db, select=TAXA_L))
+	tmp[, DATE:=tmp[, sapply( strsplit(TAXA_L,'.',fixed=TRUE), function(x) x[[3]])]]
+	#tmp[, table(DATE, useNA='if')]
+	set(tmp, tmp[, which(DATE=='-')], 'DATE', NA_character_)
+	set(tmp, NULL, 'DATE', tmp[, as.numeric(DATE)])
+	set(tmp, NULL, 'TAXA_L', tmp[, gsub('_(stripped)', '', TAXA_L, fixed=TRUE)])
+	set(tmp, NULL, 'TAXA_L', tmp[, paste('LANL.',TAXA_L,sep='')])
+	setnames(tmp, c('TAXA_L','DATE'), c('TAXA','DATE'))	
+	lsdi		<- rbind(lsdi, tmp)
+	
+	indir	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest'
+	inf		<- data.table(F=list.files(indir, pattern='lsd.date.newick$',full.names=TRUE))	
+	inf		<- inf[, {
+				#F			<- '/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000.lsd.date.newick'
+				ph			<- read.tree(F)
+				phd			<- data.table(TAXA= ph$tip.label, DUMMY=seq_along(ph$tip.label))
+				phd			<- merge(phd, lsdi, by='TAXA', all.x=1)
+				setkey(phd, DUMMY)
+				phd[, DEPTH:= node.depth.edgelength(ph)[seq_len(Ntip(ph))]]
+				phd[, TMRCA:= DATE-DEPTH]
+				phd			<- subset(phd, !is.na(DATE))
+				stopifnot( all( round(phd[1,TMRCA]-phd[,TMRCA], d=3)==0 ) )
+				list(TMRCA=phd[1,TMRCA])	
+			}, by='F']
+	ggplot(inf, aes(x=TMRCA)) + geom_histogram()
+	ggsave(file= file.path(indir, 'ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p_lsd_TRMCAs.pdf'), w=5, h=5)	
+}
+
+######################################################################################
 project.examl.ATHENA1610.LSD.process.after.outgroup.tree<- function()
 {
 	#	aim is to remove taxa from alignment that are odd in tree
@@ -243,6 +286,45 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 	outfile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B.finaltree.000"
 	write.tree(ph, file=outfile.tree)
 	
+}
+######################################################################################
+project.examl.ATHENA1610.TreeDater.run.161110<- function()
+{
+	require(big.phylo)
+	require(treedater)
+	#	on MAC
+	if(0)
+	{
+		infile.dates	<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest/ATHENA_1610_Sequences_LANL_Dates.csv"	
+		indir.tree		<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest"
+		outdir			<- indir.tree
+	}
+	#	on HPC
+	if(1)
+	{
+		infile.dates	<- "/work/or105/ATHENA_2016/data/lsd/ATHENA_1610_Sequences_LANL_Dates.csv"
+		indir.tree		<- "/work/or105/ATHENA_2016/data/examl"
+		outdir			<- "/work/or105/ATHENA_2016/data/treedater"		
+	}
+	
+	infile.tree			<- data.table(FI=list.files(indir.tree, pattern='^ExaML_result.*finaltree\\.[0-9]+$', full.names=TRUE))	
+	infile.tree[, FO:= file.path(outdir,basename(paste(gsub('\\.finaltree','_RootD.finaltree',FI), '.td.newick', sep='')))]
+	infile.tree			<- subset(infile.tree, !grepl('RootD',FI) & grepl('_wOutgroup_p',FI))
+	
+	infile.tree[, {
+				#FI		<- '/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000'
+				cmd		<- cmd.treedater(FI, infile.dates, FO, root='OUTGROUP', ali.len=1289, omega0=1.7e-3)
+				#cat(cmd)
+				#stop()
+				x		<- cmd.hpcwrapper(cmd, hpc.walltime=300, hpc.q='pqeelab', hpc.mem="5600mb", hpc.nproc=1)
+				signat	<- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+				outfile	<- paste("td",signat,sep='.')
+				cat(x)
+				cmd.hpccaller(outdir, outfile, x)
+				Sys.sleep(1)
+				stop()
+				NULL
+			}, by='FI']
 }
 ######################################################################################
 project.examl.ATHENA1610.LSD.run.161110<- function()
@@ -568,7 +650,8 @@ project.examl.ATHENA1610.161102<- function()
 {
 	require(big.phylo)
 	#project.examl.ATHENA1610.examl.run.161102()
-	project.examl.ATHENA1610.LSD.run.161110()	
+	#project.examl.ATHENA1610.LSD.run.161110()
+	project.examl.ATHENA1610.TreeDater.run.161110()
 }
 ######################################################################################
 project.examl.ATHENA1610.examl.inspect.trees.161102<- function()
