@@ -1,4 +1,236 @@
 ######################################################################################
+age.props_univariate.dev<- function()
+{	
+	require(reshape2)
+	require(data.table)	
+	require(survival)
+	require(ape)
+	
+	fargs						<- list()
+	fargs[['indircov']]			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin'
+	fargs[['file.combined']]	<- 'ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	fargs[['file.RNA']]			<- 'ATHENA_1610_All_RNA.rda'
+	fargs[['file.CD4']]			<- 'ATHENA_1610_All_CD4.rda'
+	fargs[['file.ART']]			<- 'ATHENA_1610_All_ART_checked_DropVLBeforeART.rda'
+	fargs[['file.tree']]		<- NA
+	fargs[['outfile.base']]		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/ATHENA_Age'	
+	
+	aargs									<- list()
+	aargs[['t.period']]						<- 1/8
+	aargs[['t.recent.start']]				<- 2004.0
+	aargs[['t.recent.end']] 				<- 2014.0
+	aargs[['t.end']] 						<- 2016.0
+	aargs[['method.minQLowerU']]			<- 0.148
+	aargs[['method.nodectime']]				<- 'any'
+	aargs[['method']]						<- '3p'
+	aargs[['method.brl.bwhost']]			<- 2
+	aargs[['method.lRNA.supp']]				<- 100
+	aargs[['method.thresh.pcoal']]			<- .3	
+	aargs[['method.risk']]					<- 'm5D.tp4'
+	aargs[['method.minLowerUWithNegT']]		<- 1
+	aargs[['method.cut.brl']]				<- Inf
+	aargs[['method.thresh.bs']]				<- 0.7
+	aargs[['adjust.PopSelect']] 			<- "Sex=='M'"
+	aargs[['adjust.RecentSelect']] 			<- "Sex=='M' & Trm%in%c('MSM','BI')"
+	aargs[['adjust.AcuteByNegT']]			<- 1
+	aargs[['adjust.NegTByDetectability']]	<- 1/12
+	aargs[['adjust.minSCwindow']]			<- 0.25
+	aargs[['adjust.AcuteSelect']]			<- c('Yes')	
+	
+	#
+	#	load clinical and epi data
+	#	select individuals that can be transmitters
+	#	adjust data before selecting recipients
+	#	select individuals that can be recipients
+	#
+	tmp				<- ATHENA.load.and.adjust.data(fargs, aargs)
+	df.all			<- tmp$df.all
+	df.viro.all		<- tmp$df.viro
+	df.immu.all		<- tmp$df.immu
+	df.treatment.all<- tmp$df.treatment
+	df.recent		<- tmp$df.recent
+	#
+	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
+	#
+	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 't2inf',method.PDT,method,sep='')
+	tmp				<- project.athena.Fisheretal.t2inf(	df.all.allmsm,
+			method.Acute=method.Acute, method.minQLowerU=method.minQLowerU,
+			adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, 
+			plot.file=plot.file)
+	predict.t2inf	<- tmp$predict.t2inf
+	t2inf.args		<- tmp$t2inf.args	
+	
+	
+	df.all.allmsm		<- tmp$df.all
+	tmp					<- tmp$df.select.SEQ	
+	setkey(tmp, Patient)
+	ri.ALLMSM			<- unique(tmp)
+	
+	#
+	
+	tmp				<- project.athena.Fisheretal.select.denominator(	
+			adjust.AcuteByNegT=adjust.AcuteByNegT, 
+			adjust.NegT4Acute=NA, 
+			adjust.NegTByDetectability=1/12, 
+			adjust.minSCwindow=0.25, 
+			adjust.AcuteSelect=c('Yes','Maybe'), 
+			use.AcuteSpec=method.use.AcuteSpec, 
+			thresh.bs=method.thresh.bs, 
+			t.recent.endctime=t.recent.endctime, 
+			t.recent.startctime=t.recent.startctime)	
+	
+	
+	adjust.AcuteByNegT		<- 1
+	any.pos.grace.yr		<- Inf	
+	method.lRNA.supp		<- log10(method.lRNA.supp)	
+	
+	
+	#stop()
+	indir					<- paste(DATA,"fisheretal_data",sep='/')		
+	infile.trm.model		<- NA
+	t.period				<- 1/8
+	t.recent.startctime		<- hivc.db.Date2numeric(as.Date("1996-07-15"))
+	t.recent.startctime		<- floor(t.recent.startctime) + floor( (t.recent.startctime%%1)*100 %/% (t.period*100) ) * t.period
+	t.endctime				<- hivc.db.Date2numeric(as.Date("2013-03-01"))	
+	t.endctime				<- floor(t.endctime) + floor( (t.endctime%%1)*100 %/% (t.period*100) ) * t.period
+	resume					<- 1
+	verbose					<- 1
+	
+	clu.infile			<- infile
+	clu.indir			<- indir
+	clu.insignat		<- insignat	
+	t.recent.endctime	<- hivc.db.Date2numeric(as.Date(method.recentctime))	
+	t.recent.endctime	<- floor(t.recent.endctime) + floor( (t.recent.endctime%%1)*100 %/% (t.period*100) ) * t.period	
+	outfile				<- paste( outfile, ifelse(t.recent.endctime==t.endctime,'',paste('_',t.recent.endctime,sep='')), sep='')	
+	#if(method.thresh.bs!=0.8)
+	#{		
+	clu.infilexml.opt	<- paste(clu.infilexml.opt,'_bs',method.thresh.bs,'_brl1000',sep='')
+	cat(paste('\nusing file', clu.infilexml.opt))
+	#}	
+	if(verbose)
+	{
+		print(indir)
+		print(infile)
+		print(insignat)
+		print(indircov)
+		print(infile.cov.study)
+		print(infiletree)
+		print(clu.infilexml.opt)
+		print(clu.infilexml.template)
+		print(outdir)
+		print(outfile)
+		print(method)
+		print(method.risk)
+		print(method.nodectime)
+		print(method.PDT)
+		print(method.Acute)
+		print(method.minQLowerU)
+		print(method.use.AcuteSpec)
+		print(method.lRNA.supp)
+		print(method.thresh.pcoal)
+		print(method.minLowerUWithNegT)
+		print(method.cut.brl)
+		print(method.realloc)
+	}	
+	if(method=='3l')
+	{
+		infile.trm.model	<- paste(indircov,"TchainBelgium_set7_pol_GAmodel_INFO.R",sep='/')
+		cat(paste('\nusing file', infile.trm.model))
+	}		
+	if(method=='3m')
+	{
+		infile.trm.model	<- paste(indircov,"TchainBelgium_set7_pol_GAmodel_nA_INFO.R",sep='/')
+		cat(paste('\nusing file', infile.trm.model))
+	}
+	if(method=='3n')
+	{
+		infile.trm.model	<- paste(indircov,"TchainBelgium_set7_pol_GAmodel_nA_NO_INFO.R",sep='/')
+		cat(paste('\nusing file', infile.trm.model))
+	}
+	if(method=='3o')
+	{
+		infile.trm.model	<- paste(indircov,"TchainBelgium_set7_pol_GA11model_nA_INFO.R",sep='/')
+		cat(paste('\nusing file', infile.trm.model))
+	}
+	if(method=='3p')
+	{
+		infile.trm.model	<- paste(indircov,"TchainBelgium_set7_pol_GA11emodel_nA_INFO.R",sep='/')
+		cat(paste('\nusing file', infile.trm.model))
+	}	
+	if(method.nodectime=='any')
+		method				<- paste(method,'a',sep='')
+	if(method.nodectime=='map')
+		method				<- paste(method,'m',sep='')	
+	if(method.use.AcuteSpec==0)
+		method				<- paste(method, 2, sep='')		#replaces variable method.brl.bwhost since this is now fixed
+	if(method.use.AcuteSpec==1)
+		method				<- paste(method, method.use.AcuteSpec, sep='')
+	if(method.Acute=='empirical')
+	{
+		dur.Acute			<- c(Yes= 365/2, Maybe=320)	
+	}	
+	if(method.Acute=='central')
+	{
+		dur.Acute			<- c(Yes= 2.9*30, Maybe=2.9*30)
+		method				<- paste(method,'C',sep='')
+	}
+	if(method.Acute=='lower')
+	{
+		dur.Acute			<- c(Yes= 1.23*30, Maybe=1.23*30)
+		method				<- paste(method,'L',sep='')
+	}
+	if(method.Acute=='higher')
+	{
+		dur.Acute			<- c(Yes= 5.28*30, Maybe=5.28*30)
+		method				<- paste(method,'H',sep='')
+	}		
+	if(method.minQLowerU!=0.01)
+		method				<- paste(method, method.minQLowerU*10,sep='')	
+	if(method.minQLowerU==0)
+		method				<- paste(method,'m',sep='')
+	if(method.thresh.pcoal!=0.5)
+		method				<- paste(method,'C',method.thresh.pcoal*10,sep='')	
+	if(method.lRNA.supp<1e3)
+		method				<- paste(method,'V',method.lRNA.supp,sep='')
+	if(!method.minLowerUWithNegT)
+		method				<- paste(method,'N',method.minLowerUWithNegT,sep='')
+	if(method.cut.brl!=0.08)
+		method				<- paste(method,'b',method.cut.brl,sep='')	
+	if(method.thresh.bs!=0.8)
+		method				<- paste(method,'s',method.thresh.bs,sep='')
+	if(method.tpcut==4)
+		tp.cut				<- NULL
+	if(method.tpcut==7)
+	{
+		tp.cut				<- c(-Inf, 2006.5, 2008, 2009.5, 2010, 2010.5, 2011)
+		method				<- paste(method,'T',method.tpcut,sep='')
+	}			
+	
+	
+	#	check if we are done	
+	if(0 && resume)
+	{		
+		files		<- list.files(outdir)			
+		if(length(files))
+			files	<- files[ sapply(files, function(x) grepl(outfile, x, fixed=1) & grepl(gsub('/',':',insignat), x, fixed=1) & grepl(paste('Yscore',method,sep=''), x, fixed=1) & grepl(paste('denom',method.PDT,sep=''), x) & !grepl('tables', x, fixed=1) & grepl(paste(method.risk,'.R',sep=''),x, fixed=1)  ) ]		
+		stopifnot(length(files)==0)		
+	}		
+	#	check if we have precomputed tables
+	#X.tables				<- age.get.Xtables(method, method.PDT, method.risk, outdir, outfile, insignat)
+	X.tables				<- age.get.sampling.censoring.models(method, method.PDT, method.risk, outdir, outfile, insignat, load.bs.id=1)
+	#	if no tables, precompute tables and stop (because mem intensive)
+	#	otherwise return stratified YX data.table and continue
+	tmp	<- age.precompute(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,
+			clu.indir, clu.insignat, clu.infile,
+			infile, infiletree, insignat, clu.infilexml.opt, clu.infilexml.template,
+			method, method.recentctime, method.nodectime, method.risk, method.Acute, method.minQLowerU, method.use.AcuteSpec, method.brl.bwhost, method.lRNA.supp, method.thresh.pcoal, method.minLowerUWithNegT, method.tpcut, method.PDT, method.cut.brl, tp.cut, adjust.AcuteByNegT, any.pos.grace.yr, dur.Acute, method.thresh.bs, 
+			outdir, outfile,
+			t.period, t.recent.startctime, t.endctime, t.recent.endctime,
+			is.null(X.tables$st) | is.null(X.tables$sm) | is.null(X.tables$cm), resume, verbose
+	)
+}
+
+######################################################################################
 age.props_univariate<- function()
 {	
 	require(reshape2)
@@ -6616,6 +6848,74 @@ sampling.get.all.tables<- function(YX=NULL, X.seq=NULL, X.msm=NULL, X.clu=NULL, 
 		}
 	}
 	ans
+}
+######################################################################################
+ATHENA.load.and.adjust.data<- function(fargs, aargs)
+{
+	infile.combined				<- file.path(fargs[['indircov']], fargs[['file.combined']])
+	infile.viro					<- file.path(fargs[['indircov']], fargs[['file.RNA']])
+	infile.immu					<- file.path(fargs[['indircov']], fargs[['file.CD4']])
+	infile.treatment			<- file.path(fargs[['indircov']], fargs[['file.ART']])		
+	adjust.AcuteByNegT			<- aargs[['adjust.AcuteByNegT']]
+	adjust.NegTByDetectability	<- aargs[['adjust.NegTByDetectability']]
+	adjust.minSCwindow			<- aargs[['adjust.minSCwindow']]
+	adjust.AcuteSelect			<- aargs[['adjust.AcuteSelect']]
+	adjust.PopSelect			<- aargs[['adjust.PopSelect']] 
+	adjust.RecentSelect			<- aargs[['adjust.RecentSelect']] 
+	t.recent.startctime			<- aargs[['t.recent.start']] 
+	t.recent.endctime			<- aargs[['t.recent.end']] 	
+	#
+	# 	load combined data, RNA, CD4, ART 
+	#	
+	load(infile.viro)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
+	df.viro				<- df	
+	load(infile.immu)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
+	df.immu				<- df	
+	load(infile.treatment)
+	set(df, NULL, 'Patient', df[, as.character(Patient)])
+	df.treatment		<- df	
+	load(infile.combined)
+	#	select population group to work with as probable transmitters
+	df.all				<- eval(parse(text=paste("subset(df.all, ",adjust.PopSelect,")",sep='') ))
+	#
+	#	several adjustments
+	#
+	#	set Acute=='Yes' by NegT 
+	if(!is.na(adjust.AcuteByNegT))
+	{
+		tmp		<- which( df.all[, (is.na(isAcute) | isAcute=='No') & !is.na(NegT) & AnyPos_T1<=NegT+adjust.AcuteByNegT])
+		cat(paste('\ndf.all: set Acute==Maybe when NegT is close to AnyPos_T1, n=',length(tmp)))
+		set(df.all, tmp, 'isAcute', 'Yes')
+	}	
+	#	date all NegT back by adjust.NegTByDetectability to allow for infection that the test does not pick up 
+	if(!is.na(adjust.NegTByDetectability))
+	{
+		tmp		<- df.all[, which(!is.na(NegT))]
+		cat(paste('\ndate back NegT values to allow for undetected infection for n=',length(tmp)))
+		set(df.all, tmp, 'NegT', df.all[tmp, NegT-adjust.NegTByDetectability])
+	}
+	#	make sure the SC interval is at least adjust.NegTByDetectability years
+	if(!is.na(adjust.minSCwindow))
+	{
+		tmp		<- df.all[, which(!is.na(NegT) & AnyPos_T1-NegT<adjust.minSCwindow)]
+		cat(paste('\nensure seroconversion interval is at least adjust.NegTByDetectability years, dating back NegT values for n=',length(tmp)))
+		set(df.all, tmp, 'NegT', df.all[tmp, AnyPos_T1-adjust.minSCwindow])
+	}
+	#
+	#	select recent
+	#
+	df.recent		<- eval(parse(text=paste("subset(df.all, ",adjust.RecentSelect,")",sep='') ))		
+	df.recent		<- subset(df.recent, t.recent.startctime<=AnyPos_T1 & AnyPos_T1<t.recent.endctime)
+	cat(paste('\nmsm after startctime',t.recent.startctime,'before endctime',t.recent.endctime,': #seq=',nrow(df.recent),'#patient=',length(df.recent[,unique(Patient)])))
+	setkey(df.recent, isAcute)
+	df.recent		<- subset(df.recent, isAcute%in%adjust.AcuteSelect)	
+	set(df.recent, NULL, 'Trm', df.recent[,factor(as.character(Trm))])
+	cat(paste('\nmsm isAcute: #seq=',nrow(df.recent),'#patient=',length(df.recent[,unique(Patient)])))
+	
+	ans	<- list(df.all=df.all, df.viro=df.viro, df.immu=df.immu, df.treatment=df.treatment, df.recent=df.recent )	
+	ans	
 }
 ######################################################################################
 age.precompute<- function(	indir, indircov, infile.cov.study, infile.viro.study, infile.immu.study, infile.treatment.study, infile.cov.all, infile.viro.all, infile.immu.all, infile.treatment.all, infile.trm.model,

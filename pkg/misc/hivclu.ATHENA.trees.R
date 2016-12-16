@@ -99,6 +99,28 @@ project.examl.ATHENA1610.LSD.prepare.dates.161110<- function()
 	write.csv(lsdi, file=outfile.dates, row.names=FALSE)
 }
 
+
+######################################################################################
+project.examl.ATHENA1610.TreeDater.process.after.first.run<- function()
+{
+	infile.tree	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p_RootD.finaltree.000.td.newick.rda'
+	load(infile.tree)
+	#
+	#	plot tree
+	#
+	ph			<- ladderize(ans$tre)		
+	phd			<- data.table(TAXA= ph$tip.label)
+	phd[, NL:= !grepl('LANL|OUTGROUP',TAXA)]
+	phd[, TIP.CLR:= 'black']
+	set(phd, phd[, which(NL)], 'TIP.CLR','red')
+	
+	pdf(file=paste(infile.tree,'.pdf',sep=''), width=40, height=800)
+	plot(ph, tip.color= phd[, TIP.CLR], cex=0.5, adj=.05)
+	axisPhylo(1)
+	dev.off()	
+	
+}
+
 ######################################################################################
 project.examl.ATHENA1610.LSD.check.dates<- function()
 {

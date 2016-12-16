@@ -18,7 +18,7 @@ project.hivc.Excel2dataframe.AllPatientCovariates.checkPosSeqT<- function()
 	tmp2		<- subset(tmp, lRNA.mx<2)
 	tmp2		<- merge(tmp2, df.viro,by='Patient')
 }
-project.hivc.Excel2dataframe.Patients.161027<- function()
+Patients.161027<- function()
 {
 	#	CONSTANTS
 	NA.Acute			<- c(NA,9)
@@ -28,13 +28,15 @@ project.hivc.Excel2dataframe.Patients.161027<- function()
 	NA.Subtype			<- c(NA,"")
 	NA.time				<- c("","1911-01-01","1911-11-11")		
 	date.format			<- "%Y-%m-%d"
-	#	INPUT
-	dir.name			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original'
-	file				<- file.path(dir.name, "SHM_1602_161013_OR_ALL_Patient.xlsx")
-	outfile				<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Patient.rda'
+	#	INPUT	
+	file				<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/SHM_1602_161102_OR_ALL_Patient.xlsx"
+	file.ggd			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_Region_GGD.rda'
+	outfile				<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_Patient.rda'
 	#
-	#	read PATIENT csv data file	
+	#	read data files	
 	#
+	load(file.ggd)
+	dg			<- copy(df)
 	require(gdata)
 	df			<- read.xls(file, stringsAsFactors=FALSE)
 	#
@@ -63,8 +65,6 @@ project.hivc.Excel2dataframe.Patients.161027<- function()
 	set(df, NULL, "CountryInfection", factor(df[,CountryInfection]))
 	set(df, which( df[,RegionOrigin%in%NA.RegionOrigin] ), "RegionOrigin", NA_character_ )	
 	set(df, NULL, "RegionOrigin", factor(df[,RegionOrigin]))
-	set(df, NULL, 'Region_first', df[, factor(Region_first, levels=c('AMSTERDAM','ROTTERDAM','REST'), labels=c('Amst','Rott','Other'))])
-	set(df, NULL, 'Region_now', df[, factor(Region_now, levels=c('AMSTERDAM','ROTTERDAM','REST'), labels=c('Amst','Rott','Other'))])
 	set(df, NULL, 'GGD_first', 	df[, factor(GGD_first, 	levels=c(111, 		 			706, 				1009, 		 		1106,			1406, 				1906, 
 									2006, 		 			2106, 				2209, 				2406, 			2506, 				2707, 
 									3109, 					3406, 				3606, 				3906, 			4106, 				4506, 
@@ -85,6 +85,55 @@ project.hivc.Excel2dataframe.Patients.161027<- function()
 									'Kennemerland',		'Amsterdam',		'Gooi_Vechtstreek',	'Den_Haag',		'Zuid_Holland_West','Hollands_Midden',
 									'Rotterdam_Rijnmond',	'Zuid_Holland_Zuid','Zeeland',			'West_Brabant',	'Hart_voor_Brabant', 'Brabant_Zuidoost',
 									'Limburg-Noord',		'Zuid_Limburg',		'Fryslan',			'Zaanstreek_Waterland'))])	
+	#
+	#	try complete GGD_first etc
+	#
+	tmp		<- merge(subset(df, is.na(GGD_now), c(Patient)), dg, by='Patient')
+	tmp		<- subset(tmp, !is.na(GGD))
+	tmp		<- tmp[, list(GGD_now_NEW=GGD[which.max(GGD_Reg)]), by='Patient']
+	cat('\nRecovered missing GGD_now for n=', nrow(tmp))
+	df		<- merge(df, tmp, all.x=1, by='Patient')
+	tmp		<- merge(subset(df, is.na(GGD_first), c(Patient, DateInCare)), dg, by='Patient')
+	tmp		<- subset(tmp, !is.na(GGD))	
+	tmp		<- tmp[, 	{
+							z<- which.min(GGD_Reg)
+							list(GGD_first_NEW=GGD[z], GGD_first_Date=GGD_Reg[z])
+						}, by='Patient']
+	cat('\nRecovered missing GGD_first for n=', nrow(tmp))
+	df		<- merge(df, tmp, all.x=1, by='Patient')
+	tmp		<- df[, which(!is.na(GGD_now_NEW))]
+	set(df, tmp, 'GGD_now', df[tmp,GGD_now_NEW])
+	tmp		<- df[, which(!is.na(GGD_first_NEW))]
+	set(df, tmp, 'GGD_first', df[tmp,GGD_first_NEW])
+	set(df, NULL, c('GGD_now_NEW','GGD_first_NEW'), NULL)
+	#
+	#	keep biggest cities separate for now
+	#
+	stopifnot( !nrow(subset(df, Region_first!='' & is.na(GGD_first))) )
+	stopifnot( !nrow(subset(df, Region_now!='' & is.na(GGD_now))) )
+	set(df, NULL, c('Region_first','Region_now'), NA_character_)
+	set(df, df[,which(GGD_first=='Den_Haag')], 'Region_first', 'Den_Haag')
+	set(df, df[,which(GGD_now=='Den_Haag')], 'Region_now', 'Den_Haag')	
+	set(df, df[,which(GGD_first=='Amsterdam')], 'Region_first', 'Amsterdam')
+	set(df, df[,which(GGD_now=='Amsterdam')], 'Region_now', 'Amsterdam')		
+	set(df, df[,which(GGD_first=='Rotterdam_Rijnmond')], 'Region_first', 'Rotterdam_Rijnmond')
+	set(df, df[,which(GGD_now=='Rotterdam_Rijnmond')], 'Region_now', 'Rotterdam_Rijnmond')
+	set(df, df[,which(GGD_first=='Utrecht')], 'Region_first', 'Utrecht')
+	set(df, df[,which(GGD_now=='Utrecht')], 'Region_now', 'Utrecht')		
+	#	update rest of Region_first etc
+	set(df, df[, which(GGD_now%in%c('Groningen','Drenthe','Fryslan'))], 'Region_now', 'North')
+	set(df, df[, which(GGD_first%in%c('Groningen','Drenthe','Fryslan'))], 'Region_first', 'North')
+	set(df, df[, which(GGD_now%in%c('IJsselland','Twente','Gelre_IJssel','Hulpverlening_Gelderland_Midden','Flevoland',"Rivierenland","Nijmegen","Midden_Nederland"))], 'Region_now', 'East')
+	set(df, df[, which(GGD_first%in%c('IJsselland','Twente','Gelre_IJssel','Hulpverlening_Gelderland_Midden','Flevoland',"Rivierenland","Nijmegen","Midden_Nederland"))], 'Region_first', 'East')
+	set(df, df[, which(GGD_now%in%c('Gooi_Vechtstreek','Zuid_Holland_Zuid','Zeeland','Hollands_Midden','Kennemerland','Zaanstreek_Waterland','Hollands_Noorden',"Zuid_Holland_West"))], 'Region_now', 'West')
+	set(df, df[, which(GGD_first%in%c('Gooi_Vechtstreek','Zuid_Holland_Zuid','Zeeland','Hollands_Midden','Kennemerland','Zaanstreek_Waterland','Hollands_Noorden',"Zuid_Holland_West"))], 'Region_first', 'West')
+	set(df, df[, which(GGD_now%in%c('West_Brabant','Hart_voor_Brabant','Brabant_Zuidoost','Limburg-Noord','Zuid_Limburg'))], 'Region_now', 'South')
+	set(df, df[, which(GGD_first%in%c('West_Brabant','Hart_voor_Brabant','Brabant_Zuidoost','Limburg-Noord','Zuid_Limburg'))], 'Region_first', 'South')	
+	set(df, df[, which(is.na(GGD_first))], 'Region_first', 'Unknown')
+	set(df, df[, which(is.na(GGD_now))], 'Region_now', 'Unknown')
+	#
+	#	
+	#
 	set(df, df[, which(Trm==900)], 'Trm', NA_integer_)
 	set(df, NULL, "Trm", factor(df[, Trm], 	levels= c(	100, 	110, 	150, 	200,  202, 		300,  	400,  		450,  		600,  	620, 		800),
 					labels= c(	'MSM',	'BI',	'SXCH',	'HET','HETfa',	'IDU',	'BLOOD',	'NEEACC',	'PREG',	'BREAST',	'OTH')))
@@ -96,7 +145,7 @@ project.hivc.Excel2dataframe.Patients.161027<- function()
 	set(df, NULL, 'GGD_LastCh', df[, factor(as.character(GGD_LastCh))])
 	set(df, NULL, 'isDead', df[, factor(is.na(DateDied), levels=c(TRUE,FALSE), labels=c("No","Yes"))] )
 	set(df, NULL, "NegT_Acc", factor(df[,NegT_Acc], levels=c(0,1), labels=c("No","Yes")))
-	set(df, NULL, "PosT_Acc", factor(df[,PosT_Acc], levels=c(0,1), labels=c("No","Yes")))	
+	set(df, NULL, "PosT_Acc", factor(df[,PosT_Acc], levels=c(0,1), labels=c("No","Yes")))
 	#
 	#	process Acute fields
 	#
@@ -169,7 +218,7 @@ project.hivc.Excel2dataframe.Patients.161027<- function()
 	save(df, file=outfile)	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Patients.130301<- function(dir.name= DATA, min.seq.len=21, verbose=1)
+Patients.130301<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 {
 	if(1)
 	{
@@ -379,7 +428,7 @@ project.hivc.Excel2dataframe.Patients.130301<- function(dir.name= DATA, min.seq.
 	save(df, file=paste(substr(file.update, 1, nchar(file.update)-3),'R',sep=''))	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Sequences.160227<- function(dir.name= DATA)
+Sequences.160227<- function(dir.name= DATA)
 {
 	dir.name		<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.csv",sep='/')
@@ -423,7 +472,7 @@ project.hivc.Excel2dataframe.Sequences.160227<- function(dir.name= DATA)
 	quit("no")	
 }
 ######################################################################################
-project.Sequences.addCOMET.161027<- function(dir.name= DATA)
+Sequences.addCOMET.161027<- function(dir.name= DATA)
 {
 	#	run
 	#	./comet_osx -bs 1000 < /Users/Oliver/Downloads/ATHENA_1610_All_Sequences.fasta > /Users/Oliver/Downloads/ATHENA_1610_All_Sequences_COMETv2.1.csv
@@ -469,7 +518,7 @@ project.Sequences.addCOMET.161027<- function(dir.name= DATA)
 }
 
 ######################################################################################
-project.Sequences.addOutgroupToSubtypeB.161121<- function(dir.name= DATA)
+Sequences.addOutgroupToSubtypeB.161121<- function(dir.name= DATA)
 {
 	require(big.phylo)
 	if(0)	#done once with some manual editing 
@@ -504,7 +553,7 @@ project.Sequences.addOutgroupToSubtypeB.161121<- function(dir.name= DATA)
 }
 
 ######################################################################################
-project.Sequences.align.161027<- function(dir.name= DATA)
+Sequences.align.161027<- function(dir.name= DATA)
 {
 	file.previous.align	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013.R'
 	file				<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_withCOMET_withLANL.rda'
@@ -755,7 +804,7 @@ project.Sequences.align.161027<- function(dir.name= DATA)
 	write.dna(s, file=outfile, format='fa', colsep='', nbcol=-1)	
 }
 ######################################################################################
-project.Sequences.select.by.subtype.161027<- function(dir.name= DATA)
+Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 {	
 	file.seq.noDRM		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM.fasta'
 	file.info 			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_withCOMET_withLANL.rda'
@@ -877,7 +926,7 @@ project.Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 	}
 }
 ######################################################################################
-project.Sequences.removeDRMs.161027<- function(dir.name= DATA)
+Sequences.removeDRMs.161027<- function(dir.name= DATA)
 {
 	require(big.phylo)
 	file				<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e11.fasta'
@@ -892,7 +941,7 @@ project.Sequences.removeDRMs.161027<- function(dir.name= DATA)
 	save(seq, nodr.info, file= gsub('fasta','rda',outfile))
 }
 ######################################################################################
-project.Sequences.addcloseLANL.161027<- function(dir.name= DATA)
+Sequences.addcloseLANL.161027<- function(dir.name= DATA)
 {
 	#
 	#	the blast db does not accept gaps '-' 
@@ -958,7 +1007,7 @@ project.Sequences.addcloseLANL.161027<- function(dir.name= DATA)
 	write.dna(seq.other.lanl, file=outfile.O, format='fasta', colsep='', nbcol=-1)
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Sequences.161027<- function(dir.name= DATA)
+Sequences.161027<- function(dir.name= DATA)
 {
 	#	read SEQUENCE csv data file and preprocess
 	dir.name		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update'
@@ -1027,7 +1076,7 @@ project.hivc.Excel2dataframe.Sequences.161027<- function(dir.name= DATA)
 	quit("no")	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CD4.130301<- function(dir.name= DATA, verbose=1)
+CD4.130301<- function(dir.name= DATA, verbose=1)
 {
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu.csv",sep='/')
 	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.csv",sep='/')
@@ -1178,7 +1227,7 @@ project.hivc.Excel2dataframe.CD4.130301<- function(dir.name= DATA, verbose=1)
 	save(df, file=file)		
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Viro.checkVersions<- function()		
+Viro.checkVersions<- function()		
 {
 	file				<- paste(dir.name,"derived/ATHENA_2013_03_Viro_AllMSM.R",sep='/')
 	load(file)
@@ -1192,7 +1241,7 @@ project.hivc.Excel2dataframe.Viro.checkVersions<- function()
 	subset( tmp, abs(log(RNA.x/RNA.y))>log(2) )	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CD4.checkVersions<- function()		
+CD4.checkVersions<- function()		
 {
 	file				<- paste(dir.name,"derived/ATHENA_2013_03_Immu_AllMSM.R",sep='/')
 	load(file)
@@ -1204,7 +1253,7 @@ project.hivc.Excel2dataframe.CD4.checkVersions<- function()
 }
 ######################################################################################
 #	QC corrections from Ard
-project.hivc.Excel2dataframe.Viro.process.QC.Corrections<- function(df)
+Viro.process.QC.Corrections<- function(df)
 {
 	tmp		<- which( df[, Patient=="M32210" & as.character(PosRNA)=="2010-05-10"] )
 	set(df,tmp,"PosRNA", 50.)
@@ -1433,7 +1482,7 @@ project.hivc.check.DateRes.after.T0<- function(dir.name= DATA, verbose=1)
 			})
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Viro.130301<- function()		
+Viro.130301<- function()		
 {
 	if(0)
 	{
@@ -1838,7 +1887,7 @@ project.hivc.Excel2dataframe.Viro.130301<- function()
 	save(df, file=file)	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Viro.160227<- function()		
+Viro.160227<- function()		
 {
 	#	CONSTANTS
 	RNA.min					<- 50	#400	#seems to be standard value
@@ -2182,7 +2231,7 @@ project.hivc.Excel2dataframe.Viro.160227<- function()
 	save(df, file=file)	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Viro.161027<- function()		
+Viro.161027<- function()		
 {
 	#	CONSTANTS
 	RNA.min					<- 50	#400	#seems to be standard value
@@ -2196,9 +2245,9 @@ project.hivc.Excel2dataframe.Viro.161027<- function()
 	DB.locktime				<- as.Date("2016-06-01")
 	
 	#	INPUT FILE NAMES
-	file.treatment	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_ART.rda'
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original/SHM_1602_161013_OR_ALL_RNA.csv'		
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_RNA.rda'
+	file.treatment	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART.rda'
+	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/SHM_1602_161102_OR_ALL_RNA.csv'		
+	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_RNA.rda'
 	
 	#	load ART data
 	load(file.treatment)
@@ -2526,7 +2575,7 @@ project.hivc.Excel2dataframe.Viro.161027<- function()
 	save(df, file=outfile)	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Patients.160227<- function()
+Patients.160227<- function()
 {
 	#	CONSTANTS
 	NA.Acute			<- c(NA,9)
@@ -2672,7 +2721,7 @@ project.hivc.Excel2dataframe.Patients.160227<- function()
 	save(df, file=outfile)	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CD4.160227<- function()
+CD4.160227<- function()
 {
 	#	TODO check with Ard that max source should be kept?
 	verbose			<- 1
@@ -2881,7 +2930,7 @@ project.hivc.Excel2dataframe.CD4.160227<- function()
 	save(df, file=file)		
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CD4.161027<- function()
+CD4.161027<- function()
 {
 	#	TODO check with Ard that max source should be kept?
 	verbose			<- 1
@@ -3089,7 +3138,7 @@ project.hivc.Excel2dataframe.CD4.161027<- function()
 	save(df, file=outfile)		
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CombinedTable.130301<- function(dir.name= DATA, verbose=1, resume=0)
+CombinedTable.130301<- function(dir.name= DATA, verbose=1, resume=0)
 {	
 	require(data.table)		
 	
@@ -3478,7 +3527,7 @@ project.hivc.Excel2dataframe.CombinedTable.130301<- function(dir.name= DATA, ver
 	}
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Regimen.160227<- function()
+Regimen.160227<- function()
 {
 	#	BASIC VARIABLE DEFINITIONS		
 	TR.failure 		<- c(21, 31 ) 								#viro failure
@@ -4185,7 +4234,7 @@ project.hivc.Excel2dataframe.Regimen.160227<- function()
 	save(df, file=file)
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Regimen.161027<- function()
+Regimen.161027<- function()
 {
 	require(gdata)
 	#	BASIC VARIABLE DEFINITIONS		
@@ -4202,7 +4251,7 @@ project.hivc.Excel2dataframe.Regimen.161027<- function()
 	#	INPUT FILE
 	#	
 	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Regimens.xlsx'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_ART.rda'
+	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART.rda'
 	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
 	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
 	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')	
@@ -4845,7 +4894,7 @@ project.hivc.Excel2dataframe.Regimen.161027<- function()
 	save(df, file=outfile)
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Regimen.CheckStartVL<- function(dir.name= DATA, verbose=1)
+Regimen.CheckStartVL<- function(dir.name= DATA, verbose=1)
 {
 	file		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
 	load(file)
@@ -4873,7 +4922,7 @@ project.hivc.Excel2dataframe.Regimen.CheckStartVL<- function(dir.name= DATA, ver
 	check		<- subset(check,  difftime(PosRNA, AnyT_T1, units='days')<= 0.25*365)
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Regimen.CheckOnVL<- function(dir.name= DATA, verbose=1)
+Regimen.CheckOnVL<- function(dir.name= DATA, verbose=1)
 {
 	file		<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.R",sep='/')
 	load(file)
@@ -4939,16 +4988,16 @@ project.hivc.Excel2dataframe.Regimen.CheckOnVL<- function(dir.name= DATA, verbos
 	table( subset( check, !is.na(TrI) & TrI=='Yes' )[, lRNAc], xlab= 'log10 VL for ART interruption' )
 }
 ######################################################################################
-project.hivc.Excel2dataframe.Regimen.CheckARTStartDate<- function()
+Regimen.CheckARTStartDate<- function()
 {
 	verbose		<- 1
-	file		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_ART.rda'
+	file		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART.rda'
 	load(file)
 	df.treatment<- df
-	file		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_RNA.rda'
+	file		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_RNA.rda'
 	load(file)
 	df.v		<- df
-	outfile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_ART_checked_DropVLBeforeART.rda'
+	outfile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART_checked_DropVLBeforeART.rda'
 	#
 	#	check if VL decreases just before treatment start
 	#
@@ -5099,7 +5148,7 @@ project.hivc.Excel2dataframe.Regimen.CheckARTStartDate<- function()
 	save(df, file=outfile)
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CD4.process.QC<- function( df )
+CD4.process.QC<- function( df )
 {
 	#
 	#	data corrections from Ard
@@ -5174,7 +5223,7 @@ project.hivc.Excel2dataframe.CD4.process.QC<- function( df )
 	subset(df, !is.na(CD4A))
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CD4.process.NA<- function( df, NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.var=c("DateImm") )
+CD4.process.NA<- function( df, NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.var=c("DateImm") )
 {
 	for(x in date.var)
 	{
@@ -5201,7 +5250,7 @@ project.hivc.Excel2dataframe.CD4.process.NA<- function( df, NA.time=c("","01/01/
 	df
 }
 ######################################################################################
-project.hivc.Excel2dataframe.GGD.160227<- function()
+GGD.160227<- function()
 {
 	#	INPUT FILE NAMES
 	dir.name	<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'	
@@ -5243,7 +5292,364 @@ project.hivc.Excel2dataframe.GGD.160227<- function()
 	save(df, file=file)
 }
 ######################################################################################
-project.hivc.Excel2dataframe.GGD.161027<- function()
+Population.161209<- function()
+{
+	indir	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest'
+	chdir	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/check'
+	inf.ggd	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/CBS_Gemeenden_GGD.csv'
+	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'
+	#
+	#	read GGD table
+	#	
+	fis		<- list.files(indir, pattern='CBS_Gemeenden_GGD_[0-9]+.csv', full.names=TRUE)
+	dg		<- lapply(fis, function(fi){
+						tmp		<- as.data.table(read.csv(fi, skip=6 ,header=FALSE, sep=';', quote='', col.names=c('COM','COM_ID','COM2','GGD_ID','GGD')))
+						tmp		<- tmp[-nrow(tmp),]						
+						tmp
+					})
+	dg		<- do.call('rbind', dg)	
+	tmp		<- as.data.table(read.csv(file.path(indir, 'CBS_Gemeenden_GGD.csv'), header=FALSE, sep=';', quote='', col.names=c('COM','COM_ID','COM2','GGD_ID','GGD')))
+	dg		<- rbind(dg,tmp)
+	for(x in colnames(dg))
+		set(dg, NULL, x, gsub(',','',gsub('"','',dg[[x]])))
+	set(dg, NULL, 'GGD_ID', dg[, gsub('GG','',GGD_ID)])
+	set(dg, NULL, 'COM_ID', dg[, gsub('GM','',COM_ID)])
+	set(dg, NULL, 'COM2', NULL)
+	set(dg, NULL, 'COM', dg[,gsub('[^[:alnum:]]','',COM)])
+	set(dg, NULL, 'GGD', dg[,gsub('GGenGD','',gsub('Hulpverlening','',gsub('Hulpverleningsdienst','',gsub('GGD','',gsub('[^[:alnum:]]','',GGD)))))])
+	#
+	#	GGD table fixup corrupted entries
+	#
+	# dg[, sort(unique(GGD_ID))]
+	tmp		<- dg[, which(grepl('^D|^ en',GGD_ID))]
+	set(dg, tmp, 'GGD', dg[tmp,GGD_ID])
+	set(dg, tmp, 'GGD_ID', NA_character_)
+	set(dg, NULL, 'GGD', dg[,gsub('DG','',gsub('enG','',gsub('[^[:alnum:]]','',gsub('Regio','',gsub('DGD','',gsub(' en GD ','',gsub('D ','',GGD)))))))])
+	#	fix spelling
+	set(dg, NULL, 'GGD', dg[,	gsub('NoordLimburg|NoordenMiddenLimburg','LimburgNoord',
+								gsub('GezondheidsdienstStadsgewestBreda','WestBrabant',
+								gsub('DienstGezondheidJeugdZHZ','ZuidHollandZuid',
+								gsub('Westfriesland','WestFriesland',
+								gsub('ZuidoostBrabant','BrabantZuidoost',
+								gsub('Delftland','ZuidHollandWest',
+								gsub('VeiligheidsezondheidsregioGelderlandMidden|VeilighezGelderlandMidden','GelderlandMidden',
+								gsub('MiddenNederland[0-9]','MiddenNederland',
+								gsub('IJsselVecht','IJsselland',
+								gsub('Delfland|Delftland',"ZuidHollandWest",
+								gsub('MiddenHolland','HollandsMidden',
+								gsub('KopvanNoordHolland','KopVanNoordHolland',
+								gsub('WestFriesland|Frysln|Friesland','Fryslan',
+								gsub('Achterhoek','GelreIJssel',
+								gsub('AmstellanddeMeerlanden|AmstellandDeMeerlanden','Amsterdam',
+								gsub('Rotterdameo','RotterdamRijnmond',GGD))))))))))))))))])
+	#	update GGD assignments to current GGD
+	dg.cur	<- c(106, 1, 11, 14, 44, 36, 56, 20,28,46,31,3107,59,50,26,19,111,706,1009,1106,1406,1906,2006,2106,2209,2406,2506,2707,3109,3406,3606,3906,4106,4506,4607,4810,5006,5206,5406,5608,6011,6106,7206,7306)
+	dg		<- dg[, {
+				z		<- sapply(as.numeric(GGD_ID), function(x) x%in%dg.cur)
+				ggd		<- GGD
+				ggd_id	<- GGD_ID
+				if(any(z))
+				{
+					ggd_id[!z]	<- ggd[!z]	<- NA_character_
+				}
+				list(COM=COM, GGD_ID=ggd_id, GGD=ggd, ANY_CURRENT_GGD=any(z))
+			}, by='COM_ID']
+	dg		<- unique(subset(dg, !is.na(GGD)))
+	#	check GGD manually by closest larger city / actual municipality
+	#	subset(dg, !ANY_CURRENT_GGD)[1:50,]
+	set(dg, dg[, which(COM%in%c('AmbtDelden'))], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='TerAar')], 'GGD', 'HollandsMidden')
+	set(dg, dg[, which(COM=='TerAar')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM%in%c('Limmen','Akersloot'))], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM%in%c('Limmen','Akersloot'))], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Zelhem')], 'GGD', 'GelderlandMidden')
+	set(dg, dg[, which(COM=='Zelhem')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Zwartsluis')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='Zwartsluis')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='BergenDal')], 'GGD', 'Nijmegen')
+	set(dg, dg[, which(COM=='BergenDal')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Wognum')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM=='Wognum')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='AmbtMontfort')], 'GGD', 'LimburgNoord')
+	set(dg, dg[, which(COM=='AmbtMontfort')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Wisch')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='Wisch')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Zwolle')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='Zwolle')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Wehl')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Wehl')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Avereest')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='Avereest')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Bathmen')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Bathmen')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Bergh')], 'GGD', 'GelderlandMidden')
+	set(dg, dg[, which(COM=='Bergh')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Borculo')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Borculo')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Eibergen')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Eibergen')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Neede')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Neede')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Ruurlo')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Ruurlo')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Born')], 'GGD', 'ZuidLimburg')
+	set(dg, dg[, which(COM=='Born')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Geleen')], 'GGD', 'ZuidLimburg')
+	set(dg, dg[, which(COM=='Geleen')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Brederwiede')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='Brederwiede')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Dinxperlo')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Dinxperlo')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Echt')], 'GGD', 'LimburgNoord')
+	set(dg, dg[, which(COM=='Echt')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Susteren')], 'GGD', 'LimburgNoord')
+	set(dg, dg[, which(COM=='Susteren')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Egmond')], 'GGD', 'LimburgNoord')
+	set(dg, dg[, which(COM=='Egmond')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Schoorl')], 'GGD', 'LimburgNoord')
+	set(dg, dg[, which(COM=='Schoorl')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Genemuiden')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='Genemuiden')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Gramsbergen')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='Gramsbergen')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='sGraveland')], 'GGD', 'GooienVechtstreek')
+	set(dg, dg[, which(COM=='sGraveland')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='sGravendeel')], 'GGD', 'ZuidHollandZuid')
+	set(dg, dg[, which(COM=='sGravendeel')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Harmelen')], 'GGD', 'MiddenNederland')
+	set(dg, dg[, which(COM=='Harmelen')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Hasselt')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='Hasselt')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Leidschendam')], 'GGD', 'ZuidHollandWest')
+	set(dg, dg[, which(COM=='Leidschendam')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Voorburg')], 'GGD', 'ZuidHollandWest')
+	set(dg, dg[, which(COM=='Voorburg')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Liemeer')], 'GGD', 'HollandsMidden')
+	set(dg, dg[, which(COM=='Liemeer')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Maartensdijk')], 'GGD', 'MiddenNederland')
+	set(dg, dg[, which(COM=='Maartensdijk')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Ravenstein')], 'GGD', 'HartvoorBrabant')
+	set(dg, dg[, which(COM=='Ravenstein')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Rijnsburg')], 'GGD', 'HollandsMidden')
+	set(dg, dg[, which(COM=='Rijnsburg')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Sassenheim')], 'GGD', 'HollandsMidden')
+	set(dg, dg[, which(COM=='Sassenheim')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Sittard')], 'GGD', 'ZuidLimburg')
+	set(dg, dg[, which(COM=='Sittard')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Steenderen')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Steenderen')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Valkenburg')], 'GGD', 'HollandsMidden')
+	set(dg, dg[, which(COM=='Valkenburg')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='VleutenDeMeern')], 'GGD', 'Utrecht')
+	set(dg, dg[, which(COM=='VleutenDeMeern')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Voorhout')], 'GGD', 'HollandsMidden')
+	set(dg, dg[, which(COM=='Voorhout')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Warmond')], 'GGD', 'HollandsMidden')
+	set(dg, dg[, which(COM=='Warmond')], 'ANY_CURRENT_GGD', TRUE)		
+	set(dg, dg[, which(COM=='Deventer')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='Deventer')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Heerde')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Heerde')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Andijk')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM=='Andijk')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Hoorn')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM=='Hoorn')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Medemblik')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM=='Medemblik')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Castricum')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM=='Castricum')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Castricum')], 'GGD_ID', NA_character_)
+	set(dg, dg[, which(COM=='Enkhuizen')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM=='Enkhuizen')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Opmeer')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM=='Opmeer')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Wervershoof')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM=='Wervershoof')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Drechterland')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM=='Drechterland')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='StedeBroec')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(COM=='StedeBroec')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='MookenMiddelaar')], 'GGD', 'LimburgNoord')
+	set(dg, dg[, which(COM=='MookenMiddelaar')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='OlstWijhe')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='OlstWijhe')], 'ANY_CURRENT_GGD', TRUE)
+	set(dg, dg[, which(COM=='Olst')], 'GGD', 'IJsselland')
+	set(dg, dg[, which(COM=='Olst')], 'ANY_CURRENT_GGD', TRUE)		
+	set(dg, dg[, which(COM=='Bergschenhoek')], 'GGD', 'ZuidHollandWest')
+	set(dg, dg[, which(COM=='Bergschenhoek')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='BerkelenRodenrijs')], 'GGD', 'ZuidHollandWest')
+	set(dg, dg[, which(COM=='BerkelenRodenrijs')], 'ANY_CURRENT_GGD', TRUE)		
+	set(dg, dg[, which(COM=='Apeldoorn')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Apeldoorn')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Brummen')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Brummen')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Gorssel')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Gorssel')], 'ANY_CURRENT_GGD', TRUE)		
+	set(dg, dg[, which(COM=='Epe')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Epe')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Vorden')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Vorden')], 'ANY_CURRENT_GGD', TRUE)		
+	set(dg, dg[, which(COM=='Warnsveld')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Warnsveld')], 'ANY_CURRENT_GGD', TRUE)			
+	set(dg, dg[, which(COM=='Lochem')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Lochem')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Voorst')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Voorst')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Zutphen')], 'GGD', 'GelreIJssel')
+	set(dg, dg[, which(COM=='Zutphen')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(COM=='Bleiswijk')], 'GGD', 'RotterdamRijnmond')
+	set(dg, dg[, which(COM=='Bleiswijk')], 'ANY_CURRENT_GGD', TRUE)	
+	set(dg, dg[, which(GGD_ID=='31')], 'GGD', 'Kennemerland')
+	set(dg, dg[, which(GGD_ID=='26')], 'GGD', 'MiddenNederland')
+	set(dg, dg[, which(GGD_ID=='28')], 'GGD', 'HollandsNoorden')
+	set(dg, dg[, which(GGD_ID=='19')], 'GGD', 'GelderlandMidden')
+	set(dg, dg[, which(GGD_ID=='36')], 'GGD', 'GooienVechtstreek')		
+	set(dg, dg[, which(GGD_ID=='29')], 'GGD', 'HollandsNoorden')	
+	set(dg, dg[, which(GGD=='Groningen')], 'GGD_ID', '0111')
+	set(dg, dg[, which(GGD=='Drenthe')], 'GGD_ID', '0706')
+	set(dg, dg[, which(GGD=='IJsselland')], 'GGD_ID', '1009')
+	set(dg, dg[, which(GGD=='Twente')], 'GGD_ID', '1106')
+	set(dg, dg[, which(GGD=='GelreIJssel')], 'GGD_ID', '1406')
+	set(dg, dg[, which(GGD=='GelderlandMidden')], 'GGD_ID', '1906')
+	set(dg, dg[, which(GGD=='Rivierenland')], 'GGD_ID', '2006')
+	set(dg, dg[, which(GGD=='Nijmegen')], 'GGD_ID', '2106')
+	set(dg, dg[, which(GGD=='Flevoland')], 'GGD_ID', '2209')
+	set(dg, dg[, which(GGD=='Utrecht')], 'GGD_ID', '2406')
+	set(dg, dg[, which(GGD=='MiddenNederland')], 'GGD_ID', '2506')
+	set(dg, dg[, which(GGD=='HollandsNoorden')], 'GGD_ID', '2707')
+	set(dg, dg[, which(GGD=='Kennemerland')], 'GGD_ID', '3107')
+	set(dg, dg[, which(GGD=='Amsterdam')], 'GGD_ID', '3406')
+	set(dg, dg[, which(GGD=='GooienVechtstreek')], 'GGD_ID', '3606')
+	set(dg, dg[, which(GGD=='DenHaag')], 'GGD_ID', '3906')
+	set(dg, dg[, which(GGD=='ZuidHollandWest')], 'GGD_ID', '4106')
+	set(dg, dg[, which(GGD=='HollandsMidden')], 'GGD_ID', '4506')
+	set(dg, dg[, which(GGD=='RotterdamRijnmond')], 'GGD_ID', '4607')
+	set(dg, dg[, which(GGD=='ZuidHollandZuid')], 'GGD_ID', '4810')
+	set(dg, dg[, which(GGD=='Zeeland')], 'GGD_ID', '5006')
+	set(dg, dg[, which(GGD=='WestBrabant')], 'GGD_ID', '5206')
+	set(dg, dg[, which(GGD=='HartvoorBrabant')], 'GGD_ID', '5406')
+	set(dg, dg[, which(GGD=='BrabantZuidoost')], 'GGD_ID', '5608')
+	set(dg, dg[, which(GGD=='LimburgNoord')], 'GGD_ID', '6011')
+	set(dg, dg[, which(GGD=='ZuidLimburg')], 'GGD_ID', '6106')
+	set(dg, dg[, which(GGD=='Fryslan')], 'GGD_ID', '7206')
+	set(dg, dg[, which(GGD=='ZaanstreekWaterland')], 'GGD_ID', '7306')
+	set(dg, NULL, 'ANY_CURRENT_GGD', NULL)
+	setkey(dg, COM_ID, COM, GGD_ID, GGD)
+	dg		<- unique(dg)
+	# 	find non-unique COM_ID
+	dg		<- merge(dg, dg[, list(COM_N=length(COM)), by='COM_ID'], by='COM_ID')
+	#	fixup
+	set(dg, dg[, which(COM_ID=='0014')], 'COM', 'Groningen')
+	set(dg, dg[, which(COM_ID=='0164')], 'COM', 'Hengelo')
+	set(dg, dg[, which(COM_ID=='0248')], 'COM', 'HengeloGld')
+	set(dg, dg[, which(COM_ID=='0344')], 'COM', 'Utrecht')
+	set(dg, dg[, which(COM_ID=='0393')], 'COM', 'HaarlemmerliedeenSpaarnwoude')
+	set(dg, dg[, which(COM_ID=='0417')], 'COM', 'Laren')
+	set(dg, dg[, which(COM_ID=='0518')], 'COM', 'sGravenhage')
+	set(dg, dg[, which(COM_ID=='0603')], 'COM', 'Rijswijk')
+	set(dg, dg[, which(COM_ID=='0687')], 'COM', 'Middelburg')
+	set(dg, dg[, which(COM_ID=='0820')], 'COM', 'NuenenGerwenenNederwetten')
+	set(dg, dg[, which(COM_ID=='0888')], 'COM', 'Beek')
+	set(dg, dg[, which(COM_ID=='0893')], 'COM', 'Bergen')
+	set(dg, dg[, which(COM_ID=='0971')], 'COM', 'Stein')
+	dg[, COM_N:=NULL]
+	dg		<- merge(dg, dg[, list(COM_N=length(unique(GGD))), by='COM_ID'], by='COM_ID')
+	stopifnot(nrow(subset(dg, COM_N>1))==0)
+	dg[, COM_N:=NULL]
+	setkey(dg, COM_ID, COM, GGD_ID, GGD)
+	dg		<- unique(dg)
+	#	
+	#	AGE COUNTS	
+	#
+	fis		<- list.files(indir, pattern='CBS_Bevolking_[0-9]+_[0-9]+.csv', full.names=TRUE)
+	df		<- lapply(fis, function(fi){
+				z	<- as.data.table(read.csv(fi, header=FALSE, sep=ifelse(grepl('2004',fi),',',';'), quote=ifelse(grepl('2004',fi),'"',''), col.names=c('COM','YEAR','AGE','M','F','COM_ID')))
+				for(x in colnames(z))
+					set(z, NULL, x, gsub('"','',z[[x]]))
+				z
+			})
+	df		<- do.call('rbind', df)	
+	set(df, NULL, 'YEAR', df[, as.integer(YEAR)])
+	set(df, NULL, 'M', df[, as.integer(M)])
+	set(df, NULL, 'F', df[, as.integer(F)])	
+	set(df, NULL, 'AGE', df[, gsub(' of ouder',' 100',gsub('Jonger dan ','0 ',gsub(' jaar','',gsub(' tot ',' ',AGE))))])
+	set(df, NULL, 'AGE_END', df[, as.integer(gsub('[0-9]+ ','',AGE))-1])
+	set(df, NULL, 'AGE_START', df[, as.integer(gsub('([0-9]+) [0-9]+','\\1',AGE))])
+	set(df, NULL, 'AGE', df[, paste(AGE_START,'-',AGE_END,sep='')])		
+	#	AGE COUNTS fixup corrupted entries
+	df		<- subset(df, !is.na(M) | !is.na(F))
+	set(df, NULL, 'COM', df[,gsub('[^[:alnum:]]','',COM)])	
+	tmp		<- unique(subset(df, COM_ID=='' | is.na(COM_ID), COM))
+	stopifnot(nrow(tmp)==0)
+	tmp		<- df[, which(nchar(COM_ID)==1)]
+	set(df, tmp, 'COM_ID', df[tmp, paste('000',COM_ID,sep='')])	
+	tmp		<- df[, which(nchar(COM_ID)==2)]
+	set(df, tmp, 'COM_ID', df[tmp, paste('00',COM_ID,sep='')])
+	tmp		<- df[, which(nchar(COM_ID)==3)]
+	set(df, tmp, 'COM_ID', df[tmp, paste('0',COM_ID,sep='')])	
+	#	fixup COM names
+	set(df, df[, which(COM_ID=='0014')], 'COM', 'Groningen')
+	set(df, df[, which(COM_ID=='0164')], 'COM', 'Hengelo')	
+	set(df, df[, which(COM_ID=='0344')], 'COM', 'Utrecht')	
+	set(df, df[, which(COM_ID=='0417')], 'COM', 'Laren')
+	set(df, df[, which(COM_ID=='0518')], 'COM', 'sGravenhage')
+	set(df, df[, which(COM_ID=='0603')], 'COM', 'Rijswijk')
+	set(df, df[, which(COM_ID=='0687')], 'COM', 'Middelburg')	
+	set(df, df[, which(COM_ID=='0888')], 'COM', 'Beek')
+	set(df, df[, which(COM_ID=='0893')], 'COM', 'Bergen')
+	set(df, df[, which(COM_ID=='0971')], 'COM', 'Stein')
+	set(df, df[, which(COM_ID=='0619')], 'COM', 'Valkenburg')
+	stopifnot( !nrow(unique(subset(df, COM%in%setdiff(df[, COM], dg[,COM]), c(COM, COM_ID)))) )	
+	stopifnot( length(setdiff(df[, COM_ID], dg[,COM_ID]))==0 )
+	#
+	#	MERGE
+	#
+	dpop	<- merge(dg, df, by=c('COM_ID','COM'))
+	#
+	#	further re-assignments of former municipalities to GGD of current municipality
+	#
+	set(dpop, dpop[, which(COM%in%c("Bergh","Didam","Zelhem","Wisch"))], 'GGD', 'GelreIJssel' )
+	set(dpop, dpop[, which(COM%in%c("Bergh","Didam","Zelhem","Wisch"))], 'GGD_ID', '1406' )
+	set(dpop, dpop[, which(COM%in%c("BerkelenRodenrijs","Bergschenhoek"))], 'GGD', 'RotterdamRijnmond' )
+	set(dpop, dpop[, which(COM%in%c("BerkelenRodenrijs","Bergschenhoek"))], 'GGD_ID', '4607' )	
+	save(dpop, file=outfile)
+	write.table(dpop, file=gsub('rda','csv',outfile))
+	
+	#
+	#	further checks
+	#
+	z<- subset(dpop, GGD=='GelderlandMidden' & YEAR==2004)[, sort(unique(COM))]
+	zz<- subset(dpop, GGD=='GelderlandMidden' & YEAR==2005)[, sort(unique(COM))]
+	setdiff(z, zz)	#	"Angerlo" "Bergh"   "Didam"   "Zelhem"
+	#	Angerlo now part of Zevenaar
+	#	Bergh Didam merged into Montferland in 2005
+	#	Zelhem now part of Bronckhorst
+	subset(dpop, grepl('Zevenaar',COM))[, unique(YEAR)]			#	Zevenaar has counts since 2000 but jump in 2005
+	subset(dpop, grepl('Zevenaar',COM))[, list(M=sum(M), F=sum(F)),by='YEAR']
+	subset(dpop, grepl('Montferland',COM))[, unique(YEAR)]		#	Montferland has counts since 2005
+	subset(dpop, grepl('Bronckhorst',COM))[, unique(YEAR)]		#	Bronckhorst has counts since 2005
+	# 	Montferland Bronckhorst in GelreIJssel
+	
+	z<- subset(dpop, GGD=='ZuidHollandZuid' & YEAR==2006)[, sort(unique(COM))]
+	zz<- subset(dpop, GGD=='ZuidHollandZuid' & YEAR==2007)[, sort(unique(COM))]
+	setdiff(z, zz)	#	"sGravendeel"
+	#	sGravendeel now part of Binnenmaas also ZuidHollandZuid
+	subset(dpop, grepl('Binnenmaas',COM))[, list(M=sum(M), F=sum(F)),by='YEAR']
+	
+	z<- subset(dpop, GGD=='RotterdamRijnmond' & YEAR==2006)[, sort(unique(COM))]
+	zz<- subset(dpop, GGD=='RotterdamRijnmond' & YEAR==2007)[, sort(unique(COM))]
+	setdiff(zz, z)	#	"Lansingerland"	
+	#	BerkelenRodenrijs, Bleiswijk and Bergschenhoek
+	#	BerkelenRodenrijs and Bergschenhoek are in ZuidHollandWest
+
+	z<- subset(dpop, GGD=='IJsselland' & YEAR==2004)[, sort(unique(COM))]
+	zz<- subset(dpop, GGD=='IJsselland' & YEAR==2005)[, sort(unique(COM))]
+	setdiff(z, zz)	#	"Wisch"
+	#  Wisch merged with Oude IJsselstreek
+
+}
+######################################################################################
+GGD.161027<- function()
 {
 	#	INPUT FILE NAMES
 	file		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Region_GGD.csv'		
@@ -5284,7 +5690,7 @@ project.hivc.Excel2dataframe.GGD.161027<- function()
 	save(df, file=outfile)
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CombinedTable.160227<- function()
+CombinedTable.160227<- function()
 {	
 	require(data.table)			
 	#	CONSTANTS
@@ -5514,7 +5920,7 @@ project.hivc.Excel2dataframe.CombinedTable.160227<- function()
 	}	
 }
 ######################################################################################
-project.hivc.Excel2dataframe.CombinedTable.161027<- function()
+CombinedTable.161027<- function()
 {	
 	require(data.table)			
 	#	CONSTANTS
@@ -5523,16 +5929,16 @@ project.hivc.Excel2dataframe.CombinedTable.161027<- function()
 	#
 	#	INPUT FILES generated with "project.hivc.Excel2dataframe.XXX"
 	#	
-	dir.name		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed"
-	file.seq		<- paste(dir.name,"ATHENA_1610_All_Sequences_withCOMET.rda",sep='/')
+	dir.name		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin"
+	file.seq		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_withCOMET_withLANL.rda"
 	file.patient	<- paste(dir.name,"ATHENA_1610_All_Patient.rda",sep='/')		
-	file.primoSHM	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original/ATHENA_1501_PrimoSHM.csv'
+	file.primoSHM	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/ATHENA_1501_PrimoSHM.csv'
 	file.viro		<- paste(dir.name,"ATHENA_1610_All_RNA.rda",sep='/')
 	file.immu		<- paste(dir.name,"ATHENA_1610_All_CD4.rda",sep='/')
 	file.treatment	<- paste(dir.name,"ATHENA_1610_All_ART_checked_DropVLBeforeART.rda",sep='/')
 	file.ggd		<- paste(dir.name,"ATHENA_1610_All_Region_GGD.rda",sep='/')
 	file.out		<- paste(dir.name,"ATHENA_1610_All_PatientKeyCovariates.rda",sep='/')
-	
+	file.out.numeric<- paste(dir.name,"ATHENA_1610_All_PatientKeyCovariates_Numeric.rda",sep='/')
 	if(resume)												#//load if there is R Master data.table
 	{
 		options(show.error.messages = FALSE)		
@@ -5547,7 +5953,7 @@ project.hivc.Excel2dataframe.CombinedTable.161027<- function()
 		#	start with sequences
 		#
 		load(file.seq)		
-		df.all	<- subset(ds, select=c(FASTASampleCode,Patient,SUBTYPE,SEQ_L,SUBTYPE_C,PosSeqT))
+		df.all	<- subset(ds, select=c(FASTASampleCode,Patient,SEQ_L,SUBTYPE_C,PosSeqT))
 		cat(paste("\nnumber of sequences found, n=", nrow(df.all)))
 		#
 		# add Patient data
@@ -5694,46 +6100,53 @@ project.hivc.Excel2dataframe.CombinedTable.161027<- function()
 		#
 		#	get GGD at time of diagnosis
 		#
-		load(file.ggd)		
-		tmp		<- subset(df, select=c(Patient, GGD_Reg))
-		setkey(tmp, Patient, GGD_Reg)
-		tmp		<- df[, {
-					list(GGD_Reg=GGD_Reg, GGD_Last=c(GGD_Reg[-1]-1, as.Date('2015-05-01')))
-				}, by='Patient']
-		df		<- merge(df, tmp, by=c('Patient','GGD_Reg'))		
-		tmp		<- subset(df.all, select=c(Patient, AnyPos_T1))
-		tmp		<- merge(unique(tmp), df, by='Patient', allow.cartesian=TRUE)
-		setkey(tmp, Patient, GGD_Reg)
-		tmp		<- tmp[,	{
-					z		<- which(GGD_Reg<=AnyPos_T1 & AnyPos_T1<GGD_Last)
-					z2		<- 'At_Diag'
-					if(length(z)==0)
-					{
-						z	<- which.min(difftime(GGD_Reg, AnyPos_T1))
-						z2	<- 'Earliest_After_Diag'
-					}
-					list(RegionGGD_AnyPosT1_Type=z2, GGD_RecordTime=GGD_Reg[z[1]], Region_AnyPosT1=Region[z[1]], GGD_AnyPosT1=GGD[z[1]])
-				} , by='Patient']	
+		#load(file.ggd)		
+		#tmp		<- subset(df, select=c(Patient, GGD_Reg))
+		#setkey(tmp, Patient, GGD_Reg)
+		#tmp		<- df[, {
+		#			list(GGD_Reg=GGD_Reg, GGD_Last=c(GGD_Reg[-1]-1, as.Date('2015-05-01')))
+		#		}, by='Patient']
+		#df		<- merge(df, tmp, by=c('Patient','GGD_Reg'))		
+		#tmp		<- subset(df.all, select=c(Patient, AnyPos_T1))
+		#tmp		<- merge(unique(tmp), df, by='Patient', allow.cartesian=TRUE)
+		#setkey(tmp, Patient, GGD_Reg)
+		#tmp		<- tmp[,	{
+		#			z		<- which(GGD_Reg<=AnyPos_T1 & AnyPos_T1<GGD_Last)
+		#			z2		<- 'At_Diag'
+		#			if(length(z)==0)
+		#			{
+		#				z	<- which.min(difftime(GGD_Reg, AnyPos_T1))
+		#				z2	<- 'Earliest_After_Diag'
+		#			}
+		#			list(RegionGGD_AnyPosT1_Type=z2, GGD_RecordTime=GGD_Reg[z[1]], Region_AnyPosT1=Region[z[1]], GGD_AnyPosT1=GGD[z[1]])
+		#		} , by='Patient']	
 		#			
-		set(tmp, tmp[, which(Region_AnyPosT1!='Rott' & GGD_AnyPosT1%in%c('Groningen','Drenthe','Fryslan'))], 'Region_AnyPosT1', 'North')
-		set(tmp, tmp[, which(Region_AnyPosT1!='Rott' & GGD_AnyPosT1%in%c('IJsselland','Twente','Gelre_IJssel','Hulpverlening_Gelderland_Midden','Flevoland',"Rivierenland","Nijmegen","Midden_Nederland"))], 'Region_AnyPosT1', 'East')		
-		set(tmp, tmp[, which(Region_AnyPosT1!='Rott' & GGD_AnyPosT1%in%c('Amsterdam'))], 'Region_AnyPosT1', 'Amst')
-		set(tmp, tmp[, which(Region_AnyPosT1!='Rott' & GGD_AnyPosT1%in%c('Utrecht','Gooi_Vechtstreek','Zuid_Holland_Zuid','Zeeland','Rotterdam_Rijnmond','Den_Haag','Hollands_Midden','Kennemerland','Zaanstreek_Waterland','Hollands_Noorden',"Zuid_Holland_West"))], 'Region_AnyPosT1', 'West')
-		set(tmp, tmp[, which(Region_AnyPosT1!='Rott' & GGD_AnyPosT1%in%c('West_Brabant','Hart_voor_Brabant','Brabant_Zuidoost','Limburg-Noord','Zuid_Limburg'))], 'Region_AnyPosT1', 'South')
-		set(tmp, NULL, 'Region_AnyPosT1', tmp[, factor(as.character(Region_AnyPosT1))])		
-		cat('\nPatients with no entry in GGD file', setdiff( df.all[, Patient], tmp[, Patient] ))		
-		df.all	<- merge(df.all, tmp, by='Patient', all.x=1)
+		#set(tmp, tmp[, which(Region_AnyPosT1!='Rott' & GGD_AnyPosT1%in%c('Groningen','Drenthe','Fryslan'))], 'Region_AnyPosT1', 'North')
+		#set(tmp, tmp[, which(Region_AnyPosT1!='Rott' & GGD_AnyPosT1%in%c('IJsselland','Twente','Gelre_IJssel','Hulpverlening_Gelderland_Midden','Flevoland',"Rivierenland","Nijmegen","Midden_Nederland"))], 'Region_AnyPosT1', 'East')		
+		#set(tmp, tmp[, which(Region_AnyPosT1!='Rott' & GGD_AnyPosT1%in%c('Amsterdam'))], 'Region_AnyPosT1', 'Amst')
+		#set(tmp, tmp[, which(Region_AnyPosT1!='Rott' & GGD_AnyPosT1%in%c('Utrecht','Gooi_Vechtstreek','Zuid_Holland_Zuid','Zeeland','Rotterdam_Rijnmond','Den_Haag','Hollands_Midden','Kennemerland','Zaanstreek_Waterland','Hollands_Noorden',"Zuid_Holland_West"))], 'Region_AnyPosT1', 'West')
+		#set(tmp, tmp[, which(Region_AnyPosT1!='Rott' & GGD_AnyPosT1%in%c('West_Brabant','Hart_voor_Brabant','Brabant_Zuidoost','Limburg-Noord','Zuid_Limburg'))], 'Region_AnyPosT1', 'South')
+		#set(tmp, NULL, 'Region_AnyPosT1', tmp[, factor(as.character(Region_AnyPosT1))])		
+		#cat('\nPatients with no entry in GGD file', setdiff( df.all[, Patient], tmp[, Patient] ))		
+		#df.all	<- merge(df.all, tmp, by='Patient', all.x=1)
 		#
 		#	re-arrange cols
 		#
-		df.all	<- df.all[, c(	"Patient", "DateBorn", "Sex", "CountryBorn", "RegionOrigin", "DateLastContact", "DateDied", "isDead","Region_now","GGD_now",      
+		df.all	<- df.all[, c(	"Patient", "DateBorn", "Sex", "CountryBorn", "RegionOrigin", "DateLastContact", "DateDied", "isDead",      
 						"NegT","NegT_Acc","NegT_Crude","ACS",
-						"AnyPos_T1","CountryInfection","Trm","isAcute","Acute_Spec","RegionGGD_AnyPosT1_Type","GGD_RecordTime","Region_AnyPosT1","GGD_AnyPosT1",
+						"AnyPos_T1","CountryInfection","Trm","isAcute","Acute_Spec","Region_first","GGD_first","GGD_first_Date","Region_now","GGD_now",
 						"DateInCare", "FirstMed","PoslRNA_T1", "lRNA_T1","PoslRNAg500_T1","PosCD4_T1","CD4_T1",
 						"AnyT_T1","AnyT_T1_Acc","AnyT_T1_Crude","PrimoSHM","TrI.n","TrI.p","DateAIDS",					
-						"PosSeqT","FASTASampleCode","SUBTYPE","SUBTYPE_C","SEQ_L"), with=FALSE]          
+						"PosSeqT","FASTASampleCode","SUBTYPE_C","SEQ_L"), with=FALSE]          
 		if(verbose)	cat(paste("\nsave to file",file.out))
-		stopifnot( !nrow(subset(df.all, is.na(AnyPos_T1))) )
+		#stopifnot( !nrow(subset(df.all, is.na(AnyPos_T1))) )
 		save(df.all,file=file.out)
-	}	
+		#
+		#	save with Dates in numeric format
+		#
+		for(x in colnames(df.all))
+			if(class(df.all[[x]])=='Date')
+				set(df.all, NULL, x, hivc.db.Date2numeric(df.all[[x]]))		
+		save(df.all,file=file.out.numeric)
+	}
 }
