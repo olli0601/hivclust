@@ -3210,6 +3210,61 @@ stop()
 	
 }
 ######################################################################################
+project.PANGEA.data.preprocess<- function()
+{
+	#	this cleans and pre-processes the PANGEA metadata
+	#	in PANGEA.HIV.sim/misc/treecomparison, I merge this with other study data etc
+	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_metadata/original_161128/Multiple_infections_OR_2.csv'
+	dfp		<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
+	setnames(dfp, colnames(dfp), toupper(colnames(dfp)))
+	#	clean up trailing/leading whitespace
+	for(x in colnames(dfp))
+		if(any(class(x)=='character'))
+			set(dfp, NULL, x, gsub(' +$','',gsub('^ +','',dfp[[x]])))
+	#	dates to numeric
+	set(dfp, NULL, 'SAMPLE_DATE', dfp[, as.Date(SAMPLE_DATE, format="%d/%m/%Y")])
+	set(dfp, NULL, 'VL_DATE', dfp[, as.Date(VL_DATE, format="%d/%m/%Y")])
+	set(dfp, NULL, 'CD4_DATE', dfp[, as.Date(CD4_DATE, format="%d/%m/%Y")])
+	for(x in colnames(dfp))
+		if(class(dfp[[x]])=='Date')
+			set(dfp, NULL, x, hivc.db.Date2numeric(dfp[[x]]))
+	set(dfp, NULL, 'DOB_YEAR', dfp[, as.numeric(DOB_YEAR)])
+	#	handle CD4 ranges VL ranges
+	set(dfp, NULL, 'VL_RANGE', dfp[, gsub('to ','',gsub('> ','',VL_RANGE))])
+	set(dfp, dfp[, which(VL_RANGE=='<50')], 'VL_RANGE', '0 49')
+	set(dfp, dfp[, which(VL_RANGE=='>400 1000')], 'VL_RANGE', '401 1000')
+	set(dfp, dfp[, which(VL_RANGE=='>1000 5000')], 'VL_RANGE', '1001 5000')
+	set(dfp, dfp[, which(VL_RANGE=='>5000 10000')], 'VL_RANGE', '5001 10000')
+	set(dfp, dfp[, which(VL_RANGE=='>50000 100000')], 'VL_RANGE', '50001 100000')
+	set(dfp, dfp[, which(VL_RANGE=='>100000 500000')], 'VL_RANGE', '100001 500000')
+	set(dfp, dfp[, which(VL_RANGE=='>10000 50000')], 'VL_RANGE', '10001 50000')
+	set(dfp, dfp[, which(VL_RANGE=='>500000 1000000')], 'VL_RANGE', '500001 1000000')
+	set(dfp, dfp[, which(VL_RANGE=='1000000')], 'VL_RANGE', '1000000 Inf')	
+	dfp[, VL_U:=NA_character_]
+	dfp[, VL_L:=NA_character_]
+	tmp		<- dfp[, which(VL_RANGE!='')]
+	set(dfp, tmp, 'VL_L', dfp[tmp, gsub(' [0-9]+$| Inf+$','',VL_RANGE)])
+	set(dfp, tmp, 'VL_U', dfp[tmp, gsub('^[0-9]+ ','',VL_RANGE)])
+	set(dfp, NULL, 'VL_L', dfp[, as.numeric(VL_L)])
+	set(dfp, NULL, 'VL_U', dfp[, as.numeric(VL_U)])
+	set(dfp, NULL, 'CD4_RANGE', dfp[, gsub('to ','',CD4_RANGE)])	
+	set(dfp, dfp[, which(CD4_RANGE=='350 <500')], 'CD4_RANGE', '350 499')
+	set(dfp, dfp[, which(CD4_RANGE=='200 <350')], 'CD4_RANGE', '200 349')
+	set(dfp, dfp[, which(CD4_RANGE=='100 <200')], 'CD4_RANGE', '100 199')
+	set(dfp, dfp[, which(CD4_RANGE=='<100')], 'CD4_RANGE', '0 99')
+	set(dfp, dfp[, which(CD4_RANGE=='>1600')], 'CD4_RANGE', '1601 Inf')
+	dfp[, CD4_U:=NA_character_]
+	dfp[, CD4_L:=NA_character_]
+	tmp		<- dfp[, which(CD4_RANGE!='')]
+	set(dfp, tmp, 'CD4_L', dfp[tmp, gsub(' [0-9]+$| Inf+$','',CD4_RANGE)])
+	set(dfp, tmp, 'CD4_U', dfp[tmp, gsub('^[0-9]+ ','',CD4_RANGE)])
+	set(dfp, NULL, 'CD4_L', dfp[, as.numeric(CD4_L)])
+	set(dfp, NULL, 'CD4_U', dfp[, as.numeric(CD4_U)])
+	#
+	outfile	<- '~/Dropbox (Infectious Disease)/PANGEA_metadata/processed_metadata/PANGEA_meta_161128.rda'
+	save(dfp, file=outfile)	
+}
+######################################################################################
 project.hivc.examlclock<- function()
 {
 	#

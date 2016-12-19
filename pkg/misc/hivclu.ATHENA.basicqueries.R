@@ -1531,6 +1531,7 @@ eval.diag.spatialrates.analyze<- function()
 	require(data.table)
 	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
 	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -1540,17 +1541,27 @@ eval.diag.spatialrates.analyze<- function()
 	#
 	#	prepare shape file for INLA 
 	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))
+	
 	nb2INLA(ggd.inla.file, poly2nb(ggd.shp))
 	ggd.inla		<- inla.read.graph(filename=ggd.inla.file)
 	image(inla.graph2matrix(ggd.inla), xlab='', ylab='')
 	
+	#
+	#	plot GGD names
+	#
+	pdf(file=paste(outfile.base, 'map_GGD_names.pdf'), w=6, h=6)
 	par(mar=c(0,0,0,0))
 	plot(ggd.shp)
 	text(getSpPPolygonsLabptSlots(ggd.shp), labels=ggd.shp$naam, cex=0.6)
+	dev.off()
+	
+	#	GGD with 1 neighbour
+	plot(ggd.shp)
 	tmp	<- which(1==sapply( poly2nb(ggd.shp), length ))
 	for(i in tmp)
-		plot(ggd.shp[i,], col='blue', add=T)
-	#	TODO: add index to poly2nb(ggd.shp) if you want to force
+		plot(ggd.shp[i,], col='blue', add=T)	
+	#	TODO: add index to poly2nb(ggd.shp) if you want to force other neighbourhoods
 	
 	#
 	#	AIM1	excess diagnosis rates among all MSM by GGD 2010-2015
@@ -1574,17 +1585,41 @@ eval.diag.spatialrates.analyze<- function()
 	da		<- subset(dd, STAT=='AGE' & GROUP!='0-14')[, list(M=sum(M), F=sum(F), POP=sum(POP), DIAG_MSM=sum(DIAG_MSM)), by=c('GGD','GGD_ID','GGD_INLA_IDX','REGION','YEAR')]
 	da		<- subset(da, YEAR>=2010)
 	#	calculate E
-	da[, E:= sum(DIAG_MSM)/length(unique(YEAR))]
-	tmp		<- da[, list(GGD=GGD, Mw=M/sum(M)), by=c('YEAR')]
-	da		<- merge(da, tmp, by=c('GGD','YEAR'))
-	set(da, NULL, 'E', da[, E*Mw])
-	set(da, NULL, 'Mw', NULL)
+	da[, E_NL:= sum(DIAG_MSM)/length(unique(YEAR))]	
+	tmp		<- da[, list(M=mean(M)), by=c('GGD')]
+	tmp[, Mp:= M/sum(M)]		
+	da		<- merge(da, subset(tmp, select=c(GGD, Mp)), by='GGD')
+	set(da, NULL, 'E_GGD', da[, E_NL*Mp])	
+	set(da, NULL, 'Mp', NULL)
+	#	add crude diag rate in period 2010-2015
+	tmp2	<- tmp[, sum(M)]
+	tmp		<- da[, list(R_MSM=mean(DIAG_MSM)/mean(M)), by=c('GGD')]
+	da		<- merge(da, tmp, by='GGD')
+	da[, RR_MSM:= R_MSM/(E_NL/tmp2)]
 	#
 	da.f	<- DIAG_MSM ~ 1 + f(GGD_INLA_IDX, model='bym', 
 									graph=ggd.inla.file,
 									scale.model=TRUE)
 	da.m	<- inla(da.f, family='poisson', data=da, E=da$E, control.compute(dic=TRUE))
+	#	posterior mean for sp str rnd effect
+	ggd.n	<- da[, length(unique(GGD))]
+	tmp		<- da.m$marginals.random[[1]][1:ggd.n]
+	zeta	<- lapply(tmp, function(x) inla.emarginal(exp,x))
+	da.p	<- merge(unique(da, by='GGD'),data.table(GGD_INLA_IDX=1:ggd.n, ZETA=as.numeric(unlist(zeta))), by='GGD_INLA_IDX')	
+	tmp		<- merge(ggd.shp@data, subset(da.p, select=c(GGD_INLA_IDX, R_MSM, ZETA)), by='GGD_INLA_IDX')
+	ggd.out	<- copy(ggd.shp)
+	attr(ggd.out, "data")	<- tmp
+	pdf(file=paste(outfile.base, 'map_INLA1.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='ZETA', asp=1)
+	dev.off()
 	
+	pdf(file=paste(outfile.base, 'map_crude_diagnoses_MSM_2010_2015.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='R_MSM', asp=1)
+	dev.off()
+	
+	#	TODO
+	#	why: Brabaant high, Amsterdam high, Rotterdam high ??
+	#	why zeta>5??
 }
 ######################################################################################
 eval.diag.spatialrates.prepare<- function()
