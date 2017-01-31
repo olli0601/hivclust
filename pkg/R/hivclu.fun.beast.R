@@ -485,27 +485,26 @@ hivc.beast2out.read.nodestats <- function(bstr)
 hivc.beast2out.read.nodeidtree <- function(bstr, method.node.stat='any.node') 
 {
 	# strip all meta variables and ; at end
-	bstr		<- gsub("\\[[^]]*\\]", "", bstr)
-	bstr		<- gsub(';','',bstr)
+	tmp			<- gsub(';','',gsub("\\[[^]]*\\]", "META_PARSE_ID", bstr))
 	# for each node, add a dummy node label NODE_PARSE_IDxx	
-	dummy.tree	<- unlist(strsplit(bstr, ":"))
-	if(method.node.stat=='inner.node')
-	{
+	dummy.tree	<- unlist(strsplit(tmp, "META_PARSE_ID"))
+	#if(method.node.stat=='inner.node')
+	#{
 		#	interior branch length: 	previous index ends in ). so tmp is the index of the dummy.tree chunks that gives the start of a branch length of an inner node
-		tmp			<- which( c(FALSE, grepl(')$',dummy.tree)[-length(dummy.tree)]) )
+	#	tmp			<- which( c(FALSE, grepl(')$',dummy.tree)[-length(dummy.tree)]) )
 		#	prepend NODE_PARSE_IDxx before the branch length of an inner node
-		tmp			<- tmp-1			
-	}
-	if(method.node.stat=='any.node')
-		tmp			<- seq_along(dummy.tree)
+	#	tmp			<- tmp-1			
+	#}
+	#if(method.node.stat=='any.node')
+	tmp			<- seq_along(dummy.tree)
 	dummy.tree	<- sapply(seq_along(dummy.tree), function(i)
 			{
 				z<- which(i==tmp)
-				ifelse(length(z),	paste(dummy.tree[i],'NODE_PARSE_ID',z,sep=''),	dummy.tree[i] )
+				ifelse(length(z),	paste(dummy.tree[i],'META_PARSE_ID',z,sep=''),	dummy.tree[i] )
 			}) 			
-	dummy.tree	<- paste(dummy.tree, collapse=':',sep='')
+	dummy.tree	<- paste(dummy.tree, collapse='',sep='')
 	dummy.tree	<- regmatches(dummy.tree, regexpr('\\(.*',dummy.tree))
-	dummy.tree	<- paste(dummy.tree, ';', sep='')	
+	dummy.tree	<- gsub('META_PARSE_ID[0-9]+$',';',dummy.tree)		
 	ph<-  tryCatch(
 		{
 			read.tree(text=dummy.tree)	
@@ -531,15 +530,20 @@ hivc.beast2out.read.nexus.and.stats<- function(file, tree.id=NA, method.node.sta
 	X.endblock		<- grep("END;|ENDBLOCK;|End;", X, ignore.case = TRUE)
 	X.semico 		<- grep(";", X)
 	X.i1 			<- grep("BEGIN TREES;|Begin trees;", X, ignore.case = TRUE)
-	X.i2 			<- grep("TRANSLATE|Translate", X, ignore.case = TRUE)	
-	tmp 			<- X.semico[X.semico > X.i2][1]
-	tmp 			<- X[(X.i2 + 1):tmp]
-	tmp				<- gsub('[,;]$','',gsub('^\\s+','',tmp))
-	tmp				<- tmp[nzchar(tmp)]
-	tmp				<- strsplit(tmp, ' ')
-	df.translate	<- data.table(NEXUS_ID= sapply(tmp, '[[', 1), NEXUS_LABEL=sapply(tmp, '[[', 2) )
-	set(df.translate, NULL, 'NEXUS_LABEL', df.translate[, gsub("\'","",NEXUS_LABEL)])
-	cat(paste('\nFound taxa, n=', nrow(df.translate)))
+	X.i2 			<- grep("TRANSLATE|Translate", X, ignore.case = TRUE)
+	df.translate	<- NULL
+	
+	if(length(X.i2))
+	{
+		tmp 			<- X.semico[X.semico > X.i2][1]
+		tmp 			<- X[(X.i2 + 1):tmp]
+		tmp				<- gsub('[,;]$','',gsub('^\\s+','',tmp))
+		tmp				<- tmp[nzchar(tmp)]
+		tmp				<- strsplit(tmp, ' ')
+		df.translate	<- data.table(NEXUS_ID= sapply(tmp, '[[', 1), NEXUS_LABEL=sapply(tmp, '[[', 2) )
+		set(df.translate, NULL, 'NEXUS_LABEL', df.translate[, gsub("\'","",NEXUS_LABEL)])
+		cat(paste('\nFound taxa, n=', nrow(df.translate)))		
+	}
 	
 	if(!is.na(tree.id))
 	{
@@ -554,12 +558,20 @@ hivc.beast2out.read.nexus.and.stats<- function(file, tree.id=NA, method.node.sta
 		# NODE_ID is index of node in 'btree' phylo object
 		#
 		tmp			<- strsplit( btree$tip.label, 'NODE_PARSE_ID' )
-		df.link		<- data.table(NODE_ID=seq_along(btree$tip.label), NEXUS_ID=sapply(tmp,'[[',1), NODE_PARSE_ID=sapply(tmp,'[[',2))
-		df.link		<- merge(df.link, df.translate, by='NEXUS_ID')
+		if( !is.null(df.translate) )	#with translate block 
+		{
+			df.link		<- data.table(NODE_ID=seq_along(btree$tip.label), NEXUS_ID=sapply(tmp,'[[',1), NODE_PARSE_ID=sapply(tmp,'[[',2))		
+			df.link		<- merge(df.link, df.translate, by='NEXUS_ID')
+			set(df.link, NULL, 'NEXUS_ID', NULL)
+		}
+		if( is.null(df.translate) )		#no translate block 
+		{
+			df.link		<- data.table(NODE_ID=seq_along(btree$tip.label), NODE_PARSE_ID=sapply(tmp,'[[',1))					
+		}	
 		cat(paste('\nFound tree tips with taxon name, n=', nrow(df.link)))
 		tmp			<- strsplit( btree$node.label, 'NODE_PARSE_ID' )
-		tmp			<- data.table(NODE_ID=Ntip(btree)+seq_along(btree$node.label), NODE_PARSE_ID=sapply(tmp,'[[',2), NEXUS_LABEL=NA_character_)
-		df.link		<- rbind(subset(df.link,select=c(NODE_ID, NODE_PARSE_ID, NEXUS_LABEL)), tmp)
+		tmp			<- data.table(NODE_ID=Ntip(btree)+seq_along(btree$node.label), NODE_PARSE_ID=sapply(tmp,'[[',2))
+		df.link		<- rbind(df.link, tmp)
 		set(df.link,NULL,'NODE_PARSE_ID',df.link[, as.integer(NODE_PARSE_ID)])
 		set(df.link,NULL,'NODE_ID',df.link[, as.integer(NODE_ID)])
 		set(df.link,NULL,'TREE_ID',tree.id)
@@ -607,23 +619,32 @@ hivc.beast2out.read.nexus.and.stats<- function(file, tree.id=NA, method.node.sta
 			# link node.stats with tree nodes (tip + inner node)
 			# NODE_ID is index of node in 'btree.i' phylo object
 			#
-			tmp			<- strsplit( btree.i$tip.label, 'NODE_PARSE_ID' )
+			tmp			<- strsplit( btree.i$tip.label, 'META_PARSE_ID' )
 			df.link		<- data.table(NODE_ID=seq_along(btree.i$tip.label), NEXUS_ID=sapply(tmp,'[[',1), NODE_PARSE_ID=sapply(tmp,'[[',2))
-			df.link		<- merge(df.link, df.translate, by='NEXUS_ID')
-			cat(paste('\nFound tree tips with taxon name, n=', nrow(df.link)))
-			tmp			<- strsplit( btree.i$node.label, 'NODE_PARSE_ID' )
-			tmp			<- data.table(NODE_ID=Ntip(btree.i)+seq_along(btree.i$node.label), NODE_PARSE_ID=sapply(tmp,'[[',2), NEXUS_LABEL=NA_character_)
-			df.link		<- rbind(subset(df.link,select=c(NODE_ID, NODE_PARSE_ID, NEXUS_LABEL)), tmp)
+			if( !is.null(df.translate) )	#with translate block 
+			{						
+				df.link		<- merge(df.link, df.translate, by='NEXUS_ID')			
+			}
+			if( is.null(df.translate))
+			{
+				df.link[, NEXUS_LABEL:=NEXUS_ID]
+			}
+			set(df.link, NULL, 'NEXUS_ID', NULL)			
+			tmp			<- strsplit( btree.i$node.label, 'META_PARSE_ID' )
+			tmp			<- data.table(NODE_ID=Ntip(btree.i)+seq_along(btree.i$node.label), NODE_PARSE_ID=sapply(tmp,'[[',2))
+			df.link		<- rbind(df.link, tmp, fill=TRUE)
 			set(df.link,NULL,'NODE_PARSE_ID',df.link[, as.integer(NODE_PARSE_ID)])
-			set(df.link,NULL,'NODE_ID',df.link[, as.integer(NODE_ID)])		
-			for(j in seq_len(nrow(df.link)))
-				set(node.stat, node.stat[, which(TREE_ID==tree.id[i] & NODE_PARSE_ID==df.link[j,NODE_PARSE_ID])], 'NODE_ID', df.link[j,NODE_ID])		
-			tmp			<- node.stat[, length(which(!is.na(NODE_ID)))]
-			cat(paste('\nTotal linked node statistics to tree nodes, n=', tmp  ))
+			set(df.link,NULL,'NODE_ID',df.link[, as.integer(NODE_ID)])	
+			df.link[, TREE_ID:=tree.id[i]]
+			setnames(df.link, 'NODE_ID','NODE_ID_PARSED')
+			node.stat	<- merge(node.stat, df.link, by=c('TREE_ID','NODE_PARSE_ID'), all.x=1)
+			tmp			<- node.stat[, which(!is.na(NODE_ID_PARSED))]
+			set(node.stat, tmp, 'NODE_ID', node.stat[tmp, NODE_ID_PARSED])
+			set(node.stat, NULL, c('NODE_ID_PARSED','NEXUS_LABEL'), NULL)
 			#
 			# set tip.labels and rm node.labels
 			#
-			setkey(df.link, NODE_ID)
+			setkey(df.link, NODE_ID_PARSED)
 			btree.i$tip.label	<- df.link[seq_len(Ntip(btree.i)),][,NEXUS_LABEL]
 			btree.i$node.label	<- NULL	
 			btree[[i]]			<- btree.i

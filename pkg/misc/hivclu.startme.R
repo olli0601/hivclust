@@ -90,8 +90,8 @@ EPS			<<- 1e-12
 #default.fun		<- 'project.bezemer2013a.figs.v131023_DB'
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
 #default.fun		<- "project.dual"
-default.fun		<- 'project.examl.ATHENA1610.161102'
-#default.fun		<- "hivc.pipeline.various"
+#default.fun		<- 'project.examl.ATHENA1610.161102'
+default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -102,7 +102,15 @@ default.fun		<- 'project.examl.ATHENA1610.161102'
 #cat(paste("is.loaded('tipcr')->",is.loaded("tipc_tabulate_after_sample"),'\n'))
 ###############################################################################
 function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$", all.files = FALSE,
-		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.Rakaiprjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.ATHENA.trees.R",sep='/'),paste(CODE.HOME,"misc","hivclu.ACprjcts.R",sep='/'),paste(CODE.HOME,"misc","hivclu.Londonprjcts.R",sep='/'),paste(CODE.HOME,"misc","dualproject.R",sep='/'),paste(CODE.HOME,"misc","gcproject2013.R",sep='/'))
+		full.names = TRUE, recursive = FALSE),
+							paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),
+							paste(CODE.HOME,"misc","hivclu.Rakaiprjcts.R",sep='/'),
+							paste(CODE.HOME,"misc","hivclu.ATHENA.trees.R",sep='/'),
+							paste(CODE.HOME,"misc","hivclu.ACprjcts.R",sep='/'),
+							paste(CODE.HOME,"misc","hivclu.coalreg.R",sep='/'),
+							paste(CODE.HOME,"misc","hivclu.Londonprjcts.R",sep='/'),
+							paste(CODE.HOME,"misc","dualproject.R",sep='/'),
+							paste(CODE.HOME,"misc","gcproject2013.R",sep='/'))
 sapply(function.list,function(x){ print(x); source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE) })
 ###############################################################################	
 if(0)
@@ -397,7 +405,7 @@ if(length(args))
 					PROPS.ESTIMATE			= "hivc.prog.props_univariate",
 					AGE.ESTIMATE			= "age.props_univariate",
 					BETAREG.NUMBERS			= "project.athena.Fisheretal.numbers",
-					VARIOUS					= "RakaiCirc.various"
+					VARIOUS					= "cr.various"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)

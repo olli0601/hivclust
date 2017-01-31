@@ -1000,12 +1000,12 @@ hivc.pipeline.various<- function()
 	{
 		project.dualinfecions.phylotypes.evaluatereads.150119()
 	}	
-	if(0)
+	if(1)
 	{
 		# RUN VARIOUS
 		cmd			<- hivc.cmd.various()
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=71, hpc.mem="95000mb")
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5000mb")
+		#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=71, hpc.mem="95000mb")
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5800mb")
 		cat(cmd)		
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("vrs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')

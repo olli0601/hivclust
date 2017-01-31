@@ -992,31 +992,33 @@ hivc.cmd.beast2.getclustertrees<- function(indir, infile, insignat, infilexml.op
 }
 ######################################################################################
 #' @export
-hivc.cmd.beast2.runxml<- function(indir, infile, insignat, prog.beast=PR.BEAST2, prog.opt.Xms="64m", prog.opt.Xmx="400m", hpc.tmpdir.prefix="beast2", hpc.ncpu=1)
+hivc.cmd.beast2.runxml<- function(indir, infile, outfile=infile, insignat=NULL, prog.wdir=NULL, prog.beast=PR.BEAST2, prog.opt.Xms="64m", prog.opt.Xmx="400m", prog.seed=42, hpc.ncpu=1)
 {
 	cmd		<- "#######################################################
 # start: run BEAST2
 #######################################################"	
-	hpcsys	<- hivc.cmd.hpcsys()
-	#hpcsys<- "cx1.hpc.ic.ac.uk"
+	if(!is.null(insignat))
+		infile	<- paste0(gsub('\\.xml$','',infile),'_',gsub('/',':',insignat))	
+	if(!grepl('\\.xml$', infile))
+		infile	<- paste0(infile,'.xml')		
 	cmd		<- paste(cmd,paste("\necho \'run ",prog.beast,"\'\n",sep=''))
-	if(hpcsys=="debug")						#my MAC - don t use scratch
+	cmd		<- paste(cmd,"CWD=$(pwd)\n",sep='')
+	if(is.null(prog.wdir))
 	{		
-		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,"java -Xms",prog.opt.Xms," -Xmx",prog.opt.Xmx," -jar ",prog.beast," -overwrite -working -threads ",hpc.ncpu," ",tmp,'\n',sep='')
-	}
-	else if(hpcsys=="cx1.hpc.ic.ac.uk")		#imperial - use scratch directory
-	{
-		cmd		<- paste(cmd,"CWD=$(pwd)\n",sep='')
-		cmd		<- paste(cmd,"echo $CWD\n",sep='')		
-		tmpdir	<- paste("$CWD/",hpc.tmpdir.prefix,'_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
-		cmd		<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
-		tmp		<- paste(indir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,"cp ",tmp," ",tmpdir,'\n',sep='')
-		tmp		<- paste(tmpdir,'/',infile,'_',gsub('/',':',insignat),".xml",sep='')
-		cmd		<- paste(cmd,"java -Xms",prog.opt.Xms," -Xmx",prog.opt.Xmx," -jar ",prog.beast," -working -threads ",hpc.ncpu," ",tmp,'\n',sep='')	
-		cmd		<- paste(cmd,"cp -f ",tmpdir,"/* ", indir,'\n',sep='')		
-	}
+		prog.wdir	<- '$CWD'
+	}	
+	tmpdir	<- file.path(prog.wdir,paste0("beast2_",format(Sys.time(),"%y-%m-%d-%H-%M-%S")))
+	cmd		<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
+	tmp		<- file.path(indir,infile)				
+	cmd		<- paste(cmd,"cp \"",tmp,"\" ",tmpdir,'\n',sep='')
+	cmd		<- paste(cmd,'cd ',tmpdir,'\n',sep='')
+	cmd		<- paste(cmd,"java -Xms",prog.opt.Xms," -Xmx",prog.opt.Xmx," -jar \"",prog.beast,"\" -seed ",prog.seed," -threads ",hpc.ncpu," ",infile,'\n',sep='')
+	cmd		<- paste(cmd,"rm ", infile,'\n',sep='')
+	if(outfile!=infile)
+		cmd	<- paste(cmd,'for file in ',gsub('\\.xml','',infile),'*; do\n\tmv "$file" "${file/',gsub('\\.xml','',infile),'/',outfile,'}"\ndone\n',sep='')
+	cmd		<- paste(cmd,"cp -f * \"", indir,'\"\n',sep='')
+	cmd		<- paste(cmd,'cd $CWD\n',sep='')
+	cmd		<- paste(cmd,'rm ',tmpdir,'\n',sep='')
 	cmd		<- paste(cmd,"echo \'end ",prog.beast,"\'\n",sep='')
 	cmd		<- paste(cmd,"#######################################################
 # end: run BEAST2

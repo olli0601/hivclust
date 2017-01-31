@@ -3214,7 +3214,7 @@ project.PANGEA.data.preprocess<- function()
 {
 	#	this cleans and pre-processes the PANGEA metadata
 	#	in PANGEA.HIV.sim/misc/treecomparison, I merge this with other study data etc
-	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_metadata/original_161128/Multiple_infections_OR_2.csv'
+	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_metadata/original_161128/MetaData_161219.csv'
 	dfp		<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
 	setnames(dfp, colnames(dfp), toupper(colnames(dfp)))
 	#	clean up trailing/leading whitespace
@@ -3229,6 +3229,8 @@ project.PANGEA.data.preprocess<- function()
 		if(class(dfp[[x]])=='Date')
 			set(dfp, NULL, x, hivc.db.Date2numeric(dfp[[x]]))
 	set(dfp, NULL, 'DOB_YEAR', dfp[, as.numeric(DOB_YEAR)])
+	#	NA cohorts
+	set(dfp, dfp[, which(COHORT_ID=='')], 'COHORT_ID', NA_character_)
 	#	handle CD4 ranges VL ranges
 	set(dfp, NULL, 'VL_RANGE', dfp[, gsub('to ','',gsub('> ','',VL_RANGE))])
 	set(dfp, dfp[, which(VL_RANGE=='<50')], 'VL_RANGE', '0 49')

@@ -1520,15 +1520,277 @@ eval.diag.characteristics.by.age<- function()
 	
 }
 ######################################################################################
-eval.diag.spatialrates.analyze<- function()
+eval.spatial.crudetimetrends.allMSM<- function()
 {
 	require(maptools)
 	require(maps)
 	require(spdep)
 	require(spacetime)
+	library(geoR)
 	require(xts)
 	require(INLA)
 	require(data.table)
+	library(RColorBrewer)
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	#
+	#	load: 
+	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		ggd.shp (GGD shape file)
+	#	
+	load(infile)
+	#
+	#	prepare shape file  
+	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))		
+	#
+	#	plot change in overall diagnosis rates since 2008 for every GGD
+	#	
+	da		<- subset(dd, STAT=='AGE' & GROUP!='0-14' & YEAR>=2004)[, list(M=sum(M), F=sum(F), POP=sum(POP), DIAG_MSM=sum(DIAG_MSM)), by=c('GGD','GGD_ID','GGD_INLA_IDX','REGION','YEAR')]
+	set(da, NULL, 'DIAG_MSM', da[, as.double(DIAG_MSM)])
+	da[, R_MSM:= DIAG_MSM/M]
+	tmp		<- subset(da, YEAR>=2004 & YEAR<=2007)[, list(BASELINE_DIAG_MSM=mean(DIAG_MSM), BASELINE_R_MSM=mean(DIAG_MSM)/mean(M)), by='GGD']
+	da		<- merge(da, tmp, by='GGD')
+	da		<- subset(da, YEAR>=2007)
+	tmp		<- da[, which(YEAR==2007)]
+	set(da, tmp, 'DIAG_MSM', da[tmp,BASELINE_DIAG_MSM])
+	set(da, tmp, 'R_MSM', da[tmp,BASELINE_R_MSM])
+	da[, RCH_DIAG_MSM:= DIAG_MSM/BASELINE_DIAG_MSM]
+	da[, RCH_R_MSM:= R_MSM/BASELINE_R_MSM]
+	setkey(da, GGD_INLA_IDX, YEAR)
+	da[, YEAR_Dt:=as.Date(paste0(YEAR,'-12-31'),format="%Y-%m-%d")]	
+	cols	<- colorRampPalette(brewer.pal(9, "RdYlBu"))
+	#	plot
+	tmp		<- dcast.data.table(da, GGD_INLA_IDX~YEAR_Dt, value.var='RCH_DIAG_MSM')	
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+			xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,date)
+			data.frame(RCH_DIAG_MSM=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'map_chdiagnumber_GGD_MSM.pdf'), w=9, h=6)	
+	stplot(tmp, 			da[, unique(YEAR_Dt)], 
+			at= c(-0.001,1/seq(2,1,-.2), seq(1,2,.2),15),
+			col.regions=rev(cols(24)),		
+			main='change in new HIV diagnoses among MSM\nrelative to 2004-2007',
+			animate=0 )
+	dev.off()
+	tmp		<- dcast.data.table(da, GGD_INLA_IDX~YEAR_Dt, value.var='RCH_R_MSM')	
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+			xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,date)
+			data.frame(RCH_DIAG_MSM=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'map_chdiagrates_GGD_MSM.pdf'), w=9, h=6)	
+	stplot(tmp, 			da[, unique(YEAR_Dt)], 
+			at= c(-0.001,1/seq(2,1,-.2), seq(1,2,.2),15),
+			col.regions=rev(cols(24)),		
+			main='change in new HIV diagnosis rates among MSM\nrelative to 2004-2007',
+			animate=0 )
+	dev.off()
+}
+######################################################################################
+eval.spatial.crudetimetrends.youngMSM<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(spacetime)
+	library(geoR)
+	require(xts)
+	require(INLA)
+	require(data.table)
+	library(RColorBrewer)
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	#
+	#	load: 
+	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		ggd.shp (GGD shape file)
+	#	
+	load(infile)
+	#
+	#	prepare shape file  
+	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))		
+	#
+	#	plot change in overall diagnosis rates since 2008 for every GGD
+	#	
+	dy		<- subset(dd, STAT=='YOUNG' & GROUP=='15-29' & YEAR>=2004)[, list(M=sum(M), F=sum(F), POP=sum(POP), DIAG_MSM=sum(DIAG_MSM)), by=c('GGD','GGD_ID','GGD_INLA_IDX','REGION','YEAR')]
+	set(dy, NULL, 'DIAG_MSM', dy[, as.double(DIAG_MSM)])
+	dy[, R_MSM:= DIAG_MSM/M]
+	tmp		<- subset(dy, YEAR>=2004 & YEAR<=2007)[, list(BASELINE_DIAG_MSM=mean(DIAG_MSM), BASELINE_R_MSM=mean(DIAG_MSM)/mean(M)), by='GGD']
+	dy		<- merge(dy, tmp, by='GGD')
+	dy		<- subset(dy, YEAR>=2007)
+	tmp		<- dy[, which(YEAR==2007)]
+	set(dy, tmp, 'DIAG_MSM', dy[tmp,BASELINE_DIAG_MSM])
+	set(dy, tmp, 'R_MSM', dy[tmp,BASELINE_R_MSM])
+	dy[, RCH_DIAG_MSM:= DIAG_MSM/BASELINE_DIAG_MSM]
+	dy[, RCH_R_MSM:= R_MSM/BASELINE_R_MSM]
+	setkey(dy, GGD_INLA_IDX, YEAR)
+	dy[, YEAR_Dt:=as.Date(paste0(YEAR,'-12-31'),format="%Y-%m-%d")]	
+	cols	<- colorRampPalette(brewer.pal(9, "RdYlBu"))
+	#	plot
+	tmp		<- dcast.data.table(dy, GGD_INLA_IDX~YEAR_Dt, value.var='RCH_DIAG_MSM')	
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+			xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,dyte)
+			data.frame(RCH_DIAG_MSM=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'map_chdiagnumber_GGD_youngMSM.pdf'), w=9, h=6)	
+	stplot(tmp, 			dy[, unique(YEAR_Dt)], 
+			at= c(-0.001,1/seq(2,1,-.2), seq(1,2,.2),15),
+			col.regions=rev(cols(24)),		
+			main='change in new HIV diagnoses among MSM 15-29 yrs\nrelative to 2004-2007',
+			animate=0 )
+	dev.off()
+	tmp		<- dcast.data.table(dy, GGD_INLA_IDX~YEAR_Dt, value.var='RCH_R_MSM')	
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+			xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,date)
+			data.frame(RCH_DIAG_MSM=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'map_chdiagrates_GGD_youngMSM.pdf'), w=9, h=6)	
+	stplot(tmp, 			dy[, unique(YEAR_Dt)], 
+			at= c(-0.001,1/seq(2,1,-.2), seq(1,2,.2),15),
+			col.regions=rev(cols(24)),		
+			main='change in new HIV diagnosis rates among MSM 15-29 yrs\nrelative to 2004-2007',
+			animate=0 )
+	dev.off()
+}
+######################################################################################
+eval.spatial.crudetimetrends.midMSM<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(spacetime)
+	library(geoR)
+	require(xts)
+	require(INLA)
+	require(data.table)
+	library(RColorBrewer)
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	#
+	#	load: 
+	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		ggd.shp (GGD shape file)
+	#	
+	load(infile)
+	#
+	#	prepare shape file  
+	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))		
+	#
+	#	plot change in overall diagnosis rates since 2008 for every GGD
+	#	
+	dmid	<- subset(dd, STAT=='MID' & GROUP=='30-49' & YEAR>=2004)[, list(M=sum(M), F=sum(F), POP=sum(POP), DIAG_MSM=sum(DIAG_MSM)), by=c('GGD','GGD_ID','GGD_INLA_IDX','REGION','YEAR')]
+	set(dmid, NULL, 'DIAG_MSM', dmid[, as.double(DIAG_MSM)])
+	dmid[, R_MSM:= DIAG_MSM/M]
+	tmp		<- subset(dmid, YEAR>=2004 & YEAR<=2007)[, list(BASELINE_DIAG_MSM=mean(DIAG_MSM), BASELINE_R_MSM=mean(DIAG_MSM)/mean(M)), by='GGD']
+	dmid	<- merge(dmid, tmp, by='GGD')
+	dmid	<- subset(dmid, YEAR>=2007)
+	tmp		<- dmid[, which(YEAR==2007)]
+	set(dmid, tmp, 'DIAG_MSM', dmid[tmp,BASELINE_DIAG_MSM])
+	set(dmid, tmp, 'R_MSM', dmid[tmp,BASELINE_R_MSM])
+	dmid[, RCH_DIAG_MSM:= DIAG_MSM/BASELINE_DIAG_MSM]
+	dmid[, RCH_R_MSM:= R_MSM/BASELINE_R_MSM]
+	setkey(dmid, GGD_INLA_IDX, YEAR)
+	dmid[, YEAR_Dt:=as.Date(paste0(YEAR,'-12-31'),format="%Y-%m-%d")]	
+	cols	<- colorRampPalette(brewer.pal(9, "RdYlBu"))
+	#	plot
+	tmp		<- dcast.data.table(dmid, GGD_INLA_IDX~YEAR_Dt, value.var='RCH_DIAG_MSM')	
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+			xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,dyte)
+			data.frame(RCH_DIAG_MSM=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'map_chdiagnumber_GGD_midMSM.pdf'), w=9, h=6)	
+	stplot(tmp, 			dmid[, unique(YEAR_Dt)], 
+			at= c(-0.001,1/seq(2,1,-.2), seq(1,2,.2),20),
+			col.regions=rev(cols(24)),		
+			main='change in new HIV diagnoses among MSM 30-49 yrs\nrelative to 2004-2007',
+			animate=0 )
+	dev.off()
+	tmp		<- dcast.data.table(dmid, GGD_INLA_IDX~YEAR_Dt, value.var='RCH_R_MSM')	
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+			xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,date)
+			data.frame(RCH_DIAG_MSM=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'map_chdiagrates_GGD_midMSM.pdf'), w=9, h=6)	
+	stplot(tmp, 			dmid[, unique(YEAR_Dt)], 
+			at= c(-0.001,1/seq(2,1,-.2), seq(1,2,.2),20),
+			col.regions=rev(cols(24)),		
+			main='change in new HIV diagnosis rates among MSM 30-49 yrs\nrelative to 2004-2007',
+			animate=0 )
+	dev.off()
+}
+######################################################################################
+eval.spatial.crudetimetrends.oldMSM<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(spacetime)
+	library(geoR)
+	require(xts)
+	require(INLA)
+	require(data.table)
+	library(RColorBrewer)
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	#
+	#	load: 
+	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		ggd.shp (GGD shape file)
+	#	
+	load(infile)
+	#
+	#	prepare shape file  
+	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))		
+	#
+	#	plot change in overall diagnosis rates since 2008 for every GGD
+	#	
+	do		<- subset(dd, STAT=='OLD' & GROUP=='50-69' & YEAR>=2004)[, list(M=sum(M), F=sum(F), POP=sum(POP), DIAG_MSM=sum(DIAG_MSM)), by=c('GGD','GGD_ID','GGD_INLA_IDX','REGION','YEAR')]
+	set(do, NULL, 'DIAG_MSM', do[, as.double(DIAG_MSM)])
+	do[, R_MSM:= DIAG_MSM/M]
+	tmp		<- subset(do, YEAR>=2004 & YEAR<=2007)[, list(BASELINE_DIAG_MSM=mean(DIAG_MSM), BASELINE_R_MSM=mean(DIAG_MSM)/mean(M)), by='GGD']
+	do		<- merge(do, tmp, by='GGD')
+	do		<- subset(do, YEAR>=2007)
+	tmp		<- do[, which(YEAR==2007)]
+	set(do, tmp, 'DIAG_MSM', do[tmp,BASELINE_DIAG_MSM])
+	set(do, tmp, 'R_MSM', do[tmp,BASELINE_R_MSM])
+	do[, RCH_DIAG_MSM:= DIAG_MSM/BASELINE_DIAG_MSM]
+	do[, RCH_R_MSM:= R_MSM/BASELINE_R_MSM]
+	setkey(do, GGD_INLA_IDX, YEAR)
+	do[, YEAR_Dt:=as.Date(paste0(YEAR,'-12-31'),format="%Y-%m-%d")]	
+	cols	<- colorRampPalette(brewer.pal(9, "RdYlBu"))
+	#	plot
+	tmp		<- dcast.data.table(do, GGD_INLA_IDX~YEAR_Dt, value.var='RCH_DIAG_MSM')	
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+			xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,dyte)
+			data.frame(RCH_DIAG_MSM=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'map_chdiagnumber_GGD_oldMSM.pdf'), w=9, h=6)	
+	stplot(tmp, 			do[, unique(YEAR_Dt)], 
+			at= c(-0.001,1/seq(2,1,-.2), seq(1,2,.2),20),
+			col.regions=rev(cols(24)),		
+			main='change in new HIV diagnoses among MSM 50-69 yrs\nrelative to 2004-2007',
+			animate=0 )
+	dev.off()
+	tmp		<- dcast.data.table(do, GGD_INLA_IDX~YEAR_Dt, value.var='RCH_R_MSM')	
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+			xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,date)
+			data.frame(RCH_DIAG_MSM=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'map_chdiagrates_GGD_oldMSM.pdf'), w=9, h=6)	
+	stplot(tmp, 			do[, unique(YEAR_Dt)], 
+			at= c(-0.001,1/seq(2,1,-.2), seq(1,2,.2),20),
+			col.regions=rev(cols(24)),		
+			main='change in new HIV diagnosis rates among MSM 50-69 yrs\nrelative to 2004-2007',
+			animate=0 )
+	dev.off()
+}
+######################################################################################
+eval.spatial.INLA.allMSM.2010to2015<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(spacetime)
+	library(geoR)
+	require(xts)
+	require(INLA)
+	require(data.table)
+	library(RColorBrewer)
 	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
 	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
 	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
@@ -1541,19 +1803,23 @@ eval.diag.spatialrates.analyze<- function()
 	#
 	#	prepare shape file for INLA 
 	#
-	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))
-	
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))	
 	nb2INLA(ggd.inla.file, poly2nb(ggd.shp))
 	ggd.inla		<- inla.read.graph(filename=ggd.inla.file)
 	image(inla.graph2matrix(ggd.inla), xlab='', ylab='')
 	
-	#
 	#	plot GGD names
-	#
 	pdf(file=paste(outfile.base, 'map_GGD_names.pdf'), w=6, h=6)
 	par(mar=c(0,0,0,0))
 	plot(ggd.shp)
 	text(getSpPPolygonsLabptSlots(ggd.shp), labels=ggd.shp$naam, cex=0.6)
+	dev.off()
+	#	plot population 2012
+	tmp		<- colorRampPalette(brewer.pal(9, "Blues")[-1])
+	pdf(file=paste(outfile.base, 'map_GGD_pop2012.pdf'), w=6, h=6)
+	par(mar=c(0,0,0,0))
+	spplot(ggd.shp,"inwonertal",cuts=10, col.regions=rev(tmp(11)))
+	plot(ggd.shp)	
 	dev.off()
 	
 	#	GGD with 1 neighbour
@@ -1564,21 +1830,11 @@ eval.diag.spatialrates.analyze<- function()
 	#	TODO: add index to poly2nb(ggd.shp) if you want to force other neighbourhoods
 	
 	#
+	#
 	#	AIM1	excess diagnosis rates among all MSM by GGD 2010-2015
 	#	AIM2	changes in diagnosis rates among all MSM by GGD 2000-2004, 2005-2009, 2010-2015
 	#	AIM3	contrast in spatially structured rndm effect in diagnosis rates among MSM 15-29 from age-average
 	#
-	
-	#
-	#	map crude rates
-	#
-	if(0)
-	{
-		dy	<- subset(dd, STAT=='YOUNG' & GROUP=='15-29')
-		tmp	<- dy[, as.Date(paste0(sort(unique(YEAR)), '-07-01'))]
-		STFDF( as(ggd.shp,"SpatialPolygons"), xts(1:ncol(dy)) )	
-	}
-	
 	#
 	#	AIM1
 	#	
@@ -1600,29 +1856,422 @@ eval.diag.spatialrates.analyze<- function()
 	da.f	<- DIAG_MSM ~ 1 + f(GGD_INLA_IDX, model='bym', 
 									graph=ggd.inla.file,
 									scale.model=TRUE)
-	da.m	<- inla(da.f, family='poisson', data=da, E=da$E, control.compute(dic=TRUE))
+	da.m	<- inla(da.f, family='poisson', data=da, E=da$E_GGD, control.compute(dic=TRUE), control.predictor=list(compute=TRUE))
+	#
 	#	posterior mean for sp str rnd effect
+	#
 	ggd.n	<- da[, length(unique(GGD))]
 	tmp		<- da.m$marginals.random[[1]][1:ggd.n]
 	zeta	<- lapply(tmp, function(x) inla.emarginal(exp,x))
-	da.p	<- merge(unique(da, by='GGD'),data.table(GGD_INLA_IDX=1:ggd.n, ZETA=as.numeric(unlist(zeta))), by='GGD_INLA_IDX')	
-	tmp		<- merge(ggd.shp@data, subset(da.p, select=c(GGD_INLA_IDX, R_MSM, ZETA)), by='GGD_INLA_IDX')
+	tmp		<- da.m$marginals.random[[1]][(ggd.n+1):(2*ggd.n)]
+	us		<- lapply(tmp, function(x) inla.emarginal(exp,x))
+	da.p	<- merge(unique(da, by='GGD'),data.table(GGD_INLA_IDX=1:ggd.n, ZETA=as.numeric(unlist(zeta))), by='GGD_INLA_IDX')
+	da.p	<- merge(da.p,data.table(GGD_INLA_IDX=1:ggd.n, U=as.numeric(unlist(us))), by='GGD_INLA_IDX')
+	tmp		<- merge(ggd.shp@data, subset(da.p, select=c(GGD_INLA_IDX, R_MSM, RR_MSM, ZETA)), by='GGD_INLA_IDX')
 	ggd.out	<- copy(ggd.shp)
 	attr(ggd.out, "data")	<- tmp
 	pdf(file=paste(outfile.base, 'map_INLA1.pdf'), w=6, h=6)
 	spplot(obj=ggd.out, zcol='ZETA', asp=1)
-	dev.off()
-	
-	pdf(file=paste(outfile.base, 'map_crude_diagnoses_MSM_2010_2015.pdf'), w=6, h=6)
-	spplot(obj=ggd.out, zcol='R_MSM', asp=1)
-	dev.off()
-	
-	#	TODO
-	#	why: Brabaant high, Amsterdam high, Rotterdam high ??
-	#	why zeta>5??
+	dev.off()	
+	pdf(file=paste0(outfile.base, 'map_rcrude_diagnoses_MSM_2010_2015.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='RR_MSM', asp=1)
+	dev.off()	
+	#
+	#	variance explained through spatial str rnd effect
+	#
+	vars	<- data.table(GGD_INLA_IDX=1:ggd.n, DUMMY=(ggd.n+1):(2*ggd.n))[, {
+							list(VAR_U= var(inla.rmarginal(1e5, da.m$marginals.random[['GGD_INLA_IDX']][[DUMMY]])))
+						}, by=c('GGD_INLA_IDX','DUMMY')]
+	vars[, VAR_V:= var(inla.rmarginal(1e5, inla.tmarginal(function(x) 1/x, da.m$marginals.hyper[['Precision for GGD_INLA_IDX (iid component)']])))]	
+	vars[, mean(VAR_U/(VAR_U+VAR_V))]
+	#	0.300615
 }
 ######################################################################################
-eval.diag.spatialrates.prepare<- function()
+eval.spatial.INLA.youngMSM.2010to2015<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(spacetime)
+	library(geoR)
+	require(xts)
+	require(INLA)
+	require(data.table)
+	library(RColorBrewer)
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
+	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	#
+	#	load: 
+	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		ggd.shp (GGD shape file)
+	#	
+	load(infile)
+	#
+	#	prepare shape file for INLA 
+	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))	
+	nb2INLA(ggd.inla.file, poly2nb(ggd.shp))
+	ggd.inla		<- inla.read.graph(filename=ggd.inla.file)	
+	#
+	#	AIM3	contrast in spatially structured rndm effect in diagnosis rates among MSM 15-29 from age-average
+	#
+	da		<- subset(dd, STAT=='YOUNG' & GROUP!='0-14' & YEAR>=2010)	
+	da[, R_MSM:=NULL]
+	#	calculate E: percent pop in age group in GGD in 2010-2015 	
+	tmp		<- da[, list(M=mean(M)), by=c('GGD','GROUP')]
+	tmp		<- tmp[, list(GGD=GGD, Mp=M/sum(M)), by='GROUP']			
+	da		<- merge(da, subset(tmp, select=c(GGD, GROUP, Mp)), by=c('GGD','GROUP'))
+	tmp		<- da[, list(E=sum(DIAG_MSM), M_GROUP=sum(M)), by=c('YEAR','GROUP')]
+	tmp		<- tmp[, list(E=mean(E), M_GROUP=mean(M_GROUP)), by='GROUP']
+	da		<- merge(da, tmp, by=c('GROUP'))	
+	#	add crude diag rate in period 2010-2015	
+	tmp		<- da[, list(R_MSM=mean(DIAG_MSM)/mean(M)), by=c('GGD','GROUP')]
+	da		<- merge(da, tmp, by=c('GGD','GROUP'))
+	#	add crude relative diag rate (relate to pop average by group)
+	da[, RR_MSM:= R_MSM/(E/M_GROUP)]	
+	set(da, NULL, 'E', da[, E*Mp])	
+	set(da, NULL, 'Mp', NULL)	
+	set(da, NULL, 'GROUP', da[, factor(as.character(GROUP))])
+	#
+	da[, GGD_INLA_IDX_YOUNG:= GGD_INLA_IDX]
+	da[, GGD_INLA_IDX_OTHER:= GGD_INLA_IDX]
+	#da.f	<- DIAG_MSM ~ GROUP + 	f(GGD_INLA_IDX*I(GROUP=='15-29'), model='bym', graph=ggd.inla.file,scale.model=TRUE) +
+	#								f(GGD_INLA_IDX2*I(GROUP=='30-69'), model='bym', graph=ggd.inla.file,scale.model=TRUE)	
+	set(da, da[, which(GROUP=='15-29')],'GGD_INLA_IDX_OTHER', NA_integer_)
+	set(da, da[, which(GROUP=='30-69')],'GGD_INLA_IDX_YOUNG', NA_integer_)
+	da.f	<- DIAG_MSM ~ GROUP + 	f(GGD_INLA_IDX_YOUNG, model='bym', graph=ggd.inla.file,scale.model=TRUE) +
+									f(GGD_INLA_IDX_OTHER, model='bym', graph=ggd.inla.file,scale.model=TRUE)
+	
+	da.m	<- inla(da.f, family='poisson', data=da, E=da$E, control.compute(dic=TRUE), control.predictor=list(compute=TRUE))
+	#	contrast in posterior means for sp str rnd effect
+	ggd.n	<- da[, length(unique(GGD))]		
+	lzeta.c	<- da.m$summary.random[["GGD_INLA_IDX_YOUNG"]][1:ggd.n,'mean'] - da.m$summary.random[["GGD_INLA_IDX_OTHER"]][1:ggd.n,'mean']	
+	zeta.o	<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_OTHER"]][1:ggd.n], function(x) inla.emarginal(exp,x))))
+	us.o	<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_OTHER"]][(ggd.n+1):(2*ggd.n)], function(x) inla.emarginal(exp,x))))
+	zeta.y	<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_YOUNG"]][1:ggd.n], function(x) inla.emarginal(exp,x))))
+	us.y	<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_YOUNG"]][(ggd.n+1):(2*ggd.n)], function(x) inla.emarginal(exp,x))))
+	#	quantiles of the contrast spatial effect YOUNG-OTHER 
+	#	on log scale, the marginals are Laplace approximated normal distributions
+	#	simulate from YOUNG and OTHER marginal posterior
+	#	take the difference
+	tmp			<- cbind( da.m$summary.random[["GGD_INLA_IDX_YOUNG"]][1:ggd.n,c('mean','sd')], da.m$summary.random[["GGD_INLA_IDX_OTHER"]][1:ggd.n,c('mean','sd')] )
+	tmp			<- cbind( tmp[,1]-tmp[,3], sqrt(tmp[,2]*tmp[,2]+tmp[,4]*tmp[,4]) )
+	lzeta.c.p0	<- pnorm(0, mean=tmp[,1], sd=tmp[,2], lower.tail=FALSE)
+	#	prepare output data.frame	
+	da.p		<- melt(da, id.vars=c('GGD','GGD_ID', 'GGD_INLA_IDX', 'REGION', 'STAT', 'GROUP', 'YEAR'))
+	da.p		<- subset(da.p, YEAR==2010 & variable%in%c('M','DIAG_MSM','E','R_MSM','RR_MSM'))	
+	da.p		<- dcast.data.table(da.p, GGD+GGD_ID+GGD_INLA_IDX+REGION~variable+GROUP, value.var='value')
+	tmp			<- data.table(GGD_INLA_IDX=1:ggd.n, ZETA_15_29=zeta.y, ZETA_30_69=zeta.o, U_15_29=us.y, U_30_69=us.o, LOG_ZETA_CONTRAST=lzeta.c, LOG_ZETA_CONTRAST_P0=lzeta.c.p0)	
+	da.p		<- merge(da.p, tmp, by='GGD_INLA_IDX')
+	da.p[, ZETA_CONTRAST:=ZETA_15_29-ZETA_30_69]
+	cols		<- colorRampPalette(brewer.pal(9, "RdYlBu"))
+	#	plot 
+	tmp		<- merge(ggd.shp@data, subset(da.p, select=c(GGD_INLA_IDX, LOG_ZETA_CONTRAST, LOG_ZETA_CONTRAST_P0, ZETA_CONTRAST)), by='GGD_INLA_IDX')
+	ggd.out	<- copy(ggd.shp)
+	attr(ggd.out, "data")	<- tmp
+	pdf(file=paste(outfile.base, 'map_INLA_zeta_contrastage_youngMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='ZETA_CONTRAST', asp=1)
+	dev.off()	
+	pdf(file=paste(outfile.base, 'map_INLA_logzeta_contrastage_youngMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='LOG_ZETA_CONTRAST', asp=1)
+	dev.off()	
+	pdf(file=paste(outfile.base, 'map_INLA_logzetap0_contrastage_youngMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='LOG_ZETA_CONTRAST_P0', asp=1)
+	dev.off()	
+	#
+	#	variance explained through spatial str rnd effect
+	#	
+	vars	<- as.data.table(expand.grid(GGD_INLA_IDX=1:ggd.n, EFFECT= c('GGD_INLA_IDX_YOUNG','GGD_INLA_IDX_OTHER'), stringsAsFactors=FALSE)) 
+	vars	<- merge(vars, data.table(GGD_INLA_IDX=1:ggd.n, DUMMY=(ggd.n+1):(2*ggd.n)), by='GGD_INLA_IDX')	
+	vars	<- vars[, list(VAR_U= var(inla.rmarginal(1e5, da.m$marginals.random[[EFFECT]][[DUMMY]]))), by=c('EFFECT','GGD_INLA_IDX','DUMMY')]
+	vars[, DUMMY:=NULL]
+	tmp		<- unique(vars, by='EFFECT')
+	tmp[, DUMMY:= paste0("Precision for ",EFFECT," (iid component)")]
+	tmp		<- tmp[, list(VAR_V= var(inla.rmarginal(1e5, inla.tmarginal(function(x) 1/x, da.m$marginals.hyper[[DUMMY]])))), by='EFFECT']
+	vars	<- merge(vars, tmp, by='EFFECT')
+	vars[, list(VAR_U_PC= mean(VAR_U/(VAR_U+VAR_V))), by='EFFECT']
+	#	           EFFECT  VAR_U_PC
+	#1: GGD_INLA_IDX_OTHER 0.1716102
+	#2: GGD_INLA_IDX_YOUNG 0.1641316
+
+	#
+	#	can I calculate the variance explained on the contrast?
+	#		1- 	I have mean sd for log.u.contrast. 
+	#			I can use this to obtain quantiles (q=0.01 .. 0.99) and pdfs at these quantiles for (x,y).
+	#			on this, I can run 'inla.rmarginal' as before
+	#		2- 	I can calculate log.v from log.zeta-log.u for both age groups
+	#			from this, I can calculate log.v.contrast
+	#			from this, I can follow the procedure under (1)
+}
+######################################################################################
+eval.spatial.INLA.oldMSM.2010to2015<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(spacetime)
+	library(geoR)
+	require(xts)
+	require(INLA)
+	require(data.table)
+	library(RColorBrewer)
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
+	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	#
+	#	load: 
+	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		ggd.shp (GGD shape file)
+	#	
+	load(infile)
+	#
+	#	prepare shape file for INLA 
+	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))	
+	nb2INLA(ggd.inla.file, poly2nb(ggd.shp))
+	ggd.inla		<- inla.read.graph(filename=ggd.inla.file)	
+	#
+	#	AIM3	contrast in spatially structured rndm effect in diagnosis rates among MSM 15-29 from age-average
+	#
+	da		<- subset(dd, STAT=='OLD' & GROUP!='0-14' & YEAR>=2010)	
+	da[, R_MSM:=NULL]
+	#	calculate E: percent pop in age group in GGD in 2010-2015 	
+	tmp		<- da[, list(M=mean(M)), by=c('GGD','GROUP')]
+	tmp		<- tmp[, list(GGD=GGD, Mp=M/sum(M)), by='GROUP']			
+	da		<- merge(da, subset(tmp, select=c(GGD, GROUP, Mp)), by=c('GGD','GROUP'))
+	tmp		<- da[, list(E=sum(DIAG_MSM), M_GROUP=sum(M)), by=c('YEAR','GROUP')]
+	tmp		<- tmp[, list(E=mean(E), M_GROUP=mean(M_GROUP)), by='GROUP']
+	da		<- merge(da, tmp, by=c('GROUP'))	
+	#	add crude diag rate in period 2010-2015	
+	tmp		<- da[, list(R_MSM=mean(DIAG_MSM)/mean(M)), by=c('GGD','GROUP')]
+	da		<- merge(da, tmp, by=c('GGD','GROUP'))
+	#	add crude relative diag rate (relate to pop average by group)
+	da[, RR_MSM:= R_MSM/(E/M_GROUP)]	
+	set(da, NULL, 'E', da[, E*Mp])	
+	set(da, NULL, 'Mp', NULL)	
+	set(da, NULL, 'GROUP', da[, factor(as.character(GROUP))])
+	#
+	da[, GGD_INLA_IDX_OLD:= GGD_INLA_IDX]
+	da[, GGD_INLA_IDX_OTHER:= GGD_INLA_IDX]
+	set(da, da[, which(GROUP=='50-69')],'GGD_INLA_IDX_OTHER', NA_integer_)
+	set(da, da[, which(GROUP=='15-49')],'GGD_INLA_IDX_OLD', NA_integer_)
+	da.f	<- DIAG_MSM ~ GROUP + 	f(GGD_INLA_IDX_OLD, model='bym', graph=ggd.inla.file,scale.model=TRUE) +
+									f(GGD_INLA_IDX_OTHER, model='bym', graph=ggd.inla.file,scale.model=TRUE)
+	
+	da.m	<- inla(da.f, family='poisson', data=da, E=da$E, control.compute(dic=TRUE), control.predictor=list(compute=TRUE))
+	#	contrast in posterior means for sp str rnd effect
+	ggd.n	<- da[, length(unique(GGD))]		
+	lzeta.c	<- da.m$summary.random[["GGD_INLA_IDX_OLD"]][1:ggd.n,'mean'] - da.m$summary.random[["GGD_INLA_IDX_OTHER"]][1:ggd.n,'mean']	
+	zeta.oth<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_OTHER"]][1:ggd.n], function(x) inla.emarginal(exp,x))))
+	us.oth	<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_OTHER"]][(ggd.n+1):(2*ggd.n)], function(x) inla.emarginal(exp,x))))
+	zeta.old<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_OLD"]][1:ggd.n], function(x) inla.emarginal(exp,x))))
+	us.old	<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_OLD"]][(ggd.n+1):(2*ggd.n)], function(x) inla.emarginal(exp,x))))
+	#	quantiles of the contrast spatial effect YOUNG-OTHER 
+	#	on log scale, the marginals are Laplace approximated normal distributions
+	#	simulate from YOUNG and OTHER marginal posterior
+	#	take the difference
+	tmp			<- cbind( da.m$summary.random[["GGD_INLA_IDX_OLD"]][1:ggd.n,c('mean','sd')], da.m$summary.random[["GGD_INLA_IDX_OTHER"]][1:ggd.n,c('mean','sd')] )
+	tmp			<- cbind( tmp[,1]-tmp[,3], sqrt(tmp[,2]*tmp[,2]+tmp[,4]*tmp[,4]) )
+	lzeta.c.p0	<- pnorm(0, mean=tmp[,1], sd=tmp[,2], lower.tail=FALSE)
+	#	prepare output data.frame	
+	da.p		<- melt(da, id.vars=c('GGD','GGD_ID', 'GGD_INLA_IDX', 'REGION', 'STAT', 'GROUP', 'YEAR'))
+	da.p		<- subset(da.p, YEAR==2010 & variable%in%c('M','DIAG_MSM','E','R_MSM','RR_MSM'))	
+	da.p		<- dcast.data.table(da.p, GGD+GGD_ID+GGD_INLA_IDX+REGION~variable+GROUP, value.var='value')
+	tmp			<- data.table(GGD_INLA_IDX=1:ggd.n, ZETA_50_69=zeta.old, ZETA_15_49=zeta.oth, U_50_69=us.old, U_15_49=us.oth, LOG_ZETA_CONTRAST=lzeta.c, LOG_ZETA_CONTRAST_P0=lzeta.c.p0)	
+	da.p		<- merge(da.p, tmp, by='GGD_INLA_IDX')
+	da.p[, ZETA_CONTRAST:=ZETA_50_69-ZETA_15_49]
+	cols		<- colorRampPalette(brewer.pal(9, "RdYlBu"))
+	#	plot 
+	tmp		<- merge(ggd.shp@data, subset(da.p, select=c(GGD_INLA_IDX, LOG_ZETA_CONTRAST, LOG_ZETA_CONTRAST_P0, ZETA_CONTRAST)), by='GGD_INLA_IDX')
+	ggd.out	<- copy(ggd.shp)
+	attr(ggd.out, "data")	<- tmp
+	pdf(file=paste(outfile.base, 'map_INLA_zeta_contrastage_oldMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='ZETA_CONTRAST', asp=1)
+	dev.off()	
+	pdf(file=paste(outfile.base, 'map_INLA_logzeta_contrastage_oldMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='LOG_ZETA_CONTRAST', asp=1)
+	dev.off()	
+	pdf(file=paste(outfile.base, 'map_INLA_logzetap0_contrastage_oldMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='LOG_ZETA_CONTRAST_P0', asp=1)
+	dev.off()		
+}
+######################################################################################
+eval.spatial.INLA.midMSM.2010to2015<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(spacetime)
+	library(geoR)
+	require(xts)
+	require(INLA)
+	require(data.table)
+	library(RColorBrewer)
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
+	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	#
+	#	load: 
+	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		ggd.shp (GGD shape file)
+	#	
+	load(infile)
+	#
+	#	prepare shape file for INLA 
+	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))	
+	nb2INLA(ggd.inla.file, poly2nb(ggd.shp))
+	ggd.inla		<- inla.read.graph(filename=ggd.inla.file)	
+	#
+	#	AIM3	contrast in spatially structured rndm effect in diagnosis rates among MSM 15-29 from age-average
+	#
+	da		<- subset(dd, STAT=='MID' & YEAR>=2010)	
+	da[, R_MSM:=NULL]
+	#	calculate E: percent pop in age group in GGD in 2010-2015 	
+	tmp		<- da[, list(M=mean(M)), by=c('GGD','GROUP')]
+	tmp		<- tmp[, list(GGD=GGD, Mp=M/sum(M)), by='GROUP']			
+	da		<- merge(da, subset(tmp, select=c(GGD, GROUP, Mp)), by=c('GGD','GROUP'))
+	tmp		<- da[, list(E=sum(DIAG_MSM), M_GROUP=sum(M)), by=c('YEAR','GROUP')]
+	tmp		<- tmp[, list(E=mean(E), M_GROUP=mean(M_GROUP)), by='GROUP']
+	da		<- merge(da, tmp, by=c('GROUP'))	
+	#	add crude diag rate in period 2010-2015	
+	tmp		<- da[, list(R_MSM=mean(DIAG_MSM)/mean(M)), by=c('GGD','GROUP')]
+	da		<- merge(da, tmp, by=c('GGD','GROUP'))
+	#	add crude relative diag rate (relate to pop average by group)
+	da[, RR_MSM:= R_MSM/(E/M_GROUP)]	
+	set(da, NULL, 'E', da[, E*Mp])	
+	set(da, NULL, 'Mp', NULL)	
+	set(da, NULL, 'GROUP', da[, factor(as.character(GROUP))])
+	#
+	da[, GGD_INLA_IDX_MID:= GGD_INLA_IDX]
+	da[, GGD_INLA_IDX_OTHER:= GGD_INLA_IDX]
+	set(da, da[, which(GROUP=='30-49')],'GGD_INLA_IDX_OTHER', NA_integer_)
+	set(da, da[, which(GROUP=='15-29,50-69')],'GGD_INLA_IDX_MID', NA_integer_)
+	da.f	<- DIAG_MSM ~ GROUP + 	f(GGD_INLA_IDX_MID, model='bym', graph=ggd.inla.file,scale.model=TRUE) +
+									f(GGD_INLA_IDX_OTHER, model='bym', graph=ggd.inla.file,scale.model=TRUE)	
+	da.m	<- inla(da.f, family='poisson', data=da, E=da$E, control.compute(dic=TRUE), control.predictor=list(compute=TRUE))
+	#	contrast in posterior means for sp str rnd effect
+	ggd.n	<- da[, length(unique(GGD))]		
+	lzeta.c	<- da.m$summary.random[["GGD_INLA_IDX_MID"]][1:ggd.n,'mean'] - da.m$summary.random[["GGD_INLA_IDX_OTHER"]][1:ggd.n,'mean']	
+	zeta.oth<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_OTHER"]][1:ggd.n], function(x) inla.emarginal(exp,x))))
+	us.oth	<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_OTHER"]][(ggd.n+1):(2*ggd.n)], function(x) inla.emarginal(exp,x))))
+	zeta.mid<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_MID"]][1:ggd.n], function(x) inla.emarginal(exp,x))))
+	us.mid	<- as.numeric(unlist(lapply(da.m$marginals.random[["GGD_INLA_IDX_MID"]][(ggd.n+1):(2*ggd.n)], function(x) inla.emarginal(exp,x))))
+	#	quantiles of the contrast spatial effect YOUNG-OTHER 
+	#	on log scale, the marginals are Laplace approximated normal distributions
+	#	simulate from YOUNG and OTHER marginal posterior
+	#	take the difference
+	tmp			<- cbind( da.m$summary.random[["GGD_INLA_IDX_MID"]][1:ggd.n,c('mean','sd')], da.m$summary.random[["GGD_INLA_IDX_OTHER"]][1:ggd.n,c('mean','sd')] )
+	tmp			<- cbind( tmp[,1]-tmp[,3], sqrt(tmp[,2]*tmp[,2]+tmp[,4]*tmp[,4]) )
+	lzeta.c.p0	<- pnorm(0, mean=tmp[,1], sd=tmp[,2], lower.tail=FALSE)
+	#	prepare output data.frame	
+	da.p		<- melt(da, id.vars=c('GGD','GGD_ID', 'GGD_INLA_IDX', 'REGION', 'STAT', 'GROUP', 'YEAR'))
+	da.p		<- subset(da.p, YEAR==2010 & variable%in%c('M','DIAG_MSM','E','R_MSM','RR_MSM'))	
+	da.p		<- dcast.data.table(da.p, GGD+GGD_ID+GGD_INLA_IDX+REGION~variable+GROUP, value.var='value')
+	tmp			<- data.table(GGD_INLA_IDX=1:ggd.n, ZETA_30_49=zeta.mid, ZETA_15_29_50_69=zeta.oth, U_30_49=us.mid, U_15_29_50_69=us.oth, LOG_ZETA_CONTRAST=lzeta.c, LOG_ZETA_CONTRAST_P0=lzeta.c.p0)	
+	da.p		<- merge(da.p, tmp, by='GGD_INLA_IDX')
+	da.p[, ZETA_CONTRAST:=ZETA_30_49-ZETA_15_29_50_69]
+	cols		<- colorRampPalette(brewer.pal(9, "RdYlBu"))
+	#	plot 
+	tmp		<- merge(ggd.shp@data, subset(da.p, select=c(GGD_INLA_IDX, LOG_ZETA_CONTRAST, LOG_ZETA_CONTRAST_P0, ZETA_CONTRAST)), by='GGD_INLA_IDX')
+	ggd.out	<- copy(ggd.shp)
+	attr(ggd.out, "data")	<- tmp
+	pdf(file=paste(outfile.base, 'map_INLA_zeta_contrastage_midMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='ZETA_CONTRAST', asp=1)
+	dev.off()	
+	pdf(file=paste(outfile.base, 'map_INLA_logzeta_contrastage_midMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='LOG_ZETA_CONTRAST', asp=1)
+	dev.off()	
+	pdf(file=paste(outfile.base, 'map_INLA_logzetap0_contrastage_midMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='LOG_ZETA_CONTRAST_P0', asp=1)
+	dev.off()		
+}
+######################################################################################
+eval.spatial.INLA.allMSM.timetrends<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(spacetime)
+	library(geoR)
+	require(xts)
+	require(INLA)
+	require(data.table)
+	library(RColorBrewer)
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
+	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	#
+	#	load: 
+	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		ggd.shp (GGD shape file)
+	#	
+	load(infile)
+	#
+	#	prepare shape file for INLA 
+	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))	
+	nb2INLA(ggd.inla.file, poly2nb(ggd.shp))
+	ggd.inla		<- inla.read.graph(filename=ggd.inla.file)
+	image(inla.graph2matrix(ggd.inla), xlab='', ylab='')		 
+	#
+	da		<- subset(dd, STAT=='AGE' & GROUP!='0-14' & YEAR>=2004)[, list(M=sum(M), F=sum(F), POP=sum(POP), DIAG_MSM=sum(DIAG_MSM)), by=c('GGD','GGD_ID','GGD_INLA_IDX','REGION','YEAR')]
+	set(da, NULL, 'DIAG_MSM', da[, as.double(DIAG_MSM)])
+	da[, R_MSM:= DIAG_MSM/M]
+	tmp		<- subset(da, YEAR>=2004 & YEAR<=2007)[, list(BASELINE_DIAG_MSM=mean(DIAG_MSM), BASELINE_R_MSM=mean(DIAG_MSM)/mean(M)), by='GGD']
+	da		<- merge(da, tmp, by='GGD')
+	da		<- subset(da, YEAR>=2007)
+	tmp		<- da[, which(YEAR==2007)]
+	set(da, tmp, 'DIAG_MSM', da[tmp,BASELINE_DIAG_MSM])
+	set(da, tmp, 'R_MSM', da[tmp,BASELINE_R_MSM])
+	da[, RCH_DIAG_MSM:= DIAG_MSM/BASELINE_DIAG_MSM]
+	da[, RCH_R_MSM:= R_MSM/BASELINE_R_MSM]
+	setkey(da, GGD_INLA_IDX, YEAR)
+	#
+	#	AIM2	changes in diagnosis rates among all MSM by GGD 2000-2004, 2005-2009, 2010-2015
+	#
+		
+	#	calculate E: diagnoses for 2004-2007 across entire Netherlands times proportion per year
+	da[, E:=subset(da, YEAR==2007)[, sum(DIAG_MSM)]]
+	tmp		<- da[, list(GGD=GGD, Mp=M/sum(M)), by=c('YEAR')]
+	da		<- merge(da, tmp, by=c('GGD','YEAR'))
+	set(da, NULL, 'E_GGD', da[, E*Mp])	
+	set(da, NULL, c('Mp','E'), NULL)
+	#
+	da.f	<- DIAG_MSM ~ 1 + f(GGD_INLA_IDX, model='bym',																		
+			graph=ggd.inla.file,
+			group=as.numeric(as.factor(YEAR)),
+			control.group=list(model='rw2'),
+			scale.model=TRUE)
+	da.f	<- DIAG_MSM ~ 1 + f(GGD_INLA_IDX, model='iid',  																		
+			graph=ggd.inla.file,
+			group=as.numeric(as.factor(YEAR)),
+			control.group=list(model='rw1'))
+	
+	da.f	<- DIAG_MSM ~ 1 + f(GGD_INLA_IDX, model='iid',  																		
+									graph=ggd.inla.file)
+	da.m	<- inla(da.f, family='poisson', data=da, E=da$E_GGD, verbose=TRUE,																		
+									control.compute(dic=TRUE), control.predictor=list(compute=TRUE))
+	#	posterior mean for sp str rnd effect
+	#	we want to plot log zeta
+	ggd.n	<- da[, length(unique(GGD))]	
+	lzeta	<- as.data.table(da.m$summary.random[["GGD_INLA_IDX"]])	
+	tmp		<- as.data.table(expand.grid(GGD_INLA_IDX=seq_len(ggd.n),YEAR=da[, sort(unique(YEAR))]))	
+	lzeta	<- cbind(tmp, subset(lzeta, ID<=ggd.n))
+	da.p	<- merge(da, lzeta, by=c('GGD_INLA_IDX','YEAR'))
+	setnames(da.p, c('0.025quant','0.5quant','0.975quant'), c('ql','median','qu'))
+	ggplot(da.p, aes(x=YEAR)) +
+			geom_errorbar(aes(ymin=ql, ymax=qu)) + geom_point(aes(y=mean)) +
+			facet_grid(GGD~.) +
+			labs(x='', y='log zeta', colour='public health region')
+			theme_bw() + theme()
+	ggsave(paste0(outfile.base, 'map_logzeta_allMSM_time_2007_2015.pdf'), w=6, h=25)
+	
+	
+}
+######################################################################################
+eval.spatial.prepare<- function()
 {
 	require(maptools)
 	require(maps)
@@ -1671,8 +2320,11 @@ eval.diag.spatialrates.prepare<- function()
 	set(dfs, dfs[, which(is.na(GGD_first))], "GGD_first", "Unknown")
 	set(dfs, dfs[, which(is.na(Region_first))], 'Region_first', 'Unknown')
 	set(dfs, NULL, 'AGE', dfs[, cut(Age_AnyPosT1, right=FALSE, breaks=c(-.01,seq(15,65,10),100), labels=c('0-14','15-24','25-34','35-44','45-54','55-64','65-99'))])
-	set(dfs, NULL, 'YOUNG', dfs[, cut(Age_AnyPosT1, right=FALSE, breaks=c(-.01,15,30,100), labels=c('0-14', '15-29','30-99'))])
+	set(dfs, NULL, 'YOUNG', dfs[, cut(Age_AnyPosT1, right=FALSE, breaks=c(-.01,15,30, 70, 100), labels=c('0-14', '15-29','30-69', '70-99'))])
 	set(dfs, NULL, 'OLD', dfs[, cut(Age_AnyPosT1, right=FALSE, breaks=c(-.01,15,50,70,100), labels=c('0-14', '15-49', '50-69', '70-99'))])
+	set(dfs, NULL, 'MID', dfs[, cut(Age_AnyPosT1, right=FALSE, breaks=c(-.01,15,30,50,70,100), labels=c('0-14', '15-29,50-69', '30-49', '50-69', '70-99'))])
+	set(dfs, dfs[, which(MID=='50-69')], 'MID', '15-29,50-69')
+	set(dfs, NULL, 'MID', dfs[, factor(as.character(MID))])
 	#
 	#	focus on 2000-2015 
 	#
@@ -1720,6 +2372,16 @@ eval.diag.spatialrates.prepare<- function()
 	tmp2[, STAT:='OLD']
 	setnames(tmp2, 'OLD','GROUP')
 	tmp		<- rbind(tmp, tmp2)
+	#	add population by MID and GGD
+	tmp2	<- subset(dpop, AGE%in%c("15-19","20-24","25-29","50-54","55-59","60-69"))
+	set(tmp2, NULL, 'MID', '"15-29,50-69"')
+	tmp3	<- subset(dpop, AGE%in%c("30-34","35-39","40-44","45-49"))
+	set(tmp3, NULL, 'MID', '30-49')	
+	tmp2	<- rbind(tmp2, tmp3)
+	tmp2	<- tmp2[, list(M=sum(M), F=sum(F)), by=c('GGD_ID','GGD_INLA_IDX','GGD','MID','YEAR')]
+	tmp2[, STAT:='MID']
+	setnames(tmp2, 'MID','GROUP')
+	tmp		<- rbind(tmp, tmp2)	
 	#	adjust GGD names, add REGION
 	dpop	<- copy(tmp)
 	dpop[, POP:=M+F]		
@@ -1749,6 +2411,12 @@ eval.diag.spatialrates.prepare<- function()
 	tmp2	<- rbind(tmp2, tmp2[, list(Trm='ALL', NEW_DIAG=sum(NEW_DIAG)), by=c('GGD_first','YEAR','OLD')])
 	tmp2[, STAT:='OLD']
 	setnames(tmp2, 'OLD','GROUP')
+	tmp		<- rbind(tmp, tmp2)
+	#	... by mid
+	tmp2	<- dfs[, list(NEW_DIAG= length(Patient)), by=c('GGD_first','YEAR','MID','Trm')]
+	tmp2	<- rbind(tmp2, tmp2[, list(Trm='ALL', NEW_DIAG=sum(NEW_DIAG)), by=c('GGD_first','YEAR','MID')])
+	tmp2[, STAT:='MID']
+	setnames(tmp2, 'MID','GROUP')
 	dd		<- rbind(tmp, tmp2)
 	#
 	dd		<- dcast.data.table(dd, GGD_first+YEAR+STAT+GROUP~Trm, value.var='NEW_DIAG')
@@ -1760,7 +2428,7 @@ eval.diag.spatialrates.prepare<- function()
 	dd[, R_ALL:= DIAG_ALL/POP]
 	dd[, R_MSM:= DIAG_MSM/M]
 	
-	save(dd, dpop, ggd.inla, ggd.inla.file, ggd.shp, file=outfile)
+	save(dd, dpop, ggd.shp, file=outfile)
 }
 ######################################################################################
 eval.diag.rates.by.age<- function()
