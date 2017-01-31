@@ -1,6 +1,8 @@
 cr.various<- function()
 {
-	cr.master.ex3.runcoalreg.using.TYPE.ETFI()
+	#cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla()
+	cr.master.ex3.runcoalreg.using.TYPE.ETFI.mbias()
+	#cr.master.ex3.runcoalreg.using.TYPE.ETFI.noise()
 }
 
 cr.master.ex3.generate.data<- function()
@@ -197,7 +199,7 @@ cr.master.ex3.runcoalreg.using.TYPE<- function()
 	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)			
 }
 
-cr.master.ex3.runcoalreg.using.TYPE.ETFI<- function()
+cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla<- function()
 {
 	require(coalreg)
 	require(viridis)
@@ -255,7 +257,17 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI<- function()
 			coord_cartesian(ylim=c(-7.5,7.5)) +
 			scale_y_continuous(breaks=seq(-10,10,1)) +
 			facet_grid(.~STAT) 
-	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)
+	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)	
+}
+
+cr.master.ex3.runcoalreg.using.TYPE.ETFI.mbias<- function()
+{
+	require(coalreg)
+	require(viridis)
+	indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+	par.base.pattern	<- 'm3.RR5.n150_seed123'
+	indir				<- '/work/or105/ATHENA_2016/master_examples'
+	par.base.pattern	<- 'm3.RR5.n1250_seed123'	
 	#
 	#	run coalreg	run using time to infection under multiplicative bias
 	#	with extra args lnr0 = -3, lnrLimits = c(-Inf, -1), scale=F, lasso_threshold=5, method = 'BFGS'
@@ -307,7 +319,17 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI<- function()
 			coord_cartesian(ylim=c(-7.5,7.5)) +
 			scale_y_continuous(breaks=seq(-10,10,1)) +
 			facet_grid(.~STAT) 
-	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)
+	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)	
+}
+
+cr.master.ex3.runcoalreg.using.TYPE.ETFI.noise<- function()
+{
+	require(coalreg)
+	require(viridis)
+	indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+	par.base.pattern	<- 'm3.RR5.n150_seed123'
+	indir				<- '/work/or105/ATHENA_2016/master_examples'
+	par.base.pattern	<- 'm3.RR5.n1250_seed123'	
 	#
 	#	run coalreg	run using time to infection under noise of 1 std dev
 	#	with extra args lnr0 = -3, lnrLimits = c(-Inf, -1), scale=F, lasso_threshold=5, method = 'BFGS'
