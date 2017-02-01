@@ -106,8 +106,7 @@ cr.master.ex3.runcoalreg.using.TYPE.BFGS2<- function(indir, par.base.pattern, pa
 	#	with extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
 	#	with 50% sampling
 	#	
-	set.seed(42)
-	indir	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
 				#F		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep1.nwk'
@@ -282,7 +281,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2<- function(indir, par.bas
 	#
 	#	run coalreg	run using exact time to infection
 	#	with extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
-	#	with 50% sampling	
+	#	with 50% sampling	 
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
