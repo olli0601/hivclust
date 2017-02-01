@@ -2,7 +2,7 @@ cr.various<- function()
 {
 	indir				<- '/work/or105/ATHENA_2016/master_examples'
 	par.base.pattern	<- 'm3.RR5.n1250_seed123'	
-	if(0)
+	if(1)
 	{
 		par.s				<- 0.5
 		cr.master.ex3.runcoalreg.using.TYPE.BFGS2(indir, par.base.pattern, par.s)	
@@ -103,7 +103,7 @@ cr.master.ex3.runcoalreg.using.TYPE.BFGS2<- function(indir, par.base.pattern, pa
 		
 	#
 	#	run coalreg	run 
-	#	with extra args lnr0 = -3, lnrLimits = c(-Inf, -1), scale=F, lasso_threshold=5, method = 'BFGS'
+	#	with extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
 	#	with 50% sampling
 	#	
 	set.seed(42)
@@ -122,7 +122,7 @@ cr.master.ex3.runcoalreg.using.TYPE.BFGS2<- function(indir, par.base.pattern, pa
 				set(phi, NULL, 'TAXA', NULL)
 				tmp		<- data.matrix(phi)
 				fit 	<- trf.lasso(dph, 	tmp, trf_names = c( 'TYPE'), aoi_names = c( 'TYPE' ), lasso_threshold=5, method = 'BFGS',
-											lnr0 = -3, lnrLimits = c(-Inf, -1), scale=FALSE)	
+											lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
 				fci 	<- fisher.ci(fit)	 
 				pci 	<- prof.ci(fit, fci  ) 
 				#print(fit$bestfit$par )
