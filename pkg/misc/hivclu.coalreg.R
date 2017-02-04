@@ -2,7 +2,7 @@ cr.various<- function()
 {
 	indir				<- '/work/or105/ATHENA_2016/master_examples'
 	par.base.pattern	<- 'm3.RR5.n1250_seed123'	
-	if(1)
+	if(0)
 	{
 		par.s				<- 0.5
 		cr.master.ex3.runcoalreg.using.TYPE.BFGS2(indir, par.base.pattern, par.s)	
@@ -11,7 +11,12 @@ cr.various<- function()
 	{
 		par.s				<- 0.5
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2(indir, par.base.pattern, par.s)	
-	}	
+	}
+	if(1)
+	{
+		par.s				<- 0.5
+		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3(indir, par.base.pattern, par.s)	
+	}
 	if(0)
 	{
 		par.s				<- 0.5
@@ -32,6 +37,8 @@ cr.various<- function()
 		par.tsimn			<- 1
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.lnnoise.BFGS2(indir, par.base.pattern, par.s, par.tsimb, par.tsimn)	
 	}	
+	
+	
 }
 
 cr.master.ex3.generate.data<- function()
@@ -268,6 +275,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS1<- function(indir, par.bas
 	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)
 	
 }
+
 cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2<- function(indir, par.base.pattern, par.s)
 {
 	require(coalreg)
@@ -309,6 +317,66 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2<- function(indir, par.bas
 				save( fit, fci, pci, file=tmp)
 			}, by='F']		
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs2_s50.rda'),full.names=TRUE))
+	res		<- infiles[, {
+				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep99_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
+				load(F)
+				list(	THETA= names(fit$bestfit$par),
+						MLE= unname(fit$bestfit$par),
+						PROF_MEDIAN=unname(apply(pci$sample, 2, median)))				
+			}, by='F']
+	res		<- melt(res, measure.vars=c('MLE','PROF_MEDIAN'), variable.name='STAT', value.name='V')
+	ggplot(res, aes(x=THETA, y=V)) + 
+			geom_violin(trim=TRUE, scale='width') + geom_boxplot(outlier.shape=NA, fill="#482576FF", width=0.2, size=0.3, colour="#FCA50AFF") +
+			theme_bw() + 
+			labs(x='', y='log risk ratio I1 vs baseline I0\n') +			
+			coord_cartesian(ylim=c(-7.5,7.5)) +
+			scale_y_continuous(breaks=seq(-10,10,1)) +
+			facet_grid(.~STAT) 
+	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)	
+}
+
+cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.base.pattern, par.s)
+{
+	require(coalreg)
+	require(viridis)
+	require(data.table)
+	if(0)
+	{
+		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'			
+		par.base.pattern	<- 'm3.RR5.n150_seed123'	
+		par.s				<- 0.5		
+	}
+	#
+	#	run coalreg	run using exact time to infection
+	#	with maxNodeDepth=2, extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
+	#	with 50% sampling	 
+	set.seed(42)	
+	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
+	infiles[, {
+				#F		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
+				ph		<- read.tree( F )					
+				ph 		<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
+				tmp 	<- setNames(dist.nodes( ph )[(Ntip(ph)+1), seq_len(Ntip(ph))], ph$tip.label)
+				dph		<- DatedTree(ph, sampleTimes=tmp)
+				#	create data.table with infection type
+				phi		<- data.table(	TAXA=ph$tip.label, 
+						TYPE=sapply(strsplit(ph$tip.label,'_',),'[[',2),
+						ETSI=as.numeric(sapply(strsplit(ph$tip.label,'_',),'[[',3)))
+				set(phi, NULL, 'TYPE', phi[,factor(TYPE,levels=c('I1','I0'))])
+				#	zero mean ETSI so the coefficients can be interpreted as RR
+				set(phi, NULL, 'ETSI', phi[, ETSI-mean(ETSI)])				
+				rownames(phi)	<- phi[, TAXA]
+				set(phi, NULL, 'TAXA', NULL)
+				tmp		<- data.matrix(phi)
+				fit 	<- trf.lasso(dph, 	tmp, trf_names = c( 'TYPE'), aoi_names = c( 'ETSI' ), maxNodeDepth=2, lasso_threshold=5, method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
+				fci 	<- fisher.ci(fit)	 
+				pci 	<- prof.ci(fit, fci  ) 
+				#print(fit$bestfit$par )
+				#print( fci$ci )	
+				tmp		<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs3_s',par.s*100,'.rda'),basename(F)))
+				save( fit, fci, pci, file=tmp)
+			}, by='F']		
+	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs3_s50.rda'),full.names=TRUE))
 	res		<- infiles[, {
 				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep99_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
 				load(F)
