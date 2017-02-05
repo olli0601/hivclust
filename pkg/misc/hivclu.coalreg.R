@@ -16,7 +16,7 @@ cr.various<- function()
 	{
 		par.s				<- 0.5
 		par.maxNodeDepth	<- 3
-		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3(indir, par.base.pattern, par.s, , par.maxNodeDepth)	
+		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3(indir, par.base.pattern, par.s, par.maxNodeDepth)	
 	}
 	if(0)
 	{
