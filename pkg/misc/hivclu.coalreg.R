@@ -15,7 +15,8 @@ cr.various<- function()
 	if(1)
 	{
 		par.s				<- 0.5
-		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3(indir, par.base.pattern, par.s)	
+		par.maxNodeDepth	<- 3
+		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3(indir, par.base.pattern, par.s, , par.maxNodeDepth)	
 	}
 	if(0)
 	{
@@ -36,9 +37,7 @@ cr.various<- function()
 		par.tsimb			<- 0.5
 		par.tsimn			<- 1
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.lnnoise.BFGS2(indir, par.base.pattern, par.s, par.tsimb, par.tsimn)	
-	}	
-	
-	
+	}			
 }
 
 cr.master.ex3.generate.data<- function()
@@ -173,31 +172,40 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.compare<- function()
 	res[, N:= as.integer(gsub('.*\\.n([0-9]+)_.*','\\1',F))]
 	res[, TAXA_SAMPLED:= 1]
 	tmp	<- res[, which(grepl('.*_s([0-9]+).*',F))]
-	set(res, tmp, 'TAXA_SAMPLED', res[tmp, as.numeric(gsub('.*_s([0-9]+).*','\\1',F))])
+	set(res, tmp, 'TAXA_SAMPLED', res[tmp, as.numeric(gsub('.*_s([0-9]+).*','\\1',F))/100])
 	res[, TR_COEFF:= NA_character_]
 	set(res, res[, which(grepl('using_TYPEtrf|using_TYPE',F))],'TR_COEFF', 'I0 vs I1')
 	res[, TSI_COEFF:= NA_character_]
 	set(res, res[, which(grepl('using_TYPE_|using_TYPE\\.',F))],'TSI_COEFF', 'I0 vs I1')
 	set(res, res[, which(grepl('ETFIaoi',F))],'TSI_COEFF', 'exact time since infection')
-	set(res, res[, which(grepl('ETFIaoi',F) & grepl('_mb100',F) & grepl('_en100',F))],'TSI_COEFF', 'noisy time since infection\nno bias')
-	set(res, res[, which(grepl('ETFIaoi',F) & grepl('_mb50',F) & !grepl('_en',F))],'TSI_COEFF', 'biased time since infection\nno noise')
-	res[, BFGSargs:= grepl('BFGS',F)]
+	set(res, res[, which(grepl('ETFIaoi',F) & grepl('_mb100',F) & grepl('_en100|_ln100',F))],'TSI_COEFF', 'noisy time since infection\nno bias')
+	set(res, res[, which(grepl('ETFIaoi',F) & grepl('_mb50',F) & !grepl('_en|_ln',F))],'TSI_COEFF', 'biased time since infection\nno noise')
+	set(res, res[, which(grepl('ETFIaoi',F) & grepl('_mb50',F) & grepl('_en100|_ln100',F))],'TSI_COEFF', 'biased time since infection\nnoisy time since infection')
+	res[, BFGSargs:= 'no constraints']
+	set(res, res[, which(grepl('BFGS',F))], 'BFGSargs', 'r < -1')
+	set(res, res[, which(grepl('BFGSargs2',F))], 'BFGSargs', 'r in -4,2')
+	set(res, res[, which(grepl('BFGSargs3',F))], 'BFGSargs', 'r in -4,2, maxDepth 2')
+	res[, NOISE_MODEL:='none']
+	set(res, res[, which(grepl('_en100',F))],'NOISE_MODEL', 'exp')
+	set(res, res[, which(grepl('_ln100',F))],'NOISE_MODEL', 'lognormal')
+	
 	set(res, NULL, 'THETA', res[, gsub('ETSI_NOISE','ETSI', THETA)])
 	set(res, NULL, 'TSI_COEFF', res[, factor(TSI_COEFF, levels=c('I0 vs I1','exact time since infection','noisy time since infection\nno bias','biased time since infection\nno noise'))])
 	#
 	#
-	res		<- melt(res, measure.vars=c('MLE','PROF_MEDIAN'), variable.name='STAT', value.name='V')
+	resp	<- melt(res, measure.vars=c('MLE','PROF_MEDIAN'), variable.name='STAT', value.name='V')
 	#
 	#	 compare MLEs
 	#
-	ggplot(subset(res, BFGSargs & STAT=='MLE'), aes(x=THETA, y=V)) + 
+	subset(resp, BFGSargs=='r < -1' & STAT=='MLE' & TAXA_SAMPLED==.5 & NOISE_MODEL%in%c('exp','none') & THETA=='b_TYPE')[, table(N, TSI_COEFF)]
+	ggplot(subset(resp, BFGSargs=='r < -1' & STAT=='MLE' & TAXA_SAMPLED==.5 & NOISE_MODEL%in%c('exp','none')), aes(x=THETA, y=V)) + 
 			geom_violin(trim=TRUE, scale='width') + geom_boxplot(outlier.shape=NA, fill="#482576FF", width=0.2, size=0.3, colour="#FCA50AFF") +
 			theme_bw() + 
 			labs(x='', y='log risk ratio I1 vs baseline I0\n') +	
 			coord_cartesian(ylim=c(-5,5)) +
 			scale_y_continuous(breaks=seq(-10,10,1), expand=c(0,0)) +
 			facet_grid(N~TSI_COEFF) 
-	ggsave(file= file.path(indir,'compare_MLEs.pdf'), w=10,h=7)
+	ggsave(file= file.path(indir,'compare_MLEs_BFGSargs1.pdf'), w=10,h=7)
 	#
 	#	compare bias in MLE for trm risk
 	#
@@ -211,7 +219,19 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.compare<- function()
 			facet_grid(~N) + 
 			coord_flip()
 	ggsave(file= file.path(indir,'compare_bias_trmrisk.pdf'), w=10,h=7)
-
+	#
+	#	compare BFGSargs3 to BFGSargs2
+	#
+	tmp		<- subset(resp, BFGSargs%in%c('r < -1','r in -4,2','r in -4,2, maxDepth 2') & STAT=='MLE' & TSI_COEFF=='exact time since infection' & TAXA_SAMPLED==.5 & NOISE_MODEL%in%c('none'))
+	subset(tmp, THETA=='b_TYPE')[, table(N, BFGSargs)]
+	ggplot(tmp, aes(x=THETA, y=V)) + 
+			geom_violin(trim=TRUE, scale='width') + geom_boxplot(outlier.shape=NA, fill="#482576FF", width=0.2, size=0.3, colour="#FCA50AFF") +
+			theme_bw() + 
+			labs(x='', y='log risk ratio I1 vs baseline I0\n') +	
+			coord_cartesian(ylim=c(-5,5)) +
+			scale_y_continuous(breaks=seq(-10,10,1), expand=c(0,0)) +
+			facet_grid(N~BFGSargs) 
+	
 }
 
 
@@ -335,7 +355,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2<- function(indir, par.bas
 	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)	
 }
 
-cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.base.pattern, par.s)
+cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.base.pattern, par.s, par.maxNodeDepth)
 {
 	require(coalreg)
 	require(viridis)
@@ -344,6 +364,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 	{
 		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'			
 		par.base.pattern	<- 'm3.RR5.n150_seed123'	
+		par.maxNodeDepth	<- 2
 		par.s				<- 0.5		
 	}
 	#
@@ -368,31 +389,14 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 				rownames(phi)	<- phi[, TAXA]
 				set(phi, NULL, 'TAXA', NULL)
 				tmp		<- data.matrix(phi)
-				fit 	<- trf.lasso(dph, 	tmp, trf_names = c( 'TYPE'), aoi_names = c( 'ETSI' ), maxNodeDepth=2, lasso_threshold=5, method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
+				fit 	<- trf.lasso(dph, 	tmp, trf_names = c( 'TYPE'), aoi_names = c( 'ETSI' ), maxNodeDepth=par.maxNodeDepth, lasso_threshold=5, method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
 				fci 	<- fisher.ci(fit)	 
 				pci 	<- prof.ci(fit, fci  ) 
 				#print(fit$bestfit$par )
 				#print( fci$ci )	
-				tmp		<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs3_s',par.s*100,'.rda'),basename(F)))
+				tmp		<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_s',par.s*100,'.rda'),basename(F)))
 				save( fit, fci, pci, file=tmp)
-			}, by='F']		
-	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs3_s50.rda'),full.names=TRUE))
-	res		<- infiles[, {
-				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep99_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
-				load(F)
-				list(	THETA= names(fit$bestfit$par),
-						MLE= unname(fit$bestfit$par),
-						PROF_MEDIAN=unname(apply(pci$sample, 2, median)))				
-			}, by='F']
-	res		<- melt(res, measure.vars=c('MLE','PROF_MEDIAN'), variable.name='STAT', value.name='V')
-	ggplot(res, aes(x=THETA, y=V)) + 
-			geom_violin(trim=TRUE, scale='width') + geom_boxplot(outlier.shape=NA, fill="#482576FF", width=0.2, size=0.3, colour="#FCA50AFF") +
-			theme_bw() + 
-			labs(x='', y='log risk ratio I1 vs baseline I0\n') +			
-			coord_cartesian(ylim=c(-7.5,7.5)) +
-			scale_y_continuous(breaks=seq(-10,10,1)) +
-			facet_grid(.~STAT) 
-	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)	
+			}, by='F']				
 }
 
 cr.master.ex3.runcoalreg.using.TYPE.ETFI.mbias.BFGS1<- function(indir, par.base.pattern, par.s, par.tsimb)
