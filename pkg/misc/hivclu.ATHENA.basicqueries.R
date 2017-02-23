@@ -1520,6 +1520,81 @@ eval.diag.characteristics.by.age<- function()
 	
 }
 ######################################################################################
+eval.spatial.crudetimetrends.allForeign<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(spacetime)
+	library(geoR)
+	require(xts)
+	require(INLA)
+	require(data.table)
+	library(RColorBrewer)
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	#
+	#	load: 
+	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		ggd.shp (GGD shape file)
+	#	
+	load(infile)
+	#
+	#	prepare shape file  
+	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))		
+	#
+	#	plot diagnoses since 2008 for every GGD among all foreign-born individuals
+	#	
+	da		<- subset(dm, STAT=='ORIGIN_TRM' & grepl('Foreign',GROUP) & YEAR>=2004)
+	da		<- da[, list(Foreign_DIAG=sum(NEW_DIAG)), by=c('GGD','REGION','GGD_ID','GGD_INLA_IDX','YEAR')]
+	tmp		<- subset(da, YEAR>=2004 & YEAR<=2007)[, list(YEAR=2007, Foreign_DIAG=mean(Foreign_DIAG)), by=c('GGD','REGION','GGD_ID','GGD_INLA_IDX')]
+	da		<- rbind(tmp, subset(da, YEAR>2007))	
+	tmp		<- unique(subset(da, select=c(GGD, REGION, GGD_ID, GGD_INLA_IDX)))
+	tmp2	<- as.data.table(expand.grid(GGD=da[, unique(GGD)], YEAR=da[, unique(YEAR)]))
+	tmp		<- merge(tmp, tmp2, by=c('GGD'))	
+	da		<- merge(tmp, da, by=c('GGD','REGION','GGD_ID','GGD_INLA_IDX','YEAR'), all.x=1)
+	set(da, da[, which(is.na(Foreign_DIAG))], 'Foreign_DIAG', 0)			
+	setkey(da, GGD_INLA_IDX, YEAR)
+	da[, YEAR_Dt:=as.Date(paste0(YEAR,'-12-31'),format="%Y-%m-%d")]	
+	cols	<- colorRampPalette(brewer.pal(9, "RdYlBu"))
+	#	plot by time
+	tmp		<- dcast.data.table(da, GGD_INLA_IDX~YEAR_Dt, value.var='Foreign_DIAG')	
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+			xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,date)
+			data.frame(Foreign_MSM=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'map_diagnumber_GGD_ForeignAll.pdf'), w=9, h=6)	
+	stplot(tmp, 			da[, unique(YEAR_Dt)], 
+			at= c(-1,5,10,25,50,100,200),
+			col.regions=rev(cols(8)),		
+			main='annual HIV diagnoses among foreign-born individuals',
+			animate=0 )
+	dev.off()
+	#
+	#	average p.a. 2013-2015
+	#	
+	da		<- subset(dm, STAT=='ORIGIN_TRM' & grepl('Foreign',GROUP) & YEAR>=2013)
+	da		<- da[, list(Foreign_DIAG=sum(NEW_DIAG)), by=c('GGD','REGION','GGD_ID','GGD_INLA_IDX','YEAR')]
+	tmp		<- da[, list(Foreign_DIAG=mean(Foreign_DIAG)), by=c('GGD','REGION','GGD_ID','GGD_INLA_IDX')]
+	#1:    Amsterdam          Amsterdam   3406           15    84.000000
+	#3:    Den_Haag           Den_Haag   3906           13    24.333333
+	#20:   Rotterdam_Rijnmond Rotterdam_Rijnmond   4607           10    44.000000
+
+	#	plot 
+	tmp		<- merge(ggd.shp@data, subset(tmp, select=c(GGD_INLA_IDX, Foreign_DIAG)), by='GGD_INLA_IDX')
+	ggd.out	<- copy(ggd.shp)
+	attr(ggd.out, "data")	<- tmp
+	pdf(file=paste(outfile.base, 'map_diagnumber_GGD_ForeignAll_20132015.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='Foreign_DIAG', asp=1, col.regions=rev(cols(8)), at=c(-1,5,10,20,40,80,100))
+	dev.off()	
+	pdf(file=paste(outfile.base, 'map_INLA_logzeta_contrastage_youngMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='LOG_ZETA_CONTRAST', asp=1)
+	dev.off()	
+	pdf(file=paste(outfile.base, 'map_INLA_logzetap0_contrastage_youngMSM.pdf'), w=6, h=6)
+	spplot(obj=ggd.out, zcol='LOG_ZETA_CONTRAST_P0', asp=1)
+	dev.off()	
+}
+######################################################################################
 eval.spatial.crudetimetrends.allMSM<- function()
 {
 	require(maptools)
@@ -2310,10 +2385,18 @@ eval.spatial.prepare<- function()
 	set(dfs, dfs[, which(Sex=='M' & Trm=='Het')], 'Trm', 'HetM')
 	set(dfs, dfs[, which(Sex=='F' & Trm=='Het')], 'Trm', 'HetF')
 	set(dfs, dfs[, which(is.na(Trm))], 'Trm', 'Unknown')
+	set(dfs, dfs[, which(RegionOrigin%in%c("Caribbean","Latin_South_America"))], "RegionOrigin", "Carib_Southern_America")
 	set(dfs, dfs[, which(RegionOrigin%in%c("Central_EU","Eastern_EU_stans"))], "RegionOrigin", "Cen_East_Stans_EU")
 	set(dfs, dfs[, which(RegionOrigin%in%c("Austr_NZ","Sout_SouthEast_Asia","Oceania_Pacific","North_Africa_Middle_East"))], "RegionOrigin", "Other")
 	set(dfs, dfs[, which(is.na(RegionOrigin))], "RegionOrigin", "Unknown")
 	set(dfs, NULL, "RegionOrigin", dfs[, as.character(factor(RegionOrigin))])
+	set(dfs, NULL, 'ORIGIN_TRM', NA_character_)
+	set(dfs, dfs[, which(RegionOrigin=='NL' & Trm=='MSM')], 'ORIGIN_TRM', 'NL_MSM')
+	set(dfs, dfs[, which(RegionOrigin=='NL' & Trm!='MSM')], 'ORIGIN_TRM', 'NL_Oth')
+	set(dfs, dfs[, which(RegionOrigin!='NL' & Trm=='MSM')], 'ORIGIN_TRM', 'Foreign_MSM')
+	set(dfs, dfs[, which(RegionOrigin!='NL' & Trm!='MSM')], 'ORIGIN_TRM', 'Foreign_Oth')
+	set(dfs, dfs[, which(RegionOrigin=='Unknown' & Trm=='MSM')], 'ORIGIN_TRM', 'UnknownOri_MSM')
+	set(dfs, dfs[, which(RegionOrigin=='Unknown' & Trm!='MSM')], 'ORIGIN_TRM', 'UnknownOri_Oth')	
 	set(dfs, NULL, 'Age_AnyPosT1', dfs[, AnyPos_T1-DateBorn])
 	set(dfs, NULL, 'YEAR', dfs[, floor(AnyPos_T1)])		
 	set(dfs, NULL, 'GGD_first', dfs[, gsub('-','_',gsub('Hulpverlening_','',as.character(GGD_first)))])
@@ -2329,7 +2412,7 @@ eval.spatial.prepare<- function()
 	#	focus on 2000-2015 
 	#
 	dfs		<- subset(dfs, Region_first!='Unknown' & AnyPos_T1>2000 & AnyPos_T1<2016)	
-	stopifnot( !nrow(subset(dfs, is.na(GGD_INLA_IDX))))
+	#stopifnot( !nrow(subset(dfs, is.na(GGD_INLA_IDX))))
 	#
 	#	get population by AGE and GGD 
 	#
@@ -2427,8 +2510,23 @@ eval.spatial.prepare<- function()
 		set(dd, which(is.na(dd[[x]])), x, 0L)
 	dd[, R_ALL:= DIAG_ALL/POP]
 	dd[, R_MSM:= DIAG_MSM/M]
+	#
+	#	from list of individual-level diagnoses above get total new HIV diagnoses
+	#	by region origin
+	#
+	tmp		<- dfs[, list(NEW_DIAG= length(Patient)), by=c('GGD_first','YEAR','RegionOrigin')]
+	tmp[, STAT:='RegionOrigin']
+	setnames(tmp, 'RegionOrigin','GROUP')
+	#	... by ORIGIN_TRM
+	tmp2	<- dfs[, list(NEW_DIAG= length(Patient)), by=c('GGD_first','YEAR','ORIGIN_TRM')]	
+	tmp2[, STAT:='ORIGIN_TRM']
+	setnames(tmp2, 'ORIGIN_TRM','GROUP')
+	dm		<- rbind(tmp, tmp2)	
+	setnames(dm, c('GGD_first'), c('GGD'))	
+	dm		<- merge(unique(subset(dpop, select=c(GGD, REGION, GGD_ID, GGD_INLA_IDX))), dm, by=c('GGD'), all.x=1)
 	
-	save(dd, dpop, ggd.shp, file=outfile)
+	#	save
+	save(dd, dpop, ggd.shp, dm, file=outfile)
 }
 ######################################################################################
 eval.diag.rates.by.age<- function()
@@ -2767,6 +2865,91 @@ eval.pop.by.age.migration<- function()
 }
 ######################################################################################
 eval.diag.newdiagnoses.by.migration<- function()
+{
+	require(viridis)
+	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	load(infile)
+	#
+	#	get first sequence
+	#	
+	dfs		<- df.all[, {
+				z	<- NA_character_
+				zz	<- NA_real_
+				if(any(!is.na(PosSeqT)))
+				{
+					z	<- FASTASampleCode[which.min(PosSeqT)]
+					zz	<- min(PosSeqT, na.rm=TRUE)
+				}
+				list(FASTASampleCode=z, PosSeqT=zz)
+			}, by=c('Patient')]
+	tmp		<- copy(df.all)
+	set(tmp, NULL, c('PosSeqT','FASTASampleCode','SUBTYPE_C','SEQ_L'), NULL)
+	dfs		<- merge(dfs, unique(tmp), by='Patient')
+	
+	set(dfs, dfs[, which(Trm%in%c('MSM','BI'))], 'Trm', 'MSM')
+	set(dfs, dfs[, which(Trm%in%c('HET','HETfa'))], 'Trm', 'Het')
+	#set(dfs, dfs[, which(Sex=='M' & Trm=='Het')], 'Trm', 'HetM')
+	#set(dfs, dfs[, which(Sex=='F' & Trm=='Het')], 'Trm', 'HetF')	
+	set(dfs, dfs[, which(Trm%in%c('BLOOD','NEEACC','PREG','SXCH'))], 'Trm', 'OTH')
+	set(dfs, dfs[, which(is.na(Trm))], 'Trm', 'Unknown')
+	set(dfs, dfs[, which(RegionOrigin%in%c("Austr_NZ","Western_EU"))], "RegionOrigin", "Western")
+	set(dfs, dfs[, which(RegionOrigin%in%c("Caribbean","Latin_South_America"))], "RegionOrigin", "Carib_Southern_America")
+	set(dfs, dfs[, which(RegionOrigin%in%c("Central_EU","Eastern_EU_stans"))], "RegionOrigin", "Cen_East_Stans_EU")
+	set(dfs, dfs[, which(RegionOrigin%in%c("Sout_SouthEast_Asia","Oceania_Pacific","North_Africa_Middle_East"))], "RegionOrigin", "Other")
+	set(dfs, dfs[, which(is.na(RegionOrigin))], "RegionOrigin", "Unknown")
+	set(dfs, NULL, "RegionOrigin", dfs[, as.character(factor(RegionOrigin))])
+	set(dfs, NULL, 'ORIGIN_TRM', NA_character_)
+	set(dfs, dfs[, which(RegionOrigin=='NL' & Trm=='MSM')], 'ORIGIN_TRM', 'NL_MSM')
+	set(dfs, dfs[, which(RegionOrigin=='NL' & Trm!='MSM')], 'ORIGIN_TRM', 'NL_Oth')
+	set(dfs, dfs[, which(RegionOrigin!='NL' & Trm=='MSM')], 'ORIGIN_TRM', 'Foreign_MSM')
+	set(dfs, dfs[, which(RegionOrigin!='NL' & Trm!='MSM')], 'ORIGIN_TRM', 'Foreign_Oth')
+	set(dfs, dfs[, which(RegionOrigin=='Unknown' & Trm=='MSM')], 'ORIGIN_TRM', 'UnknownOri_MSM')
+	set(dfs, dfs[, which(RegionOrigin=='Unknown' & Trm!='MSM')], 'ORIGIN_TRM', 'UnknownOri_Oth')		
+	set(dfs, NULL, 'Age_AnyPosT1', dfs[, AnyPos_T1-DateBorn])
+	set(dfs, NULL, 'YEAR', dfs[, floor(AnyPos_T1)])		
+	set(dfs, NULL, 'GGD_first', dfs[, gsub('-','_',gsub('Hulpverlening_','',as.character(GGD_first)))])
+	set(dfs, dfs[, which(is.na(GGD_first))], "GGD_first", "Unknown")
+	set(dfs, dfs[, which(is.na(Region_first))], 'Region_first', 'Unknown')
+	
+	
+	#
+	#	cumulative numbers by sex orientation and origin in Amsterdam since 2010
+	#
+	dfa	<- subset(dfs, !Trm%in%c('Unknown','OTH','IDU') & RegionOrigin!='Unknown' & AnyPos_T1>=2010 & AnyPos_T1<2016 & GGD_first=='Amsterdam')
+	dfa	<- dfa[, list(ND=length(Patient)), by=c('YEAR','Trm','RegionOrigin')]
+	tmp	<- as.data.table(expand.grid(YEAR=dfa[, sort(unique(YEAR))], Trm=dfa[, sort(unique(Trm))], RegionOrigin=dfa[, sort(unique(RegionOrigin))], stringsAsFactors=FALSE))  
+	dfa	<- merge(tmp, dfa, by=c('YEAR','Trm','RegionOrigin'), all.x=1)
+	set(dfa, dfa[, which(is.na(ND))], 'ND', 0)
+	ggplot(dfa, aes(x=YEAR, y=ND, colour=RegionOrigin)) + geom_line() + facet_grid(~Trm)
+	#	extrapolate numbers for 2016 - 2020
+	#	simply take 2014-2015 numbers for all but Dutch MSM
+	tmp	<- subset(dfa, YEAR>2013)[,list(ND=0.7*mean(ND)),by=c('Trm','RegionOrigin')]
+	set(tmp, tmp[, which(Trm=='MSM' & RegionOrigin=='NL')],'ND',40)
+	tmp	<- merge(as.data.table(expand.grid(YEAR=2016:2020, Trm=dfa[, sort(unique(Trm))], RegionOrigin=dfa[, sort(unique(RegionOrigin))], stringsAsFactors=FALSE)), tmp, by=c('Trm','RegionOrigin'))
+	dfa	<- rbind(dfa, tmp)
+	ggplot(dfa, aes(x=YEAR, y=ND, colour=RegionOrigin)) + geom_line() + facet_grid(~Trm)
+	#	add sequencing probs to calculate trm events that are in data
+	probs<- data.table(	Trm=c('MSM','Het'), 
+						IN_NL=c(0.75,0.5), 
+						IN_A=0.7,
+						SA=0.8,
+						SO=0.5)
+	dfa	<- merge(dfa, probs, by=c('Trm'))
+	set(dfa, dfa[, which(RegionOrigin=='NL')], 'IN_NL', 0.9)
+	dfa[, TRM_INDATA:= ND*IN_NL*IN_A*SA + ND*IN_NL*(1-IN_A)*SO]
+	
+	
+	setkey(dfa, Trm, RegionOrigin, YEAR)
+	tmp	<- dfa[, list(YEAR=YEAR, NDC=round(cumsum(ND)), TRM_INDATA_C=round(cumsum(TRM_INDATA))), by=c('Trm','RegionOrigin')]
+	ggplot(tmp, aes(x=YEAR, y=TRM_INDATA_C, colour=RegionOrigin)) + geom_line() + facet_grid(~Trm) 
+	tmp	<- dcast.data.table(melt(tmp, measure.vars=c('NDC','TRM_INDATA_C')), Trm+YEAR~RegionOrigin+variable, value.var='value')
+	
+	write.csv(tmp, row.names=FALSE, file='~/Dropbox (Infectious Disease)/OR_Work/2017/2017_AIDSFonds/trm_events_numbers.csv')
+	
+}
+######################################################################################
+eval.diag.newdiagnoses.by.age.migration<- function()
 {
 	require(viridis)
 	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'

@@ -5,8 +5,7 @@ project.Rakai.checkMissingRakai.150307<- function()
 	#infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/CheckPangeaId.csv'
 	#infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/CheckPangeaId2.csv'
 	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/SequenceDataNOTAvailable_Documented.csv'
-	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/SequenceDataAvailable_NotDocumented.csv'
-	
+	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/SequenceDataAvailable_NotDocumented.csv'	
 	#
 	#
 	#
@@ -268,7 +267,7 @@ RakaiCirc.recipient.female.get.info<- function(wdir=NA)
 	rrec
 }
 
-RakaiCirc.epi.get.info<- function()
+RakaiCirc.epi.get.info.170120<- function()
 {
 	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"	
 	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
@@ -301,27 +300,27 @@ RakaiCirc.epi.get.info<- function()
 	setnames(rh, c('RLTN1','RLTN2','RLTN3','RLTN4'), c('RLTN1_','RLTN2_','RLTN3_','RLTN4_'))
 	warning('undocumented RLTN codes 15 16 88 -> set to Unknown')
 	tmp		<- as.data.table(matrix(data=c(	'1','Current wife (at the time)',
-											'2','Current consensual partner (at the time)',
-											'3','Former wife/consensual partner',
-											'4','Girlfriend',
-											'5','Occasional or casual friend',
-											'6','Visitor (incl. wedding/funeral)',
-											'7','Stranger',
-											'8','Workmate',
-											'9','Boss/work supervisor',
-											'10','Employee',
-											'11','Fellow student',
-											'12','Sugar mummy',
-											'13','Relative other than spouse',
-											'14','Other non relative',
-											'15','Unknown',
-											'16','Unknown',
-											'88','Unknown',
-											'0','Unknown',
-											'97','Unknown',
-											'98','Unknown',
-											'99','Unknown'
-									), ncol=2, byrow=TRUE))
+							'2','Current consensual partner (at the time)',
+							'3','Former wife/consensual partner',
+							'4','Girlfriend',
+							'5','Occasional or casual friend',
+							'6','Visitor (incl. wedding/funeral)',
+							'7','Stranger',
+							'8','Workmate',
+							'9','Boss/work supervisor',
+							'10','Employee',
+							'11','Fellow student',
+							'12','Sugar mummy',
+							'13','Relative other than spouse',
+							'14','Other non relative',
+							'15','Unknown',
+							'16','Unknown',
+							'88','Unknown',
+							'0','Unknown',
+							'97','Unknown',
+							'98','Unknown',
+							'99','Unknown'
+					), ncol=2, byrow=TRUE))
 	setnames(tmp, colnames(tmp), c('RLTN1_','RLTN1'))
 	set(tmp, NULL,'RLTN1_',tmp[, as.integer(RLTN1_)])
 	rh		<- merge(rh,tmp,by='RLTN1_')
@@ -350,32 +349,32 @@ RakaiCirc.epi.get.info<- function()
 	set(rh, rh[, which(is.na(OCCUP2))],'OCCUP2',99L)
 	setnames(rh, c('OCCUP1','OCCUP2'), c('OCCUP1_','OCCUP2_'))
 	tmp		<- as.data.table(matrix(data=c(	'1','Agriculture for home use/barter',
-											'2','Agriculture for selling',
-											'3','Housework in your own home',
-											'4','Housekeeper',
-											'5','Home brewing',
-											'6','Government/clerical/teaching',
-											'7','Fishing',
-											'8','Student',
-											'9','Military/police',
-											'10','Shopkeeper',
-											'11','Trading/vending',
-											'12','Bar worker or owner',
-											'13','Trucker',
-											'14','Unemployed',
-											'15','Other',
-											'88','No additional occupation',
-											'16','Medical worker',
-											'17','Casual laborer',
-											'18','Waitress/Waiter/restaurant owner',
-											'19','Hair dresser/Salon owner',
-											'20','Construction (brick maker, builder, porter, painter, roofing)',
-											'21','Mechanic (automobiles, bicycles, electronics)',
-											'22','Boda Boda',
-											'23','Client/Sex worker',
-											'0','Unknown',
-											'98','Unknown',
-											'99','Unknown'), ncol=2, byrow=TRUE))
+							'2','Agriculture for selling',
+							'3','Housework in your own home',
+							'4','Housekeeper',
+							'5','Home brewing',
+							'6','Government/clerical/teaching',
+							'7','Fishing',
+							'8','Student',
+							'9','Military/police',
+							'10','Shopkeeper',
+							'11','Trading/vending',
+							'12','Bar worker or owner',
+							'13','Trucker',
+							'14','Unemployed',
+							'15','Other',
+							'88','No additional occupation',
+							'16','Medical worker',
+							'17','Casual laborer',
+							'18','Waitress/Waiter/restaurant owner',
+							'19','Hair dresser/Salon owner',
+							'20','Construction (brick maker, builder, porter, painter, roofing)',
+							'21','Mechanic (automobiles, bicycles, electronics)',
+							'22','Boda Boda',
+							'23','Client/Sex worker',
+							'0','Unknown',
+							'98','Unknown',
+							'99','Unknown'), ncol=2, byrow=TRUE))
 	setnames(tmp, colnames(tmp), c('OCCUP1_','OCCUP1'))
 	set(tmp, NULL,'OCCUP1_',tmp[, as.integer(OCCUP1_)])
 	rh		<- merge(rh,tmp,by='OCCUP1_')
@@ -486,10 +485,10 @@ RakaiCirc.epi.get.info<- function()
 	set(rh, rh[, which(grepl('CURRMARR',SEXC) & EVERSEX=='N')], 'SEXC', 'no sex contact ever')
 	set(rh, rh[, which(grepl('CURRMARR',SEXC))], 'SEXC', 'Unknown')	
 	tmp		<- rh[, which(grepl(	'currently married', SEXC) & 
-									(	!grepl('Current wife|Current consensual partner|Unknown', RLTN1) | 
-										!grepl('Current wife|Current consensual partner|Unknown', RLTN2) | 
-										!grepl('Current wife|Current consensual partner|Unknown', RLTN3) | 
-										!grepl('Current wife|Current consensual partner|Unknown', RLTN4))	)]
+							(	!grepl('Current wife|Current consensual partner|Unknown', RLTN1) | 
+								!grepl('Current wife|Current consensual partner|Unknown', RLTN2) | 
+								!grepl('Current wife|Current consensual partner|Unknown', RLTN3) | 
+								!grepl('Current wife|Current consensual partner|Unknown', RLTN4))	)]
 	set(rh, tmp, 'SEXC', 'currently married and other partner')			
 	#	check circumcision
 	tmp		<- rh[, which(CIRC=='Y' & SEX=='F')]
@@ -497,6 +496,283 @@ RakaiCirc.epi.get.info<- function()
 	set(rh, tmp, 'CIRC', NA_integer_)
 	#	set to NULL
 	set(rh, NULL, c('VDEX','AGEYRS','ORALHC','INJHC','EVERMARR','MARORDER','CURRMARR','POLYMAR','AGE1STSEX','WHOFSTSEX','CIRCUM','CIRCY1','CIRCY2','DUMMY','RLTN1','RLTN2','RLTN3','RLTN4','RLTN_NAMED'), NULL)
+	list(rd=rd, rh=rh)
+}
+
+
+RakaiCirc.epi.get.info.170208<- function()
+{
+	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"	
+	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	load(infile)
+	#	a bit of clean up 
+	rd		<- as.data.table(rccsData)
+	setnames(rd, colnames(rd), gsub('\\.','_',toupper(colnames(rd))))	
+	for(x in colnames(rd))
+		if(class(rd[[x]])=='Date')
+			set(rd, NULL, x, hivc.db.Date2numeric(rd[[x]]))
+	rh		<- as.data.table(rccsHistory)
+	setnames(rh, colnames(rh), gsub('\\.','_',toupper(colnames(rh))))
+	#rd[, table(VISIT)]
+	#	make shorter
+	setnames(rd, 'RCCS_STUDYID', 'RID')
+	setnames(rd, 'PANGEA_ID', 'PID')
+	setnames(rd, 'STUDYID', 'SID')
+	setnames(rh, 'RCCS_STUDYID', 'RID')	
+	#	data checks
+	setkey(rh, VISIT, RID)
+	stopifnot(nrow(rh)==nrow(unique(rh)))
+	#	define circumcision	
+	set(rh, rh[, which(!CIRCUM%in%c(1,2))], 'CIRCUM', NA_integer_)
+	set(rh, NULL, 'CIRCUM', rh[, factor(CIRCUM, levels=c(1,2), labels=c('Y','N'))])
+	#	define sexual relationships
+	set(rh, rh[, which(is.na(RLTN1))],'RLTN1',99L)
+	set(rh, rh[, which(is.na(RLTN2))],'RLTN2',99L)
+	set(rh, rh[, which(is.na(RLTN3))],'RLTN3',99L)
+	set(rh, rh[, which(is.na(RLTN4))],'RLTN4',99L)
+	setnames(rh, c('RLTN1','RLTN2','RLTN3','RLTN4'), c('RLTN1_','RLTN2_','RLTN3_','RLTN4_'))
+	warning('undocumented RLTN codes 15 16 88 -> set to Unknown')
+	tmp		<- as.data.table(matrix(data=c(	'1','Current wife (at the time)',
+											'2','Current consensual partner (at the time)',
+											'3','Former wife/consensual partner',
+											'4','Girlfriend',
+											'5','Occasional or casual friend',
+											'6','Visitor (incl. wedding/funeral)',
+											'7','Stranger',
+											'8','Workmate',
+											'9','Boss/work supervisor',
+											'10','Employee',
+											'11','Fellow student',
+											'12','Sugar mummy',
+											'13','Relative other than spouse',
+											'14','Other non relative',
+											'15','Unknown',
+											'16','Unknown',
+											'88','Unknown',
+											'0','Unknown',
+											'97','Unknown',
+											'98','Unknown',
+											'99','Unknown'
+									), ncol=2, byrow=TRUE))
+	setnames(tmp, colnames(tmp), c('RLTN1_','RLTN1'))
+	set(tmp, NULL,'RLTN1_',tmp[, as.integer(RLTN1_)])
+	rh		<- merge(rh,tmp,by='RLTN1_')
+	setnames(tmp, c('RLTN1_','RLTN1'), c('RLTN2_','RLTN2'))	
+	rh		<- merge(rh,tmp,by='RLTN2_')
+	setnames(tmp, c('RLTN2_','RLTN2'), c('RLTN3_','RLTN3'))	
+	rh		<- merge(rh,tmp,by='RLTN3_')
+	setnames(tmp, c('RLTN3_','RLTN3'), c('RLTN4_','RLTN4'))	
+	rh		<- merge(rh,tmp,by='RLTN4_')
+	set(rh, NULL, c('RLTN1_','RLTN2_','RLTN3_','RLTN4_'), NULL)	
+	tmp		<- rh[, which(RLTN1=='Unknown' & RLTN2!='Unknown')]
+	set(rh, tmp, 'RLTN1', rh[tmp, RLTN2])
+	set(rh, tmp, 'RLTN2', 'Unknown')
+	tmp		<- rh[, which(RLTN2=='Unknown' & RLTN3!='Unknown')]
+	set(rh, tmp, 'RLTN2', rh[tmp, RLTN3])
+	set(rh, tmp, 'RLTN3', 'Unknown')
+	tmp		<- rh[, which(RLTN3=='Unknown' & RLTN4!='Unknown')]
+	set(rh, tmp, 'RLTN3', rh[tmp, RLTN4])
+	set(rh, tmp, 'RLTN4', 'Unknown')
+	#	define number named sexual relations last year
+	tmp		<- melt(rh, id.vars=c('RID','VISIT'), measure.vars=c('RLTN1','RLTN2','RLTN3','RLTN4'))
+	tmp		<- tmp[, list(RLTN_NAMED= length(which(value!='Unknown'))), by=c('RID','VISIT')]
+	rh		<- merge(rh, tmp, by=c('RID','VISIT'))
+	#	define occuption
+	set(rh, rh[, which(is.na(OCCUP1))],'OCCUP1',99L)
+	set(rh, rh[, which(is.na(OCCUP2))],'OCCUP2',99L)
+	tmp		<- rh[, which(OCCUP1==15)]
+	set(rh, tmp,'OCCUP1', rh[tmp, as.integer(OCC)])	
+	setnames(rh, c('OCCUP1','OCCUP2'), c('OCCUP1_','OCCUP2_'))
+	tmp		<- as.data.table(matrix(data=c(	'1','Agriculture for home use/barter',
+											'2','Agriculture for selling',
+											'3','Housework in your own home',
+											'4','Housekeeper',
+											'5','Home brewing',
+											'6','Government/clerical/teaching',
+											'7','Fishing',
+											'8','Student',
+											'9','Military/police',
+											'10','Shopkeeper',
+											'11','Trading/vending',
+											'12','Bar worker or owner',
+											'13','Trucker',
+											'14','Unemployed',
+											'15','Other',
+											'88','No additional occupation',
+											'16','Medical worker',
+											'17','Casual laborer',
+											'18','Waitress/Waiter/restaurant owner',
+											'19','Hair dresser/Salon owner',
+											'20','Construction (brick maker, builder, porter, painter, roofing)',
+											'21','Mechanic (automobiles, bicycles, electronics)',
+											'22','Boda Boda',
+											'23','Client/Sex worker',
+											'0','Unknown',
+											'98','Unknown',
+											'99','Unknown'), ncol=2, byrow=TRUE))
+	setnames(tmp, colnames(tmp), c('OCCUP1_','OCCUP1'))
+	set(tmp, NULL,'OCCUP1_',tmp[, as.integer(OCCUP1_)])
+	rh		<- merge(rh,tmp,by='OCCUP1_')
+	setnames(tmp, c('OCCUP1_','OCCUP1'), c('OCCUP2_','OCCUP2') )
+	rh		<- merge(rh,tmp,by='OCCUP2_')
+	set(rh, NULL, c('OCCUP1_','OCCUP2_'), NULL)
+	tmp		<- rh[, which(OCCUP1=='Unknown' & OCCUP2!='Unknown')]
+	set(rh, tmp, 'OCCUP1', rh[tmp, OCCUP2])
+	set(rh, tmp, 'OCCUP2', 'Unknown')
+	#	condense OCCUP1 and OCCUP2
+	set(rh, rh[, which(OCCUP1%in%c('Boda Boda','Trucker'))], 'OCCUP1', 'Boda/Trucking')	
+	set(rh, rh[, which(OCCUP2%in%c('Boda Boda','Trucker'))], 'OCCUP2', 'Boda/Trucking')
+	set(rh, rh[, which(OCCUP1%in%c('Government/clerical/teaching','Military/police','Medical worker'))], 'OCCUP1', 'Government/clerical/teaching/military/police/medic')
+	set(rh, rh[, which(OCCUP2%in%c('Government/clerical/teaching','Military/police','Medical worker'))], 'OCCUP2', 'Government/clerical/teaching/military/police/medic')
+	set(rh, rh[, which(OCCUP1%in%c('Trading/vending','Shopkeeper','Hair dresser/Salon owner'))], 'OCCUP1', 'Trading/Shopkeeper/Hair')
+	set(rh, rh[, which(OCCUP2%in%c('Trading/vending','Shopkeeper','Hair dresser/Salon owner'))], 'OCCUP2', 'Trading/Shopkeeper/Hair')
+	set(rh, rh[, which(OCCUP1%in%c('Agriculture for home use/barter','Agriculture for selling','Housekeeper','Housework in your own home','Home brewing'))], 'OCCUP1', 'Agro/House')
+	set(rh, rh[, which(OCCUP2%in%c('Agriculture for home use/barter','Agriculture for selling','Housekeeper','Housework in your own home','Home brewing'))], 'OCCUP2', 'Agro/House')
+	set(rh, rh[, which(OCCUP1%in%c('Waitress/Waiter/restaurant owner','Bar worker or owner'))], 'OCCUP1', 'Bar/waitress')
+	set(rh, rh[, which(OCCUP2%in%c('Waitress/Waiter/restaurant owner','Bar worker or owner'))], 'OCCUP2', 'Bar/waitress')
+	set(rh, rh[, which(OCCUP1%in%c('Casual laborer','Unemployed'))], 'OCCUP1', 'Casual laborer/unemployed')
+	set(rh, rh[, which(OCCUP2%in%c('Casual laborer','Unemployed'))], 'OCCUP2', 'Casual laborer/unemployed')
+	set(rh, rh[, which(OCCUP1%in%c('Construction (brick maker, builder, porter, painter, roofing)','Mechanic (automobiles, bicycles, electronics)'))], 'OCCUP1', 'Construction/Mechanic')
+	set(rh, rh[, which(OCCUP2%in%c('Construction (brick maker, builder, porter, painter, roofing)','Mechanic (automobiles, bicycles, electronics)'))], 'OCCUP2', 'Construction/Mechanic')	
+	set(rh, rh[, which(OCCUP1=='No additional occupation' & OCCUP2=='Unknown')], 'OCCUP1', 'Unknown')
+	#	refine OCCUP1 OCCUP2 when OCAT==Student
+	set(rh, rh[, which(OCAT%in%c('Student'))], 'OCCUP1', 'Student')
+	set(rh, rh[, which(OCAT%in%c('Student'))], 'OCCUP2', 'Student')
+	#
+	#	OK this is getting complicated: Kate is using all OCC codes to override OCCUP1 
+	#	as deemed sensible
+	#	just OCAT for simplicity
+	#subset(rh, OCAT=='Bar/waitress' & OCCUP1!='Bar/waitress')
+	#subset(rh, RID=='G030852')
+
+	#	define SEXWORK
+	set(rh, NULL, 'SEXWORK', rh[, as.character(factor(SEXWORK,levels=c(0,1),labels=c('N','Y')))])
+	#	extend MARSTAT
+	tmp		<- rh[, which((is.na(MARSTAT)|MARSTAT=='Never Married') & (RLTN1=='Current wife (at the time)'|RLTN2=='Current wife (at the time)'|RLTN3=='Current wife (at the time)'|RLTN4=='Current wife (at the time)'))]
+	set(rh, tmp, 'EVERMARR', 1L)
+	set(rh, tmp, 'CURRMARR', 1L)
+	set(rh, tmp, 'MARSTAT', 'Monogamous')
+	tmp		<- rh[, which(is.na(MARSTAT) & (RLTN1=='Former wife/consensual partner'|RLTN2=='Former wife/consensual partner'|RLTN3=='Former wife/consensual partner'|RLTN4=='Former wife/consensual partner'))]
+	set(rh, tmp, 'EVERMARR', 1L)
+	set(rh, tmp, 'PREVMAR', 1L)
+	set(rh, tmp, 'MARSTAT', 'Previously Married')
+	tmp		<- rh[, which(is.na(MARSTAT) & (!RLTN1%in%c('Unknown','Current consensual partner (at the time)')))]
+	set(rh, tmp, 'EVERMARR', 0L)
+	set(rh, tmp, 'PREVMAR', 0L)
+	set(rh, tmp, 'CURRMARR', 0L)
+	set(rh, tmp, 'MARSTAT', 'Never Married')
+	set(rh, rh[, which(is.na(MARSTAT))], 'MARSTAT', 'Unknown')		
+	#	define SEXYEAR
+	set(rh, rh[, which(is.na(SEXYEAR))],'SEXYEAR', 99)
+	set(rh, NULL, 'SEXYEAR', rh[, gsub('_[0-9]$','',as.character(factor(SEXYEAR, levels=c(0,1,2,8,99), labels=c('Unknown_1','Y','N','Unknown_2','Unknown_3'))))])
+	stopifnot( !nrow(subset(rh, is.na(SEXYEAR))) )	
+	#	define SEXP1YR 
+	setnames(rh, c('SEXP1YR'), c('SEXP1YR_'))	
+	rh[, SEXP1YR:= as.character(SEXP1YR_)]
+	set(rh, rh[, which(SEXP1YR_==92)],'SEXP1YR','<3')
+	set(rh, rh[, which(SEXP1YR_==93)],'SEXP1YR','3+')
+	set(rh, rh[, which(SEXP1YR_%in%c(97,98,99) | is.na(SEXP1YR_))],'SEXP1YR','Unknown')
+	set(rh, NULL, 'SEXP1YR_', NULL)
+	#	revisit SEXP1YR based on relationships
+	set(rh, rh[, which(SEXP1YR%in%c('Unknown') & RLTN_NAMED==1)], 'SEXP1YR', '1')
+	set(rh, rh[, which(SEXP1YR%in%c('Unknown') & RLTN_NAMED==2)], 'SEXP1YR', '2')
+	set(rh, rh[, which(SEXP1YR%in%c('Unknown') & RLTN_NAMED==3)], 'SEXP1YR', '3')
+	set(rh, rh[, which(SEXP1YR%in%c('Unknown') & RLTN_NAMED==4)], 'SEXP1YR', '3+')
+	tmp		<- rh[, which(SEXP1YR%in%c('0') & RLTN_NAMED>0)]
+	if( nrow(rh[tmp,]) )
+		warning("found SEXP1YR%in%c('0') & RLTN_NAMED>0  --> set to had sex last year, n=", length(tmp))
+	set(rh, rh[, which(SEXP1YR%in%c('0') & RLTN_NAMED==1)], 'SEXP1YR', '1')
+	set(rh, rh[, which(SEXP1YR%in%c('0') & RLTN_NAMED==2)], 'SEXP1YR', '2')
+	set(rh, rh[, which(SEXP1YR%in%c('0') & RLTN_NAMED==3)], 'SEXP1YR', '3')
+	set(rh, rh[, which(SEXP1YR%in%c('0') & RLTN_NAMED==4)], 'SEXP1YR', '3+')
+	#	revisit SEXYEAR based on SEXP1YR
+	set(rh, rh[, which(SEXYEAR%in%c('Unknown') & !SEXP1YR%in%c('0','Unknown'))], 'SEXYEAR', 'Y')
+	tmp		<- rh[, which(SEXYEAR%in%c('N') & !SEXP1YR%in%c('0','Unknown'))]
+	if( nrow(rh[tmp,]) )
+		warning("found SEXYEAR%in%c('N') & !SEXP1YR%in%c('0','Unknown') --> set to had sex last year, n=", length(tmp))	
+	set(rh, tmp, 'SEXYEAR', 'Y')	
+	#	define SEXP1OUT 
+	setnames(rh, c('SEXP1OUT'), c('SEXP1OUT_'))	
+	rh[, SEXP1OUT:= as.character(SEXP1OUT_)]
+	set(rh, rh[, which(SEXP1OUT_==92)],'SEXP1OUT','<3')
+	set(rh, rh[, which(SEXP1OUT_==93)],'SEXP1OUT','3+')
+	set(rh, rh[, which(SEXP1OUT_%in%c(97,98,99) | is.na(SEXP1OUT_))],'SEXP1OUT','Unknown')
+	set(rh, NULL, 'SEXP1OUT_', NULL)
+	#	revisit SEXYEAR based on SEXP1OUT
+	set(rh, rh[, which(SEXYEAR%in%c('Unknown') & !SEXP1OUT%in%c('0','Unknown'))], 'SEXYEAR', 'Y')
+	tmp		<- rh[, which(SEXYEAR%in%c('N') & !SEXP1OUT%in%c('0','Unknown'))]
+	if( nrow(rh[tmp,]) )
+		warning("found SEXYEAR%in%c('N') & !SEXP1OUT%in%c('0','Unknown') --> set to had sex last year, n=", length(tmp))
+	set(rh, tmp, 'SEXYEAR', 'Y')
+	#	revisit SEXP1YR based on SEXP1OUT
+	set(rh, rh[, which(SEXP1OUT=='3+' & SEXP1YR%in%c('0','1','2','<3','Unknown'))], 'SEXP1YR', '3+')
+	set(rh, rh[, which(SEXP1OUT=='<3' & SEXP1YR%in%c('0','Unknown'))], 'SEXP1YR', '<3')
+	rh[, DUMMY:= seq_len(nrow(rh))]
+	warning("set(rh, rh[, which(RID=='G013746' & VISIT==14)], 'SEXP1OUT', 1) --> think this is typo")
+	set(rh, rh[, which(RID=='G013746' & VISIT==14)], 'SEXP1OUT', '1')	
+	tmp		<- rh[, which(	!SEXP1OUT%in%c('3+','<3','Unknown') & !SEXP1YR%in%c('3+','<3','Unknown'))]  
+	tmp		<- subset(rh[tmp, ], as.numeric(SEXP1OUT)>as.numeric(SEXP1YR))[, DUMMY]
+	warning("as.numeric(SEXP1OUT)>as.numeric(SEXP1YR), set to SEXP1OUT, n=", length(tmp))
+	set(rh, tmp, 'SEXP1YR', rh[tmp, SEXP1OUT])
+	#	revisit SEXP1YR based on SEXYEAR
+	set(rh, rh[, which(SEXYEAR=='Unknown' & SEXP1YR=='0')], 'SEXP1YR', 'Unknown')
+	set(rh, rh[, which(SEXYEAR=='Y' & SEXP1YR=='0')], 'SEXP1YR', 'Unknown')
+	#	define SEXPEVER
+	setnames(rh, c('SEXPEVER'), c('SEXPEVER_'))	
+	rh[, SEXPEVER:= as.character(SEXPEVER_)]
+	set(rh, rh[, which(SEXPEVER_==92)],'SEXPEVER','<3')
+	set(rh, rh[, which(SEXPEVER_==93)],'SEXPEVER','3+')
+	set(rh, rh[, which(SEXPEVER_%in%c(97,98,99) | is.na(SEXPEVER_))],'SEXPEVER','Unknown')
+	set(rh, NULL, 'SEXPEVER_', NULL)
+	stopifnot( !nrow(subset(rh, is.na(SEXPEVER))) )
+	#	revisit SEXPEVER based on SEXP1YR
+	set(rh, rh[, which(SEXP1YR=='3+' & SEXPEVER%in%c('0','1','2','<3','Unknown'))], 'SEXPEVER', '3+')
+	set(rh, rh[, which(SEXP1YR=='<3' & SEXPEVER%in%c('0','Unknown'))], 'SEXPEVER', '<3')	
+	tmp		<- rh[, which(	!SEXP1YR%in%c('3+','<3','Unknown') & !SEXPEVER%in%c('3+','<3','Unknown'))]  
+	tmp		<- subset(rh[tmp, ], as.numeric(SEXP1YR)>as.numeric(SEXPEVER))[, DUMMY]
+	warning("as.numeric(SEXP1YR)>as.numeric(SEXPEVER), set to SEXP1YR, n=", length(tmp))
+	set(rh, tmp, 'SEXPEVER', rh[tmp, SEXP1YR])
+	#	define EVERSEX 
+	set(rh, rh[, which(is.na(EVERSEX))],'EVERSEX', 99)
+	set(rh, NULL, 'EVERSEX', rh[, gsub('_[0-9]$','',as.character(factor(EVERSEX, levels=c(0,1,2,3,8,99), labels=c('Unknown_1','Y','N','Unknown_2','Unknown_3','Unknown_4'))))])
+	stopifnot( !nrow(subset(rh, is.na(EVERSEX))) )	
+	set(rh, rh[, which(EVERSEX%in%c('Unknown') & SEXYEAR=='Y')], 'EVERSEX', 'Y')
+	set(rh, rh[, which(EVERSEX%in%c('Unknown') & CURRMARR==1)], 'EVERSEX', 'Y')
+	set(rh, rh[, which(EVERSEX%in%c('Unknown') & EVERMARR==1)], 'EVERSEX', 'Y')
+	set(rh, rh[, which(EVERSEX%in%c('Unknown') & RLTN_NAMED>0)], 'EVERSEX', 'Y')
+	#	revisit EVERSEX based on SEXPEVER
+	set(rh, rh[, which(EVERSEX%in%c('Unknown') & !SEXPEVER%in%c('0','Unknown'))], 'EVERSEX', 'Y')
+	tmp		<- rh[, which(EVERSEX%in%c('N') & !SEXPEVER%in%c('0','Unknown'))]
+	if( nrow(rh[tmp,]) )
+		warning("found EVERSEX%in%c('N') & !SEXPEVER%in%c('0','Unknown') --> set to had sex ever, n=", length(tmp))
+	set(rh, tmp, 'EVERSEX', 'Y')
+	#	revisit SEXPEVER based on EVERSEX
+	set(rh, rh[, which(EVERSEX=='Unknown' & SEXPEVER=='0')], 'SEXP1YR', 'Unknown')
+	set(rh, rh[, which(EVERSEX=='Y' & SEXPEVER=='0')], 'SEXP1YR', 'Unknown')	
+	#	check SEXPEVER	
+	tmp		<- subset(rh, SEXPEVER=='0' & SEXACTIVE==1)
+	if( nrow(tmp) )
+		warning("found SEXPEVER=='0' & SEXACTIVE==1 --> report only, n=", nrow(tmp))	
+	#	add extra-marital partner to MARSTAT
+	tmp	<- rh[, which(MULTIPART>0 | !SEXP1YR%in%c('1','Unknown'))]
+	set(rh, tmp, 'MARSTAT', rh[tmp, paste0(MARSTAT,' >1 partner')])	
+	#	define ever alcohol use during sex
+	set(rh, NULL, 'ALC', rh[, as.character(factor(ALC, levels=c(0,1), labels=c('N','Y')))])
+	#	redefine SEXP1YR
+	set(rh, rh[, which(!SEXP1YR%in%c('0','1','2','Unknown'))], 'SEXP1YR','3+')
+	#	redefine SEXP1OUT
+	set(rh, rh[, which(!SEXP1OUT%in%c('0','1','2','Unknown'))], 'SEXP1OUT','3+')
+	
+	#	check circumcision
+	tmp		<- rh[, which(CIRCUM=='Y' & SEX=='F')]
+	cat('\nWarning: found female circumcised --> set to NA' ,rh[tmp, paste(RID, collapse=' ')])	
+	set(rh, tmp, 'CIRCUM', NA_integer_)
+	#	set to NULL
+	set(rh, NULL, c('VDEX','EVERMARR','CURRMARR','RELIGION','POLYMAR','DUMMY','RLTN1','RLTN2','RLTN3','RLTN4','RLTN_NAMED'), NULL)
+	set(rh, NULL, c('BVDEX','EVERSEX','SEXGIFT','SEXYEAR','EDUCATE','EDUCYRS','EDCAT','OCC','OCC2','ARVMED','CNDEVER1','RNYRCON1','CNDEVER2','RNYRCON2','CNDEVER3','RNYRCON3','CNDEVER4','RNYRCON4','RLTNCON1'),NULL)
+	set(rh, NULL, c('RLTNCON2','RLTNCON3','RLTNCON4','ALC1B','ALC2B','ALC3B','ALC4B','ALC1F','ALC2F','ALC3F','ALC4F','OCCUP3','OCCUP4','OCCUP21','OCCUP22','OCCUP23','OCCUP24','SEXWORKER','SEXBAR','SEXHIGH','SEXOUT'),NULL)
+	set(rh, NULL, c('SEXCAT','PREVMAR','AGECAT','AGECAT2','HIVPREV2','UNDER25','AGE15TO19','AGE20TO24','AGE25TO29','AGE30TO34','AGE35TO39','AGE40TO44','AGE45TO49','OCCLAG1','SUM_ALC'),NULL)
+	set(rh, NULL, c('SEXACTIVE','MULTIPART','CAS','SUMCON','CONCON','NEVERSEX','OCCUP1','OCCUP2','SEXPEVER'),NULL)
 	list(rd=rd, rh=rh)
 }
 
