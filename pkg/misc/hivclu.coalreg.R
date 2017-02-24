@@ -1,5 +1,13 @@
 cr.various<- function()
 {
+	#cr.various.master()
+	cr.various.pangea()
+}
+
+
+cr.various.master<- function()
+{
+	
 	indir				<- '/work/or105/ATHENA_2016/master_examples'
 	par.base.pattern	<- 'm3.RR5.n1250_seed123'	
 	if(1)
@@ -37,7 +45,20 @@ cr.various<- function()
 		par.tsimb			<- 0.5
 		par.tsimn			<- 1
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.lnnoise.BFGS2(indir, par.base.pattern, par.s, par.tsimb, par.tsimn)	
-	}			
+	}
+}
+
+cr.various.pangea<- function()
+{
+	
+	indir				<- '/work/or105/coalreg/pangea_examples'
+	par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'		
+	if(1)
+	{		
+		par.maxNodeDepth	<- 3
+		par.maxHeight		<- 10
+		cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight)		
+	}	
 }
 
 cr.png.generate.data<- function()
@@ -502,7 +523,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2<- function(indir, par.bas
 	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)	
 }
 
-cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS2<- function(indir, par.base.pattern, par.s)
+cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10)
 {
 	require(coalreg)
 	require(data.table)
@@ -512,12 +533,14 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS2<- function(indir, par.base.pa
 	{
 		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
 		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
-		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'		
+		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
+		par.maxNodeDepth	<- 3
+		par.maxHeight		<- 10
 	}
 	#
 	#	run coalreg	run using exact time to infection
 	#	with extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
-	#	with 50% sampling	 
+	#		 
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
@@ -528,7 +551,7 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS2<- function(indir, par.base.pa
 				#	paste(	IDREC,GENDER,DOB,RISK,round(TIME_TR,d=3),round(DIAG_T,d=3),DIAG_CD4,
 				#			DIAG_IN_RECENT,DIAG_IN_ACUTE,round(TIME_SEQ,d=3),round(ETSI,d=3),SAMPLED_TR,TRM_FROM_RECENT,TRM_FROM_ACUTE,SEQ_COV_2020,sep='|')				
 				phi		<- data.table(	TAXA=ph$tip.label,
-										IDPOP=as.integer(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',1)),
+										IDPOP=paste0('ID_',sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',1)),
 										SEX=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',2),
 										DOB=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',3)),
 										RISK=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',4),
@@ -552,6 +575,7 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS2<- function(indir, par.base.pa
 				tmp				<- data.matrix(subset(phi, select=c(TRM_FROM_RECENT,ETSI)))
 				rownames(tmp)	<- phi[, IDPOP]
 				stopifnot(!any(is.na(tmp)))
+				ph 				<- DatedTree( ph, setNames( phi$TIME_SEQ, ph$tip.label) ) 
 				#	The rigorous way to choose lasso_threshold would be to use cross-validation which I do not have coded up yet; 
 				#	in lieu of that I set it to approximately (number free parameters) * (maximum expected effect size). 
 				#	You don't need to worry much about it for the BD sims, but for pangea it will help prevent over fitting.
@@ -566,31 +590,16 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS2<- function(indir, par.base.pa
 				#	I set scale=F so that parameter estimates could be interpreted as log-odds for binary covariates.. 
 				#	You will want this to be TRUE for PANGEA 			
 				fit 	<- trf.lasso(ph, tmp, trf_names=c('TRM_FROM_RECENT'), aoi_names=c( 'ETSI' ), 
+											maxNodeDepth=par.maxNodeDepth,
+											maxHeight=par.maxHeight,
 											lasso_threshold=5, method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
 				fci 	<- fisher.ci(fit)	 
 				pci 	<- prof.ci(fit, fci  ) 
 				#print(fit$bestfit$par )
-				#print( fci$ci )	
-				tmp		<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs2_s',par.s*100,'.rda'),basename(F)))
+				#print( fci$ci )
+				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'.rda'),basename(F)))				
 				save( fit, fci, pci, file=tmp)
-			}, by='F']		
-	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs2_s50.rda'),full.names=TRUE))
-	res		<- infiles[, {
-				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep99_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
-				load(F)
-				list(	THETA= names(fit$bestfit$par),
-						MLE= unname(fit$bestfit$par),
-						PROF_MEDIAN=unname(apply(pci$sample, 2, median)))				
-			}, by='F']
-	res		<- melt(res, measure.vars=c('MLE','PROF_MEDIAN'), variable.name='STAT', value.name='V')
-	ggplot(res, aes(x=THETA, y=V)) + 
-			geom_violin(trim=TRUE, scale='width') + geom_boxplot(outlier.shape=NA, fill="#482576FF", width=0.2, size=0.3, colour="#FCA50AFF") +
-			theme_bw() + 
-			labs(x='', y='log risk ratio I1 vs baseline I0\n') +			
-			coord_cartesian(ylim=c(-7.5,7.5)) +
-			scale_y_continuous(breaks=seq(-10,10,1)) +
-			facet_grid(.~STAT) 
-	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)	
+			}, by='F']				
 }
 
 cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.base.pattern, par.s, par.maxNodeDepth)

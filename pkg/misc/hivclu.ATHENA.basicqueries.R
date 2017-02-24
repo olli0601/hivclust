@@ -2867,6 +2867,8 @@ eval.pop.by.age.migration<- function()
 eval.diag.newdiagnoses.by.migration<- function()
 {
 	require(viridis)
+	require(data.table)
+	require(ggplot2)
 	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
 	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile)
@@ -2896,7 +2898,8 @@ eval.diag.newdiagnoses.by.migration<- function()
 	set(dfs, dfs[, which(RegionOrigin%in%c("Austr_NZ","Western_EU"))], "RegionOrigin", "Western")
 	set(dfs, dfs[, which(RegionOrigin%in%c("Caribbean","Latin_South_America"))], "RegionOrigin", "Carib_Southern_America")
 	set(dfs, dfs[, which(RegionOrigin%in%c("Central_EU","Eastern_EU_stans"))], "RegionOrigin", "Cen_East_Stans_EU")
-	set(dfs, dfs[, which(RegionOrigin%in%c("Sout_SouthEast_Asia","Oceania_Pacific","North_Africa_Middle_East"))], "RegionOrigin", "Other")
+	set(dfs, dfs[, which(RegionOrigin%in%c("Sout_SouthEast_Asia"))], "RegionOrigin", "Other")	
+	set(dfs, dfs[, which(RegionOrigin%in%c("Oceania_Pacific","North_Africa_Middle_East"))], "RegionOrigin", "Other")
 	set(dfs, dfs[, which(is.na(RegionOrigin))], "RegionOrigin", "Unknown")
 	set(dfs, NULL, "RegionOrigin", dfs[, as.character(factor(RegionOrigin))])
 	set(dfs, NULL, 'ORIGIN_TRM', NA_character_)
@@ -2912,6 +2915,16 @@ eval.diag.newdiagnoses.by.migration<- function()
 	set(dfs, dfs[, which(is.na(GGD_first))], "GGD_first", "Unknown")
 	set(dfs, dfs[, which(is.na(Region_first))], 'Region_first', 'Unknown')
 	
+	#
+	#	% diagnoses among migrants 2010-2015 in Amsterdam
+	#
+	dfa	<- subset(dfs, !Trm%in%c('Unknown','OTH','IDU') & RegionOrigin!='Unknown' & AnyPos_T1>=2010 & AnyPos_T1<2016 & GGD_first=='Amsterdam')
+	dfa[, mean(RegionOrigin!='NL')]
+	#
+	#	% diagnoses among migrants 2010-2015 in Amsterdam, The Hague, Rotterdam
+	#
+	dfa	<- subset(dfs, !Trm%in%c('Unknown','OTH','IDU') & !RegionOrigin%in%c('Unknown','NL') & AnyPos_T1>=2010 & AnyPos_T1<2016)
+	dfa[, mean(GGD_first%in%c('Amsterdam','Rotterdam_Rijnmond','Den_Haag'))]
 	
 	#
 	#	cumulative numbers by sex orientation and origin in Amsterdam since 2010
@@ -2933,7 +2946,7 @@ eval.diag.newdiagnoses.by.migration<- function()
 	probs<- data.table(	Trm=c('MSM','Het'), 
 						IN_NL=c(0.75,0.5), 
 						IN_A=0.7,
-						SA=0.8,
+						SA=0.95,
 						SO=0.5)
 	dfa	<- merge(dfa, probs, by=c('Trm'))
 	set(dfa, dfa[, which(RegionOrigin=='NL')], 'IN_NL', 0.9)
