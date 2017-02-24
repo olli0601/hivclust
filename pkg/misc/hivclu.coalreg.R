@@ -1,7 +1,7 @@
 cr.various<- function()
 {
-	#cr.various.master()
-	cr.various.pangea()
+	cr.various.master()
+	#cr.various.pangea()
 }
 
 
@@ -10,7 +10,7 @@ cr.various.master<- function()
 	
 	indir				<- '/work/or105/ATHENA_2016/master_examples'
 	par.base.pattern	<- 'm3.RR5.n1250_seed123'	
-	if(1)
+	if(0)
 	{
 		par.s				<- 0.5
 		cr.master.ex3.runcoalreg.using.TYPE.BFGS2(indir, par.base.pattern, par.s)	
@@ -20,11 +20,12 @@ cr.various.master<- function()
 		par.s				<- 0.5
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2(indir, par.base.pattern, par.s)	
 	}
-	if(0)
+	if(1)
 	{
 		par.s				<- 0.5
-		par.maxNodeDepth	<- 3
-		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3(indir, par.base.pattern, par.s, par.maxNodeDepth)	
+		par.maxNodeDepth	<- 15
+		par.maxHeight		<- Inf
+		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3(indir, par.base.pattern, par.s, par.maxNodeDepth, par.maxHeight=par.maxHeight)	
 	}
 	if(0)
 	{
@@ -597,12 +598,12 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3<- function(indir, par.base.pa
 				pci 	<- prof.ci(fit, fci  ) 
 				#print(fit$bestfit$par )
 				#print( fci$ci )
-				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'.rda'),basename(F)))				
+				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'.rda'),basename(F)))				
 				save( fit, fci, pci, file=tmp)
 			}, by='F']				
 }
 
-cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.base.pattern, par.s, par.maxNodeDepth)
+cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.base.pattern, par.s, par.maxNodeDepth, par.maxHeight)
 {
 	require(coalreg)
 	require(viridis)
@@ -611,7 +612,8 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 	{
 		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'			
 		par.base.pattern	<- 'm3.RR5.n150_seed123'	
-		par.maxNodeDepth	<- 2
+		par.maxNodeDepth	<- 3
+		par.maxHeight		<- 10
 		par.s				<- 0.5		
 	}
 	#
@@ -636,12 +638,14 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 				rownames(phi)	<- phi[, TAXA]
 				set(phi, NULL, 'TAXA', NULL)
 				tmp		<- data.matrix(phi)
-				fit 	<- trf.lasso(dph, 	tmp, trf_names = c( 'TYPE'), aoi_names = c( 'ETSI' ), maxNodeDepth=par.maxNodeDepth, lasso_threshold=5, method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
+				fit 	<- trf.lasso(	dph, 	tmp, trf_names = c( 'TYPE'), aoi_names = c( 'ETSI' ), 
+										maxNodeDepth=par.maxNodeDepth, maxHeight=par.maxHeight, 
+										lasso_threshold=5, method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
 				fci 	<- fisher.ci(fit)	 
 				pci 	<- prof.ci(fit, fci  ) 
 				#print(fit$bestfit$par )
 				#print( fci$ci )	
-				tmp		<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_s',par.s*100,'.rda'),basename(F)))
+				tmp		<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_s',par.s*100,'.rda'),basename(F)))
 				save( fit, fci, pci, file=tmp)
 			}, by='F']				
 }
