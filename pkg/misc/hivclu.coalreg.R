@@ -9,7 +9,7 @@ cr.hpc.submit<- function()
 	par.maxNodeDepth	<- Inf
 	par.maxHeight		<- 10
 	par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed44'
-	cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern ',par.base.pattern,' -par.maxNodeDepth ',par.maxNodeDepth,' -par.maxHeight ',par.maxHeight)			
+	cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight)			
 	cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5800mb")
 	cat(cmd)	
 	outdir		<- paste(DATA,"tmp",sep='/')
