@@ -9,7 +9,7 @@ cr.hpc.submit<- function()
 	par.maxNodeDepth	<- Inf
 	par.maxHeight		<- 10
 	par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed44'
-	cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS --par.base.pattern ',par.base.pattern,' --par.maxNodeDepth ',par.maxNodeDepth,' --par.maxHeight ',par.maxHeight)			
+	cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern ',par.base.pattern,' -par.maxNodeDepth ',par.maxNodeDepth,' -par.maxHeight ',par.maxHeight)			
 	cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5800mb")
 	cat(cmd)	
 	outdir		<- paste(DATA,"tmp",sep='/')
@@ -65,21 +65,24 @@ cr.various.master<- function()
 cr.various.pangea<- function()
 {
 	indir				<- '/work/or105/coalreg/pangea_examples'
+	par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
+	par.maxHeight		<- Inf
+	par.maxNodeDepth	<- Inf
 	#
 	#	read args
 	#
-	require(argparse, quietly=TRUE, warn.conflicts=FALSE)	
-	arg_parser = ArgumentParser(description="Run Coalreg on PANGEA simulations.")	
-	arg_parser$add_argument("-v", "--verbose", action="store_true", default=FALSE, help="Talk about what I'm doing.")
-	arg_parser$add_argument("-p", "--par.base.pattern", action="store", default='PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43', help="par.base.pattern")
-	arg_parser$add_argument("-d", "--par.maxNodeDepth", action="store", default='3', help="par.maxNodeDepth.")
-	arg_parser$add_argument("-h", "--par.maxHeight", action="store", default='10', help="par.maxHeight.")	
-	args 				<- arg_parser$parse_args()
-	par.base.pattern 	<- args$par.base.pattern
-	par.maxNodeDepth 	<- as.numeric(args$par.maxNodeDepth)
-	par.maxHeight 		<- as.numeric(args$par.maxHeight)
-	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n')
-	
+	if(exists("argv"))
+	{
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,17), par.base.pattern= return(substr(arg,19,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.base.pattern<- tmp[1]
+		
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,17), par.maxNodeDepth= return(substr(arg,19,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.maxNodeDepth<- as.numeric(tmp[1])
+		
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,14), par.maxHeight= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.maxHeight<- as.numeric(tmp[1])
+	}	
+	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n')	
 	stop()
 	if(1)
 	{		
