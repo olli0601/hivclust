@@ -73,13 +73,17 @@ cr.various.pangea<- function()
 	#
 	if(exists("argv"))
 	{
+		print(argv)
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,17), par.base.pattern= return(substr(arg,19,nchar(arg))),NA)	}))
+		print(tmp)
 		if(length(tmp)>0) par.base.pattern<- tmp[1]
 		
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,17), par.maxNodeDepth= return(substr(arg,19,nchar(arg))),NA)	}))
+		print(tmp)
 		if(length(tmp)>0) par.maxNodeDepth<- as.numeric(tmp[1])
 		
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,14), par.maxHeight= return(substr(arg,16,nchar(arg))),NA)	}))
+		print(tmp)
 		if(length(tmp)>0) par.maxHeight<- as.numeric(tmp[1])
 	}	
 	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n')	
