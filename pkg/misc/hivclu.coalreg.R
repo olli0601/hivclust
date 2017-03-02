@@ -7,14 +7,17 @@ cr.various<- function()
 cr.hpc.submit<- function()
 {
 	par.maxNodeDepth	<- Inf
-	par.maxHeight		<- 10
-	par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed44'
-	cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight)			
-	cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5800mb")
-	cat(cmd)	
-	outdir		<- paste(DATA,"tmp",sep='/')
-	outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-	hivc.cmd.hpccaller(outdir, outfile, cmd)
+	par.maxHeight		<- 10	
+	for(i in 44:51)
+	{
+		par.base.pattern	<- paste0('PANGEA-AcuteHigh-InterventionNone-cov11.8-seed',i)
+		cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight)			
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5800mb")
+		cat(cmd)	
+		outdir		<- paste(DATA,"tmp",sep='/')
+		outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		hivc.cmd.hpccaller(outdir, outfile, cmd)		
+	}
 	quit("no")		
 }
 
@@ -73,21 +76,14 @@ cr.various.pangea<- function()
 	#
 	if(exists("argv"))
 	{
-		print(argv)
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,17), par.base.pattern= return(substr(arg,19,nchar(arg))),NA)	}))
-		print(tmp)
-		if(length(tmp)>0) par.base.pattern<- tmp[1]
-		
+		if(length(tmp)>0) par.base.pattern<- tmp[1]		
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,17), par.maxNodeDepth= return(substr(arg,19,nchar(arg))),NA)	}))
-		print(tmp)
-		if(length(tmp)>0) par.maxNodeDepth<- as.numeric(tmp[1])
-		
+		if(length(tmp)>0) par.maxNodeDepth<- as.numeric(tmp[1])		
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,14), par.maxHeight= return(substr(arg,16,nchar(arg))),NA)	}))
-		print(tmp)
 		if(length(tmp)>0) par.maxHeight<- as.numeric(tmp[1])
 	}	
 	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n')	
-	stop()
 	if(1)
 	{		
 		cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight)		
