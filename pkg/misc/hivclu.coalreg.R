@@ -12,7 +12,6 @@ cr.hpc.submit<- function()
 	cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS --par.base.pattern ',par.base.pattern,' --par.maxNodeDepth ',par.maxNodeDepth,' --par.maxHeight ',par.maxHeight)			
 	cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5800mb")
 	cat(cmd)	
-	stop()
 	outdir		<- paste(DATA,"tmp",sep='/')
 	outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 	hivc.cmd.hpccaller(outdir, outfile, cmd)
@@ -77,8 +76,8 @@ cr.various.pangea<- function()
 	arg_parser$add_argument("-h", "--par.maxHeight", action="store", default='10', help="par.maxHeight.")	
 	args 				<- arg_parser$parse_args()
 	par.base.pattern 	<- args$par.base.pattern
-	par.maxNodeDepth 	<- args$par.maxNodeDepth
-	par.maxHeight 		<- args$par.maxHeight
+	par.maxNodeDepth 	<- as.numeric(args$par.maxNodeDepth)
+	par.maxHeight 		<- as.numeric(args$par.maxHeight)
 	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n')
 	
 	stop()
