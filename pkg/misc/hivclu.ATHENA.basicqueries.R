@@ -2944,7 +2944,9 @@ eval.diag.newdiagnoses.by.migration<- function()
 	ggplot(dfa, aes(x=YEAR, y=ND, colour=RegionOrigin)) + geom_line() + facet_grid(~Trm)
 	#	add sequencing probs to calculate trm events that are in data
 	probs<- data.table(	Trm=c('MSM','Het'), 
-						IN_NL=c(0.75,0.5), 
+						#IN_NL=c(0.75,0.5),
+						#IN_NL=c(0.25,0.25),
+						IN_NL=c(0.5,0.4),
 						IN_A=0.7,
 						SA=0.95,
 						SO=0.5)
@@ -2955,6 +2957,9 @@ eval.diag.newdiagnoses.by.migration<- function()
 	
 	setkey(dfa, Trm, RegionOrigin, YEAR)
 	tmp	<- dfa[, list(YEAR=YEAR, NDC=round(cumsum(ND)), TRM_INDATA_C=round(cumsum(TRM_INDATA))), by=c('Trm','RegionOrigin')]
+	subset(tmp, YEAR==2016 & RegionOrigin!='NL' & RegionOrigin!='Other')[, list(NDC=0.95*sum(NDC)), by=c('Trm')]
+	subset(tmp, YEAR==2018 & RegionOrigin!='NL' & RegionOrigin!='Other')[, list(TRM_INDATA_C=sum(TRM_INDATA_C)), by=c('Trm')]
+	
 	ggplot(tmp, aes(x=YEAR, y=TRM_INDATA_C, colour=RegionOrigin)) + geom_line() + facet_grid(~Trm) 
 	tmp	<- dcast.data.table(melt(tmp, measure.vars=c('NDC','TRM_INDATA_C')), Trm+YEAR~RegionOrigin+variable, value.var='value')
 	

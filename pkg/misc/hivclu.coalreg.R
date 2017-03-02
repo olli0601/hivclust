@@ -1,9 +1,23 @@
 cr.various<- function()
 {
-	cr.various.master()
-	#cr.various.pangea()
+	#cr.various.master()
+	cr.various.pangea()
 }
 
+cr.hpc.submit<- function()
+{
+	par.maxNodeDepth	<- Inf
+	par.maxHeight		<- Inf
+	par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed44'
+	cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS --par.base.pattern ',par.base.pattern,' --par.maxNodeDepth ',par.maxNodeDepth,' --par.maxHeight ',par.maxHeight)			
+	cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5800mb")
+	cat(cmd)	
+	stop()
+	outdir		<- paste(DATA,"tmp",sep='/')
+	outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+	hivc.cmd.hpccaller(outdir, outfile, cmd)
+	quit("no")		
+}
 
 cr.various.master<- function()
 {
@@ -51,13 +65,25 @@ cr.various.master<- function()
 
 cr.various.pangea<- function()
 {
-	
 	indir				<- '/work/or105/coalreg/pangea_examples'
-	par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'		
+	#
+	#	read args
+	#
+	require(argparse, quietly=TRUE, warn.conflicts=FALSE)	
+	arg_parser = ArgumentParser(description="Run Coalreg on PANGEA simulations.")	
+	arg_parser$add_argument("-v", "--verbose", action="store_true", default=FALSE, help="Talk about what I'm doing.")
+	arg_parser$add_argument("-p", "--par.base.pattern", action="store", default='PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43', help="par.base.pattern")
+	arg_parser$add_argument("-d", "--par.maxNodeDepth", action="store", default='3', help="par.maxNodeDepth.")
+	arg_parser$add_argument("-h", "--par.maxHeight", action="store", default='10', help="par.maxHeight.")	
+	args 				<- arg_parser$parse_args()
+	par.base.pattern 	<- args$par.base.pattern
+	par.maxNodeDepth 	<- args$par.maxNodeDepth
+	par.maxHeight 		<- args$par.maxHeight
+	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n')
+	
+	stop()
 	if(1)
 	{		
-		par.maxNodeDepth	<- 3
-		par.maxHeight		<- 10
 		cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight)		
 	}	
 }
@@ -67,13 +93,17 @@ cr.png.generate.data<- function()
 	require(data.table)
 	require(ape)
 	require(phangorn)
-	infiles	<- data.table(FR= c(	'~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R',
-									'~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov22.4-seed43/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R',
-									'~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov41.3-seed43/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'),
-						  FT= c(	'~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43/150129_HPTN071_scHN_SIMULATED_TREE/150129_HPTN071_scHN_DATEDTREE.newick',
-								  	'~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov22.4-seed43/150129_HPTN071_scHN_SIMULATED_TREE/150129_HPTN071_scHN_DATEDTREE.newick',
-								  	'~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov41.3-seed43/150129_HPTN071_scHN_SIMULATED_TREE/150129_HPTN071_scHN_DATEDTREE.newick'))
+	indir	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
+	infiles	<- data.table(FR=list.files(indir, pattern='_INTERNAL.R', full.names=TRUE, recursive=TRUE))
 	infiles[, SC:= basename(dirname(dirname(FR)))]
+	infiles[, SEQCOV:= as.numeric(gsub('.*cov([0-9]+\\.[0-9]+).*','\\1',SC))/100]
+	infiles[, SEED:= as.numeric(gsub('.*seed([0-9]+).*','\\1',SC))]	
+	tmp		<- data.table(FT=list.files(indir, pattern='_DATEDTREE.newick', full.names=TRUE, recursive=TRUE))
+	tmp[, SC:= basename(dirname(dirname(FT)))]
+	infiles	<- merge(infiles, tmp, by='SC', all=1)
+	
+	infiles[, table(SEQCOV)]
+	
 	outfile	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-'
 	t.end	<- 2020
 	t.adult	<- 14
@@ -126,11 +156,14 @@ cr.png.generate.data<- function()
 			#
 			#	transmission rate given risk category: 
 			#	what I can calculate is the #transmissions per year when in stage X
-			#	so I need the duration of stage X and the #transmissions while in stage X
+			#	so I need the duration that individuals spend in stage X and the #transmissions while in stage X
+			#	this is easy for risk group, because individuals stay in the risk group forever
 			#
+			#	calculate: time between infection until death or end of observation 2020
 			dfd[, DUR_RISK:= DOD]
 			set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
 			set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-(DOB+t.adult)])
+			#	calculate: number of infections until 2020
 			tmp		<- subset(df.trms, TIME_TR<t.end)[, list(TR_N=length(IDREC)), by='IDTR']
 			setnames(tmp, 'IDTR', 'IDPOP')
 			dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
@@ -522,6 +555,20 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2<- function(indir, par.bas
 			scale_y_continuous(breaks=seq(-10,10,1)) +
 			facet_grid(.~STAT) 
 	ggsave(file= gsub('\\.rda','_violin.pdf',gsub('_rep','',infiles[1,F])), w=5,h=4)	
+}
+
+cr.png.evalcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3<- function()
+{
+	require(coalreg)
+	load('~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-empirical_transmission_rates.rda')
+	subset(dfr, GROUP=='TR_STAGE' & SC=='PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43')
+	
+	infiles	<- data.table(F=list.files('/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results', pattern='*rda', full.names=TRUE))
+	
+	load(infiles[1,F])
+	f.maxD3<- fit$bestfit
+	load(infiles[2,F])
+	f.maxDInf<- fit$bestfit
 }
 
 cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10)

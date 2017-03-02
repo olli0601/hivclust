@@ -1002,6 +1002,11 @@ hivc.pipeline.various<- function()
 	}	
 	if(1)
 	{
+		#run coalreg
+		cr.hpc.submit()			
+	}
+	if(0)
+	{
 		# RUN VARIOUS
 		cmd			<- hivc.cmd.various()
 		#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=71, hpc.mem="95000mb")
