@@ -6,7 +6,7 @@ cr.various<- function()
 
 cr.hpc.submit<- function()
 {
-	par.maxNodeDepth	<- Inf
+	par.maxNodeDepth	<- 3
 	par.maxHeight		<- 10	
 	for(i in 44:51)
 	{
