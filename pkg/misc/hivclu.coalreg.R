@@ -84,10 +84,14 @@ cr.various.pangea<- function()
 		if(length(tmp)>0) par.maxHeight<- as.numeric(tmp[1])
 	}	
 	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n')	
-	if(1)
+	if(0)
 	{		
 		cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight)		
 	}	
+	if(1)
+	{
+		cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight)
+	}
 }
 
 cr.png.generate.data<- function()
@@ -325,7 +329,53 @@ cr.master.ex3.runcoalreg.using.TYPE.BFGS2<- function(indir, par.base.pattern, pa
 			}, by='F']					
 }
 
-cr.master.ex3.runcoalreg.using.TYPE.ETFI.compare<- function()
+cr.png.compare<- function()
+{
+	require(coalreg)
+	require(viridis)
+	indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
+	res		<- infiles[, {
+				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43_coalreg_using_TRM-FROM-RECENTtrf_ETSIaoi_BFGSargs3_maxNodeDepth3.rda'
+				load(F)
+				list(	THETA= names(fit$bestfit$par),
+						MLE= unname(fit$bestfit$par),
+						MLE_CONVERGED= fit$bestfit$convergence==0,
+						PROF_MEDIAN=unname(apply(pci$sample, 2, median)))				
+			}, by='F']
+	res[, SEED:= as.integer(gsub('.*seed([0-9]+)_.*','\\1',F))]
+	res[, COV:= as.numeric(gsub('.*cov([0-9]+\\.[0-9]+)-.*','\\1',F))/100]
+	res[, MAXNODE:=as.numeric(gsub('.*_maxNodeDepth([0-9A-Za-z]+).*','\\1',F))]
+	res[, MAXHEIGHT:=as.numeric(gsub('.*_maxHeight([0-9A-Za-z]+).*','\\1',F))]
+	res[, TRF_RECENT:= as.numeric(grepl('RECENTtrf',F))]
+	res[, AOI_ETSI:= as.numeric(grepl('ETSIaoi',F))]
+	res[, TRF:=NA_character_]
+	set(res, res[, which(TRF_RECENT==1)],'TRF','recent transmission')
+	res[, AOI:=NA_character_]
+	set(res, res[, which(AOI_ETSI==1)],'AOI','exact time since infection')	
+	res[, BFGSargs:= NA_character_]	
+	set(res, res[, which(grepl('BFGSargs3',F))], 'BFGSargs', 'r in -4,2')			
+	#
+	#
+	resp	<- melt(res, measure.vars=c('MLE','PROF_MEDIAN'), variable.name='STAT', value.name='V')
+	#
+	#	 compare MLEs with constraint r< -1
+	#
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT=='MLE')
+	subset(tmp,THETA=='b_TRM_FROM_RECENT')[, table(MAXNODE, useNA='if')]	
+	tmp[, LABEL:= factor(MAXNODE, levels= sort(unique(tmp$MAXNODE)), labels=paste0('exact time since infection\nmaxHeight 10\nmaxDepth',sort(unique(tmp$MAXNODE))))]					
+	ggplot(tmp, aes(x=THETA, y=V)) + 
+			#geom_violin(trim=TRUE, scale='width') + geom_boxplot(outlier.shape=NA, fill="#482576FF", width=0.2, size=0.3, colour="#FCA50AFF") +
+			geom_point() +
+			theme_bw() + 
+			labs(x='', y='log risk ratio\n') +	
+			coord_cartesian(ylim=c(-5,5)) +
+			scale_y_continuous(breaks=seq(-10,10,1), expand=c(0,0)) +
+			facet_grid(~LABEL) 
+	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_trfRECENT_aoiETSI.pdf'), w=7,h=4)
+}
+	
+cr.master.ex3.compare<- function()
 {
 	require(coalreg)
 	require(viridis)
@@ -353,9 +403,12 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.compare<- function()
 	set(res, res[, which(grepl('ETFIaoi',F) & grepl('_mb50',F) & !grepl('_en|_ln',F))],'TSI_COEFF', 'biased time since infection\nno noise')
 	set(res, res[, which(grepl('ETFIaoi',F) & grepl('_mb50',F) & grepl('_en100|_ln100',F))],'TSI_COEFF', 'biased time since infection\nnoisy time since infection')
 	res[, MAXNODE:=Inf]
-	set(res, res[, which(grepl('BFGSargs3',F))], 'MAXNODE', 2)
+	set(res, res[, which(grepl('BFGSargs3',F) & !grepl('maxNodeDepthInf',F))], 'MAXNODE', 2)
 	tmp	<- res[, which(grepl('maxNodeDepth[0-9]+',F))]
-	set(res, tmp, 'MAXNODE', res[tmp,as.numeric(gsub('.*maxNodeDepth([0-9]+)_.*','\\1',F))])	
+	set(res, tmp, 'MAXNODE', res[tmp,as.numeric(gsub('.*maxNodeDepth([0-9]+)_.*','\\1',F))])
+	res[, MAXHEIGHT:=Inf]
+	tmp	<- res[, which(grepl('maxHeight[0-9]+',F))]
+	set(res, tmp, 'MAXHEIGHT', res[tmp,as.numeric(gsub('.*maxHeight([0-9]+)_.*','\\1',F))])	
 	res[, BFGSargs:= 'no constraints']
 	set(res, res[, which(grepl('BFGS',F))], 'BFGSargs', 'r < -1')
 	set(res, res[, which(grepl('BFGSargs2|BFGSargs3',F))], 'BFGSargs', 'r in -4,2')	
@@ -382,8 +435,8 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.compare<- function()
 	#
 	#	compare MLEs with constraint r in -4,2
 	#
-	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT=='MLE' & TAXA_SAMPLED==.5 & NOISE_MODEL%in%c('lognormal','none') & MAXNODE==Inf)
-	subset(tmp,THETA=='b_TYPE')[, table(N, TSI_COEFF)]
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT=='MLE' & TAXA_SAMPLED==.5 & NOISE_MODEL%in%c('lognormal','none') & MAXNODE==Inf & MAXHEIGHT==Inf)
+	subset(tmp,THETA=='b_TYPE')[, table(N, TSI_COEFF, useNA='if')]
 	ggplot(tmp, aes(x=THETA, y=V)) + 
 			geom_violin(trim=TRUE, scale='width') + geom_boxplot(outlier.shape=NA, fill="#482576FF", width=0.2, size=0.3, colour="#FCA50AFF") +
 			theme_bw() + 
@@ -395,9 +448,9 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.compare<- function()
 	#
 	#	compare maxNodeDepth results
 	#
-	tmp	<- subset(resp, BFGSargs=='r in -4,2' & grepl('BFGSargs3',F) & STAT=='MLE' & TAXA_SAMPLED==.5 & NOISE_MODEL%in%c('lognormal','none'))
-	subset(tmp,THETA=='b_TYPE')[, table(N, MAXNODE)]
-	tmp[, LABEL:=paste0('exact time since infection\nmaxNodeDepth\n',MAXNODE)]
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & grepl('BFGSargs3',F) & STAT=='MLE' & TAXA_SAMPLED==.5 & NOISE_MODEL%in%c('lognormal','none') & MAXHEIGHT==Inf)
+	subset(tmp,THETA=='b_TYPE')[, table(N, MAXNODE, useNA='if')]	
+	tmp[, LABEL:= factor(MAXNODE, levels= sort(unique(tmp$MAXNODE)), labels=paste0('exact time since infection\nmaxNodeDepth\n',sort(unique(tmp$MAXNODE))))]					
 	ggplot(tmp, aes(x=THETA, y=V)) + 
 			geom_violin(trim=TRUE, scale='width') + geom_boxplot(outlier.shape=NA, fill="#482576FF", width=0.2, size=0.3, colour="#FCA50AFF") +
 			theme_bw() + 
@@ -406,6 +459,20 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.compare<- function()
 			scale_y_continuous(breaks=seq(-10,10,1), expand=c(0,0)) +
 			facet_grid(N~LABEL) 
 	ggsave(file= file.path(indir,'compare_MLEs_BFGSargs3_maxNodeDepth.pdf'), w=10,h=7)	
+	#
+	#	compare maxHeight results
+	#
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & grepl('BFGSargs3',F) & STAT=='MLE' & TAXA_SAMPLED==.5 & NOISE_MODEL%in%c('lognormal','none') & MAXNODE==Inf)
+	subset(tmp,THETA=='b_TYPE')[, table(N, MAXHEIGHT, useNA='if')]	
+	tmp[, LABEL:= factor(MAXHEIGHT, levels= sort(unique(tmp$MAXHEIGHT)), labels=paste0('exact time since infection\nmaxHeight\n',sort(unique(tmp$MAXHEIGHT))))]					
+	ggplot(tmp, aes(x=THETA, y=V)) + 
+			geom_violin(trim=TRUE, scale='width') + geom_boxplot(outlier.shape=NA, fill="#482576FF", width=0.2, size=0.3, colour="#FCA50AFF") +
+			theme_bw() + 
+			labs(x='', y='log risk ratio I1 vs baseline I0\n') +	
+			coord_cartesian(ylim=c(-5,5)) +
+			scale_y_continuous(breaks=seq(-10,10,1), expand=c(0,0)) +
+			facet_grid(N~LABEL) 
+	ggsave(file= file.path(indir,'compare_MLEs_BFGSargs3_maxHeight.pdf'), w=10,h=4)	
 	
 
 	#
@@ -648,6 +715,87 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3<- function(indir, par.base.pa
 				#print(fit$bestfit$par )
 				#print( fci$ci )
 				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'.rda'),basename(F)))				
+				save( fit, fci, pci, file=tmp)
+			}, by='F']				
+}
+
+cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10)
+{
+	require(coalreg)
+	require(data.table)
+	require(ape)
+	require(viridis)
+	if(0)
+	{
+		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
+		par.maxNodeDepth	<- 3
+		par.maxHeight		<- 10
+	}
+	#
+	#	run coalreg	run using exact time to infection
+	#	with extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
+	#		 
+	set.seed(42)	
+	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
+	infiles[, {
+				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				ph		<- read.tree( F )
+				ph		<- multi2di(ladderize(ph),random=FALSE)
+				#	create data.table with infection type				
+				#	paste(	IDREC,GENDER,DOB,RISK,round(TIME_TR,d=3),round(DIAG_T,d=3),DIAG_CD4,
+				#			DIAG_IN_RECENT,DIAG_IN_ACUTE,round(TIME_SEQ,d=3),round(ETSI,d=3),SAMPLED_TR,TRM_FROM_RECENT,TRM_FROM_ACUTE,SEQ_COV_2020,sep='|')				
+				phi		<- data.table(	TAXA=ph$tip.label,
+						IDPOP=paste0('ID_',sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',1)),
+						SEX=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',2),
+						DOB=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',3)),
+						RISK=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',4),
+						TIME_TR=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',5)),
+						DIAG_T=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',6)),
+						DIAG_CD4=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',7)),										
+						DIAG_IN_RECENT=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',8),
+						DIAG_IN_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',9),
+						TIME_SEQ=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',10)),
+						ETSI=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',11)),
+						SAMPLED_TR=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',12),
+						TRM_FROM_RECENT=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',13),
+						TRM_FROM_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',14),
+						SEQ_COV_2020=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',15))	
+						)				
+				set(phi, NULL, 'TRM_FROM_RECENT', phi[,factor(TRM_FROM_RECENT,levels=c('N','Y'))])
+				set(phi, NULL, 'RISK_L', phi[,factor(RISK!='L',levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'RISK_H', phi[,factor(RISK!='H',levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				#	zero mean ETSI so the coefficients can be interpreted as RR
+				set(phi, NULL, 'ETSI', phi[, ETSI-mean(ETSI)])
+				#	prepare coalreg input
+				ph$tip.label	<- phi[, IDPOP]
+				tmp				<- data.matrix(subset(phi, select=c(TRM_FROM_RECENT,RISK_L,RISK_H,ETSI)))
+				rownames(tmp)	<- phi[, IDPOP]
+				stopifnot(!any(is.na(tmp)))
+				ph 				<- DatedTree( ph, setNames( phi$TIME_SEQ, ph$tip.label) ) 
+				#	The rigorous way to choose lasso_threshold would be to use cross-validation which I do not have coded up yet; 
+				#	in lieu of that I set it to approximately (number free parameters) * (maximum expected effect size). 
+				#	You don't need to worry much about it for the BD sims, but for pangea it will help prevent over fitting.
+				#		
+				#	BFGS is fast, but i find is less robust than Nelder-Mead and gets stuck in local optima. 
+				#	Feel free to experiment with that. 
+				#		
+				#	I think your suggested lnr limits are good. 
+				#	Do you see that lnr is correlated with other parameter estimates ? 
+				#	If outlier lnr's correspond to outlier parameter estimates, that is good cause to put limits on it. 
+				#
+				#	I set scale=F so that parameter estimates could be interpreted as log-odds for binary covariates.. 
+				#	You will want this to be TRUE for PANGEA 			
+				fit 	<- trf.lasso(ph, tmp, trf_names=c('TRM_FROM_RECENT','RISK_L','RISK_H'), aoi_names=c( 'ETSI' ), 
+											maxNodeDepth=par.maxNodeDepth,
+											maxHeight=par.maxHeight,
+											lasso_threshold=5, method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
+				fci 	<- fisher.ci(fit)	 
+				pci 	<- prof.ci(fit, fci  ) 
+				#print(fit$bestfit$par )
+				#print( fci$ci )
+				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'.rda'),basename(F)))				
 				save( fit, fci, pci, file=tmp)
 			}, by='F']				
 }
