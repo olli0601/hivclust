@@ -6,7 +6,7 @@ cr.various<- function()
 
 cr.hpc.submit<- function()
 {
-	par.maxNodeDepth	<- 3
+	par.maxNodeDepth	<- Inf
 	par.maxHeight		<- 10	
 	par.lasso			<- 10
 	for(i in 44:51)
@@ -88,13 +88,13 @@ cr.various.pangea<- function()
 		if(length(tmp)>0) par.lasso<- as.numeric(tmp[1])
 	}	
 	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n')	
-	if(1)
+	if(0)
 	{		
 		cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso)		
 	}	
-	if(0)
+	if(1)
 	{
-		cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight)
+		cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso)
 	}
 }
 
@@ -724,7 +724,7 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3<- function(indir, par.base.pa
 			}, by='F']				
 }
 
-cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10)
+cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10, par.lasso=5)
 {
 	require(coalreg)
 	require(data.table)
@@ -737,6 +737,7 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- 3
 		par.maxHeight		<- 10
+		par.lasso			<- 5
 	}
 	#
 	#	run coalreg	run using exact time to infection
@@ -795,12 +796,13 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.
 				fit 	<- trf.lasso(ph, tmp, trf_names=c('TRM_FROM_RECENT','RISK_L','RISK_H'), aoi_names=c( 'ETSI' ), 
 											maxNodeDepth=par.maxNodeDepth,
 											maxHeight=par.maxHeight,
-											lasso_threshold=5, method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
+											lasso_threshold=par.lasso, 
+											method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
 				fci 	<- fisher.ci(fit)	 
 				pci 	<- prof.ci(fit, fci  ) 
 				#print(fit$bestfit$par )
 				#print( fci$ci )
-				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'.rda'),basename(F)))				
+				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'.rda'),basename(F)))				
 				save( fit, fci, pci, file=tmp)
 			}, by='F']				
 }
