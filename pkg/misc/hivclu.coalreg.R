@@ -9,11 +9,13 @@ cr.hpc.submit<- function()
 	par.maxNodeDepth	<- Inf
 	par.maxHeight		<- 10	
 	par.lasso			<- 5
+	par.bias			<- 1
+	par.noise			<- 1
 	for(i in 44:51)
 	{
 		par.base.pattern	<- paste0('PANGEA-AcuteHigh-InterventionNone-cov11.8-seed',i)
-		cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight, ' -par.lasso=',par.lasso)			
-		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeph', hpc.walltime=71, hpc.mem="3600mb")
+		cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight, ' -par.lasso=',par.lasso, ' -par.noise=', par.noise, ' -par.bias=', par.bias)			
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeph', hpc.walltime=171, hpc.mem="3600mb")
 		cat(cmd)	
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -73,6 +75,8 @@ cr.various.pangea<- function()
 	par.maxHeight		<- Inf
 	par.maxNodeDepth	<- Inf
 	par.lasso			<- 5
+	par.noise			<- 0
+	par.bias			<- 1
 	#
 	#	read args
 	#
@@ -85,9 +89,13 @@ cr.various.pangea<- function()
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,14), par.maxHeight= return(substr(arg,16,nchar(arg))),NA)	}))
 		if(length(tmp)>0) par.maxHeight<- as.numeric(tmp[1])
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,10), par.lasso= return(substr(arg,12,nchar(arg))),NA)	}))
-		if(length(tmp)>0) par.lasso<- as.numeric(tmp[1])
+		if(length(tmp)>0) par.lasso<- as.numeric(tmp[1])		
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,10), par.noise= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.noise<- as.numeric(tmp[1])
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,9), par.bias= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.bias<- as.numeric(tmp[1])
 	}	
-	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n')	
+	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n', par.noise,'\n', par.bias, '\n')	
 	if(0)
 	{		
 		cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso)		
@@ -96,7 +104,7 @@ cr.various.pangea<- function()
 	{
 		cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso)
 	}
-	if(1)
+	if(0)
 	{
 		cr.png.runcoalreg.using.TRGENDER.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso)
 	}
@@ -111,6 +119,10 @@ cr.various.pangea<- function()
 	if(0)
 	{
 		cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso)
+	}
+	if(1)
+	{
+		cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.noise.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias)
 	}
 }
 
@@ -422,7 +434,15 @@ cr.png.compare<- function()
 	dfr		<- c(	'b_TRM_FROM_RECENT'=		log( dfr[which(GROUP=='TR_STAGE' & FACTOR=='early'), TR_RATE] / dfr[which(GROUP=='TR_STAGE' & FACTOR=='late'), TR_RATE]),
 					'b_TRM_FROM_RECENT_RISKM'=	log( dfr[which(GROUP=='TR_STAGE_RISKM' & FACTOR=='early'), TR_RATE] / dfr[which(GROUP=='TR_STAGE_RISKM' & FACTOR=='late'), TR_RATE]),
 					'b_RISK_L'=					log( dfr[which(GROUP=='RISK' & FACTOR=='L'), TR_RATE] / dfr[which(GROUP=='RISK' & FACTOR=='M'), TR_RATE]),
-					'b_RISK_H'=					log( dfr[which(GROUP=='RISK' & FACTOR=='H'), TR_RATE] / dfr[which(GROUP=='RISK' & FACTOR=='M'), TR_RATE])
+					'b_RISK_H'=					log( dfr[which(GROUP=='RISK' & FACTOR=='H'), TR_RATE] / dfr[which(GROUP=='RISK' & FACTOR=='M'), TR_RATE]),
+					'b_MALE'=					log( dfr[which(GROUP=='GENDER' & FACTOR=='M'), TR_RATE] / dfr[which(GROUP=='GENDER' & FACTOR=='F'), TR_RATE]),
+					'b_MALE_RISKM'=				log( dfr[which(GROUP=='GENDER_RISKM' & FACTOR=='M'), TR_RATE] / dfr[which(GROUP=='GENDER_RISKM' & FACTOR=='F'), TR_RATE]),
+					'b_AGE_AT_DIAG_unknown'=	log( dfr[which(GROUP=='AGE_AT_DIAG' & FACTOR=='unknown'), TR_RATE] / dfr[which(GROUP=='AGE_AT_DIAG' & FACTOR=='30'), TR_RATE]),
+					'b_AGE_AT_DIAG_less25'=		log( dfr[which(GROUP=='AGE_AT_DIAG' & FACTOR=='less25'), TR_RATE] / dfr[which(GROUP=='AGE_AT_DIAG' & FACTOR=='30'), TR_RATE]),
+					'b_AGE_AT_DIAG_25to29'=		log( dfr[which(GROUP=='AGE_AT_DIAG' & FACTOR=='25to29'), TR_RATE] / dfr[which(GROUP=='AGE_AT_DIAG' & FACTOR=='30'), TR_RATE]),
+					'b_AGE_AT_DIAG_unknown_RISKM_GENDERF'=		log( dfr[which(GROUP=='AGE_AT_DIAG_RISKM_GENDERF' & FACTOR=='unknown'), TR_RATE] / dfr[which(GROUP=='AGE_AT_DIAG_RISKM_GENDERF' & FACTOR=='30'), TR_RATE]),
+					'b_AGE_AT_DIAG_less25_RISKM_GENDERF'=		log( dfr[which(GROUP=='AGE_AT_DIAG_RISKM_GENDERF' & FACTOR=='less25'), TR_RATE] / dfr[which(GROUP=='AGE_AT_DIAG_RISKM_GENDERF' & FACTOR=='30'), TR_RATE]),
+					'b_AGE_AT_DIAG_25to29_RISKM_GENDERF'=		log( dfr[which(GROUP=='AGE_AT_DIAG_RISKM_GENDERF' & FACTOR=='25to29'), TR_RATE] / dfr[which(GROUP=='AGE_AT_DIAG_RISKM_GENDERF' & FACTOR=='30'), TR_RATE])
 					)		
 	dfr		<- data.table(FACTOR=names(dfr), TRUE_TR_RATE_RATIO=unname(dfr))
 	#	parse results	
@@ -440,19 +460,42 @@ cr.png.compare<- function()
 	res[, MAXHEIGHT:=as.numeric(gsub('.*_maxHeight([0-9A-Za-z]+).*','\\1',F))]
 	res[, LASSO:=as.numeric(gsub('.*_lasso([0-9]+).*','\\1',F))]
 	res[, TRF_RECENT:= as.numeric(grepl('RECENTtrf',F))]
-	res[, AOI_ETSI:= as.numeric(grepl('ETSIaoi',F))]
 	res[, TRF_RISK:= as.numeric(grepl('RISKtrf',F))]
+	res[, TRF_GENDER:= as.numeric(grepl('MALEtrf',F))]
+	res[, TRF_AGEATDIAG:= as.numeric(grepl('AGEATDIAGtrf',F))]
+	res[, AOI_ETSI:= as.numeric(grepl('ETSIaoi',F))]
+	#
 	res[, TRF:=NA_character_]
 	set(res, res[, which(TRF_RECENT==1)],'TRF','recent transmission')
+	set(res, res[, which(TRF_RISK==1)],'TRF','risk low, high')
+	set(res, res[, which(TRF_GENDER==1)],'TRF','male')
 	set(res, res[, which(TRF_RECENT==1 & TRF_RISK==1)],'TRF','recent transmission\nrisk low, high')
+	set(res, res[, which(TRF_RECENT==1 & TRF_RISK==1 & TRF_GENDER==1)],'TRF','recent transmission\nrisk low, high\nmale')
+	set(res, res[, which(TRF_RECENT==1 & TRF_RISK==1 & TRF_GENDER==1 & TRF_AGEATDIAG==1)],'TRF','recent transmission\nrisk low, high\nmale\nage at diagnosis')
+	stopifnot(res[, !any(is.na(TRF))])
 	res[, AOI:=NA_character_]
 	set(res, res[, which(AOI_ETSI==1)],'AOI','exact time since infection')	
 	res[, BFGSargs:= NA_character_]	
 	set(res, res[, which(grepl('BFGSargs3',F))], 'BFGSargs', 'r in -4,2')	
-	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high' & THETA=='b_TRM_FROM_RECENT')]
+	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high' & FACTOR=='b_TRM_FROM_RECENT')]
+	set(res, tmp, 'FACTOR', 'b_TRM_FROM_RECENT_RISKM')	
+	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high\nmale' & FACTOR=='b_TRM_FROM_RECENT')]
 	set(res, tmp, 'FACTOR', 'b_TRM_FROM_RECENT_RISKM')
+	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high\nmale' & FACTOR=='b_MALE')]
+	set(res, tmp, 'FACTOR', 'b_MALE_RISKM')	
+	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high\nmale\nage at diagnosis' & FACTOR=='b_TRM_FROM_RECENT')]
+	set(res, tmp, 'FACTOR', 'b_TRM_FROM_RECENT_RISKM')	
+	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high\nmale\nage at diagnosis' & FACTOR=='b_MALE')]
+	set(res, tmp, 'FACTOR', 'b_MALE_RISKM')
+	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high\nmale\nage at diagnosis' & FACTOR=='b_AGE_AT_DIAG_unknown')]
+	set(res, tmp, 'FACTOR', 'b_AGE_AT_DIAG_unknown_RISKM_GENDERF')	
+	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high\nmale\nage at diagnosis' & FACTOR=='b_AGE_AT_DIAG_less25')]
+	set(res, tmp, 'FACTOR', 'b_AGE_AT_DIAG_less25_RISKM_GENDERF')
+	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high\nmale\nage at diagnosis' & FACTOR=='b_AGE_AT_DIAG_25to29')]
+	set(res, tmp, 'FACTOR', 'b_AGE_AT_DIAG_25to29_RISKM_GENDERF')
 	#
 	res		<- merge(res, dfr, by='FACTOR', all.x=1)
+	save(res, file=file.path(indir, 'PANGEA-AcuteHigh-InterventionNone-results.rda'))
 	#
 	#
 	resp	<- melt(res, measure.vars=c('MLE','PROF_MEDIAN','TRUE_TR_RATE_RATIO'), variable.name='STAT', value.name='V')
@@ -479,20 +522,20 @@ cr.png.compare<- function()
 	#		vary trm risk from recent infection AND PERHAPS risk  
 	#		fix lasso=5 maxHeight=10
 	#	result: adding RISK_L and RISK_H really improves inference
-	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXHEIGHT==10)
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf)
 	subset(tmp,FACTOR=='b_TRM_FROM_RECENT' & STAT=='MLE')[, table(MAXNODE, TRF, useNA='if')]	
-	tmp[, LABEL:= paste0(TRF,'\nmaxHeight 10\nmaxDepth',MAXNODE)]
+	tmp[, LABEL:= paste0(TRF,'\n\nmaxHeight ',MAXHEIGHT,'\nmaxDepth ',MAXNODE,'\nlasso ',LASSO)]
 	ggplot(tmp, aes(x=V, y=FACTOR, colour=STAT)) + 
 			geom_vline(xintercept=0, colour='grey50', size=1) +
 			geom_point() +
 			theme_bw() + 
 			labs(y='', x='\nlog risk ratio') +	
-			coord_cartesian(xlim=c(-5,5)) +
+			coord_cartesian(xlim=c(-7,7)) +
 			scale_x_continuous(breaks=seq(-10,10,1), expand=c(0,0)) +
 			scale_colour_manual(values=c('MLE'='black', 'TRUE_TR_RATE_RATIO'='red')) +
 			facet_grid(~LABEL) +
 			theme(legend.position='bottom')
-	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_trfRECENT_trfRISK_aoiETSI.pdf'), w=10,h=6)
+	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_trfRECENT_trfRISK_trfMALE_trfAGEATDIAG_aoiETSI.pdf'), w=25,h=6)	
 	#
 	#	compare MLEs: given exact time since infection, given trm recent infection and risk 
 	#		vary lasso
@@ -513,6 +556,51 @@ cr.png.compare<- function()
 			facet_grid(~LABEL) +
 			theme(legend.position='bottom')
 	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_trfRECENT_trfRISK_aoiETSI_vary_LASSO_MAXHEIGHT_MAXDEPTH.pdf'), w=30,h=6)
+	#
+	#	MLE correlations
+	#
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & TRF=='recent transmission\nrisk low, high\nmale\nage at diagnosis')
+	tmp	<- dcast.data.table(subset(tmp, STAT=='MLE'), SEED~FACTOR, value.var='V')
+	setnames(tmp, colnames(tmp), gsub('_','\n',gsub('b_','',colnames(tmp))))
+	pdf(file=file.path(indir,'corr_trfRECENT_trfRISK_trfMALE_trfAGEATDIAG.pdf'), w=10, h=10)
+	pairs(tmp[, 2:10], col='black', pch=16)
+	dev.off()
+	
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXHEIGHT==10 & MAXNODE==Inf & TRF=='recent transmission\nrisk low, high\nmale')
+	tmp	<- dcast.data.table(subset(tmp, STAT=='MLE'), SEED~FACTOR, value.var='V')
+	setnames(tmp, colnames(tmp), gsub('_','\n',gsub('b_','',colnames(tmp))))
+	pdf(file=file.path(indir,'corr_trfRECENT_trfRISK_trfMALE.pdf'), w=7, h=7)
+	pairs(tmp[, 2:7], col='black', pch=16)
+	dev.off()
+	
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXHEIGHT==10 & MAXNODE==Inf & TRF=='recent transmission\nrisk low, high')
+	tmp	<- dcast.data.table(subset(tmp, STAT=='MLE'), SEED~FACTOR, value.var='V')
+	setnames(tmp, colnames(tmp), gsub('_','\n',gsub('b_','',colnames(tmp))))
+	pdf(file=file.path(indir,'corr_trfRECENT_trfRISK.pdf'), w=5, h=5)
+	pairs(tmp[, 2:6], col='black', pch=16)
+	dev.off()
+	
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXHEIGHT==10 & MAXNODE==Inf & TRF=='recent transmission')
+	tmp	<- dcast.data.table(subset(tmp, STAT=='MLE'), SEED~FACTOR, value.var='V')
+	setnames(tmp, colnames(tmp), gsub('_','\n',gsub('b_','',colnames(tmp))))
+	pdf(file=file.path(indir,'corr_trfRECENT.pdf'), w=4, h=4)
+	pairs(tmp[, 2:4], col='black', pch=16)
+	dev.off()
+	
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXHEIGHT==10 & MAXNODE==Inf & TRF=='male')
+	tmp	<- dcast.data.table(subset(tmp, STAT=='MLE'), SEED~FACTOR, value.var='V')
+	setnames(tmp, colnames(tmp), gsub('_','\n',gsub('b_','',colnames(tmp))))
+	pdf(file=file.path(indir,'corr_trfMALE.pdf'), w=4, h=4)
+	pairs(tmp[, 2:4], col='black', pch=16)
+	dev.off()
+	
+	tmp	<- subset(resp, BFGSargs=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXHEIGHT==10 & MAXNODE==Inf & TRF=='risk low, high')
+	tmp	<- dcast.data.table(subset(tmp, STAT=='MLE'), SEED~FACTOR, value.var='V')
+	setnames(tmp, colnames(tmp), gsub('_','\n',gsub('b_','',colnames(tmp))))
+	pdf(file=file.path(indir,'corr_trfRISK.pdf'), w=5, h=5)
+	pairs(tmp[, 2:5], col='black', pch=16)
+	dev.off()
+	
 }
 	
 cr.master.ex3.compare<- function()
@@ -1274,6 +1362,100 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.vanilla.BFGS3<- f
 				#print(fit$bestfit$par )
 				#print( fci$ci )
 				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_MALEtrf_AGEATDIAGtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'.rda'),basename(F)))				
+				save( fit, fci, pci, file=tmp)
+			}, by='F']				
+}
+
+cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.noise.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10, par.lasso=5, par.noise=1, par.bias=1)
+{
+	require(coalreg)
+	require(data.table)
+	require(ape)
+	require(viridis)
+	if(0)
+	{
+		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
+		par.maxNodeDepth	<- Inf
+		par.maxHeight		<- 10
+		par.lasso			<- 5
+		par.noise			<- 1
+		par.bias			<- 1
+	}
+	#
+	#	run coalreg	run using exact time to infection
+	#	with extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
+	#		 
+	set.seed(42)	
+	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
+	infiles[, {
+				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				ph		<- read.tree( F )
+				ph		<- multi2di(ladderize(ph),random=FALSE)
+				#	create data.table with infection type				
+				#	paste(	IDREC,GENDER,DOB,RISK,round(TIME_TR,d=3),round(DIAG_T,d=3),DIAG_CD4,
+				#			DIAG_IN_RECENT,DIAG_IN_ACUTE,round(TIME_SEQ,d=3),round(ETSI,d=3),SAMPLED_TR,TRM_FROM_RECENT,TRM_FROM_ACUTE,SEQ_COV_2020,sep='|')				
+				phi		<- data.table(	TAXA=ph$tip.label,
+						IDPOP=paste0('ID_',sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',1)),
+						GENDER=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',2),
+						DOB=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',3)),
+						RISK=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',4),
+						TIME_TR=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',5)),
+						DIAG_T=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',6)),
+						DIAG_CD4=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',7)),										
+						DIAG_IN_RECENT=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',8),
+						DIAG_IN_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',9),
+						TIME_SEQ=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',10)),
+						ETSI=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',11)),
+						SAMPLED_TR=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',12),
+						TRM_FROM_RECENT=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',13),
+						TRM_FROM_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',14),
+						SEQ_COV_2020=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',15))	
+				)	
+				set(phi, NULL, 'AGE_AT_DIAG', phi[, cut(DIAG_T-DOB, breaks=c(-1,25,30,1e4),labels=c('less25','25to29','30'))])								
+				set(phi, NULL, 'AGE_AT_DIAG_25to29', phi[,factor(is.na(AGE_AT_DIAG) | AGE_AT_DIAG!='25to29',levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'AGE_AT_DIAG_less25', phi[,factor(is.na(AGE_AT_DIAG) | AGE_AT_DIAG!='less25',levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'AGE_AT_DIAG_unknown', phi[,factor(!is.na(AGE_AT_DIAG),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'TRM_FROM_RECENT', phi[,factor(TRM_FROM_RECENT,levels=c('N','Y'))])
+				set(phi, NULL, 'MALE', phi[,factor(GENDER,levels=c('F','M'))])
+				set(phi, NULL, 'RISK_L', phi[,factor(RISK!='L',levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'RISK_H', phi[,factor(RISK!='H',levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				#	add noise and bias
+				tmp		<- phi[, list(ETSI_NOISE=rlnorm(1, meanlog= log(ETSI)-0.5*log(par.noise*par.noise+1), sdlog= sqrt(log(par.noise*par.noise+1)))), by='TAXA']				
+				phi		<- merge(phi, tmp, by='TAXA')					
+				set(phi, NULL, 'ETSI_NOISE', phi[, ETSI_NOISE*par.bias])
+				#	zero mean ETSI_NOISE so the coefficients can be interpreted as RR
+				set(phi, NULL, 'ETSI_NOISE', phi[, ETSI_NOISE-mean(ETSI_NOISE)])								
+				#	prepare coalreg input
+				ph$tip.label	<- phi[, IDPOP]
+				tmp				<- data.matrix(subset(phi, select=c(TRM_FROM_RECENT,RISK_L,RISK_H,MALE,AGE_AT_DIAG_25to29,AGE_AT_DIAG_less25,AGE_AT_DIAG_unknown,ETSI_NOISE)))
+				rownames(tmp)	<- phi[, IDPOP]
+				stopifnot(!any(is.na(tmp)))
+				ph 				<- DatedTree( ph, setNames( phi$TIME_SEQ, ph$tip.label) ) 
+				#	The rigorous way to choose lasso_threshold would be to use cross-validation which I do not have coded up yet; 
+				#	in lieu of that I set it to approximately (number free parameters) * (maximum expected effect size). 
+				#	You don't need to worry much about it for the BD sims, but for pangea it will help prevent over fitting.
+				#		
+				#	BFGS is fast, but i find is less robust than Nelder-Mead and gets stuck in local optima. 
+				#	Feel free to experiment with that. 
+				#		
+				#	I think your suggested lnr limits are good. 
+				#	Do you see that lnr is correlated with other parameter estimates ? 
+				#	If outlier lnr's correspond to outlier parameter estimates, that is good cause to put limits on it. 
+				#
+				#	I set scale=F so that parameter estimates could be interpreted as log-odds for binary covariates.. 
+				#	You will want this to be TRUE for PANGEA 			
+				fit 	<- trf.lasso(ph, tmp, trf_names=c('TRM_FROM_RECENT','RISK_L','RISK_H','MALE','AGE_AT_DIAG_25to29', 'AGE_AT_DIAG_less25', 'AGE_AT_DIAG_unknown'), aoi_names=c( 'ETSI_NOISE' ), 
+						maxNodeDepth=par.maxNodeDepth,
+						maxHeight=par.maxHeight,
+						lasso_threshold=par.lasso, 
+						method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
+				fci 	<- fisher.ci(fit)	 
+				pci 	<- prof.ci(fit, fci  ) 
+				#print(fit$bestfit$par )
+				#print( fci$ci )
+				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_MALEtrf_AGEATDIAGtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'_ETSIbias',par.bias,'_ETSInoise',par.noise,'.rda'),basename(F)))				
 				save( fit, fci, pci, file=tmp)
 			}, by='F']				
 }
