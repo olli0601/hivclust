@@ -25,23 +25,46 @@ cr.hpc.submit<- function()
 		}
 		quit("no")	
 	}
-	if(1)
+	if(0)
 	{
 		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10	
 		par.lasso			<- 5
+		par.scale			<- 0
+		par.climb			<- 'BFGS'
 		for(par.bias in c(0.5,1,2))
 			for(par.noise in c(0.5,1,2))
 				for(i in 44:51)
 				{
 					par.base.pattern	<- paste0('PANGEA-AcuteHigh-InterventionNone-cov11.8-seed',i)
-					cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight, ' -par.lasso=',par.lasso, ' -par.noise=', par.noise, ' -par.bias=', par.bias)			
+					cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight, ' -par.lasso=',par.lasso, ' -par.noise=', par.noise, ' -par.bias=', par.bias, ' -par.climb=', par.climb, ' -par.scale=', par.scale)			
 					cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=171, hpc.mem="3600mb")
 					cat(cmd)	
 					outdir		<- paste(DATA,"tmp",sep='/')
 					outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 					hivc.cmd.hpccaller(outdir, outfile, cmd)		
 				}
+		quit("no")	
+	}
+	if(1)
+	{
+		par.maxNodeDepth	<- Inf
+		par.maxHeight		<- 10	
+		par.lasso			<- 5
+		par.noise			<- 0
+		for(par.bias in c(0.5,1,2))
+			for(par.climb in c('BFGS','Nelder-Mead'))
+				for(par.scale in c(0,1))
+					for(i in 44:51)
+					{
+						par.base.pattern	<- paste0('PANGEA-AcuteHigh-InterventionNone-cov11.8-seed',i)
+						cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight, ' -par.lasso=',par.lasso, ' -par.noise=', par.noise, ' -par.bias=', par.bias, ' -par.climb=', par.climb, ' -par.scale=', par.scale)			
+						cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=171, hpc.mem="3600mb")
+						cat(cmd)	
+						outdir		<- paste(DATA,"tmp",sep='/')
+						outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+						hivc.cmd.hpccaller(outdir, outfile, cmd)		
+					}	
 		quit("no")	
 	}
 }
@@ -96,9 +119,11 @@ cr.various.pangea<- function()
 	par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 	par.maxHeight		<- Inf
 	par.maxNodeDepth	<- Inf
+	par.climb			<- 'BFGS'
 	par.lasso			<- 5
 	par.noise			<- 0
 	par.bias			<- 1
+	par.scale			<- 0
 	#
 	#	read args
 	#
@@ -115,9 +140,13 @@ cr.various.pangea<- function()
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,10), par.noise= return(substr(arg,12,nchar(arg))),NA)	}))
 		if(length(tmp)>0) par.noise<- as.numeric(tmp[1])
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,9), par.bias= return(substr(arg,11,nchar(arg))),NA)	}))
-		if(length(tmp)>0) par.bias<- as.numeric(tmp[1])
+		if(length(tmp)>0) par.bias<- as.numeric(tmp[1])		
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,10), par.scale= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.scale<- as.numeric(tmp[1])
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,10), par.climb= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.climb<- as.numeric(tmp[1])
 	}	
-	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n', par.noise,'\n', par.bias, '\n')	
+	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n', par.noise,'\n', par.bias, '\n', par.climb, '\n', par.scale)	
 	if(0)
 	{		
 		cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso)		
@@ -144,7 +173,7 @@ cr.various.pangea<- function()
 	}
 	if(1)
 	{
-		cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.noise.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias)
+		cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.noise.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale)
 	}
 	if(0)
 	{
@@ -1108,7 +1137,7 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.
 			}, by='F']				
 }
 
-cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.noise.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10, par.lasso=5, par.noise=1, par.bias=1)
+cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.noise.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10, par.lasso=5, par.noise=1, par.bias=1, par.climb='BFGS', par.scale=0)
 {
 	require(coalreg)
 	require(data.table)
@@ -1122,6 +1151,8 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.noise.BFGS3<- function(indir, par.ba
 		par.maxNodeDepth	<- 3
 		par.maxHeight		<- 10
 		par.lasso			<- 5
+		par.climb			<- 'BFGS'
+		par.scale			<- 0
 		par.noise			<- 1
 		par.bias			<- 1
 	}
@@ -1187,12 +1218,14 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.noise.BFGS3<- function(indir, par.ba
 						maxNodeDepth=par.maxNodeDepth,
 						maxHeight=par.maxHeight,
 						lasso_threshold=par.lasso, 
-						method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
+						method=par.climb, 
+						lnr0= -2, lnrLimits= c(-4, 2), 
+						scale=as.logical(par.scale))	
 				fci 	<- fisher.ci(fit)	 
 				pci 	<- prof.ci(fit, fci  ) 
 				#print(fit$bestfit$par )
 				#print( fci$ci )
-				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'_ETSIbias',par.bias,'_ETSInoise',par.noise,'.rda'),basename(F)))				
+				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_',par.climb,'args3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'_ETSIbias',par.bias,'_ETSInoise',par.noise,'_scale',par.scale,'.rda'),basename(F)))				
 				save( fit, fci, pci, file=tmp)
 			}, by='F']				
 }
