@@ -146,8 +146,7 @@ cr.various.pangea<- function()
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,10), par.climb= return(substr(arg,12,nchar(arg))),NA)	}))
 		if(length(tmp)>0) par.climb<- tmp[1]
 	}	
-	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n', par.noise,'\n', par.bias, '\n', par.climb, '\n', par.scale)
-	stop()
+	cat('input args\n',par.base.pattern,'\n',par.maxNodeDepth,'\n',par.maxHeight,'\n', par.noise,'\n', par.bias, '\n', par.climb, '\n', par.scale)	
 	if(0)
 	{		
 		cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso)		
