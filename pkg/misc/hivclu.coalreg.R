@@ -1134,6 +1134,10 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.unmodelled.het.BFGS3<- function(indir, par.
 		par.maxNodeDepth	<- 3
 		par.maxHeight		<- 10
 		par.lasso			<- 5
+		par.climb			<- 'BFGS' 
+		par.bias			<- 1 
+		par.noise			<- 0 
+		par.scale			<- 0
 	}
 	stopifnot(par.bias==1, par.noise==0)
 	#
@@ -1194,7 +1198,7 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.unmodelled.het.BFGS3<- function(indir, par.
 						lasso_threshold=par.lasso, 
 						method=unname(par.climb), 
 						lnr0 = -2, lnrLimits = c(-4, 2), 
-						scale=as.logical(scale))							
+						scale=as.logical(par.scale))							
 				fci 	<- fisher.ci(fit)	 
 				pci 	<- prof.ci(fit, fci  ) 
 				#print(fit$bestfit$par )
@@ -1700,11 +1704,11 @@ cr.png.runcoalreg.using.TRRISK.ETSI.unmodelled.het.BFGS3<- function(indir, par.b
 				#	You will want this to be TRUE for PANGEA 			
 				fit 	<- trf.lasso(ph, tmp, trf_names=c('RISK_L','RISK_H'), aoi_names=c( 'ETSI' ), 
 						maxNodeDepth=par.maxNodeDepth,
-						maxHeight=par.maxHeight,
+						maxHeight=par.maxHeight, 
 						lasso_threshold=par.lasso, 
 						method=unname(par.climb), 
 						lnr0 = -2, lnrLimits = c(-4, 2), 
-						scale=as.logical(scale))	
+						scale=as.logical(par.scale))	
 				fci 	<- fisher.ci(fit)	 
 				pci 	<- prof.ci(fit, fci  ) 
 				#print(fit$bestfit$par )
