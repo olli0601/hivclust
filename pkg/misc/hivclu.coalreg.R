@@ -6,26 +6,28 @@ cr.various<- function()
 
 cr.hpc.submit<- function()
 {
-	if(0)
+	if(1)
 	{
 		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10	
 		par.lasso			<- 5
 		par.bias			<- 1
-		par.noise			<- 1
+		par.scale			<- 0
+		par.climb			<- 'BFGS'		
+		par.noise			<- 0
 		for(i in 44:51)
 		{
 			par.base.pattern	<- paste0('PANGEA-AcuteHigh-InterventionNone-cov11.8-seed',i)
-			cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight, ' -par.lasso=',par.lasso, ' -par.noise=', par.noise, ' -par.bias=', par.bias)			
-			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=171, hpc.mem="3600mb")
+			cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight, ' -par.lasso=',par.lasso, ' -par.noise=', par.noise, ' -par.bias=', par.bias, ' -par.climb=', par.climb, ' -par.scale=', par.scale)			
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeph', hpc.walltime=171, hpc.mem="3600mb")
 			cat(cmd)	
 			outdir		<- paste(DATA,"tmp",sep='/')
 			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 			hivc.cmd.hpccaller(outdir, outfile, cmd)		
 		}
-		quit("no")	
+		quit("no")	 
 	}
-	if(1)
+	if(0)
 	{
 		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10	
@@ -175,9 +177,17 @@ cr.various.pangea<- function()
 	{
 		cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.noise.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale)
 	}
-	if(1)
+	if(0)
 	{
 		cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.noise.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale)
+	}
+	if(1)
+	{
+		cr.png.runcoalreg.using.TRSTAGE.ETSI.unmodelled.het.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale)
+	}
+	if(0)
+	{
+		cr.png.runcoalreg.using.TRRISK.ETSI.unmodelled.het.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale)
 	}
 }
 
@@ -1110,6 +1120,90 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3<- function(indir, par.base.pa
 			}, by='F']				
 }
 
+cr.png.runcoalreg.using.TRSTAGE.ETSI.unmodelled.het.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10, par.lasso=5, par.climb='BFGS', par.bias=1, par.noise=0, par.scale=0)
+{
+	require(coalreguh)
+	require(data.table)
+	require(ape)
+	require(viridis)
+	if(0)
+	{
+		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
+		par.maxNodeDepth	<- 3
+		par.maxHeight		<- 10
+		par.lasso			<- 5
+	}
+	stopifnot(par.bias==1, par.noise==0)
+	#
+	#	run coalreg	run using exact time to infection
+	#	with extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
+	#		 
+	set.seed(42)	
+	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
+	infiles[, {
+				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				ph		<- read.tree( F )
+				ph		<- multi2di(ladderize(ph),random=FALSE)
+				#	create data.table with infection type				
+				#	paste(	IDREC,GENDER,DOB,RISK,round(TIME_TR,d=3),round(DIAG_T,d=3),DIAG_CD4,
+				#			DIAG_IN_RECENT,DIAG_IN_ACUTE,round(TIME_SEQ,d=3),round(ETSI,d=3),SAMPLED_TR,TRM_FROM_RECENT,TRM_FROM_ACUTE,SEQ_COV_2020,sep='|')				
+				phi		<- data.table(	TAXA=ph$tip.label,
+						IDPOP=paste0('ID_',sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',1)),
+						SEX=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',2),
+						DOB=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',3)),
+						RISK=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',4),
+						TIME_TR=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',5)),
+						DIAG_T=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',6)),
+						DIAG_CD4=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',7)),										
+						DIAG_IN_RECENT=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',8),
+						DIAG_IN_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',9),
+						TIME_SEQ=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',10)),
+						ETSI=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',11)),
+						SAMPLED_TR=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',12),
+						TRM_FROM_RECENT=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',13),
+						TRM_FROM_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',14),
+						SEQ_COV_2020=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',15))	
+				)				
+				set(phi, NULL, 'TRM_FROM_RECENT', phi[,factor(TRM_FROM_RECENT,levels=c('N','Y'))])
+				#	zero mean ETSI so the coefficients can be interpreted as RR
+				set(phi, NULL, 'ETSI', phi[, ETSI-mean(ETSI)])
+				#	prepare coalreg input
+				ph$tip.label	<- phi[, IDPOP]
+				tmp				<- data.matrix(subset(phi, select=c(TRM_FROM_RECENT,ETSI)))
+				rownames(tmp)	<- phi[, IDPOP]
+				stopifnot(!any(is.na(tmp)))
+				ph 				<- DatedTree( ph, setNames( phi$TIME_SEQ, ph$tip.label) ) 
+				#	The rigorous way to choose lasso_threshold would be to use cross-validation which I do not have coded up yet; 
+				#	in lieu of that I set it to approximately (number free parameters) * (maximum expected effect size). 
+				#	You don't need to worry much about it for the BD sims, but for pangea it will help prevent over fitting.
+				#		
+				#	BFGS is fast, but i find is less robust than Nelder-Mead and gets stuck in local optima. 
+				#	Feel free to experiment with that. 
+				#		
+				#	I think your suggested lnr limits are good. 
+				#	Do you see that lnr is correlated with other parameter estimates ? 
+				#	If outlier lnr's correspond to outlier parameter estimates, that is good cause to put limits on it. 
+				#
+				#	I set scale=F so that parameter estimates could be interpreted as log-odds for binary covariates.. 
+				#	You will want this to be TRUE for PANGEA 			
+				fit 	<- trf.lasso(ph, tmp, trf_names=c('TRM_FROM_RECENT'), aoi_names=c( 'ETSI' ), 
+						maxNodeDepth=par.maxNodeDepth,
+						maxHeight=par.maxHeight,
+						lasso_threshold=par.lasso, 
+						method=unname(par.climb), 
+						lnr0 = -2, lnrLimits = c(-4, 2), 
+						scale=as.logical(scale))							
+				fci 	<- fisher.ci(fit)	 
+				pci 	<- prof.ci(fit, fci  ) 
+				#print(fit$bestfit$par )
+				#print( fci$ci )
+				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreguh_using_TRM-FROM-RECENTtrf_ETSIaoi_',par.climb,'args3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'_ETSIbias',par.bias,'_ETSInoise',par.noise,'_scale',par.scale,'.rda'),basename(F)))								
+				save( fit, fci, pci, file=tmp)
+			}, by='F']				
+}
+
 cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10, par.lasso=5)
 {
 	require(coalreg)
@@ -1531,6 +1625,91 @@ cr.png.runcoalreg.using.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.base.pat
 				#print(fit$bestfit$par )
 				#print( fci$ci )
 				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreg_using_RISKtrf_ETSIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'.rda'),basename(F)))				
+				save( fit, fci, pci, file=tmp)
+			}, by='F']				
+}
+
+cr.png.runcoalreg.using.TRRISK.ETSI.unmodelled.het.BFGS3<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10, par.lasso=5, par.climb='BFGS', par.bias=1, par.noise=0, par.scale=0)
+{
+	require(coalreguh)
+	require(data.table)
+	require(ape)
+	require(viridis)
+	if(0)
+	{
+		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
+		par.maxNodeDepth	<- Inf
+		par.maxHeight		<- 10
+		par.lasso			<- 5
+	}
+	stopifnot(par.bias==1, par.noise==0)
+	#
+	#	run coalreg	run using exact time to infection
+	#	with extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
+	#		 
+	set.seed(42)	
+	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
+	infiles[, {
+				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				ph		<- read.tree( F )
+				ph		<- multi2di(ladderize(ph),random=FALSE)
+				#	create data.table with infection type				
+				#	paste(	IDREC,GENDER,DOB,RISK,round(TIME_TR,d=3),round(DIAG_T,d=3),DIAG_CD4,
+				#			DIAG_IN_RECENT,DIAG_IN_ACUTE,round(TIME_SEQ,d=3),round(ETSI,d=3),SAMPLED_TR,TRM_FROM_RECENT,TRM_FROM_ACUTE,SEQ_COV_2020,sep='|')				
+				phi		<- data.table(	TAXA=ph$tip.label,
+						IDPOP=paste0('ID_',sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',1)),
+						GENDER=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',2),
+						DOB=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',3)),
+						RISK=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',4),
+						TIME_TR=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',5)),
+						DIAG_T=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',6)),
+						DIAG_CD4=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',7)),										
+						DIAG_IN_RECENT=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',8),
+						DIAG_IN_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',9),
+						TIME_SEQ=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',10)),
+						ETSI=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',11)),
+						SAMPLED_TR=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',12),
+						TRM_FROM_RECENT=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',13),
+						TRM_FROM_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',14),
+						SEQ_COV_2020=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',15))	
+				)				
+				set(phi, NULL, 'RISK_L', phi[,factor(RISK!='L',levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'RISK_H', phi[,factor(RISK!='H',levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				#	zero mean ETSI so the coefficients can be interpreted as RR
+				set(phi, NULL, 'ETSI', phi[, ETSI-mean(ETSI)])
+				#	prepare coalreg input
+				ph$tip.label	<- phi[, IDPOP]
+				tmp				<- data.matrix(subset(phi, select=c(RISK_L,RISK_H,ETSI)))
+				rownames(tmp)	<- phi[, IDPOP]
+				stopifnot(!any(is.na(tmp)))
+				ph 				<- DatedTree( ph, setNames( phi$TIME_SEQ, ph$tip.label) ) 
+				#	The rigorous way to choose lasso_threshold would be to use cross-validation which I do not have coded up yet; 
+				#	in lieu of that I set it to approximately (number free parameters) * (maximum expected effect size). 
+				#	You don't need to worry much about it for the BD sims, but for pangea it will help prevent over fitting.
+				#		
+				#	BFGS is fast, but i find is less robust than Nelder-Mead and gets stuck in local optima. 
+				#	Feel free to experiment with that. 
+				#		
+				#	I think your suggested lnr limits are good. 
+				#	Do you see that lnr is correlated with other parameter estimates ? 
+				#	If outlier lnr's correspond to outlier parameter estimates, that is good cause to put limits on it. 
+				#
+				#	I set scale=F so that parameter estimates could be interpreted as log-odds for binary covariates.. 
+				#	You will want this to be TRUE for PANGEA 			
+				fit 	<- trf.lasso(ph, tmp, trf_names=c('RISK_L','RISK_H'), aoi_names=c( 'ETSI' ), 
+						maxNodeDepth=par.maxNodeDepth,
+						maxHeight=par.maxHeight,
+						lasso_threshold=par.lasso, 
+						method=unname(par.climb), 
+						lnr0 = -2, lnrLimits = c(-4, 2), 
+						scale=as.logical(scale))	
+				fci 	<- fisher.ci(fit)	 
+				pci 	<- prof.ci(fit, fci  ) 
+				#print(fit$bestfit$par )
+				#print( fci$ci )				
+				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreguh_using_RISKtrf_ETSIaoi_',par.climb,'args3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'_ETSIbias',par.bias,'_ETSInoise',par.noise,'_scale',par.scale,'.rda'),basename(F)))				
 				save( fit, fci, pci, file=tmp)
 			}, by='F']				
 }
