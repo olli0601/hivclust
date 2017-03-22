@@ -38,7 +38,7 @@ cr.hpc.submit<- function()
 				{
 					par.base.pattern	<- paste0('PANGEA-AcuteHigh-InterventionNone-cov11.8-seed',i)
 					cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -par.base.pattern=',par.base.pattern,' -par.maxNodeDepth=',par.maxNodeDepth,' -par.maxHeight=',par.maxHeight, ' -par.lasso=',par.lasso, ' -par.noise=', par.noise, ' -par.bias=', par.bias, ' -par.climb=', par.climb, ' -par.scale=', par.scale)			
-					cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=171, hpc.mem="3600mb")
+					cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeph', hpc.walltime=171, hpc.mem="3600mb")
 					cat(cmd)	
 					outdir		<- paste(DATA,"tmp",sep='/')
 					outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -1638,6 +1638,8 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.noise.BFGS3<- fun
 		par.maxHeight		<- 10
 		par.lasso			<- 5
 		par.noise			<- 1
+		par.scale			<- 0
+		par.climb			<- 'BFGS'
 		par.bias			<- 1
 	}
 	#
@@ -1709,7 +1711,7 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.noise.BFGS3<- fun
 						maxNodeDepth=par.maxNodeDepth,
 						maxHeight=par.maxHeight,
 						lasso_threshold=par.lasso, 
-						method=par.climb, 
+						method=unname(par.climb), 
 						lnr0= -2, lnrLimits= c(-4, 2), 
 						scale=as.logical(par.scale))								
 				fci 	<- fisher.ci(fit)	 
