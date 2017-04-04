@@ -181,7 +181,7 @@ cr.various.pangea<- function()
 	{
 		cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.noise.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale)
 	}
-	if(1)
+	if(0)
 	{
 		cr.png.runcoalreg.using.TRSTAGE.ETSI.unmodelled.het.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale)
 	}
@@ -189,6 +189,39 @@ cr.various.pangea<- function()
 	{
 		cr.png.runcoalreg.using.TRRISK.ETSI.unmodelled.het.BFGS3(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale)
 	}
+	if(1)
+	{
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_RECENT'))
+	}
+	if(0)
+	{
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_SIXM'))
+	}
+	if(0)
+	{
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_THREEM'))
+	}
+	if(0)
+	{
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_CD4_STAGE2'))
+	}	
+	if(0)
+	{
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_RECENT','MALE','AGE_AT_DIAG'))
+	}
+	if(0)
+	{
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_SIXM','MALE','AGE_AT_DIAG'))
+	}
+	if(0)
+	{
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_THREEM','MALE','AGE_AT_DIAG'))
+	}
+	if(0)
+	{
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_CD4_STAGE2','MALE','AGE_AT_DIAG'))
+	}
+	
 }
 
 cr.png.generate.data<- function()
@@ -271,8 +304,10 @@ cr.png.generate.data<- function()
 				#
 				#	calculate: time between infection until death or end of observation 2020
 				dfd[, DUR_RISK:= DOD]
+				#tmp		<- dfd[, which(!is.na(ART1_T))]
+				#set(dfd, tmp, 'DUR_RISK', dfd[tmp, ART1_T])				
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
-				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-(DOB+t.adult)])
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])				
 				#	calculate: number of infections until 2020
 				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
 				setnames(tmp, 'IDTR', 'IDPOP')
@@ -280,12 +315,31 @@ cr.png.generate.data<- function()
 				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
 				dfr		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='RISK'], measure.vars='RISK', variable.name='GROUP', value.name='FACTOR')
 				
+				#	for individuals that started ART or did not start ART
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start)
+				dfd[, ART_STARTED:= factor(is.na(ART1_T), levels=c(TRUE,FALSE), labels=c('N','Y'))]
+				dfd[, DUR_RISK:= DOD]
+				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
+				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
+				setnames(tmp, 'IDTR', 'IDPOP')
+				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
+				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
+				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='ART_STARTED'], measure.vars='ART_STARTED', variable.name='GROUP', value.name='FACTOR') 
+				dfr		<- rbind(dfr, tmp)
+				tmp		<- melt(subset(dfd, RISK=='M')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='ART_STARTED'], measure.vars='ART_STARTED', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='ART_STARTED_RISKM']
+				dfr		<- rbind(dfr, tmp)
+				tmp		<- melt(subset(dfd, RISK=='M' & GENDER=='F')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='ART_STARTED'], measure.vars='ART_STARTED', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='ART_STARTED_RISKM_GENDERF']
+				dfr		<- rbind(dfr, tmp)
+				
 				
 				#	for males
 				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start & !is.na(DIAG_T))						
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
-				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-(DOB+t.adult)])
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
 				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
 				setnames(tmp, 'IDTR', 'IDPOP')
 				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
@@ -296,6 +350,62 @@ cr.png.generate.data<- function()
 				tmp		<- melt(subset(dfd, DUR_RISK>0 & RISK=='M')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='GENDER'], measure.vars='GENDER', variable.name='GROUP', value.name='FACTOR')
 				tmp[, GROUP:='GENDER_RISKM']
 				dfr		<- rbind(dfr, tmp)	
+				
+				#	for period before / after ART
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start & !is.na(DIAG_T))						
+				tmp		<- as.data.table(expand.grid(ART_STAGE=c('before start','after start'),IDPOP=unique(dfd$IDPOP)))
+				dfd		<- merge(dfd,tmp,by='IDPOP')
+				dfd[, DUR_RISK:= DOD]
+				dfd[, DUMMY:= dfd[, pmax(t.start,TIME_TR)]]
+				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
+				tmp		<- dfd[, which(ART_STAGE=='before start' & !is.na(ART1_T) & ART1_T<t.end)]
+				set(dfd, tmp, 'DUR_RISK', dfd[tmp, ART1_T])
+				tmp		<- dfd[, which(ART_STAGE=='after start' & !is.na(ART1_T) & ART1_T<t.end)]
+				set(dfd, tmp, 'DUMMY', dfd[tmp, ART1_T])
+				tmp		<- dfd[, which(ART_STAGE=='after start' & (is.na(ART1_T) | !is.na(ART1_T) & ART1_T>=t.end))]
+				set(dfd, tmp, 'DUMMY', dfd[tmp, DUR_RISK])
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-DUMMY])
+				tmp		<- copy(df.trms)
+				setnames(tmp, 'IDTR', 'IDPOP')
+				tmp		<- merge(tmp, subset(dfd, select=c(IDPOP,ART1_T)), by='IDPOP')				
+				tmp[, ART_STAGE:= as.character(factor(TIME_TR<=ART1_T,levels=c(TRUE,FALSE),labels=c('before start','after start')))]
+				set(tmp, tmp[, which(is.na(ART_STAGE))], 'ART_STAGE', 'before start')				
+				tmp		<- subset(tmp, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by=c('IDPOP','ART_STAGE')]
+				dfd		<- merge(dfd, tmp, by=c('IDPOP','ART_STAGE'), all.x=1)
+				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
+				#	marginal trm 
+				tmp		<- melt(subset(dfd, DUR_RISK>0)[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='ART_STAGE'], measure.vars='ART_STAGE', variable.name='GROUP', value.name='FACTOR')
+				dfr		<- rbind(dfr, tmp)
+				#	conditional trm risk for RISK group= M
+				tmp		<- melt(subset(dfd, DUR_RISK>0 & RISK=='M')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='ART_STAGE'], measure.vars='ART_STAGE', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='ART_STAGE_RISKM']
+				dfr		<- rbind(dfr, tmp)
+				#	conditional trm risk for RISK group= M, GENDER=F
+				tmp		<- melt(subset(dfd, DUR_RISK>0 & RISK=='M' & GENDER=='F')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='ART_STAGE'], measure.vars='ART_STAGE', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='ART_STAGE_RISKM_GENDERF']
+				dfr		<- rbind(dfr, tmp)
+				
+				
+				#	for ART start-DIAG_T < 12m or >12m
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start & !is.na(DIAG_T))
+				dfd[, TIME_TO_ART:= cut(ART1_T-DIAG_T, breaks=c(-1,.5,1e4),labels=c('<6m to ART','>6m to ART'))]
+				set(dfd, dfd[, which(is.na(TIME_TO_ART))], 'TIME_TO_ART', 'no ART')  				
+				dfd[, DUR_RISK:= DOD]
+				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
+				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
+				setnames(tmp, 'IDTR', 'IDPOP')
+				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
+				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
+				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='TIME_TO_ART'], measure.vars='TIME_TO_ART', variable.name='GROUP', value.name='FACTOR') 
+				dfr		<- rbind(dfr, tmp)
+				tmp		<- melt(subset(dfd, RISK=='M')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='TIME_TO_ART'], measure.vars='TIME_TO_ART', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='TIME_TO_ART_RISKM']
+				dfr		<- rbind(dfr, tmp)
+				tmp		<- melt(subset(dfd, RISK=='M' & GENDER=='F')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='TIME_TO_ART'], measure.vars='TIME_TO_ART', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='TIME_TO_ART_RISKM_GENDERF']
+				dfr		<- rbind(dfr, tmp)
+				
 				
 				
 				#	for early infection < 1 year vs late infection > 1 year
@@ -325,13 +435,32 @@ cr.png.generate.data<- function()
 				tmp[, GROUP:='TR_STAGE_RISKM_GENDERF']
 				dfr		<- rbind(dfr, tmp)
 				
+				#	for diagnosed w CD4<500 vs diagnosed w CD4>500
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start & !is.na(DIAG_T))
+				dfd[, DIAG_CD4_STAGE2:= cut(DIAG_CD4, breaks=c(-1,500,1e4),labels=c('l500','g500'))]			
+				dfd[, DUR_RISK:= DOD]
+				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
+				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
+				setnames(tmp, 'IDTR', 'IDPOP')
+				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
+				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
+				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_CD4_STAGE2'], measure.vars='DIAG_CD4_STAGE2', variable.name='GROUP', value.name='FACTOR') 
+				dfr		<- rbind(dfr, tmp)
+				tmp		<- melt(subset(dfd, RISK=='M')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_CD4_STAGE2'], measure.vars='DIAG_CD4_STAGE2', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='DIAG_CD4_STAGE2_RISKM']
+				dfr		<- rbind(dfr, tmp)
+				tmp		<- melt(subset(dfd, RISK=='M' & GENDER=='F')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_CD4_STAGE2'], measure.vars='DIAG_CD4_STAGE2', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='DIAG_CD4_STAGE2_RISKM_GENDERF']
+				dfr		<- rbind(dfr, tmp)
+				
 				
 				#	for diagnosed w CD4<350 vs diagnosed w CD4>350
 				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start & !is.na(DIAG_T))
 				dfd[, DIAG_CD4_STAGE:= cut(DIAG_CD4, breaks=c(-1,350,1e4),labels=c('l350','g350'))]			
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
-				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-(DOB+t.adult)])
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
 				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
 				setnames(tmp, 'IDTR', 'IDPOP')
 				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
@@ -346,12 +475,13 @@ cr.png.generate.data<- function()
 				dfr		<- rbind(dfr, tmp)
 				
 				
+				
 				#	for diagnosed w recent infection vs late infection
 				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR>t.start & TIME_TR<t.end & !is.na(DIAG_T))
-				setnames(dfd, 'RECENT_TR','DIAG_IN_RECENT')
+				dfd[, DIAG_IN_RECENT:= as.character(factor((DIAG_T-TIME_TR)>=1, levels=c(TRUE,FALSE), labels=c('N','Y')))]
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
-				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-(DOB+t.adult)])
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
 				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
 				setnames(tmp, 'IDTR', 'IDPOP')
 				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
@@ -365,6 +495,47 @@ cr.png.generate.data<- function()
 				tmp[, GROUP:='DIAG_IN_RECENT_RISKM_GENDERF']
 				dfr		<- rbind(dfr, tmp)
 				
+				#	for diagnosed w acute infection vs later infection
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR>t.start & TIME_TR<t.end & !is.na(DIAG_T))
+				dfd[, DIAG_IN_THREEM:= as.character(factor((DIAG_T-TIME_TR)>=3/12, levels=c(TRUE,FALSE), labels=c('N','Y')))]
+				dfd[, DUR_RISK:= DOD]
+				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
+				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
+				setnames(tmp, 'IDTR', 'IDPOP')
+				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
+				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
+				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_IN_THREEM'], measure.vars='DIAG_IN_THREEM', variable.name='GROUP', value.name='FACTOR') 
+				dfr		<- rbind(dfr, tmp)
+				tmp		<- melt(subset(dfd, RISK=='M')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_IN_THREEM'], measure.vars='DIAG_IN_THREEM', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='DIAG_IN_THREEM_RISKM']
+				dfr		<- rbind(dfr, tmp)
+				tmp		<- melt(subset(dfd, RISK=='M' & GENDER=='F')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_IN_THREEM'], measure.vars='DIAG_IN_THREEM', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='DIAG_IN_THREEM_RISKM_GENDERF']
+				dfr		<- rbind(dfr, tmp)
+				
+				
+				
+				#	for diagnosed within six months of infection vs later infection
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR>t.start & TIME_TR<t.end & !is.na(DIAG_T))
+				dfd[, DIAG_IN_SIXM:= as.character(factor((DIAG_T-TIME_TR)>=.5, levels=c(TRUE,FALSE), labels=c('N','Y')))]
+				dfd[, DUR_RISK:= DOD]
+				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
+				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
+				setnames(tmp, 'IDTR', 'IDPOP')
+				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
+				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
+				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_IN_SIXM'], measure.vars='DIAG_IN_SIXM', variable.name='GROUP', value.name='FACTOR') 
+				dfr		<- rbind(dfr, tmp)
+				tmp		<- melt(subset(dfd, RISK=='M')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_IN_SIXM'], measure.vars='DIAG_IN_SIXM', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='DIAG_IN_SIXM_RISKM']
+				dfr		<- rbind(dfr, tmp)
+				tmp		<- melt(subset(dfd, RISK=='M' & GENDER=='F')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_IN_SIXM'], measure.vars='DIAG_IN_SIXM', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='DIAG_IN_SIXM_RISKM_GENDERF']
+				dfr		<- rbind(dfr, tmp)
+								
+				
 				#	age at diagnosis	
 				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR>t.start & TIME_TR<t.end )
 				dfd[, AGE_AT_DIAG:= DIAG_T-DOB]
@@ -372,7 +543,7 @@ cr.png.generate.data<- function()
 				set(dfd, dfd[, which(is.na(AGE_AT_DIAG))], 'AGE_AT_DIAG', 'unknown')
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
-				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-(DOB+t.adult)])
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
 				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
 				setnames(tmp, 'IDTR', 'IDPOP')
 				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
@@ -384,14 +555,20 @@ cr.png.generate.data<- function()
 				dfr		<- rbind(dfr, tmp)
 				tmp		<- melt(subset(dfd, RISK=='M' & GENDER=='F')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='AGE_AT_DIAG'], measure.vars='AGE_AT_DIAG', variable.name='GROUP', value.name='FACTOR')
 				tmp[, GROUP:='AGE_AT_DIAG_RISKM_GENDERF']
-				dfr		<- rbind(dfr, tmp)		
+				dfr		<- rbind(dfr, tmp)						
+				#	
 				
 				dfr				
 			}, by=c('TS','TE')]
 	#	generate transmission risk ratios
 	dtrr	<- dfr[, {
 				tmp		<- c(	'b_TRM_FROM_RECENT'=		log( TR_RATE[which(GROUP=='TR_STAGE' & FACTOR=='early')] 		/ TR_RATE[which(GROUP=='TR_STAGE' & FACTOR=='late')]),
-								'b_TRM_FROM_RECENT_RISKM'=	log( TR_RATE[which(GROUP=='TR_STAGE_RISKM' & FACTOR=='early')] 	/ TR_RATE[which(GROUP=='TR_STAGE_RISKM' & FACTOR=='late')]),
+								'b_TRM_FROM_RECENT_RISKM'=	log( TR_RATE[which(GROUP=='TR_STAGE_RISKM' & FACTOR=='early')] 	/ TR_RATE[which(GROUP=='TR_STAGE_RISKM' & FACTOR=='late')]),								
+								'b_DIAG_IN_RECENT_yes'=		log( TR_RATE[which(GROUP=='DIAG_IN_RECENT' & FACTOR=='Y')] 		/ TR_RATE[which(GROUP=='DIAG_IN_RECENT' & FACTOR=='N')]),
+								'b_DIAG_IN_SIXM_yes'=		log( TR_RATE[which(GROUP=='DIAG_IN_SIXM' & FACTOR=='Y')] 		/ TR_RATE[which(GROUP=='DIAG_IN_SIXM' & FACTOR=='N')]),
+								'b_DIAG_IN_THREEM_yes'=		log( TR_RATE[which(GROUP=='DIAG_IN_THREEM' & FACTOR=='Y')] 		/ TR_RATE[which(GROUP=='DIAG_IN_THREEM' & FACTOR=='N')]),								
+								'b_DIAG_CD4_STAGE2_g500'=	log( TR_RATE[which(GROUP=='DIAG_CD4_STAGE2' & FACTOR=='g500')] 	/ TR_RATE[which(GROUP=='DIAG_CD4_STAGE2' & FACTOR=='l500')]),
+								'b_DIAG_CD4_STAGE2_unknown'=log( TR_RATE[which(GROUP=='DIAG_CD4_STAGE2' & is.na(FACTOR))] 	/ TR_RATE[which(GROUP=='DIAG_CD4_STAGE2' & FACTOR=='l500')]),								
 								'b_RISK_L'=					log( TR_RATE[which(GROUP=='RISK' & FACTOR=='L')] 				/ TR_RATE[which(GROUP=='RISK' & FACTOR=='M')]),
 								'b_RISK_H'=					log( TR_RATE[which(GROUP=='RISK' & FACTOR=='H')] 				/ TR_RATE[which(GROUP=='RISK' & FACTOR=='M')]),
 								'b_MALE'=					log( TR_RATE[which(GROUP=='GENDER' & FACTOR=='M')] 				/ TR_RATE[which(GROUP=='GENDER' & FACTOR=='F')]),
@@ -543,6 +720,8 @@ cr.png.compare<- function()
 	res[, LASSO:=as.numeric(gsub('.*_lasso([0-9]+).*','\\1',F))]
 	res[, SCALE:=as.numeric(gsub('.*_scale([0-9]).*','\\1',F))]
 	res[, CLIMB:= gsub('.*_(BFGS|Nelder-Mead).*','\\1',F)]
+	res[, CR_VERSION:='standard']
+	set(res, res[, which(grepl('coalreguh',F))], 'CR_VERSION','unmodelled heterogeneity')
 	res[, TRF_RECENT:= as.numeric(grepl('RECENTtrf',F))]
 	res[, TRF_RISK:= as.numeric(grepl('RISKtrf',F))]
 	res[, TRF_GENDER:= as.numeric(grepl('MALEtrf',F))]
@@ -598,7 +777,7 @@ cr.png.compare<- function()
 	#
 	#	 compare MLEs: given exact time since infection, consider trm risk from recent infection, vary max node depth 
 	#
-	tmp	<- subset(resp, CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & TRF=='recent transmission' & AOI=='exact time since infection')
+	tmp	<- subset(resp, CR_VERSION=='standard' & CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & TRF=='recent transmission' & AOI=='exact time since infection')
 	subset(tmp,FACTOR=='b_TRM_FROM_RECENT' & STAT=='MLE')[, table(MAXNODE, useNA='if')]	
 	tmp[, LABEL:= factor(MAXNODE, levels= sort(unique(tmp$MAXNODE)), labels=paste0('exact time since infection\nmaxHeight 10\nmaxDepth',sort(unique(tmp$MAXNODE))))]					
 	ggplot(tmp, aes(x=FACTOR, y=V, colour=STAT)) + 
@@ -617,7 +796,7 @@ cr.png.compare<- function()
 	#		vary trm risk from recent infection AND PERHAPS risk  
 	#		fix lasso=5 maxHeight=10
 	#	result: adding RISK_L and RISK_H really improves inference
-	tmp	<- subset(resp, CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & AOI=='exact time since infection')
+	tmp	<- subset(resp, CR_VERSION=='standard' & CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & AOI=='exact time since infection')
 	subset(tmp,FACTOR=='b_TRM_FROM_RECENT' & STAT=='MLE')[, table(MAXNODE, TRF, useNA='if')]	
 	tmp[, LABEL:= paste0(TRF,'\n\nmaxHeight ',MAXHEIGHT,'\nmaxDepth ',MAXNODE,'\nlasso ',LASSO)]
 	ggplot(tmp, aes(x=V, y=FACTOR, colour=STAT)) + 
@@ -630,15 +809,12 @@ cr.png.compare<- function()
 			scale_colour_manual(values=c('MLE'='black', 'TRUE_TR_RATE_RATIO'='red')) +
 			facet_grid(~LABEL) +
 			theme(legend.position='bottom')
-	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_trfRECENT_trfRISK_trfMALE_trfAGEATDIAG_aoiETSI.pdf'), w=25,h=6)
-	
-	
+	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_varyTRF_fixETSI.pdf'), w=25,h=6)
 	#
-	#	compare MLEs: given trm risk
-	#		vary time since infection  
+	#	vary time since infection  
 	#		fix lasso=5 maxHeight=10
-	#	result: 
-	tmp	<- subset(resp, CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & MAXHEIGHT%in%c(5,10) & TRF=='recent transmission\nrisk low, high\nmale\nage at diagnosis')
+	#	result: this is pretty good! noise + bias in the time since infection model do not have much of an impact 
+	tmp	<- subset(resp, CR_VERSION=='standard' & CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & MAXHEIGHT%in%c(5,10) & TRF=='recent transmission\nrisk low, high\nmale\nage at diagnosis')
 	subset(tmp,FACTOR=='b_TRM_FROM_RECENT_RISKM' & STAT=='MLE')[, table(MAXHEIGHT, AOI, useNA='if')]	
 	#tmp[, LABEL:= paste0(AOI,'\nmaxHeight ',MAXHEIGHT,'\nmaxDepth ',MAXNODE,'\nlasso ',LASSO)]
 	tmp[, LABEL:= AOI]
@@ -652,23 +828,26 @@ cr.png.compare<- function()
 			scale_colour_manual(values=c('MLE'='black', 'TRUE_TR_RATE_RATIO'='red')) +
 			facet_grid(~FACTOR, scales='free_x') +
 			theme(legend.position='bottom')
-	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_modelWRISKAGERECENT_aoiETSINOISE.pdf'), w=25,h=6)	
-	tmp	<- subset(resp, CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & MAXHEIGHT==10 & TRF=='recent transmission\nrisk low, high')
-	subset(tmp,FACTOR=='b_TRM_FROM_RECENT_RISKM' & STAT=='MLE')[, table(MAXHEIGHT, AOI, useNA='if')]	
-	#tmp[, LABEL:= paste0(AOI,'\nmaxHeight ',MAXHEIGHT,'\nmaxDepth ',MAXNODE,'\nlasso ',LASSO)]
-	tmp[, LABEL:= AOI]
-	ggplot(tmp, aes(x=V, y=LABEL, colour=STAT)) + 
+	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_fixTRF_comapre_noisebias_in_timesinceinfection.pdf'), w=25,h=6)
+	#
+	#	check unmodelled heterogeneity
+	#
+	#
+	tmp	<- subset(resp, MLE_CONVERGED & CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & MAXHEIGHT==10 & AOI=='exact time since infection')
+	tmp	<- subset(tmp, TRF%in%c('recent transmission','risk low, high'))
+	subset(tmp,FACTOR=='b_TRM_FROM_RECENT' & STAT=='MLE')[, table(TRF, CR_VERSION, useNA='if')]
+	tmp[, LABEL:= paste0(TRF,'\n',CR_VERSION)]
+	ggplot(tmp, aes(x=V, y=FACTOR, colour=STAT)) + 
 			geom_vline(xintercept=0, colour='grey50', size=1) +
 			geom_point() +
 			theme_bw() + 
 			labs(y='', x='\nlog risk ratio') +	
-			coord_cartesian(xlim=c(-7,7)) +
+			coord_cartesian(xlim=c(-6,6)) +
 			scale_x_continuous(breaks=seq(-10,10,1), expand=c(0,0)) +
 			scale_colour_manual(values=c('MLE'='black', 'TRUE_TR_RATE_RATIO'='red')) +
-			facet_grid(~FACTOR, scales='free_x') +
+			facet_grid(~LABEL) +
 			theme(legend.position='bottom')
-	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_modelWRISKRECENT_aoiETSINOISE.pdf'), w=15,h=6)	
-	
+	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_varyTRF_fixETSI_compare_unmodelledheterogeneity.pdf'), w=15,h=6)
 	
 	#
 	#	compare MLEs: given exact time since infection, given trm recent infection and risk 
@@ -676,7 +855,7 @@ cr.png.compare<- function()
 	#	result: lasso has large impact, lasso=5 much better than lasso=10
 	#			maxDepth=3 does not lead to significantly worse performace
 	#			maxHeight=5 does not lead to significantly worse performace
-	tmp	<- subset(resp, CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & AOI=='exact time since infection')
+	tmp	<- subset(resp, CR_VERSION=='standard' & CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & AOI=='exact time since infection')
 	subset(tmp,FACTOR=='b_TRM_FROM_RECENT_RISKM' & STAT=='MLE')[, table(MAXNODE, MAXHEIGHT, LASSO, useNA='if')]	
 	tmp[, LABEL:= paste0(TRF,'\nmaxHeight ',MAXHEIGHT,'\nmaxDepth ',MAXNODE,'\nlasso ',LASSO)]
 	ggplot(tmp, aes(x=V, y=FACTOR, colour=STAT)) + 
@@ -693,7 +872,7 @@ cr.png.compare<- function()
 	#
 	#	compare CLIMB / SCALE 
 	#
-	tmp	<- subset(resp, AOI_ETSINOISE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & MAXHEIGHT==10 & TRF=='recent transmission\nrisk low, high' & MLE_CONVERGED)
+	tmp	<- subset(resp, CR_VERSION=='standard' & AOI_ETSINOISE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & MAXHEIGHT==10 & TRF=='recent transmission\nrisk low, high' & MLE_CONVERGED)
 	subset(tmp,FACTOR=='b_TRM_FROM_RECENT_RISKM' & STAT=='MLE')[, table(CLIMB, SCALE, useNA='if')]	
 	tmp[, LABEL:= paste0(AOI,'\nclimb ',CLIMB,'\nscale ',SCALE,'\nlasso ',LASSO,'\nmaxHeight ',MAXHEIGHT)]
 	ggplot(tmp, aes(x=V, y=LABEL, colour=STAT)) + 
@@ -1204,6 +1383,128 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.unmodelled.het.BFGS3<- function(indir, par.
 				#print(fit$bestfit$par )
 				#print( fci$ci )
 				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreguh_using_TRM-FROM-RECENTtrf_ETSIaoi_',par.climb,'args3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'_ETSIbias',par.bias,'_ETSInoise',par.noise,'_scale',par.scale,'.rda'),basename(F)))								
+				save( fit, fci, pci, file=tmp)
+			}, by='F']				
+}
+
+cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10, par.lasso=5, par.climb='BFGS', par.bias=1, par.noise=0, par.scale=0, trm.factors= c('DIAG_IN_RECENT','MALE','AGE_AT_DIAG'))
+{
+	require(coalreguh)
+	require(data.table)
+	require(ape)
+	require(viridis)
+	if(0)
+	{
+		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
+		par.maxNodeDepth	<- 3
+		par.maxHeight		<- 10
+		par.lasso			<- 5
+		par.climb			<- 'BFGS' 
+		par.bias			<- 1 
+		par.noise			<- 0 
+		par.scale			<- 0
+	}
+	#
+	#	run coalreg	run using exact time to infection
+	#	with extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
+	#		 
+	set.seed(42)	
+	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
+	infiles[, {
+				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				ph		<- read.tree( F )
+				ph		<- multi2di(ladderize(ph),random=FALSE)
+				#	create data.table with infection type				
+				#	paste(	IDREC,GENDER,DOB,RISK,round(TIME_TR,d=3),round(DIAG_T,d=3),DIAG_CD4,
+				#			DIAG_IN_RECENT,DIAG_IN_ACUTE,round(TIME_SEQ,d=3),round(ETSI,d=3),SAMPLED_TR,TRM_FROM_RECENT,TRM_FROM_ACUTE,SEQ_COV_2020,sep='|')				
+				phi		<- data.table(	TAXA=ph$tip.label,
+										TAXA_ID=seq_along(ph$tip.label),
+										IDPOP=paste0('ID_',sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',1)),
+										GENDER=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',2),
+										DOB=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',3)),
+										RISK=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',4),
+										TIME_TR=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',5)),
+										DIAG_T=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',6)),
+										DIAG_CD4=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',7)),																				
+										DIAG_IN_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',9),
+										TIME_SEQ=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',10)),
+										ETSI=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',11)),
+										SAMPLED_TR=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',12),
+										TRM_FROM_RECENT=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',13),
+										TRM_FROM_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',14),
+										SEQ_COV_2020=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',15))	
+										)				
+				set(phi, NULL, 'AGE_AT_DIAG', phi[, cut(DIAG_T-DOB, breaks=c(-1,25,30,1e4),labels=c('less25','25to29','30'))])								
+				set(phi, NULL, 'AGE_AT_DIAG_25to29', phi[,factor(!(!is.na(AGE_AT_DIAG) & AGE_AT_DIAG=='25to29'),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'AGE_AT_DIAG_less25', phi[,factor(!(!is.na(AGE_AT_DIAG) & AGE_AT_DIAG=='less25'),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'AGE_AT_DIAG_unknown', phi[,factor(!is.na(AGE_AT_DIAG),levels=c(TRUE,FALSE),labels=c('N','Y'))])				
+				set(phi, NULL, 'MALE', phi[,factor(GENDER,levels=c('F','M'))])
+				set(phi, NULL, 'DIAG_CD4_STAGE2', phi[, cut(DIAG_CD4, breaks=c(-1,500,1e4),labels=c('l500','g500'))])			
+				set(phi, NULL, 'DIAG_CD4_STAGE2_unknown', phi[,factor(!is.na(DIAG_CD4_STAGE2),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'DIAG_CD4_STAGE2_g500', phi[,factor(!(!is.na(DIAG_CD4_STAGE2) & DIAG_CD4_STAGE2=='g500') ,levels=c(TRUE,FALSE),labels=c('N','Y'))])								
+				set(phi, NULL, 'DIAG_IN_RECENT', phi[, as.character(factor((DIAG_T-TIME_TR)<1, levels=c(TRUE,FALSE),labels=c('Y','N')))])
+				set(phi, NULL, 'DIAG_IN_RECENT_unknown', phi[,factor(!is.na(DIAG_IN_RECENT),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'DIAG_IN_RECENT_yes', phi[,factor(!(!is.na(DIAG_IN_RECENT) & DIAG_IN_RECENT=='Y') ,levels=c(TRUE,FALSE),labels=c('N','Y'))])				
+				set(phi, NULL, 'DIAG_IN_SIXM', phi[, as.character(factor((DIAG_T-TIME_TR)<.5, levels=c(TRUE,FALSE),labels=c('Y','N')))])
+				set(phi, NULL, 'DIAG_IN_SIXM_unknown', phi[,factor(!is.na(DIAG_IN_SIXM),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'DIAG_IN_SIXM_yes', phi[,factor(!(!is.na(DIAG_IN_SIXM) & DIAG_IN_SIXM=='Y') ,levels=c(TRUE,FALSE),labels=c('N','Y'))])				
+				set(phi, NULL, 'DIAG_IN_THREEM', phi[, as.character(factor((DIAG_T-TIME_TR)<3/12, levels=c(TRUE,FALSE),labels=c('Y','N')))])
+				set(phi, NULL, 'DIAG_IN_THREEM_unknown', phi[,factor(!is.na(DIAG_IN_THREEM),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'DIAG_IN_THREEM_yes', phi[,factor(!(!is.na(DIAG_IN_THREEM) & DIAG_IN_THREEM=='Y') ,levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				#	add noise and bias
+				tmp		<- phi[, list(ETSI_NOISE=rlnorm(1, meanlog= log(ETSI)-0.5*log(par.noise*par.noise+1), sdlog= sqrt(log(par.noise*par.noise+1)))), by='TAXA']				
+				phi		<- merge(phi, tmp, by='TAXA')					
+				set(phi, NULL, 'ETSI_NOISE', phi[, ETSI_NOISE*par.bias])
+				#	zero mean ETSI_NOISE so the coefficients can be interpreted as RR
+				set(phi, NULL, 'ETSI_NOISE', phi[, ETSI_NOISE-mean(ETSI_NOISE)])
+				setkey(phi, TAXA_ID)
+				#	prepare coalreg input
+				ph$tip.label	<- phi[, IDPOP]
+				#	select columns
+				tmp		<- 'ETSI_NOISE'
+				if(any(trm.factors=='DIAG_IN_THREEM'))
+					tmp	<- c(tmp, 'DIAG_IN_THREEM_unknown', 'DIAG_IN_THREEM_yes')
+				if(any(trm.factors=='DIAG_IN_SIXM'))
+					tmp	<- c(tmp, 'DIAG_IN_SIXM_unknown', 'DIAG_IN_SIXM_yes')
+				if(any(trm.factors=='DIAG_IN_RECENT'))
+					tmp	<- c(tmp, 'DIAG_IN_RECENT_unknown', 'DIAG_IN_RECENT_yes')
+				if(any(trm.factors=='DIAG_CD4_STAGE2'))
+					tmp	<- c(tmp, 'DIAG_CD4_STAGE2_unknown', 'DIAG_CD4_STAGE2_g500')
+				if(any(trm.factors=='MALE'))
+					tmp	<- c(tmp, 'MALE')
+				if(any(trm.factors=='AGE_AT_DIAG'))
+					tmp	<- c(tmp, 'AGE_AT_DIAG_unknown', 'AGE_AT_DIAG_less25', 'AGE_AT_DIAG_25to29')
+				tmp				<- data.matrix(subset(phi, select=tmp))
+				rownames(tmp)	<- phi[, IDPOP]
+				stopifnot(!any(is.na(tmp)))
+				ph 				<- DatedTree( ph, setNames( phi$TIME_SEQ, ph$tip.label) ) 
+				#	The rigorous way to choose lasso_threshold would be to use cross-validation which I do not have coded up yet; 
+				#	in lieu of that I set it to approximately (number free parameters) * (maximum expected effect size). 
+				#	You don't need to worry much about it for the BD sims, but for pangea it will help prevent over fitting.
+				#		
+				#	BFGS is fast, but i find is less robust than Nelder-Mead and gets stuck in local optima. 
+				#	Feel free to experiment with that. 
+				#		
+				#	I think your suggested lnr limits are good. 
+				#	Do you see that lnr is correlated with other parameter estimates ? 
+				#	If outlier lnr's correspond to outlier parameter estimates, that is good cause to put limits on it. 
+				#
+				#	I set scale=F so that parameter estimates could be interpreted as log-odds for binary covariates.. 
+				#	You will want this to be TRUE for PANGEA 			
+				fit 	<- trf.lasso(ph, tmp, trf_names=colnames(tmp)[!grepl('ETSI',colnames(tmp))], aoi_names=colnames(tmp)[grepl('ETSI',colnames(tmp))], 
+						maxNodeDepth=par.maxNodeDepth,
+						maxHeight=par.maxHeight,
+						lasso_threshold=par.lasso, 
+						method=unname(par.climb), 
+						lnr0 = -2, lnrLimits = c(-4, 2), 
+						scale=as.logical(par.scale))							
+				fci 	<- fisher.ci(fit)	 
+				pci 	<- prof.ci(fit, fci  ) 
+				#print(fit$bestfit$par )
+				#print( fci$ci )
+				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreguh_using_',paste(trm.factors,'trf',collapse='_',sep=''),'_ETSIaoi_',par.climb,'args3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'_ETSIbias',par.bias,'_ETSInoise',par.noise,'_scale',par.scale,'.rda'),basename(F)))								
 				save( fit, fci, pci, file=tmp)
 			}, by='F']				
 }

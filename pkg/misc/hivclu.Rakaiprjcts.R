@@ -502,6 +502,17 @@ RakaiCirc.epi.get.info.170120<- function()
 
 RakaiCirc.epi.get.info.170208<- function()
 {
+	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/alldat_r15tor17.rda"
+	load(infile)
+	ra		<- as.data.table(alldat)
+	ra		<- subset(ra, select=c(RCCS_studyid,REGION,COMM_NUM,HH_NUM,SEX,AGEYRS,visdate,visit,lastNegDate,hiv,firstPosDate,eversex, evermarr, currmarr, polymar, sexpever, sexp1yr, sexp1out, sexgift, sexyear, religion, educate, educyrs, edcat, occ, occ2))
+	#	a bit of clean up 	
+	setnames(ra, colnames(ra), gsub('\\.','_',toupper(colnames(ra))))	
+	set(ra, NULL, 'VISDATE', ra[, as.Date(VISDATE, format='%d/%m/%Y')])	
+	for(x in colnames(ra))
+		if(class(ra[[x]])=='Date')
+			set(ra, NULL, x, hivc.db.Date2numeric(ra[[x]]))
+	#	
 	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"	
 	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
 	load(infile)
@@ -515,6 +526,7 @@ RakaiCirc.epi.get.info.170208<- function()
 	setnames(rh, colnames(rh), gsub('\\.','_',toupper(colnames(rh))))
 	#rd[, table(VISIT)]
 	#	make shorter
+	setnames(ra, 'RCCS_STUDYID', 'RID')
 	setnames(rd, 'RCCS_STUDYID', 'RID')
 	setnames(rd, 'PANGEA_ID', 'PID')
 	setnames(rd, 'STUDYID', 'SID')
@@ -577,12 +589,20 @@ RakaiCirc.epi.get.info.170208<- function()
 	tmp		<- melt(rh, id.vars=c('RID','VISIT'), measure.vars=c('RLTN1','RLTN2','RLTN3','RLTN4'))
 	tmp		<- tmp[, list(RLTN_NAMED= length(which(value!='Unknown'))), by=c('RID','VISIT')]
 	rh		<- merge(rh, tmp, by=c('RID','VISIT'))
-	#	define occuption
+	#	define occupation
+	#	set back OCCUP codes according to patient sheet
+	setnames(rh, c('OCCUP1','OCCUP2','OCCUP3','OCCUP4'), c('OCCUP11','OCCUP12','OCCUP13','OCCUP14'))
+	setnames(rh, c('OCC','OCC2'), c('OCCUP1','OCCUP2'))	
 	set(rh, rh[, which(is.na(OCCUP1))],'OCCUP1',99L)
 	set(rh, rh[, which(is.na(OCCUP2))],'OCCUP2',99L)
-	tmp		<- rh[, which(OCCUP1==15)]
-	set(rh, tmp,'OCCUP1', rh[tmp, as.integer(OCC)])	
+	set(rh, NULL, 'OCCUP1', rh[, as.integer(OCCUP1)])	
 	setnames(rh, c('OCCUP1','OCCUP2'), c('OCCUP1_','OCCUP2_'))
+	#	handle ra
+	setnames(ra, c('OCC','OCC2'), c('OCCUP1','OCCUP2'))	
+	set(ra, ra[, which(is.na(OCCUP1))],'OCCUP1',99L)
+	set(ra, ra[, which(is.na(OCCUP2))],'OCCUP2',99L)
+	set(ra, NULL, 'OCCUP1', ra[, as.integer(OCCUP1)])	
+	setnames(ra, c('OCCUP1','OCCUP2'), c('OCCUP1_','OCCUP2_'))	
 	tmp		<- as.data.table(matrix(data=c(	'1','Agriculture for home use/barter',
 											'2','Agriculture for selling',
 											'3','Housework in your own home',
@@ -614,40 +634,62 @@ RakaiCirc.epi.get.info.170208<- function()
 	set(tmp, NULL,'OCCUP1_',tmp[, as.integer(OCCUP1_)])
 	rh		<- merge(rh,tmp,by='OCCUP1_')
 	setnames(tmp, c('OCCUP1_','OCCUP1'), c('OCCUP2_','OCCUP2') )
-	rh		<- merge(rh,tmp,by='OCCUP2_')
+	rh		<- merge(rh,tmp,by='OCCUP2_')	
 	set(rh, NULL, c('OCCUP1_','OCCUP2_'), NULL)
+	setnames(tmp, c('OCCUP2_','OCCUP2'), c('OCCUP1_','OCCUP1') )
+	#	handle ra
+	ra		<- merge(ra,tmp,by='OCCUP1_')
+	setnames(tmp, c('OCCUP1_','OCCUP1'), c('OCCUP2_','OCCUP2') )
+	ra		<- merge(ra,tmp,by='OCCUP2_')	
+	set(ra, NULL, c('OCCUP1_','OCCUP2_'), NULL)
 	tmp		<- rh[, which(OCCUP1=='Unknown' & OCCUP2!='Unknown')]
 	set(rh, tmp, 'OCCUP1', rh[tmp, OCCUP2])
 	set(rh, tmp, 'OCCUP2', 'Unknown')
+	tmp		<- ra[, which(OCCUP1=='Unknown' & OCCUP2!='Unknown')]
+	set(ra, tmp, 'OCCUP1', ra[tmp, OCCUP2])
+	set(ra, tmp, 'OCCUP2', 'Unknown')	
 	#	condense OCCUP1 and OCCUP2
-	set(rh, rh[, which(OCCUP1%in%c('Boda Boda','Trucker'))], 'OCCUP1', 'Boda/Trucking')	
-	set(rh, rh[, which(OCCUP2%in%c('Boda Boda','Trucker'))], 'OCCUP2', 'Boda/Trucking')
-	set(rh, rh[, which(OCCUP1%in%c('Government/clerical/teaching','Military/police','Medical worker'))], 'OCCUP1', 'Government/clerical/teaching/military/police/medic')
-	set(rh, rh[, which(OCCUP2%in%c('Government/clerical/teaching','Military/police','Medical worker'))], 'OCCUP2', 'Government/clerical/teaching/military/police/medic')
-	set(rh, rh[, which(OCCUP1%in%c('Trading/vending','Shopkeeper','Hair dresser/Salon owner'))], 'OCCUP1', 'Trading/Shopkeeper/Hair')
-	set(rh, rh[, which(OCCUP2%in%c('Trading/vending','Shopkeeper','Hair dresser/Salon owner'))], 'OCCUP2', 'Trading/Shopkeeper/Hair')
-	set(rh, rh[, which(OCCUP1%in%c('Agriculture for home use/barter','Agriculture for selling','Housekeeper','Housework in your own home','Home brewing'))], 'OCCUP1', 'Agro/House')
-	set(rh, rh[, which(OCCUP2%in%c('Agriculture for home use/barter','Agriculture for selling','Housekeeper','Housework in your own home','Home brewing'))], 'OCCUP2', 'Agro/House')
-	set(rh, rh[, which(OCCUP1%in%c('Waitress/Waiter/restaurant owner','Bar worker or owner'))], 'OCCUP1', 'Bar/waitress')
-	set(rh, rh[, which(OCCUP2%in%c('Waitress/Waiter/restaurant owner','Bar worker or owner'))], 'OCCUP2', 'Bar/waitress')
-	set(rh, rh[, which(OCCUP1%in%c('Casual laborer','Unemployed'))], 'OCCUP1', 'Casual laborer/unemployed')
-	set(rh, rh[, which(OCCUP2%in%c('Casual laborer','Unemployed'))], 'OCCUP2', 'Casual laborer/unemployed')
-	set(rh, rh[, which(OCCUP1%in%c('Construction (brick maker, builder, porter, painter, roofing)','Mechanic (automobiles, bicycles, electronics)'))], 'OCCUP1', 'Construction/Mechanic')
-	set(rh, rh[, which(OCCUP2%in%c('Construction (brick maker, builder, porter, painter, roofing)','Mechanic (automobiles, bicycles, electronics)'))], 'OCCUP2', 'Construction/Mechanic')	
+	for(x in c('OCCUP1','OCCUP2'))
+	{
+		set(rh, which(rh[[x]]%in%c('Boda Boda','Trucker')), x, 'Boda/Trucking')
+		set(rh, which(rh[[x]]%in%c('Government/clerical/teaching','Military/police','Medical worker')), x, 'Government/clerical/related')
+		set(rh, which(rh[[x]]%in%c('Trading/vending','Shopkeeper','Hair dresser/Salon owner')), x, 'Trading/Shopkeeper/Hair')
+		set(rh, which(rh[[x]]%in%c('Agriculture for home use/barter','Agriculture for selling','Housekeeper','Housework in your own home','Home brewing')), x, 'Agro/House')
+		set(rh, which(rh[[x]]%in%c('Waitress/Waiter/restaurant owner','Bar worker or owner')), x, 'Bar/waitress')
+		set(rh, which(rh[[x]]%in%c('Casual laborer','Unemployed')), x, 'Casual laborer/unemployed')
+		set(rh, which(rh[[x]]%in%c('Construction (brick maker, builder, porter, painter, roofing)','Mechanic (automobiles, bicycles, electronics)')), x, 'Construction/Mechanic')
+		
+		set(ra, which(ra[[x]]%in%c('Boda Boda','Trucker')), x, 'Boda/Trucking')
+		set(ra, which(ra[[x]]%in%c('Government/clerical/teaching','Military/police','Medical worker')), x, 'Government/clerical/related')
+		set(ra, which(ra[[x]]%in%c('Trading/vending','Shopkeeper','Hair dresser/Salon owner')), x, 'Trading/Shopkeeper/Hair')
+		set(ra, which(ra[[x]]%in%c('Agriculture for home use/barter','Agriculture for selling','Housekeeper','Housework in your own home','Home brewing')), x, 'Agro/House')
+		set(ra, which(ra[[x]]%in%c('Waitress/Waiter/restaurant owner','Bar worker or owner')), x, 'Bar/waitress')
+		set(ra, which(ra[[x]]%in%c('Casual laborer','Unemployed')), x, 'Casual laborer/unemployed')
+		set(ra, which(ra[[x]]%in%c('Construction (brick maker, builder, porter, painter, roofing)','Mechanic (automobiles, bicycles, electronics)')), x, 'Construction/Mechanic')
+	}
 	set(rh, rh[, which(OCCUP1=='No additional occupation' & OCCUP2=='Unknown')], 'OCCUP1', 'Unknown')
 	#	refine OCCUP1 OCCUP2 when OCAT==Student
 	set(rh, rh[, which(OCAT%in%c('Student'))], 'OCCUP1', 'Student')
 	set(rh, rh[, which(OCAT%in%c('Student'))], 'OCCUP2', 'Student')
-	#
+	#	define own OCCUP at time of RCCS visit
+	rh[, OCCUP_OLLI:= OCCUP1]
+	for(x in c('Student','Boda/Trucking','Bar/waitress','Client/Sex worker'))
+		set(rh, rh[, which(OCCUP1==x | OCCUP2==x )],'OCCUP_OLLI', x)
+	#	handle ra
+	set(ra, ra[, which(OCCUP1=='No additional occupation' & OCCUP2=='Unknown')], 'OCCUP1', 'Unknown')
+	ra[, OCCUP_OLLI:= OCCUP1]
+	for(x in c('Student','Boda/Trucking','Bar/waitress','Client/Sex worker'))
+		set(ra, ra[, which(OCCUP1==x | OCCUP2==x )],'OCCUP_OLLI', x)
 	#	OK this is getting complicated: Kate is using all OCC codes to override OCCUP1 
 	#	as deemed sensible
 	#	just OCAT for simplicity
 	#subset(rh, OCAT=='Bar/waitress' & OCCUP1!='Bar/waitress')
 	#subset(rh, RID=='G030852')
-
 	#	define SEXWORK
 	set(rh, NULL, 'SEXWORK', rh[, as.character(factor(SEXWORK,levels=c(0,1),labels=c('N','Y')))])
-	#	extend MARSTAT
+	#	define SEXBAR (either work in bar or have sexual contact with barworker)
+	set(rh, NULL, 'SEXBAR', rh[, as.character(factor(SEXBAR,levels=c(0,1),labels=c('N','Y')))])	
+	#	extend MARSTAT for rh
 	tmp		<- rh[, which((is.na(MARSTAT)|MARSTAT=='Never Married') & (RLTN1=='Current wife (at the time)'|RLTN2=='Current wife (at the time)'|RLTN3=='Current wife (at the time)'|RLTN4=='Current wife (at the time)'))]
 	set(rh, tmp, 'EVERMARR', 1L)
 	set(rh, tmp, 'CURRMARR', 1L)
@@ -661,11 +703,20 @@ RakaiCirc.epi.get.info.170208<- function()
 	set(rh, tmp, 'PREVMAR', 0L)
 	set(rh, tmp, 'CURRMARR', 0L)
 	set(rh, tmp, 'MARSTAT', 'Never Married')
-	set(rh, rh[, which(is.na(MARSTAT))], 'MARSTAT', 'Unknown')		
+	set(rh, rh[, which(is.na(MARSTAT))], 'MARSTAT', 'Unknown')
+	#	define MARSTAT for ra
+	ra[, MARSTAT:='Unknown']
+	set(ra, ra[, which(EVERMARR==2)], 'MARSTAT', 'Never Married')
+	set(ra, ra[, which(EVERMARR==1 & CURRMARR==2)], 'MARSTAT', 'Previously Married')
+	set(ra, ra[, which(EVERMARR==1 & CURRMARR==1)], 'MARSTAT', 'Monogamous')
+	set(ra, ra[, which(POLYMAR>1 & !POLYMAR%in%c(97,98))], 'MARSTAT', 'Polygamous')
 	#	define SEXYEAR
 	set(rh, rh[, which(is.na(SEXYEAR))],'SEXYEAR', 99)
 	set(rh, NULL, 'SEXYEAR', rh[, gsub('_[0-9]$','',as.character(factor(SEXYEAR, levels=c(0,1,2,8,99), labels=c('Unknown_1','Y','N','Unknown_2','Unknown_3'))))])
-	stopifnot( !nrow(subset(rh, is.na(SEXYEAR))) )	
+	stopifnot( !nrow(subset(rh, is.na(SEXYEAR))) )
+	set(ra, ra[, which(is.na(SEXYEAR))],'SEXYEAR', 99)
+	set(ra, NULL, 'SEXYEAR', ra[, gsub('_[0-9]$','',as.character(factor(SEXYEAR, levels=c(0,1,2,8,9,99), labels=c('Unknown_1','Y','N','Unknown_2','Unknown_3','Unknown_4'))))])
+	stopifnot( !nrow(subset(ra, is.na(SEXYEAR))) )		
 	#	define SEXP1YR 
 	setnames(rh, c('SEXP1YR'), c('SEXP1YR_'))	
 	rh[, SEXP1YR:= as.character(SEXP1YR_)]
@@ -673,6 +724,12 @@ RakaiCirc.epi.get.info.170208<- function()
 	set(rh, rh[, which(SEXP1YR_==93)],'SEXP1YR','3+')
 	set(rh, rh[, which(SEXP1YR_%in%c(97,98,99) | is.na(SEXP1YR_))],'SEXP1YR','Unknown')
 	set(rh, NULL, 'SEXP1YR_', NULL)
+	setnames(ra, c('SEXP1YR'), c('SEXP1YR_'))	
+	ra[, SEXP1YR:= as.character(SEXP1YR_)]
+	set(ra, ra[, which(SEXP1YR_==92)],'SEXP1YR','<3')
+	set(ra, ra[, which(SEXP1YR_==93)],'SEXP1YR','3+')
+	set(ra, ra[, which(SEXP1YR_%in%c(97,98,99) | is.na(SEXP1YR_))],'SEXP1YR','Unknown')
+	set(ra, NULL, 'SEXP1YR_', NULL)	
 	#	revisit SEXP1YR based on relationships
 	set(rh, rh[, which(SEXP1YR%in%c('Unknown') & RLTN_NAMED==1)], 'SEXP1YR', '1')
 	set(rh, rh[, which(SEXP1YR%in%c('Unknown') & RLTN_NAMED==2)], 'SEXP1YR', '2')
@@ -690,20 +747,36 @@ RakaiCirc.epi.get.info.170208<- function()
 	tmp		<- rh[, which(SEXYEAR%in%c('N') & !SEXP1YR%in%c('0','Unknown'))]
 	if( nrow(rh[tmp,]) )
 		warning("found SEXYEAR%in%c('N') & !SEXP1YR%in%c('0','Unknown') --> set to had sex last year, n=", length(tmp))	
-	set(rh, tmp, 'SEXYEAR', 'Y')	
+	set(rh, tmp, 'SEXYEAR', 'Y')		
+	set(ra, ra[, which(SEXYEAR%in%c('Unknown') & !SEXP1YR%in%c('0','Unknown'))], 'SEXYEAR', 'Y')
+	tmp		<- ra[, which(SEXYEAR%in%c('N') & !SEXP1YR%in%c('0','Unknown'))]
+	if( nrow(ra[tmp,]) )
+		warning("found SEXYEAR%in%c('N') & !SEXP1YR%in%c('0','Unknown') --> set to had sex last year, n=", length(tmp))	
+	set(ra, tmp, 'SEXYEAR', 'Y')		
 	#	define SEXP1OUT 
 	setnames(rh, c('SEXP1OUT'), c('SEXP1OUT_'))	
 	rh[, SEXP1OUT:= as.character(SEXP1OUT_)]
 	set(rh, rh[, which(SEXP1OUT_==92)],'SEXP1OUT','<3')
 	set(rh, rh[, which(SEXP1OUT_==93)],'SEXP1OUT','3+')
 	set(rh, rh[, which(SEXP1OUT_%in%c(97,98,99) | is.na(SEXP1OUT_))],'SEXP1OUT','Unknown')
-	set(rh, NULL, 'SEXP1OUT_', NULL)
+	set(rh, NULL, 'SEXP1OUT_', NULL)	
+	setnames(ra, c('SEXP1OUT'), c('SEXP1OUT_'))	
+	ra[, SEXP1OUT:= as.character(SEXP1OUT_)]
+	set(ra, ra[, which(SEXP1OUT_==92)],'SEXP1OUT','<3')
+	set(ra, ra[, which(SEXP1OUT_==93)],'SEXP1OUT','3+')
+	set(ra, ra[, which(SEXP1OUT_%in%c(97,98,99) | is.na(SEXP1OUT_))],'SEXP1OUT','Unknown')
+	set(ra, NULL, 'SEXP1OUT_', NULL)	
 	#	revisit SEXYEAR based on SEXP1OUT
 	set(rh, rh[, which(SEXYEAR%in%c('Unknown') & !SEXP1OUT%in%c('0','Unknown'))], 'SEXYEAR', 'Y')
 	tmp		<- rh[, which(SEXYEAR%in%c('N') & !SEXP1OUT%in%c('0','Unknown'))]
 	if( nrow(rh[tmp,]) )
 		warning("found SEXYEAR%in%c('N') & !SEXP1OUT%in%c('0','Unknown') --> set to had sex last year, n=", length(tmp))
 	set(rh, tmp, 'SEXYEAR', 'Y')
+	set(ra, ra[, which(SEXYEAR%in%c('Unknown') & !SEXP1OUT%in%c('0','Unknown'))], 'SEXYEAR', 'Y')
+	tmp		<- ra[, which(SEXYEAR%in%c('N') & !SEXP1OUT%in%c('0','Unknown'))]
+	if( nrow(ra[tmp,]) )
+		warning("found SEXYEAR%in%c('N') & !SEXP1OUT%in%c('0','Unknown') --> set to had sex last year, n=", length(tmp))
+	set(ra, tmp, 'SEXYEAR', 'Y')	
 	#	revisit SEXP1YR based on SEXP1OUT
 	set(rh, rh[, which(SEXP1OUT=='3+' & SEXP1YR%in%c('0','1','2','<3','Unknown'))], 'SEXP1YR', '3+')
 	set(rh, rh[, which(SEXP1OUT=='<3' & SEXP1YR%in%c('0','Unknown'))], 'SEXP1YR', '<3')
@@ -713,10 +786,19 @@ RakaiCirc.epi.get.info.170208<- function()
 	tmp		<- rh[, which(	!SEXP1OUT%in%c('3+','<3','Unknown') & !SEXP1YR%in%c('3+','<3','Unknown'))]  
 	tmp		<- subset(rh[tmp, ], as.numeric(SEXP1OUT)>as.numeric(SEXP1YR))[, DUMMY]
 	warning("as.numeric(SEXP1OUT)>as.numeric(SEXP1YR), set to SEXP1OUT, n=", length(tmp))
-	set(rh, tmp, 'SEXP1YR', rh[tmp, SEXP1OUT])
+	set(rh, tmp, 'SEXP1YR', rh[tmp, SEXP1OUT])	
+	set(ra, ra[, which(SEXP1OUT=='3+' & SEXP1YR%in%c('0','1','2','<3','Unknown'))], 'SEXP1YR', '3+')
+	set(ra, ra[, which(SEXP1OUT=='<3' & SEXP1YR%in%c('0','Unknown'))], 'SEXP1YR', '<3')
+	ra[, DUMMY:= seq_len(nrow(ra))]
+	tmp		<- ra[, which(	!SEXP1OUT%in%c('3+','<3','Unknown') & !SEXP1YR%in%c('3+','<3','Unknown'))]  
+	tmp		<- subset(ra[tmp, ], as.numeric(SEXP1OUT)>as.numeric(SEXP1YR))[, DUMMY]
+	warning("as.numeric(SEXP1OUT)>as.numeric(SEXP1YR), set to SEXP1OUT, n=", length(tmp))
+	set(ra, tmp, 'SEXP1YR', ra[tmp, SEXP1OUT])	
 	#	revisit SEXP1YR based on SEXYEAR
 	set(rh, rh[, which(SEXYEAR=='Unknown' & SEXP1YR=='0')], 'SEXP1YR', 'Unknown')
 	set(rh, rh[, which(SEXYEAR=='Y' & SEXP1YR=='0')], 'SEXP1YR', 'Unknown')
+	set(ra, ra[, which(SEXYEAR=='Unknown' & SEXP1YR=='0')], 'SEXP1YR', 'Unknown')
+	set(ra, ra[, which(SEXYEAR=='Y' & SEXP1YR=='0')], 'SEXP1YR', 'Unknown')	
 	#	define SEXPEVER
 	setnames(rh, c('SEXPEVER'), c('SEXPEVER_'))	
 	rh[, SEXPEVER:= as.character(SEXPEVER_)]
@@ -724,14 +806,27 @@ RakaiCirc.epi.get.info.170208<- function()
 	set(rh, rh[, which(SEXPEVER_==93)],'SEXPEVER','3+')
 	set(rh, rh[, which(SEXPEVER_%in%c(97,98,99) | is.na(SEXPEVER_))],'SEXPEVER','Unknown')
 	set(rh, NULL, 'SEXPEVER_', NULL)
-	stopifnot( !nrow(subset(rh, is.na(SEXPEVER))) )
+	stopifnot( !nrow(subset(rh, is.na(SEXPEVER))) )	
+	setnames(ra, c('SEXPEVER'), c('SEXPEVER_'))	
+	ra[, SEXPEVER:= as.character(SEXPEVER_)]
+	set(ra, ra[, which(SEXPEVER_==92)],'SEXPEVER','<3')
+	set(ra, ra[, which(SEXPEVER_==93)],'SEXPEVER','3+')
+	set(ra, ra[, which(SEXPEVER_%in%c(97,98,99) | is.na(SEXPEVER_))],'SEXPEVER','Unknown')
+	set(ra, NULL, 'SEXPEVER_', NULL)
+	stopifnot( !nrow(subset(ra, is.na(SEXPEVER))) )	
 	#	revisit SEXPEVER based on SEXP1YR
 	set(rh, rh[, which(SEXP1YR=='3+' & SEXPEVER%in%c('0','1','2','<3','Unknown'))], 'SEXPEVER', '3+')
 	set(rh, rh[, which(SEXP1YR=='<3' & SEXPEVER%in%c('0','Unknown'))], 'SEXPEVER', '<3')	
 	tmp		<- rh[, which(	!SEXP1YR%in%c('3+','<3','Unknown') & !SEXPEVER%in%c('3+','<3','Unknown'))]  
 	tmp		<- subset(rh[tmp, ], as.numeric(SEXP1YR)>as.numeric(SEXPEVER))[, DUMMY]
 	warning("as.numeric(SEXP1YR)>as.numeric(SEXPEVER), set to SEXP1YR, n=", length(tmp))
-	set(rh, tmp, 'SEXPEVER', rh[tmp, SEXP1YR])
+	set(rh, tmp, 'SEXPEVER', rh[tmp, SEXP1YR])	
+	set(ra, ra[, which(SEXP1YR=='3+' & SEXPEVER%in%c('0','1','2','<3','Unknown'))], 'SEXPEVER', '3+')
+	set(ra, ra[, which(SEXP1YR=='<3' & SEXPEVER%in%c('0','Unknown'))], 'SEXPEVER', '<3')	
+	tmp		<- ra[, which(	!SEXP1YR%in%c('3+','<3','Unknown') & !SEXPEVER%in%c('3+','<3','Unknown'))]  
+	tmp		<- subset(ra[tmp, ], as.numeric(SEXP1YR)>as.numeric(SEXPEVER))[, DUMMY]
+	warning("as.numeric(SEXP1YR)>as.numeric(SEXPEVER), set to SEXP1YR, n=", length(tmp))
+	set(ra, tmp, 'SEXPEVER', ra[tmp, SEXP1YR])	
 	#	define EVERSEX 
 	set(rh, rh[, which(is.na(EVERSEX))],'EVERSEX', 99)
 	set(rh, NULL, 'EVERSEX', rh[, gsub('_[0-9]$','',as.character(factor(EVERSEX, levels=c(0,1,2,3,8,99), labels=c('Unknown_1','Y','N','Unknown_2','Unknown_3','Unknown_4'))))])
@@ -739,41 +834,73 @@ RakaiCirc.epi.get.info.170208<- function()
 	set(rh, rh[, which(EVERSEX%in%c('Unknown') & SEXYEAR=='Y')], 'EVERSEX', 'Y')
 	set(rh, rh[, which(EVERSEX%in%c('Unknown') & CURRMARR==1)], 'EVERSEX', 'Y')
 	set(rh, rh[, which(EVERSEX%in%c('Unknown') & EVERMARR==1)], 'EVERSEX', 'Y')
-	set(rh, rh[, which(EVERSEX%in%c('Unknown') & RLTN_NAMED>0)], 'EVERSEX', 'Y')
+	set(rh, rh[, which(EVERSEX%in%c('Unknown') & RLTN_NAMED>0)], 'EVERSEX', 'Y')	
+	set(ra, ra[, which(is.na(EVERSEX))],'EVERSEX', 99)
+	set(ra, NULL, 'EVERSEX', ra[, gsub('_[0-9]$','',as.character(factor(EVERSEX, levels=c(0,1,2,3,8,99), labels=c('Unknown_1','Y','N','Unknown_2','Unknown_3','Unknown_4'))))])
+	stopifnot( !nrow(subset(ra, is.na(EVERSEX))) )	
+	set(ra, ra[, which(EVERSEX%in%c('Unknown') & SEXYEAR=='Y')], 'EVERSEX', 'Y')
+	set(ra, ra[, which(EVERSEX%in%c('Unknown') & CURRMARR==1)], 'EVERSEX', 'Y')
+	set(ra, ra[, which(EVERSEX%in%c('Unknown') & EVERMARR==1)], 'EVERSEX', 'Y')		
 	#	revisit EVERSEX based on SEXPEVER
 	set(rh, rh[, which(EVERSEX%in%c('Unknown') & !SEXPEVER%in%c('0','Unknown'))], 'EVERSEX', 'Y')
 	tmp		<- rh[, which(EVERSEX%in%c('N') & !SEXPEVER%in%c('0','Unknown'))]
 	if( nrow(rh[tmp,]) )
 		warning("found EVERSEX%in%c('N') & !SEXPEVER%in%c('0','Unknown') --> set to had sex ever, n=", length(tmp))
 	set(rh, tmp, 'EVERSEX', 'Y')
+	set(ra, ra[, which(EVERSEX%in%c('Unknown') & !SEXPEVER%in%c('0','Unknown'))], 'EVERSEX', 'Y')
+	tmp		<- ra[, which(EVERSEX%in%c('N') & !SEXPEVER%in%c('0','Unknown'))]
+	if( nrow(ra[tmp,]) )
+		warning("found EVERSEX%in%c('N') & !SEXPEVER%in%c('0','Unknown') --> set to had sex ever, n=", length(tmp))
+	set(ra, tmp, 'EVERSEX', 'Y')	
 	#	revisit SEXPEVER based on EVERSEX
 	set(rh, rh[, which(EVERSEX=='Unknown' & SEXPEVER=='0')], 'SEXP1YR', 'Unknown')
-	set(rh, rh[, which(EVERSEX=='Y' & SEXPEVER=='0')], 'SEXP1YR', 'Unknown')	
+	set(rh, rh[, which(EVERSEX=='Y' & SEXPEVER=='0')], 'SEXP1YR', 'Unknown')
+	set(ra, ra[, which(EVERSEX=='Unknown' & SEXPEVER=='0')], 'SEXP1YR', 'Unknown')
+	set(ra, ra[, which(EVERSEX=='Y' & SEXPEVER=='0')], 'SEXP1YR', 'Unknown')		
 	#	check SEXPEVER	
 	tmp		<- subset(rh, SEXPEVER=='0' & SEXACTIVE==1)
 	if( nrow(tmp) )
 		warning("found SEXPEVER=='0' & SEXACTIVE==1 --> report only, n=", nrow(tmp))	
 	#	add extra-marital partner to MARSTAT
-	tmp	<- rh[, which(MULTIPART>0 | !SEXP1YR%in%c('1','Unknown'))]
-	set(rh, tmp, 'MARSTAT', rh[tmp, paste0(MARSTAT,' >1 partner')])	
+	tmp	<- rh[, which(MULTIPART>0 & MARSTAT!='Previously Married')]
+	set(rh, tmp, 'MARSTAT', rh[tmp, paste0(MARSTAT,' + casual partner')])
+	tmp	<- rh[, which(MARSTAT%in%c('Monogamous') & !SEXP1YR%in%c('1','Unknown'))]
+	set(rh, tmp, 'MARSTAT', rh[tmp, paste0(MARSTAT,' + casual partner')])	
+	tmp	<- rh[, which(MARSTAT%in%c('Polygamous') & !SEXP1YR%in%c('1','Unknown') & POLYMAR<as.numeric(gsub('Unknown','0',gsub('+','',SEXP1YR,fixed=1))) ) ]
+	set(rh, tmp, 'MARSTAT', rh[tmp, paste0(MARSTAT,' + casual partner')])
+	tmp	<- ra[, which(MARSTAT%in%c('Monogamous') & !SEXP1YR%in%c('1','Unknown'))]
+	set(ra, tmp, 'MARSTAT', ra[tmp, paste0(MARSTAT,' + casual partner')])	
+	tmp	<- ra[, which(MARSTAT%in%c('Polygamous') & !SEXP1YR%in%c('1','Unknown') & POLYMAR<as.numeric(gsub('Unknown','0',gsub('+','',SEXP1YR,fixed=1))) ) ]
+	set(ra, tmp, 'MARSTAT', ra[tmp, paste0(MARSTAT,' + casual partner')])
 	#	define ever alcohol use during sex
 	set(rh, NULL, 'ALC', rh[, as.character(factor(ALC, levels=c(0,1), labels=c('N','Y')))])
 	#	redefine SEXP1YR
 	set(rh, rh[, which(!SEXP1YR%in%c('0','1','2','Unknown'))], 'SEXP1YR','3+')
+	set(ra, ra[, which(!SEXP1YR%in%c('0','1','2','Unknown'))], 'SEXP1YR','3+')
 	#	redefine SEXP1OUT
 	set(rh, rh[, which(!SEXP1OUT%in%c('0','1','2','Unknown'))], 'SEXP1OUT','3+')
-	
+	set(ra, ra[, which(!SEXP1OUT%in%c('0','1','2','Unknown'))], 'SEXP1OUT','3+')
 	#	check circumcision
 	tmp		<- rh[, which(CIRCUM=='Y' & SEX=='F')]
 	cat('\nWarning: found female circumcised --> set to NA' ,rh[tmp, paste(RID, collapse=' ')])	
 	set(rh, tmp, 'CIRCUM', NA_integer_)
+	#	define COMM_TYPE
+	tmp		<- data.table(	COMM_NUM=	c("1","2","3","4","5","6","7","8","9","14","15","16","18","19","22","23","24","25","29","32","33","34","35","36","38","40","44","45","46","51","52","53","54","55", "56","57","58","59","60","61","62","65","67","74","77","81","84","89","94","95","103","106","107","108","109","120","177", "183", "256", "370","391","401","451", "468","602", "754", "755", "760", "770","771","772","773","774","776"),
+							COMM_TYPE=	c("T","A","A","T","A","A","A","A","A", "A", "A", "T", "A", "A", "T", "A", "T", "A", "A", "A", "T", "A", "A", "A", "F", "A", "A", "A", "A", "T", "A", "A", "A", "A",  "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",  "A","A",   "A",  "T",  "A",  "A",  "A",  "A",   "A",   "A",   "A",  "A", "A",  "A",    "A",  "A",  "A",    "A",   "A", "F",  "F",  "A",  "A",  "F",   "T"))
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])
+	set(tmp, NULL, 'COMM_NUM', tmp[, as.integer(COMM_NUM)])	
+	stopifnot(!length(setdiff( rh[, COMM_NUM], tmp[, COMM_NUM] )))
+	stopifnot(!length(setdiff( ra[, COMM_NUM], tmp[, COMM_NUM] )))	
+	rh		<- merge(rh, tmp, by='COMM_NUM')
+	ra		<- merge(ra, tmp, by='COMM_NUM')
 	#	set to NULL
 	set(rh, NULL, c('VDEX','EVERMARR','CURRMARR','RELIGION','POLYMAR','DUMMY','RLTN1','RLTN2','RLTN3','RLTN4','RLTN_NAMED'), NULL)
-	set(rh, NULL, c('BVDEX','EVERSEX','SEXGIFT','SEXYEAR','EDUCATE','EDUCYRS','EDCAT','OCC','OCC2','ARVMED','CNDEVER1','RNYRCON1','CNDEVER2','RNYRCON2','CNDEVER3','RNYRCON3','CNDEVER4','RNYRCON4','RLTNCON1'),NULL)
-	set(rh, NULL, c('RLTNCON2','RLTNCON3','RLTNCON4','ALC1B','ALC2B','ALC3B','ALC4B','ALC1F','ALC2F','ALC3F','ALC4F','OCCUP3','OCCUP4','OCCUP21','OCCUP22','OCCUP23','OCCUP24','SEXWORKER','SEXBAR','SEXHIGH','SEXOUT'),NULL)
+	set(rh, NULL, c('BVDEX','EVERSEX','SEXGIFT','SEXYEAR','EDUCATE','EDUCYRS','EDCAT','ARVMED','CNDEVER1','RNYRCON1','CNDEVER2','RNYRCON2','CNDEVER3','RNYRCON3','CNDEVER4','RNYRCON4','RLTNCON1'),NULL)
+	set(rh, NULL, c('RLTNCON2','RLTNCON3','RLTNCON4','ALC1B','ALC2B','ALC3B','ALC4B','ALC1F','ALC2F','ALC3F','ALC4F','OCCUP11','OCCUP12','OCCUP13','OCCUP14','OCCUP21','OCCUP22','OCCUP23','OCCUP24','SEXHIGH','SEXOUT'),NULL)
 	set(rh, NULL, c('SEXCAT','PREVMAR','AGECAT','AGECAT2','HIVPREV2','UNDER25','AGE15TO19','AGE20TO24','AGE25TO29','AGE30TO34','AGE35TO39','AGE40TO44','AGE45TO49','OCCLAG1','SUM_ALC'),NULL)
 	set(rh, NULL, c('SEXACTIVE','MULTIPART','CAS','SUMCON','CONCON','NEVERSEX','OCCUP1','OCCUP2','SEXPEVER'),NULL)
-	list(rd=rd, rh=rh)
+	#
+	list(rd=rd, rh=rh, ra=ra)
 }
 
 RakaiCirc.seq.get.info<- function()
