@@ -191,35 +191,43 @@ cr.various.pangea<- function()
 	}
 	if(1)
 	{
-		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_RECENT'))
+		#cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_RECENT'))
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_RECENT'))
 	}
 	if(0)
 	{
-		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_SIXM'))
+		#cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_SIXM'))
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_SIXM'))
 	}
 	if(0)
 	{
-		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_THREEM'))
+		#cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_THREEM'))
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_THREEM'))
 	}
 	if(0)
 	{
-		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_CD4_STAGE2'))
+		#cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_CD4_STAGE2'))
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_CD4_STAGE2'))
 	}	
 	if(0)
 	{
-		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_RECENT','MALE','AGE_AT_DIAG'))
+		#cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_RECENT','MALE','AGE_AT_DIAG'))
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_RECENT','MALE','AGE_AT_DIAG'))
 	}
 	if(0)
 	{
-		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_SIXM','MALE','AGE_AT_DIAG'))
+		#cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_SIXM','MALE','AGE_AT_DIAG'))
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_SIXM','MALE','AGE_AT_DIAG'))
 	}
 	if(0)
 	{
-		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_THREEM','MALE','AGE_AT_DIAG'))
+		#cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_THREEM','MALE','AGE_AT_DIAG'))
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_IN_THREEM','MALE','AGE_AT_DIAG'))
 	}
 	if(0)
 	{
-		cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_CD4_STAGE2','MALE','AGE_AT_DIAG'))
+		#cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_CD4_STAGE2','MALE','AGE_AT_DIAG'))
+		cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1(indir, par.base.pattern, par.maxNodeDepth=par.maxNodeDepth, par.maxHeight=par.maxHeight, par.lasso=par.lasso, par.noise=par.noise, par.bias=par.bias, par.climb=par.climb, par.scale=par.scale, trm.factors= c('DIAG_CD4_STAGE2','MALE','AGE_AT_DIAG'))		
 	}
 	
 }
@@ -722,10 +730,14 @@ cr.png.compare<- function()
 	res[, CLIMB:= gsub('.*_(BFGS|Nelder-Mead).*','\\1',F)]
 	res[, CR_VERSION:='standard']
 	set(res, res[, which(grepl('coalreguh',F))], 'CR_VERSION','unmodelled heterogeneity')
-	res[, TRF_RECENT:= as.numeric(grepl('RECENTtrf',F))]
+	res[, TRF_RECENT:= as.numeric(grepl('TRM-FROM-RECENTtrf',F))]
 	res[, TRF_RISK:= as.numeric(grepl('RISKtrf',F))]
 	res[, TRF_GENDER:= as.numeric(grepl('MALEtrf',F))]
-	res[, TRF_AGEATDIAG:= as.numeric(grepl('AGEATDIAGtrf',F))]
+	res[, TRF_AGEATDIAG:= as.numeric(grepl('AGEATDIAGtrf|AGE_AT_DIAGtrf',F))]	
+	res[, TRF_DIAG3M:= as.numeric(grepl('DIAG_IN_THREEMtrf',F))]
+	res[, TRF_DIAG6M:= as.numeric(grepl('DIAG_IN_SIXMtrf',F))]
+	res[, TRF_DIAG12M:= as.numeric(grepl('DIAG_IN_RECENTtrf',F))]
+	res[, TRF_DIAGCD4g500:= as.numeric(grepl('DIAG_CD4_STAGE2trf',F))]
 	res[, AOI_ETSI:= as.numeric(grepl('ETSIaoi',F))]
 	res[, AOI_ETSINOISE:=as.numeric(gsub('.*_ETSInoise([0-9]+\\.?[0-9]*).*','\\1',F))]
 	res[, AOI_ETSIBIAS:=as.numeric(gsub('.*_ETSIbias([0-9]+\\.?[0-9]*).*','\\1',F))]	
@@ -733,10 +745,18 @@ cr.png.compare<- function()
 	res[, TRF:=NA_character_]
 	set(res, res[, which(TRF_RECENT==1)],'TRF','recent transmission')
 	set(res, res[, which(TRF_RISK==1)],'TRF','risk low, high')
-	set(res, res[, which(TRF_GENDER==1)],'TRF','male')
+	set(res, res[, which(TRF_GENDER==1)],'TRF','male')	
+	set(res, res[, which(TRF_DIAG3M==1)],'TRF','diagnosed within 3 month of infection')
+	set(res, res[, which(TRF_DIAG6M==1)],'TRF','diagnosed within 6 month of infection')
+	set(res, res[, which(TRF_DIAG12M==1)],'TRF','diagnosed within 12 month of infection')
+	set(res, res[, which(TRF_DIAGCD4g500==1)],'TRF','diagnosed with CD4>500')
 	set(res, res[, which(TRF_RECENT==1 & TRF_RISK==1)],'TRF','recent transmission\nrisk low, high')
 	set(res, res[, which(TRF_RECENT==1 & TRF_RISK==1 & TRF_GENDER==1)],'TRF','recent transmission\nrisk low, high\nmale')
-	set(res, res[, which(TRF_RECENT==1 & TRF_RISK==1 & TRF_GENDER==1 & TRF_AGEATDIAG==1)],'TRF','recent transmission\nrisk low, high\nmale\nage at diagnosis')
+	set(res, res[, which(TRF_RECENT==1 & TRF_RISK==1 & TRF_GENDER==1 & TRF_AGEATDIAG==1)],'TRF','recent transmission\nrisk low, high\nmale\nage at diagnosis')	
+	set(res, res[, which(TRF_DIAG3M==1 & TRF_GENDER==1 & TRF_AGEATDIAG==1)],'TRF','diagnosed within 3 month of infection\nmale\nage at diagnosis')
+	set(res, res[, which(TRF_DIAG6M==1 & TRF_GENDER==1 & TRF_AGEATDIAG==1)],'TRF','diagnosed within 6 month of infection\nmale\nage at diagnosis')
+	set(res, res[, which(TRF_DIAG12M==1 & TRF_GENDER==1 & TRF_AGEATDIAG==1)],'TRF','diagnosed within 12 month of infection\nmale\nage at diagnosis')
+	set(res, res[, which(TRF_DIAGCD4g500==1 & TRF_GENDER==1 & TRF_AGEATDIAG==1)],'TRF','diagnosed with CD4>500\nmale\nage at diagnosis')
 	stopifnot(res[, !any(is.na(TRF))])
 	res[, AOI:=NA_character_]
 	set(res, res[, which(AOI_ETSI==1 & AOI_ETSINOISE==0 & AOI_ETSIBIAS==1)],'AOI','exact time since infection')
@@ -765,10 +785,12 @@ cr.png.compare<- function()
 	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high\nmale\nage at diagnosis' & FACTOR=='b_AGE_AT_DIAG_less25')]
 	set(res, tmp, 'FACTOR', 'b_AGE_AT_DIAG_less25_RISKM_GENDERF')
 	tmp		<- res[, which(TRF=='recent transmission\nrisk low, high\nmale\nage at diagnosis' & FACTOR=='b_AGE_AT_DIAG_25to29')]
-	set(res, tmp, 'FACTOR', 'b_AGE_AT_DIAG_25to29_RISKM_GENDERF')
-	set(res, NULL, 'FACTOR', res[, gsub('s_ETSI_NOISE','s_ETSI',FACTOR)])
+	set(res, tmp, 'FACTOR', 'b_AGE_AT_DIAG_25to29_RISKM_GENDERF')	
 	#		
 	res		<- merge(res, dtrr, by='FACTOR', all.x=1)
+	#
+	set(res, res[, which(FACTOR=='b_DIAG_IN_RECENT_yes')], 'FACTOR', 'b_DIAG_IN_TWELVEM_yes')
+	set(res, res[, which(FACTOR=='b_DIAG_IN_RECENT_unknown')], 'FACTOR', 'b_DIAG_IN_TWELVEM_unknown')	
 	save(res, file=file.path(indir, 'PANGEA-AcuteHigh-InterventionNone-results.rda'))
 	#
 	#
@@ -832,8 +854,7 @@ cr.png.compare<- function()
 	#
 	#	check unmodelled heterogeneity
 	#
-	#
-	tmp	<- subset(resp, MLE_CONVERGED & CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & MAXHEIGHT==10 & AOI=='exact time since infection')
+	tmp	<- subset(resp, MLE_CONVERGED & CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & MAXHEIGHT==10 & AOI=='exact time since infection' & !grepl('diagnosed',TRF))
 	tmp	<- subset(tmp, TRF%in%c('recent transmission','risk low, high'))
 	subset(tmp,FACTOR=='b_TRM_FROM_RECENT' & STAT=='MLE')[, table(TRF, CR_VERSION, useNA='if')]
 	tmp[, LABEL:= paste0(TRF,'\n',CR_VERSION)]
@@ -842,12 +863,33 @@ cr.png.compare<- function()
 			geom_point() +
 			theme_bw() + 
 			labs(y='', x='\nlog risk ratio') +	
-			coord_cartesian(xlim=c(-6,6)) +
+			coord_cartesian(xlim=c(-3,3)) +
 			scale_x_continuous(breaks=seq(-10,10,1), expand=c(0,0)) +
 			scale_colour_manual(values=c('MLE'='black', 'TRUE_TR_RATE_RATIO'='red')) +
 			facet_grid(~LABEL) +
 			theme(legend.position='bottom')
 	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_varyTRF_fixETSI_compare_unmodelledheterogeneity.pdf'), w=15,h=6)
+	#
+	#	check unmodelled heterogeneity
+	#
+	tmp	<- subset(resp, MLE_CONVERGED & CLIMB=='BFGS' & SCALE==0 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & MAXHEIGHT==10 & AOI=='exact time since infection' & grepl('diagnosed',TRF))
+	set(tmp, NULL, 'LABEL', tmp[, factor(TRF, levels=c(	'diagnosed within 3 month of infection','diagnosed within 6 month of infection','diagnosed within 12 month of infection','diagnosed with CD4>500',
+														'diagnosed within 3 month of infection\nmale\nage at diagnosis','diagnosed within 6 month of infection\nmale\nage at diagnosis','diagnosed within 12 month of infection\nmale\nage at diagnosis','diagnosed with CD4>500\nmale\nage at diagnosis'
+														))])
+	subset(tmp,FACTOR=='b_TRM_FROM_RECENT' & STAT=='MLE')[, table(TRF, CR_VERSION, useNA='if')]	
+	ggplot(tmp, aes(x=V, y=FACTOR, colour=STAT)) + 
+			geom_vline(xintercept=0, colour='grey50', size=1) +
+			geom_point() +
+			theme_bw() + 
+			labs(y='', x='\nlog risk ratio') +	
+			coord_cartesian(xlim=c(-3,3)) +
+			scale_x_continuous(breaks=seq(-10,10,1), expand=c(0,0)) +
+			scale_colour_manual(values=c('MLE'='black', 'TRUE_TR_RATE_RATIO'='red')) +
+			facet_grid(~LABEL) +
+			theme(legend.position='bottom')
+	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_varyObservedTRF_fixETSI_compare_unmodelledheterogeneity.pdf'), w=20,h=6)
+	
+	
 	
 	#
 	#	compare MLEs: given exact time since infection, given trm recent infection and risk 
@@ -1506,6 +1548,128 @@ cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het<- function(indir, pa
 				#print( fci$ci )
 				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalreguh_using_',paste(trm.factors,'trf',collapse='_',sep=''),'_ETSIaoi_',par.climb,'args3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'_ETSIbias',par.bias,'_ETSInoise',par.noise,'_scale',par.scale,'.rda'),basename(F)))								
 				save( fit, fci, pci, file=tmp)
+			}, by='F']				
+}
+
+cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1<- function(indir, par.base.pattern, par.maxNodeDepth=3, par.maxHeight=10, par.lasso=5, par.climb='BFGS', par.bias=1, par.noise=0, par.scale=0, trm.factors= c('DIAG_IN_RECENT','MALE','AGE_AT_DIAG'))
+{
+	require(coalregaoiModel1)
+	require(data.table)
+	require(ape)
+	require(viridis)
+	if(0)
+	{
+		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
+		par.maxNodeDepth	<- 3
+		par.maxHeight		<- 10
+		par.lasso			<- 5
+		par.climb			<- 'BFGS' 
+		par.bias			<- 1 
+		par.noise			<- 0 
+		par.scale			<- 0
+	}
+	#
+	#	run coalreg	run using exact time to infection
+	#	with extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
+	#		 
+	set.seed(42)	
+	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
+	infiles[, {
+				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				ph		<- read.tree( F )
+				ph		<- multi2di(ladderize(ph),random=FALSE)
+				#	create data.table with infection type				
+				#	paste(	IDREC,GENDER,DOB,RISK,round(TIME_TR,d=3),round(DIAG_T,d=3),DIAG_CD4,
+				#			DIAG_IN_RECENT,DIAG_IN_ACUTE,round(TIME_SEQ,d=3),round(ETSI,d=3),SAMPLED_TR,TRM_FROM_RECENT,TRM_FROM_ACUTE,SEQ_COV_2020,sep='|')				
+				phi		<- data.table(	TAXA=ph$tip.label,
+						TAXA_ID=seq_along(ph$tip.label),
+						IDPOP=paste0('ID_',sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',1)),
+						GENDER=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',2),
+						DOB=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',3)),
+						RISK=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',4),
+						TIME_TR=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',5)),
+						DIAG_T=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',6)),
+						DIAG_CD4=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',7)),																				
+						DIAG_IN_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',9),
+						TIME_SEQ=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',10)),
+						ETSI=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',11)),
+						SAMPLED_TR=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',12),
+						TRM_FROM_RECENT=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',13),
+						TRM_FROM_ACUTE=sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',14),
+						SEQ_COV_2020=as.numeric(sapply(strsplit(ph$tip.label,'|',fixed=TRUE),'[[',15))	
+				)				
+				set(phi, NULL, 'AGE_AT_DIAG', phi[, cut(DIAG_T-DOB, breaks=c(-1,25,30,1e4),labels=c('less25','25to29','30'))])								
+				set(phi, NULL, 'AGE_AT_DIAG_25to29', phi[,factor(!(!is.na(AGE_AT_DIAG) & AGE_AT_DIAG=='25to29'),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'AGE_AT_DIAG_less25', phi[,factor(!(!is.na(AGE_AT_DIAG) & AGE_AT_DIAG=='less25'),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'AGE_AT_DIAG_unknown', phi[,factor(!is.na(AGE_AT_DIAG),levels=c(TRUE,FALSE),labels=c('N','Y'))])				
+				set(phi, NULL, 'MALE', phi[,factor(GENDER,levels=c('F','M'))])
+				set(phi, NULL, 'DIAG_CD4_STAGE2', phi[, cut(DIAG_CD4, breaks=c(-1,500,1e4),labels=c('l500','g500'))])			
+				set(phi, NULL, 'DIAG_CD4_STAGE2_unknown', phi[,factor(!is.na(DIAG_CD4_STAGE2),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'DIAG_CD4_STAGE2_g500', phi[,factor(!(!is.na(DIAG_CD4_STAGE2) & DIAG_CD4_STAGE2=='g500') ,levels=c(TRUE,FALSE),labels=c('N','Y'))])								
+				set(phi, NULL, 'DIAG_IN_RECENT', phi[, as.character(factor((DIAG_T-TIME_TR)<1, levels=c(TRUE,FALSE),labels=c('Y','N')))])
+				set(phi, NULL, 'DIAG_IN_RECENT_unknown', phi[,factor(!is.na(DIAG_IN_RECENT),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'DIAG_IN_RECENT_yes', phi[,factor(!(!is.na(DIAG_IN_RECENT) & DIAG_IN_RECENT=='Y') ,levels=c(TRUE,FALSE),labels=c('N','Y'))])				
+				set(phi, NULL, 'DIAG_IN_SIXM', phi[, as.character(factor((DIAG_T-TIME_TR)<.5, levels=c(TRUE,FALSE),labels=c('Y','N')))])
+				set(phi, NULL, 'DIAG_IN_SIXM_unknown', phi[,factor(!is.na(DIAG_IN_SIXM),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'DIAG_IN_SIXM_yes', phi[,factor(!(!is.na(DIAG_IN_SIXM) & DIAG_IN_SIXM=='Y') ,levels=c(TRUE,FALSE),labels=c('N','Y'))])				
+				set(phi, NULL, 'DIAG_IN_THREEM', phi[, as.character(factor((DIAG_T-TIME_TR)<3/12, levels=c(TRUE,FALSE),labels=c('Y','N')))])
+				set(phi, NULL, 'DIAG_IN_THREEM_unknown', phi[,factor(!is.na(DIAG_IN_THREEM),levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				set(phi, NULL, 'DIAG_IN_THREEM_yes', phi[,factor(!(!is.na(DIAG_IN_THREEM) & DIAG_IN_THREEM=='Y') ,levels=c(TRUE,FALSE),labels=c('N','Y'))])
+				#	add noise and bias
+				tmp		<- phi[, list(ETSI_NOISE=rlnorm(1, meanlog= log(ETSI)-0.5*log(par.noise*par.noise+1), sdlog= sqrt(log(par.noise*par.noise+1)))), by='TAXA']				
+				phi		<- merge(phi, tmp, by='TAXA')					
+				set(phi, NULL, 'ETSI_NOISE', phi[, ETSI_NOISE*par.bias])
+				#	zero mean ETSI_NOISE so the coefficients can be interpreted as RR
+				set(phi, NULL, 'ETSI_NOISE', phi[, ETSI_NOISE-mean(ETSI_NOISE)])
+				setkey(phi, TAXA_ID)
+				#	prepare coalreg input
+				ph$tip.label	<- phi[, IDPOP]
+				#	select columns
+				tmp		<- 'ETSI_NOISE'
+				if(any(trm.factors=='DIAG_IN_THREEM'))
+					tmp	<- c(tmp, 'DIAG_IN_THREEM_unknown', 'DIAG_IN_THREEM_yes')
+				if(any(trm.factors=='DIAG_IN_SIXM'))
+					tmp	<- c(tmp, 'DIAG_IN_SIXM_unknown', 'DIAG_IN_SIXM_yes')
+				if(any(trm.factors=='DIAG_IN_RECENT'))
+					tmp	<- c(tmp, 'DIAG_IN_RECENT_unknown', 'DIAG_IN_RECENT_yes')
+				if(any(trm.factors=='DIAG_CD4_STAGE2'))
+					tmp	<- c(tmp, 'DIAG_CD4_STAGE2_unknown', 'DIAG_CD4_STAGE2_g500')
+				if(any(trm.factors=='MALE'))
+					tmp	<- c(tmp, 'MALE')
+				if(any(trm.factors=='AGE_AT_DIAG'))
+					tmp	<- c(tmp, 'AGE_AT_DIAG_unknown', 'AGE_AT_DIAG_less25', 'AGE_AT_DIAG_25to29')
+				tmp				<- data.matrix(subset(phi, select=tmp))
+				rownames(tmp)	<- phi[, IDPOP]
+				stopifnot(!any(is.na(tmp)))
+				ph 				<- DatedTree( ph, setNames( phi$TIME_SEQ, ph$tip.label) ) 
+				#	The rigorous way to choose lasso_threshold would be to use cross-validation which I do not have coded up yet; 
+				#	in lieu of that I set it to approximately (number free parameters) * (maximum expected effect size). 
+				#	You don't need to worry much about it for the BD sims, but for pangea it will help prevent over fitting.
+				#		
+				#	BFGS is fast, but i find is less robust than Nelder-Mead and gets stuck in local optima. 
+				#	Feel free to experiment with that. 
+				#		
+				#	I think your suggested lnr limits are good. 
+				#	Do you see that lnr is correlated with other parameter estimates ? 
+				#	If outlier lnr's correspond to outlier parameter estimates, that is good cause to put limits on it. 
+				#
+				#	I set scale=F so that parameter estimates could be interpreted as log-odds for binary covariates.. 
+				#	You will want this to be TRUE for PANGEA 			
+				fit 	<- trf.lasso(ph, tmp, trf_names=colnames(tmp)[!grepl('ETSI',colnames(tmp))], aoi_names=colnames(tmp)[grepl('ETSI',colnames(tmp))], 
+						maxNodeDepth=par.maxNodeDepth,
+						maxHeight=par.maxHeight,
+						lasso_threshold=par.lasso, 
+						method=unname(par.climb), 
+						lnr0 = -2, lnrLimits = c(-4, 2), 
+						scale=as.logical(par.scale))							
+				#fci 	<- fisher.ci(fit)	 
+				#pci 	<- prof.ci(fit, fci  ) 
+				#print(fit$bestfit$par )
+				#print( fci$ci )
+				tmp		<- file.path(dirname(F), gsub('\\.newick',paste0('_coalregaoimodel1_using_',paste(trm.factors,'trf',collapse='_',sep=''),'_ETSIaoi_',par.climb,'args3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_lasso',par.lasso,'_ETSIbias',par.bias,'_ETSInoise',par.noise,'_scale',par.scale,'.rda'),basename(F)))								
+				save( fit, file=tmp)
 			}, by='F']				
 }
 
