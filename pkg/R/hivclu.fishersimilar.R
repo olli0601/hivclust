@@ -11005,12 +11005,14 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 	#	get rough idea about (backward) time to infection from time to diagnosis, taking midpoint of SC interval as 'training data'
 	#
 	plot.file		<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 't2inf',method.PDT,method,sep='')
+	#save(df.all.allmsm,method.Acute, method.minQLowerU, dur.Acute, method.use.AcuteSpec, t.recent.endctime, file="~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/ATHENA_2013_03_predict_t2inf_inputs.rda")
 	tmp				<- project.athena.Fisheretal.t2inf(	df.all.allmsm,
 														method.Acute=method.Acute, method.minQLowerU=method.minQLowerU,
 														adjust.AcuteByNegT=0.75, adjust.dt.CD4=1, adjust.AnyPos_y=2003, adjust.NegT=2, dur.AcuteYes=dur.Acute['Yes'], dur.AcuteMaybe=dur.Acute['Maybe'], use.AcuteSpec=method.use.AcuteSpec, t.recent.endctime=t.recent.endctime, 
 														plot.file=plot.file)
 	predict.t2inf	<- tmp$predict.t2inf
 	t2inf.args		<- tmp$t2inf.args	
+	#save(predict.t2inf, t2inf.args, file="~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/ATHENA_2013_03_predict_t2inf.rda")
 	#	determine best quantile parameter
 	if(is.na(method.minQLowerU))
 	{

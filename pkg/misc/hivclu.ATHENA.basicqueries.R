@@ -1595,7 +1595,7 @@ eval.spatial.crudetimetrends.allForeign<- function()
 	dev.off()	
 }
 ######################################################################################
-eval.spatial.crudetimetrends.allMSM<- function()
+eval.time2diag.crudetimetrends.allMSM<- function()
 {
 	require(maptools)
 	require(maps)
@@ -1606,11 +1606,11 @@ eval.spatial.crudetimetrends.allMSM<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed_t2d.rda'	
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_t2d_'
 	#
 	#	load: 
-	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		dfs 	(preprocessed HIV diagnoses for 2010-2015 in Netherlands among known Het,MSM,IDU)
 	#		ggd.shp (GGD shape file)
 	#	
 	load(infile)
@@ -1658,6 +1658,146 @@ eval.spatial.crudetimetrends.allMSM<- function()
 			main='change in new HIV diagnosis rates among MSM\nrelative to 2004-2007',
 			animate=0 )
 	dev.off()
+}
+######################################################################################
+eval.spatial.crudetimetrends.allMSM<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(spacetime)
+	library(geoR)
+	require(xts)
+	require(INLA)
+	require(data.table)
+	library(RColorBrewer)
+	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	#
+	#	load: 
+	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
+	#		ggd.shp (GGD shape file)
+	#	
+	load(infile)
+	#
+	#	prepare shape file  
+	#
+	ggd.shp@data$GGD_INLA_IDX	<- seq_len(nrow(ggd.shp@data))
+	#
+	#	does time to ART vary across GGD?
+	#
+	dfs				<- subset(dfs, YEAR>2007)
+	dfs				<- subset(dfs, !is.na(AnyT_T1))		# TODO this introduces right censoring issues
+	dt				<- dfs[, list( 	DIAG_N= length(Patient),
+									T2T_AVG= mean(AnyT_T1-AnyPos_T1),
+									T2T_P12M= mean(as.numeric(AnyT_T1-AnyPos_T1<1)),
+									T2T_P6M= mean(as.numeric(AnyT_T1-AnyPos_T1<.5)),
+									T2T_P3M= mean(as.numeric(AnyT_T1-AnyPos_T1<3/12)),
+									T2T_P1M= mean(as.numeric(AnyT_T1-AnyPos_T1<1/12))
+									), 
+									by=c('YEAR','GGD_INLA_IDX','GGD_first','Trm')]
+	dt				<- subset(dt, Trm=='MSM')
+	dt[, YEAR_Dt:=as.Date(paste0(YEAR,'-12-31'),format="%Y-%m-%d")]	
+	cols	<- colorRampPalette(brewer.pal(9, "RdYlBu"))
+	#	plot average time to diagnosis	
+	tmp		<- dcast.data.table(dt, GGD_INLA_IDX~YEAR_Dt, value.var='T2T_AVG')		
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+						xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,date)
+						data.frame(V=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'time2ART_map_avg_GGD_MSM.pdf'), w=9, h=9)	
+	stplot(tmp, 			dt[, unique(YEAR_Dt)], 
+			at= c(0,1/12,3/12,6/12,9/12,1,1.5,2,6),
+			col.regions=rev(cols(8)),		
+			main='average time from diagnosis to ART start\namong MSM',
+			animate=0 )
+	dev.off()
+	#	plot proportion starting ART within 3 months	
+	tmp		<- dcast.data.table(dt, GGD_INLA_IDX~YEAR_Dt, value.var='T2T_P3M')		
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+						xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,date)
+						data.frame(V=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'time2ART_map_p3m_GGD_MSM.pdf'), w=9, h=9)	
+	stplot(tmp, 			dt[, unique(YEAR_Dt)], 
+			at= c(-0.0001,0.2,0.4,0.6,0.8,1.0001), #c(-0.0001,0.25,0.5,0.6,0.7,0.8,0.9,1.0001),
+			col.regions=cols(5),		
+			main='proportion of diagnosed MSM\nthat start ART within 3 months',
+			animate=0 )
+	dev.off()
+	#	plot proportion starting ART within 1 months	
+	tmp		<- dcast.data.table(dt, GGD_INLA_IDX~YEAR_Dt, value.var='T2T_P1M')		
+	tmp		<- STFDF(	as(ggd.shp,"SpatialPolygons"),
+			xts(1:ncol(tmp[,-1]), as.Date(colnames(tmp[,-1]),format="%Y-%m-%d")), # xts(num_time_points,date)
+			data.frame(V=unlist(tmp[,-1]),row.names=1:((dim(tmp[,-1])[1])*(dim(tmp[,-1])[2])))) # data.frame(vector values district order)
+	pdf(file=paste(outfile.base, 'time2ART_map_p1m_GGD_MSM.pdf'), w=9, h=9)	
+	stplot(tmp, 			dt[, unique(YEAR_Dt)], 
+			at= c(-0.0001,0.2,0.4,0.6,0.8,1.0001), #c(-0.0001,0.25,0.5,0.6,0.7,0.8,0.9,1.0001),
+			col.regions=cols(5),		
+			main='proportion of diagnosed MSM\nthat start ART within 1 month',
+			animate=0 )
+	dev.off()
+	
+	#
+	#	total diagnoses per year per GGD among MSM  
+	#	average time to ART per year per GGD among MSM
+	#	question: is there a correlation by GGD across time?
+	#
+	tmp	<- dt[, {
+				m <- lm(DIAG_N ~ T2T_AVG)
+				z <- summary(m)							
+				list(	A= format(coef(m)[1], digits = 2), 
+						B= format(coef(m)[2], digits = 2),
+						PB= round(unname(pf(z$fstatistic[1],z$fstatistic[2],z$fstatistic[3],lower.tail=F)),d=2),
+						R2= round(z$r.squared, d=2))	
+			}, by='GGD_first']
+	tmp[, LABEL:= paste0('p=',PB,'\nR2=',R2)]
+	ggplot(dt, aes(x=T2T_AVG, y=DIAG_N, colour=YEAR)) +
+			geom_smooth(method='lm', colour='red', fill='grey50', alpha=.5, size=0.5) +
+			geom_text(data=tmp, x=Inf, y=Inf, aes(label=LABEL), hjust=1.3, vjust=1.3, colour='red', size=3) +
+			geom_point() +
+			theme_bw() +
+			labs(x='\naverage time from diagnosis to ART start\namong MSM\n(years)',y='annual new diagnoses\n2008-2015\n',colour='year') +			
+			facet_wrap(~GGD_first, ncol=4, scale='free_y')
+	ggsave(file=paste(outfile.base, 'time2ART_lm_avg_GGD_MSM.pdf'), w=10, h=10)
+	#	same but just in cities
+	ggplot(subset(dt, grepl('Amsterdam|Utrecht|Haag|Rotterdam',GGD_first)), aes(x=T2T_AVG, y=DIAG_N, colour=YEAR)) +
+			geom_smooth(method='lm', colour='red', fill='grey70', alpha=.5, size=0.5) +
+			geom_text(data=subset(tmp, grepl('Amsterdam|Utrecht|Haag|Rotterdam',GGD_first)), x=Inf, y=Inf, aes(label=LABEL), hjust=1.3, vjust=1.3, colour='red', size=3) +
+			geom_point() +
+			theme_bw() +
+			labs(x='\naverage time from diagnosis to ART start\namong MSM\n(years)',y='annual new diagnoses\n2008-2015\n',colour='year') +			
+			facet_wrap(~GGD_first, ncol=2, scale='free_y')
+	ggsave(file=paste(outfile.base, 'time2ART_lm_avg_Cities_MSM.pdf'), w=8, h=8)
+	#
+	#	question: are there correlations by city between diagnoses ~ proportion starting within 3 months?
+	#
+	tmp	<- dt[, {
+				m <- lm(DIAG_N ~ T2T_P3M)
+				z <- summary(m)							
+				list(	A= format(coef(m)[1], digits = 2), 
+						B= format(coef(m)[2], digits = 2),
+						PB= round(unname(pf(z$fstatistic[1],z$fstatistic[2],z$fstatistic[3],lower.tail=F)),d=2),
+						R2= round(z$r.squared, d=2))	
+			}, by='GGD_first']
+	tmp[, LABEL:= paste0('slope=',B,'\np=',PB,'\nR2=',R2)]
+	ggplot(dt, aes(x=T2T_P3M, y=DIAG_N, colour=YEAR)) +
+			geom_smooth(method='lm', colour='red', fill='grey50', alpha=.5, size=0.5) +
+			geom_text(data=tmp, x=Inf, y=Inf, aes(label=LABEL), hjust=1.3, vjust=1.3, colour='red', size=3) +
+			geom_point() +
+			theme_bw() +
+			scale_x_continuous(labels=scales::percent) +
+			labs(x='\nproportion of diagnosed MSM\nthat start ART within 3 months',y='annual new diagnoses\n2008-2015\n',colour='year') +			
+			facet_wrap(~GGD_first, ncol=4, scale='free_y')
+	ggsave(file=paste(outfile.base, 'time2ART_lm_p3m_GGD_MSM.pdf'), w=10, h=10)	
+	ggplot(subset(dt, grepl('Amsterdam|Utrecht|Haag|Rotterdam',GGD_first)), aes(x=T2T_P3M, y=DIAG_N, colour=YEAR)) +
+			geom_smooth(method='lm', colour='red', fill='grey70', alpha=.5, size=0.5) +
+			geom_text(data=subset(tmp, grepl('Amsterdam|Utrecht|Haag|Rotterdam',GGD_first)), x=Inf, y=Inf, aes(label=LABEL), hjust=1.3, vjust=1.3, colour='red', size=3) +			
+			geom_point() +
+			theme_bw() +
+			scale_x_continuous(labels=scales::percent) +
+			labs(x='\nproportion of diagnosed MSM\nthat start ART within 3 months',y='annual new diagnoses\n2008-2015\n',colour='year') +			
+			facet_wrap(~GGD_first, ncol=2, scale='free_y')
+	ggsave(file=paste(outfile.base, 'time2ART_lm_p3m_Cities_MSM.pdf'), w=8, h=8)
+	
 }
 ######################################################################################
 eval.spatial.crudetimetrends.youngMSM<- function()
@@ -2527,6 +2667,83 @@ eval.spatial.prepare<- function()
 	
 	#	save
 	save(dd, dpop, ggd.shp, dm, file=outfile)
+}
+
+######################################################################################
+eval.time2diag.prepare<- function()
+{
+	require(maptools)
+	require(maps)
+	require(spdep)
+	require(INLA)
+	infile.ggd		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/GGD_2012.shp"
+	infile.hiv		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	infile.pop		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'			
+	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed_t2d.rda'
+	#
+	#	prepare INLA graph file
+	#
+	ggd.shp			<- readShapeSpatial(infile.ggd)	
+	#	ggd.shp@data
+	#
+	#	load and prepare HIV cases
+	#
+	load(infile.hiv)
+	#	reduce to patients with / without first sequence
+	dfs		<- df.all[, {
+				z	<- NA_character_
+				zz	<- NA_real_
+				if(any(!is.na(PosSeqT)))
+				{
+					z	<- FASTASampleCode[which.min(PosSeqT)]
+					zz	<- min(PosSeqT, na.rm=TRUE)
+				}
+				list(FASTASampleCode=z, PosSeqT=zz)
+			}, by=c('Patient')]
+	tmp		<- copy(df.all)
+	set(tmp, NULL, c('PosSeqT','FASTASampleCode','SUBTYPE_C','SEQ_L'), NULL)
+	dfs		<- merge(dfs, unique(tmp), by='Patient')
+	set(dfs, dfs[, which(Trm%in%c('MSM','BI'))], 'Trm', 'MSM')	
+	set(dfs, dfs[, which(Trm%in%c('HET','HETfa'))], 'Trm', 'Het')
+	set(dfs, dfs[, which(Trm%in%c('BLOOD','NEEACC','PREG','SXCH'))], 'Trm', 'OTH')
+	set(dfs, dfs[, which(Sex=='M' & Trm=='Het')], 'Trm', 'HetM')
+	set(dfs, dfs[, which(Sex=='F' & Trm=='Het')], 'Trm', 'HetF')
+	set(dfs, dfs[, which(is.na(Trm))], 'Trm', 'Unknown')
+	set(dfs, dfs[, which(RegionOrigin%in%c("Caribbean","Latin_South_America"))], "RegionOrigin", "Carib_Southern_America")
+	set(dfs, dfs[, which(RegionOrigin%in%c("Central_EU","Eastern_EU_stans"))], "RegionOrigin", "Cen_East_Stans_EU")
+	set(dfs, dfs[, which(RegionOrigin%in%c("Austr_NZ","Sout_SouthEast_Asia","Oceania_Pacific","North_Africa_Middle_East"))], "RegionOrigin", "Other")
+	set(dfs, dfs[, which(is.na(RegionOrigin))], "RegionOrigin", "Unknown")
+	set(dfs, NULL, "RegionOrigin", dfs[, as.character(factor(RegionOrigin))])
+	set(dfs, NULL, 'ORIGIN_TRM', NA_character_)
+	set(dfs, dfs[, which(RegionOrigin=='NL' & Trm=='MSM')], 'ORIGIN_TRM', 'NL_MSM')
+	set(dfs, dfs[, which(RegionOrigin=='NL' & Trm!='MSM')], 'ORIGIN_TRM', 'NL_Oth')
+	set(dfs, dfs[, which(RegionOrigin!='NL' & Trm=='MSM')], 'ORIGIN_TRM', 'Foreign_MSM')
+	set(dfs, dfs[, which(RegionOrigin!='NL' & Trm!='MSM')], 'ORIGIN_TRM', 'Foreign_Oth')
+	set(dfs, dfs[, which(RegionOrigin=='Unknown' & Trm=='MSM')], 'ORIGIN_TRM', 'UnknownOri_MSM')
+	set(dfs, dfs[, which(RegionOrigin=='Unknown' & Trm!='MSM')], 'ORIGIN_TRM', 'UnknownOri_Oth')	
+	set(dfs, NULL, 'Age_AnyPosT1', dfs[, AnyPos_T1-DateBorn])
+	set(dfs, NULL, 'YEAR', dfs[, floor(AnyPos_T1)])		
+	set(dfs, NULL, 'GGD_first', dfs[, gsub('-','_',gsub('Hulpverlening_','',as.character(GGD_first)))])
+	set(dfs, dfs[, which(is.na(GGD_first))], "GGD_first", "Unknown")
+	set(dfs, dfs[, which(is.na(Region_first))], 'Region_first', 'Unknown')
+	#
+	#	focus on 2000-2015 
+	#	focus on known IDU, MSM, HET
+	dfs		<- subset(dfs, Region_first!='Unknown' & AnyPos_T1>2000 & AnyPos_T1<2016)
+	dfs		<- subset(dfs, !Trm%in%c('OTH','Unknown'))	
+	#stopifnot( !nrow(subset(dfs, is.na(GGD_INLA_IDX))))
+	#
+	#	make GGD_INLA_IDX 
+	#
+	tmp		<- data.table(GGD_=ggd.shp@data$naam, GGD_INLA_IDX= seq_len(nrow(ggd.shp@data)))
+	set(tmp, NULL, 'GGD_', tmp[, gsub('[^[:alnum:]]','',gsub('^ +','',gsub('â','a',gsub('GGD','',gsub('GG en GD| en','',gsub('Regio|Hulpverlening','',GGD_))))))])
+	tmp2	<- data.table(GGD= setdiff(dfs[,sort(unique(GGD_first))],'Unknown'), GGD_=tmp[,sort(unique(GGD_))])
+	tmp		<- merge(tmp, tmp2, by='GGD_')
+	setnames(tmp, c('GGD'), c('GGD_first'))
+	set(tmp, NULL, 'GGD_', NULL)
+	dfs		<- merge(dfs, tmp, by='GGD_first')	
+	#	save
+	save(dfs, ggd.shp, file=outfile)
 }
 ######################################################################################
 eval.diag.rates.by.age<- function()
