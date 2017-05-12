@@ -502,6 +502,15 @@ RakaiCirc.epi.get.info.170120<- function()
 
 RakaiCirc.epi.get.info.170208<- function()
 {
+	hivc.db.Date2numeric<- function( x )
+	{
+		if(!class(x)%in%c('Date','character'))	return( x )
+		x	<- as.POSIXlt(x)
+		tmp	<- x$year + 1900
+		x	<- tmp + round( x$yday / ifelse((tmp%%4==0 & tmp%%100!=0) | tmp%%400==0,366,365), d=3 )
+		x	
+	}
+	#
 	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/alldat_r15tor17.rda"
 	load(infile)
 	ra		<- as.data.table(alldat)
@@ -524,6 +533,11 @@ RakaiCirc.epi.get.info.170208<- function()
 			set(rd, NULL, x, hivc.db.Date2numeric(rd[[x]]))
 	rh		<- as.data.table(rccsHistory)
 	setnames(rh, colnames(rh), gsub('\\.','_',toupper(colnames(rh))))
+	rn		<- as.data.table(neuroData)
+	setnames(rn, colnames(rn), gsub('\\.','_',toupper(colnames(rn))))
+	for(x in colnames(rn))
+		if(class(rn[[x]])=='Date')
+			set(rn, NULL, x, hivc.db.Date2numeric(rn[[x]]))
 	#rd[, table(VISIT)]
 	#	make shorter
 	setnames(ra, 'RCCS_STUDYID', 'RID')
@@ -531,6 +545,12 @@ RakaiCirc.epi.get.info.170208<- function()
 	setnames(rd, 'PANGEA_ID', 'PID')
 	setnames(rd, 'STUDYID', 'SID')
 	setnames(rh, 'RCCS_STUDYID', 'RID')	
+	setnames(rn, 'STUDYID', 'RID')
+	setnames(rn, 'PANGEA_ID', 'PID')
+	#	get neuro into format of rd
+	setnames(rn, c('SAMPLEDATE','GENDER','CD4','VIRALLOAD'), c('DATE','SEX','RECENTCD4','RECENTVL'))
+	set(rn, NULL, c('RECENTVLDATE','RECENTCD4DATE'), rn[, DATE])
+	set(rn, NULL, c('TIMESINCEVL','TIMESINCECD4'), 0)
 	#	data checks
 	setkey(rh, VISIT, RID)
 	stopifnot(nrow(rh)==nrow(unique(rh)))
@@ -885,22 +905,31 @@ RakaiCirc.epi.get.info.170208<- function()
 	cat('\nWarning: found female circumcised --> set to NA' ,rh[tmp, paste(RID, collapse=' ')])	
 	set(rh, tmp, 'CIRCUM', NA_integer_)
 	#	define COMM_TYPE
+	set(rh, NULL, 'COMM_NUM', rh[, as.character(COMM_NUM)])
+	set(ra, NULL, 'COMM_NUM', ra[, as.character(COMM_NUM)])
 	tmp		<- data.table(	COMM_NUM=	c("1","2","3","4","5","6","7","8","9","14","15","16","18","19","22","23","24","25","29","32","33","34","35","36","38","40","44","45","46","51","52","53","54","55", "56","57","58","59","60","61","62","65","67","74","77","81","84","89","94","95","103","106","107","108","109","120","177", "183", "256", "370","391","401","451", "468","602", "754", "755", "760", "770","771","772","773","774","776"),
 							COMM_TYPE=	c("T","A","A","T","A","A","A","A","A", "A", "A", "T", "A", "A", "T", "A", "T", "A", "A", "A", "T", "A", "A", "A", "F", "A", "A", "A", "A", "T", "A", "A", "A", "A",  "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",  "A","A",   "A",  "T",  "A",  "A",  "A",  "A",   "A",   "A",   "A",  "A", "A",  "A",    "A",  "A",  "A",    "A",   "A", "F",  "F",  "A",  "A",  "F",   "T"))
-	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])
-	set(tmp, NULL, 'COMM_NUM', tmp[, as.integer(COMM_NUM)])	
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])		
 	stopifnot(!length(setdiff( rh[, COMM_NUM], tmp[, COMM_NUM] )))
-	stopifnot(!length(setdiff( ra[, COMM_NUM], tmp[, COMM_NUM] )))	
+	stopifnot(!length(setdiff( ra[, COMM_NUM], tmp[, COMM_NUM] )))
 	rh		<- merge(rh, tmp, by='COMM_NUM')
-	ra		<- merge(ra, tmp, by='COMM_NUM')
+	ra		<- merge(ra, tmp, by='COMM_NUM')	
+	#	merge community numbers for same community
+	set(rh, NULL, 'COMM_NUM', rh[, gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',COMM_NUM))))])
+	set(ra, NULL, 'COMM_NUM', ra[, gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',COMM_NUM))))])
+	set(rd, NULL, 'COMM_NUM', rd[, gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',COMM_NUM))))])	
 	#	set to NULL
 	set(rh, NULL, c('VDEX','EVERMARR','CURRMARR','RELIGION','POLYMAR','DUMMY','RLTN1','RLTN2','RLTN3','RLTN4','RLTN_NAMED'), NULL)
 	set(rh, NULL, c('BVDEX','EVERSEX','SEXGIFT','SEXYEAR','EDUCATE','EDUCYRS','EDCAT','ARVMED','CNDEVER1','RNYRCON1','CNDEVER2','RNYRCON2','CNDEVER3','RNYRCON3','CNDEVER4','RNYRCON4','RLTNCON1'),NULL)
 	set(rh, NULL, c('RLTNCON2','RLTNCON3','RLTNCON4','ALC1B','ALC2B','ALC3B','ALC4B','ALC1F','ALC2F','ALC3F','ALC4F','OCCUP11','OCCUP12','OCCUP13','OCCUP14','OCCUP21','OCCUP22','OCCUP23','OCCUP24','SEXHIGH','SEXOUT'),NULL)
 	set(rh, NULL, c('SEXCAT','PREVMAR','AGECAT','AGECAT2','HIVPREV2','UNDER25','AGE15TO19','AGE20TO24','AGE25TO29','AGE30TO34','AGE35TO39','AGE40TO44','AGE45TO49','OCCLAG1','SUM_ALC'),NULL)
 	set(rh, NULL, c('SEXACTIVE','MULTIPART','CAS','SUMCON','CONCON','NEVERSEX','OCCUP1','OCCUP2','SEXPEVER'),NULL)
+	set(rn, NULL, c('SAMPLEREASON'), NULL)
+	rd[, COHORT:= 'RCCS']
+	rh[, COHORT:= 'RCCS']
+	ra[, COHORT:= 'RCCS']
 	#
-	list(rd=rd, rh=rh, ra=ra)
+	list(rd=rd, rh=rh, ra=ra, rn=rn)
 }
 
 RakaiCirc.seq.get.info<- function()
@@ -921,7 +950,7 @@ RakaiCirc.seq.get.info<- function()
 	load(infile.region1)
 	tmp		<- as.character(gag.sqn)
 	tmp		<- data.table(	relabel= rownames(tmp),
-							BASE_N= apply(tmp, 1, function(x) sum(as.numeric(x%in%c('a','t','g','c')))) )
+			BASE_N= apply(tmp, 1, function(x) sum(as.numeric(x%in%c('a','t','g','c')))) )
 	tmp		<- merge(tmp, as.data.table(subset(summaryData, select=c('seqid', 'relabel'))), by='relabel', all.x=1)
 	#	get Pangea data from region 1
 	z2		<- subset(as.data.table(pangeaMetaData), select=c(RCCS_studyid, visit, date, seqid, CometSubtype, Pangea.id))	
@@ -959,7 +988,7 @@ RakaiCirc.seq.get.info<- function()
 	#	TODO: there are 729 duplicates in env.sqn ie RCCS*A108646*vis15*reg13*com774*hh75*F*17*prev*2012.37
 	tmp		<- as.character(env.sqn)
 	tmp		<- data.table(	relabel= rownames(tmp),
-							BASE_N= apply(tmp, 1, function(x) sum(as.numeric(x%in%c('a','t','g','c')))) )
+			BASE_N= apply(tmp, 1, function(x) sum(as.numeric(x%in%c('a','t','g','c')))) )
 	tmp		<- subset(tmp, BASE_N>0)	
 	setkey(tmp, relabel)	
 	tmp		<- merge(unique(tmp), as.data.table(subset(summaryData, select=c('seqid', 'relabel'))), by='relabel', all.x=1)
@@ -976,7 +1005,7 @@ RakaiCirc.seq.get.info<- function()
 	load(infile.region4)
 	tmp		<- as.character(gp.sqn)
 	tmp		<- data.table(	relabel= rownames(tmp),
-							BASE_N= apply(tmp, 1, function(x) sum(as.numeric(x%in%c('a','t','g','c')))) )
+			BASE_N= apply(tmp, 1, function(x) sum(as.numeric(x%in%c('a','t','g','c')))) )
 	tmp		<- merge(tmp, as.data.table(subset(summaryData, select=c('seqid', 'relabel'))), by='relabel', all.x=1)
 	#
 	#	TODO: no PANGEA data from region 4
@@ -1061,16 +1090,171 @@ RakaiCirc.seq.get.info<- function()
 	#	> rs[, table(SEQTYPE, GENE_REGION)]
 	#                               GENE_REGION
 	#	SEQTYPE                         Region1 Region2 Region3 Region4 <NA>
-  	#	HISTORIC                         2381       0       0    2608    0
-  	#	PANGEA                           2905    2401    1302       0    0
-  	#	Sanger completed with IVA           0       0       0       0  598
-  	#	Sanger completed without IVA        0       0       0       0  286
-  	#	Sanger failed                       0       0       0       0  292
-  	#	Sanger not started by Jul2016       0       0       0       0 1501
+	#	HISTORIC                         2381       0       0    2608    0
+	#	PANGEA                           2905    2401    1302       0    0
+	#	Sanger completed with IVA           0       0       0       0  598
+	#	Sanger completed without IVA        0       0       0       0  286
+	#	Sanger failed                       0       0       0       0  292
+	#	Sanger not started by Jul2016       0       0       0       0 1501
 	#
 	#	save to file
 	#
 	save(rs, file=file.path(wdir,'RCCS_SeqInfo_160816.rda'))
+}
+
+RakaiCirc.seq.get.info.PANGEA.170505<- function()
+{
+	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301'
+	#	start with latest Sanger IDs
+	dc		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/WTSI_PANGEA_InfoFind_2017-02-14.csv', header=TRUE, stringsAsFactors=FALSE))
+	setnames(dc, c('Lane','Public'), c('SID','PIDF'))
+	dc		<- subset(dc, select=c(SID,PIDF))
+	set(dc, NULL, 'SID', dc[, gsub('#','_',SID)])
+	set(dc, NULL, 'PID', dc[, gsub('-S[0-9]+$','',PIDF)])
+	#
+	#	list of files that Chris has
+	#
+	infiles	<- data.table(F=list.files(indir, pattern='^CW_PANGEA',full.names=TRUE))
+	tmp		<- do.call('rbind',lapply(infiles[, F], function(file){
+						tmp<- as.data.table(read.csv(file, header=FALSE, col.names='PID', stringsAsFactors=FALSE))
+						tmp[, F:=file]
+						tmp
+					}))
+	set(tmp, NULL, 'PROC_STATUS', tmp[, gsub('CW_PANGEA_Rakai_','',gsub('\\.txt','',basename(F)))])	
+	set(tmp, NULL, 'F', NULL)
+	#	all files for which we have some PID
+	dc		<- merge(dc, tmp, by='PID',all=1)	
+	stopifnot(!nrow(subset(dc, is.na(SID) & PROC_STATUS!='ThoseWithoutFastqs')))
+	dc		<- subset(dc, is.na(SID) | SID!='15351_1_1')		#	remove 15351_1_1  with no PANGEA info in WTSI file
+	dc		<- subset(dc, is.na(SID) | SID!='15430_1_75')	#	remove 15430_1_75  with no PANGEA info in WTSI file
+	stopifnot(!nrow(subset(dc, is.na(PIDF) & !is.na(SID))))
+	dc[, PART:= as.numeric(gsub('^[0-9]+_([0-9])_[0-9]+','\\1',SID))]
+	dc[, DUMMY:= gsub('^([0-9]+)_[0-9]_([0-9]+)','\\1_x_\\2',SID)]	
+	dc		<- merge(dc, dc[, list(N_PART=length(PART), S_PART=sum(PART)), by='DUMMY'], by='DUMMY')	
+	#	check if we always have _1_ and _2_
+	stopifnot(!nrow(subset(dc, N_PART==2 & S_PART!=3)))
+	#	assume Tanya merges to _3_
+	tmp		<- dc[, which(N_PART==2)]
+	set(dc, tmp, 'SID', dc[tmp, gsub('^([0-9]+)_[0-9]_([0-9]+)','\\1_3_\\2',SID)])
+	set(dc, NULL, c('PART','N_PART','S_PART','DUMMY'),NULL)
+	dc		<- unique(dc)
+	tmp		<- subset(dc, !is.na(SID))[, list(N_SID=length(SID)), by='PIDF']
+	dc		<- merge(dc, tmp, by='PIDF',all.x=1)
+	#	define controls
+	set(dc, dc[, which(grepl('neg',PID))], 'PROC_STATUS', 'NegControl')
+	#	define not in Chris census
+	set(dc, dc[, which(is.na(PROC_STATUS))], 'PROC_STATUS', 'NotTrackedByChris')	
+	#	add extra category to PROC_STATUS: not processed by Kate
+	tmp		<- as.data.table(read.table("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/KG_PANGEA_Processed_597.txt", header=TRUE,stringsAsFactors=FALSE))
+	setnames(tmp, c('SampleID','LaneID'), c('PID','SID'))
+	tmp[, KATE_PROC:='Y']
+	dc		<- merge(dc, tmp, by=c('PID','SID'), all.x=1)	
+	set(dc, dc[, which(PROC_STATUS=='ThoseWithFastqs_WithKateShiverOutput' & is.na(KATE_PROC))], 'PROC_STATUS','ThoseWithFastqs_KateNotProcessed') 
+	set(dc, NULL, 'KATE_PROC', NULL)	
+	#	add RIDs
+	load('~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda')
+	tmp		<- subset(as.data.table(rccsData), select=c(RCCS_studyid,Pangea.id, batch, date, SEX))
+	setnames(tmp, c('RCCS_studyid','Pangea.id','batch','date'), c('RID','PID','RCCS_SHIP_BATCH','SAMPLE_DATE'))
+	tmp		<- subset(tmp, !is.na(PID))
+	tmp		<- unique(tmp, by=c('RID','PID'))
+	tmp2	<- subset(as.data.table(neuroData), select=c(studyid, Pangea.id, sampleDate, gender))
+	setnames(tmp2, c('studyid','Pangea.id','sampleDate','gender'), c('RID','PID','SAMPLE_DATE','SEX'))
+	tmp2[, RCCS_SHIP_BATCH:='neuro']
+	tmp		<- rbind(tmp, tmp2, use.names=TRUE)
+	set(tmp, NULL, 'RID', tmp[, as.character(RID)])
+	set(tmp, NULL, 'PID', tmp[, as.character(PID)])
+	set(tmp, NULL, 'SEX', tmp[, as.character(SEX)])
+	dc		<- merge(dc, tmp, by='PID',all.x=1)
+	#	flag test plate
+	set(dc, dc[, which(grepl('PG14-UG9000[0-9][0-9]',PID))], 'RCCS_SHIP_BATCH', 'test')
+	#	see if on HPC	
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_bams.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
+	tmp[, HPC_BAM:='Y']
+	set(tmp, NULL, 'SID', tmp[, gsub('\\.bam','',SID)])
+	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to bams from SANGER
+	stopifnot( !length(setdiff( tmp[, SID], dc[, SID] )) )
+	dc		<- merge(dc, tmp, by='SID',all.x=TRUE)
+	set(dc, dc[, which(is.na(HPC_BAM))], 'HPC_BAM', 'N')	
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_refs.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
+	tmp[, HPC_REF:='Y']
+	set(tmp, NULL, 'SID', tmp[, gsub('_ref.fasta','',SID)])
+	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to refs from SANGER	
+	stopifnot( !length(setdiff( tmp[, SID], dc[, SID] )) )	
+	dc		<- merge(dc, tmp, by='SID',all.x=TRUE)
+	set(dc, dc[, which(is.na(HPC_REF))], 'HPC_REF', 'N')
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_fastq.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
+	tmp[, HPC_FASTQ:='Y']
+	set(tmp, NULL, 'SID', tmp[, gsub('_[0-9].fastq.gz','',SID)])	
+	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to fastqz's from SANGER	
+	dc		<- merge(dc, unique(tmp), by='SID',all.x=TRUE)
+	set(dc, dc[, which(is.na(HPC_FASTQ))], 'HPC_FASTQ', 'N')	
+	#	add latest PANGEA stats
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv', stringsAsFactors=FALSE))
+	setnames(tmp, 	c('Status','Submitted','DayDiff','ProjectID','Cohort','Submitted.1','Sequenced','Assembled','HIVcontig'), 
+			c('WTSI_STATUS','WTSI_SUBMITTED_DATE','DayDiff','PID','Cohort','WTSI_SUBMITTED','WTSI_SEQUENCED','WTSI_ASSEMBLED','WTSI_HIVCONTIG'))
+	tmp		<- subset(tmp, PID!='')
+	set(tmp, NULL, 'WTSI_SUBMITTED', tmp[, as.character(factor(WTSI_SUBMITTED=='',levels=c(TRUE,FALSE),labels=c('N','Y')))])
+	set(tmp, NULL, 'WTSI_SEQUENCED', tmp[, as.character(factor(WTSI_SEQUENCED=='',levels=c(TRUE,FALSE),labels=c('N','Y')))])
+	set(tmp, NULL, 'WTSI_ASSEMBLED', tmp[, as.character(factor(WTSI_ASSEMBLED=='',levels=c(TRUE,FALSE),labels=c('N','Y')))])
+	set(tmp, NULL, 'WTSI_HIVCONTIG', tmp[, as.character(factor(WTSI_HIVCONTIG=='',levels=c(TRUE,FALSE),labels=c('N','Y')))])
+	set(tmp, NULL, c('DayDiff','Cohort'), NULL)
+	dc		<- merge(dc, tmp, by='PID', all.x=1)
+	#	check what Dan assembled HISEQ
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/PANGEA_UCL_Feb2017_collated_stats_all_genomes_UCL_release_Feb2017_allhitodate.csv', stringsAsFactors=FALSE))
+	setnames(tmp, c('PANGEA_ID','PGID_full','WTSI_ID','Length', 'Cohort'), c('PID','PIDF','SID','UCL_LEN', 'COHORT'))
+	tmp		<- subset(tmp, select=c('PID','PIDF','SID','UCL_LEN', 'COHORT'))
+	#	convert SID to _3_ to match our convention
+	set(tmp, NULL, 'SID', tmp[, gsub('^([0-9]+)_[0-9]_([0-9]+)','\\1_3_\\2',SID)])
+	#	check what Dan assembled MISEQ
+	tmp2	<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/PANGEA_UCL_Feb2017_collated_stats_all_genomes_UCL_release_Feb2017_allmitodate.csv', stringsAsFactors=FALSE))
+	setnames(tmp2, c('PANGEA_ID','PGID_full','WTSI_lane_ID','Length', 'Cohort'), c('PID','PIDF','SID','UCL_LEN', 'COHORT'))
+	tmp2	<- subset(tmp2, select=c('PID','PIDF','SID','UCL_LEN', 'COHORT'))	
+	tmp		<- rbind(tmp, tmp2)
+	stopifnot( !length(setdiff(tmp[, SID], dc[, SID])) )	
+	#	n=6 plus test plate
+	if(0)
+	{
+		tmp		<- subset(tmp, grepl('Rakai',COHORT))
+		tmp2	<- setdiff( tmp[, unique(sort(PID))], dc[, unique(sort(PID))] )
+		write.csv(data.table(ID=tmp2), file=file.path(indir,'IDs_that_Dan_flags_from_Rakai_but_not_in_Chris_census.csv'), row.names=FALSE)			
+	}
+	set(tmp, NULL, 'COHORT', NULL)		
+	dc		<- merge(dc, tmp, by=c('PID','PIDF','SID'),all.x=1)	
+	#	resolve 60 from Chris that he confirmed he has not processed -- at least one SID from said individual has been processed
+	set(dc, dc[, which(PROC_STATUS=='ThoseWithFastqs_WithChrisShiverOutput' & HPC_BAM=='N')], 'PROC_STATUS','ThoseWithFastqs_ChrisNotProcessed')
+	#
+	#	subset to RAKAI
+	#
+	dc		<- subset(dc, !is.na(RID))
+	#	define RIDs from whom all SIDs are complete and on HPC
+	tmp		<- dc[, list(	HPC_ALL_SID_FOR_RID= all(HPC_BAM=='Y') & all(HPC_REF=='Y')), by='RID']	
+	set(tmp, NULL, 'HPC_ALL_SID_FOR_RID', tmp[,as.character(factor(HPC_ALL_SID_FOR_RID, levels=c(TRUE,FALSE), labels=c('Y','N')))])
+	dc		<- merge(dc, tmp, by='RID',all.x=1)
+	#	define Sampling Time
+	set(dc, NULL, 'WTSI_SUBMITTED_DATE', dc[, as.Date(WTSI_SUBMITTED_DATE)])	
+	stopifnot(!nrow(subset(dc, HPC_BAM!=HPC_REF)))
+	#	reduce to currently on HPC 
+	rs		<- subset(dc, !is.na(SID), select=c(RID, PID, PIDF, SID, RCCS_SHIP_BATCH, SAMPLE_DATE))
+	set(rs, NULL, 'SAMPLE_DATE', rs[, hivc.db.Date2numeric(SAMPLE_DATE)])
+	#	add VISIT for those individuals in pop surveillance
+	infile	<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	load(infile)
+	rd		<- as.data.table(rccsData)
+	setnames(rd, colnames(rd), gsub('\\.','_',toupper(colnames(rd))))	
+	for(x in colnames(rd))
+		if(class(rd[[x]])=='Date')
+			set(rd, NULL, x, hivc.db.Date2numeric(rd[[x]]))
+	setnames(rd, c('RCCS_STUDYID','PANGEA_ID','DATE'), c('RID','PID','SAMPLE_DATE'))
+	rd		<- subset(rd, !is.na(PID), select=c(RID,PID,VISIT,SAMPLE_DATE))
+	#	round sample dates since we need to merge by those	
+	set(rs, NULL, 'SAMPLE_DATE', rs[, round(SAMPLE_DATE,d=3)])
+	set(rd, NULL, 'SAMPLE_DATE', rd[, round(SAMPLE_DATE,d=3)])
+	rs		<- merge(rs, rd, by=c('RID','PID','SAMPLE_DATE'), all=1)
+	rs		<- subset(rs, !is.na(SID))
+	#
+	#	save to file
+	#
+	save(rs, file=file.path(wdir,'RCCS_SeqInfo_170505.rda'))
 }
 
 RakaiCirc.various<- function()
