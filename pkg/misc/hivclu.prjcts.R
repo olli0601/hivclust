@@ -4714,6 +4714,45 @@ project.Tchain.Swedish.sensecheck	<- function()
 	}
 }
 ######################################################################################
+project.Eduan.cluster.results<- function()
+{
+	require(data.table)
+	require(ggplot2)
+	
+	df	<- as.data.table(read.csv('~/Downloads/HighCov.csv'))
+	set(df, 24L, 'FACTOR', 'Time.to.Diag>6M')
+	setnames(df, colnames(df), gsub('COR','clustering odds ratio',gsub('TTR','true transmission rate ratio',gsub('TOD','true odds ratio being transmitter',colnames(df)))))
+	df	<- suppressWarnings(melt(df, id.vars=c('Coverage','FACTOR')))
+	df[, STAT:=gsub('.*_([A-Za-z]+)$','\\1', variable)]
+	set(df, NULL, 'variable', df[, gsub('(.*)_[A-Za-z]+$','\\1', variable)])	
+	df	<- dcast.data.table(df, FACTOR+variable~STAT, value.var='value')	
+	df	<- subset(df, FACTOR%in%c(	'Age.at.Diag.25to29','Age.at.Diag.less25',
+									'ART+','Male','HighRisk',
+									'Recency<1Y','Recency<6M','Recency<3M',
+									'Time.to.Diag<1Y','Time.to.Diag<6M',
+									'Time.to.ART<6M'))
+	set(df, NULL, 'FACTOR', df[, factor(FACTOR, levels=c(	'Male','HighRisk','ART+','Time.to.ART<6M','Age.at.Diag.less25','Age.at.Diag.25to29','Recency<3M','Recency<6M','Recency<1Y','Time.to.Diag<6M','Time.to.Diag<1Y'),
+												labels=c(	'Male vs\nFemale',
+															'high risk behaviour vs\nmedium risk behaviour',
+															'ever ART started vs\nnever ART started',
+															'ART started in first 6 monthsvs\nART started after first 6 months or never',
+															'Age at diagnosis <25 yrs vs\n>30 yrs',
+															'Age at diagnosis 25-29 yrs vs\n>30 yrs',
+															'In the first 3 months of infection vs\nafter the first 3 months',
+															'In the first 6 months of infection vs\nafter the first 6 months',
+															'In the first 12 months of infection vs\nafter the first 12 months',															
+															'Diagnosed in the first 6 months of infection vs\nafter the first 6 months',
+															'Diagnosed in the first 12 months of infection vs\nafter the first 12 months'
+															))])
+	ggplot(df, aes(x=FACTOR, y=Mean, ymin=Lower, ymax=Upper, color=variable)) + 
+			geom_point(position=position_dodge(width=0.5)) + 
+			geom_errorbar(position=position_dodge(width=0.5)) + 
+			coord_flip() + 
+			scale_y_log10(breaks=c(0.1, 0.33, 0.5, 0.66, 1, 1.5, 2, 3, 10), limits=c(1/3,3)) +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(x='', colour='', y='')
+}
+######################################################################################
 project.Tchain.Belgium.sensecheck	<- function()
 {
 	require(adephylo)

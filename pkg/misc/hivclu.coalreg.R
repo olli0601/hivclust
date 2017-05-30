@@ -295,16 +295,17 @@ cr.png.generate.data<- function()
 	#	
 	
 	FR		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed50/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
-	FR		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov41.3-seed46/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
+	#FR		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov41.3-seed46/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
+	#FR		<- '~/Downloads/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
 	cat('\n',FR)
 	load(FR)
-	dfo		<- data.table(TS=c(0, 0, 2005), TE=c(2040,2020,2020))
+	dfo		<- data.table(TS=c(0, 2000, 2005, 2005, 2010), TE=c(2020, 2010, 2015,2020,2020))
 	dfr		<- dfo[, {
 				t.start	<- TS
 				t.end	<- TE
 				#
 				#	denominator population: all adults by 2020 that were infected before 2020
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & DOD>t.start & HIV=='Y' &  TIME_TR<t.end)
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & TIME_TR>t.start & HIV=='Y' &  TIME_TR<t.end)
 				#
 				#	transmission rate given risk category: 
 				#	what I can calculate is the #transmissions per year when in stage X
@@ -325,8 +326,8 @@ cr.png.generate.data<- function()
 				dfr		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='RISK'], measure.vars='RISK', variable.name='GROUP', value.name='FACTOR')
 				
 				#	for individuals that started ART or did not start ART
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & DOD>t.start)
-				dfd[, ART_STARTED:= factor(is.na(ART1_T), levels=c(TRUE,FALSE), labels=c('N','Y'))]
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start)
+				dfd[, EVER_ART:= factor(is.na(ART1_T), levels=c(TRUE,FALSE), labels=c('N','Y'))]
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
 				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
@@ -334,7 +335,7 @@ cr.png.generate.data<- function()
 				setnames(tmp, 'IDTR', 'IDPOP')
 				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
 				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
-				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='ART_STARTED'], measure.vars='ART_STARTED', variable.name='GROUP', value.name='FACTOR') 
+				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='EVER_ART'], measure.vars='EVER_ART', variable.name='GROUP', value.name='FACTOR') 
 				dfr		<- rbind(dfr, tmp)
 				#tmp		<- melt(subset(dfd, RISK=='M')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='ART_STARTED'], measure.vars='ART_STARTED', variable.name='GROUP', value.name='FACTOR')
 				#tmp[, GROUP:='ART_STARTED_RISKM']
@@ -345,7 +346,8 @@ cr.png.generate.data<- function()
 				
 				
 				#	for males
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & DOD>t.start)						
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start)
+				dfd	<- subset(dfd, is.na(ART1_T))
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
 				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
@@ -361,7 +363,7 @@ cr.png.generate.data<- function()
 				#dfr		<- rbind(dfr, tmp)	
 				
 				#	for period before / after ART
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & DOD>t.start & !is.na(DIAG_T))						
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start & !is.na(DIAG_T))						
 				tmp		<- as.data.table(expand.grid(ART_STAGE=c('before start','after start'),IDPOP=unique(dfd$IDPOP)))
 				dfd		<- merge(dfd,tmp,by='IDPOP')
 				dfd[, DUR_RISK:= DOD]
@@ -396,7 +398,7 @@ cr.png.generate.data<- function()
 				
 				
 				#	for ART start-DIAG_T < 12m or >12m
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & DOD>t.start & !is.na(DIAG_T))
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start & !is.na(DIAG_T))
 				dfd[, TIME_TO_ART:= cut(ART1_T-DIAG_T, breaks=c(-1,.5,1e4),labels=c('<6m to ART','>6m to ART'))]
 				set(dfd, dfd[, which(is.na(TIME_TO_ART))], 'TIME_TO_ART', 'no ART')  				
 				dfd[, DUR_RISK:= DOD]
@@ -419,17 +421,17 @@ cr.png.generate.data<- function()
 				
 				#	for transmission during early infection < 1 year vs late infection > 1 year
 				#	(of course this will never be known, but include as ideal case)
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & DOD>t.start & !is.na(DIAG_T))
-				dfd[, DUR_RISK:= DOD]
-				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
-				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
-				tmp		<- as.data.table(expand.grid(TR_STAGE=c('early','late'),IDPOP=unique(dfd$IDPOP)))
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & DOD>t.start)
+				tmp		<- as.data.table(expand.grid(TR_STAGE=c('yes','no'),IDPOP=unique(dfd$IDPOP)))
 				dfd		<- merge(dfd,tmp,by='IDPOP')			
-				tmp		<- dfd[, which(TR_STAGE=='early')]
-				set(dfd, tmp, 'DUR_RISK', dfd[tmp, pmin(DUR_RISK,rep(1,length(tmp)))])
-				tmp		<- dfd[, which(TR_STAGE=='late')]
-				set(dfd, tmp, 'DUR_RISK', dfd[tmp, pmax(DUR_RISK-1,rep(0,length(tmp)))])
-				df.trms[, TR_STAGE:= as.character(factor(TIME_TR-IDTR_TIME_INFECTED<=t.early,levels=c(TRUE,FALSE),labels=c('early','late')))]
+				dfd[, DUR_RISK:= DOD]
+				tmp		<- 12/12
+				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)				 
+				set(dfd, dfd[, which(TR_STAGE=='yes' & (TIME_TR+tmp)<t.start)], 'DUR_RISK', 0)	# early stage not in observation period
+				set(dfd, dfd[, which(TR_STAGE=='yes' & (TIME_TR+tmp)>=t.start)], 'DUR_RISK', dfd[TR_STAGE=='yes' & (TIME_TR+tmp)>=t.start, pmin(tmp, pmin(TIME_TR+tmp,DUR_RISK)-t.start)]) # some of the early stage in observation period				
+				set(dfd, dfd[, which(TR_STAGE=='no' & (TIME_TR+tmp)<t.start)], 'DUR_RISK', dfd[TR_STAGE=='no' & (TIME_TR+tmp)<t.start, DUR_RISK-pmax(t.start,TIME_TR)])	# only late stage in observation period
+				set(dfd, dfd[, which(TR_STAGE=='no' & (TIME_TR+tmp)>=t.start)], 'DUR_RISK', dfd[TR_STAGE=='no' & (TIME_TR+tmp)>=t.start, (DUR_RISK-pmax(t.start,TIME_TR)) - (pmin(tmp, pmin(TIME_TR+tmp,DUR_RISK)-t.start))]) # some of the early stage in observation period
+				df.trms[, TR_STAGE:= as.character(factor(TIME_TR-IDTR_TIME_INFECTED<=tmp,levels=c(TRUE,FALSE),labels=c('yes','no')))]
 				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by=c('IDTR','TR_STAGE')]
 				df.trms[, TR_STAGE:=NULL]
 				setnames(tmp, 'IDTR', 'IDPOP')
@@ -437,6 +439,7 @@ cr.png.generate.data<- function()
 				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
 				#	marginal trm 
 				tmp		<- melt(subset(dfd, DUR_RISK>0)[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='TR_STAGE'], measure.vars='TR_STAGE', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='TRM_IN_TWM']
 				dfr		<- rbind(dfr, tmp)
 				#	conditional trm risk for RISK group= M
 				#tmp		<- melt(subset(dfd, DUR_RISK>0 & RISK=='M')[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='TR_STAGE'], measure.vars='TR_STAGE', variable.name='GROUP', value.name='FACTOR')
@@ -447,8 +450,56 @@ cr.png.generate.data<- function()
 				#tmp[, GROUP:='TR_STAGE_RISKM_GENDERF']
 				#dfr		<- rbind(dfr, tmp)
 				
+				#	for transmission during first 6 months vs after 6 months of infection
+				#	(of course this will never be known, but include as ideal case)
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start)
+				tmp		<- as.data.table(expand.grid(TR_STAGE=c('yes','no'),IDPOP=unique(dfd$IDPOP)))
+				dfd		<- merge(dfd,tmp,by='IDPOP')			
+				dfd[, DUR_RISK:= DOD]
+				tmp		<- 6/12
+				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)				 
+				set(dfd, dfd[, which(TR_STAGE=='yes' & (TIME_TR+tmp)<t.start)], 'DUR_RISK', 0)	# early stage not in observation period
+				set(dfd, dfd[, which(TR_STAGE=='yes' & (TIME_TR+tmp)>=t.start)], 'DUR_RISK', dfd[TR_STAGE=='yes' & (TIME_TR+tmp)>=t.start, pmin(tmp, pmin(TIME_TR+tmp,DUR_RISK)-t.start)]) # some of the early stage in observation period				
+				set(dfd, dfd[, which(TR_STAGE=='no' & (TIME_TR+tmp)<t.start)], 'DUR_RISK', dfd[TR_STAGE=='no' & (TIME_TR+tmp)<t.start, DUR_RISK-pmax(t.start,TIME_TR)])	# only late stage in observation period
+				set(dfd, dfd[, which(TR_STAGE=='no' & (TIME_TR+tmp)>=t.start)], 'DUR_RISK', dfd[TR_STAGE=='no' & (TIME_TR+tmp)>=t.start, (DUR_RISK-pmax(t.start,TIME_TR)) - (pmin(tmp, pmin(TIME_TR+tmp,DUR_RISK)-t.start))]) # some of the early stage in observation period
+				df.trms[, TR_STAGE:= as.character(factor(TIME_TR-IDTR_TIME_INFECTED<=tmp,levels=c(TRUE,FALSE),labels=c('yes','no')))]
+				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by=c('IDTR','TR_STAGE')]
+				df.trms[, TR_STAGE:=NULL]
+				setnames(tmp, 'IDTR', 'IDPOP')
+				dfd		<- merge(dfd, tmp, by=c('IDPOP','TR_STAGE'), all.x=1)
+				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
+				#	marginal trm 
+				tmp		<- melt(subset(dfd, DUR_RISK>0)[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='TR_STAGE'], measure.vars='TR_STAGE', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='TRM_IN_SIXM']
+				dfr		<- rbind(dfr, tmp)
+				
+				
+				#	for transmission during first 3 months vs after 3 months of infection
+				#	(of course this will never be known, but include as ideal case)
+				dfd		<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start)
+				tmp		<- as.data.table(expand.grid(TR_STAGE=c('yes','no'),IDPOP=unique(dfd$IDPOP)))
+				dfd		<- merge(dfd,tmp,by='IDPOP')			
+				dfd[, DUR_RISK:= DOD]
+				tmp		<- 3/12
+				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)				 
+				set(dfd, dfd[, which(TR_STAGE=='yes' & (TIME_TR+tmp)<t.start)], 'DUR_RISK', 0)	# early stage not in observation period
+				set(dfd, dfd[, which(TR_STAGE=='yes' & (TIME_TR+tmp)>=t.start)], 'DUR_RISK', dfd[TR_STAGE=='yes' & (TIME_TR+tmp)>=t.start, pmin(tmp, pmin(TIME_TR+tmp,DUR_RISK)-t.start)]) # some of the early stage in observation period				
+				set(dfd, dfd[, which(TR_STAGE=='no' & (TIME_TR+tmp)<t.start)], 'DUR_RISK', dfd[TR_STAGE=='no' & (TIME_TR+tmp)<t.start, DUR_RISK-pmax(t.start,TIME_TR)])	# only late stage in observation period
+				set(dfd, dfd[, which(TR_STAGE=='no' & (TIME_TR+tmp)>=t.start)], 'DUR_RISK', dfd[TR_STAGE=='no' & (TIME_TR+tmp)>=t.start, (DUR_RISK-pmax(t.start,TIME_TR)) - (pmin(tmp, pmin(TIME_TR+tmp,DUR_RISK)-t.start))]) # some of the early stage in observation period
+				df.trms[, TR_STAGE:= as.character(factor(TIME_TR-IDTR_TIME_INFECTED<=tmp,levels=c(TRUE,FALSE),labels=c('yes','no')))]
+				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by=c('IDTR','TR_STAGE')]
+				df.trms[, TR_STAGE:=NULL]
+				setnames(tmp, 'IDTR', 'IDPOP')
+				dfd		<- merge(dfd, tmp, by=c('IDPOP','TR_STAGE'), all.x=1)
+				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 	# if individuals have early stage before observation period, TR_N is set to 0. This is OK because in the next step we only consider individuals with DUR_RISK>0, and this excludes the individuals in question
+				#	marginal trm 
+				tmp		<- melt(subset(dfd, DUR_RISK>0)[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='TR_STAGE'], measure.vars='TR_STAGE', variable.name='GROUP', value.name='FACTOR')
+				tmp[, GROUP:='TRM_IN_THREEM']
+				dfr		<- rbind(dfr, tmp)
+
+
 				#	for diagnosed w CD4<500 vs diagnosed w CD4>500
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & DOD>t.start & !is.na(DIAG_T))
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start & !is.na(DIAG_T))
 				dfd[, DIAG_CD4_STAGE2:= cut(DIAG_CD4, breaks=c(-1,500,1e4),labels=c('l500','g500'))]			
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
@@ -462,7 +513,7 @@ cr.png.generate.data<- function()
 				
 				
 				#	for diagnosed w CD4<350 vs diagnosed w CD4>350
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & DOD>t.start & !is.na(DIAG_T))
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR<t.end & TIME_TR>t.start & !is.na(DIAG_T))
 				dfd[, DIAG_CD4_STAGE:= cut(DIAG_CD4, breaks=c(-1,350,1e4),labels=c('l350','g350'))]			
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
@@ -476,8 +527,8 @@ cr.png.generate.data<- function()
 				
 				
 				
-				#	for diagnosed w recent infection vs late infection
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & DOD>t.start & TIME_TR<t.end & !is.na(DIAG_T))
+				#	for diagnosed within 12 months of infection vs later
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR>t.start & TIME_TR<t.end & !is.na(DIAG_T))
 				dfd[, DIAG_IN_RECENT:= as.character(factor((DIAG_T-TIME_TR)>=1, levels=c(TRUE,FALSE), labels=c('N','Y')))]
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
@@ -490,8 +541,8 @@ cr.png.generate.data<- function()
 				dfr		<- rbind(dfr, tmp)
 				
 				
-				#	for diagnosed w acute infection vs later infection
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & DOD>t.start & TIME_TR<t.end & !is.na(DIAG_T))
+				#	for diagnosed within three months of infection vs later 
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR>t.start & TIME_TR<t.end & !is.na(DIAG_T))
 				dfd[, DIAG_IN_THREEM:= as.character(factor((DIAG_T-TIME_TR)>=3/12, levels=c(TRUE,FALSE), labels=c('N','Y')))]
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
@@ -501,12 +552,13 @@ cr.png.generate.data<- function()
 				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
 				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
 				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_IN_THREEM'], measure.vars='DIAG_IN_THREEM', variable.name='GROUP', value.name='FACTOR') 
-				dfr		<- rbind(dfr, tmp)
+				dfr		<- rbind(dfr, tmp)				
+				#melt(subset(dfd, TIME_TR<2017 & TIME_TR>2016)[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_IN_THREEM'], measure.vars='DIAG_IN_THREEM', variable.name='GROUP', value.name='FACTOR')
+				#subset(dfd, TIME_TR>2010 & ART1_T<2015)[, table(DIAG_IN_THREEM)]
+				#melt(subset(dfd, TIME_TR>2010 & ART1_T<2015)[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='DIAG_IN_THREEM'], measure.vars='DIAG_IN_THREEM', variable.name='GROUP', value.name='FACTOR')
 				
-				
-				
-				#	for diagnosed within six months of infection vs later infection
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & DOD>t.start & TIME_TR<t.end & !is.na(DIAG_T))
+				#	for diagnosed within six months of infection vs later 
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR>t.start & TIME_TR<t.end & !is.na(DIAG_T))
 				dfd[, DIAG_IN_SIXM:= as.character(factor((DIAG_T-TIME_TR)>=.5, levels=c(TRUE,FALSE), labels=c('N','Y')))]
 				dfd[, DUR_RISK:= DOD]
 				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
@@ -520,7 +572,8 @@ cr.png.generate.data<- function()
 								
 				
 				#	age at diagnosis	
-				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & DOD>t.start & TIME_TR<t.end )
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR>t.start & TIME_TR<t.end )
+				#dfd	<- subset(dfd, is.na(ART1_T))
 				dfd[, AGE_AT_DIAG:= DIAG_T-DOB]
 				set(dfd, NULL, 'AGE_AT_DIAG', dfd[, cut(AGE_AT_DIAG, breaks=c(-1,25,30,1e4),labels=c('less25','25to29','30'))])
 				set(dfd, dfd[, which(is.na(AGE_AT_DIAG))], 'AGE_AT_DIAG', 'unknown')
@@ -531,7 +584,25 @@ cr.png.generate.data<- function()
 				setnames(tmp, 'IDTR', 'IDPOP')
 				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
 				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
-				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='AGE_AT_DIAG'], measure.vars='AGE_AT_DIAG', variable.name='GROUP', value.name='FACTOR') 
+				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='AGE_AT_DIAG'], measure.vars='AGE_AT_DIAG', variable.name='GROUP', value.name='FACTOR')
+				dfr		<- rbind(dfr, tmp)
+				#ggplot(dfd, aes(x= floor(TIME_TR), fill=AGE_AT_DIAG)) + geom_bar(position='fill')
+				#ggplot(dfd, aes(x= floor(TIME_TR), fill=cut(TIME_TR-DOB, breaks=c(-1,25,30,1e4)))) + geom_bar(position='fill')
+			
+				#	age at infection	
+				dfd	<- subset(df.inds, IDPOP>0 & DOB<(t.end-t.adult) & HIV=='Y' & TIME_TR>t.start & TIME_TR<t.end )
+				dfd	<- subset(dfd, is.na(ART1_T))
+				dfd[, AGE_AT_INFECTION:= TIME_TR-DOB]
+				set(dfd, NULL, 'AGE_AT_INFECTION', dfd[, cut(AGE_AT_INFECTION, breaks=c(-1,25,30,1e4),labels=c('less25','25to29','30'))])
+				set(dfd, dfd[, which(is.na(AGE_AT_INFECTION))], 'AGE_AT_INFECTION', 'unknown')
+				dfd[, DUR_RISK:= DOD]
+				set(dfd, dfd[, which(is.na(DUR_RISK) | DUR_RISK>t.end)], 'DUR_RISK', t.end)
+				set(dfd, NULL, 'DUR_RISK', dfd[, DUR_RISK-pmax(t.start,TIME_TR)])
+				tmp		<- subset(df.trms, TIME_TR<t.end & TIME_TR>t.start)[, list(TR_N=length(IDREC)), by='IDTR']
+				setnames(tmp, 'IDTR', 'IDPOP')
+				dfd		<- merge(dfd, tmp, by='IDPOP', all.x=1)
+				set(dfd, dfd[, which(is.na(TR_N))], 'TR_N', 0L) 
+				tmp		<- melt(dfd[, list(TR_RATE= mean(TR_N/DUR_RISK)), by='AGE_AT_INFECTION'], measure.vars='AGE_AT_INFECTION', variable.name='GROUP', value.name='FACTOR')				
 				dfr		<- rbind(dfr, tmp)									
 				#	
 				
@@ -539,7 +610,9 @@ cr.png.generate.data<- function()
 			}, by=c('TS','TE')]
 	#	generate transmission risk ratios
 	dtrr	<- dfr[, {
-				tmp		<- c(	'b_TRM_FROM_RECENT'=		log( TR_RATE[which(GROUP=='TR_STAGE' & FACTOR=='early')] 		/ TR_RATE[which(GROUP=='TR_STAGE' & FACTOR=='late')]),																
+				tmp		<- c(	'b_TRM_IN_TWM_yes'=			log( TR_RATE[which(GROUP=='TRM_IN_TWM' & FACTOR=='yes')] 		/ TR_RATE[which(GROUP=='TRM_IN_TWM' & FACTOR=='no')]),
+								'b_TRM_IN_SIXM_yes'=		log( TR_RATE[which(GROUP=='TRM_IN_SIXM' & FACTOR=='yes')] 		/ TR_RATE[which(GROUP=='TRM_IN_SIXM' & FACTOR=='no')]),
+								'b_TRM_IN_THREEM_yes'=		log( TR_RATE[which(GROUP=='TRM_IN_THREEM' & FACTOR=='yes')] 	/ TR_RATE[which(GROUP=='TRM_IN_THREEM' & FACTOR=='no')]),
 								'b_DIAG_IN_RECENT_yes'=		log( TR_RATE[which(GROUP=='DIAG_IN_RECENT' & FACTOR=='Y')] 		/ TR_RATE[which(GROUP=='DIAG_IN_RECENT' & FACTOR=='N')]),
 								'b_DIAG_IN_SIXM_yes'=		log( TR_RATE[which(GROUP=='DIAG_IN_SIXM' & FACTOR=='Y')] 		/ TR_RATE[which(GROUP=='DIAG_IN_SIXM' & FACTOR=='N')]),
 								'b_DIAG_IN_THREEM_yes'=		log( TR_RATE[which(GROUP=='DIAG_IN_THREEM' & FACTOR=='Y')] 		/ TR_RATE[which(GROUP=='DIAG_IN_THREEM' & FACTOR=='N')]),								
@@ -555,6 +628,12 @@ cr.png.generate.data<- function()
 								)		
 				list(TRUE_TR_RATE_RATIO=unname(tmp), FACTOR=names(tmp))
 			}, by=c('TS','TE')]	
+	
+	dcast.data.table(dfr,  GROUP+FACTOR~TS+TE, value.var='TR_RATE')	
+	dcast.data.table(subset(dtrr, grepl('b_DIAG_IN|b_TRM_IN',FACTOR)),  FACTOR~TS+TE, value.var='TRUE_TR_RATE_RATIO')
+	dcast.data.table(subset(dtrr, grepl('b_AGE_AT_DIAG',FACTOR)),  FACTOR~TS+TE, value.var='TRUE_TR_RATE_RATIO')
+	
+	
 	save(dfr, dtrr, file=paste0(outfile,'empirical_transmission_rates.rda'))
 	
 	ggplot(dtrr, aes(x=paste(FACTOR, TS, TE), y=TRUE_TR_RATE_RATIO)) + 
