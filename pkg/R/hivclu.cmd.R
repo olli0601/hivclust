@@ -5,6 +5,8 @@ hivc.cmd.hpcsys<- function()
 	if(!nchar(tmp))	tmp<- "debug"
 	tmp
 }
+CODE.HOME		<- "/Users/Oliver/git/hivclust/pkg"
+
 ######################################################################################
 #' @export
 HPC.NPROC		<- {tmp<- c(1,4); names(tmp)<- c("debug","cx1.hpc.ic.ac.uk"); tmp}

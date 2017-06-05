@@ -11,3 +11,4 @@ Depends:
 Description: tools for HIV sequence analysis
 License: GPL (>=2)
 LazyLoad: yes
+RoxygenNote: 5.0.1

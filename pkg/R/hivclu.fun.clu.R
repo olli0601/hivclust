@@ -1612,7 +1612,7 @@ hivc.clu.plot.tiplabels<- function (tip, text, col, xx=NULL, adj = c(-0.05, 0.5)
 	text(coord["xx",], coord["yy",], text, cex=cex)
 }
 ######################################################################################
-hivc.clu.plot<- function(	ph, clu=NULL, edge.col.basic="black", show.node.label= T, show.tip.label=F, file=NULL,  
+hivc.clu.plot<- function(	ph, clu=NULL, edge.col.basic="black", show.node.label= TRUE, show.tip.label=FALSE, show.edge.label=FALSE, file=NULL,  
 							highlight.edge.of.tiplabel=NULL, highlight.edge.of.tiplabel.col="red", 
 							highlight.cluster=NULL, highlight.cluster.col="red",							
 							pdf.scaley=10, pdf.width= 7, pdf.height=pdf.scaley*7, pdf.off=1, pdf.xlim=NULL,
@@ -1655,6 +1655,8 @@ hivc.clu.plot<- function(	ph, clu=NULL, edge.col.basic="black", show.node.label=
 		pdf(file,width=pdf.width,height=pdf.height)
 	if(no.margin) 	par(mar=c(0,0,0,0))
 	plot.coordinates					<- plot(ph, show.tip.label=show.tip.label, show.node.label=show.node.label, cex=cex.nodelabel, edge.color=clu.edge.col, edge.width=clu.edge.width, edge.lty=clu.edge.lty, x.lim=pdf.xlim, ...)
+	if(show.edge.label)
+		edgelabels(ph$edge.length, adj=c(0.5, 1.25), frame="none", bg="transparent", col="black", cex=cex.nodelabel)
 	if(class(file)=="character" && pdf.off)
 		dev.off()
 	plot.coordinates
