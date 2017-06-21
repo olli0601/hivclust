@@ -91,7 +91,8 @@ EPS			<<- 1e-12
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
 #default.fun		<- "project.dual"
 #default.fun		<- 'project.examl.ATHENA1610.161102'
-default.fun		<- "hivc.pipeline.various"
+default.fun			<- 'seattle.wrapper'
+#default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -105,6 +106,7 @@ function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$",
 		full.names = TRUE, recursive = FALSE),
 							paste(CODE.HOME,"misc","hivclu.prjcts.R",sep='/'),
 							paste(CODE.HOME,"misc","hivclu.Rakaiprjcts.R",sep='/'),
+							paste(CODE.HOME,"misc","hivclu.Seattle.R",sep='/'),
 							paste(CODE.HOME,"misc","hivclu.ATHENA.trees.R",sep='/'),
 							paste(CODE.HOME,"misc","hivclu.ACprjcts.R",sep='/'),
 							paste(CODE.HOME,"misc","hivclu.coalreg.R",sep='/'),

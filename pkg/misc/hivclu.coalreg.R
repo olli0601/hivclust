@@ -86,7 +86,7 @@ cr.various.master<- function()
 		par.s				<- 0.5
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2(indir, par.base.pattern, par.s)	
 	}
-	if(1)
+	if(0)
 	{
 		par.s				<- 0.5
 		par.maxNodeDepth	<- 15
@@ -113,6 +113,14 @@ cr.various.master<- function()
 		par.tsimn			<- 1
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.lnnoise.BFGS2(indir, par.base.pattern, par.s, par.tsimb, par.tsimn)	
 	}
+	if(1)
+	{
+		par.s				<- 0.5
+		par.maxNodeDepth	<- Inf
+		par.maxHeight		<- 10
+		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.MCMC1(indir, par.base.pattern, par.s, par.maxNodeDepth, par.maxHeight=par.maxHeight)	
+	}
+	
 }
 
 cr.various.pangea<- function()
@@ -2461,6 +2469,61 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 				#print( fci$ci )	
 				tmp		<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_s',par.s*100,'.rda'),basename(F)))
 				save( fit, fci, pci, file=tmp)
+			}, by='F']				
+}
+
+cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.MCMC1<- function(indir, par.base.pattern, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize)
+{
+	require(coalreg)
+	require(viridis)
+	require(data.table)
+	require(coda)
+	if(0)
+	{
+		indir						<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'			
+		par.base.pattern			<- 'm3.RR5.n150_seed123'	
+		par.maxNodeDepth			<- Inf
+		par.maxHeight				<- 10
+		par.hetInflation_logprior	<- NA
+		par.mincladesize			<- 100
+		par.s						<- 0.5		
+	}
+	#
+	#	run coalreg	run using exact time to infection
+	#	with maxNodeDepth=2, extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
+	#	with 50% sampling	 
+	set.seed(42)	
+	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
+	infiles[, {
+				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
+				phylo	<- read.tree( F )					
+				phylo 	<- drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s))
+				#	create data.table with infection type
+				phi		<- data.table(	TAXA=phylo$tip.label, 
+						TYPE=sapply(strsplit(phylo$tip.label,'_',),'[[',2),
+						ETSI=as.numeric(sapply(strsplit(phylo$tip.label,'_',),'[[',3)))
+				set(phi, NULL, 'TYPE', phi[,factor(TYPE,levels=c('I1','I0'))])
+				#	coreg
+				X				<- data.matrix(phi[,2:3,with=FALSE])
+				rownames(X)	<- phi[, TAXA]
+				colnames(X)	<- colnames(phi)[2:3]				
+				fit 			<- coreg.or170611(	X, phylo,
+											transmission=~TYPE,
+											infection=~ETSI,
+											mhsteps=5e3,
+											mhscale=setNames(c(1/4,1,1/4),c('logscale','TYPE','ETSI')),
+											maxHeight=par.maxHeight,
+											maxNodeDepth=par.maxNodeDepth,
+											mincladesize=par.mincladesize,
+											infection_logpriors=list(ETSI= function(x) dlnorm(x, meanlog=0, sdlog=0.1, log=TRUE)),
+											hetInflation_logprior=par.hetInflation_logprior
+											)
+				fit.mcmc	<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)
+				if(is.na(par.hetInflation_logprior))
+					fit.mcmc<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+				fit.mcmc	<- mcmc(fit.mcmc)
+				tmp			<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_s',par.s*100,'.rda'),basename(F)))
+				save(fit, fit.mcmc, file=tmp)
 			}, by='F']				
 }
 

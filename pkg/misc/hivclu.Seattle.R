@@ -1,3 +1,8 @@
+seattle.wrapper<- function()
+{
+	seattle.170621.fastree()
+}
+
 seattle.170601.rm.drug.resistance.mutations<- function()
 {
 	require(big.phylo)
@@ -12,9 +17,26 @@ seattle.170601.rm.drug.resistance.mutations<- function()
 	write.dna(sq, file= outfile, format='fasta')
 }
 
+seattle.170607.rm.drug.resistance.mutations<- function()
+{
+	require(big.phylo)
+	#	handle DRMs
+	infile.fasta		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.fasta'
+	outfile				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.ndrm.fasta'	
+	infile.fasta		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.PHSKCLANLe.refse.fasta'
+	outfile				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.PHSKCLANLe.refse.ndrm.fasta'
+	sq					<- read.dna(infile.fasta, format='fa')	
+	tmp					<- which(grepl("HXB2",rownames(sq)))
+	rownames(sq)[tmp]	<- 'HXB2'
+	tmp					<- big.phylo:::seq.rm.drugresistance(sq)
+	sq					<- tmp$nodr.seq
+	write.dna(sq, file= outfile, format='fasta')
+}
+
 seattle.170601.fastree<- function()
 {	
 	require(big.phylo)
+	
 	#	first tree
 	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.alignment.fasta'
 	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
@@ -25,7 +47,59 @@ seattle.170601.fastree<- function()
 	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
 	#	run on command line
 	cat(tmp)		
+	
+	#
+	# 	bootstrap trees
+	
+	#	second tree, DRMs removed + including references for rooting
+	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm.fasta'
+	bs.id			<- 2
+	outfile.ft		<- gsub('\\.fasta',paste0('_ft.',sprintf("%03d",bs.id),'.newick'),infile.fasta)
+	tmp				<- cmd.fasttree.one.bootstrap(infile.fasta, bs.id, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
+	#	run on command line
+	cat(tmp)		
+	
+	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm.fasta'
+	bs.n			<- 3
+	bs.dir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm_bootstrap_trees'
+	outfile			<- paste0('/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm_ft_bs',bs.n,'.newick')
+	tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile)
+	cat(paste0('#!/bin/sh\n',tmp), file=paste0(outfile,'.sh'))
+	Sys.chmod(paste0(outfile,'.sh'), mode = "777")	
 }
+
+seattle.170607.fastree<- function()
+{	
+	require(big.phylo)
+	
+	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.ndrm.fasta'
+	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
+	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma', check.binary=TRUE)
+	#	run on command line
+	cat(tmp)	
+}
+
+seattle.170621.fastree<- function()
+{	
+	require(big.phylo)
+		
+	#indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle'
+	indir			<- '/work/or105/SEATTLE'
+	infile.fasta	<- file.path(indir,'Seattle.June2017.PHSKCLANLe.refse.ndrm.fasta')
+	
+	bs.n			<- 100	
+	bs.dir			<- file.path(indir,'Seattle.June2017.PHSKCLANLe.refse.ndrm_bootstrap_trees')	
+	outfile.ft		<- gsub('\\.fasta',paste0('_ft_bs',bs.n,'.newick'),infile.fasta)
+	tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
+	
+	#	run on HPC
+	cmd				<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load='')
+	cmd				<- paste(cmd,tmp,sep='\n')
+	cat(cmd)					
+	outfile.cmd		<- paste("sea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+	cmd.hpccaller(indir, outfile.cmd, cmd)	
+}
+
 
 seattle.170601.clustering<- function()
 {	
@@ -62,6 +136,48 @@ seattle.170601.clustering<- function()
 					pdf.off=0, pdf.width=15, pdf.height=1000, 
 					show.node.label=TRUE, show.edge.label=TRUE,  
 					cex.edge.incluster=2)
+	dev.off()
+	
+	dfc		<- data.table(TAXA=ph$tip.label, CLU=clustering$clu.mem[1:Ntip(ph)])
+	outfile	<- gsub('\\.newick',paste0('_reroot.clu',thresh.brl*1e2,'-',thresh.bs*1e2,'.rda'),infile.ft)
+	save(ph, clustering, dfc, file, file=outfile)	
+}
+
+seattle.170607.clustering<- function()
+{	
+	require(big.phylo)
+	#	first tree
+	infile.ft		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.ndrm_ft.newick'
+	ph				<- read.tree(infile.ft)
+	#	reroot at AY371169
+	tmp				<- which(grepl('AY371169',ph$tip.label))
+	ph				<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
+	ph 				<- ladderize( ph )
+	#	process bootstrap support values	
+	tmp				<- as.numeric( ph$node.label )		
+	tmp[is.na(tmp)]	<- 0
+	ph$node.label	<- tmp
+	#	
+	write.tree(ph, gsub('\\.newick','_reroot.newick',infile.ft))
+	pdf(gsub('\\.newick','_reroot.pdf',infile.ft), w=15, h=2e3)
+	plot(ph, cex=0.4, show.node.label=TRUE)
+	dev.off()
+	#
+	#read patristic distances
+	require(hivclust)
+	stat.fun						<- hivc.clu.min.transmission.cascade	
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)	
+	thresh.brl						<- 0.045
+	thresh.bs						<- 0.8
+	#produce clustering 
+	clustering						<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph$node.label, retval="all")	
+	outfile							<- gsub('\\.newick',paste0('_reroot.clu',thresh.brl*1e2,'-',thresh.bs*1e2,'.pdf'),infile.ft)	
+	hivc.clu.plot(ph, 
+			clustering[["clu.mem"]], 
+			file=outfile, 
+			pdf.off=0, pdf.width=15, pdf.height=1000, 
+			show.node.label=TRUE, show.edge.label=TRUE,  
+			cex.edge.incluster=2)
 	dev.off()
 	
 	dfc		<- data.table(TAXA=ph$tip.label, CLU=clustering$clu.mem[1:Ntip(ph)])
