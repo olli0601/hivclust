@@ -93,7 +93,7 @@ seattle.170621.fastree<- function()
 	tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
 	
 	#	run on HPC
-	cmd				<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load='module load R/3.2.0')
+	cmd				<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load='module load R/3.2.0')
 	cmd				<- paste(cmd,tmp,sep='\n')
 	cat(cmd)					
 	outfile.cmd		<- paste("sea",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
