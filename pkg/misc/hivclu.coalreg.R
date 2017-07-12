@@ -9,7 +9,7 @@ cr.hpc.submit<- function()
 	if(1)
 	{
 		cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS')			
-		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=NA, hpc.walltime=71, hpc.mem="1800mb")
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=NA, hpc.walltime=71, hpc.mem="1800mb", hpc.load='module load intel-suite/2015.1 mpi R/3.3.3')
 		cat(cmd)	
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
