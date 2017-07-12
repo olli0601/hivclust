@@ -20,8 +20,6 @@ HPC.CX1.IMPERIAL<- "cx1.hpc.ic.ac.uk"		#this is set to system('domainname',inter
 #' @export
 HPC.MEM			<- "1750mb"
 
-#' @export
-HPC.LOAD		<- "module load intel-suite/2015.1 mpi examl/2015-09-04 R/3.2.0 raxml beast/1.8.0 beagle-lib/2014-07-30"
 ######################################################################################
 #' @export
 PR.STARTME		<- system.file(package="hivclust", "misc", "hivclu.startme.R")
@@ -1030,7 +1028,7 @@ hivc.cmd.beast2.runxml<- function(indir, infile, outfile=infile, insignat=NULL, 
 ######################################################################################
 #add additional high performance computing information 
 #' @export
-hivc.cmd.hpcwrapper<- function(cmd, hpcsys= hivc.cmd.hpcsys(), hpc.walltime=24, hpc.mem=HPC.MEM, hpc.nproc=HPC.NPROC[hpcsys], hpc.q=NA)
+hivc.cmd.hpcwrapper<- function(cmd, hpcsys= hivc.cmd.hpcsys(), hpc.walltime=24, hpc.mem=HPC.MEM, hpc.nproc=HPC.NPROC[hpcsys], hpc.q=NA, hpc.load="module load intel-suite/2015.1 mpi examl/2015-09-04 R/3.2.0 raxml beast/1.8.0 beagle-lib/2014-07-30")
 {
 	wrap<- "#!/bin/sh"
 	#hpcsys<- HPC.CX1.IMPERIAL
@@ -1043,7 +1041,7 @@ hivc.cmd.hpcwrapper<- function(cmd, hpcsys= hivc.cmd.hpcsys(), hpc.walltime=24, 
 		wrap<- paste(wrap, "#PBS -j oe", sep='\n')
 		if(!is.na(hpc.q))
 			wrap<- paste(wrap, paste("#PBS -q",hpc.q), sep='\n\n')
-		wrap<- paste(wrap, HPC.LOAD, sep='\n')
+		wrap<- paste(wrap, hpc.load, sep='\n')
 	}
 	else if(hpcsys=='debug')
 		cat(paste("\ndetected no HPC system and no hpcwrapper generated, domain name is",hpcsys))
