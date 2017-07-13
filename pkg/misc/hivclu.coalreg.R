@@ -8,12 +8,84 @@ cr.hpc.submit<- function()
 {
 	if(1)
 	{
-		cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS')			
-		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
-		cat(cmd)	
-		outdir		<- paste(DATA,"tmp",sep='/')
-		outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		indir						<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir						<- '/work/or105/ATHENA_2016/master_examples'	
+		par.base.pattern			<- 'm3.RR5.n1250_seed123'
+		infiles				<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))	
+		infiles[, REP:= as.numeric(gsub('.*rep([0-9]+)\\.nwk','\\1',basename(F)))]
+		infiles				<- subset(infiles, REP<=30)
+		setkey(infiles, REP)
+		
+		par.maxNodeDepth			<- Inf
+		par.maxHeight				<- 10	
+		par.hetInflation_logprior	<- 0
+		par.noise					<- 0
+		par.bias					<- 1
+		par.s						<- 0.5
+		par.mincladesize			<- 100		
+		for(i in seq_len(nrow(infiles)))
+		{
+			infile						<- infiles[i,F]
+			formula.tr					<- '~TYPE'
+			formula.inf					<- '~ETSI'
+			extra						<- '_170713'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+											' -formula.tr=',formula.tr,
+											' -formula.inf=',formula.inf,
+											' -extra=',extra,
+											' -par.maxNodeDepth=',par.maxNodeDepth,
+											' -par.maxHeight=',par.maxHeight, 
+											' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+											' -par.noise=', par.noise, 
+											' -par.bias=', par.bias, 
+											' -par.s=', par.s, 
+											' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)
+			stop()
+			formula.tr					<- '~TYPE'
+			formula.inf					<- '~TYPE'
+			extra						<- '_170713'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)
+		
+			formula.tr					<- '~TYPE'
+			formula.inf					<- '~ETSIC'
+			extra						<- '_170713'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)			
+		}
 	}
 	if(0)
 	{
@@ -83,41 +155,51 @@ cr.hpc.submit<- function()
 
 cr.various.master<- function()
 {
-	indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
-	indir				<- '/work/or105/ATHENA_2016/master_examples'
-	par.base.pattern	<- 'm3.RR5.n1250_seed123'	
-	infiles				<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))	
-	infiles[, REP:= as.numeric(gsub('.*rep([0-9]+)\\.nwk','\\1',basename(F)))]
-	infiles				<- subset(infiles, REP<=30)
-	setkey(infiles, REP)
-	
-	if(1)	
+	infile						<- "/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk"
+	par.maxNodeDepth			<- Inf
+	par.maxHeight				<- 10	
+	par.hetInflation_logprior	<- NA
+	par.s						<- 0.5
+	par.mincladesize			<- 100
+	formula.tr					<- ~TYPE
+	formula.inf					<- ~ETSI
+	extra						<- ''
+	#
+	#	read args
+	#
+	if(exists("argv"))
 	{
-		for(i in seq_len(nrow(infiles)))
-		{
-			extra		<- '_170712'
-			#	best possible run we can aim for
-			infile						<- infiles[i,F]		
-			formula.tr					<- ~TYPE
-			formula.inf					<- ~ETSI
-			par.s						<- 0.5
-			par.maxNodeDepth			<- Inf
-			par.maxHeight				<- 10
-			par.mincladesize			<- 100
-			par.tsimb					<- 1
-			par.tsimn					<- 0
-			par.hetInflation_logprior	<- NA		
-			cr.master.ex3.adMCMC(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior, extra)
-								
-			formula.tr					<- ~TYPE
-			formula.inf					<- ~TYPE
-			cr.master.ex3.adMCMC(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior, extra)
-			
-			formula.tr					<- ~TYPE
-			formula.inf					<- ~ETSIC
-			cr.master.ex3.adMCMC(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior, extra)
-		}		
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,7), infile= return(substr(arg,9,nchar(arg))),NA)	}))
+		if(length(tmp)>0) infile<- tmp[1]	
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,11), formula.tr= return(substr(arg,13,nchar(arg))),NA)	}))
+		if(length(tmp)>0) formula.tr<- as.formula(tmp[1])	
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,12), formula.inf= return(substr(arg,14,nchar(arg))),NA)	}))
+		if(length(tmp)>0) formula.inf<- as.formula(tmp[1])
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,6), extra= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) extra<- tmp[1]		
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,17), par.maxNodeDepth= return(substr(arg,19,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.maxNodeDepth<- as.numeric(tmp[1])		
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,14), par.maxHeight= return(substr(arg,16,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.maxHeight<- as.numeric(tmp[1])
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,10), par.noise= return(substr(arg,12,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.noise<- as.numeric(tmp[1])
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,9), par.bias= return(substr(arg,11,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.bias<- as.numeric(tmp[1])		
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,26), par.hetInflation_logprior= return(substr(arg,28,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.hetInflation_logprior<- as.numeric(tmp[1])
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,6), par.s= return(substr(arg,8,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.s<- as.numeric(tmp[1])
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,17), par.mincladesize= return(substr(arg,19,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.mincladesize<- as.numeric(tmp[1])
 	}	
+	#	process args
+	par.tsimn	<- par.noise
+	par.tsimb	<- par.bias	
+	stopifnot(par.hetInflation_logprior==0)
+	if(par.hetInflation_logprior==0)
+		par.hetInflation_logprior	<- NA
+	#	
+	cr.master.ex3.adMCMC(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior, extra)	
 }
 
 
