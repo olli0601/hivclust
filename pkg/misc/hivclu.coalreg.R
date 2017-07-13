@@ -9,7 +9,7 @@ cr.hpc.submit<- function()
 	if(1)
 	{
 		cmd					<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS')			
-		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=NA, hpc.walltime=71, hpc.mem="1800mb", hpc.load='module load intel-suite/2015.1 mpi R/3.3.3')
+		cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
 		cat(cmd)	
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -2548,6 +2548,18 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 	#	with maxNodeDepth=2, extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
 	#	with 50% sampling	 
 	set.seed(42)	
+	cat(	'\ninfile=',infile,
+			'\nformula.tr=',formula.tr, 
+			'\nformula.inf=',formula.inf, 
+			'\npar.s=',par.s, 
+			'\npar.maxNodeDepth=',par.maxNodeDepth, 
+			'\npar.maxHeight=',par.maxHeight, 
+			'\npar.mincladesize=',par.mincladesize, 
+			'\npar.tsimb=',par.tsimb, 
+			'\npar.tsimn=',par.tsimn, 
+			'\npar.hetInflation_logprior=',par.hetInflation_logprior,
+			'\nextra=',extra)
+	
 	phylo	<- read.tree( infile )					
 	phylo 	<- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
 	#	create data.table with infection type
@@ -2564,6 +2576,9 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 	#	zero mean	
 	set(phi, NULL, 'ETSI', phi[,ETSI-mean(ETSI)])
 	set(phi, NULL, 'ETSI_NOISE', phi[,ETSI_NOISE-mean(ETSI_NOISE)])
+	#	print
+	print(phylo)
+	print(phi)
 	#	init coreg
 	tmp				<- unique(c(unlist(strsplit(gsub(' ','',as.character(formula.tr))[2],'+',fixed=TRUE)),unlist(strsplit(gsub(' ','',as.character(formula.inf))[2],'+',fixed=TRUE))))	
 	X				<- data.matrix(phi[,tmp,with=FALSE])
@@ -2593,7 +2608,9 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 														'_mcs',par.mincladesize,
 														'_s',par.s,														
 														'.rda'),basename(infile)))
-	save(fit, file=outfile)										
+	cat('\noutfile=',outfile)
+	save(fit, file=outfile)	
+	cat('\nDONE\n')
 }
 
 cr.master.ex3.dev.MCMC1<- function()
