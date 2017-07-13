@@ -2549,8 +2549,8 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 	#	with 50% sampling	 
 	set.seed(42)	
 	cat(	'\ninfile=',infile,
-			'\nformula.tr=',formula.tr, 
-			'\nformula.inf=',formula.inf, 
+			'\nformula.tr=',as.character(formula.tr), 
+			'\nformula.inf=',as.character(formula.inf), 
 			'\npar.s=',par.s, 
 			'\npar.maxNodeDepth=',par.maxNodeDepth, 
 			'\npar.maxHeight=',par.maxHeight, 
