@@ -1002,6 +1002,10 @@ hivc.pipeline.various<- function()
 	}	
 	if(1)
 	{
+		project.Bezemer.VLIntros()
+	}
+	if(0)
+	{
 		#run coalreg
 		cr.hpc.submit()			
 	}

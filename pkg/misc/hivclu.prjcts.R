@@ -3873,8 +3873,36 @@ project.hivc.examlclock<- function()
 	#		theme(legend.justification=c(0,1), legend.position=c(0,1), legend.key.size=unit(13,'mm'), legend.title = element_blank())
 	#ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_zagaqq','.pdf',sep=''), w=4,h=6)		
 }
+
 ######################################################################################
-project.hivc.bezemer<- function()
+project.Bezemer.VLIntros<- function()
+{	
+	require(big.phylo)
+	
+	#indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle'
+	indir			<- '/work/or105/ATHENA_2016/vlintros'
+	infiles			<- list.files(indir, pattern='fasta$')
+	for(infile in infiles)
+	{
+		infile.fasta	<- file.path(indir,infile)
+		bs.dir			<- gsub('.fasta','_bootstrap_trees',infile.fasta)
+		bs.n			<- 100	
+		dir.create(bs.dir)	
+		outfile.ft		<- gsub('\\.fasta',paste0('_ft_bs',bs.n,'.newick'),infile.fasta)
+		tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
+		
+		#	run on HPC
+		cmd				<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="5800mb",  hpc.nproc=1, hpc.load='module load R/3.3.2')
+		cmd				<- paste(cmd,tmp,sep='\n')
+		cat(cmd)					
+		outfile.cmd		<- paste("bez",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		cmd.hpccaller(indir, outfile.cmd, cmd)	
+	}
+	
+}
+
+######################################################################################
+project.Bezemer.clusters<- function()
 {
 	#clustering
 	dir.name	<- DATA  	

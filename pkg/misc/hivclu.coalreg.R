@@ -1182,6 +1182,119 @@ cr.png.compare<- function()
 	
 }
 	
+cr.master.ex3.adMCMC.evaluate<- function()
+{
+	require(data.table)
+	require(coda)
+	
+	indir	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results'
+	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
+	infiles[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
+	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z]+)_.*','\\1',basename(F))]
+	tmp		<- lapply(seq_len(nrow(infiles)), function(i)
+			{
+				infile	<- infiles[i,F]
+				cat(basename(infile),'\n')
+				#infile	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infTYPE_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
+				load(infile)	
+				fit.mcmc			<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
+				fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+				colnames(fit.mcmc)	<- paste0(c('','tr','inf'),colnames(fit.mcmc))				
+				fit.mcmc			<- mcmc(fit.mcmc)
+				#	raw plots
+				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(infile))), w=10, h=7)
+				plot(fit.mcmc)
+				dev.off()
+				fit.mcmc.a	<- mcmc(fit$trace_qsd)
+				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(infile))), w=5, h=10)
+				plot(fit.mcmc.a)
+				dev.off()
+				#	rm burn in and thin
+				tmp <- seq.int(1e3,1e4,4*5)
+				dfm	<- melt(cbind(as.data.table(fit.mcmc[tmp,]), data.table(IT=tmp)), id.vars='IT')
+				dfm	<- dfm[, list(STAT=paste0('q',c(0.025,0.25,0.5,0.75,0.975)), V=quantile(value,p=c(0.025,0.25,0.5,0.75,0.975))), by=c('variable')]
+				#	add acceptance
+				tmp	<- 1-rejectionRate(window(fit.mcmc, start=1e3, end=1e4, thin=4))
+				tmp	<- data.table(variable=names(tmp), STAT='acceptance',V=tmp)
+				dfm	<- rbind(dfm, tmp)
+				#	add ESS
+				tmp	<- effectiveSize(window(fit.mcmc, start=1e3, end=1e4, thin=4))
+				tmp	<- data.table(variable=names(tmp), STAT='ESS',V=tmp)
+				dfm	<- rbind(dfm, tmp)
+				#
+				dfm[, REP:=infiles[i,REP]]
+				dfm[, FORMULA_INF:=infiles[i,FORMULA_INF]]
+				dfm
+			})
+	dfm	<- do.call('rbind',tmp)
+	
+	dfm	<- dcast.data.table(dfm, FORMULA_INF+REP+variable~STAT, value.var='V') 
+	tmp	<- unique(subset(dfm, variable=='trTYPE', select=c('FORMULA_INF','REP','variable')))
+	tmp[, TRUTH:=log(5)]	
+	ggplot(dfm, aes(x=REP)) + 
+			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
+			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
+			facet_grid(variable~FORMULA_INF, scales='free')
+	ggsave(file=file.path(indir,'boxplots.pdf'),w=10,h=10)
+	
+	
+	tmp		<- lapply(seq_len(nrow(infiles)), function(i)
+			{
+				infile	<- infiles[i,F]
+				cat(basename(infile),'\n')
+				#infile	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infTYPE_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
+				load(infile)	
+				fit.mcmc			<- cbind(IT=seq_along(fit$loglik), fit$trace, fit$trace_tr, fit$trace_inf, LOGPO=fit$loglik)				
+				fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+				colnames(fit.mcmc)	<- paste0(c('','','tr','inf',''),colnames(fit.mcmc))
+				fit.mcmc			<- subset(as.data.table(fit.mcmc), IT>=1e3)				
+				fit.mcmc			<- unique(fit.mcmc, by=setdiff(colnames(fit.mcmc),'IT'))
+				fit.mcmc			<- melt(fit.mcmc, id.vars=c('IT','logscale','trTYPE','LOGPO'))
+				fit.mcmc[, REP:=infiles[i,REP]]
+				fit.mcmc
+			})
+	dfl	<- do.call('rbind',tmp)	
+	for(x in c('infTYPE','infETSI','infETSIC'))
+	{
+		tmp	<- subset(dfl, variable==x)	
+		ggplot(tmp, aes(x=trTYPE, y=LOGPO, colour=value)) + 
+				geom_point() + 
+				labs(x='H coeff for I0', y='log posterior', colour='S coeff') +
+				geom_vline(xintercept=log(5), colour='red') + 
+				theme_bw() +
+				facet_wrap(~REP, ncol=6, scales='free_y')
+		ggsave(file=file.path(indir,paste0('logpoprofile_with_formula.inf_',x,'.pdf')),w=15,h=10)
+	}
+	for(x in c('infTYPE','infETSI','infETSIC'))
+	{	
+		tmp	<- unique(subset(dfl, variable==x, c(REP, trTYPE, LOGPO, variable, value)), by=c('REP','trTYPE','value'))	
+		ggplot(tmp, aes(x=trTYPE, y=value, z=LOGPO)) + 
+				stat_density2d(colour='black') +
+				labs(x='H coeff for I0', y='S coeff', colour='log posterior') +
+				geom_vline(xintercept=log(5), colour='red') + 
+				theme_bw() +
+				facet_wrap(~REP, ncol=6, scales='free_y')
+		ggsave(file=file.path(indir,paste0('logposurface_with_formula.inf_',x,'.pdf')),w=15,h=10)
+	}
+	
+	tmp		<- lapply(seq_len(nrow(infiles)), function(i)
+			{
+				infile	<- infiles[i,F]
+				cat(basename(infile),'\n')
+				#infile	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infTYPE_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
+				load(infile)	
+				fit.bdt	<- data.table(SLICE_ID=seq_along(fit$bdt), SLICE_NTIP=sapply(fit$bdt, Ntip))
+				fit.bdt[, REP:=infiles[i,REP]]
+				fit.bdt[, FORMULA_INF:=infiles[i,FORMULA_INF]]
+				fit.bdt				
+			})
+	fit.bdt	<- do.call('rbind',tmp)
+	fit.bdt	<- fit.bdt[, list(SLICE_N=length(SLICE_ID), SLICE_ALLTIPS=sum(SLICE_NTIP), SLICE_MTIPS=mean(SLICE_NTIP)), by=c('FORMULA_INF','REP')]
+	fit.bdt	<- melt(fit.bdt, id.vars=c('FORMULA_INF','REP'))
+	ggplot(fit.bdt, aes(x=REP, y=value)) + geom_point() + facet_grid(variable~FORMULA_INF, scales='free')
+	ggsave(file=file.path(indir,'slice_info.pdf'),w=10,h=10)
+}
+
 cr.master.ex3.compare<- function()
 {
 	require(coalreg)
