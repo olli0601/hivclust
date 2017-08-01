@@ -3875,30 +3875,60 @@ project.hivc.examlclock<- function()
 }
 
 ######################################################################################
-project.Bezemer.VLIntros<- function()
+project.Bezemer.VLIntros.DataFile<- function()
+{
+	infile	<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/seq_info/NONB_flowinfo.csv'
+	df		<- as.data.table(read.csv(infile))
+}
+
+######################################################################################
+project.Bezemer.VLIntros.FastTrees<- function()
 {	
 	require(big.phylo)
-	
-	#indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle'
-	indir			<- '/work/or105/ATHENA_2016/vlintros'
-	infiles			<- list.files(indir, pattern='fasta$')
-	for(infile in infiles)
+	#	run FastTree on HPC
+	if(0)
 	{
-		infile.fasta	<- file.path(indir,infile)
-		bs.dir			<- gsub('.fasta','_bootstrap_trees',infile.fasta)
-		bs.n			<- 100	
-		dir.create(bs.dir)	
-		outfile.ft		<- gsub('\\.fasta',paste0('_ft_bs',bs.n,'.newick'),infile.fasta)
-		tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
-		
-		#	run on HPC
-		cmd				<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="5800mb",  hpc.nproc=1, hpc.load='module load R/3.3.2')
-		cmd				<- paste(cmd,tmp,sep='\n')
-		cat(cmd)					
-		outfile.cmd		<- paste("bez",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-		cmd.hpccaller(indir, outfile.cmd, cmd)	
+		#indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle'
+		indir			<- '/work/or105/ATHENA_2016/vlintros'
+		infiles			<- list.files(indir, pattern='fasta$')
+		for(infile in infiles)
+		{
+			infile.fasta	<- file.path(indir,infile)
+			bs.dir			<- gsub('.fasta','_bootstrap_trees',infile.fasta)
+			bs.n			<- 100	
+			dir.create(bs.dir)	
+			outfile.ft		<- gsub('\\.fasta',paste0('_ft_bs',bs.n,'.newick'),infile.fasta)
+			tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
+			
+			#	run on HPC
+			cmd				<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="5800mb",  hpc.nproc=1, hpc.load='module load R/3.3.2')
+			cmd				<- paste(cmd,tmp,sep='\n')
+			cat(cmd)					
+			outfile.cmd		<- paste("bez",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			cmd.hpccaller(indir, outfile.cmd, cmd)	
+		}
 	}
-	
+	#	re-root at random taxon with name 'subtree'
+	if(1)
+	{
+		require(ape)
+		require(adephylo)
+		require(phytools)		
+		indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
+		infiles			<- data.table(F=list.files(indir, pattern='newick$', recursive=TRUE, full.names=TRUE))		
+		infiles[, {
+					#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft/06cpx_withD_bootstrap_trees/06cpx_withD_ft.000.newick'
+					ph	<- read.newick(F)		
+					tmp				<- which(grepl('subtype',ph$tip.label))[1]		
+					ph				<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
+					ph				<- ladderize(ph)	
+					write.tree(ph, file=gsub('_ft\\.','_rr.',F))
+					pdf(file=paste0(gsub('_ft\\.','_rr.',F),'.pdf'), w=20, h=10+Ntip(ph)/10)
+					plot(ph, show.node.label=TRUE, cex=0.3)
+					dev.off()
+				}, by='F']
+		
+	}
 }
 
 ######################################################################################

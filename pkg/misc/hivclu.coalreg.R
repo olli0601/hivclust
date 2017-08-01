@@ -3147,6 +3147,152 @@ cr.master.ex3.dev.MCMC3<- function()
 	
 }
 
+cr.master.ex3.dev.MCMC5<- function()
+{
+	require(coalreg)	
+	require(data.table)
+	require(ape)
+	require(coda)
+	
+	par.s	<- 0.5	
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+	infile	<- file.path(indir, 'm3.RR5.n150_seed123_rep3.nwk')
+	infile	<- file.path(indir, 'm3.RR5.n1250_seed123_rep3.nwk')
+	
+	set.seed(42)
+	tr 			<- read.tree( infile )	
+	tr 			<- multi2di(drop.tip(tr, sample(tr$tip.label, replace=FALSE, size=length(tr$tip.label)*par.s)), random=FALSE)
+	X 			<- data.frame( TYPE=grepl('I0', tr$tip.label) )
+	rownames(X) <- tr$tip.label	
+	f0 			<- coreg ( X, tr
+							, ~TYPE
+							, ~TYPE
+							, mhsteps = 5e3, ncpu=1)
+	set.seed(42)
+	tr 			<- read.tree( infile )	
+	tr 			<- multi2di(drop.tip(tr, sample(tr$tip.label, replace=FALSE, size=length(tr$tip.label)*par.s)), random=FALSE)
+	X 			<- data.frame( TYPE=grepl('I0', tr$tip.label) )
+	rownames(X) <- tr$tip.label		
+	f2 			<-  coreg.adaptiveMHwithinGibbs.or170710(X, tr
+							, ~TYPE
+							, ~TYPE
+							, adapt.batch=function(accn){  ifelse(accn<1e3, 20, 50) },
+							adapt.schedule=function(b){ 1+1*(1/b)^(1/3) }, 
+							mhsteps=5e3,													
+							maxHeight=10, #***
+							maxNodeDepth=Inf,
+							mincladesize=100,
+							coef_logprior_sd=10,	
+							verbose=TRUE)	
+	outfile	<- file.path(dirname(infile), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_TYPEaoi_simpleversion.rda'),basename(infile)))
+	save(f0, f2, file=outfile)
+	
+					
+	
+	fit	<- f0
+	fit.mcmc	<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
+	fit.mcmc<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+	fit.mcmc	<- mcmc(fit.mcmc)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_coeff_trace_f0.pdf'),basename(outfile))), w=10, h=7)
+	plot(fit.mcmc)
+	dev.off()	
+	
+	fit	<- f2
+	fit.mcmc	<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)					
+	fit.mcmc<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+	colnames(fit.mcmc)	<- c('logscale','TR_I0','INF_I0')
+	fit.mcmc	<- mcmc(fit.mcmc)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_coeff_trace_f2.pdf'),basename(outfile))), w=10, h=7)
+	plot(fit.mcmc)
+	dev.off()
+	fit.mcmc.a	<- mcmc(fit$trace_qsd)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_sdadapt_f2.pdf'),basename(outfile))), w=5, h=10)
+	plot(fit.mcmc.a)
+	dev.off()
+	tmp <- seq.int(1e3,5e3,4*5)
+	dfm	<- cbind(as.data.table(fit.mcmc[tmp,]), data.table(IT=tmp))
+	
+	
+	
+	fs				<- data.table( IT=seq_along(f2$logprior), PR=f2$logprior, LKL=f2$loglik, PO=f2$logposterior, ACC=f2$accept )
+	tmp				<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)
+	colnames(tmp)	<- c('logscale','logHetInflation','TR_I0','INF_I0')
+	fs				<- cbind(fs, as.data.table(tmp))
+	
+	subset(fs, TR_I0>(log(5)-.1) & TR_I0<(log(5)+.1))[, mean(LKL)]
+	#	-2943.644
+	subset(fs, TR_I0>(5-.1) & TR_I0<(5+.1))[, mean(LKL)]
+	#	-2943.338
+	#	--> lkl is indeed larger for theta=5 than theta=log 5
+
+	#	is this the same on the full tree?	
+	coefs0		<- c(logscale=0.11, logHetInflation=0); coef_inf<- 1.033; 
+	coef_trs	<- as.data.table(expand.grid(COEF_TR=c(1,log(5),2,2.5,3,3.5,4,5,6,7,8,10), SAMPLE=c(1,0.8,0.5)))
+	infile		<- file.path(indir, 'm3.RR5.n1250_seed123_rep5.nwk')
+	coef_trs	<- coef_trs[, {
+				coef_tr		<- COEF_TR
+				par.s		<- SAMPLE
+				set.seed(42)
+				cat('\nprocess',coef_tr, ', ',par.s)				
+				tr 			<- read.tree( infile )
+				if(par.s<1)
+					tr 		<- multi2di(drop.tip(tr, sample(tr$tip.label, replace=FALSE, size=length(tr$tip.label)*par.s)), random=FALSE)
+				n			<- length( tr$tip.label )
+				X 			<- data.frame( TYPE=grepl('I0', tr$tip.label) )
+				rownames(X) <- tr$tip.label		
+				sts 		<- setNames( node.depth.edgelength( tr )[1:n] , tr$tip.label )
+				bdt 		<- DatedTree( tr, sts )
+				X 			<- as.data.frame(X)
+				maxHeight	<- 10
+				maxNodeDepth<- Inf
+				mincladesize<- 100
+				transmission<- ~TYPE
+				infection	<- ~TYPE
+				bdts 		<- .slice.and.stitch.DatedTrees( bdt, maxHeight, mincladesize )		
+				X_tr 		<- as.data.frame( model.matrix( formula( transmission ) , data = X) )
+				X_inf 		<-  as.data.frame( model.matrix( formula( infection), data = X ) ) 
+				X_tr_mat 	<- data.matrix( X_tr )
+				X_inf_mat 	<- data.matrix( X_inf )
+				names_coef_tr	<- colnames( X_tr )[-1]
+				names_coef_inf	<- colnames( X_inf )[-1]	
+				.h <- function( coef_tr, .bdt = bdt ){
+					if (length( names_coef_tr ) == 0) {
+						rv <-  ( rep(1, n ) )
+					} else if (length( names_coef_tr ) == 1)  { 
+						rv <- exp(  X_tr[.bdt$tip.label, names_coef_tr] * coef_tr) ;
+					} else{
+						rv <- exp( as.vector( X_tr_mat[.bdt$tip.label, names_coef_tr] %*% coef_tr ) )
+					}
+					setNames( rv / mean ( rv ) , .bdt$tip.label )
+				}
+				.s <- function( coef_inf, .bdt = bdt ){
+					if (length( names_coef_inf ) == 0) {
+						rv <- ( rep(1, n ) )
+					} else if (length( names_coef_inf ) == 1) {
+						rv <-   exp( X_inf[.bdt$tip.label, names_coef_inf] * coef_inf ) ; 
+					} else {
+						rv <- exp( as.vector( X_inf_mat[.bdt$tip.label, names_coef_inf] %*% coef_inf) )
+					}
+					setNames( rv / mean ( rv ) , .bdt$tip.label)
+				}
+				h0			<- .h(coef_tr )
+				s0			<- .s(coef_inf )		
+				loglkl		<- sum(sapply( bdts, 
+								function(.bdt ){
+									.loglik(.bdt, 
+											h0[.bdt$tip.label], 
+											s0[.bdt$tip.label], 
+											exp(coefs0['logscale']), 
+											maxHeight = maxHeight, 
+											maxNodeDepth = maxNodeDepth, 
+											hetInflation = exp(coefs0['logHetInflation']))
+								}))
+				list(LKL=loglkl)
+			}, by=c('COEF_TR','SAMPLE')]
+	outfile	<- file.path(dirname(infile), gsub('\\.nwk',paste0('_coalreg_likelihoods_for_mean_other_params.rda'),basename(infile)))
+	save(infile, coefs0, coef_inf, coef_trs, file=outfile)			
+}
+
 cr.master.ex3.dev.MCMC4<- function()
 {
 	require(coalreg)	
@@ -3195,6 +3341,101 @@ cr.master.ex3.dev.MCMC4<- function()
 							hetInflation_logprior=NA,
 							debug.nolkl=FALSE
 							)	
+	save(fit, file=outfile)	
+	
+	fit.mcmc	<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
+	if(is.na(par.hetInflation_logprior))
+		fit.mcmc<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+	fit.mcmc	<- mcmc(fit.mcmc)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(outfile))), w=10, h=7)
+	plot(fit.mcmc)
+	dev.off()
+	fit.mcmc.a	<- mcmc(fit$trace_qsd)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(outfile))), w=5, h=10)
+	plot(fit.mcmc.a)
+	dev.off()
+	
+	#actual prior for TYPE and ETSI
+	prior.logTYPE.sd	<- apply(X,2,sd)[1]*5
+	dfp	<- rbind(	data.table(variable='logscale', x=seq(-15,15,1e-2), y=dnorm(seq(-15,15,1e-2), 0, 5)),
+			data.table(variable='TYPE', x=seq(-15,15,1e-2), y=dnorm(seq(-15,15,1e-2), 0, prior.logTYPE.sd)),
+			data.table(variable='ETSI', x=seq(-0.4,0.4,1e-3), y=dnorm(seq(-0.4,0.4,1e-3), 0, 0.1))
+	)				
+	prior.logTYPE.d		<- function(x){ dnorm(x,0, prior.logTYPE.sd) }
+	prior.logETSI.d		<- function(x){ dnorm(x, 0, 0.1) }				
+	#sampled parameters
+	tmp <- seq.int(1e3,5e4,4*5)
+	dfm	<- melt(cbind(as.data.table(fit.mcmc[tmp,]), data.table(IT=tmp)), id.vars='IT')
+	ggplot(dfm) + geom_histogram(aes(x=value, y=..density..), bins=50) + facet_wrap(~variable, scale='free', ncol=3) +
+			geom_line(data=dfp, aes(x=x, y=y, colour='red'))
+	ggsave(file=file.path(dirname(outfile), gsub('\\.rda',paste0('_coeffhistograms_from_prior.pdf'),basename(outfile))), w=10, h=7)
+	
+	#
+	da	<- as.data.table(t(matrix(data=fit$accept, nrow=4, dimnames=list(c('logscale','logHetInflation','ETSI','TYPE'),NULL))))				
+	da[, BATCH:= ceiling(seq_len(nrow(da))/20 )]
+	da	<- melt(da, id.vars='BATCH')
+	da	<- da[, list(ACC=mean(value)), by=c('BATCH','variable')]
+	ggplot(da, aes(x=BATCH, y=ACC, colour=variable)) + geom_line() + geom_hline(yintercept=0.44) + facet_grid(variable~.)
+	ggsave(file=file.path(dirname(outfile), gsub('\\.rda',paste0('_accept.pdf'),basename(outfile))), w=10, h=10)
+	
+	#
+	tr	<- as.data.table(fit$trace_qsd)
+	tr[, IT:=seq.int(1,nrow(tr))]
+	tr	<- subset(tr, IT%%(20*4)==0)
+	
+	
+	1-rejectionRate(window(fit.mcmc, start=1e3, end=5e3, thin=4))
+	
+}
+
+cr.master.ex3.dev.MCMC6<- function()
+{
+	require(coalreg)	
+	require(data.table)
+	require(ape)
+	require(coda)
+	
+	par.s	<- 1			
+	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep5.nwk'
+	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_adaptiveMCMC_50100_v6.rda'),basename(F)))
+	
+	set.seed(42)
+	phylo	<- read.tree( F )
+	if(par.s<1)
+		phylo <- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
+	#	create data.table with infection type
+	phi		<- data.table(	TAXA=phylo$tip.label, 
+			TYPE=sapply(strsplit(phylo$tip.label,'_',),'[[',2),
+			ETSI=as.numeric(sapply(strsplit(phylo$tip.label,'_',),'[[',3)))
+	set(phi, NULL, 'TYPE', phi[,factor(TYPE,levels=c('I1','I0'))])
+	phi[, ETSI_C:= as.numeric(as.character(factor(ETSI<0.25,levels=c(TRUE,FALSE),labels=c('0','1'))))]
+	
+	#set(phi, NULL, 'ETSI', phi[,ETSI-mean(ETSI)])
+	#	coreg
+	tmp		<- unique(c('TYPE','TYPE'))
+	X				<- data.matrix(phi[,tmp,with=FALSE])
+	rownames(X)	<- phi[, TAXA]
+	colnames(X)	<- tmp
+	# 	make sure baseline is coded as x=0, and that acute stage is coded x=1 
+	#	hence exp(beta*x)=exp(beta) for individuals with x=1 and 1 for individuals with x=0
+	X[, 'TYPE']	<- X[, 'TYPE']-1 	
+	#
+	#	make 
+	
+	fit				<- coreg.adaptiveMHwithinGibbs.or170710(
+			X, phylo,
+			transmission=~TYPE,
+			infection=~TYPE,
+			adapt.batch=function(accn){  ifelse(accn<1e3, 20, 50) },
+			adapt.schedule=function(b){ 1+1*(1/b)^(1/3) }, 
+			mhsteps=3e3,													
+			maxHeight=10,
+			maxNodeDepth=Inf,
+			mincladesize=100,
+			coef_logprior_sd=10,			
+			hetInflation_logprior=NA,
+			debug.nolkl=FALSE
+	)	
 	save(fit, file=outfile)	
 	
 	fit.mcmc	<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
