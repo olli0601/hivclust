@@ -142,7 +142,7 @@ cr.master.ex3.check.likelihoods.aoiModel<- function()
 	save(fit, file=outfile)
 }
 
-cr.master.ex3.check.likelihoods<- function()
+cr.master.ex3.check.likelihoods.mincladesize100.maxHeight10<- function()
 {
 	require(coalreg)	
 	require(data.table)
@@ -242,5 +242,111 @@ cr.master.ex3.check.likelihoods<- function()
 			geom_vline(xintercept=log(5)) +
 			theme_bw() + facet_wrap(SAMPLE~REP, scales='free', ncol=9)
 	outfile	<- file.path(dirname(infile), gsub('\\.nwk',paste0('_coalreg_likelihoods_for_mean_other_params_1.pdf'),basename(infile)))
+	ggsave(file=outfile, w=15, h=15)
+}
+
+
+cr.master.ex3.check.likelihoods.mincladesize200.maxHeight30<- function()
+{
+	require(coalreg)	
+	require(data.table)
+	require(ape)
+	require(coda)
+	
+	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'	
+	coefs0		<- as.data.table(expand.grid( 	LOGSCALE=c(0.11, -1.04),
+					LOGHET=0,
+					COEF_INF=c(1.033, 1.29),
+					DUMMY=1))	
+	coefs0		<- coefs0[c(1,4),]
+	coefs0[, FIXED_PARAMS:= c('mean MCMC','trf.lasso best.fit')]
+	coef_trs	<- as.data.table(expand.grid( COEF_TR=c(1,log(5),2,2.5,3,3.5,4,5,6,7,8,10), 
+					SAMPLE=c(1,0.8,0.5),
+					DUMMY=1))
+	coef_trs	<- merge(coef_trs, coefs0, by='DUMMY',allow.cartesian=TRUE)
+	tmp			<- data.table(DUMMY=1, REP=1:10) 
+	coef_trs	<- merge(coef_trs, tmp, by='DUMMY',allow.cartesian=TRUE)	
+	setkey(coef_trs, COEF_INF, SAMPLE, COEF_TR)
+	infile		<- file.path(indir, 'm3.RR5.n1250_seed123_rep5.nwk')
+	
+	coef_trs	<- coef_trs[, {
+				#COEF_TR<-1; SAMPLE<- 0.5; LOGSCALE<- 0.11; LOGHET<- 0; COEF_INF<- 1.033; FIXED_PARAMS<- 'mean MCMC'; REP<-1
+				coef_tr		<- COEF_TR
+				coef_inf	<- COEF_INF
+				logscale	<- LOGSCALE
+				loghet		<- LOGHET
+				par.s		<- SAMPLE
+
+				set.seed(REP)
+				cat('\nprocess',coef_tr, ', ',par.s)	
+				tryCatch({
+							tr 			<- read.tree( infile )
+							if(par.s<1)
+								tr 		<- multi2di(drop.tip(tr, sample(tr$tip.label, replace=FALSE, size=length(tr$tip.label)*par.s)), random=FALSE)
+							n			<- length( tr$tip.label )
+							X 			<- data.frame( TYPE=grepl('I0', tr$tip.label) )
+							rownames(X) <- tr$tip.label		
+							sts 		<- setNames( node.depth.edgelength( tr )[1:n] , tr$tip.label )
+							bdt 		<- DatedTree( tr, sts )
+							X 			<- as.data.frame(X)
+							maxHeight	<- 30
+							maxNodeDepth<- Inf
+							mincladesize<- 200
+							transmission<- ~TYPE
+							infection	<- ~TYPE
+							bdts 		<- .slice.and.stitch.DatedTrees( bdt, maxHeight, mincladesize )		
+							X_tr 		<- as.data.frame( model.matrix( formula( transmission ) , data = X) )
+							X_inf 		<-  as.data.frame( model.matrix( formula( infection), data = X ) ) 
+							X_tr_mat 	<- data.matrix( X_tr )
+							X_inf_mat 	<- data.matrix( X_inf )
+							names_coef_tr	<- colnames( X_tr )[-1]
+							names_coef_inf	<- colnames( X_inf )[-1]	
+							.h <- function( coef_tr, .bdt = bdt ){
+								if (length( names_coef_tr ) == 0) {
+									rv <-  ( rep(1, n ) )
+								} else if (length( names_coef_tr ) == 1)  { 
+									rv <- exp(  X_tr[.bdt$tip.label, names_coef_tr] * coef_tr) ;
+								} else{
+									rv <- exp( as.vector( X_tr_mat[.bdt$tip.label, names_coef_tr] %*% coef_tr ) )
+								}
+								setNames( rv / mean ( rv ) , .bdt$tip.label )
+							}
+							.s <- function( coef_inf, .bdt = bdt ){
+								if (length( names_coef_inf ) == 0) {
+									rv <- ( rep(1, n ) )
+								} else if (length( names_coef_inf ) == 1) {
+									rv <-   exp( X_inf[.bdt$tip.label, names_coef_inf] * coef_inf ) ; 
+								} else {
+									rv <- exp( as.vector( X_inf_mat[.bdt$tip.label, names_coef_inf] %*% coef_inf) )
+								}
+								setNames( rv / mean ( rv ) , .bdt$tip.label)
+							}
+							h0			<- .h(coef_tr )
+							s0			<- .s(coef_inf )
+							loglkl		<- sum(sapply( bdts, 
+											function(.bdt ){
+												.loglik(.bdt, 
+														h0[.bdt$tip.label], 
+														s0[.bdt$tip.label], 
+														exp(logscale), 
+														maxHeight = maxHeight, 
+														maxNodeDepth = maxNodeDepth, 
+														hetInflation = exp(loghet))
+											}))
+							
+						}, error=function(e){ print(e$message); loglkl<<- NA_real_})								
+				list(LKL=loglkl)
+			}, by=c('COEF_TR','SAMPLE','COEF_INF','LOGSCALE','LOGHET','FIXED_PARAMS','REP')]
+	coef_trs<- subset(coef_trs, !is.na(LKL))
+	set(coef_trs, NULL, 'SAMPLE', coef_trs[,paste0('sampling prob\n',SAMPLE)])
+	set(coef_trs, NULL, 'REP', coef_trs[,paste0('seed\n',REP)])
+	outfile	<- file.path(dirname(infile), gsub('\\.nwk',paste0('_coalreg_likelihoods_for_mean_other_params_mincladesize200_maxHeight30.rda'),basename(infile)))
+	save(infile, coef_trs, file=outfile)	
+	
+	ggplot(coef_trs, aes(x=COEF_TR, y=LKL, colour=FIXED_PARAMS, group=interaction(FIXED_PARAMS,REP))) + 
+			geom_line() + geom_point(size=0.8) + 
+			geom_vline(xintercept=log(5)) +
+			theme_bw() + facet_wrap(SAMPLE~REP, scales='free', ncol=9)
+	outfile	<- file.path(dirname(infile), gsub('\\.nwk',paste0('_coalreg_likelihoods_for_mean_other_params_mincladesize200_maxHeight30_1.pdf'),basename(infile)))
 	ggsave(file=outfile, w=15, h=15)
 }

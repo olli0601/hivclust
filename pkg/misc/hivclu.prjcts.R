@@ -3877,7 +3877,7 @@ project.hivc.examlclock<- function()
 ######################################################################################
 project.Bezemer.VLIntros.DataFile<- function()
 {
-	infile	<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/seq_info/NONB_flowinfo.csv'
+	infile	<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo.csv'
 	df		<- as.data.table(read.csv(infile))
 }
 

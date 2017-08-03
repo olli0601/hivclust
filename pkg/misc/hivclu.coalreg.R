@@ -16,6 +16,107 @@ cr.hpc.submit<- function()
 		infiles				<- subset(infiles, REP<=30)
 		setkey(infiles, REP)
 		
+		formula.tr					<- '~TYPE'
+		formula.inf					<- '~TYPE'		
+		par.maxNodeDepth			<- Inf			
+		par.hetInflation_logprior	<- 0
+		par.noise					<- 0
+		par.bias					<- 1		
+		par.mincladesize			<- 100		
+		for(i in seq_len(nrow(infiles)))
+		{
+			infile						<- infiles[i,F]
+			par.s						<- 0.5
+			par.maxHeight				<- 10
+			extra						<- '_170803'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)
+			
+			par.s						<- 1
+			par.maxHeight				<- 10
+			extra						<- '_170803'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)
+			
+			par.s						<- 0.5
+			par.maxHeight				<- 25
+			extra						<- '_170713'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+			par.s						<- 1
+			par.maxHeight				<- 25
+			extra						<- '_170713'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+		}
+	}
+	if(0)
+	{
+		indir						<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir						<- '/work/or105/ATHENA_2016/master_examples'	
+		par.base.pattern			<- 'm3.RR5.n1250_seed123'
+		infiles				<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))	
+		infiles[, REP:= as.numeric(gsub('.*rep([0-9]+)\\.nwk','\\1',basename(F)))]
+		infiles				<- subset(infiles, REP<=30)
+		setkey(infiles, REP)
+		
 		par.maxNodeDepth			<- Inf
 		par.maxHeight				<- 10	
 		par.hetInflation_logprior	<- 0
@@ -28,7 +129,7 @@ cr.hpc.submit<- function()
 			infile						<- infiles[i,F]
 			formula.tr					<- '~TYPE'
 			formula.inf					<- '~ETSI'
-			extra						<- '_170713'			
+			extra						<- '_170803'			
 			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
 											' -formula.tr=',formula.tr,
 											' -formula.inf=',formula.inf,
@@ -48,7 +149,7 @@ cr.hpc.submit<- function()
 			stop()
 			formula.tr					<- '~TYPE'
 			formula.inf					<- '~TYPE'
-			extra						<- '_170713'			
+			extra						<- '_170803'			
 			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
 					' -formula.tr=',formula.tr,
 					' -formula.inf=',formula.inf,
@@ -2755,8 +2856,9 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 			'\npar.hetInflation_logprior=',par.hetInflation_logprior,
 			'\nextra=',extra)
 	
-	phylo	<- read.tree( infile )					
-	phylo 	<- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
+	phylo	<- read.tree( infile )	
+	if(par.s<1)
+		phylo 	<- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
 	#	create data.table with infection type
 	phi		<- data.table(	TAXA=phylo$tip.label, 
 							TYPE=sapply(strsplit(phylo$tip.label,'_',),'[[',2),
@@ -2793,7 +2895,7 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 								coef_logprior_sd=10																
 								)	
 	outfile	<- file.path(dirname(infile), gsub( '\\.nwk', 
-												paste0(	'_aMCMC170710',
+												paste0(	'_aMCMC170803',
 														extra,
 														'_tr',gsub(' ','',as.character(formula.tr)[2]),
 														'_inf',gsub(' ','',as.character(formula.inf)[2]),
@@ -3428,7 +3530,7 @@ cr.master.ex3.dev.MCMC6<- function()
 			infection=~TYPE,
 			adapt.batch=function(accn){  ifelse(accn<1e3, 20, 50) },
 			adapt.schedule=function(b){ 1+1*(1/b)^(1/3) }, 
-			mhsteps=3e3,													
+			mhsteps=5e3,													
 			maxHeight=10,
 			maxNodeDepth=Inf,
 			mincladesize=100,
@@ -3449,38 +3551,134 @@ cr.master.ex3.dev.MCMC6<- function()
 	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(outfile))), w=5, h=10)
 	plot(fit.mcmc.a)
 	dev.off()
+}
+
+cr.master.ex3.dev.MCMC7<- function()
+{
+	require(coalreg)	
+	require(data.table)
+	require(ape)
+	require(coda)
 	
-	#actual prior for TYPE and ETSI
-	prior.logTYPE.sd	<- apply(X,2,sd)[1]*5
-	dfp	<- rbind(	data.table(variable='logscale', x=seq(-15,15,1e-2), y=dnorm(seq(-15,15,1e-2), 0, 5)),
-			data.table(variable='TYPE', x=seq(-15,15,1e-2), y=dnorm(seq(-15,15,1e-2), 0, prior.logTYPE.sd)),
-			data.table(variable='ETSI', x=seq(-0.4,0.4,1e-3), y=dnorm(seq(-0.4,0.4,1e-3), 0, 0.1))
-	)				
-	prior.logTYPE.d		<- function(x){ dnorm(x,0, prior.logTYPE.sd) }
-	prior.logETSI.d		<- function(x){ dnorm(x, 0, 0.1) }				
-	#sampled parameters
-	tmp <- seq.int(1e3,5e4,4*5)
-	dfm	<- melt(cbind(as.data.table(fit.mcmc[tmp,]), data.table(IT=tmp)), id.vars='IT')
-	ggplot(dfm) + geom_histogram(aes(x=value, y=..density..), bins=50) + facet_wrap(~variable, scale='free', ncol=3) +
-			geom_line(data=dfp, aes(x=x, y=y, colour='red'))
-	ggsave(file=file.path(dirname(outfile), gsub('\\.rda',paste0('_coeffhistograms_from_prior.pdf'),basename(outfile))), w=10, h=7)
+	par.s	<- 0.5			
+	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep3.nwk'
+	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_TYPEaoi_mincladesize200_v7.rda'),basename(F)))
 	
+	set.seed(42)
+	phylo	<- read.tree( F )
+	if(par.s<1)
+		phylo <- drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s))
+		#phylo <- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
+	#	create data.table with infection type
+	phi		<- data.table(	TAXA=phylo$tip.label, 
+							TYPE=sapply(strsplit(phylo$tip.label,'_',),'[[',2),
+							ETSI=as.numeric(sapply(strsplit(phylo$tip.label,'_',),'[[',3)))
+	set(phi, NULL, 'TYPE', phi[,factor(TYPE,levels=c('I1','I0'))])
+	phi[, ETSI_C:= as.numeric(as.character(factor(ETSI<0.25,levels=c(TRUE,FALSE),labels=c('0','1'))))]
+	
+	#set(phi, NULL, 'ETSI', phi[,ETSI-mean(ETSI)])
+	#	coreg
+	tmp			<- unique(c('TYPE','TYPE'))
+	X			<- data.matrix(phi[,tmp,with=FALSE])
+	rownames(X)	<- phi[, TAXA]
+	colnames(X)	<- tmp
+	# 	make sure baseline is coded as x=0, and that acute stage is coded x=1 
+	#	hence exp(beta*x)=exp(beta) for individuals with x=1 and 1 for individuals with x=0
+	X[, 'TYPE']	<- X[, 'TYPE']-1 	
 	#
-	da	<- as.data.table(t(matrix(data=fit$accept, nrow=4, dimnames=list(c('logscale','logHetInflation','ETSI','TYPE'),NULL))))				
-	da[, BATCH:= ceiling(seq_len(nrow(da))/20 )]
-	da	<- melt(da, id.vars='BATCH')
-	da	<- da[, list(ACC=mean(value)), by=c('BATCH','variable')]
-	ggplot(da, aes(x=BATCH, y=ACC, colour=variable)) + geom_line() + geom_hline(yintercept=0.44) + facet_grid(variable~.)
-	ggsave(file=file.path(dirname(outfile), gsub('\\.rda',paste0('_accept.pdf'),basename(outfile))), w=10, h=10)
+	#	make 
 	
+	fit				<- coreg.adaptiveMHwithinGibbs.or170710(
+			X, phylo,
+			transmission=~TYPE,
+			infection=~TYPE,
+			adapt.batch=function(accn){  ifelse(accn<1e3, 20, 50) },
+			adapt.schedule=function(b){ 1+1*(1/b)^(1/3) }, 
+			mhsteps=5e3,													
+			maxHeight=10,
+			maxNodeDepth=Inf,
+			mincladesize=200,
+			coef_logprior_sd=10,			
+			hetInflation_logprior=NA,
+			debug.nolkl=FALSE
+	)	
+	save(fit, file=outfile)	
+	
+	fit.mcmc	<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
+	if(is.na(par.hetInflation_logprior))
+		fit.mcmc<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+	fit.mcmc	<- mcmc(fit.mcmc)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(outfile))), w=10, h=7)
+	plot(fit.mcmc)
+	dev.off()
+	fit.mcmc.a	<- mcmc(fit$trace_qsd)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(outfile))), w=5, h=10)
+	plot(fit.mcmc.a)
+	dev.off()
+}
+
+cr.master.ex3.dev.MCMC8<- function()
+{
+	require(coalreg)	
+	require(data.table)
+	require(ape)
+	require(coda)
+	
+	par.s	<- 0.5			
+	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep3.nwk'
+	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_TYPEaoi_mincladesize200_maxHeightInf_v8.rda'),basename(F)))
+	
+	set.seed(42)
+	phylo	<- read.tree( F )
+	if(par.s<1)
+		phylo <- drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s))
+	#phylo <- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
+	#	create data.table with infection type
+	phi		<- data.table(	TAXA=phylo$tip.label, 
+			TYPE=sapply(strsplit(phylo$tip.label,'_',),'[[',2),
+			ETSI=as.numeric(sapply(strsplit(phylo$tip.label,'_',),'[[',3)))
+	set(phi, NULL, 'TYPE', phi[,factor(TYPE,levels=c('I1','I0'))])
+	phi[, ETSI_C:= as.numeric(as.character(factor(ETSI<0.25,levels=c(TRUE,FALSE),labels=c('0','1'))))]
+	
+	#set(phi, NULL, 'ETSI', phi[,ETSI-mean(ETSI)])
+	#	coreg
+	tmp			<- unique(c('TYPE','TYPE'))
+	X			<- data.matrix(phi[,tmp,with=FALSE])
+	rownames(X)	<- phi[, TAXA]
+	colnames(X)	<- tmp
+	# 	make sure baseline is coded as x=0, and that acute stage is coded x=1 
+	#	hence exp(beta*x)=exp(beta) for individuals with x=1 and 1 for individuals with x=0
+	X[, 'TYPE']	<- X[, 'TYPE']-1 	
 	#
-	tr	<- as.data.table(fit$trace_qsd)
-	tr[, IT:=seq.int(1,nrow(tr))]
-	tr	<- subset(tr, IT%%(20*4)==0)
+	#	make 
 	
+	fit				<- coreg.adaptiveMHwithinGibbs.or170710(
+			X, phylo,
+			transmission=~TYPE,
+			infection=~TYPE,
+			adapt.batch=function(accn){  ifelse(accn<1e3, 20, 50) },
+			adapt.schedule=function(b){ 1+1*(1/b)^(1/3) }, 
+			mhsteps=5e3,													
+			maxHeight=Inf,
+			maxNodeDepth=Inf,
+			mincladesize=200,
+			coef_logprior_sd=10,			
+			hetInflation_logprior=NA,
+			debug.nolkl=FALSE
+	)	
+	save(fit, file=outfile)	
 	
-	1-rejectionRate(window(fit.mcmc, start=1e3, end=5e3, thin=4))
-	
+	fit.mcmc	<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
+	if(is.na(par.hetInflation_logprior))
+		fit.mcmc<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+	fit.mcmc	<- mcmc(fit.mcmc)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(outfile))), w=10, h=7)
+	plot(fit.mcmc)
+	dev.off()
+	fit.mcmc.a	<- mcmc(fit$trace_qsd)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(outfile))), w=5, h=10)
+	plot(fit.mcmc.a)
+	dev.off()
 }
 
 cr.master.ex3.runcoalreg.using.TYPE.ETFI.mbias.BFGS1<- function(indir, par.base.pattern, par.s, par.tsimb)
