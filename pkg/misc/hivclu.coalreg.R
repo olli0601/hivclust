@@ -4,9 +4,9 @@ cr.various<- function()
 	#cr.various.pangea()
 }
 
-cr.hpc.submit<- function()
+cr.hpc.submit.170803<- function()
 {
-	if(1)
+	if(0)
 	{
 		indir						<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
 		indir						<- '/work/or105/ATHENA_2016/master_examples'	
@@ -105,6 +105,70 @@ cr.hpc.submit<- function()
 			outdir		<- paste(DATA,"tmp",sep='/')
 			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+		}
+	}
+}
+
+cr.hpc.submit<- function()
+{	
+	if(1)
+	{
+		indir						<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir						<- '/work/or105/ATHENA_2016/master_examples'	
+		par.base.pattern			<- 'm3.RR5.n1250_seed123'
+		infiles				<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))	
+		infiles[, REP:= as.numeric(gsub('.*rep([0-9]+)\\.nwk','\\1',basename(F)))]
+		infiles				<- subset(infiles, REP<=30)
+		setkey(infiles, REP)
+		
+		formula.tr					<- '~TYPE'
+		formula.inf					<- '~ETSI'		
+		par.maxNodeDepth			<- Inf	
+		par.maxHeight				<- 25
+		par.hetInflation_logprior	<- 0
+		par.noise					<- 0
+		par.bias					<- 1		
+		par.mincladesize			<- 100		
+		for(i in seq_len(nrow(infiles)))
+		{
+			infile						<- infiles[i,F]
+			par.s						<- 0.5			
+			extra						<- '_170810'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=NA, hpc.walltime=23, hpc.mem="1800mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)
+			
+			par.s						<- 1
+			extra						<- '_170810'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=NA, hpc.walltime=23, hpc.mem="1800mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)							
 		}
 	}
 	if(0)
@@ -1283,6 +1347,72 @@ cr.png.compare<- function()
 	
 }
 	
+cr.master.ex3.adMCMC.evaluate.170803<- function()
+{
+	require(data.table)
+	require(coda)
+	
+	indir	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results_2'
+	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
+	infiles[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
+	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z]+)_.*','\\1',basename(F))]
+	infiles[, FORMULA_TR:= gsub('.*_tr([A-Z]+)_.*','\\1',basename(F))]
+	infiles[, SAMPLING:= 100*as.numeric(gsub('.*_s([0-1]\\.?[0-9]*).*','\\1',basename(F)))]
+	infiles[, MAXHEIGHT:= as.numeric(gsub('.*_mh([0-9]+)_.*','\\1',basename(F)))]
+	
+	tmp		<- lapply(seq_len(nrow(infiles)), function(i)
+			{
+				infile	<- infiles[i,F]
+				cat(basename(infile),'\n')
+				#infile	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results_2/m3.RR5.n1250_seed123_rep1_aMCMC170803_170713_trTYPE_infTYPE_mndInf_mh25_hetinf0_mcs100_s0.5.rda'
+				load(infile)	
+				fit.mcmc			<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
+				fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+				colnames(fit.mcmc)	<- paste0(c('','tr','inf'),colnames(fit.mcmc))				
+				fit.mcmc			<- mcmc(fit.mcmc)
+				#	raw plots
+				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(infile))), w=10, h=7)
+				plot(fit.mcmc)
+				dev.off()
+				fit.mcmc.a	<- mcmc(fit$trace_qsd)
+				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(infile))), w=5, h=10)
+				plot(fit.mcmc.a)
+				dev.off()
+				#	rm burn in and thin
+				tmp <- seq.int(1e3,1e4,4*5)
+				dfm	<- melt(cbind(as.data.table(fit.mcmc[tmp,]), data.table(IT=tmp)), id.vars='IT')
+				dfm	<- dfm[, list(STAT=paste0('q',c(0.025,0.25,0.5,0.75,0.975)), V=quantile(value,p=c(0.025,0.25,0.5,0.75,0.975))), by=c('variable')]
+				#	add acceptance
+				tmp	<- 1-rejectionRate(window(fit.mcmc, start=1e3, end=1e4, thin=4))
+				tmp	<- data.table(variable=names(tmp), STAT='acceptance',V=tmp)
+				dfm	<- rbind(dfm, tmp)
+				#	add ESS
+				tmp	<- effectiveSize(window(fit.mcmc, start=1e3, end=1e4, thin=4))
+				tmp	<- data.table(variable=names(tmp), STAT='ESS',V=tmp)
+				dfm	<- rbind(dfm, tmp)
+				#
+				dfm[, REP:=infiles[i,REP]]
+				dfm[, FORMULA_INF:=infiles[i,FORMULA_INF]]
+				dfm[, FORMULA_TR:=infiles[i,FORMULA_TR]]
+				dfm[, SAMPLING:=infiles[i,SAMPLING]]
+				dfm[, MAXHEIGHT:=infiles[i,MAXHEIGHT]]
+				dfm
+			})
+	dfm	<- do.call('rbind',tmp)
+	save(dfm, file=file.path(indir,'results.rda'))
+	
+	dfm	<- dcast.data.table(dfm, SAMPLING+MAXHEIGHT+REP+variable~STAT, value.var='V')
+	set(dfm, NULL, 'SAMPLING', dfm[, paste0('sampling=',SAMPLING,'%')])
+	set(dfm, NULL, 'MAXHEIGHT', dfm[, paste0('max height=',MAXHEIGHT)])
+	tmp	<- unique(subset(dfm, variable=='trTYPE', select=c('SAMPLING','MAXHEIGHT','REP','variable')))
+	tmp[, TRUTH:=log(5)]	
+	ggplot(dfm, aes(x=REP)) + 
+			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
+			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
+			facet_grid(variable~SAMPLING+MAXHEIGHT, scales='free')
+	ggsave(file=file.path(indir,'boxplots.pdf'),w=10,h=10)
+}
+
 cr.master.ex3.adMCMC.evaluate<- function()
 {
 	require(data.table)

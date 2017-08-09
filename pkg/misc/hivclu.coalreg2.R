@@ -7,7 +7,7 @@ cr.master.ex3.dev.MCMC2<- function()
 	
 	par.s	<- 0.5	
 	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
+	#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
 	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_adaptiveMCMC_50100.rda'),basename(F)))
 	
 	set.seed(42)
@@ -40,6 +40,73 @@ cr.master.ex3.dev.MCMC2<- function()
 																hetInflation_logprior=NA,
 																debug.nolkl=FALSE
 																)	
+	save(fit, file=outfile)	
+	
+	fit.mcmc	<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
+	if(is.na(par.hetInflation_logprior))
+		fit.mcmc<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+	fit.mcmc	<- mcmc(fit.mcmc)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(outfile))), w=10, h=7)
+	plot(fit.mcmc)
+	dev.off()
+	fit.mcmc.a	<- mcmc(fit$trace_qsd)
+	pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(outfile))), w=5, h=10)
+	plot(fit.mcmc.a)
+	dev.off()
+}
+
+cr.master.ex3.dev.MCMC3<- function()
+{
+	require(coalreg)	
+	require(data.table)
+	require(ape)
+	require(coda)
+	
+	par.s	<- 1	
+	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep30.nwk'
+	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_adaptiveMCMC_50100.rda'),basename(F)))
+	
+	set.seed(42)
+	phylo	<- read.tree( F )
+	if(par.s<1)
+		phylo 	<- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
+	#	create data.table with infection type
+	phi		<- data.table(	TAXA=phylo$tip.label, 
+			TYPE=sapply(strsplit(phylo$tip.label,'_',),'[[',2),
+			ETSI=as.numeric(sapply(strsplit(phylo$tip.label,'_',),'[[',3)))
+	set(phi, NULL, 'TYPE', phi[,factor(TYPE,levels=c('I1','I0'))])
+	#set(phi, NULL, 'ETSI', phi[,ETSI-mean(ETSI)])
+	#	coreg
+	X				<- data.matrix(phi[,2,with=FALSE])
+	rownames(X)	<- phi[, TAXA]
+	colnames(X)	<- colnames(phi)[2]
+	# 	make sure baseline is coded as x=0, and that acute stage is coded x=1 
+	#	hence exp(beta*x)=exp(beta) for individuals with x=1 and 1 for individuals with x=0
+	X[, 'TYPE']	<- X[, 'TYPE']-1 	 
+	
+	
+	n 	<- length( phylo$tip.label )
+	sts <- setNames( node.depth.edgelength( phylo )[1:n] , phylo$tip.label )
+	bdt <- DatedTree( phylo, sts )
+	maxHeight <- 25
+	mincladesize <- 100
+	bdts <- .slice.and.stitch.DatedTrees( bdt, maxHeight, mincladesize )
+	
+	
+	fit				<- coreg.adaptiveMHwithinGibbs.or170710(	X, 
+			phylo,
+			transmission=~TYPE,
+			infection=~TYPE,
+			adapt.batch=function(accn){  ifelse(accn<1e3, 20, 50) },
+			adapt.schedule=function(b){ 1+1*(1/b)^(1/3) }, 
+			mhsteps=3e3,													
+			maxHeight=25,
+			maxNodeDepth=Inf,
+			mincladesize=100,
+			coef_logprior_sd=10,			
+			hetInflation_logprior=NA,
+			debug.nolkl=FALSE
+	)	
 	save(fit, file=outfile)	
 	
 	fit.mcmc	<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
