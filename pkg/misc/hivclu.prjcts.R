@@ -3924,6 +3924,7 @@ project.Bezemer.VLIntros.DataFile<- function()
 
 project.Bezemer.VLIntros.LSD<- function()
 {	
+	require(data.table)
 	require(big.phylo)
 	#
 	#	write the overall dates file
@@ -3966,7 +3967,7 @@ project.Bezemer.VLIntros.LSD<- function()
 	lsd.args		<- '-v 1 -c -b 10'			# no rooting, no re-estimation of rates				
 	#	get files	
 	infiles	<- data.table(F=list.files(indir.ft, pattern='*newick$', full.names=TRUE, recursive=TRUE))
-	infiles	<- subset(tmp, !grepl('RAxML',F))
+	infiles	<- subset(infiles, !grepl('RAxML',F))
 	infiles[, SUBTYPE:= gsub('_.*','',basename(F))]
 	tmp		<- data.table(FD=list.files(indir.dates, pattern='*_lsddates.csv$', full.names=TRUE, recursive=TRUE))
 	tmp[, SUBTYPE:= gsub('_.*','',basename(FD))]
