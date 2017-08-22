@@ -100,6 +100,297 @@ seattle.170621.fastree<- function()
 	cmd.hpccaller(indir, outfile.cmd, cmd)	
 }
 
+seattle.170814.metadata.regionorigin<- function()
+{
+	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/sequences_meta.RData'
+	outfile	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/sequences_first_OR.rda'
+	load(infile)
+	ds	<- as.data.table(sequences_meta)
+	ds	<- subset(ds, select=c(seqID, newnum, seqy, seqm))
+	setnames(ds, colnames(ds), toupper(colnames(ds)))
+	set(ds, NULL, 'NEWNUM', ds[, as.integer(NEWNUM)])
+	set(ds, NULL, 'SEQID', ds[, as.character(SEQID)])
+	set(ds, NULL, 'SEQY', ds[, as.integer(SEQY)])
+	set(ds, NULL, 'SEQM', ds[, as.integer(SEQM)])
+	set(ds, NULL, 'SEQ_DATE', ds[, as.numeric(SEQY)+(as.numeric(SEQM)-1+.5)/12])
+	
+	dsf	<- ds[, {
+					z<- which(SEQ_DATE==min(SEQ_DATE))
+					list(SEQID=SEQID[z], SEQ_DATE1=min(SEQ_DATE))
+				}, by='NEWNUM']
+	dsf[, GENE:= dsf[,gsub('(.*)-[0-9]+$','\\1',SEQID)]]	
+	save(ds, dsf, file=outfile)
+	
+	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/person.RData'
+	outfile	<- gsub('\\.RData','_OR.rda',infile)
+	load(infile)
+	dp	<- as.data.table(person)
+	dp	<- subset(dp, select=c(newnum, race, b_yr, gender, transm, birthCountry, rsh_county_name, rsa_county_name, cur_county_name, hivyr, hivmo))
+	setnames(dp, colnames(dp), toupper(colnames(dp)))
+	
+	set(dp, NULL, 'NEWNUM', dp[, as.integer(NEWNUM)])
+	set(dp, NULL, 'RACE', dp[, as.character(RACE)])
+	set(dp, NULL, 'B_YR', dp[, as.integer(B_YR)])
+	set(dp, NULL, 'GENDER', dp[, as.character(GENDER)])
+	set(dp, NULL, 'TRANSM', dp[, as.character(TRANSM)])
+	set(dp, NULL, 'BIRTHCOUNTRY', dp[, as.character(BIRTHCOUNTRY)])
+	set(dp, NULL, 'RSH_COUNTY_NAME', dp[, as.character(RSH_COUNTY_NAME)])
+	set(dp, NULL, 'RSA_COUNTY_NAME', dp[, as.character(RSA_COUNTY_NAME)])
+	set(dp, NULL, 'CUR_COUNTY_NAME', dp[, as.character(CUR_COUNTY_NAME)])
+	set(dp, NULL, 'HIVYR', dp[, as.character(HIVYR)])
+	set(dp, NULL, 'HIVMO', dp[, as.character(HIVMO)])
+	
+	set(dp, NULL, 'RACE', dp[, gsub('\\([0-9]+\\)(.*)','\\1',RACE)])
+	set(dp, NULL, 'RACE', dp[, gsub('-','_',gsub('/','_',gsub(' ','_',gsub('Not Hispanic, |, All races','',RACE))))])
+	set(dp, NULL, 'TRANSM', dp[, gsub('[0-9]+\\.(.*)','\\1',TRANSM)])	
+	#set(dp, NULL, 'HIV_DIAG', dp[, as.numeric(HIVYR)+(as.numeric(HIVMO)-1+.5)/12])
+	
+	# use line below to create the following vector
+	# dp[, cat(paste(unique(BIRTHCOUNTRY), collapse='\", \"'))]
+	tmp	<- c( "(USA)United States"="USA", 
+			"(ZMB)Zambia"="AFR", 
+			"(SLV)El Salvador"="CAR", 
+			"(X99)Not Specified/Unknown"="UNKNOWN", 
+			"(MEX)Mexico"="MEX", 
+			"(VNM)Viet Nam"="SASIA", 
+			"(TZA)Tanzania, United Republic of"="AFR", 
+			"(MWI)Malawi"="AFR", 
+			"(PHL)Philippines"="SASIA", 
+			"(IRL)Ireland"="EU", 
+			"(PER)Peru"="SAM", 
+			"(ETH)Ethiopia"="AFR", 
+			"(KEN)Kenya"="AFR", 
+			"(PRI)Puerto Rico"="CAR", 
+			"(GRC)Greece"="EU", 
+			"(GTM)Guatemala"="CAR", 
+			"(CUB)Cuba"="CAR", 
+			"(X98)Other"="UNKNOWN", 
+			"(NIC)Nicaragua"="CAR", 
+			"(CIV)Cote d'Ivoire (Ivory Coast)"="AFR", 
+			"(ARG)Argentina"="SAM", 
+			"(ESP)Spain"="EU", 
+			"(ERI)Eritrea"="AFR", 
+			"(HKG)Hong Kong"="SASIA", 
+			"(VEN)Venezuela"="SAM", 
+			"(LBR)Liberia"="AFR", 
+			"(SOM)Somalia"="AFR", 
+			"(DOM)Dominican Republic"="CAR", 
+			"(ITA)Italy"="EU", 
+			"(THA)Thailand"="SASIA", 
+			"(UGA)Uganda"="AFR", 
+			"(GUF)French Guiana"="SAM", 
+			"(JAM)Jamaica"="CAR", 
+			"(CAN)Canada"="CAN", 
+			"(DMA)Dominica"="CAR", 
+			"(MRT)Mauritania"="AFR", 
+			"(EGY)Egypt"="AFR", 
+			"(CHN)China"="NASIA", 
+			"(JPN)Japan"="NASIA", 
+			"(DEU)Germany"="EU", 
+			"(ZWE)Zimbabwe"="AFR", 
+			"(PAN)Panama"="CAR", 
+			"(TWN)Taiwan, Province of China"="NASIA", 
+			"(IND)India"="NASIA", 
+			"(GUM)Guam"="PAC", 
+			"(KOR)Korea, Republic of (South)"="NASIA", 
+			"(LAO)Lao People's Democratic Republic"="SASIA", 
+			"(KHM)Cambodia"="SASIA", 
+			"(GBR)United Kingdom"="EU", 
+			"(ASM)American Samoa"="PAC", 
+			"(FJI)Fiji"="PAC", 
+			"(RUS)Russian Federation"="NASIA", 
+			"(SAU)Saudi Arabia"="MIDEAST", 
+			"(TGO)Togo"="AFR", 
+			"(COD)Congo, Democratic Republic of Zaire"="AFR", 
+			"(SLE)Sierra Leone"="AFR", 
+			"(MMR)Myanmar (Burma)"="SASIA", 
+			"(NGA)Nigeria"="AFR", 
+			"(COL)Colombia"="SAM", 
+			"(COG)Congo"="AFR", 
+			"(NOR)Norway"="EU", 
+			"(SDN)Sudan"="AFR", 
+			"(SVK)Slovakia"="EU", 
+			"(TON)Tonga"="PAC", 
+			"(BRA)Brazil"="SAM", 
+			"(POL)Poland"="EU", 
+			"(LUX)Luxembourg"="EU", 
+			"(NZL)New Zealand"="PAC", 
+			"(AFG)Afghanistan"="NASIA", 
+			"(MLI)Mali"="AFR", 
+			"(RWA)Rwanda"="AFR", 
+			"(CHL)Chile"="SAM", 
+			"(BDI)Burundi"="AFR", 
+			"(ECU)Ecuador"="CAR", 
+			"(GHA)Ghana"="AFR", 
+			"(FRA)France"="EU", 
+			"(AUS)Australia"="PAC", 
+			"(HND)Honduras"="CAR", 
+			"(SYR)Syrian Arab Republic"="MIDEAST", 
+			"(HTI)Haiti"="CAR", 
+			"(MNP)Northern Mariana Islands"="PAC", 
+			"(IDN)Indonesia"="SASIA", 
+			"(ZAF)South Africa"="AFR", 
+			"(CMR)Cameroon"="AFR", 
+			"(LKA)Sri Lanka"="NASIA", 
+			"(KAZ)Kazakhstan"="NASIA", 
+			"(IRN)Iran, Islamic Republic of"="NASIA", 
+			"(VIR)Virgin Islands, U.S."="CAR", 
+			"(MHL)Marshall Islands"="PAC", 
+			"(GIN)Guinea"="AFR", 
+			"(MAR)Morocco"="AFR", 
+			"(ROU)Romania"="EU", 
+			"(YUG)Yugoslavia"="EU", 
+			"(CRI)Costa Rica"="SAM", 
+			"(MYS)Malaysia"="SASIA", 
+			"(GMB)Gambia"="AFR", 
+			"(YEM)Yemen"="MIDEAST", 
+			"(SWZ)Swaziland"="AFR", 
+			"(UKR)Ukraine"="EU", 
+			"(AUT)Austria"="EU", 
+			"(TCD)Chad"="AFR", 
+			"(NLD)Netherlands"="EU", 
+			"(BFA)Burkina Faso"="AFR", 
+			"(URY)Uruguay"="SAM", 
+			"(NAM)Namibia"="AFR", 
+			"(NER)Niger"="AFR", 
+			"(SGP)Singapore"="SASIA", 
+			"(LBN)Lebanon"="MIDEAST", 
+			"(PRT)Portugal"="EU", 
+			"(BIH)Bosnia and Herzegovina"="EU",
+			"(BEN)Benin"="AFR", 
+			"(ISR)Israel"="MIDEAST", 
+			"(HUN)Hungary"="EU", 
+			"(MDA)Moldova, Republic of"="EU", 
+			"(BGR)Bulgaria"="EU", 
+			"(SEN)Senegal"="AFR", 
+			"(DNK)Denmark"="EU", 
+			"(LSO)Lesotho"="AFR", 
+			"(BHR)Bahrain"="MIDEAST", 
+			"(ALB)Albania"="EU", 
+			"(UZB)Uzbekistan"="NASIA", 
+			"(TTO)Trinidad and Tobago"="CAR", 
+			"(BWA)Botswana"="AFR", 
+			"(PAK)Pakistan"="NASIA", 
+			"(IRQ)Iraq"="NASIA", 
+			"(DJI)Djibouti"="AFR", 
+			"(BOL)Bolivia"="SAM", 
+			"(ATG)Antigua and Barbuda"="CAR", 
+			"(MOZ)Mozambique"="AFR", 
+			"(GAB)Gabon"="AFR", 
+			"(BEL)Belgium"="EU", 
+			"(BMU)Bermuda"="CAR", 
+			"(LVA)Latvia"="EU", 
+			"(LBY)Libyan Arab Jamahiriya"="AFR", 
+			"(FSM)Micronesia, Federated States of"="PAC", 
+			"(MNG)Mongolia"="NASIA", 
+			"(SWE)Sweden"="EU", 
+			"(TUR)Turkey"="MIDEAST", 
+			"(GEO)Georgia"="EU", 
+			"(WSM)Samoa"="PAC", 
+			"(AGO)Angola"="AFR", 
+			"(PNG)Papua New Guinea"="SASIA", 
+			"(GUY)Guyana"="SAM", 
+			"(AZE)Azerbaijan"="NASIA", 
+			"(NPL)Nepal"="NASIA", 
+			"(CZE)Czech Republic"="EU", 
+			"(DZA)Algeria"="AFR", 
+			"(PRY)Paraguay"="SAM", 
+			"(QAT)Qatar"="MIDEAST", 
+			"(BLZ)Belize"="SAM", 
+			"(MTQ)Martinique"="CAR", 
+			"(FIN)Finland"="EU", 
+			"(BRB)Barbados"="CAR", 
+			"(ISL)Iceland"="EU", 
+			"(PRK)Korea, Dem People's Rep of (North)"="NASIA", 
+			"(CHE)Switzerland"="EU", 
+			"(UMI)U.S. Minor Outlying Areas"="PAC")
+	dp	<- merge(dp, data.table(BIRTHCOUNTRY=names(tmp), BIRTHLOC=tmp), all.x=1, by='BIRTHCOUNTRY')
+	set(dp, dp[, which(is.na(BIRTHLOC))], 'BIRTHLOC', 'UNKNOWN')
+	save(dp, file=outfile)
+}
+
+seattle.170814.LSD<- function()
+{	
+	require(data.table)
+	require(big.phylo)
+	#
+	#	write the overall dates file
+	#
+	if(0)
+	{
+		infile.seq	<- '~/Box Sync/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/sequences_first_OR.rda'
+		infile.pers	<- "~/Box Sync/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/person_OR.rda"
+		infile.tree	<- '~/Box Sync/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA/Seattle.plus.LANL.USA.refse.ndrm_ft_reroot.newick'
+		load(infile.seq)
+		load(infile.pers)
+		
+		ph			<- read.tree(infile.tree)
+		dph			<- data.table(TAXA=ph$tip.label)
+		dph[, SEA:= as.numeric(grepl('^SEA',TAXA))]
+		tmp			<- dph[, which(SEA==1)]
+		set(dph, tmp, 'NEWNUM', as.integer(dph[tmp, gsub('SEATTLE\\.([0-9]+)\\|.*','\\1',TAXA)]))
+		#	there is one sequence per individual
+		dph			<- merge(dph, unique(subset(dsf, select=c(NEWNUM, SEQ_DATE1))), by='NEWNUM', all.x=TRUE)
+		
+		write.csv(subset(dph, !is.na(NEWNUM) & is.na(SEQ_DATE1)), file='~/Box Sync/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA/Seattle.plus.LANL.USA.refse.ndrm_ft_reroot_missingsamplingdates.csv')
+		
+		
+		infile.dates	<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_OR.csv'
+		df				<- as.data.table(read.csv(infile.dates))
+		df				<- subset(df, select=c(ID, SUBTYPE, SAMPLING_DATE))
+		setnames(df, c('ID','SAMPLING_DATE'), c('TAXA','DATE'))
+		tmp				<- copy(df)
+		set(tmp, NULL, 'TAXA', tmp[,gsub('[0-9]$','',paste0(TAXA,'_subtype',SUBTYPE))])
+		df				<- rbind(df, tmp)	
+		infile.dates	<- gsub('\\.csv','_lsddates.csv',infile.dates)
+		write.csv(df, row.names=FALSE, infile.dates)
+		#
+		#	write subtype specific dates files
+		#
+		indir.ft		<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
+		infiles			<- data.table(F=list.files(indir.ft, pattern='*newick$', full.names=TRUE))
+		infiles[, DATES_FILE:= gsub('_ft_bs100\\.newick','_lsddates.csv',F)]
+		invisible(infiles[, {
+							cmd		<- cmd.lsd.dates(infile.dates, F, DATES_FILE, run.lsd=FALSE)
+							system(cmd)
+							NULL
+						}, by='F'])
+	}	
+	#
+	#	run LSD 
+	#
+	#indir.ft		<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
+	#indir.dates		<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
+	#outdir			<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
+	
+	indir.ft		<- '/work/or105/ATHENA_2016/vlintros/trees_ft'
+	indir.dates		<- '/work/or105/ATHENA_2016/vlintros/trees_lsd'
+	outdir			<- '/work/or105/ATHENA_2016/vlintros/trees_lsd'
+	
+	ali.len			<- 1000				
+	lsd.args		<- '-v 1 -c -b 10'			# no rooting, no re-estimation of rates				
+	#	get files	
+	infiles	<- data.table(F=list.files(indir.ft, pattern='*newick$', full.names=TRUE, recursive=TRUE))
+	infiles	<- subset(infiles, !grepl('RAxML',F))
+	infiles[, SUBTYPE:= gsub('_.*','',basename(F))]
+	tmp		<- data.table(FD=list.files(indir.dates, pattern='*_lsddates.csv$', full.names=TRUE, recursive=TRUE))
+	tmp[, SUBTYPE:= gsub('_.*','',basename(FD))]
+	infiles	<- merge(infiles, tmp, by='SUBTYPE')
+	infiles[, FL:= file.path(outdir,gsub('_ft\\.|_ft_','_lsd_',gsub('\\.newick','',basename(F))))]	
+	#	build LSD commands
+	dlsd	<- infiles[, {
+				cmd		<- cmd.lsd(F, FD, ali.len, outfile=FL, pr.args=lsd.args)
+				list(CMD=cmd)
+			}, by='F']
+	tmp		<- dlsd[, paste(CMD, collapse='\n')]
+	#	qsub
+	cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=50, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=1, hpc.load='module load R/3.3.3')							
+	cmd		<- paste(cmd,tmp,sep='\n')
+	#cat(cmd)					
+	outfile	<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+	cmd.hpccaller(indir.ft, outfile, cmd)	
+}
+
 
 seattle.170601.clustering<- function()
 {	

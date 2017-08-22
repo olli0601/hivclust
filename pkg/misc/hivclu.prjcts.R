@@ -3878,7 +3878,8 @@ project.hivc.examlclock<- function()
 
 project.Bezemer.VLIntros<- function()
 {
-	project.Bezemer.VLIntros.LSD()	
+	#project.Bezemer.VLIntros.LSD()
+	project.Bezemer.VLIntros.FastTrees()
 }
 
 ######################################################################################
@@ -3993,7 +3994,7 @@ project.Bezemer.VLIntros.FastTrees<- function()
 {	
 	require(big.phylo)
 	#	run FastTree on HPC
-	if(0)
+	if(1)
 	{
 		#indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle'
 		indir			<- '/work/or105/ATHENA_2016/vlintros'
@@ -4008,7 +4009,7 @@ project.Bezemer.VLIntros.FastTrees<- function()
 			tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
 			
 			#	run on HPC
-			cmd				<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="5800mb",  hpc.nproc=1, hpc.load='module load R/3.3.2')
+			cmd				<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=1, hpc.load='module load R/3.3.3')
 			cmd				<- paste(cmd,tmp,sep='\n')
 			cat(cmd)					
 			outfile.cmd		<- paste("bez",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -4016,7 +4017,7 @@ project.Bezemer.VLIntros.FastTrees<- function()
 		}
 	}
 	#	re-root at random taxon with name 'subtree'
-	if(1)
+	if(0)
 	{
 		require(ape)
 		require(adephylo)

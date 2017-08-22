@@ -1317,6 +1317,27 @@ RakaiCirc.various<- function()
 	}	
 }
 
+RakaiCirc.seq.get.rawdistances<- function()
+{
+	require(ape)
+	require(data.table)
+	infile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700.fasta'
+	sq			<- read.dna(infile, format='fasta')
+	sq			<- as.character(sq)
+	sq[sq=='?']	<- '-'
+	sq			<- as.DNAbin(sq)
+	tmp			<- dist.dna(sq, model='raw', pairwise.deletion=TRUE)
+	tmp.save	<- copy(tmp)
+	tmp								<- as.matrix(tmp)
+	tmp[upper.tri(tmp, diag=TRUE)]	<- NA_real_
+	tmp								<- as.data.table(melt(tmp))
+	setnames(tmp, c('Var1','Var2','value'), c('TAXA','TAXA2','CONS_GDRW'))
+	gd			<- subset(tmp, !is.na(CONS_GDRW))
+	set(gd, NULL, 'TAXA', gd[, as.character(TAXA)])
+	set(gd, NULL, 'TAXA2', gd[, as.character(TAXA2)])
+	save(gd, file=gsub('\\.fasta','_rawgendist.rda',infile))	
+}
+	
 RakaiCirc.seq.get.phylogenies<- function()
 {
 	require(ape)
