@@ -3878,8 +3878,8 @@ project.hivc.examlclock<- function()
 
 project.Bezemer.VLIntros<- function()
 {
-	#project.Bezemer.VLIntros.LSD()
-	project.Bezemer.VLIntros.FastTrees()
+	project.Bezemer.VLIntros.LSD()
+	#project.Bezemer.VLIntros.FastTrees()
 }
 
 ######################################################################################
@@ -3981,7 +3981,7 @@ project.Bezemer.VLIntros.LSD<- function()
 			}, by='F']
 	tmp		<- dlsd[, paste(CMD, collapse='\n')]
 	#	qsub
-	cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=50, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=1, hpc.load='module load R/3.3.3')							
+	cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=30, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=1, hpc.load='module load R/3.3.3')							
 	cmd		<- paste(cmd,tmp,sep='\n')
 	#cat(cmd)					
 	outfile	<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -3997,7 +3997,7 @@ project.Bezemer.VLIntros.FastTrees<- function()
 	if(1)
 	{
 		#indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle'
-		indir			<- '/work/or105/ATHENA_2016/vlintros'
+		indir			<- '/work/or105/ATHENA_2016/vlintros/trees_ft'
 		infiles			<- list.files(indir, pattern='fasta$')
 		for(infile in infiles)
 		{
