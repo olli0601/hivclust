@@ -3960,7 +3960,7 @@ project.Bezemer.VLIntros.LSD<- function()
 	#indir.dates		<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
 	#outdir			<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
 	
-	indir.ft		<- '/work/or105/ATHENA_2016/vlintros/trees_ft'
+	indir.ft		<- '/work/or105/ATHENA_2016/vlintros/trees_ft_rerooted'
 	indir.dates		<- '/work/or105/ATHENA_2016/vlintros/trees_lsd'
 	outdir			<- '/work/or105/ATHENA_2016/vlintros/trees_lsd'
 		
@@ -3973,7 +3973,7 @@ project.Bezemer.VLIntros.LSD<- function()
 	tmp		<- data.table(FD=list.files(indir.dates, pattern='*_lsddates.csv$', full.names=TRUE, recursive=TRUE))
 	tmp[, SUBTYPE:= gsub('_.*','',basename(FD))]
 	infiles	<- merge(infiles, tmp, by='SUBTYPE')
-	infiles[, FL:= file.path(outdir,gsub('_ft\\.|_ft_','_lsd_',gsub('\\.newick','',basename(F))))]	
+	infiles[, FL:= file.path(outdir,gsub('_rr\\.|_rr_','_lsd_',gsub('\\.newick','',basename(F))))]	
 	#	build LSD commands
 	dlsd	<- infiles[, {
 				cmd		<- cmd.lsd(F, FD, ali.len, outfile=FL, pr.args=lsd.args)
@@ -4023,8 +4023,9 @@ project.Bezemer.VLIntros.FastTrees<- function()
 		require(adephylo)
 		require(phytools)		
 		indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
-		infiles			<- data.table(F=list.files(indir, pattern='newick$', recursive=TRUE, full.names=TRUE))		
-		infiles[, {
+		infiles			<- data.table(F=list.files(indir, pattern='newick$', recursive=TRUE, full.names=TRUE))
+		#infiles			<- subset(infiles, grepl('cpx06', F))
+		invisible(infiles[, {
 					#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft/06cpx_withD_bootstrap_trees/06cpx_withD_ft.000.newick'
 					ph	<- read.newick(F)		
 					tmp				<- which(grepl('subtype',ph$tip.label))[1]		
@@ -4034,7 +4035,7 @@ project.Bezemer.VLIntros.FastTrees<- function()
 					pdf(file=paste0(gsub('_ft\\.','_rr.',F),'.pdf'), w=20, h=10+Ntip(ph)/10)
 					plot(ph, show.node.label=TRUE, cex=0.3)
 					dev.off()
-				}, by='F']
+				}, by='F'])
 		
 	}
 }
