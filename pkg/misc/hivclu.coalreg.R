@@ -121,6 +121,9 @@ cr.hpc.submit<- function()
 		infiles				<- subset(infiles, REP<=30)
 		setkey(infiles, REP)
 		
+		hpc.q						<- NA	# 'pqeelab'
+		hpc.mem						<- "1800mb"	# "5600mb"
+		hpc.walltime				<- 71
 		formula.tr					<- '~TYPE'
 		formula.inf					<- '~TYPE'		
 		par.maxNodeDepth			<- Inf		
@@ -145,7 +148,7 @@ cr.hpc.submit<- function()
 					' -par.bias=', par.bias, 
 					' -par.s=', par.s, 
 					' -par.mincladesize=', par.mincladesize)
-			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
 			cat(cmd)	
 			outdir		<- paste(DATA,"tmp",sep='/')
 			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -167,7 +170,7 @@ cr.hpc.submit<- function()
 					' -par.bias=', par.bias, 
 					' -par.s=', par.s, 
 					' -par.mincladesize=', par.mincladesize)
-			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
 			cat(cmd)	
 			outdir		<- paste(DATA,"tmp",sep='/')
 			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -188,7 +191,7 @@ cr.hpc.submit<- function()
 					' -par.bias=', par.bias, 
 					' -par.s=', par.s, 
 					' -par.mincladesize=', par.mincladesize)
-			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
 			cat(cmd)	
 			outdir		<- paste(DATA,"tmp",sep='/')
 			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -208,7 +211,7 @@ cr.hpc.submit<- function()
 					' -par.bias=', par.bias, 
 					' -par.s=', par.s, 
 					' -par.mincladesize=', par.mincladesize)
-			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
 			cat(cmd)	
 			outdir		<- paste(DATA,"tmp",sep='/')
 			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -228,7 +231,7 @@ cr.hpc.submit<- function()
 					' -par.bias=', par.bias, 
 					' -par.s=', par.s, 
 					' -par.mincladesize=', par.mincladesize)
-			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
 			cat(cmd)	
 			outdir		<- paste(DATA,"tmp",sep='/')
 			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
