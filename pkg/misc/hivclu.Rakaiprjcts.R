@@ -1,11 +1,11 @@
 ######################################################################################
 project.Rakai.checkMissingRakai.150307<- function()
 {
-	png.f	<- '~/Dropbox (Infectious Disease)/PANGEA_data/2016-01-20_PANGEA_stats_by_sample.csv'	
-	#infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/CheckPangeaId.csv'
-	#infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/CheckPangeaId2.csv'
-	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/SequenceDataNOTAvailable_Documented.csv'
-	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/SequenceDataAvailable_NotDocumented.csv'	
+	png.f	<- '~/Dropbox (SPH Imperial College)/PANGEA_data/2016-01-20_PANGEA_stats_by_sample.csv'	
+	#infile	<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/CheckPangeaId.csv'
+	#infile	<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/CheckPangeaId2.csv'
+	infile	<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/SequenceDataNOTAvailable_Documented.csv'
+	infile	<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/SequenceDataAvailable_NotDocumented.csv'	
 	#
 	#
 	#
@@ -16,7 +16,7 @@ project.Rakai.checkMissingRakai.150307<- function()
 	df		<- merge(dpng, df, by='PANGEA_ID')	
 	write.csv(df, row.names=FALSE, file=gsub('.csv','_info.csv',infile))
 	
-	png.f	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/PANGEA_orig/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda'
+	png.f	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/PANGEA_orig/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda'
 	load(png.f)	#sq, sqi, si
 	set(si, NULL, 'PANGEA_ID', si[, regmatches(PANGEA_ID, regexpr('PG[0-9]+-[^-]+',PANGEA_ID))])
 	merge(si, df, by='PANGEA_ID')		
@@ -204,9 +204,9 @@ RakaiCirc.circ.timelines.init.160816<- function(rh, rd)
 
 RakaiCirc.recipient.female.get.info<- function(wdir=NA)
 {
-	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
-	indir.historicseq	<- "~/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree"
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	indir.historicseq	<- "~/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 	#
 	#	prepare RCCS data
 	#	
@@ -269,8 +269,8 @@ RakaiCirc.recipient.female.get.info<- function(wdir=NA)
 
 RakaiCirc.epi.get.info.170120<- function()
 {
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"	
-	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"	
+	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
 	load(infile)
 	#	a bit of clean up 
 	rd		<- as.data.table(rccsData)
@@ -511,7 +511,7 @@ RakaiCirc.epi.get.info.170208<- function()
 		x	
 	}
 	#
-	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/alldat_r15tor17.rda"
+	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/alldat_r15tor17.rda"
 	load(infile)
 	ra		<- as.data.table(alldat)
 	ra		<- subset(ra, select=c(RCCS_studyid,REGION,COMM_NUM,HH_NUM,SEX,AGEYRS,visdate,visit,lastNegDate,hiv,firstPosDate,eversex, evermarr, currmarr, polymar, sexpever, sexp1yr, sexp1out, sexgift, sexyear, religion, educate, educyrs, edcat, occ, occ2))
@@ -522,8 +522,8 @@ RakaiCirc.epi.get.info.170208<- function()
 		if(class(ra[[x]])=='Date')
 			set(ra, NULL, x, hivc.db.Date2numeric(ra[[x]]))
 	#	
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"	
-	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"	
+	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
 	load(infile)
 	#	a bit of clean up 
 	rd		<- as.data.table(rccsData)
@@ -919,7 +919,7 @@ RakaiCirc.epi.get.info.170208<- function()
 	set(ra, NULL, 'COMM_NUM', ra[, gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',COMM_NUM))))])
 	set(rd, NULL, 'COMM_NUM', rd[, gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',COMM_NUM))))])
 	#	add anonymized IDs
-	dc		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv'))
+	dc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv'))
 	dc		<- unique(subset(dc, select=c('COMM_NUM','COMM_NUM_A')))	
 	rh		<- merge(rh, dc, by='COMM_NUM')
 	ra		<- merge(ra, dc, by='COMM_NUM')
@@ -940,18 +940,18 @@ RakaiCirc.epi.get.info.170208<- function()
 
 RakaiCirc.seq.get.info<- function()
 {
-	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"	
-	infile.sangerstats	<- "~/Dropbox (Infectious Disease)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv"
-	infile.relabel		<- "~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional phylogenetic analyses/Region 1 gag analysis/SummaryofGagSequenceData.rda"
-	infile.assembly		<- "~/Dropbox (Infectious Disease)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"	
+	infile.sangerstats	<- "~/Dropbox (SPH Imperial College)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv"
+	infile.relabel		<- "~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional phylogenetic analyses/Region 1 gag analysis/SummaryofGagSequenceData.rda"
+	infile.assembly		<- "~/Dropbox (SPH Imperial College)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 	#
 	#	read all processed RCCS sequences 
 	#	
-	infile.region1		<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region1.rda'
-	infile.region2		<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region2.rda'
-	infile.region3		<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region3.rda'
-	infile.region4		<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region4.rda'
+	infile.region1		<- '/Users/Oliver/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region1.rda'
+	infile.region2		<- '/Users/Oliver/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region2.rda'
+	infile.region3		<- '/Users/Oliver/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region3.rda'
+	infile.region4		<- '/Users/Oliver/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region4.rda'
 	
 	load(infile.region1)
 	tmp		<- as.character(gag.sqn)
@@ -1110,9 +1110,9 @@ RakaiCirc.seq.get.info<- function()
 
 RakaiCirc.seq.get.info.PANGEA.170505<- function()
 {
-	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301'
 	#	start with latest Sanger IDs
-	dc		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/WTSI_PANGEA_InfoFind_2017-02-14.csv', header=TRUE, stringsAsFactors=FALSE))
+	dc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/WTSI_PANGEA_InfoFind_2017-02-14.csv', header=TRUE, stringsAsFactors=FALSE))
 	setnames(dc, c('Lane','Public'), c('SID','PIDF'))
 	dc		<- subset(dc, select=c(SID,PIDF))
 	set(dc, NULL, 'SID', dc[, gsub('#','_',SID)])
@@ -1151,14 +1151,14 @@ RakaiCirc.seq.get.info.PANGEA.170505<- function()
 	#	define not in Chris census
 	set(dc, dc[, which(is.na(PROC_STATUS))], 'PROC_STATUS', 'NotTrackedByChris')	
 	#	add extra category to PROC_STATUS: not processed by Kate
-	tmp		<- as.data.table(read.table("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/KG_PANGEA_Processed_597.txt", header=TRUE,stringsAsFactors=FALSE))
+	tmp		<- as.data.table(read.table("~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/KG_PANGEA_Processed_597.txt", header=TRUE,stringsAsFactors=FALSE))
 	setnames(tmp, c('SampleID','LaneID'), c('PID','SID'))
 	tmp[, KATE_PROC:='Y']
 	dc		<- merge(dc, tmp, by=c('PID','SID'), all.x=1)	
 	set(dc, dc[, which(PROC_STATUS=='ThoseWithFastqs_WithKateShiverOutput' & is.na(KATE_PROC))], 'PROC_STATUS','ThoseWithFastqs_KateNotProcessed') 
 	set(dc, NULL, 'KATE_PROC', NULL)	
 	#	add RIDs
-	load('~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda')
 	tmp		<- subset(as.data.table(rccsData), select=c(RCCS_studyid,Pangea.id, batch, date, SEX))
 	setnames(tmp, c('RCCS_studyid','Pangea.id','batch','date'), c('RID','PID','RCCS_SHIP_BATCH','SAMPLE_DATE'))
 	tmp		<- subset(tmp, !is.na(PID))
@@ -1174,28 +1174,28 @@ RakaiCirc.seq.get.info.PANGEA.170505<- function()
 	#	flag test plate
 	set(dc, dc[, which(grepl('PG14-UG9000[0-9][0-9]',PID))], 'RCCS_SHIP_BATCH', 'test')
 	#	see if on HPC	
-	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_bams.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
+	tmp		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_bams.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
 	tmp[, HPC_BAM:='Y']
 	set(tmp, NULL, 'SID', tmp[, gsub('\\.bam','',SID)])
 	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to bams from SANGER
 	stopifnot( !length(setdiff( tmp[, SID], dc[, SID] )) )
 	dc		<- merge(dc, tmp, by='SID',all.x=TRUE)
 	set(dc, dc[, which(is.na(HPC_BAM))], 'HPC_BAM', 'N')	
-	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_refs.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
+	tmp		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_refs.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
 	tmp[, HPC_REF:='Y']
 	set(tmp, NULL, 'SID', tmp[, gsub('_ref.fasta','',SID)])
 	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to refs from SANGER	
 	stopifnot( !length(setdiff( tmp[, SID], dc[, SID] )) )	
 	dc		<- merge(dc, tmp, by='SID',all.x=TRUE)
 	set(dc, dc[, which(is.na(HPC_REF))], 'HPC_REF', 'N')
-	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_fastq.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
+	tmp		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_fastq.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
 	tmp[, HPC_FASTQ:='Y']
 	set(tmp, NULL, 'SID', tmp[, gsub('_[0-9].fastq.gz','',SID)])	
 	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to fastqz's from SANGER	
 	dc		<- merge(dc, unique(tmp), by='SID',all.x=TRUE)
 	set(dc, dc[, which(is.na(HPC_FASTQ))], 'HPC_FASTQ', 'N')	
 	#	add latest PANGEA stats
-	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv', stringsAsFactors=FALSE))
+	tmp		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv', stringsAsFactors=FALSE))
 	setnames(tmp, 	c('Status','Submitted','DayDiff','ProjectID','Cohort','Submitted.1','Sequenced','Assembled','HIVcontig'), 
 			c('WTSI_STATUS','WTSI_SUBMITTED_DATE','DayDiff','PID','Cohort','WTSI_SUBMITTED','WTSI_SEQUENCED','WTSI_ASSEMBLED','WTSI_HIVCONTIG'))
 	tmp		<- subset(tmp, PID!='')
@@ -1206,13 +1206,13 @@ RakaiCirc.seq.get.info.PANGEA.170505<- function()
 	set(tmp, NULL, c('DayDiff','Cohort'), NULL)
 	dc		<- merge(dc, tmp, by='PID', all.x=1)
 	#	check what Dan assembled HISEQ
-	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/PANGEA_UCL_Feb2017_collated_stats_all_genomes_UCL_release_Feb2017_allhitodate.csv', stringsAsFactors=FALSE))
+	tmp		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/PANGEA_data/PANGEA_UCL_Feb2017_collated_stats_all_genomes_UCL_release_Feb2017_allhitodate.csv', stringsAsFactors=FALSE))
 	setnames(tmp, c('PANGEA_ID','PGID_full','WTSI_ID','Length', 'Cohort'), c('PID','PIDF','SID','UCL_LEN', 'COHORT'))
 	tmp		<- subset(tmp, select=c('PID','PIDF','SID','UCL_LEN', 'COHORT'))
 	#	convert SID to _3_ to match our convention
 	set(tmp, NULL, 'SID', tmp[, gsub('^([0-9]+)_[0-9]_([0-9]+)','\\1_3_\\2',SID)])
 	#	check what Dan assembled MISEQ
-	tmp2	<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/PANGEA_UCL_Feb2017_collated_stats_all_genomes_UCL_release_Feb2017_allmitodate.csv', stringsAsFactors=FALSE))
+	tmp2	<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/PANGEA_data/PANGEA_UCL_Feb2017_collated_stats_all_genomes_UCL_release_Feb2017_allmitodate.csv', stringsAsFactors=FALSE))
 	setnames(tmp2, c('PANGEA_ID','PGID_full','WTSI_lane_ID','Length', 'Cohort'), c('PID','PIDF','SID','UCL_LEN', 'COHORT'))
 	tmp2	<- subset(tmp2, select=c('PID','PIDF','SID','UCL_LEN', 'COHORT'))	
 	tmp		<- rbind(tmp, tmp2)
@@ -1243,7 +1243,7 @@ RakaiCirc.seq.get.info.PANGEA.170505<- function()
 	rs		<- subset(dc, !is.na(SID), select=c(RID, PID, PIDF, SID, RCCS_SHIP_BATCH, SAMPLE_DATE))
 	set(rs, NULL, 'SAMPLE_DATE', rs[, hivc.db.Date2numeric(SAMPLE_DATE)])
 	#	add VISIT for those individuals in pop surveillance
-	infile	<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	infile	<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
 	load(infile)
 	rd		<- as.data.table(rccsData)
 	setnames(rd, colnames(rd), gsub('\\.','_',toupper(colnames(rd))))	
@@ -1269,7 +1269,7 @@ RakaiCirc.various<- function()
 	require(data.table)
 	if(0)
 	{
-		wdir	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+		wdir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 		wdir	<- '/work/or105/Gates_2014/Rakai'
 		load(file.path(wdir,'RCCS_PhInfo_160825.rda'))
 		
@@ -1291,7 +1291,7 @@ RakaiCirc.various<- function()
 		require(ape)
 		require(data.table)
 		
-		wdir	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+		wdir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 		wdir	<- '/work/or105/Gates_2014/Rakai'
 		infile	<- file.path(wdir, "PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda")
 		load(infile)
@@ -1321,7 +1321,7 @@ RakaiCirc.seq.get.rawdistances<- function()
 {
 	require(ape)
 	require(data.table)
-	infile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700.fasta'
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700.fasta'
 	sq			<- read.dna(infile, format='fasta')
 	sq			<- as.character(sq)
 	sq[sq=='?']	<- '-'
@@ -1342,11 +1342,11 @@ RakaiCirc.seq.get.phylogenies<- function()
 {
 	require(ape)
 	require(data.table)
-	wdir	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	wdir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 	#
 	#	start with Kate s GP24 FastTree
 	#
-	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional phylogenetic analyses/Region 1 gag analysis/gagAllSmall.nwk'
+	infile	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional phylogenetic analyses/Region 1 gag analysis/gagAllSmall.nwk'
 	phf		<- read.tree(infile)
 	phfi	<- data.table(SEQIDb= phf$tip.label)
 	#	get patristic distances
@@ -1359,7 +1359,7 @@ RakaiCirc.seq.get.phylogenies<- function()
 	#
 	#	also use the PANGEA ExaML tree
 	#
-	infile	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_fasttree.rda'
+	infile	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_fasttree.rda'
 	load(infile)	#loads "ph", "dist.brl", "ph.gdtr", "ph.mrca", "clustering"
 	php		<- ph
 	tmp		<- copy(ph.gdtr)
@@ -1370,7 +1370,7 @@ RakaiCirc.seq.get.phylogenies<- function()
 	#
 	#	get raw genetic distances on latest Region1 alignment
 	#
-	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments/150825_Region1UG_codonaligned_p_PANGEA151113_p_HXB2.rda'
+	infile	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments/150825_Region1UG_codonaligned_p_PANGEA151113_p_HXB2.rda'
 	load(infile)	
 	sq			<- as.character(sq)
 	sq[sq=='?']	<- '-'
@@ -1424,7 +1424,7 @@ RakaiCirc.circ.dev160907<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 	
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info()
@@ -1446,11 +1446,11 @@ RakaiCirc.circ.dev160907<- function()
 	#
 	#	collect runs
 	#
-	infiles	<- data.table(	F_TRM= c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w200/RCCS_160902_w200_trmStats.rda',
-										'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w220/RCCS_160902_w220_trmStats.rda',
-										'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250/RCCS_160902_w250_trmStats.rda',
-										'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trmStats.rda',
-										'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w280/RCCS_160902_w280_trmStats.rda'
+	infiles	<- data.table(	F_TRM= c(	'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w200/RCCS_160902_w200_trmStats.rda',
+										'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w220/RCCS_160902_w220_trmStats.rda',
+										'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250/RCCS_160902_w250_trmStats.rda',
+										'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trmStats.rda',
+										'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w280/RCCS_160902_w280_trmStats.rda'
 							))
 	infiles[, F_PH:= gsub('trmStats.rda','trees.rda', F_TRM)]
 	infiles[, DIR:= dirname(F_TRM)]
@@ -1459,8 +1459,8 @@ RakaiCirc.circ.dev160907<- function()
 	#	for each run: get list of pairs
 	#	
 	rp		<- infiles[, {
-				#F_TRM	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trmStats.rda'
-				#F_PH	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trees.rda'
+				#F_TRM	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trmStats.rda'
+				#F_PH	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trees.rda'
 				load(F_TRM)	#loads df
 				dlkl	<- copy(df)
 				load(F_PH)	#loads phs and dfr
@@ -1619,7 +1619,7 @@ RakaiCirc.circ.dev160901<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 	
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info()
@@ -1631,11 +1631,11 @@ RakaiCirc.circ.dev160901<- function()
 	
 	
 	#	load likely transmissions summary from phyloscanner
-	infile.phsc.trms	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_lkltrms_summary.rda"
+	infile.phsc.trms	<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_lkltrms_summary.rda"
 	load(infile.phsc.trms)
 	dlkl				<- copy(df)
 	#	load trees from phyloscanner
-	infile.phsc.trees	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_all_trees.rda'	
+	infile.phsc.trees	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_all_trees.rda'	
 	load(infile.phsc.trees)
 	phs					<- tmp$phs
 	stat.phs			<- tmp$dfr
@@ -1768,7 +1768,7 @@ RakaiCirc.circ.dev160815<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"	
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"	
 	tmp		<- RakaiCirc.epi.get.info()
 	rh		<- tmp$rh
 	rd		<- tmp$rd
@@ -1804,7 +1804,7 @@ RakaiCirc.circ.dev160815<- function()
 	#
 	#	load info on phylotype runs
 	#
-	load("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda")	
+	load("~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda")	
 	ptyi	<- subset(pty.runs, select=c(TAXA, FILE_ID, PTY_RUN))
 	set(ptyi,NULL,'TAXA', ptyi[,gsub('_','-',gsub('_S[0-9]+','',TAXA))])
 	setnames(ptyi, c('TAXA','FILE_ID'), c('PID','SID'))
@@ -1929,7 +1929,7 @@ RakaiCirc.circ.dev160815<- function()
 	tmp		<- unique(subset(rt, SEQ_TYPE=='Sanger not started by Jul2016', select=c(RID, ROUND, SEX)))
 	tmp		<- merge(tmp, subset(rd, select=c(RID, PID)), by='RID')
 	write.table(tmp, file.path(wdir, 'RCCSparticipants_sequencingunclear.csv'))
-	infile.sangerstats	<- "~/Dropbox (Infectious Disease)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv"
+	infile.sangerstats	<- "~/Dropbox (SPH Imperial College)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv"
 	tmp2	<- as.data.table(read.csv(infile.sangerstats, stringsAsFactors=FALSE))	
 	setnames(tmp2, colnames(tmp2), gsub('\\.','_',toupper(colnames(tmp2))))
 	setnames(tmp2, c('PROJECTID','STATUS'), c('PID','SANGER_STATUS'))
@@ -1953,7 +1953,7 @@ project.Rakai.aliRegion1.597<- function()
 	require(plyr)
 	
 	#	load 597 new files
-	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/PANGEA_UG full alignment/PANGEA_HIV_n597_Imperial_v160916_RakaiPlates.fasta'
+	infile	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/PANGEA_UG full alignment/PANGEA_HIV_n597_Imperial_v160916_RakaiPlates.fasta'
 	sqn		<- read.dna(infile, format='fa')
 	sqni	<- data.table(TAXA=rownames(sqn))
 	sqni	<- subset(sqni, grepl('HXB2|consensus',TAXA))
@@ -1963,12 +1963,12 @@ project.Rakai.aliRegion1.597<- function()
 	sqn		<- sqn[ sqni[,TAXA], ]
 	
 	#	load PANGEA alignment
-	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_HXB2.fasta'
+	infile	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_HXB2.fasta'
 	sqp		<- read.dna(infile,format='fa')
 	
 	#	required: HXB2 in alignment
 	ans		<- seq.align.based.on.common.reference(sqn, sqp, return.common.sites=TRUE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
-	outfile	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_597_p_HXB2.fasta'
+	outfile	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_597_p_HXB2.fasta'
 	write.dna(ans, file=outfile, format='fasta', colsep='', nbcol=-1)
 	
 	#	get genetic distance matrix
@@ -1994,10 +1994,10 @@ project.Rakai.aliRegion1.597<- function()
 	#
 	#	resolve SANGER IDs
 	#
-	load('~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_597_p_HXB2.rda')
+	load('~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_597_p_HXB2.rda')
 	sqi		<- data.table(TAXA=rownames(sq), ID=seq_len(nrow(sq)))
 	
-	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_data/2016-09-18_PAN_SANGER_IDs.txt'
+	infile	<- '~/Dropbox (SPH Imperial College)/PANGEA_data/2016-09-18_PAN_SANGER_IDs.txt'
 	pni		<- as.data.table(read.table(infile, header=TRUE, sep='\t', comment.char='%'))
 	setnames(pni, colnames(pni), toupper(colnames(pni)))
 	set(pni, NULL, 'SANGERID', pni[, gsub('#','_',SANGERID)])
@@ -2017,19 +2017,19 @@ project.Rakai.aliRegion1.597<- function()
 	set(sq.gd, NULL, c('TAXA1','TAXA2'), NULL)
 	setnames(sq.gd, c('TAXA1_NEW','TAXA2_NEW'), c('TAXA1','TAXA2'))
 	#	write to file
-	outfile	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_597_p_HXB2.fasta'
+	outfile	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_597_p_HXB2.fasta'
 	write.dna(sq, file=outfile, format='fasta', colsep='', nbcol=-1)	
 	#
 	#	read COMETv0.5
 	#
-	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_597_p_HXB2_COMETv0.5.txt'
+	infile	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_597_p_HXB2_COMETv0.5.txt'
 	sqi		<- as.data.table(read.table(infile, header=TRUE, sep='\t',stringsAsFactors=FALSE))
 	setnames(sqi, c('name','subtype','length'), c('TAXA','COMET_ST','COMET_N'))
 	sqi[, COMET_V:='0.5']
 	#
 	#	read COMETv2.1
 	#
-	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_597_p_HXB2_COMETv2.1.txt'
+	infile	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_597_p_HXB2_COMETv2.1.txt'
 	tmp		<- as.data.table(read.table(infile, header=TRUE, sep='\t',stringsAsFactors=FALSE))
 	setnames(tmp, c('name','subtype','bootstrap.support'), c('TAXA','COMET_ST','COMET_BOOTSTRAP'))
 	tmp[, COMET_V:='2.1']
@@ -2043,13 +2043,13 @@ project.Rakai.aliRegion1.597<- function()
 ######################################################################################
 project.Rakai.aliRegion1.add.HXB2.RCCSmissing<- function()
 {
-	wdir	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	wdir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 	#	load Susanna s codon alignment
-	susa.f	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/Susannah3/Region1_codon aligned.fasta'
+	susa.f	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/Susannah3/Region1_codon aligned.fasta'
 	susa.s	<- read.dna(susa.f, format='fasta')
 	susa.d	<- data.table(	ID=gsub('\\*.*','',rownames(susa.s)),
 							DATA= factor(grepl('^PG', rownames(susa.s)), levels=c(TRUE,FALSE), label=c('PNG','LNL')))
-	infile.relabel	<- "~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional phylogenetic analyses/Region 1 gag analysis/SummaryofGagSequenceData.rda"				
+	infile.relabel	<- "~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional phylogenetic analyses/Region 1 gag analysis/SummaryofGagSequenceData.rda"				
 	load(infile.relabel)
 	s		<- as.data.table(summaryData)
 	s[, TAXA:= gsub('a\\||b\\|','',seqid)]		#taxa names have been tinkered with. does not merge.
@@ -2072,7 +2072,7 @@ project.Rakai.aliRegion1.add.HXB2.RCCSmissing<- function()
 	# 
 	#	get missing sequences
 	#
-	infile.gag	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree/gag.sqn.fasta'
+	infile.gag	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree/gag.sqn.fasta'
 	seq.m		<- read.dna(infile.gag, format='fasta')
 	seq.m		<- seq.m[ tmp[, relabel2], ]
 	file.seq.m	<- file.path('/Users/Oliver/duke/tmp', 'tmp_missingseq_150825.fasta')
@@ -2085,9 +2085,9 @@ project.Rakai.aliRegion1.add.HXB2.RCCSmissing<- function()
 	system(cmd)
 	#	inspecting mapout: HXB2 no internal sites removed, only end clipped 
 	#
-	#	move to '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments'
+	#	move to '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments'
 	#
-	file.rename(outfile, file.path('~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments',basename(outfile)))
+	file.rename(outfile, file.path('~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments',basename(outfile)))
 }
 ######################################################################################
 #
@@ -2095,18 +2095,18 @@ project.Rakai.aliRegion1.add.HXB2.RCCSmissing<- function()
 project.Rakai.aliRegion1.merge.with.PANGEA.160825<- function()
 {	
 	#	load Susanna s codon alignment and remove any PANGEA seqs
-	susa.f	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151129.fasta'
-	susa.f	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_missing_p_HXB2.fasta'
+	susa.f	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151129.fasta'
+	susa.f	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_missing_p_HXB2.fasta'
 	susa.s	<- read.dna(susa.f, format='fasta')
 	susa.d	<- data.table(TAXA=rownames(susa.s), DATA= factor(grepl('^PG', rownames(susa.s)), levels=c(TRUE,FALSE), label=c('PNG','LNL')))	
 	in.s	<- susa.s[subset(susa.d, DATA!='PNG')[, TAXA],]	
 	#	load PANGEA alignment	
-	png.f	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/PANGEA_orig/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda'
+	png.f	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/PANGEA_orig/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda'
 	load(png.f)	#sq, sqi, si
 	sq		<- sq[grepl('^PG[0-9]+|HXB2',rownames(sq)),]
 	#	required: HXB2 in alignment
 	sqn		<- seq.align.based.on.common.reference(in.s, sq, return.common.sites=TRUE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
-	outfile	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_HXB2.fasta'
+	outfile	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments/150825_Region1_codonaligned_p_PANGEA151113_p_HXB2.fasta'
 	write.dna(sqn, file=outfile, format='fasta', colsep='', nbcol=-1)
 	
 	#
@@ -2114,7 +2114,7 @@ project.Rakai.aliRegion1.merge.with.PANGEA.160825<- function()
 	#
 	
 	#	load summaryData
-	infile.relabel	<- "~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional phylogenetic analyses/Region 1 gag analysis/SummaryofGagSequenceData.rda"				
+	infile.relabel	<- "~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional phylogenetic analyses/Region 1 gag analysis/SummaryofGagSequenceData.rda"				
 	load(infile.relabel)
 	s		<- as.data.table(summaryData)
 	s[, TAXA:= gsub('a\\||b\\|','',seqid)]		#taxa names have been tinkered with. does not merge.
@@ -2145,7 +2145,7 @@ project.Rakai.aliRegion1.merge.with.PANGEA.160825<- function()
 	set(sqni, NULL, c('IDX','TAXA_ID','ID','SRC','TAXA'), NULL)
 	set(sqni, NULL, 'index', 1:nrow(sqni))
 	sq			<- sqn[sqni[, SEQID],]
-	outfile	<- '~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional Alignments/150825_Region1UG_codonaligned_p_PANGEA151113_p_HXB2.fasta'
+	outfile	<- '~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional Alignments/150825_Region1UG_codonaligned_p_PANGEA151113_p_HXB2.fasta'
 	write.dna(sqn, file=outfile, format='fasta', colsep='', nbcol=-1)
 	summaryData	<- copy(sqni)
 	save(sq, summaryData, file=gsub('\\.fasta','.rda',outfile))
@@ -2180,10 +2180,10 @@ project.Rakai.aliRegion1.merge.with.PANGEA.160825<- function()
 	set(sqni, tmp, 'ACCN', sqni[tmp, sapply(strsplit(TAXA,'.',fixed=1),function(x) rev(x)[1])])
 	tmp			<- sqni[, which(SRC=='LANL')]
 	set(sqni, tmp, 'ACCN', sqni[tmp, sapply(strsplit(TAXA,'*',fixed=1),'[[',1)])
-	write.dna( sqn, format='fasta', file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151201.fasta', colsep='', nbcol=-1)
-	save(sqni, sqn, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151201.rda')
+	write.dna( sqn, format='fasta', file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151201.fasta', colsep='', nbcol=-1)
+	save(sqni, sqn, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151201.rda')
 	
-	sqn				<- read.dna(file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151201_rm99gps.fasta',format='fasta')
+	sqn				<- read.dna(file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151201_rm99gps.fasta',format='fasta')
 	rownames(sqn)	<- gsub(' (stripped)','',rownames(sqn),fixed=1)
 	#	get info
 	sqni		<- data.table(TAXA=rownames(sqn), IDX=seq_len(nrow(sqn)))		
@@ -2213,8 +2213,8 @@ project.Rakai.aliRegion1.merge.with.PANGEA.160825<- function()
 	set(sqni, tmp, 'ACCN', sqni[tmp, sapply(strsplit(TAXA,'.',fixed=1),function(x) rev(x)[1])])
 	tmp			<- sqni[, which(SRC=='LANL')]
 	set(sqni, tmp, 'ACCN', sqni[tmp, sapply(strsplit(TAXA,'*',fixed=1),'[[',1)])
-	save(sqni, sqn, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151201_rm99gps.rda')	
-	write.dna( sqn, format='fasta', file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151201_rm99gps.fasta', colsep='', nbcol=-1)
+	save(sqni, sqn, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151201_rm99gps.rda')	
+	write.dna( sqn, format='fasta', file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/Susannah/PANGEA_Region1_Final2_151201_rm99gps.fasta', colsep='', nbcol=-1)
 }
 ######################################################################################
 project.Rakai.checkforARVs.150910<- function()
@@ -2227,10 +2227,10 @@ project.Rakai.checkforARVs.150910<- function()
 	#	library(devtools)
 	#	install_github("olli0601/big.phylo")
 	
-	f.arv	<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_150909.rda'
-	f.rccsid<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/150625_PangeaBoxes.csv'
-	f.sid	<- '~/Dropbox (Infectious Disease)/PANGEA_data/SangerUpdates/2015-07-20_PANGEA_3.csv'
-	f.seq	<- '~/Dropbox (Infectious Disease)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908.fasta'
+	f.arv	<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_150909.rda'
+	f.rccsid<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/150625_PangeaBoxes.csv'
+	f.sid	<- '~/Dropbox (SPH Imperial College)/PANGEA_data/SangerUpdates/2015-07-20_PANGEA_3.csv'
+	f.seq	<- '~/Dropbox (SPH Imperial College)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908.fasta'
 	#
 	#	get IDs into OK format
 	#
@@ -2263,7 +2263,7 @@ project.Rakai.checkforARVs.150910<- function()
 	seq				<- read.dna(file=f.seq, format='fasta')	
 	seq				<- seq[c("B.FR.83.HXB2_LAI_IIIB_BRU.K03455",arvdat[, PNG_ID_FULL]),]
 	rownames(seq)[1]	<- 'HXB2'
-	outfile			<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_PotentialDRMs_OR_150910.R'
+	outfile			<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_PotentialDRMs_OR_150910.R'
 	tmp				<- big.phylo:::seq.rm.drugresistance(seq, outfile=outfile)
 	nodr.info		<- tmp$nodr.info
 	nodr.seq		<- tmp$nodr.seq
@@ -2279,10 +2279,10 @@ project.Rakai.checkforARVs.150911<- function()
 	#	library(devtools)
 	#	install_github("olli0601/big.phylo")
 	
-	f.arv			<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_150911.rda'
-	f.rccsid		<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/150625_PangeaBoxes.csv'
-	f.sid			<- '~/Dropbox (Infectious Disease)/PANGEA_data/SangerUpdates/2015-07-20_PANGEA_3.csv'
-	f.seq			<- '~/Dropbox (Infectious Disease)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908.fasta'
+	f.arv			<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_150911.rda'
+	f.rccsid		<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/data/150625_PangeaBoxes.csv'
+	f.sid			<- '~/Dropbox (SPH Imperial College)/PANGEA_data/SangerUpdates/2015-07-20_PANGEA_3.csv'
+	f.seq			<- '~/Dropbox (SPH Imperial College)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908.fasta'
 	#
 	load(f.arv)	#	loads rakaidat
 	rakaidat		<- as.data.table(rakaidat)
@@ -2299,7 +2299,7 @@ project.Rakai.checkforARVs.150911<- function()
 	#
 	seq				<- seq[c("B.FR.83.HXB2_LAI_IIIB_BRU.K03455",d.seq[, PNG_ID]),]		
 	rownames(seq)[1]	<- 'HXB2'
-	outfile			<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_PotentialDRMs_OR_150911.R'
+	outfile			<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_PotentialDRMs_OR_150911.R'
 	tmp				<- big.phylo:::seq.rm.drugresistance(seq, outfile=outfile)
 	nodr.info		<- tmp$nodr.info
 	nodr.seq		<- tmp$nodr.seq

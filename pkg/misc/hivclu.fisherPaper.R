@@ -71,7 +71,7 @@ project.athena.Fisheretal.revision.coclustering.recentlate<- function()
 					textGrob("phylogenetic clusters by first date of diagnosis", gp = gpar(col = 'black'))), 3, 4, 3, 8, name = paste(runif(2)))
 	z <- gtable_add_rows(z, unit(2/8, "line"), 3)
 	grid.newpage()
-	pdf(file='~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/150626_revisionlate.pdf', w=10, h=7)
+	pdf(file='~/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/150626_revisionlate.pdf', w=10, h=7)
 	grid.draw(z)
 	dev.off()
 	
@@ -88,7 +88,7 @@ project.athena.Fisheretal.revision.coclustering.recentlate<- function()
 					textGrob("number of men in phylogenetic cluster", gp = gpar(col = 'black'))), 3, 4, 3, 8, name = paste(runif(2)))
 	z <- gtable_add_rows(z, unit(2/8, "line"), 3)
 	grid.newpage()
-	pdf(file='~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/150626_revisionlate_clusize.pdf', w=10, h=7)
+	pdf(file='~/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/150626_revisionlate_clusize.pdf', w=10, h=7)
 	grid.draw(z)
 	dev.off()
 	
@@ -100,7 +100,7 @@ project.athena.Fisheretal.revision.coclustering.recentlate<- function()
 			theme_bw() +
 			labs(colour='recipient MSM\nin cluster', x='men in cluster',y='late presenters in cluster') +
 			theme(legend.position='bottom')
-	ggsave(file='~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/150626_revisionlate_LATnvsSize.pdf', h=10, w=6)
+	ggsave(file='~/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/150626_revisionlate_LATnvsSize.pdf', h=10, w=6)
 	
 	
 	crlm2	<- gamlss(formula=LATn~RECc+clu.npat, family=NO(), data=subset(crl, select=c(LATn, RECc, RECn, clu.npat, clu.nFrgnInfection, clu.AnyPos_T1)))
@@ -122,7 +122,7 @@ project.athena.Fisheretal.revision.coclustering.recentlate<- function()
 			#facet_grid(~tC, scales='free') + 
 			labs(x='\npresence of recipient MSM\nin cluster', y='late presenters in cluster minus\nexpected number of late presenters in clusters with same size that have a recipient') +
 			theme(legend.position='bottom')
-	ggsave(file='~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/150626_revisionlate_contrastLATn.pdf', h=10, w=6)
+	ggsave(file='~/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/150626_revisionlate_contrastLATn.pdf', h=10, w=6)
 	
 	
 	library(coin)
@@ -270,7 +270,7 @@ project.athena.Fisheretal.composition.censoringfraction<- function()
 	ctn			<- subset(cens.Patient.n, grepl('X.msm',stat) & method.brl=='3pa1H1.48C2V100bInfT7')
 	setkey(ctn, stat, t.period)
 	ctn			<- unique(ctn)
-	plot.file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150304_CensoringFraction.pdf'
+	plot.file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150304_CensoringFraction.pdf'
 	ct1			<- project.athena.Fisheretal.censoring.model(ct, ctb, ctn, plot.file=plot.file, factors=factors)	
 	#
 	# illustrate extent of censoring
@@ -284,7 +284,7 @@ project.athena.Fisheretal.composition.censoringfraction<- function()
 			scale_y_continuous(breaks=seq(0,2000,100), minor_breaks=NULL, expand=c(0,5)) + 
 			scale_x_continuous(breaks=seq(2004, 2015, 2), minor_breaks=seq(2004, 2015, 0.5), expand=c(0,0)) +
 			facet_grid(. ~ stage, margins=FALSE) + theme_bw() + theme(panel.grid.major= element_line(colour="grey70", size=0.4), panel.grid.minor= element_line(colour="grey70", size=0.4))	
-	plot.file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150305_censoringUandUA.pdf'
+	plot.file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150305_censoringUandUA.pdf'
 	ggsave(file=plot.file, w=10, h=4)
 	#
 	dfc			<- data.table(expand.grid(tC=seq(2008,2013,0.05), factor=unique(tmp$stage), stringsAsFactors=FALSE))
@@ -300,7 +300,7 @@ project.athena.Fisheretal.composition.censoringfraction<- function()
 			facet_grid(. ~ factor, margins=FALSE) + theme_bw() +
 			labs(y='censored\npotential transmission intervals\n(%)', x='hypothetical time of database closure') +
 			theme(panel.grid.major= element_line(colour="grey70", size=0.4), panel.grid.minor= element_line(colour="grey70", size=0.4))
-	plot.file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150305_censoringUandUApc.pdf'
+	plot.file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150305_censoringUandUApc.pdf'
 	ggsave(file=plot.file, w=10, h=3)
 	#
 	#
@@ -409,7 +409,7 @@ project.athena.Fisheretal.composition.potentialintervals.table<- function()
 					dcast.data.table( subset(dftp, select=c('method.brl', 'factor', '4')), factor~method.brl, value.var='4')	)
 	#	inf estimates	
 	tmp			<- subset(ans, select=c('factor','3pa1H1.48C2V100bInfT7','3pa1H1.94C2V100bInfT7','3pa1H1.09C2V100bInfT7'))
-	file		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_PoIntervals_InfTime.csv'
+	file		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_PoIntervals_InfTime.csv'
 	write.csv(tmp, file=file, eol='\r\n')
 }
 ######################################################################################
@@ -504,7 +504,7 @@ project.athena.Fisheretal.composition.problintervals.enrichment<- function()
 		labs(x='stage in HIV infection and care continuum', y='Transmission intervals\n(%)') +
 		facet_wrap(~method.legend, ncol=3) +
 		theme(axis.text=element_text(size=14), axis.title=element_text(size=14), legend.key.size=unit(11,'mm'), legend.position = "bottom", legend.box = "vertical", axis.ticks.x=element_blank(), axis.text.x=element_blank(), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7)) 
-	file		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150309_PrMIntervalsEnrichment.pdf'
+	file		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150309_PrMIntervalsEnrichment.pdf'
 	ggsave(file=file, width=14, height=14)
 
 
@@ -619,7 +619,7 @@ project.athena.Fisheretal.composition.potentialintervals.withmissing.table<- fun
 	#
 	runs.table			<- subset(runs.table, !grepl('ARTstarted|GroupsUDA',method.risk))
 	tmp					<- subset(runs.table, grepl('bInfT7', method.brl) & grepl('C2', method.brl))	
-	file				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PotAdjIntervalsByCoalComp.csv'
+	file				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PotAdjIntervalsByCoalComp.csv'
 	project.athena.Fisheretal.composition.potentialintervals.withmissing.table.generate(tmp, file)
 	
 }
@@ -654,13 +654,13 @@ project.athena.Fisheretal.composition.problintervals.withmissing.table<- functio
 	#
 	runs.table			<- subset(runs.table, !grepl('ARTstarted|GroupsUDA',method.risk))
 	tmp					<- subset(runs.table, grepl('bInfT7', method.brl) & grepl('H1.48', method.brl))	
-	file				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150308_PrMIntervals.csv'
+	file				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150308_PrMIntervals.csv'
 	project.athena.Fisheretal.composition.problintervals.withmissing.table.generate(tmp, file)
 	#
 	#	second table
 	#	
 	tmp					<- subset(runs.table, grepl('C2', method.brl) & grepl('bInf', method.brl) & grepl('H1.48', method.brl))	
-	file				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150308_PrMIntervalsByCladeFreq.csv'
+	file				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150308_PrMIntervalsByCladeFreq.csv'
 	project.athena.Fisheretal.composition.problintervals.withmissing.table.generate(tmp, file)	
 }
 ######################################################################################
@@ -714,7 +714,7 @@ project.athena.Fisheretal.composition.transprob.uncertainty<- function()
 			theme(strip.text=element_blank(), strip.background=element_blank(), axis.text.x=element_blank(), axis.ticks=element_blank(), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey60", size=0.4), panel.grid.minor=element_line(colour="grey60", size=0.4) ) +			
 			facet_wrap(~factor.legend, ncol=2, scales='free') +
 			labs(	x='transmission intervals', y='transmission probability\n(%)')
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150311_TrProbUncertainty.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150311_TrProbUncertainty.pdf'
 	ggsave(file=file, w=10, h=8)
 }
 ######################################################################################
@@ -804,7 +804,7 @@ project.athena.Fisheretal.composition.transprob.byexclusioncriteria<- function()
 			stat_summary(geom= "crossbar", width=0.65, fatten=0, color="white", fun.data = function(x){ return(c(y=median(x), ymin=median(x), ymax=median(x))) }) +		
 			theme_bw() + theme(panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major.x=element_blank(), panel.grid.major=element_line(colour="grey70", size=0.7)) +
 			facet_wrap(~method.legend, ncol=3)
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150312_TrProbByCriteria.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150312_TrProbByCriteria.pdf'
 	ggsave(file=file, w=10, h=10)
 			
 }
@@ -885,7 +885,7 @@ project.athena.Fisheretal.composition.riskratio.exclusioncriteria<- function()
 			theme_bw() + theme(panel.margin.y=unit(1.25, "lines"), panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_line(colour="grey70", size=0.4), panel.grid.major.x=element_blank(), panel.grid.major.y=element_line(colour="grey70", size=0.4)) +
 			labs(x="", y="Transmission risk ratio\ncompared to diagnosed, untreated men with CD4>500\n(%)") +
 			facet_wrap(~method.legend, ncol=3, scales='free')
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150316_RRByExclusionCriteria.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150316_RRByExclusionCriteria.pdf'
 	ggsave(file=file, w=10, h=10)
 	#
 	
@@ -948,7 +948,7 @@ project.athena.Fisheretal.composition.prop.overall<- function()
 			theme_bw() + theme(strip.text=element_text(size=14), axis.text=element_text(size=14), axis.title=element_text(size=14), legend.key.size=unit(10.5,'mm'), plot.margin=unit(c(0,0,-5,0),"mm"), panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey70", size=0.7)) + #coord_flip() +
 			geom_bar(stat='identity', position='dodge') + geom_errorbar(aes(ymin=100*l95.bs, ymax=100*u95.bs), width=0.3, position=position_dodge(width=0.9)) 
 	
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/160603_PropOverall.pdf'		
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/160603_PropOverall.pdf'		
 	ggsave(file=file, w=5, h=3.5)		
 }
 ######################################################################################
@@ -1020,8 +1020,8 @@ project.athena.Fisheretal.composition.prop.exclusiongendistance<- function()
 			geom_bar(stat='identity',binwidth=1, position='dodge') + 
 			geom_errorbar(aes(ymin=l95.bs*100, ymax=u95.bs*100), width=0.3, position=position_dodge(width=0.9))	+ 
 			facet_grid(method.legend ~ t.period.long, margins=FALSE)
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150618_PropByInfectionTime.pdf'
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150618_PropByInfectionTimePraw.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150618_PropByInfectionTime.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150618_PropByInfectionTimePraw.pdf'
 	ggsave(file=file, w=10, h=7)		
 }
 ######################################################################################
@@ -1106,7 +1106,7 @@ project.athena.Fisheretal.composition.prop.exclusioncriteria<- function()
 			geom_bar(stat='identity',binwidth=1, position='dodge') + 
 			geom_errorbar(aes(ymin=l95.bs*100, ymax=u95.bs*100), width=0.3, position=position_dodge(width=0.9))	+ 
 			facet_grid(method.legend ~ t.period.long, margins=FALSE)
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150316_PropByInfectionTime.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150316_PropByInfectionTime.pdf'
 	ggsave(file=file, w=10, h=10)
 	
 	tmp2	<- subset(tmp[c(1,6:13), ], select=method.brl)
@@ -1121,7 +1121,7 @@ project.athena.Fisheretal.composition.prop.exclusioncriteria<- function()
 			geom_bar(stat='identity',binwidth=1, position='dodge') + 
 			geom_errorbar(aes(ymin=l95.bs*100, ymax=u95.bs*100), width=0.3, position=position_dodge(width=0.9))	+ 
 			facet_grid(method.legend ~ t.period.long, margins=FALSE)
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150316_PropByExclusionCriteria.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150316_PropByExclusionCriteria.pdf'
 	ggsave(file=file, w=10, h=25)	
 }
 ######################################################################################
@@ -1190,7 +1190,7 @@ project.athena.Fisheretal.composition.prop.phylolikelihoods<- function()
 			geom_bar(stat='identity',binwidth=1, position='dodge') + 
 			geom_errorbar(aes(ymin=l95.bs*100, ymax=u95.bs*100), width=0.3, position=position_dodge(width=0.9))	+ 
 			facet_grid(method.legend ~ t.period.long, margins=FALSE)
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150312_PropByLklMethod.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150312_PropByLklMethod.pdf'
 	ggsave(file=file, w=10, h=13)	
 }
 ######################################################################################
@@ -1249,7 +1249,7 @@ project.athena.Fisheretal.composition.prop.samplingcensoring<- function()
 			geom_bar(stat='identity',binwidth=1, position='dodge') + 
 			geom_errorbar(aes(ymin=l95.bs*100, ymax=u95.bs*100), width=0.3, position=position_dodge(width=0.9))	+ 
 			facet_grid(stat.legend ~ t.period.long, margins=FALSE)
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150312_PropBySamplingCens.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150312_PropBySamplingCens.pdf'
 	ggsave(file=file, w=10, h=10)	
 }
 ######################################################################################
@@ -1300,7 +1300,7 @@ project.athena.Fisheretal.composition.transprob<- function()
 			scale_x_continuous(breaks=seq(0,100,10), minor_breaks=seq(0,100,5), expand=c(0,0)) +
 			labs(x='phylogenetically derived transmission probability\nper observed transmission interval\n(%)')
 			#theme(panel.grid.minor=element_line(colour="grey60", size=0.2), panel.grid.major=element_line(colour="grey60", size=0.4))
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150311_TrProbHist.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150311_TrProbHist.pdf'
 	ggsave(file=file, w=10, h=3)
 	#	overall stats
 	YX[, c(mean(tp), quantile(tp, prob=c(0.025, 0.25, 0.5, 0.75, 0.975, 1)))]
@@ -1381,13 +1381,13 @@ project.athena.Fisheretal.composition.problintervals.table<- function()
 	#	first table
 	#
 	dft					<- subset(dft.all, grepl('bInfT7', method.brl) & grepl('H1.48', method.brl))
-	file				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150304_PrIntervalsByCoalComp.csv'
+	file				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150304_PrIntervalsByCoalComp.csv'
 	project.athena.Fisheretal.composition.problintervals.table.generate(dft, file)
 	#
 	#	second table
 	#
 	dft					<- subset(dft.all, grepl('C2', method.brl) & grepl('bInf', method.brl) & grepl('H1.48', method.brl))
-	file				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150304_PrIntervalsByCladeFreq.csv'
+	file				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150304_PrIntervalsByCladeFreq.csv'
 	project.athena.Fisheretal.composition.problintervals.table.generate(dft, file)
 }
 ######################################################################################
@@ -1436,7 +1436,7 @@ project.athena.Fisheretal.composition.acute<- function()
 			theme_bw() +
 			theme(legend.position='bottom', legend.text=element_text(size=14), legend.key.size=unit(7,'mm'), axis.title=element_text(size=14), axis.text.x=element_text(size=14), axis.text.y=element_text(size=14), strip.background = element_blank(), strip.text = element_blank(), panel.grid.major.y = element_line(colour="black", size=0.4), panel.grid.minor.y = element_line(colour="black", size=0.4), panel.grid.major.x=element_blank(), panel.grid.minor.x=element_blank(), plot.margin=unit(c(0,2,0,0),"cm")) +	
 			guides(fill=guide_legend(ncol=2))
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150223_AcuteSpec_Time.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150223_AcuteSpec_Time.pdf'
 	ggsave(file=file, w=10, h=4)
 	#
 	tmp[, table(t.period, Acute_Spec)]
@@ -2354,7 +2354,7 @@ project.athena.Fisheretal.composition.recipients.repr<- function()
 	setkey(ans, STAT, t.period, DATA)
 	
 	ans			<- subset(ans, select=c("STAT","t.period","DATA","0.025","0.25","mean","0.75","0.975"))
-	file		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_RecipMSMRepresentative.csv'
+	file		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_RecipMSMRepresentative.csv'
 	write.csv(ans, file=file, eol="\r\n", row.names=FALSE)
 }
 ######################################################################################
@@ -2381,7 +2381,7 @@ project.athena.Fisheretal.composition.probtranspairs.Ard<- function()
 	
 	
 	df.immu.allmsm
-	file		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150319_NoContactPotentialTransmitters.csv'
+	file		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150319_NoContactPotentialTransmitters.csv'
 	write.csv(df.nc, file=file, eol='\r\n')	
 }
 ######################################################################################
@@ -2431,7 +2431,7 @@ project.athena.Fisheretal.composition.conftranspairs.divergence<- function()
 			#labs(x='time elapsed\n(years)', y='genetic distance\n(subst/site)', title='sequence pairs\nbetween transmitters and recipients\nin epidemiologically confirmed pairs\n') +
 			labs(x='time elapsed\n(years)', y='genetic distance\n(subst/site)', title='epidemiologically confirmed\ntransmission pairs\n') +
 			theme(panel.grid.major=element_line(colour="grey70", size=0.4), panel.grid.minor=element_line(colour="grey70", size=0.2))
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150320_ConfPairsBrl2.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150320_ConfPairsBrl2.pdf'
 	ggsave(file=file, w=5, h=5)	
 }
 ######################################################################################
@@ -2475,7 +2475,7 @@ project.athena.Fisheretal.composition.probtranspairs.divergence<- function()
 			#labs(x='time elapsed\n(years)', y='genetic distance\n(subst/site)', title='sequence pairs\nbetween transmitters and recipients\nin phylogenetically probable pairs\n') +
 			labs(x='time elapsed\n(years)', y='genetic distance\n(subst/site)', title='phylogenetically probable\ntransmission pairs\n') +
 			theme(panel.grid.major=element_line(colour="grey70", size=0.4), panel.grid.minor=element_line(colour="grey70", size=0.2))
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150320_ProbPairsBrl2.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150320_ProbPairsBrl2.pdf'
 	ggsave(file=file, w=5, h=5)
 	
 	
@@ -2491,7 +2491,7 @@ project.athena.Fisheretal.composition.probtranspairs.divergence<- function()
 			scale_y_continuous(breaks=seq(0,0.2,0.02), limit=c(0,0.15), expand=c(0,0)) +
 			theme_bw() + labs(x='time elapsed\n(years)', y='evolutionary divergence\n(subst/site)') +
 			theme(panel.grid.major=element_line(colour="grey70", size=0.4), panel.grid.minor=element_line(colour="grey70", size=0.4))
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150302_ProbPairsBrl.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150302_ProbPairsBrl.pdf'
 	ggsave(file=file, w=8, h=8)
 	
 	require(scales)
@@ -2504,7 +2504,7 @@ project.athena.Fisheretal.composition.probtranspairs.divergence<- function()
 			scale_size_continuous(range = c(1,4), trans = sqrt_trans(), guide=FALSE) +
 			theme_bw() + labs(x='time elapsed\n(years)', y='evolutionary divergence\n(subst/site)') +
 			theme( legend.position=c(1,1), legend.justification=c(1,1), panel.grid.major=element_line(colour="grey70", size=0.4), panel.grid.minor=element_line(colour="grey70", size=0.4))
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150302_ProbPairsPhyloLkl.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150302_ProbPairsPhyloLkl.pdf'
 	ggsave(file=file, w=5, h=5)
 	
 	
@@ -2521,7 +2521,7 @@ project.athena.Fisheretal.composition.probtranspairs.divergence<- function()
 			scale_colour_brewer(name='time elapsed\n(years)', palette='Dark2') +
 			labs(x='evolutionary divergence\n(subst/site)', y='relative transmission probability') +
 			theme_bw() + theme(legend.position=c(1,1), legend.justification=c(1,1),panel.grid.major=element_line(colour="grey70", size=0.4)) 
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150302_PhyloLkl.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150302_PhyloLkl.pdf'
 	ggsave(file=file, w=5, h=5)
 	
 	
@@ -2614,7 +2614,7 @@ project.athena.Fisheretal.composition.probtranspairs.table<- function()
 	setkey(ans, stat, t.period)
 	ans		<- subset(ans, select=c('stat','t.period','n3pa1H1.48C2V100bInfT7','p3pa1H1.48C2V100bInfT7','n3pa1H1.48C3V100bInfT7','p3pa1H1.48C3V100bInfT7','n3pa1H1.48C1V100bInfT7','p3pa1H1.48C1V100bInfT7',
 									'n3pa1H1.48C2V100bInfs0.7T7','p3pa1H1.48C2V100bInfs0.7T7','n3pa1H1.48C2V100bInfs0.85T7','p3pa1H1.48C2V100bInfs0.85T7'))
-	file		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150310_PrPairs.csv'
+	file		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150310_PrPairs.csv'
 	write.csv(ans, file=file, eol='\r\n')	
 	#
 	#	multiple transmitters
@@ -2634,7 +2634,7 @@ project.athena.Fisheretal.composition.probtranspairs.table<- function()
 			scale_y_continuous(breaks=seq(0,100,10)) +
 			scale_fill_brewer(name='time of diagnosis of\nrecipient MSM', palette='Set2') +
 			theme(legend.position=c(1,1), legend.justification=c(1,1), panel.grid.major.y=element_line(colour="grey70", size=0.4), panel.grid.minor.y=element_line(colour="grey70", size=0.4), panel.grid.major.x=element_blank(), panel.grid.minor.x=element_blank())
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150302_MultiPairs.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150302_MultiPairs.pdf'
 	ggsave(file=file, w=10, h=3)
 	
 	
@@ -2699,7 +2699,7 @@ project.athena.Fisheretal.composition.cluster.typeI<- function()
 			scale_colour_brewer(palette='Set2', name='Distance threshold') + 
 			theme_bw() + labs(x='clade frequency threshold',y='probability that sequences from\nthe same individual do not co-cluster\n(%)') +			
 			theme(legend.position=c(0,1), legend.justification=c(0,1), panel.grid.major=element_line(colour="grey70", size=0.4))
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150228_ClusterTypeI.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150228_ClusterTypeI.pdf'
 	ggsave(file=file, w=5, h=5)
 	
 }
@@ -2769,7 +2769,7 @@ project.athena.Fisheretal.composition.cluster.thresholds<- function()
 			scale_colour_brewer(name='clustering\nthreshold', palette='Dark2') +
 			theme_bw() + labs(x='phylogenetic cluster size', y='individuals in cluster\n(cumulative number)') +
 			theme(legend.position=c(1,0), legend.justification=c(1,0), panel.grid.major=element_line(colour="grey70", size=0.5))
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150228_ClusterInd.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150228_ClusterInd.pdf'
 	ggsave(file=file, w=5, h=6)
 	#
 	#	plot prob transmitters in cluster; need YX.tpairs for correct clustering criteria .. TODO
@@ -2904,7 +2904,7 @@ project.athena.Fisheretal.composition.prop.recent<- function()
 			theme_bw() +
 			theme(panel.margin=unit(1, "lines"), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank(), panel.grid.major.x=element_line(colour='grey70', size=0.5), panel.grid.minor.x=element_line(colour='grey70', size=0.2)) +
 			facet_grid(~t.period.long)
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150325_PropRecent.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150325_PropRecent.pdf'
 	ggsave(file, w=12, h=10)
 }
 ######################################################################################
@@ -2945,7 +2945,7 @@ project.athena.Fisheretal.composition.seqfraction<- function()
 	method.RISK		<- 'm2Awmx.wtn.tp'
 	method.WEIGHT	<- ''			
 	method.BRL		<- '3pa1H1.48C2V100bInfT7'		
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_SeqFraction.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_SeqFraction.pdf'
 	factors			<- project.athena.Fisheretal.sensitivity.factor.legend(method.RISK)
 	project.athena.Fisheretal.sensitivity.getfigures.pseq(runs.table, file, method.DENOM, method.BRL, method.RISK, method.WEIGHT, factors, tperiod.info)
 }
@@ -3083,7 +3083,7 @@ project.athena.Fisheretal.composition.testing.of.ProbTr<- function()
 			theme_bw() +
 			theme(legend.position=c(1,0), legend.justification=c(1,0), panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.4)) +
 			labs(x= 'time between last negative HIV test and diagnosis\n(years)', y='Proportion with a last negative test', colour='')
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150318_Testing.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150318_Testing.pdf'
 	ggsave(file=file, w=10, h=10)
 	#
 	subset(df.test, TESTL==1 & method.brl=='3pa1H1.48C2V100bInfT7')
@@ -3306,7 +3306,7 @@ project.athena.Fisheretal.composition.viralload<- function()
 			facet_wrap(~Patient, scales='free') + labs(x='', y='log10 viral load\n(cps/ml)') +
 			theme(strip.text=element_blank(), strip.background=element_blank())
 	
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_VLtraj.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_VLtraj.pdf'
 	ggsave(file=file, w=10, h=7)
 	
 }
@@ -3519,7 +3519,7 @@ project.athena.Fisheretal.composition.DiagCD4350<- function()
 		#extract left axis label		
 		g 	<- gtable_add_grob(g, g2$grobs[[which(g2$layout$name == "ylab")]], pp$t, length(g$widths), pp$b)
 		#draw the whole thing	
-		file	<- paste('/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150316_DiagCD4350_',df.Praw.e0cp[1,method.brl],'.pdf', sep='')		
+		file	<- paste('/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150316_DiagCD4350_',df.Praw.e0cp[1,method.brl],'.pdf', sep='')		
 		pdf(file=file, w=6, h=4) # plot saved by default to Rplots.pdf
 		grid.newpage()
 		grid.draw(g)
@@ -3709,7 +3709,7 @@ project.athena.Fisheretal.composition.CD4model<- function()
 				theme_bw() +
 				facet_wrap(~Patient, scales='free') + labs(x='', y='CD4 count\n(cells/mm3)') +
 				theme(strip.text=element_blank(), strip.background=element_blank())
-		file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_CD4.pdf'
+		file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_CD4.pdf'
 		ggsave(file=file, w=10, h=7)
 		
 		#file			<- paste(outdir, '/ATHENA0312_CD4endpoint_check.pdf',sep='')	
@@ -3785,7 +3785,7 @@ project.athena.Fisheretal.composition.CD4model<- function()
 					scale_fill_manual(name='CD4 progression to', values=tmp[, unique(colour)], guide=T) +
 					theme_bw() + theme(legend.position='bottom',  strip.background = element_blank(), strip.text = element_blank()) +
 					guides(fill=guide_legend(ncol=2))
-			file	<- file				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150123_ATHENA_2014_06_Patient_AllMSM_ARTno_by_CD4.pdf'
+			file	<- file				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150123_ATHENA_2014_06_Patient_AllMSM_ARTno_by_CD4.pdf'
 			ggsave(w=10,h=6,file=file)
 			
 			ggplot(df.cd4cov, aes(x=t, y=N_CD4_350_ART/N_CD4_350)) + geom_bar(stat='identity') + theme_bw() +
@@ -4058,7 +4058,7 @@ project.athena.Fisheretal.composition.putativeinfectionwindow<- function()
 			scale_y_log10(breaks=c(10, seq(20,100,20), 200))+
 			labs(x='duration of putative infection window\n(months)', y='') +
 			theme_bw()
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150223_PutInfWindow_Duration.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150223_PutInfWindow_Duration.pdf'
 	ggsave(file=file, w=10, h=4)
 	#
 	nrow(subset(tmp, IPWd<1)) / nrow(tmp)

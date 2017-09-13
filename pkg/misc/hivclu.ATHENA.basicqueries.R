@@ -1,8 +1,8 @@
 ######################################################################################
 eval.seq.first.sequences.numbers<- function()
 {
-	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile)
 	#
 	#	sequence numbers per individual	
@@ -44,8 +44,8 @@ eval.seq.first.sequences.numbers<- function()
 ######################################################################################
 eval.seq.first.sequences.timetosequencing<- function()
 {
-	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile)
 	#
 	#	sequence numbers per individual	
@@ -86,9 +86,9 @@ eval.migrants.WTprop.160618<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	indir		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+	indir		<- "~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update"
 	infile		<- file.path(indir,"ATHENA_1502_All_PatientKeyCovariates.R")
-	outdir		<- "/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_GuidingTransmissionElimination"
+	outdir		<- "/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2016/2016_GuidingTransmissionElimination"
 	load(infile)	
 	df			<- copy(df.all)
 	#	convert dates to numeric
@@ -481,9 +481,9 @@ eval.migrants.WTprop.160228<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	indir		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+	indir		<- "~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update"
 	infile		<- file.path(indir,"ATHENA_1502_All_PatientKeyCovariates.R")
-	outdir		<- "/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_GuidingTransmissionElimination"
+	outdir		<- "/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2016/2016_GuidingTransmissionElimination"
 	load(infile)	
 	df			<- copy(df.all)
 	#	convert dates to numeric
@@ -1178,8 +1178,8 @@ eval.migrants.WTprop.160228<- function()
 eval.diag.newdiagnoses.by.migration.region<- function()
 {
 	require(viridis)
-	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile)
 	#
 	#	age group
@@ -1229,8 +1229,8 @@ eval.diag.newdiagnoses.by.migration.region<- function()
 eval.diag.newdiagnoses.by.age<- function()
 {
 	require(viridis)
-	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile)
 	
 	
@@ -1331,8 +1331,8 @@ eval.diag.newdiagnoses.by.age<- function()
 eval.diag.inrecentinfection<- function()
 {
 	require(viridis)
-	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile)
 	
 	dfs		<- df.all[, {
@@ -1450,9 +1450,9 @@ eval.diag.characteristics.by.age<- function()
 	require(scales)
 	require(Hmisc)
 	
-	infile.hiv	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	infile.pop	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile.hiv	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	infile.pop	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile.hiv)
 	#
 	#	reduce to patients with / without first sequence
@@ -1531,8 +1531,8 @@ eval.spatial.crudetimetrends.allForeign<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -1606,8 +1606,8 @@ eval.time2diag.crudetimetrends.allMSM<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed_t2d.rda'	
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_t2d_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed_t2d.rda'	
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_t2d_'
 	#
 	#	load: 
 	#		dfs 	(preprocessed HIV diagnoses for 2010-2015 in Netherlands among known Het,MSM,IDU)
@@ -1671,8 +1671,8 @@ eval.spatial.crudetimetrends.allMSM<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -1811,8 +1811,8 @@ eval.spatial.crudetimetrends.youngMSM<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -1876,8 +1876,8 @@ eval.spatial.crudetimetrends.midMSM<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -1941,8 +1941,8 @@ eval.spatial.crudetimetrends.oldMSM<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'	
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -2006,9 +2006,9 @@ eval.spatial.INLA.allMSM.2010to2015<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
-	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
+	ggd.inla.file	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -2113,9 +2113,9 @@ eval.spatial.INLA.youngMSM.2010to2015<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
-	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
+	ggd.inla.file	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -2231,9 +2231,9 @@ eval.spatial.INLA.oldMSM.2010to2015<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
-	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
+	ggd.inla.file	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -2323,9 +2323,9 @@ eval.spatial.INLA.midMSM.2010to2015<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
-	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
+	ggd.inla.file	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -2414,9 +2414,9 @@ eval.spatial.INLA.allMSM.timetrends<- function()
 	require(INLA)
 	require(data.table)
 	library(RColorBrewer)
-	infile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
-	ggd.inla.file	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
-	outfile.base	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
+	ggd.inla.file	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/GGD_2012_INLA.graph"
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	#
 	#	load: 
 	#		dd 		(preprocessed HIV diagnoses + population counts for 2010-2015 in Netherlands)
@@ -2492,10 +2492,10 @@ eval.spatial.prepare<- function()
 	require(maps)
 	require(spdep)
 	require(INLA)
-	infile.ggd		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/GGD_2012.shp"
-	infile.hiv		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	infile.pop		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'			
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
+	infile.ggd		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_latest/GGD_2012.shp"
+	infile.hiv		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	infile.pop		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'			
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed.rda'
 	#
 	#	prepare INLA graph file
 	#
@@ -2676,10 +2676,10 @@ eval.time2diag.prepare<- function()
 	require(maps)
 	require(spdep)
 	require(INLA)
-	infile.ggd		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/GGD_2012.shp"
-	infile.hiv		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	infile.pop		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'			
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed_t2d.rda'
+	infile.ggd		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_latest/GGD_2012.shp"
+	infile.hiv		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	infile.pop		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'			
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/diagrates_INLA/ATHENA_1610_INLA_preprocessed_t2d.rda'
 	#
 	#	prepare INLA graph file
 	#
@@ -2751,9 +2751,9 @@ eval.diag.rates.by.age<- function()
 	require(viridis)
 	require(scales)
 	
-	infile.hiv	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	infile.pop	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile.hiv	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	infile.pop	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile.hiv)
 	#
 	#	reduce to patients with / without first sequence
@@ -2971,9 +2971,9 @@ eval.pop.by.age.migration<- function()
 	require(viridis)
 	require(scales)
 	
-	infile.hiv	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	infile.pop	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile.hiv	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	infile.pop	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile.hiv)
 	#
 	#	age group
@@ -3086,8 +3086,8 @@ eval.diag.newdiagnoses.by.migration<- function()
 	require(viridis)
 	require(data.table)
 	require(ggplot2)
-	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile)
 	#
 	#	get first sequence
@@ -3180,15 +3180,15 @@ eval.diag.newdiagnoses.by.migration<- function()
 	ggplot(tmp, aes(x=YEAR, y=TRM_INDATA_C, colour=RegionOrigin)) + geom_line() + facet_grid(~Trm) 
 	tmp	<- dcast.data.table(melt(tmp, measure.vars=c('NDC','TRM_INDATA_C')), Trm+YEAR~RegionOrigin+variable, value.var='value')
 	
-	write.csv(tmp, row.names=FALSE, file='~/Dropbox (Infectious Disease)/OR_Work/2017/2017_AIDSFonds/trm_events_numbers.csv')
+	write.csv(tmp, row.names=FALSE, file='~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_AIDSFonds/trm_events_numbers.csv')
 	
 }
 ######################################################################################
 eval.diag.newdiagnoses.by.age.migration<- function()
 {
 	require(viridis)
-	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile)
 	#
 	#	age group
@@ -3325,8 +3325,8 @@ eval.diag.newdiagnoses.by.age.migration<- function()
 eval.diag.newdiagnoses.by.age.migration.city<- function()
 {
 	require(viridis)
-	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile)
 	#
 	#	age group
@@ -3392,8 +3392,8 @@ eval.diag.newdiagnoses.by.age.migration.city<- function()
 ######################################################################################
 eval.seq.sequence.coverage.among.diagnosed<- function()
 {
-	infile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
+	infile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/info/ATHENA_1610_'
 	load(infile)
 	#
 	#	sequence coverage	

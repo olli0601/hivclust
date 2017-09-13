@@ -7,8 +7,8 @@ seattle.170601.rm.drug.resistance.mutations<- function()
 {
 	require(big.phylo)
 	#	handle DRMs
-	infile.fasta		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.fasta'
-	outfile				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm.fasta'
+	infile.fasta		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.fasta'
+	outfile				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm.fasta'
 	sq					<- read.dna(infile.fasta, format='fa')	
 	tmp					<- which(grepl("HXB2",rownames(sq)))
 	rownames(sq)[tmp]	<- 'HXB2'
@@ -21,10 +21,10 @@ seattle.170607.rm.drug.resistance.mutations<- function()
 {
 	require(big.phylo)
 	#	handle DRMs
-	infile.fasta		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.fasta'
-	outfile				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.ndrm.fasta'	
-	infile.fasta		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.PHSKCLANLe.refse.fasta'
-	outfile				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.PHSKCLANLe.refse.ndrm.fasta'
+	infile.fasta		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.fasta'
+	outfile				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.ndrm.fasta'	
+	infile.fasta		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.PHSKCLANLe.refse.fasta'
+	outfile				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.PHSKCLANLe.refse.ndrm.fasta'
 	sq					<- read.dna(infile.fasta, format='fa')	
 	tmp					<- which(grepl("HXB2",rownames(sq)))
 	rownames(sq)[tmp]	<- 'HXB2'
@@ -38,11 +38,11 @@ seattle.170601.fastree<- function()
 	require(big.phylo)
 	
 	#	first tree
-	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.alignment.fasta'
+	infile.fasta	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.alignment.fasta'
 	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
 	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
 	#	second tree, DRMs removed + including references for rooting
-	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm.fasta'
+	infile.fasta	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm.fasta'
 	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
 	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
 	#	run on command line
@@ -52,17 +52,17 @@ seattle.170601.fastree<- function()
 	# 	bootstrap trees
 	
 	#	second tree, DRMs removed + including references for rooting
-	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm.fasta'
+	infile.fasta	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm.fasta'
 	bs.id			<- 2
 	outfile.ft		<- gsub('\\.fasta',paste0('_ft.',sprintf("%03d",bs.id),'.newick'),infile.fasta)
 	tmp				<- cmd.fasttree.one.bootstrap(infile.fasta, bs.id, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
 	#	run on command line
 	cat(tmp)		
 	
-	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm.fasta'
+	infile.fasta	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm.fasta'
 	bs.n			<- 3
-	bs.dir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm_bootstrap_trees'
-	outfile			<- paste0('/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm_ft_bs',bs.n,'.newick')
+	bs.dir			<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm_bootstrap_trees'
+	outfile			<- paste0('/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm_ft_bs',bs.n,'.newick')
 	tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile)
 	cat(paste0('#!/bin/sh\n',tmp), file=paste0(outfile,'.sh'))
 	Sys.chmod(paste0(outfile,'.sh'), mode = "777")	
@@ -72,7 +72,7 @@ seattle.170607.fastree<- function()
 {	
 	require(big.phylo)
 	
-	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.ndrm.fasta'
+	infile.fasta	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.ndrm.fasta'
 	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
 	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma', check.binary=TRUE)
 	#	run on command line
@@ -83,7 +83,7 @@ seattle.170621.fastree<- function()
 {	
 	require(big.phylo)
 		
-	#indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle'
+	#indir			<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle'
 	indir			<- '/work/or105/SEATTLE'
 	infile.fasta	<- file.path(indir,'Seattle.June2017.PHSKCLANLe.refse.ndrm.fasta')
 	
@@ -102,8 +102,8 @@ seattle.170621.fastree<- function()
 
 seattle.170814.metadata.regionorigin<- function()
 {
-	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/sequences_meta.RData'
-	outfile	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/sequences_first_OR.rda'
+	infile	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/sequences_meta.RData'
+	outfile	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/sequences_first_OR.rda'
 	load(infile)
 	ds	<- as.data.table(sequences_meta)
 	ds	<- subset(ds, select=c(seqID, newnum, seqy, seqm))
@@ -121,7 +121,7 @@ seattle.170814.metadata.regionorigin<- function()
 	dsf[, GENE:= dsf[,gsub('(.*)-[0-9]+$','\\1',SEQID)]]	
 	save(ds, dsf, file=outfile)
 	
-	infile	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/person.RData'
+	infile	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/person.RData'
 	outfile	<- gsub('\\.RData','_OR.rda',infile)
 	load(infile)
 	dp	<- as.data.table(person)
@@ -335,7 +335,7 @@ seattle.170814.LSD<- function()
 		write.csv(subset(dph, !is.na(NEWNUM) & is.na(SEQ_DATE1)), file='~/Box Sync/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA/Seattle.plus.LANL.USA.refse.ndrm_ft_reroot_missingsamplingdates.csv')
 		
 		
-		infile.dates	<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_OR.csv'
+		infile.dates	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_OR.csv'
 		df				<- as.data.table(read.csv(infile.dates))
 		df				<- subset(df, select=c(ID, SUBTYPE, SAMPLING_DATE))
 		setnames(df, c('ID','SAMPLING_DATE'), c('TAXA','DATE'))
@@ -347,7 +347,7 @@ seattle.170814.LSD<- function()
 		#
 		#	write subtype specific dates files
 		#
-		indir.ft		<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
+		indir.ft		<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft'
 		infiles			<- data.table(F=list.files(indir.ft, pattern='*newick$', full.names=TRUE))
 		infiles[, DATES_FILE:= gsub('_ft_bs100\\.newick','_lsddates.csv',F)]
 		invisible(infiles[, {
@@ -359,9 +359,9 @@ seattle.170814.LSD<- function()
 	#
 	#	run LSD 
 	#
-	#indir.ft		<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
-	#indir.dates		<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
-	#outdir			<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
+	#indir.ft		<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft'
+	#indir.dates		<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft'
+	#outdir			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft'
 	
 	indir.ft		<- '/work/or105/ATHENA_2016/vlintros/trees_ft'
 	indir.dates		<- '/work/or105/ATHENA_2016/vlintros/trees_lsd'
@@ -396,7 +396,7 @@ seattle.170601.clustering<- function()
 {	
 	require(big.phylo)
 	#	first tree
-	infile.ft		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm_ft.newick'
+	infile.ft		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm_ft.newick'
 	ph				<- read.tree(infile.ft)
 	#	reroot at AY371169
 	tmp				<- which(grepl('AY371169',ph$tip.label))
@@ -438,7 +438,7 @@ seattle.170607.clustering<- function()
 {	
 	require(big.phylo)
 	#	first tree
-	infile.ft		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.ndrm_ft.newick'
+	infile.ft		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.ndrm_ft.newick'
 	ph				<- read.tree(infile.ft)
 	#	reroot at AY371169
 	tmp				<- which(grepl('AY371169',ph$tip.label))
@@ -480,7 +480,7 @@ seattle.170601.clustering.plot<- function()
 {
 	
 	require(data.table)
-	infile	<- "/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm_ft_reroot.clu4.5-80.rda"
+	infile	<- "/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.June2017.refse.ndrm_ft_reroot.clu4.5-80.rda"
 	load(infile)
 	#	exclude reference sequences non-Seattle
 	dfc		<- subset(dfc, !grepl('AY371169|HXB2',TAXA))

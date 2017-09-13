@@ -167,7 +167,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			theme_bw() + theme(	text=element_text(size=6.5), panel.margin=unit(0.5,"lines"), legend.position='bottom', panel.grid.major.x=element_line(colour="grey70", size=0.3), panel.grid.minor.x=element_line(colour="grey70", size=0.3), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank(), 
 								axis.text.y=element_text(size=6), axis.ticks=element_line(size=0.2), plot.margin=unit(c(0.2,0.4,0.2,0.2),"mm")) +
 			facet_grid(LEGEND_PREP~LEGEND)
-	file			<- '~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_Prevention.pdf'
+	file			<- '~/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/151006_Prevention.pdf'
 	ggsave(file=file, w=7.3, h=2.5, units='in')
 	#
 	#	plot comparison PrEP coverage
@@ -183,7 +183,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(LEGEND_PREP~LEGEND)
-	file			<- '~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_PreventionPrEPCoverage.pdf'
+	file			<- '~/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/151006_PreventionPrEPCoverage.pdf'
 	ggsave(file=file, w=16, h=10)		
 	#
 	#	plot comparison 44% vs 86%
@@ -198,7 +198,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(PREP_EFF~LEGEND)
-	file			<- '~/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_Prevention4486.pdf'
+	file			<- '~/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/151006_Prevention4486.pdf'
 	ggsave(file=file, w=16, h=8)	
 	#
 	#	plot for SOM: across censoring adjustments etc
@@ -217,7 +217,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(stat.legend~LEGEND)
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_PreventionBySamplingAdj.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/151006_PreventionBySamplingAdj.pdf'
 	ggsave(file=file, w=16, h=10)
 	#
 	#	plot for SOM: across trm prob
@@ -240,7 +240,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(method.legend~LEGEND)			
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_PreventionByPhyloLkl.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/151006_PreventionByPhyloLkl.pdf'
 	ggsave(file=file, w=16, h=10)	
 	#
 	#	plot for SOM: across exclusion criteria
@@ -273,7 +273,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(method.legend~LEGEND)			
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_PreventionByExclusionCriteria.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/151006_PreventionByExclusionCriteria.pdf'
 	ggsave(file=file, w=16, h=45)
 	#
 	#	plot for SOM: across exclusion criteria gen distance
@@ -294,7 +294,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(method.legend~LEGEND)			
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/2014_MSMtransmission_ATHENA1303/151006_PreventionByGenDist.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2014_MSMtransmission_ATHENA1303/151006_PreventionByGenDist.pdf'
 	ggsave(file=file, w=16, h=7)
 	
 	
@@ -323,7 +323,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(~LEGEND)
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_Prevention.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_Prevention.pdf'
 	ggsave(file=file, w=16, h=6)	
 	#
 	#	plot for SOM: across censoring adjustments etc
@@ -342,7 +342,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(stat.legend~LEGEND)
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionBySamplingAdj.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionBySamplingAdj.pdf'
 	ggsave(file=file, w=16, h=14)
 	#
 	#	plot for SOM: across likelihood methods
@@ -365,7 +365,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(method.legend~LEGEND)
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionByPhyloLkl.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionByPhyloLkl.pdf'
 	ggsave(file=file, w=14, h=14)	
 	#
 	#	plot for SOM: across exclusion criteria
@@ -398,7 +398,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(method.legend~LEGEND)
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionByExclusionCriteria.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150327_PreventionByExclusionCriteria.pdf'
 	ggsave(file=file, w=14, h=45)
 	#
 	#	plot for SOM: across exclusion criteria gen distance
@@ -423,7 +423,7 @@ project.athena.Fisheretal.Hypo.evaluate<- function()
 			coord_flip() +			
 			theme_bw() + theme(panel.margin=unit(1.25,"lines"), legend.position='bottom', axis.text.y=element_text(size=12), panel.grid.major.x=element_line(colour="grey70", size=0.6), panel.grid.minor.x=element_line(colour="grey70", size=0.6), panel.grid.major.y=element_blank(), panel.grid.minor.y=element_blank()) +
 			facet_grid(method.legend~LEGEND)
-	file			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150618_PreventionByGenDist.pdf'
+	file			<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150618_PreventionByGenDist.pdf'
 	ggsave(file=file, w=14, h=10)
 	
 	#

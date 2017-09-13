@@ -3,16 +3,16 @@
 db.clusterR.plot<- function()
 {
 	require(data.table)
-	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/material for paper/data_SA_Rt'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/material for paper/data_SA_Rt'
 	infile	<- 'R-Estimates_SA80p10.csv'
-	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/material for paper'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/material for paper'
 	infile	<- 'R-Estimates_MSM_only.csv'
 	file	<- paste(indir, '/', infile, sep='')
 	read.csv(file)	
 	df		<- as.data.table(read.csv(file))
 	setnames(df, c('ClusterName','ClusterSizeWithDiagDate','TimeLastREstimate'), c('CID','CN','T'))
 	
-	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/material for paper/data_SA_Rt'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/material for paper/data_SA_Rt'
 	infile	<- 'WT-smoothed_SA80p10.RData'	
 	file	<- paste(indir, '/', infile, sep='')
 	z		<- load(file)

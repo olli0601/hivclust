@@ -101,7 +101,7 @@ project.ACdata.size.proposal.160404<- function()
 	#	seropos and seroconverters with migration background
 	#
 	load('~/duke/2016_AC/data/160404_PosMigrantsResidents.rda')	#loads alm
-	plotdir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_GuidingTransmissionElimination/figures'
+	plotdir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2016/2016_GuidingTransmissionElimination/figures'
 	ggplot(subset(alm, FirstHIVPositive_Yr>2005 & FirstHIVPositive_Yr<2015), aes(x=factor(FirstHIVPositive_Yr), fill=InfectionType)) + 
 			geom_bar(position='dodge', width=0.8 ) +
 			scale_y_continuous(breaks=seq(0,600,100)) +
@@ -863,7 +863,7 @@ project.ACdata.csv.to.rda.PANGEA.160817<- function()
 ######################################################################################
 project.AC.cleanalignment<- function()
 {
-	sx				<- read.dna("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/AC_Geneious1012Seq.gag_nef.fasta", format='fasta')
+	sx				<- read.dna("~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/AC_Geneious1012Seq.gag_nef.fasta", format='fasta')
 	sxd				<- data.table(TAXA= rownames(sx))
 	set(sxd, NULL, 'TAXA', sxd[, gsub('_$','',TAXA)])
 	set(sxd, NULL, 'TAXA', sxd[, gsub(' ','R',TAXA)])
@@ -874,13 +874,13 @@ project.AC.cleanalignment<- function()
 	
 	tmp	<- sxd[, which(grepl('AF411967',TAXA))]
 	sx	<- sx[ -tmp[-1], ]
-	write.dna(sx, file="~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/AC_Geneious1012Seq.gag_nef.OR.fasta", format='fasta')
-	seq.write.dna.phylip(sx, file="~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/AC_Geneious1012Seq.gag_nef.OR.phylip")
+	write.dna(sx, file="~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/AC_Geneious1012Seq.gag_nef.OR.fasta", format='fasta')
+	seq.write.dna.phylip(sx, file="~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/AC_Geneious1012Seq.gag_nef.OR.phylip")
 }
 ######################################################################################
 project.ACpolext.rmDRM.150913<- function()
 {
-	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150831'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext150831'
 	infile	<- 'SATURN150831.csv'
 	dfstr	<- data.table(read.csv(file=paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE))
 	infile	<- 'Eduan_DRT_170815.csv'
@@ -911,7 +911,7 @@ project.ACpolext.rmDRM.150913<- function()
 project.ACpolext.rmDRM.160120<- function()
 {
 	require(big.phylo)
-	infile				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160120/ZA_aln4_160120.fasta'
+	infile				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160120/ZA_aln4_160120.fasta'
 	acxs				<- read.dna(file=infile, format='fasta')
 	tmp					<- which(grepl("B.FR.K03455.1983",rownames(acxs)))
 	rownames(acxs)[tmp]	<- 'HXB2'
@@ -925,7 +925,7 @@ project.ACpolext.rmDRM.160120<- function()
 project.ACpolext.rmDRM.160209<- function()
 {
 	require(big.phylo)
-	infile				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_16442_20160208_aln.fasta'
+	infile				<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_16442_20160208_aln.fasta'
 	acxs				<- read.dna(file=infile, format='fasta')
 	tmp					<- which(grepl("B.FR.K03455.1983",rownames(acxs)))
 	rownames(acxs)[tmp]	<- 'HXB2'
@@ -938,18 +938,18 @@ project.ACpolext.rmDRM.160209<- function()
 ######################################################################################
 project.ACpolext.geneticdistances.161009<- function()
 {	
-	infile		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_aln.rda'
+	infile		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_aln.rda'
 	load(infile)
 	tmp			<- dist.dna(seq, model='raw',pairwise.deletion=TRUE)
 	seqd		<- as.data.table(melt(as.matrix(tmp),varnames=c('TAXA','TAXA2'),value.name="GD"))
 	seqd		<- subset(seqd, TAXA!=TAXA2)
 	setkey(seqd, TAXA, GD)	
-	save(seq, seqd, file='/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20161009_aln.rda')	
+	save(seq, seqd, file='/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20161009_aln.rda')	
 }
 ######################################################################################
 project.ACpolext.rmDRM.150907<- function()
 {
-	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150831'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext150831'
 	infile	<- 'SATURN150831.csv'
 	dfstr	<- data.table(read.csv(file=paste(indir, '/', infile, sep=''), stringsAsFactors=FALSE))
 	infile	<- 'Eduan_DRT_170815.csv'
@@ -965,7 +965,7 @@ project.ACpolext.rmDRM.150907<- function()
 	#	clarify: not all C? do we have subtype assignment for all others that are not in SATURN?
 	seq				<- seq[c("B.FR.83.HXB2_LAI_IIIB_BRU.K03455",arvdat[, PNG_ID_FULL]),]
 	rownames(seq)[1]	<- 'HXB2'
-	outfile			<- '~/Dropbox (Infectious Disease)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_PotentialDRMs_OR_150910.R'
+	outfile			<- '~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_PANGEA_Fisherfolk/PANGEA_ARV/RakaiARVData_PotentialDRMs_OR_150910.R'
 	tmp				<- big.phylo:::seq.rm.drugresistance(seq, outfile=outfile)
 	nodr.info		<- tmp$nodr.info
 	nodr.seq		<- tmp$nodr.seq
@@ -1016,7 +1016,7 @@ project.ACpolext.rmDRM.150907<- function()
 	set(dr, NULL,'Alignment.nuc.pos', dr[, HXB2.pos-acxs.st+1L])
 	tmp			<- subset(dr, select=c(DR.name, Mutant.NTs, Alignment.nuc.pos))
 	seq			<- seq.rm.drugresistance(as.character(acxs), tmp, verbose=1, rtn.DNAbin=1 )
-	outdir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACextpol150831'
+	outdir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACextpol150831'
 	outfile		<- 'ZA_SubC_12432_nDRM.fasta'
 	write.dna(seq, paste(outdir, '/', outfile, sep=''), format='fasta', colsep='', nbcol=-1)
 	save(seq, file=paste(outdir, '/', gsub('\\.fasta','\\.R',outfile), sep=''))	
@@ -1024,7 +1024,7 @@ project.ACpolext.rmDRM.150907<- function()
 ######################################################################################
 project.ACpolext.intros<- function()
 {	  	
-	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209'
+	indir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209'
 	#	David's FastTree2 + LSD tree
 	infile		<- 'ViroIntro_noDRM_16442_20160208_F2_LSD.nex'
 	ph			<- read.nexus(file.path(indir, infile))
@@ -1039,7 +1039,7 @@ project.ACpolext.intros<- function()
 project.ACpolext.ViralIntros.mergewithmigrants.161009<- function()
 {
 	#	load phylogeny and distances
-	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209'
+	indir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209'
 	infile		<- 'ViroIntro_noDRM_16442_20160329_ft2_cleanloc_dist.rda'	
 	load(file.path(indir,infile))
 	#	load migrants
@@ -1098,7 +1098,7 @@ project.ACpolext.ViralIntros.mergewithmigrants.161009<- function()
 			geom_bar(stat='identity',position='dodge') +
 			scale_y_continuous(labels = scales::percent) +
 			theme_bw() + labs(x='\nlocation of phylogenetically closest individual\n(max genetic distance 4.4%)', y='labour migrants with a sequence\n(n=534)\n')
-	plot.dir	<- '~/Dropbox (Infectious Disease)/OR_Work/2016/2016_GuidingTransmissionElimination/figures'
+	plot.dir	<- '~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_GuidingTransmissionElimination/figures'
 	ggsave(file=file.path(plot.dir, 'AC_Migrants_PhylogeneticallyClosest_161009.pdf'), w=12, h=5)
 	
 	require(Hmisc)
@@ -1112,7 +1112,7 @@ project.ACpolext.ViralIntros.mergewithmigrants.161009<- function()
 ######################################################################################
 project.ACpolext.ViralIntros.cleanlocations.160329<- function()
 {	  	
-	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209'
+	indir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209'
 	infile		<- file.path(indir,'ViroIntro_noDRM_16442_20160208_ft2.newick.rda')
 	load(infile)
 	set(phd, NULL, 'TAXA', phd[, gsub('._','_',TAXA, fixed=1)])
@@ -1142,7 +1142,7 @@ project.ACpolext.ViralIntros.cleanlocations.160329<- function()
 	#				
 	#	try resolve 'other' - suspect many are from LANL
 	#
-	pl		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150830_original/ZA.LANL.seq2402.csv', stringsAsFactors=FALSE))
+	pl		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext150830_original/ZA.LANL.seq2402.csv', stringsAsFactors=FALSE))
 	setnames(pl, c('X','Place.of.sampling'), c('GENBANK','SITE'))
 	set(pl, NULL, 'GENBANK', pl[, regmatches(GENBANK,regexpr('^[^\\.]+',GENBANK))])
 	pl[, LOC_UP:=NA_character_]
@@ -1155,11 +1155,11 @@ project.ACpolext.ViralIntros.cleanlocations.160329<- function()
 	set(pl, pl[, which(is.na(LOC_UP))], 'LOC_UP', 'other')	
 	phd		<- merge(phd, subset(pl, select=c(GENBANK,LOC_UP)), by='GENBANK', all.x=1)
 	#	300 cases that cannot be resolved further
-	#	write.csv(subset(phd, is.na(LOC_UP) & !is.na(GENBANK) & LOC!='foreign'), file='/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanCheck.csv')
-	#	write.csv(subset(phd, LOC=='other'), file='/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanCheck2.csv')
+	#	write.csv(subset(phd, is.na(LOC_UP) & !is.na(GENBANK) & LOC!='foreign'), file='/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanCheck.csv')
+	#	write.csv(subset(phd, LOC=='other'), file='/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanCheck2.csv')
 	#	Eduan helped
 	#
-	pl		<- as.data.table(read.csv('/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanChecked.csv', stringsAsFactors=FALSE))
+	pl		<- as.data.table(read.csv('/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanChecked.csv', stringsAsFactors=FALSE))
 	setnames(pl, 'X.2', 'LOC_UPP')
 	set(pl, NULL, 'LOC_UPP', pl[, factor(LOC_UPP, 	levels=c('Gauteng','KwaZulu-Natal',	'Unknown',	'WesternCape'),
 													labels=c('Gauteng','KZN',			'other',	'Western_Cape'))])
@@ -1171,7 +1171,7 @@ project.ACpolext.ViralIntros.cleanlocations.160329<- function()
 	set(phd, tmp, 'LOC',  phd[tmp, LOC_UPP])
 	set(phd, NULL, 'LOC_UPP', NULL)	
 	#	375 cases with known GENBANK that cannot be resolved further
-	pl		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanCheck2_EW.csv', stringsAsFactors=FALSE))
+	pl		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209/ViroIntro_noDRM_16442_20160208_EduanCheck2_EW.csv', stringsAsFactors=FALSE))
 	setnames(pl, 'X.2', 'LOC_UPP')
 	set(pl, NULL, 'LOC_UPP', pl[, factor(LOC_UPP, 	levels=c('Gauteng','KwaZulu-Natal',	'Unknown',	'WesternCape'),
 													labels=c('Gauteng','KZN',			'other',	'Western_Cape'))])
@@ -1247,13 +1247,13 @@ project.ACpolext.ViralIntros.cleanlocations.160329<- function()
 	setkey(phg, TAXA, GD)			
 	phg			<- merge(phg, seqd, by=c('TAXA','TAXA2'))
 	
-	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209'
+	indir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209'
 	save(ph, phd, phg, file=file.path(indir,'ViroIntro_noDRM_16442_20160329_ft2_cleanloc_dist.rda'))
 }
 ######################################################################################
 project.ACpolext.Fasttree.160209<- function()
 {	  	
-	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160209'
+	indir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext160209'
 	infiles		<- data.table(FILE=list.files(indir, pattern='_ft2.newick$', full.names=1))
 	require(phytools)
 	i			<- 1
@@ -1277,7 +1277,7 @@ project.ACpolext.Fasttree.160209<- function()
 ######################################################################################
 project.ACpolext.trees.inspect<- function()
 {	  	
-	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext150913'
+	indir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_SA/ACpolext150913'
 	infiles		<- data.table(FILE=list.files(indir, pattern='^ExaML_result', full.names=1))
 	require(phytools)
 	i			<- 1

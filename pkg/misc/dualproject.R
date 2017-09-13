@@ -1,7 +1,7 @@
 project.dual<- function()
 {
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
-	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
+	#HOME		<<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	project.dual.examl.231015()
 	#pty.pipeline.fasta()
@@ -24,7 +24,7 @@ project.dual<- function()
 project.dual.distances.231015<- function()
 {
 	indir		<- paste(HOME,"alignments_160110",sep='/')
-	#indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
+	#indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
 	infiles		<- list.files(indir, pattern='R$')
 	
 	for(i in seq_along(infiles))
@@ -41,7 +41,7 @@ project.dual.examl.231015<- function()
 	require(big.phylo)
 	#indir		<- paste(HOME,"alignments_151023",sep='/')
 	indir		<- paste(HOME,"alignments_160110",sep='/')	
-	#indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
+	#indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023'
 	#indir		<- '~/duke/2015_various'
 	#infiles		<- list.files(indir, pattern='PANGEA_HIV_n5003_Imperial_.*\\.R')	
 	infiles		<- 'PANGEA_HIV_n5003_Imperial_v160110_BW.R'
@@ -73,16 +73,16 @@ project.dual.examl.231015<- function()
 
 project.dual.alignments.160110<- function()
 {
-	outdir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110'
+	outdir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110'
 	#	read info
-	#file	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
+	#file	<- "~/Dropbox (SPH Imperial College)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
 	#si		<- as.data.table(read.csv(file, stringsAsFactors=FALSE))
 	#setnames(si, colnames(si), toupper(gsub('.','_',colnames(si),fixed=1))) 
 	#set(si, NULL, 'PANGEA_ID', si[, gsub(' ','',PANGEA_ID)])
 	#setnames(si, 'CLINICAL_GENOME_COVERAGE', 'COV')
 	
 	#	read global PANGEA alignment w SA seqs and split by site	
-	file			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/AfricaCentreSeqs/GlobalAln_PlusAllPANGEA.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/AfricaCentreSeqs/GlobalAln_PlusAllPANGEA.fasta'
 	sq				<- read.dna(file, format='fasta')
 	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
 	tmp				<- sqi[, which(duplicated(TAXA))]
@@ -124,17 +124,17 @@ project.dual.alignments.160110<- function()
 
 project.dual.alignments.151023<- function()
 {
-	outdir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151113'
+	outdir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151113'
 	#	read info
-	file	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
+	file	<- "~/Dropbox (SPH Imperial College)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
 	si		<- as.data.table(read.csv(file, stringsAsFactors=FALSE))
 	setnames(si, colnames(si), toupper(gsub('.','_',colnames(si),fixed=1))) 
 	set(si, NULL, 'PANGEA_ID', si[, gsub(' ','',PANGEA_ID)])
 	setnames(si, 'CLINICAL_GENOME_COVERAGE', 'COV')
 	
 	#	read global PANGEA alignment and split by site	
-	file			<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_GlobalAlignment.fasta"
-	file			<- '~/Dropbox (Infectious Disease)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.fasta'
+	file			<- "~/Dropbox (SPH Imperial College)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_GlobalAlignment.fasta"
+	file			<- '~/Dropbox (SPH Imperial College)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.fasta'
 	sq				<- read.dna(file, format='fasta')
 	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
 	tmp				<- sqi[, which(duplicated(TAXA))]
@@ -161,7 +161,7 @@ project.dual.alignments.151023<- function()
 	
 	
 	#	read contig alignment and split by site
-	file	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAcontigs_2015-09_Imperial/contigs_cnsalign_PNGIDn3366_CNTGSn6120_stripped99.fasta"
+	file	<- "~/Dropbox (SPH Imperial College)/pangea_data/PANGEAcontigs_2015-09_Imperial/contigs_cnsalign_PNGIDn3366_CNTGSn6120_stripped99.fasta"
 	cr		<- read.dna(file, format='fasta')
 	cri		<- data.table(TAXA=rownames(cr))
 	cri[, PNG:= cri[, factor(grepl('^[0-9]+_[0-9]+_[0-9]+.*',gsub('^\\.', '', TAXA)),levels=c(TRUE,FALSE),labels=c('Y','N'))]]
@@ -373,14 +373,14 @@ project.dualinfecions.phylotypes.setup.trmpairs.ZA.160110<- function()
 	pty.gd		<- 0.2
 	pty.sel.n	<- 20
 	
-	infile		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_GlobalAlignment.rda'
+	infile		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_GlobalAlignment.rda'
 	load(infile)	#loads sqi, sq
-	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data"
+	indir		<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data"
 	outdir		<- indir
 	infile		<-  "PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500.rda"
 	load(paste(indir,infile,sep='/'))	#loads "ph" "dist.brl" "ph.gdtr"  "ph.mrca"
 	#	add SANGER_ID
-	infile.s	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
+	infile.s	<- "~/Dropbox (SPH Imperial College)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
 	si			<- as.data.table(read.csv(infile.s, stringsAsFactors=FALSE))
 	setnames(si, colnames(si), toupper(gsub('.','_',colnames(si),fixed=1))) 
 	set(si, NULL, 'PANGEA_ID', si[, gsub(' ','',PANGEA_ID)])
@@ -389,7 +389,7 @@ project.dualinfecions.phylotypes.setup.trmpairs.ZA.160110<- function()
 	set(tmp, NULL, 'PANGEA_ID', tmp[,gsub('-','_',PANGEA_ID)])
 	sqi			<- merge(sqi, tmp, by='PANGEA_ID', all.x=1)	
 	#	delete duplicates identified by Tulio from tree
-	infile.dup	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_ZA_Duplicates.csv'
+	infile.dup	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_ZA_Duplicates.csv'
 	dupl		<- as.data.table(read.csv(infile.dup, stringsAsFactors=FALSE))
 	dupl		<- subset(dupl, Duplicated==1, select=c(strains, Duplicated))
 	dupl[, DUP_ID:= seq_len(nrow(dupl))]
@@ -470,14 +470,14 @@ project.dualinfecions.phylotypes.setup.coinfections.ZA.160110<- function()
 	pty.gd		<- 0.2
 	pty.sel.n	<- 15
 		
-	infile		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_GlobalAlignment.rda'
+	infile		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_GlobalAlignment.rda'
 	load(infile)	#loads sqi, sq
-	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data"
+	indir		<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data"
 	outdir		<- indir
 	infile		<-  "PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500.rda"
 	load(paste(indir,infile,sep='/'))	#loads "ph" "dist.brl" "ph.gdtr"  "ph.mrca"
 	#	add SANGER_ID
-	infile.s	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
+	infile.s	<- "~/Dropbox (SPH Imperial College)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
 	si			<- as.data.table(read.csv(infile.s, stringsAsFactors=FALSE))
 	setnames(si, colnames(si), toupper(gsub('.','_',colnames(si),fixed=1))) 
 	set(si, NULL, 'PANGEA_ID', si[, gsub(' ','',PANGEA_ID)])
@@ -486,7 +486,7 @@ project.dualinfecions.phylotypes.setup.coinfections.ZA.160110<- function()
 	set(tmp, NULL, 'PANGEA_ID', tmp[,gsub('-','_',PANGEA_ID)])
 	sqi			<- merge(sqi, tmp, by='PANGEA_ID', all.x=1)	
 	#	delete duplicates identified by Tulio from tree
-	infile.dup	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_ZA_Duplicates.csv'
+	infile.dup	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_ZA_Duplicates.csv'
 	dupl		<- as.data.table(read.csv(infile.dup, stringsAsFactors=FALSE))
 	dupl		<- subset(dupl, Duplicated==1, select=c(strains, Duplicated))
 	dupl[, DUP_ID:= seq_len(nrow(dupl))]
@@ -667,7 +667,7 @@ pty.cmdwrap <- function(pty.runs, pty.args)
 
 project.dualinfecions.phylotypes.test<- function()
 {
-	tfd	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/phylotypes'
+	tfd	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/phylotypes'
 	tfd	<- '~/duke/2016_PANGEAphylotypes/phylotypes'
 	tf	<- data.table(FILE=list.files(tfd, pattern='^ptyr1_*'))
 	tf	<- subset(tf, !grepl('fasta2',FILE))
@@ -693,7 +693,7 @@ project.dualinfecions.phylotypes.test<- function()
 	ggplot(tmp, aes(x=as.numeric(W_FROM),y=BAM_N,colour=FILE_ID,group=FILE_ID)) + geom_line() + facet_grid(~Q1)
 	#no R8_RES486_S8_L001 at all!
 
-	load("/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
+	load("/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
 }
 
 project.dualinfecions.phylotypes.mltrees.160115<- function() 
@@ -1103,7 +1103,7 @@ project.dualinfecions.phylotypes.countbam.150120<- function()
 project.dualinfecions.phylotypes.evaluatereads.150119<- function()
 {
 	
-	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
+	#HOME		<<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"
 	pty.infile		<- file.path(HOME,"data", "PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")		
 	indir			<- file.path(HOME,"phylotypes")	
 	pty.evaluate.fasta(pty.infile, indir)
@@ -1349,7 +1349,7 @@ project.dualinfecions.NJExaTrees.160110<- function()
 	#
 	#	BW contigs
 	#
-	load('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023/PANGEAinfo_2015-09_Imperial.R')
+	load('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151023/PANGEAinfo_2015-09_Imperial.R')
 	
 	infile		<- "PANGEAcontigs_2015-09_Imperial_BW_151023_dist.R"
 	load( paste(indir,'/',infile,sep='') )
@@ -1392,14 +1392,14 @@ project.dualinfecions.NJExaTrees.160110<- function()
 	#
 	#	UG consensus data tree
 	#
-	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data"
+	indir		<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data"
 	infile		<- "ExaML_result.PANGEAconsensuses_2015-09_Imperial_UG_151023.finaltree.040"
 	ph			<- read.tree( paste(indir,'/',infile,sep='') )	
 	#	no branch lengths??
 	#
 	#	ZA consensus BEST tree
 	#	
-	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data"
+	indir		<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data"
 	outdir		<- indir
 	infile		<-  "PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500.newick"
 	ph			<- read.tree( paste(indir,'/',infile,sep='') )

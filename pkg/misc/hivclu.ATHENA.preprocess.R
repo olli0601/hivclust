@@ -29,9 +29,9 @@ Patients.161027<- function()
 	NA.time				<- c("","1911-01-01","1911-11-11")		
 	date.format			<- "%Y-%m-%d"
 	#	INPUT	
-	file				<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/SHM_1602_161102_OR_ALL_Patient.xlsx"
-	file.ggd			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_Region_GGD.rda'
-	outfile				<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_Patient.rda'
+	file				<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_latest/SHM_1602_161102_OR_ALL_Patient.xlsx"
+	file.ggd			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_Region_GGD.rda'
+	outfile				<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_Patient.rda'
 	#
 	#	read data files	
 	#
@@ -234,7 +234,7 @@ Patients.130301<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 	}
 	if(1)
 	{
-		dir.name			<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+		dir.name			<- "~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update"
 		file				<- NA
 		file.update			<- paste(dir.name,"ATHENA_1502_All_Patient.csv",sep='/')
 		date.format			<- "%d/%m/%y"
@@ -430,7 +430,7 @@ Patients.130301<- function(dir.name= DATA, min.seq.len=21, verbose=1)
 ######################################################################################
 Sequences.160227<- function(dir.name= DATA)
 {
-	dir.name		<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'
+	dir.name		<- '~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update'
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Sequences.csv",sep='/')
 	file			<- paste(dir.name,"derived/ATHENA_2013_03_Sequences_AllMSM.csv",sep='/')
 	date.format		<- "%d/%m/%Y"
@@ -477,9 +477,9 @@ Sequences.addCOMET.161027<- function(dir.name= DATA)
 	#	run
 	#	./comet_osx -bs 1000 < /Users/Oliver/Downloads/ATHENA_1610_All_Sequences.fasta > /Users/Oliver/Downloads/ATHENA_1610_All_Sequences_COMETv2.1.csv
 	
-	file	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences.rda'
-	outfile <- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_withCOMET.rda'
-	file.c	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_COMETv2.1.csv'
+	file	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences.rda'
+	outfile <- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_withCOMET.rda'
+	file.c	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_COMETv2.1.csv'
 	
 	tmp		<- as.data.table(read.csv(file=file.c, sep='\t', stringsAsFactors=FALSE))
 	setnames(tmp, c('name','subtype','bootstrap.support'), c('FASTASampleCode','SUBTYPE_C','SUBTYPE_CBS'))
@@ -524,9 +524,9 @@ Sequences.addOutgroupToSubtypeB.161121<- function(dir.name= DATA)
 	if(0)	#done once with some manual editing 
 	{
 		#	add outgroup to subtype B sequences
-		file.new		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_sequences/LANL_outgroup_For_Subtype_B.fasta'
-		file.previous	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_161102/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
-		outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta'
+		file.new		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_sequences/LANL_outgroup_For_Subtype_B.fasta'
+		file.previous	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_161102/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
+		outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta'
 		scp				<- read.dna(file.previous, format='fa')	
 		sce				<- read.dna(file.new, format='fa')
 		tmp				<- which(grepl('HXB2',rownames(sce)))
@@ -540,9 +540,9 @@ Sequences.addOutgroupToSubtypeB.161121<- function(dir.name= DATA)
 	}
 	if(1)	#next iteration: simply copy from previous file
 	{
-		file.new		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta'
-		file.previous	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_161102/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta'
-		outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_wOutgroup.fasta'
+		file.new		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.fasta'
+		file.previous	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_161102/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta'
+		outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_wOutgroup.fasta'
 		scp				<- read.dna(file.previous, format='fa')
 		scp				<- scp[grepl('OUTGROUP',rownames(scp)),]
 		sce				<- read.dna(file.new, format='fa')
@@ -556,9 +556,9 @@ Sequences.addOutgroupToSubtypeB.161121<- function(dir.name= DATA)
 Sequences.align.161027<- function(dir.name= DATA)
 {
 	file.previous.align	<- '~/duke/2013_HIV_NL/ATHENA_2013/data/fisheretal_data/ATHENA_2013_03_-DR-RC-SH+LANL_Sequences_Wed_Dec_18_11:37:00_2013.R'
-	file				<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_withCOMET_withLANL.rda'
-	outfile.ali			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_aligned.fasta'
-	outfile.nali		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_notaligned.fasta'
+	file				<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_withCOMET_withLANL.rda'
+	outfile.ali			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_aligned.fasta'
+	outfile.nali		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_notaligned.fasta'
 	load(file)
 	#
 	#	write to file only those sequences that have not yet been aligned
@@ -586,104 +586,104 @@ Sequences.align.161027<- function(dir.name= DATA)
 	# then edit manually to remove the pol DRMs insert/del regions
 	
 	# add HXB2 to prev alignment
-	outfile.hxb2	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/hxb2.fasta'
+	outfile.hxb2	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/hxb2.fasta'
 	load('~/git/hivclust/pkg/data/refseq_hiv1_hxb2.rda')
 	tmp				<- as.DNAbin(as.matrix(t(as.character(hxb2[2000:4000, HXB2.K03455]))))
 	rownames(tmp)	<- 'HXB2'
 	write.dna(tmp, file=outfile.hxb2, format='fa', colsep='', nbcol=-1)
 	# edited manually. change some gaps to N
-	seq.PROT.RT		<- read.dna('~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_HXB2_e.fasta',format='fa')
+	seq.PROT.RT		<- read.dna('~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_HXB2_e.fasta',format='fa')
 	seq.PROT.RT		<- as.character(seq.PROT.RT)	
 	tmp				<- seq.find(seq.PROT.RT, 504, "-")	
 	seq.PROT.RT[tmp,504]<- matrix( c('n'), nrow=length(tmp), ncol=1, byrow=1 )
 	tmp				<- seq.find(seq.PROT.RT, 505, "-")	
 	seq.PROT.RT[tmp,505]<- matrix( c('n'), nrow=length(tmp), ncol=1, byrow=1 )
-	write.dna(seq.PROT.RT, file='~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_HXB2_e2.fasta', format='fa', colsep='', nbcol=-1)
+	write.dna(seq.PROT.RT, file='~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_HXB2_e2.fasta', format='fa', colsep='', nbcol=-1)
 	
 	# merge alignments
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_HXB2_e3.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_1_500.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_500.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_HXB2_e3.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_1_500.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_500.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')	
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_500.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_501_1000.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_1000.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_500.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_501_1000.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_1000.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')	
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_1000.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_1001_1500.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_1500.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_1000.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_1001_1500.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_1500.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')	
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_1500.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_1501_2000.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_2000.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_1500.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_1501_2000.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_2000.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')	
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_2000.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_2001_2500.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_2500.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_2000.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_2001_2500.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_2500.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')	
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_2500.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_2501_3000.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_3000.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_2500.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_2501_3000.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_3000.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')	
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_3000.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_3001_3500.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_3500.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_3000.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_3001_3500.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_3500.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')	
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_3500.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_3501_4000.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_4000.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_3500.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_3501_4000.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_4000.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')	
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_4000.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_4001_4500.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_4500.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_4000.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_4001_4500.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_4500.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')	
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_4500.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_4501_5000.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_5000.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_4500.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_4501_5000.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_5000.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')	
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_5000.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_5001_5500.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_5500.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_5000.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_5001_5500.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_5500.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')
 	tmp				<- which(grepl('HXB2',rownames(sce)))
@@ -691,57 +691,57 @@ Sequences.align.161027<- function(dir.name= DATA)
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_5500.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_5501_6000.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_6000.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_5500.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_5501_6000.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_6000.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_6000.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_6001_6500.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_6500.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_6000.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_6001_6500.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_6500.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_6500.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_6501_7000.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_7000.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_6500.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_6501_7000.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_7000.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_7000.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_7001_7500.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_7500.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_7000.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_7001_7500.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_7500.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_7500.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_7501_8000.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_8000.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_7500.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_7501_8000.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_8000.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_8000.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_8001_8500.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_8500.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_8000.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_8001_8500.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_8500.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
 	write.dna(scn, file=outfile, format='fa', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_8500.fasta'
-	file.codonedited<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_8501_9000.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_9000.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_8500.fasta'
+	file.codonedited<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignededited_8501_9000.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmerged_9000.fasta'
 	scp				<- read.dna(file, format='fa')	
 	sce				<- read.dna(file.codonedited, format='fa')
 	scn				<- seq.align.based.on.common.reference(sce, scp, return.common.sites=FALSE, regexpr.reference='HXB2', regexpr.nomatch='-|\\?')
@@ -749,8 +749,8 @@ Sequences.align.161027<- function(dir.name= DATA)
 	#
 	#	mask major DRM sites
 	#
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e1.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e2.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e1.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e2.fasta'
 	s				<- read.dna(file, format='fa')
 	s				<- as.character(s)
 	s[which(!grepl('HXB2',rownames(s))),105:112]	<- 'n'
@@ -760,8 +760,8 @@ Sequences.align.161027<- function(dir.name= DATA)
 	#
 	#	curate end bit
 	#
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e3.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e4.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e3.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e4.fasta'
 	s				<- read.dna(file, format='fa')
 	s				<- as.character(s)
 	s[ which(s[,1184]=='-' & s[,1185]!='-' & s[,1186]=='-'), 1185]<- '-'
@@ -787,8 +787,8 @@ Sequences.align.161027<- function(dir.name= DATA)
 	#
 	#	curate dangling end bit
 	#
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e7.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e8.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e7.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e8.fasta'
 	s				<- read.dna(file, format='fa')
 	s				<- as.character(s)
 	s[ which(s[,1296]=='-' & s[,1297]!='-' & s[,1298]=='-'), 1297]<- '-'
@@ -797,8 +797,8 @@ Sequences.align.161027<- function(dir.name= DATA)
 	#
 	#	cut for our purposes
 	#
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e10.fasta'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e11.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e10.fasta'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e11.fasta'
 	s				<- read.dna(file, format='fa')
 	s				<- s[, seq.int(1,1289)]	
 	write.dna(s, file=outfile, format='fa', colsep='', nbcol=-1)	
@@ -806,8 +806,8 @@ Sequences.align.161027<- function(dir.name= DATA)
 ######################################################################################
 Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 {	
-	file.seq.noDRM		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM.fasta'
-	file.info 			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_withCOMET_withLANL.rda'
+	file.seq.noDRM		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM.fasta'
+	file.info 			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_withCOMET_withLANL.rda'
 	s					<- read.dna(file.seq.noDRM, format='fa')
 	load(file.info)
 	#	141028040728 is pol but starting at pos 2550. Exclude.
@@ -929,8 +929,8 @@ Sequences.select.by.subtype.161027<- function(dir.name= DATA)
 Sequences.removeDRMs.161027<- function(dir.name= DATA)
 {
 	require(big.phylo)
-	file				<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e11.fasta'
-	outfile				<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonaligned_noDRM.fasta'
+	file				<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonalignedmergededited_9000_e11.fasta'
+	outfile				<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_codonaligned_noDRM.fasta'
 	s					<- read.dna(file, format='fa')
 	tmp					<- which(grepl("HXB2",rownames(s)))
 	rownames(s)[tmp]	<- 'HXB2'
@@ -962,13 +962,13 @@ Sequences.addcloseLANL.161027<- function(dir.name= DATA)
 	#run
 	#	blastn -query /Users/Oliver/Downloads/ATHENA_1610_All_Sequences.fasta -db /Users/Oliver/Downloads/LANL_background_protrt300complete_n25000_strippedn.db -out /Users/Oliver/Downloads/ATHENA_1610_All_Sequences.txt -max_target_seqs 5 -outfmt 6
 	
-	file		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_withCOMET.rda"	
-	bfile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_Closest5LANL_protrt300complete.txt'
-	lfile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/LANL_background_protrt300complete_n25455_strippedn.fasta'
-	outfile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_withCOMET_withLANL.rda'
-	outfile.B	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_B_LANL.fasta'
-	outfile.O	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_Other_LANL.fasta'	
-	outfile.nali<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_notaligned.fasta'
+	file		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_withCOMET.rda"	
+	bfile		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_Closest5LANL_protrt300complete.txt'
+	lfile		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/LANL_background_protrt300complete_n25455_strippedn.fasta'
+	outfile		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_withCOMET_withLANL.rda'
+	outfile.B	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_B_LANL.fasta'
+	outfile.O	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_Other_LANL.fasta'	
+	outfile.nali<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Sequences_LANL_notaligned.fasta'
 	load(file)
 	db			<- as.data.table(read.csv(bfile, sep='\t',stringsAsFactors=FALSE, header=FALSE))		
 	setnames(db, paste('V',1:12,sep=''),c('FASTASampleCode','TAXA_L','pident','length','mismatch','gapopen','qstart','qend','sstart','send','evalue','bitscore'))
@@ -1010,7 +1010,7 @@ Sequences.addcloseLANL.161027<- function(dir.name= DATA)
 Sequences.161027<- function(dir.name= DATA)
 {
 	#	read SEQUENCE csv data file and preprocess
-	dir.name		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update'
+	dir.name		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update'
 	file			<- paste(dir.name,"original","SHM_1602_161013_OR_ALL_Sequences.xlsx",sep='/')
 	outfile			<- paste(dir.name,"preprocessed","ATHENA_1610_All_Sequences.rda",sep='/')
 	#					
@@ -1901,7 +1901,7 @@ Viro.160227<- function()
 	DB.locktime				<- as.Date("2015-05-01")
 	
 	#	INPUT FILE NAMES
-	dir.name		<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'
+	dir.name		<- '~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update'
 	file.treatment	<- paste(dir.name,"ATHENA_1502_All_Regimens.R",sep='/')
 	file			<- file.path(dir.name, 'ATHENA_1502_All_Viro.csv')		
 	
@@ -2245,9 +2245,9 @@ Viro.161027<- function()
 	DB.locktime				<- as.Date("2016-06-01")
 	
 	#	INPUT FILE NAMES
-	file.treatment	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART.rda'
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/SHM_1602_161102_OR_ALL_RNA.csv'		
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_RNA.rda'
+	file.treatment	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART.rda'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_latest/SHM_1602_161102_OR_ALL_RNA.csv'		
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_RNA.rda'
 	
 	#	load ART data
 	load(file.treatment)
@@ -2586,7 +2586,7 @@ Patients.160227<- function()
 	NA.time				<- c("","1911-01-01","1911-11-11")		
 	date.format			<- "%Y-%m-%d"
 	#	INPUT
-	dir.name			<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+	dir.name			<- "~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update"
 	file				<- file.path(dir.name, "ATHENA_1502_All_Patient.csv")
 	outfile				<- gsub('csv','R',file)
 	#
@@ -2727,7 +2727,7 @@ CD4.160227<- function()
 	verbose			<- 1
 	
 	#	INPUT FILE NAMES
-	dir.name		<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'	
+	dir.name		<- '~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update'	
 	file			<- paste(dir.name,"ATHENA_1502_All_Immu.csv",sep='/')
 	#
 	#	read CD4 csv data file and preprocess
@@ -2936,8 +2936,8 @@ CD4.161027<- function()
 	verbose			<- 1
 	
 	#	INPUT FILE NAMES	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Immu.csv'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_CD4.rda'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Immu.csv'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_CD4.rda'
 	#
 	#	read CD4 csv data file and preprocess
 	#
@@ -3167,7 +3167,7 @@ CombinedTable.130301<- function(dir.name= DATA, verbose=1, resume=0)
 	}
 	if(1)
 	{
-		dir.name		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+		dir.name		<- "~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update"
 		file.seq		<- paste(dir.name,"ATHENA_1502_All_Sequences.R",sep='/')
 		file.patient	<- paste(dir.name,"ATHENA_1502_All_Patient.R",sep='/')
 	}
@@ -3542,7 +3542,7 @@ Regimen.160227<- function()
 	#
 	#	INPUT FILE
 	#
-	dir.name		<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'
+	dir.name		<- '~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update'
 	file			<- file.path(dir.name, 'ATHENA_1502_All_Regimens.csv')
 	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
 	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
@@ -4250,8 +4250,8 @@ Regimen.161027<- function()
 	#
 	#	INPUT FILE
 	#	
-	file			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Regimens.xlsx'
-	outfile			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART.rda'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Regimens.xlsx'
+	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART.rda'
 	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
 	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')
 	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens_AllMSM.csv",sep='/')	
@@ -4606,7 +4606,7 @@ Regimen.161027<- function()
 	tmp		<- merge(subset(df, select=c(Patient, StopTime)), tmp, by='Patient')
 	tmp		<- tmp[, list(OddStopTime=OddStopTime[1], DUMMY=DUMMY[1], LAST=max(StopTime)<=OddStopTime[1]), by='Patient']
 	tmp		<- subset(tmp, LAST)
-	#write.csv(tmp, file='~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/check/check_inaccurateStopTime_equal_StartTime_and_Last_2.csv')
+	#write.csv(tmp, file='~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/check/check_inaccurateStopTime_equal_StartTime_and_Last_2.csv')
 	for(i in seq_len(nrow(tmp)))
 	{
 		set(df, tmp[i,DUMMY], 'StopTime', TR.notyet)
@@ -4991,13 +4991,13 @@ Regimen.CheckOnVL<- function(dir.name= DATA, verbose=1)
 Regimen.CheckARTStartDate<- function()
 {
 	verbose		<- 1
-	file		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART.rda'
+	file		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART.rda'
 	load(file)
 	df.treatment<- df
-	file		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_RNA.rda'
+	file		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_RNA.rda'
 	load(file)
 	df.v		<- df
-	outfile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART_checked_DropVLBeforeART.rda'
+	outfile		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART_checked_DropVLBeforeART.rda'
 	#
 	#	check if VL decreases just before treatment start
 	#
@@ -5253,7 +5253,7 @@ CD4.process.NA<- function( df, NA.time=c("","01/01/1911","11/11/1911","24/06/192
 GGD.160227<- function()
 {
 	#	INPUT FILE NAMES
-	dir.name	<- '~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update'	
+	dir.name	<- '~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update'	
 	file		<- paste(dir.name,"ATHENA_1502_All_Region_GGD_v02.csv",sep='/')
 	df			<- read.csv(file, stringsAsFactors=FALSE)
 	df			<- hivc.db.reset.Date(df, col="DateReg", NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.format="%Y-%m-%d")
@@ -5294,10 +5294,10 @@ GGD.160227<- function()
 ######################################################################################
 Population.161209<- function()
 {
-	indir	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest'
-	chdir	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/check'
-	inf.ggd	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/CBS_Gemeenden_GGD.csv'
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'
+	indir	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_latest'
+	chdir	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/check'
+	inf.ggd	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_latest/CBS_Gemeenden_GGD.csv'
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/CBS_1612_Population_GGD_Age.rda'
 	#
 	#	read GGD table
 	#	
@@ -5652,8 +5652,8 @@ Population.161209<- function()
 GGD.161027<- function()
 {
 	#	INPUT FILE NAMES
-	file		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Region_GGD.csv'		
-	outfile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Region_GGD.rda'
+	file		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Region_GGD.csv'		
+	outfile		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_Region_GGD.rda'
 	
 	df			<- read.csv(file, stringsAsFactors=FALSE)
 	df			<- hivc.db.reset.Date(df, col="REG_D", NA.time=c("","01/01/1911","11/11/1911","24/06/1923"), date.format="%d/%m/%Y")
@@ -5699,7 +5699,7 @@ CombinedTable.160227<- function()
 	#
 	#	INPUT FILES generated with "project.hivc.Excel2dataframe.XXX"
 	#	
-	dir.name		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+	dir.name		<- "~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update"
 	file.seq		<- paste(dir.name,"ATHENA_1502_All_Sequences.R",sep='/')
 	file.patient	<- paste(dir.name,"ATHENA_1502_All_Patient.R",sep='/')		
 	file.primoSHM	<- paste(dir.name,"ATHENA_1501_PrimoSHM.csv",sep='/')
@@ -5929,10 +5929,10 @@ CombinedTable.161027<- function()
 	#
 	#	INPUT FILES generated with "project.hivc.Excel2dataframe.XXX"
 	#	
-	dir.name		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin"
-	file.seq		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_withCOMET_withLANL.rda"
+	dir.name		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin"
+	file.seq		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_withCOMET_withLANL.rda"
 	file.patient	<- paste(dir.name,"ATHENA_1610_All_Patient.rda",sep='/')		
-	file.primoSHM	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/original_latest/ATHENA_1501_PrimoSHM.csv'
+	file.primoSHM	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_latest/ATHENA_1501_PrimoSHM.csv'
 	file.viro		<- paste(dir.name,"ATHENA_1610_All_RNA.rda",sep='/')
 	file.immu		<- paste(dir.name,"ATHENA_1610_All_CD4.rda",sep='/')
 	file.treatment	<- paste(dir.name,"ATHENA_1610_All_ART_checked_DropVLBeforeART.rda",sep='/')

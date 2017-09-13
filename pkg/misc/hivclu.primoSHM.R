@@ -97,11 +97,11 @@ primoSHM.plotViralLoad<- function()
 	dfvpu	<- unique(dfvp)
 	setkey(dfvp, AnyPos_T1, Patient)
 	
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_MSMtransmission_Primo/150417_Primo.R'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_MSMtransmission_Primo/150417_Primo.R'
 	save(dfvpu, dfvp, dfpr, file=file)
 	
 	ggplot(dfvpu, aes(x=AnyT_T1-AnyPos_T1)) + geom_histogram(binwidth=1/12) + scale_x_continuous(breaks=seq(0,15,1))
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_MSMtransmission_Primo/150417_TimeToARTStart.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_MSMtransmission_Primo/150417_TimeToARTStart.pdf'
 	ggsave(file=file, w=8, h=6)
 	
 	subset(dfvpu, AnyPos_T1>2003.33 & AnyPos_T1<=2013.16)[, table(AnyT_T1-AnyPos_T1<.5, useNA='if')]
@@ -120,7 +120,7 @@ primoSHM.plotViralLoad<- function()
 			theme_bw() +
 			theme(panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.3)) +
 			facet_grid(Patient~., scales='free')			
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_MSMtransmission_Primo/150417_VLtraj_ARTwithin6mo.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_MSMtransmission_Primo/150417_VLtraj_ARTwithin6mo.pdf'
 	ggsave(file=file, w=8, h=1*tmp[,length(unique(Patient))],limitsize=FALSE)
 	
 	#	ART after 6mo
@@ -137,13 +137,13 @@ primoSHM.plotViralLoad<- function()
 			theme_bw() +
 			theme(panel.grid.minor = element_line(colour='grey70', size=0.2), panel.grid.major = element_line(colour='grey70', size=0.3)) +
 			facet_grid(Patient~., scales='free')			
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_MSMtransmission_Primo/150417_VLtraj_ARTafter6mo.pdf'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_MSMtransmission_Primo/150417_VLtraj_ARTafter6mo.pdf'
 	ggsave(file=file, w=8, h=1*tmp[,length(unique(Patient))],limitsize=FALSE)
 }
 
 primoSHM.probableTransmitters<- function()
 {
-	file	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_MSMtransmission_Primo/150417_Primo.R'
+	file	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2015/2015_MSMtransmission_Primo/150417_Primo.R'
 	load(file)
 		
 	setnames(dfvpu, 'Patient', 't.Patient')

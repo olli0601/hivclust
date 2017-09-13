@@ -6,8 +6,8 @@ cr.master.ex3.dev.MCMC2<- function()
 	require(coda)
 	
 	par.s	<- 0.5	
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
-	#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
+	#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
 	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_adaptiveMCMC_50100.rda'),basename(F)))
 	
 	set.seed(42)
@@ -63,7 +63,7 @@ cr.master.ex3.dev.MCMC3<- function()
 	require(coda)
 	
 	par.s	<- 1	
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep30.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep30.nwk'
 	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_adaptiveMCMC_50100.rda'),basename(F)))
 	
 	set.seed(42)
@@ -131,8 +131,8 @@ cr.master.ex3.generate.data<- function()
 	#
 	#	generate MASTER simulations based on Erik's XML file
 	#
-	#infile.xml	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150.xml'
-	infile.xml	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250.xml'
+	#infile.xml	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150.xml'
+	infile.xml	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250.xml'
 	pr.beast2	<- '/Applications/BEAST 2.4.4/lib/beast.jar'
 	pr.wdir		<- '/Users/Oliver/duke/tmp'
 	pr.seed		<- 123
@@ -145,8 +145,8 @@ cr.master.ex3.generate.data<- function()
 	#
 	#	read out tip state info 
 	#	
-	#file	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123.nex'
-	file	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123.nex'	 
+	#file	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123.nex'
+	file	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123.nex'	 
 	tmp		<- hivc.beast2out.read.nexus.and.stats(file, method.node.stat='any.node')
 	phs		<- tmp$tree
 	phi		<- copy(tmp$node.stat)
@@ -185,7 +185,7 @@ cr.master.ex3.check.likelihoods.aoiModel<- function()
 	require(ape)
 	require(viridis)
 	
-	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+	indir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 	infile		<- file.path(indir, 'm3.RR5.n1250_seed123_rep5.nwk')	
 	tr			<- read.tree( infile )
 	tr			<- multi2di(ladderize(tr),random=FALSE)	
@@ -216,7 +216,7 @@ cr.master.ex3.check.likelihoods.mincladesize100.maxHeight10<- function()
 	require(ape)
 	require(coda)
 	
-	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'	
+	indir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'	
 	coefs0		<- as.data.table(expand.grid( 	LOGSCALE=c(0.11, -1.04),
 												LOGHET=0,
 												COEF_INF=c(1.033, 1.29),
@@ -320,7 +320,7 @@ cr.master.ex3.check.likelihoods.mincladesize200.maxHeight30<- function()
 	require(ape)
 	require(coda)
 	
-	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'	
+	indir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'	
 	coefs0		<- as.data.table(expand.grid( 	LOGSCALE=c(0.11, -1.04),
 					LOGHET=0,
 					COEF_INF=c(1.033, 1.29),

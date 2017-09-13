@@ -7,13 +7,13 @@ age.props_univariate.dev<- function()
 	require(ape)
 	
 	fargs						<- list()
-	fargs[['indircov']]			<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_democlin'
+	fargs[['indircov']]			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin'
 	fargs[['file.combined']]	<- 'ATHENA_1610_All_PatientKeyCovariates_Numeric.rda'
 	fargs[['file.RNA']]			<- 'ATHENA_1610_All_RNA.rda'
 	fargs[['file.CD4']]			<- 'ATHENA_1610_All_CD4.rda'
 	fargs[['file.ART']]			<- 'ATHENA_1610_All_ART_checked_DropVLBeforeART.rda'
 	fargs[['file.tree']]		<- NA
-	fargs[['outfile.base']]		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/ATHENA_Age'	
+	fargs[['outfile.base']]		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/ATHENA_Age'	
 	
 	aargs									<- list()
 	aargs[['t.period']]						<- 1/8
@@ -7987,7 +7987,7 @@ recipients.repr.160907<- function()
 	setkey(ans, STAT, t.period, DATA)
 	
 	ans			<- subset(ans, select=c("STAT","t.period","DATA","0.025","0.25","mean","0.75","0.975"))
-	file		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_RecipMSMRepresentative.csv'
+	file		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2014/MSMtransmission_ATHENA1303/150303_RecipMSMRepresentative.csv'
 	write.csv(ans, file=file, eol="\r\n", row.names=FALSE)
 }
 ######################################################################################

@@ -743,10 +743,10 @@ project.WTprop.ATHENAmobility.160309<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	indir		<- "~/Dropbox (Infectious Disease)/2015_ATHENA_May_Update"
+	indir		<- "~/Dropbox (SPH Imperial College)/2015_ATHENA_May_Update"
 	infile.main	<- file.path(indir,"ATHENA_1502_All_PatientKeyCovariates.R")
 	infile.ggd	<- file.path(indir,"ATHENA_1502_All_Region_GGD_v02.R")
-	outdir		<- "/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_GuidingTransmissionElimination"
+	outdir		<- "/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2016/2016_GuidingTransmissionElimination"
 	
 	load(infile.main)
 	df.all		<- subset(df.all, select=c(Patient, DateBorn, Sex, CountryBorn, CountryInfection, Region_RegT1, Region_now, RegionOrigin, Trm, DateLastContact, DateDied, isDead, AnyPos_T1, PosSeqT))
@@ -1170,8 +1170,8 @@ project.hivc.clustering.forStephane.onUK.ExaML<- function()
 	verbose			<- 1
 	resume			<- 1
 	patient.n		<- 15700; 	thresh.brl<- 0.096; 	thresh.bs<- 0.8;	opt.brl<- "dist.brl.casc" 
-	indir			<- '~/Dropbox (Infectious Disease)/2015_OptimalClusteringThresholds/data'	
-	outdir			<- '~/Dropbox (Infectious Disease)/2015_OptimalClusteringThresholds/data'
+	indir			<- '~/Dropbox (SPH Imperial College)/2015_OptimalClusteringThresholds/data'	
+	outdir			<- '~/Dropbox (SPH Imperial College)/2015_OptimalClusteringThresholds/data'
 	
 	#	read tree
 	if(0)
@@ -3214,7 +3214,7 @@ project.PANGEA.data.preprocess<- function()
 {
 	#	this cleans and pre-processes the PANGEA metadata
 	#	in PANGEA.HIV.sim/misc/treecomparison, I merge this with other study data etc
-	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_metadata/original_161128/MetaData_161219.csv'
+	infile	<- '~/Dropbox (SPH Imperial College)/PANGEA_metadata/original_161128/MetaData_161219.csv'
 	dfp		<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
 	setnames(dfp, colnames(dfp), toupper(colnames(dfp)))
 	#	clean up trailing/leading whitespace
@@ -3263,7 +3263,7 @@ project.PANGEA.data.preprocess<- function()
 	set(dfp, NULL, 'CD4_L', dfp[, as.numeric(CD4_L)])
 	set(dfp, NULL, 'CD4_U', dfp[, as.numeric(CD4_U)])
 	#
-	outfile	<- '~/Dropbox (Infectious Disease)/PANGEA_metadata/processed_metadata/PANGEA_meta_161128.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/PANGEA_metadata/processed_metadata/PANGEA_meta_161128.rda'
 	save(dfp, file=outfile)	
 }
 ######################################################################################
@@ -3874,171 +3874,6 @@ project.hivc.examlclock<- function()
 	#ggsave(file=paste(substr(plot.file.one,1,nchar(plot.file.one)-4),'_zagaqq','.pdf',sep=''), w=4,h=6)		
 }
 
-######################################################################################
-
-project.Bezemer.VLIntros<- function()
-{
-	project.Bezemer.VLIntros.LSD()
-	#project.Bezemer.VLIntros.FastTrees()
-}
-
-######################################################################################
-
-project.Bezemer.VLIntros.DataFile<- function()
-{
-	require(data.table)
-	require(ggplot2)
-	infile	<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo.csv'
-	indir	<- dirname(infile)
-	basename<- file.path(indir,gsub('\\.csv','',basename(infile)))
-	
-	df		<- as.data.table(read.csv(infile))
-	df1		<- subset(df, select=c(patient, sex, routesex, NL, subtype, date_LSD, SampleRegion_V1, COMBIREGIONDIST_V1, infectionregion_V1, country, country_infection, countryborn))
-	set(df1, df1[, which(infectionregion_V1=='ZAz')], 'infectionregion_V1', 'ZAZ')
-	set(df1, df1[, which(countryborn=='LA')], 'countryborn', 'LANL')
-	set(df1, NULL, 'COMBIREGIONDIST_V1', df1[, gsub('_SHM|_LANL','',COMBIREGIONDIST_V1)])
-	setnames(df1, 	c('patient','sex','routesex','NL','subtype','date_LSD','SampleRegion_V1','COMBIREGIONDIST_V1','infectionregion_V1','country','country_infection','countryborn'), 
-					c('ID','GENDER','GENDER_TRMGROUP','DATA_FROM_SHM','SUBTYPE','SAMPLING_DATE','SAMPLING_LOC','BORN_LOC','INFECTED_LOC','SAMPLING_COUNTRY','INFECTED_COUNTRY','BORN_COUNTRY'))
-	#	write to file
-	#
-	write.csv(df1, row.names=FALSE, file=gsub('\\.csv','_OR.csv',infile))	
-	#
-	#	plot born_loc vs infected_loc	
-	tmp	<- df1[, list(N=length(ID)), by=c('BORN_LOC','INFECTED_LOC')]
-	ggplot(tmp, aes(x=BORN_LOC, y=INFECTED_LOC, size=N)) + geom_point()
-	ggsave(file=paste0(basename,'_plot_BORNLOC_vs_INFECTEDLOC.pdf'), h=6, w=6)
-	ggplot(subset(tmp, BORN_LOC=='NL'), aes(x=INFECTED_LOC, y=N)) + geom_bar(stat='identity')
-	ggsave(file=paste0(basename,'_plot_BORNNL_INFECTEDLOC_numbers.pdf'), h=5, w=8)
-	ggplot(subset(tmp, BORN_LOC=='NL'), aes(x=INFECTED_LOC, y= N/sum(N))) + geom_bar(stat='identity') + scale_y_continuous(labels = scales:::percent, breaks=seq(0,1,0.1)) 
-	ggsave(file=paste0(basename,'_plot_BORNNL_INFECTEDLOC_percent.pdf'), h=5, w=8)
-	#
-	#	plot sampling locations over time
-	tmp	<- copy(df1)
-	tmp[, SAMPLING_DATE2:= cut(SAMPLING_DATE, seq(1981,2016,5))]	
-	ggplot(tmp, aes(x=SAMPLING_DATE2, fill=SAMPLING_LOC)) + geom_bar() + scale_fill_brewer(palette='Set3')
-	ggsave(file=paste0(basename,'_plot_SAMPLINGDATE_by_SAMPLINGLOC_numbers.pdf'), h=5, w=8)
-	ggplot(tmp, aes(x=SAMPLING_DATE2, fill=SAMPLING_LOC)) + geom_bar(position='fill') + scale_fill_brewer(palette='Set3') + scale_y_continuous(labels = scales:::percent, breaks=seq(0,1,0.1))
-	ggsave(file=paste0(basename,'_plot_SAMPLINGDATE_by_SAMPLINGLOC_percent.pdf'), h=5, w=8)
-}
-
-######################################################################################
-
-project.Bezemer.VLIntros.LSD<- function()
-{	
-	require(data.table)
-	require(big.phylo)
-	#
-	#	write the overall dates file
-	#
-	if(0)
-	{
-		infile.dates	<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_OR.csv'
-		df				<- as.data.table(read.csv(infile.dates))
-		df				<- subset(df, select=c(ID, SUBTYPE, SAMPLING_DATE))
-		setnames(df, c('ID','SAMPLING_DATE'), c('TAXA','DATE'))
-		tmp				<- copy(df)
-		set(tmp, NULL, 'TAXA', tmp[,gsub('[0-9]$','',paste0(TAXA,'_subtype',SUBTYPE))])
-		df				<- rbind(df, tmp)	
-		infile.dates	<- gsub('\\.csv','_lsddates.csv',infile.dates)
-		write.csv(df, row.names=FALSE, infile.dates)
-		#
-		#	write subtype specific dates files
-		#
-		indir.ft		<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
-		infiles			<- data.table(F=list.files(indir.ft, pattern='*newick$', full.names=TRUE))
-		infiles[, DATES_FILE:= gsub('_ft_bs100\\.newick','_lsddates.csv',F)]
-		invisible(infiles[, {
-							cmd		<- cmd.lsd.dates(infile.dates, F, DATES_FILE, run.lsd=FALSE)
-							system(cmd)
-							NULL
-						}, by='F'])
-	}	
-	#
-	#	run LSD 
-	#
-	#indir.ft		<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
-	#indir.dates		<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
-	#outdir			<- '~/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
-	
-	indir.ft		<- '/work/or105/ATHENA_2016/vlintros/trees_ft_rerooted'
-	indir.dates		<- '/work/or105/ATHENA_2016/vlintros/trees_lsd'
-	outdir			<- '/work/or105/ATHENA_2016/vlintros/trees_lsd'
-		
-	ali.len			<- 1000				
-	lsd.args		<- '-v 1 -c -b 10'			# no rooting, no re-estimation of rates				
-	#	get files	
-	infiles	<- data.table(F=list.files(indir.ft, pattern='*newick$', full.names=TRUE, recursive=TRUE))
-	infiles	<- subset(infiles, !grepl('RAxML',F))
-	infiles[, SUBTYPE:= gsub('_.*','',basename(F))]
-	tmp		<- data.table(FD=list.files(indir.dates, pattern='*_lsddates.csv$', full.names=TRUE, recursive=TRUE))
-	tmp[, SUBTYPE:= gsub('_.*','',basename(FD))]
-	infiles	<- merge(infiles, tmp, by='SUBTYPE')
-	infiles[, FL:= file.path(outdir,gsub('_rr\\.|_rr_','_lsd_',gsub('\\.newick','',basename(F))))]	
-	#	build LSD commands
-	dlsd	<- infiles[, {
-				cmd		<- cmd.lsd(F, FD, ali.len, outfile=FL, pr.args=lsd.args)
-				list(CMD=cmd)
-			}, by='F']
-	tmp		<- dlsd[, paste(CMD, collapse='\n')]
-	#	qsub
-	cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=30, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=1, hpc.load='module load R/3.3.3')							
-	cmd		<- paste(cmd,tmp,sep='\n')
-	#cat(cmd)					
-	outfile	<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-	cmd.hpccaller(indir.ft, outfile, cmd)	
-}
-
-######################################################################################
-
-project.Bezemer.VLIntros.FastTrees<- function()
-{	
-	require(big.phylo)
-	#	run FastTree on HPC
-	if(1)
-	{
-		#indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle'
-		indir			<- '/work/or105/ATHENA_2016/vlintros/trees_ft'
-		infiles			<- list.files(indir, pattern='fasta$')
-		for(infile in infiles)
-		{
-			infile.fasta	<- file.path(indir,infile)
-			bs.dir			<- gsub('.fasta','_bootstrap_trees',infile.fasta)
-			bs.n			<- 100	
-			dir.create(bs.dir)	
-			outfile.ft		<- gsub('\\.fasta',paste0('_ft_bs',bs.n,'.newick'),infile.fasta)
-			tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
-			
-			#	run on HPC
-			cmd				<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=1, hpc.load='module load R/3.3.3')
-			cmd				<- paste(cmd,tmp,sep='\n')
-			cat(cmd)					
-			outfile.cmd		<- paste("bez",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-			cmd.hpccaller(indir, outfile.cmd, cmd)	
-		}
-	}
-	#	re-root at random taxon with name 'subtree'
-	if(0)
-	{
-		require(ape)
-		require(adephylo)
-		require(phytools)		
-		indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft'
-		infiles			<- data.table(F=list.files(indir, pattern='newick$', recursive=TRUE, full.names=TRUE))
-		#infiles			<- subset(infiles, grepl('cpx06', F))
-		invisible(infiles[, {
-					#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/2017_NL_Introductions/trees_ft/06cpx_withD_bootstrap_trees/06cpx_withD_ft.000.newick'
-					ph	<- read.newick(F)		
-					tmp				<- which(grepl('subtype',ph$tip.label))[1]		
-					ph				<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
-					ph				<- ladderize(ph)	
-					write.tree(ph, file=gsub('_ft\\.','_rr.',F))
-					pdf(file=paste0(gsub('_ft\\.','_rr.',F),'.pdf'), w=20, h=10+Ntip(ph)/10)
-					plot(ph, show.node.label=TRUE, cex=0.3)
-					dev.off()
-				}, by='F'])
-		
-	}
-}
 
 ######################################################################################
 project.Bezemer.clusters<- function()

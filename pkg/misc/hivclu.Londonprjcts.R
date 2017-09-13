@@ -1,13 +1,13 @@
 ######################################################################################
 project.London.rmDRM.151130<- function()
 {
-	infile	<- '~/Dropbox (Infectious Disease)/2016_LondonMSM/subUKogC.fasta'
+	infile	<- '~/Dropbox (SPH Imperial College)/2016_LondonMSM/subUKogC.fasta'
 	seql	<- read.dna(infile, format='fasta')	
 	stopifnot( any(grepl('HXB2',rownames(seql))) )
 	
 	require(big.phylo)
 	drmout	<- seq.rm.drugresistance(seql)
-	outfile	<- '~/Dropbox (Infectious Disease)/2016_LondonMSM/subUKogC_noDRM.fasta'	
+	outfile	<- '~/Dropbox (SPH Imperial College)/2016_LondonMSM/subUKogC_noDRM.fasta'	
 	save(drmout, file=gsub('\\.fasta','_output.R',outfile))
 	seq		<- drmout$nodr.seq
 	save(seq, file=gsub('\\.fasta','.R',outfile))
@@ -17,7 +17,7 @@ project.London.rmDRM.151130<- function()
 project.London.FirstExaml.151202<- function()
 {
 	require(big.phylo)	
-	indir		<- '~/Dropbox (Infectious Disease)/2016_LondonMSM'	#TODO: currently no whitespace or brackets in file name: escape all files with ""
+	indir		<- '~/Dropbox (SPH Imperial College)/2016_LondonMSM'	#TODO: currently no whitespace or brackets in file name: escape all files with ""
 	indir		<- '/Users/Oliver/duke/2015_various'
 	indir		<- DATA
 	infile		<- "subUKogC_noDRM"				#TODO: use fasta instead of R

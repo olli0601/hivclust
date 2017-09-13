@@ -8,7 +8,7 @@ cr.hpc.submit.170803<- function()
 {
 	if(0)
 	{
-		indir						<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir						<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 		indir						<- '/work/or105/ATHENA_2016/master_examples'	
 		par.base.pattern			<- 'm3.RR5.n1250_seed123'
 		infiles				<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))	
@@ -110,10 +110,138 @@ cr.hpc.submit.170803<- function()
 }
 
 cr.hpc.submit<- function()
+{
+	if(1)
+	{
+		indir						<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
+		indir						<- '/work/or105/ATHENA_2016/master_examples'	
+		par.base.pattern			<- 'm3.RR5.n1250_seed123'
+		infiles				<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))	
+		infiles[, REP:= as.numeric(gsub('.*rep([0-9]+)\\.nwk','\\1',basename(F)))]
+		infiles				<- subset(infiles, REP<=30)
+		setkey(infiles, REP)
+		
+		formula.tr					<- '~TYPE'
+		formula.inf					<- '~TYPE'		
+		par.maxNodeDepth			<- Inf		
+		par.maxHeight				<- 25
+		par.hetInflation_logprior	<- 0
+		par.noise					<- 0
+		par.bias					<- 1					
+		for(i in seq_len(nrow(infiles)))
+		{
+			infile						<- infiles[i,F]
+			par.s						<- 1
+			par.mincladesize			<- 50
+			extra						<- '170913'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+			
+			infile						<- infiles[i,F]
+			par.s						<- 1
+			par.mincladesize			<- 75
+			extra						<- '170913'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+			
+			par.s						<- 1
+			par.mincladesize			<- 100
+			extra						<- '170913'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)
+			
+			par.s						<- 1
+			par.mincladesize			<- 150
+			extra						<- '170913'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)
+			
+			par.s						<- 1
+			par.mincladesize			<- 200
+			extra						<- '170913'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q='pqeelab', hpc.walltime=71, hpc.mem="5600mb", hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)							
+		}
+	}
+}
+
+cr.hpc.submit.170810<- function()
 {	
 	if(1)
 	{
-		indir						<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir						<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 		indir						<- '/work/or105/ATHENA_2016/master_examples'	
 		par.base.pattern			<- 'm3.RR5.n1250_seed123'
 		infiles				<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))	
@@ -173,7 +301,7 @@ cr.hpc.submit<- function()
 	}
 	if(0)
 	{
-		indir						<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir						<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 		indir						<- '/work/or105/ATHENA_2016/master_examples'	
 		par.base.pattern			<- 'm3.RR5.n1250_seed123'
 		infiles				<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))	
@@ -320,7 +448,7 @@ cr.hpc.submit<- function()
 
 cr.various.master<- function()
 {
-	infile						<- "/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk"
+	infile						<- "/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk"
 	par.maxNodeDepth			<- Inf
 	par.maxHeight				<- 10	
 	par.hetInflation_logprior	<- NA
@@ -542,7 +670,7 @@ cr.png.generate.data<- function()
 	require(data.table)
 	require(ape)
 	require(phangorn)
-	indir	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
+	indir	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
 	infiles	<- data.table(FR=list.files(indir, pattern='_INTERNAL.R', full.names=TRUE, recursive=TRUE))
 	infiles[, SC:= basename(dirname(dirname(FR)))]
 	infiles[, SEQCOV:= as.numeric(gsub('.*cov([0-9]+\\.[0-9]+).*','\\1',SC))/100]
@@ -553,7 +681,7 @@ cr.png.generate.data<- function()
 	
 	infiles[, table(SEQCOV)]
 	
-	outfile	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-'
+	outfile	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-'
 	t.start	<- 0
 	t.end	<- 2020
 	t.adult	<- 14
@@ -563,8 +691,8 @@ cr.png.generate.data<- function()
 	#	prepare tree files
 	#
 	infiles[, {
-				#FR		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
-				#FT		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43/150129_HPTN071_scHN_SIMULATED_TREE/150129_HPTN071_scHN_DATEDTREE.newick'
+				#FR		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
+				#FT		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43/150129_HPTN071_scHN_SIMULATED_TREE/150129_HPTN071_scHN_DATEDTREE.newick'
 				cat('\n',FR)
 				load(FR)
 				#	collect all meta data that we want
@@ -599,8 +727,8 @@ cr.png.generate.data<- function()
 	#	- risk group, with recent infection at diagnosis, transmission from recent, transmission from acute
 	#	
 	
-	FR		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed50/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
-	#FR		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov41.3-seed46/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
+	FR		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed50/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
+	#FR		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov41.3-seed46/150129_HPTN071_scHN_INTERNAL/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
 	#FR		<- '~/Downloads/150129_HPTN071_scHN_SIMULATED_INTERNAL.R'
 	cat('\n',FR)
 	load(FR)
@@ -954,8 +1082,8 @@ cr.master.ex3.generate.data<- function()
 	#
 	#	generate MASTER simulations based on Erik's XML file
 	#
-	#infile.xml	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150.xml'
-	infile.xml	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250.xml'
+	#infile.xml	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150.xml'
+	infile.xml	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250.xml'
 	pr.beast2	<- '/Applications/BEAST 2.4.4/lib/beast.jar'
 	pr.wdir		<- '/Users/Oliver/duke/tmp'
 	pr.seed		<- 123
@@ -968,8 +1096,8 @@ cr.master.ex3.generate.data<- function()
 	#
 	#	read out tip state info 
 	#	
-	#file	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123.nex'
-	file	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123.nex'	 
+	#file	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123.nex'
+	file	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123.nex'	 
 	tmp		<- hivc.beast2out.read.nexus.and.stats(file, method.node.stat='any.node')
 	phs		<- tmp$tree
 	phi		<- copy(tmp$node.stat)
@@ -1007,7 +1135,7 @@ cr.master.ex3.runcoalreg.using.TYPE.BFGS2<- function(indir, par.base.pattern, pa
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 		par.base.pattern	<- 'm3.RR5.n150_seed123'
 		par.s				<- 0.5
 	}
@@ -1020,7 +1148,7 @@ cr.master.ex3.runcoalreg.using.TYPE.BFGS2<- function(indir, par.base.pattern, pa
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
-				#F		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep1.nwk'
+				#F		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep1.nwk'
 				ph		<- read.tree( F )					
 				ph 		<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
 				tmp 	<- setNames(dist.nodes( ph )[(Ntip(ph)+1), seq_len(Ntip(ph))], ph$tip.label)
@@ -1046,7 +1174,7 @@ cr.png.compare<- function()
 {
 	require(coalreg)
 	require(viridis)
-	indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+	indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
 	#	update file names if needed
 	if(0)
@@ -1057,13 +1185,13 @@ cr.png.compare<- function()
 		invisible(infiles[,file.rename(F, gsub('\\.rda$','_scale0.rda',F)),by='F'])
 	}
 	#	load true values
-	load("~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-empirical_transmission_rates.rda")
+	load("~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-empirical_transmission_rates.rda")
 	dtrr	<- subset(dtrr, TS==2005 & TE==2020)
 	set(dtrr, NULL, c('TS','TE'), NULL)
 	#	parse results	
 	infiles	<- subset(infiles, !grepl('results\\.rda',F))
 	res		<- infiles[, {
-				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43_coalreg_using_TRM-FROM-RECENTtrf_ETSIaoi_BFGSargs3_maxNodeDepth3.rda'
+				#F	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43_coalreg_using_TRM-FROM-RECENTtrf_ETSIaoi_BFGSargs3_maxNodeDepth3.rda'
 				load(F)
 				list(	FACTOR= names(fit$bestfit$par),
 						MLE= unname(fit$bestfit$par),
@@ -1281,11 +1409,11 @@ cr.png.compare<- function()
 	ggsave(file= file.path(indir,'compare_png_MLEs_BFGSargs3_modelWRISKRECENT_aoiETSINOISE_checkCLIMB.pdf'), w=15,h=15)	
 	
 	tmp	<- subset(resp, AOI_ETSINOISE==0 & AOI_ETSIBIAS==1 & R_RANGE=='r in -4,2' & STAT%in%c('MLE','TRUE_TR_RATE_RATIO') & LASSO==5 & MAXNODE==Inf & MAXHEIGHT==10 & TRF=='recent transmission\nrisk low, high' & AOI=='exact time since infection' & SCALE==0)
-	load('/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed51_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_BFGSargs3_maxNodeDepthInf_maxHeight10_lasso5_ETSIbias1_ETSInoise0_scale0.rda')
+	load('/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed51_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_BFGSargs3_maxNodeDepthInf_maxHeight10_lasso5_ETSIbias1_ETSInoise0_scale0.rda')
 	fit.bfgs	<- fit
-	load('~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/tmp/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed51_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_BFGSargs3_maxNodeDepthInf_maxHeight10_lasso5_ETSIbias1_ETSInoise0_scale0.rda')
+	load('~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/tmp/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed51_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_BFGSargs3_maxNodeDepthInf_maxHeight10_lasso5_ETSIbias1_ETSInoise0_scale0.rda')
 	fit.bfgs.n	<- fit
-	load('/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed51_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_Nelder-Meadargs3_maxNodeDepthInf_maxHeight10_lasso5_ETSIbias1_ETSInoise0_scale0.rda')
+	load('/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed51_coalreg_using_TRM-FROM-RECENTtrf_RISKtrf_ETSIaoi_Nelder-Meadargs3_maxNodeDepthInf_maxHeight10_lasso5_ETSIbias1_ETSInoise0_scale0.rda')
 	fit.nm		<- fit
 	lapply(list(fit.bfgs, fit.bfgs.n, fit.nm), function(x) x[['theta0']])
 	lapply(list(fit.bfgs, fit.bfgs.n, fit.nm), function(x) x[['theta_starts']])
@@ -1352,7 +1480,7 @@ cr.master.ex3.adMCMC.evaluate.170803<- function()
 	require(data.table)
 	require(coda)
 	
-	indir	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results_2'
+	indir	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_results_2'
 	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
 	infiles[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
 	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z]+)_.*','\\1',basename(F))]
@@ -1364,7 +1492,7 @@ cr.master.ex3.adMCMC.evaluate.170803<- function()
 			{
 				infile	<- infiles[i,F]
 				cat(basename(infile),'\n')
-				#infile	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results_2/m3.RR5.n1250_seed123_rep1_aMCMC170803_170713_trTYPE_infTYPE_mndInf_mh25_hetinf0_mcs100_s0.5.rda'
+				#infile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_results_2/m3.RR5.n1250_seed123_rep1_aMCMC170803_170713_trTYPE_infTYPE_mndInf_mh25_hetinf0_mcs100_s0.5.rda'
 				load(infile)	
 				fit.mcmc			<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
 				fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
@@ -1413,12 +1541,79 @@ cr.master.ex3.adMCMC.evaluate.170803<- function()
 	ggsave(file=file.path(indir,'boxplots.pdf'),w=10,h=10)
 }
 
+cr.master.ex3.adMCMC.evaluate.170913<- function()
+{
+	require(data.table)
+	require(coda)
+	require(ggplot2)
+	
+	indir	<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_results_3'
+	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
+	infiles[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
+	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z]+)_.*','\\1',basename(F))]
+	infiles[, FORMULA_TR:= gsub('.*_tr([A-Z]+)_.*','\\1',basename(F))]
+	infiles[, SAMPLING:= 100*as.numeric(gsub('.*_s([0-1]\\.?[0-9]*).*','\\1',basename(F)))]
+	infiles[, MAXHEIGHT:= as.numeric(gsub('.*_mh([0-9]+)_.*','\\1',basename(F)))]
+	
+	tmp		<- lapply(seq_len(nrow(infiles)), function(i)
+			{
+				infile	<- infiles[i,F]
+				cat(basename(infile),'\n')
+				#infile	<- '/Users/Oliver/Box Sync/OR_Work/2017/2017_coalregression/master_results_3/m3.RR5.n1250_seed123_rep9_aMCMC170803_170810_trTYPE_infETSI_mndInf_mh25_hetinf0_mcs100_s1.rda'
+				load(infile)	
+				fit.mcmc			<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
+				fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+				colnames(fit.mcmc)	<- paste0(c('','tr','inf'),colnames(fit.mcmc))				
+				fit.mcmc			<- mcmc(fit.mcmc)
+				#	raw plots
+				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(infile))), w=10, h=7)
+				plot(fit.mcmc)
+				dev.off()
+				fit.mcmc.a	<- mcmc(fit$trace_qsd)
+				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(infile))), w=5, h=10)
+				plot(fit.mcmc.a)
+				dev.off()
+				#	rm burn in and thin
+				tmp <- seq.int(1e3,1e4,4*5)
+				dfm	<- melt(cbind(as.data.table(fit.mcmc[tmp,]), data.table(IT=tmp)), id.vars='IT')
+				dfm	<- dfm[, list(STAT=paste0('q',c(0.025,0.25,0.5,0.75,0.975)), V=quantile(value,p=c(0.025,0.25,0.5,0.75,0.975))), by=c('variable')]
+				#	add acceptance
+				tmp	<- 1-rejectionRate(window(fit.mcmc, start=1e3, end=1e4, thin=4))
+				tmp	<- data.table(variable=names(tmp), STAT='acceptance',V=tmp)
+				dfm	<- rbind(dfm, tmp)
+				#	add ESS
+				tmp	<- effectiveSize(window(fit.mcmc, start=1e3, end=1e4, thin=4))
+				tmp	<- data.table(variable=names(tmp), STAT='ESS',V=tmp)
+				dfm	<- rbind(dfm, tmp)
+				#
+				dfm[, REP:=infiles[i,REP]]
+				dfm[, FORMULA_INF:=infiles[i,FORMULA_INF]]
+				dfm[, FORMULA_TR:=infiles[i,FORMULA_TR]]
+				dfm[, SAMPLING:=infiles[i,SAMPLING]]
+				dfm[, MAXHEIGHT:=infiles[i,MAXHEIGHT]]
+				dfm
+			})
+	dfm	<- do.call('rbind',tmp)
+	save(dfm, file=file.path(indir,'results.rda'))
+	
+	dfm	<- dcast.data.table(dfm, SAMPLING+MAXHEIGHT+REP+variable~STAT, value.var='V')
+	set(dfm, NULL, 'SAMPLING', dfm[, paste0('sampling=',SAMPLING,'%')])
+	set(dfm, NULL, 'MAXHEIGHT', dfm[, paste0('max height=',MAXHEIGHT)])
+	tmp	<- unique(subset(dfm, variable=='trTYPE', select=c('SAMPLING','MAXHEIGHT','REP','variable')))
+	tmp[, TRUTH:=log(5)]	
+	ggplot(dfm, aes(x=REP)) + 
+			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
+			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
+			facet_grid(variable~SAMPLING+MAXHEIGHT, scales='free')
+	ggsave(file=file.path(indir,'boxplots_trTYPE_infETSI.pdf'),w=10,h=10)
+}
+
 cr.master.ex3.adMCMC.evaluate<- function()
 {
 	require(data.table)
 	require(coda)
 	
-	indir	<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results'
+	indir	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_results'
 	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
 	infiles[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
 	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z]+)_.*','\\1',basename(F))]
@@ -1426,7 +1621,7 @@ cr.master.ex3.adMCMC.evaluate<- function()
 			{
 				infile	<- infiles[i,F]
 				cat(basename(infile),'\n')
-				#infile	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infTYPE_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
+				#infile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infTYPE_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
 				load(infile)	
 				fit.mcmc			<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
 				fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
@@ -1473,7 +1668,7 @@ cr.master.ex3.adMCMC.evaluate<- function()
 			{
 				infile	<- infiles[i,F]
 				cat(basename(infile),'\n')
-				#infile	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infTYPE_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
+				#infile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infTYPE_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
 				load(infile)	
 				fit.mcmc			<- cbind(IT=seq_along(fit$loglik), fit$trace, fit$trace_tr, fit$trace_inf, LOGPO=fit$loglik)				
 				fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
@@ -1512,7 +1707,7 @@ cr.master.ex3.adMCMC.evaluate<- function()
 			{
 				infile	<- infiles[i,F]
 				cat(basename(infile),'\n')
-				#infile	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infTYPE_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
+				#infile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infTYPE_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
 				load(infile)	
 				fit.bdt	<- data.table(SLICE_ID=seq_along(fit$bdt), SLICE_NTIP=sapply(fit$bdt, Ntip))
 				fit.bdt[, REP:=infiles[i,REP]]
@@ -1530,10 +1725,10 @@ cr.master.ex3.compare<- function()
 {
 	require(coalreg)
 	require(viridis)
-	indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+	indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
 	res		<- infiles[, {
-				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep99_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
+				#F	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep99_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
 				load(F)
 				list(	THETA= names(fit$bestfit$par),
 						MLE= unname(fit$bestfit$par),
@@ -1663,7 +1858,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS1<- function(indir, par.bas
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'			
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'			
 		par.base.pattern	<- 'm3.RR5.n150_seed123'
 		par.s				<- 0.5
 	}
@@ -1674,7 +1869,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS1<- function(indir, par.bas
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
-				#F		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep1.nwk'
+				#F		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep1.nwk'
 				ph		<- read.tree( F )					
 				ph 		<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
 				tmp 	<- setNames(dist.nodes( ph )[(Ntip(ph)+1), seq_len(Ntip(ph))], ph$tip.label)
@@ -1700,7 +1895,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS1<- function(indir, par.bas
 			}, by='F']		
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'),full.names=TRUE))
 	res		<- infiles[, {
-				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep99_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
+				#F	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep99_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
 				load(F)
 				list(	THETA= names(fit$bestfit$par),
 						MLE= unname(fit$bestfit$par),
@@ -1724,7 +1919,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2<- function(indir, par.bas
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'			
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'			
 		par.base.pattern	<- 'm3.RR5.n150_seed123'	
 		par.s				<- 0.5		
 	}
@@ -1735,7 +1930,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2<- function(indir, par.bas
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
-				#F		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep1.nwk'
+				#F		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep1.nwk'
 				ph		<- read.tree( F )					
 				ph 		<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
 				tmp 	<- setNames(dist.nodes( ph )[(Ntip(ph)+1), seq_len(Ntip(ph))], ph$tip.label)
@@ -1760,7 +1955,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2<- function(indir, par.bas
 			}, by='F']		
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs2_s50.rda'),full.names=TRUE))
 	res		<- infiles[, {
-				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep99_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
+				#F	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep99_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
 				load(F)
 				list(	THETA= names(fit$bestfit$par),
 						MLE= unname(fit$bestfit$par),
@@ -1780,10 +1975,10 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2<- function(indir, par.bas
 cr.png.evalcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3<- function()
 {
 	require(coalreg)
-	load('~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-empirical_transmission_rates.rda')
+	load('~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-empirical_transmission_rates.rda')
 	subset(dfr, GROUP=='TR_STAGE' & SC=='PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43')
 	
-	infiles	<- data.table(F=list.files('/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results', pattern='*rda', full.names=TRUE))
+	infiles	<- data.table(F=list.files('/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results', pattern='*rda', full.names=TRUE))
 	
 	load(infiles[1,F])
 	f.maxD3<- fit$bestfit
@@ -1799,8 +1994,8 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3<- function(indir, par.base.pa
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- 3
 		par.maxHeight		<- 10
@@ -1813,7 +2008,7 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.vanilla.BFGS3<- function(indir, par.base.pa
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -1879,8 +2074,8 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.unmodelled.het.BFGS3<- function(indir, par.
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- 3
 		par.maxHeight		<- 10
@@ -1898,7 +2093,7 @@ cr.png.runcoalreg.using.TRSTAGE.ETSI.unmodelled.het.BFGS3<- function(indir, par.
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -1967,8 +2162,8 @@ cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het<- function(indir, pa
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- 3
 		par.maxHeight		<- 10
@@ -1985,7 +2180,7 @@ cr.png.runcoalreg.using.TRvariable.ETSInoise.unmodelled.het<- function(indir, pa
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -2089,8 +2284,8 @@ cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1<- function(indir, par.ba
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- 3
 		par.maxHeight		<- 10
@@ -2107,7 +2302,7 @@ cr.png.runcoalreg.using.TRvariable.ETSInoise.aoi.model1<- function(indir, par.ba
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -2211,8 +2406,8 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- 3
 		par.maxHeight		<- 10
@@ -2225,7 +2420,7 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -2294,8 +2489,8 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.noise.BFGS3<- function(indir, par.ba
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- 3
 		par.maxHeight		<- 10
@@ -2312,7 +2507,7 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.ETSI.noise.BFGS3<- function(indir, par.ba
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed51.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed51.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -2389,8 +2584,8 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.ETSI.vanilla.BFGS3<- function(in
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10
@@ -2403,7 +2598,7 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.ETSI.vanilla.BFGS3<- function(in
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -2473,8 +2668,8 @@ cr.png.runcoalreg.using.TRGENDER.ETSI.vanilla.BFGS3<- function(indir, par.base.p
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10
@@ -2487,7 +2682,7 @@ cr.png.runcoalreg.using.TRGENDER.ETSI.vanilla.BFGS3<- function(indir, par.base.p
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -2554,8 +2749,8 @@ cr.png.runcoalreg.using.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.base.pat
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10
@@ -2568,7 +2763,7 @@ cr.png.runcoalreg.using.TRRISK.ETSI.vanilla.BFGS3<- function(indir, par.base.pat
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -2636,8 +2831,8 @@ cr.png.runcoalreg.using.TRRISK.ETSI.unmodelled.het.BFGS3<- function(indir, par.b
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10
@@ -2651,7 +2846,7 @@ cr.png.runcoalreg.using.TRRISK.ETSI.unmodelled.het.BFGS3<- function(indir, par.b
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -2721,8 +2916,8 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.vanilla.BFGS3<- f
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10
@@ -2735,7 +2930,7 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.vanilla.BFGS3<- f
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -2809,8 +3004,8 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.noise.BFGS3<- fun
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations'
-		outdir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_results'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations'
+		outdir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results'
 		par.base.pattern	<- 'PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43'
 		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10
@@ -2827,7 +3022,7 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.noise.BFGS3<- fun
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'.*.newick'),full.names=TRUE))
 	infiles[, {
-				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
+				#F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_simulations/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43.newick'
 				ph		<- read.tree( F )
 				ph		<- multi2di(ladderize(ph),random=FALSE)
 				#	create data.table with infection type				
@@ -2908,7 +3103,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 	require(data.table)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'			
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'			
 		par.base.pattern	<- 'm3.RR5.n150_seed123'	
 		par.maxNodeDepth	<- 3
 		par.maxHeight		<- 10
@@ -2921,7 +3116,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
-				#F		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
+				#F		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
 				ph		<- read.tree( F )					
 				ph 		<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
 				tmp 	<- setNames(dist.nodes( ph )[(Ntip(ph)+1), seq_len(Ntip(ph))], ph$tip.label)
@@ -2957,8 +3152,8 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 	require(coda)
 	if(0)
 	{
-		infile						<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
-		infile						<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
+		infile						<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
+		infile						<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
 		par.maxNodeDepth			<- Inf
 		par.maxHeight				<- 10
 		par.hetInflation_logprior	<- NA
@@ -3025,7 +3220,7 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 								coef_logprior_sd=10																
 								)	
 	outfile	<- file.path(dirname(infile), gsub( '\\.nwk', 
-												paste0(	'_aMCMC170803',
+												paste0(	'_aMCMC',
 														extra,
 														'_tr',gsub(' ','',as.character(formula.tr)[2]),
 														'_inf',gsub(' ','',as.character(formula.inf)[2]),
@@ -3048,7 +3243,7 @@ cr.master.ex3.dev.MCMC1<- function()
 	require(ape)
 	require(coda)
 	
-	indir						<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'			
+	indir						<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'			
 	par.base.pattern			<- 'm3.RR5.n150_seed123'	
 	par.maxNodeDepth			<- Inf
 	par.maxHeight				<- 10
@@ -3056,8 +3251,8 @@ cr.master.ex3.dev.MCMC1<- function()
 	par.mincladesize			<- 100
 	par.s						<- 0.5
 	
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
 	
 	set.seed(42)
 	phylo	<- read.tree( F )					
@@ -3200,7 +3395,7 @@ cr.master.ex3.dev.MCMC2<- function()
 	require(coda)
 		
 	par.s	<- 0.5		
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
 	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_adaptiveMCMC_50100_v2.rda'),basename(F)))
 	
 	set.seed(42)
@@ -3288,7 +3483,7 @@ cr.master.ex3.dev.MCMC3<- function()
 	require(coda)
 	
 	par.s	<- 0.5		
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep3.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep3.nwk'
 	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_adaptiveMCMC_50100.rda'),basename(F)))
 	
 	set.seed(42)
@@ -3387,7 +3582,7 @@ cr.master.ex3.dev.MCMC5<- function()
 	require(coda)
 	
 	par.s	<- 0.5	
-	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 	infile	<- file.path(indir, 'm3.RR5.n150_seed123_rep3.nwk')
 	infile	<- file.path(indir, 'm3.RR5.n1250_seed123_rep3.nwk')
 	
@@ -3533,8 +3728,8 @@ cr.master.ex3.dev.MCMC4<- function()
 	require(coda)
 	
 	par.s	<- 0.5		
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep4.nwk'
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep4.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
 	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_adaptiveMCMC_50100_v4.rda'),basename(F)))
 	
 	set.seed(42)
@@ -3628,7 +3823,7 @@ cr.master.ex3.dev.MCMC6<- function()
 	require(coda)
 	
 	par.s	<- 1			
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep5.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep5.nwk'
 	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_adaptiveMCMC_50100_v6.rda'),basename(F)))
 	
 	set.seed(42)
@@ -3691,7 +3886,7 @@ cr.master.ex3.dev.MCMC7<- function()
 	require(coda)
 	
 	par.s	<- 0.5			
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep3.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep3.nwk'
 	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_TYPEaoi_mincladesize200_v7.rda'),basename(F)))
 	
 	set.seed(42)
@@ -3755,7 +3950,7 @@ cr.master.ex3.dev.MCMC8<- function()
 	require(coda)
 	
 	par.s	<- 0.5			
-	F		<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep3.nwk'
+	F		<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep3.nwk'
 	outfile	<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_TYPEaoi_mincladesize200_maxHeightInf_v8.rda'),basename(F)))
 	
 	set.seed(42)
@@ -3817,7 +4012,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.mbias.BFGS1<- function(indir, par.base.
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 		par.base.pattern	<- 'm3.RR5.n150_seed123'
 		par.s				<- 0.5
 		par.tsimb			<- 0.5		
@@ -3829,7 +4024,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.mbias.BFGS1<- function(indir, par.base.
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
-				#F		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11.nwk'
+				#F		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11.nwk'
 				ph		<- read.tree( F )					
 				ph 		<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
 				tmp 	<- setNames(dist.nodes( ph )[(Ntip(ph)+1), seq_len(Ntip(ph))], ph$tip.label)
@@ -3857,7 +4052,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.mbias.BFGS1<- function(indir, par.base.
 			}, by='F']	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s',par.s*100,'_mb',par.tsimb*100,'.rda'),full.names=TRUE))
 	res		<- infiles[, {
-				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
+				#F	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
 				load(F)
 				list(	THETA= names(fit$bestfit$par),
 						MLE= unname(fit$bestfit$par),
@@ -3880,7 +4075,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.mbias.BFGS2<- function(indir, par.base.
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 		par.base.pattern	<- 'm3.RR5.n150_seed123'
 		par.s				<- 0.5
 		par.tsimb			<- 0.5		
@@ -3892,7 +4087,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.mbias.BFGS2<- function(indir, par.base.
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
-				#F		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11.nwk'
+				#F		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11.nwk'
 				ph		<- read.tree( F )					
 				ph 		<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
 				tmp 	<- setNames(dist.nodes( ph )[(Ntip(ph)+1), seq_len(Ntip(ph))], ph$tip.label)
@@ -3919,7 +4114,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.mbias.BFGS2<- function(indir, par.base.
 			}, by='F']	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs2_s',par.s*100,'_mb',par.tsimb*100,'.rda'),full.names=TRUE))
 	res		<- infiles[, {
-				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
+				#F	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
 				load(F)
 				list(	THETA= names(fit$bestfit$par),
 						MLE= unname(fit$bestfit$par),
@@ -3942,7 +4137,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.lnnoise.BFGS2<- function(indir, par.bas
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 		par.base.pattern	<- 'm3.RR5.n150_seed123'
 		par.s				<- 0.5
 		par.tsimb			<- 1
@@ -3955,7 +4150,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.lnnoise.BFGS2<- function(indir, par.bas
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
-				#F		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11.nwk'
+				#F		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11.nwk'
 				ph		<- read.tree( F )					
 				ph 		<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
 				tmp 	<- setNames(dist.nodes( ph )[(Ntip(ph)+1), seq_len(Ntip(ph))], ph$tip.label)
@@ -3985,7 +4180,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.lnnoise.BFGS2<- function(indir, par.bas
 			}, by='F']	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs2_s',par.s*100,'_mb',par.tsimb*100,'_ln',par.tsimn*100,'.rda'),full.names=TRUE))
 	res		<- infiles[, {
-				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
+				#F	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
 				load(F)
 				list(	THETA= names(fit$bestfit$par),
 						MLE= unname(fit$bestfit$par),
@@ -4008,7 +4203,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.expnoise.BFGS1<- function(indir, par.ba
 	require(viridis)
 	if(0)
 	{
-		indir				<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples'
+		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 		par.base.pattern	<- 'm3.RR5.n150_seed123'
 		par.s				<- 0.5
 		par.tsimb			<- 1
@@ -4021,7 +4216,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.expnoise.BFGS1<- function(indir, par.ba
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
-				#F		<- '~/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11.nwk'
+				#F		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11.nwk'
 				ph		<- read.tree( F )					
 				ph 		<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
 				tmp 	<- setNames(dist.nodes( ph )[(Ntip(ph)+1), seq_len(Ntip(ph))], ph$tip.label)
@@ -4054,7 +4249,7 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.expnoise.BFGS1<- function(indir, par.ba
 			}, by='F']	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s',par.s*100,'_mb',par.tsimb*100,'_en',par.tsimn*100,'.rda'),full.names=TRUE))
 	res		<- infiles[, {
-				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
+				#F	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n150_seed123_rep11_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs_s50.rda'
 				load(F)
 				list(	THETA= names(fit$bestfit$par),
 						MLE= unname(fit$bestfit$par),

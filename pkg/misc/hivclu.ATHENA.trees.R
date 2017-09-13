@@ -38,10 +38,10 @@ project.examl.ATHENA1610.161102.B.isolate.clade.alignments<- function()
 	#1- run FastTree on subtype B alignment
 	#2- select two large clades in FigTree
 	#3- now split alignment
-	infile.c1	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_clade1.nexus"
-	infile.c2	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_clade2.nexus"
-	infile.B	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta"
-	infile.D	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_D.fasta"
+	infile.c1	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_clade1.nexus"
+	infile.c2	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessing_sequences/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_clade2.nexus"
+	infile.B	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta"
+	infile.D	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_D.fasta"
 	
 	seq.b		<- read.dna(infile, format='fa')
 	ph.c1		<- read.nexus(infile.c1)
@@ -66,8 +66,8 @@ project.examl.ATHENA1610.161102.B.isolate.clade.alignments<- function()
 ######################################################################################
 project.examl.ATHENA1610.LSD.prepare.dates.161110<- function()
 {
-	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"	
-	outfile.dates	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees/ATHENA_1610_Sequences_LANL_Dates.csv"
+	infile.info		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"	
+	outfile.dates	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees/ATHENA_1610_Sequences_LANL_Dates.csv"
 	#
 	#	prepare csv file with sampling times for all taxa
 	#
@@ -87,7 +87,7 @@ project.examl.ATHENA1610.LSD.prepare.dates.161110<- function()
 	setnames(tmp, c('TAXA_L','DATE'), c('TAXA','DATE'))
 	lsdi		<- rbind(lsdi, tmp)
 	#	process OUTGROUP DATES
-	infile.tree	<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B_wOutgroup.finaltree.000"
+	infile.tree	<- "/Users/Oliver/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B_wOutgroup.finaltree.000"
 	ph			<- read.tree(infile.tree)
 	tmp			<- subset(data.table(TAXA=ph$tip.label), grepl('OUTGROUP',TAXA))
 	tmp[, DATE:=tmp[,as.numeric(sapply(strsplit(TAXA, '.', fixed=1),'[[',4))]]
@@ -103,7 +103,7 @@ project.examl.ATHENA1610.LSD.prepare.dates.161110<- function()
 ######################################################################################
 project.examl.ATHENA1610.TreeDater.process.after.first.run<- function()
 {
-	infile.tree	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p_RootD.finaltree.000.td.newick.rda'
+	infile.tree	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p_RootD.finaltree.000.td.newick.rda'
 	load(infile.tree)
 	#
 	#	plot tree
@@ -127,7 +127,7 @@ project.examl.ATHENA1610.LSD.check.dates<- function()
 	#	aim is to remove taxa from alignment that are odd in tree
 	require(big.phylo)
 	require(phytools)
-	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
+	infile.info		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
 	
 	#	collect dates
 	load(infile.info)
@@ -146,10 +146,10 @@ project.examl.ATHENA1610.LSD.check.dates<- function()
 	setnames(tmp, c('TAXA_L','DATE'), c('TAXA','DATE'))	
 	lsdi		<- rbind(lsdi, tmp)
 	
-	indir	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest'
+	indir	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees_latest'
 	inf		<- data.table(F=list.files(indir, pattern='lsd.date.newick$',full.names=TRUE))	
 	inf		<- inf[, {
-				#F			<- '/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000.lsd.date.newick'
+				#F			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees_latest/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000.lsd.date.newick'
 				ph			<- read.tree(F)
 				phd			<- data.table(TAXA= ph$tip.label, DUMMY=seq_along(ph$tip.label))
 				phd			<- merge(phd, lsdi, by='TAXA', all.x=1)
@@ -170,7 +170,7 @@ project.examl.ATHENA1610.LSD.process.after.outgroup.tree<- function()
 	#	aim is to remove taxa from alignment that are odd in tree
 	require(big.phylo)
 	require(phytools)	
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B_wOutgroup.finaltree.000.lsd.date.newick"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B_wOutgroup.finaltree.000.lsd.date.newick"
 	
 	ph			<- read.tree(infile.tree)	
 	ph			<- ladderize(ph)	
@@ -187,11 +187,11 @@ project.examl.ATHENA1610.LSD.process.after.outgroup.tree<- function()
 	#
 	#	remove some taxa from outgroup tree -- tree no 3
 	#
-	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B_wOutgroup.finaltree.000"
+	infile.tree		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B_wOutgroup.finaltree.000"
 	ph				<- read.tree(infile.tree)
-	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
+	infile.info		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
 	load(infile.info)
-	outfile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B_wOutgroup.finaltree.000"
+	outfile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B_wOutgroup.finaltree.000"
 	#	remove all 'singletons' defined by very long tip branches >5%
 	#	rm also all non-B COMET sequences
 	phd		<- data.table(FASTASampleCode= ph$tip.label)
@@ -209,11 +209,11 @@ project.examl.ATHENA1610.LSD.process.after.outgroup.tree<- function()
 	#
 	#	remove some taxa from outgroup tree -- tree no 4
 	#
-	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B_wOutgroup.finaltree.000"
+	infile.tree		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B_wOutgroup.finaltree.000"
 	ph				<- read.tree(infile.tree)
-	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
+	infile.info		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
 	load(infile.info)
-	outfile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B_wOutgroup.finaltree.000"	
+	outfile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B_wOutgroup.finaltree.000"	
 	#	rm all non-B COMET sequences
 	phd		<- data.table(FASTASampleCode= ph$tip.label)
 	phd[, BRL:=sapply( seq_len(Ntip(ph)), function(i)	ph$edge.length[ which(ph$edge[,2]==i) ] )]
@@ -236,12 +236,12 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 	#	aim is to remove taxa from alignment that are odd in tree
 	require(big.phylo)
 	require(phytools)	
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000.lsd.date.newick"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000.lsd_ra.date.newick"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000.lsd_ra.date.newick"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B.finaltree.000.lsd_ra.date.newick"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.finaltree.000.lsd.date.newick"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000.lsd.date.newick"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000.lsd.date.newick"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000.lsd_ra.date.newick"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000.lsd_ra.date.newick"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B.finaltree.000.lsd_ra.date.newick"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.finaltree.000.lsd.date.newick"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000.lsd.date.newick"
 	ph			<- read.tree(infile.tree)	
 	ph			<- ladderize(ph)	
 	
@@ -257,55 +257,55 @@ project.examl.ATHENA1610.LSD.process.after.first.tree<- function()
 	#
 	#	inspect odd cases
 	#
-	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
+	infile.info		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
 	load(infile.info)
 	subset(ds, FASTASampleCode%in%c('130130020669','140424041146'))	#--> no sampling dates!
 	
 	
 	
-	infile.info		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
+	infile.info		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
 	load(infile.info)	
 	dodd	<- data.table(FASTASampleCode= c("M4546917032015", "M4579808092015",  
 					"M2567209052006", "M2567228072009","M2567209012007", "M2567203072007", "21412569"))
 	dodd	<- merge(ds, dodd, by='FASTASampleCode', all.y=1)	
 	
-	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000"
-	outfile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000"
+	infile.tree		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000"
+	outfile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000"
 	ph				<- read.tree(infile.tree)
 	ph				<- drop.tip(ph, dodd[, FASTASampleCode])
 	write.tree(ph, file=outfile.tree)
 	#
 	#	remove all 'singletons' defined by very long tip branches >10%
 	#
-	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000"
+	infile.tree		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE2_subtype_B.finaltree.000"
 	ph				<- read.tree(infile.tree)	
 	ph				<- ladderize(ph)	
 	phd				<- data.table(TAXA= ph$tip.label)
 	phd[, BRL:=sapply( seq_len(Ntip(ph)), function(i)	ph$edge.length[ which(ph$edge[,2]==i) ] )]
 	ph				<- drop.tip(ph, subset(phd, BRL>0.1)[, TAXA])
-	outfile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000"
+	outfile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000"
 	write.tree(ph, file=outfile.tree)
 	#
 	#	remove all 'singletons' defined by very long tip branches >7.5%
 	#
-	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000"
+	infile.tree		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000"
 	ph				<- read.tree(infile.tree)	
 	ph				<- ladderize(ph)	
 	phd				<- data.table(TAXA= ph$tip.label)
 	phd[, BRL:=sapply( seq_len(Ntip(ph)), function(i)	ph$edge.length[ which(ph$edge[,2]==i) ] )]
 	ph				<- drop.tip(ph, subset(phd, BRL>0.075)[, TAXA])
-	outfile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B.finaltree.000"
+	outfile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B.finaltree.000"
 	write.tree(ph, file=outfile.tree)
 	#
 	#	remove all 'singletons' defined by very long tip branches >5%
 	#
-	infile.tree		<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000"
+	infile.tree		<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE3_subtype_B.finaltree.000"
 	ph				<- read.tree(infile.tree)	
 	ph				<- ladderize(ph)	
 	phd				<- data.table(TAXA= ph$tip.label)
 	phd[, BRL:=sapply( seq_len(Ntip(ph)), function(i)	ph$edge.length[ which(ph$edge[,2]==i) ] )]
 	ph				<- drop.tip(ph, subset(phd, BRL>0.075)[, TAXA])
-	outfile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B.finaltree.000"
+	outfile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE4_subtype_B.finaltree.000"
 	write.tree(ph, file=outfile.tree)
 	
 }
@@ -317,8 +317,8 @@ project.examl.ATHENA1610.TreeDater.run.161110<- function()
 	#	on MAC
 	if(0)
 	{
-		infile.dates	<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest/ATHENA_1610_Sequences_LANL_Dates.csv"	
-		indir.tree		<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest"
+		infile.dates	<- "/Users/Oliver/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees_latest/ATHENA_1610_Sequences_LANL_Dates.csv"	
+		indir.tree		<- "/Users/Oliver/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees_latest"
 		outdir			<- indir.tree
 	}
 	#	on HPC
@@ -334,7 +334,7 @@ project.examl.ATHENA1610.TreeDater.run.161110<- function()
 	infile.tree			<- subset(infile.tree, !grepl('RootD',FI) & grepl('_wOutgroup_p',FI))
 	
 	infile.tree[, {
-				#FI		<- '/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees_latest/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000'
+				#FI		<- '/Users/Oliver/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees_latest/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000'
 				cmd		<- cmd.treedater(FI, infile.dates, FO, root='OUTGROUP', ali.len=1289, omega0=1.7e-3)
 				cat(cmd)
 				stop()
@@ -355,8 +355,8 @@ project.examl.ATHENA1610.LSD.run.161110<- function()
 	#	on MAC
 	if(0)
 	{
-		infile.dates	<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees/ATHENA_1610_Sequences_LANL_Dates.csv"	
-		indir.tree		<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees"
+		infile.dates	<- "/Users/Oliver/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees/ATHENA_1610_Sequences_LANL_Dates.csv"	
+		indir.tree		<- "/Users/Oliver/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees"
 		outdir			<- indir.tree
 	}
 	#	on HPC
@@ -406,8 +406,8 @@ project.examl.ATHENA1610.examl.process.bstree<- function()
 	#	aim is to remove taxa from alignment that are odd in tree
 	require(big.phylo)
 	require(phytools)
-	infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_examl_dtbs500.newick"	
+	infile.info	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_examl_dtbs500.newick"	
 	ph			<- read.tree(infile.tree)
 	#	re-root at HXB2	
 	tmp			<- which(grepl('HXB2',ph$tip.label))
@@ -450,9 +450,9 @@ project.examl.ATHENA1610.examl.process.after.second.tree<- function()
 	#	aim is to remove taxa from alignment that are odd in tree
 	require(big.phylo)
 	require(phytools)
-	infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_examl_dtbs500.newick"
-	outfile.path<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_examl_dtbs500.nex"
+	infile.info	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_examl_dtbs500.newick"
+	outfile.path<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_examl_dtbs500.nex"
 	ph			<- read.tree(infile.tree)
 	#
 	#	get dates
@@ -494,8 +494,8 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 	#	aim is to remove taxa from alignment that are odd in tree
 	require(big.phylo)
 	require(phytools)
-	infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.finaltree.000"
+	infile.info	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.finaltree.000"
 	ph			<- read.tree(infile.tree)	
 	tmp			<- which(grepl('HXB2',ph$tip.label))
 	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])	
@@ -528,7 +528,7 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 		'LANL.01_AE.TH.-.045133.AF191195','LANL.01_AE.TH.-.GEN5WK4.AF191204','LANL.01_AE.TH.-.GEN5WK1.AF191203',
 		'LANL.F1.RO.2012.F1_ND1088_2012.KJ194679','LANL.F1.ES.2010.X2922_3s_nfl.KJ883142','LANL.F1.ES.2009.X2687_1.GU326171','LANL.F1.ES.2010.X3079_2i_nfl.KJ883146'))
 	#
-	infile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
+	infile		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
 	seq.b		<- read.dna(infile, format='fa')
 	stopifnot( length(setdiff( tmp, rownames(seq.b)))==0 )	
 	seq.b		<- seq.b[setdiff( rownames(seq.b), tmp ),]
@@ -540,8 +540,8 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 	#
 	require(big.phylo)
 	require(phytools)
-	infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000"
+	infile.info	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B.finaltree.000"
 	
 	ph			<- read.tree(infile.tree)		
 	#ph$tip.label[ which(grepl('LANL',ph$tip.label)) ]	
@@ -569,7 +569,7 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 	dodd	<- subset(dodd, SUBTYPE!='B'|SUBTYPE_C!='B'|is.na(Patient))
 	tmp		<- dodd[, FASTASampleCode]
 	#
-	infile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
+	infile		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
 	seq.b		<- read.dna(infile, format='fa')
 	stopifnot( length(setdiff( tmp, rownames(seq.b)))==0 )
 	seq.b		<- seq.b[setdiff( ph$tip.label, tmp ),]
@@ -579,7 +579,7 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 	#
 	#	remove same taxa from alignment that were odd in previous tree
 	#
-	infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"	
+	infile.info	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL.rda"	
 	load(infile.info)
 	#	odd taxa
 	dodd	<- data.table(FASTASampleCode= c("21444311", #CPX??
@@ -598,7 +598,7 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 					'LANL.01_AE.TH.-.045133.AF191195','LANL.01_AE.TH.-.GEN5WK4.AF191204','LANL.01_AE.TH.-.GEN5WK1.AF191203',
 					'LANL.F1.RO.2012.F1_ND1088_2012.KJ194679','LANL.F1.ES.2010.X2922_3s_nfl.KJ883142','LANL.F1.ES.2009.X2687_1.GU326171','LANL.F1.ES.2010.X3079_2i_nfl.KJ883146'))
 	#
-	infile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta'
+	infile		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta'
 	seq.b		<- read.dna(infile, format='fa')
 	stopifnot( length(setdiff( tmp, rownames(seq.b)))==0 )	
 	seq.b		<- seq.b[setdiff( rownames(seq.b), tmp ),]
@@ -608,8 +608,8 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 	#
 	#	read tree number 3 with outgroup
 	#
-	infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
-	infile.tree	<- "/Users/Oliver/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_wOutgroup.finaltree.000"
+	infile.info	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree	<- "/Users/Oliver/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_noROGUE_subtype_B_wOutgroup.finaltree.000"
 	
 	ph			<- read.tree(infile.tree)				
 	tmp			<- which(grepl('OUTGROUP\\.D',ph$tip.label))
@@ -639,7 +639,7 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 	dodd	<- subset(dodd, SUBTYPE!='B'|SUBTYPE_C!='B'|is.na(Patient))
 	tmp		<- dodd[, FASTASampleCode]
 	#
-	infile		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
+	infile		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B.fasta'
 	seq.b		<- read.dna(infile, format='fa')
 	stopifnot( length(setdiff( tmp, rownames(seq.b)))==0 )
 	seq.b		<- seq.b[setdiff( ph$tip.label, tmp ),]
@@ -648,9 +648,9 @@ project.examl.ATHENA1610.examl.process.after.first.tree<- function()
 	#
 	#	read tree 4 (using latest COMET subtype assignments)
 	#
-	#infile.info	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.finaltree.000"
-	infile.tree	<- "~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000"
+	#infile.info	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_Sequences_LANL.rda"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.finaltree.000"
+	infile.tree	<- "~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processing_trees/ExaML_result.ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup_p.finaltree.000"
 	ph			<- read.tree(infile.tree)
 	tmp			<- which(grepl('OUTGROUP\\.D',ph$tip.label))
 	tmp			<- getMRCA(ph,tmp)
@@ -678,7 +678,7 @@ project.examl.ATHENA1610.161102<- function()
 ######################################################################################
 project.examl.ATHENA1610.examl.inspect.trees.161102<- function()
 {
-	indir	<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees'
+	indir	<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees'
 	tmp		<- data.table(FT=list.files(indir, pattern='ExaML_result.*finaltree\\.[0-9]+$', full.names=TRUE))
 	tmp		<- tmp[, {
 				ph<- read.tree(FT)
@@ -691,9 +691,9 @@ project.examl.ATHENA1610.examl.run.161102<- function()
 	require(big.phylo)
 	if(0)	#	MAC
 	{
-		indir		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_sequences_latest'
+		indir		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_sequences_latest'
 		infile		<- "ATHENA_1610_Sequences_LANL_codonaligned_noDRM_subtype_B_wOutgroup.fasta"
-		outdir		<- '~/Dropbox (Infectious Disease)/2016_ATHENA_Oct_Update/processed_trees'
+		outdir		<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_trees'
 	}
 	if(1)	#	HPC
 	{
