@@ -125,7 +125,8 @@ cr.hpc.submit<- function()
 		hpc.mem						<- '5600mb'
 		hpc.walltime				<- 71
 		formula.tr					<- '~TYPE'
-		formula.inf					<- '~TYPE'		
+		formula.inf					<- '~TYPE'
+		formula.inf					<- '~ETSI'
 		par.maxNodeDepth			<- Inf		
 		par.maxHeight				<- 10
 		par.hetInflation_logprior	<- 0
