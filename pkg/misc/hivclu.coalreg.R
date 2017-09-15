@@ -3240,10 +3240,13 @@ cr.png.runcoalreg.using.TRSTAGE.TRRISK.TRGENDER.TRAGEDIAG.ETSI.noise.BFGS3<- fun
 
 cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.base.pattern, par.s, par.maxNodeDepth, par.maxHeight)
 {
+	require(ape)
+	require(lhs)
+	require(akima)
+	require(mvtnorm)
 	require(coalreg)
 	require(viridis)
-	require(data.table)
-	require(lhs)
+	require(data.table)	
 	if(0)
 	{
 		indir				<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_examples'			
