@@ -112,6 +112,23 @@ cr.hpc.submit.170803<- function()
 cr.hpc.submit<- function()
 {
 	if(1)
+	{		
+		hpc.q						<- 'pqeelab'
+		hpc.mem						<- '5600mb'
+		hpc.walltime				<- 71
+				
+		cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS')
+		cmd		<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+		cat(cmd)	
+		outdir		<- paste(DATA,"tmp",sep='/')
+		outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		hivc.cmd.hpccaller(outdir, outfile, cmd)			
+	}
+}
+
+cr.hpc.submit.170914<- function()
+{
+	if(1)
 	{
 		indir						<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
 		indir						<- '/work/or105/ATHENA_2016/master_examples'	
@@ -449,8 +466,13 @@ cr.hpc.submit.170810<- function()
 	}
 }
 
-
 cr.various.master<- function()
+{
+	cr.various.master.MLE()
+	#cr.various.master.Bayes()
+}
+
+cr.various.master.Bayes<- function()
 {
 	infile						<- "/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk"
 	par.maxNodeDepth			<- Inf
@@ -496,11 +518,11 @@ cr.various.master<- function()
 	if(par.hetInflation_logprior==0)
 		par.hetInflation_logprior	<- NA
 	#	
-	cr.master.ex3.adMCMC(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior, extra)	
+	cr.master.ex3.adMCMC(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior, extra)		
 }
 
 
-cr.various.master.old<- function()
+cr.various.master.MLE<- function()
 {
 	
 	indir				<- '/work/or105/ATHENA_2016/master_examples'
@@ -515,10 +537,17 @@ cr.various.master.old<- function()
 		par.s				<- 0.5
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS2(indir, par.base.pattern, par.s)	
 	}
+	if(1)
+	{
+		par.s				<- 0.5	
+		par.maxNodeDepth	<- 15 
+		par.maxHeight		<- Inf
+		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3(indir, par.base.pattern, par.s, par.maxNodeDepth, par.maxHeight=par.maxHeight)	
+	}	
 	if(0)
 	{
-		par.s				<- 0.5
-		par.maxNodeDepth	<- 15
+		par.s				<- 1	
+		par.maxNodeDepth	<- Inf 
 		par.maxHeight		<- Inf
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3(indir, par.base.pattern, par.s, par.maxNodeDepth, par.maxHeight=par.maxHeight)	
 	}
@@ -542,14 +571,13 @@ cr.various.master.old<- function()
 		par.tsimn			<- 1
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.lnnoise.BFGS2(indir, par.base.pattern, par.s, par.tsimb, par.tsimn)	
 	}
-	if(1)
+	if(0)
 	{
 		par.s				<- 0.5
 		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10
 		cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.MCMC1(indir, par.base.pattern, par.s, par.maxNodeDepth, par.maxHeight=par.maxHeight)	
-	}
-	
+	}	
 }
 
 cr.various.pangea<- function()
@@ -1552,7 +1580,7 @@ cr.master.ex3.adMCMC.evaluate.170913<- function()
 	require(ggplot2)
 	
 	indir	<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_results_3'
-	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
+	infiles	<- data.table(F=list.files(indir, pattern='^m3.*rda$',full.names=TRUE))
 	infiles[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
 	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z]+)_.*','\\1',basename(F))]
 	infiles[, FORMULA_TR:= gsub('.*_tr([A-Z]+)_.*','\\1',basename(F))]
@@ -1610,6 +1638,38 @@ cr.master.ex3.adMCMC.evaluate.170913<- function()
 			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
 			facet_grid(variable~SAMPLING+MAXHEIGHT, scales='free')
 	ggsave(file=file.path(indir,'boxplots_trTYPE_infETSI.pdf'),w=10,h=10)
+	
+	
+	tmp		<- lapply(seq_len(nrow(infiles)), function(i)
+			{
+				infile	<- infiles[i,F]				
+				cat(basename(infile),'\n')
+				#infile	<- '/Users/Oliver/Box Sync/OR_Work/2017/2017_coalregression/master_results_3/m3.RR5.n1250_seed123_rep9_aMCMC170803_170810_trTYPE_infETSI_mndInf_mh25_hetinf0_mcs100_s1.rda'
+				load(infile)	
+				fit.mcmc			<- cbind(IT=seq_along(fit$loglik), fit$trace, fit$trace_tr, fit$trace_inf, LLKL=fit$loglik)				
+				fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+				colnames(fit.mcmc)	<- paste0(c('','','tr','inf',''),colnames(fit.mcmc))
+				fit.mcmc			<- subset(as.data.table(fit.mcmc), IT>=1e3)				
+				fit.mcmc			<- unique(fit.mcmc, by=setdiff(colnames(fit.mcmc),'IT'))
+				fit.mcmc			<- melt(fit.mcmc, id.vars=c('IT','logscale','trTYPE','LLKL'))
+				fit.mcmc[, REP:=infiles[i,REP]]
+				fit.mcmc[, SAMPLING:=infiles[i,SAMPLING]]
+				fit.mcmc[, MAXHEIGHT:=infiles[i,MAXHEIGHT]]
+				fit.mcmc
+			})
+	dfl	<- do.call('rbind',tmp)	
+	save(dfl, file=file.path(indir,'results_lkl.rda'))
+	for(x in c('infETSI'))
+	{	
+		tmp	<- unique(subset(dfl, SAMPLING==100 & variable==x, c(REP, trTYPE, LLKL, variable, value)), by=c('REP','trTYPE','value'))	
+		ggplot(tmp, aes(x=trTYPE, y=value, z=LLKL)) + 
+				stat_density2d(colour='black') +
+				labs(x='H coeff for I0', y='S coeff for ETSI', colour='log likelihood') +
+				geom_vline(xintercept=log(5), colour='red') + 
+				theme_bw() +
+				facet_wrap(~REP, ncol=6, scales='free_y')
+		ggsave(file=file.path(indir,paste0('loglklsurface_with_formula.inf_',x,'_s100pc.pdf')),w=15,h=10)
+	}
 }
 
 cr.master.ex3.adMCMC.evaluate.170914<- function()
@@ -1619,7 +1679,7 @@ cr.master.ex3.adMCMC.evaluate.170914<- function()
 	require(ggplot2)
 	
 	indir	<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_results_4'
-	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
+	infiles	<- data.table(F=list.files(indir, pattern='^m3.*rda$',full.names=TRUE))
 	infiles[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
 	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z]+)_.*','\\1',basename(F))]
 	infiles[, FORMULA_TR:= gsub('.*_tr([A-Z]+)_.*','\\1',basename(F))]
@@ -1668,17 +1728,26 @@ cr.master.ex3.adMCMC.evaluate.170914<- function()
 			})
 	dfm	<- do.call('rbind',tmp)
 	save(dfm, file=file.path(indir,'results.rda'))
-	
-	dfm	<- dcast.data.table(dfm, SAMPLING+MAXCLADE+REP+variable~STAT, value.var='V')
+	#	load(file.path(indir,'results.rda'))
+	dfm	<- dcast.data.table(dfm, SAMPLING+MAXCLADE+MAXHEIGHT+REP+variable+FORMULA_INF~STAT, value.var='V')
 	set(dfm, NULL, 'SAMPLING', dfm[, paste0('sampling=',SAMPLING,'%')])
 	set(dfm, NULL, 'MAXCLADE', dfm[, paste0('max clade=',MAXCLADE)])
-	tmp	<- unique(subset(dfm, variable=='trTYPE', select=c('SAMPLING','MAXCLADE','REP','variable')))
+	set(dfm, NULL, 'MAXHEIGHT', dfm[, paste0('max height=',MAXHEIGHT)])
+	tmp	<- unique(subset(dfm, FORMULA_INF=='ETSI' & variable=='trTYPE', select=c('SAMPLING','MAXCLADE','MAXHEIGHT','REP','variable')))
 	tmp[, TRUTH:=log(5)]	
-	ggplot(dfm, aes(x=REP)) + 
+	ggplot(subset(dfm, FORMULA_INF=='ETSI' & MAXHEIGHT=='max height=10'), aes(x=REP)) + 
 			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
 			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
-			facet_grid(variable~SAMPLING+MAXCLADE, scales='free')
-	ggsave(file=file.path(indir,'boxplots_trTYPE_infTYPE_vary_maxcladesize.pdf'),w=10,h=10)
+			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT, scales='free')
+	ggsave(file=file.path(indir,'boxplots_trTYPE_infETSI_sampling100_maxheight10_vary_maxcladesize.pdf'),w=10,h=10)
+	
+	tmp	<- unique(subset(dfm, FORMULA_INF=='TYPE' & variable=='trTYPE' & MAXHEIGHT=='max height=10', select=c('SAMPLING','MAXCLADE','MAXHEIGHT','REP','variable')))
+	tmp[, TRUTH:=log(5)]	
+	ggplot(subset(dfm, FORMULA_INF=='TYPE' & MAXHEIGHT=='max height=10'), aes(x=REP)) + 
+			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
+			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
+			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT, scales='free')
+	ggsave(file=file.path(indir,'boxplots_trTYPE_infTYPE_sampling100_maxheight10_vary_maxcladesize.pdf'),w=10,h=10)
 }
 
 cr.master.ex3.adMCMC.evaluate<- function()
@@ -3174,13 +3243,14 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 	require(coalreg)
 	require(viridis)
 	require(data.table)
+	require(lhs)
 	if(0)
 	{
-		indir				<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'			
-		par.base.pattern	<- 'm3.RR5.n150_seed123'	
-		par.maxNodeDepth	<- 3
+		indir				<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_examples'			
+		par.base.pattern	<- 'm3.RR5.n1250_seed123'	
+		par.maxNodeDepth	<- Inf
 		par.maxHeight		<- 10
-		par.s				<- 0.5		
+		par.s				<- 1
 	}
 	#
 	#	run coalreg	run using exact time to infection
@@ -3189,9 +3259,10 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 	set.seed(42)	
 	infiles	<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))
 	infiles[, {
-				#F		<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
-				ph		<- read.tree( F )					
-				ph 		<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
+				#F		<- '/Users/Oliver/Box Sync/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
+				ph		<- read.tree( F )
+				if(par.s<1)
+					ph 	<- drop.tip(ph, sample(ph$tip.label, replace=FALSE, size=length(ph$tip.label)*par.s))
 				tmp 	<- setNames(dist.nodes( ph )[(Ntip(ph)+1), seq_len(Ntip(ph))], ph$tip.label)
 				dph		<- DatedTree(ph, sampleTimes=tmp)
 				#	create data.table with infection type
@@ -3204,9 +3275,16 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 				rownames(phi)	<- phi[, TAXA]
 				set(phi, NULL, 'TAXA', NULL)
 				tmp		<- data.matrix(phi)
-				fit 	<- trf.lasso(	dph, 	tmp, trf_names = c( 'TYPE'), aoi_names = c( 'ETSI' ), 
-										maxNodeDepth=par.maxNodeDepth, maxHeight=par.maxHeight, 
-										lasso_threshold=5, method = 'BFGS', lnr0 = -2, lnrLimits = c(-4, 2), scale=FALSE)	
+				fit 	<- trf.lasso(	dph, 	tmp, 
+										trf_names = c( 'TYPE'), 
+										aoi_names = c( 'ETSI' ), 
+										maxNodeDepth=par.maxNodeDepth, 
+										maxHeight=par.maxHeight, 
+										lasso_threshold=5, 
+										method = 'BFGS', 
+										lnr0 = -2, 
+										lnrLimits = c(-4, 2), 
+										scale=FALSE)	
 				fci 	<- fisher.ci(fit)	 
 				pci 	<- prof.ci(fit, fci  ) 
 				#print(fit$bestfit$par )
