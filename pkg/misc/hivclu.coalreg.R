@@ -278,7 +278,7 @@ cr.hpc.submit<- function()
 		#formula.inf					<- '~ETSI'
 		extra						<- '170919'
 		par.maxNodeDepth			<- Inf				
-		par.hetInflation_logprior	<- dnorm(x, mean=0, sd=10, log=TRUE)
+		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)
 		par.noise					<- 0
 		par.bias					<- 1					
 		for(i in seq_len(nrow(infiles)))
