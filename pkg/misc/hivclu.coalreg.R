@@ -278,7 +278,7 @@ cr.hpc.submit<- function()
 		#formula.inf					<- '~ETSI'
 		extra						<- '170919'
 		par.maxNodeDepth			<- Inf				
-		par.hetInflation_logprior	<- 1 
+		par.hetInflation_logprior	<- 1 	# cannot pass function in cmd, define within
 		par.noise					<- 0
 		par.bias					<- 1					
 		for(i in seq_len(nrow(infiles)))
