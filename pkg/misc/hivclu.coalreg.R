@@ -278,7 +278,7 @@ cr.hpc.submit<- function()
 		#formula.inf					<- '~ETSI'
 		extra						<- '170919'
 		par.maxNodeDepth			<- Inf				
-		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)
+		par.hetInflation_logprior	<- 1 
 		par.noise					<- 0
 		par.bias					<- 1					
 		for(i in seq_len(nrow(infiles)))
@@ -3561,7 +3561,7 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 	require(viridis)
 	require(data.table)
 	require(ape)
-	require(coda)
+	require(coda)	
 	if(0)
 	{
 		infile						<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'
@@ -3576,6 +3576,8 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 		formula.tr					<- ~TYPE
 		formula.inf					<- ~ETSI		
 	}
+	if(par.hetInflation_logprior>0)
+		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)
 	#
 	#	run coalreg	run using exact time to infection
 	#	with maxNodeDepth=2, extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
@@ -3590,7 +3592,7 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 			'\npar.mincladesize=',par.mincladesize, 
 			'\npar.tsimb=',par.tsimb, 
 			'\npar.tsimn=',par.tsimn, 
-			'\npar.hetInflation_logprior=',par.hetInflation_logprior,
+			'\npar.hetInflation_logprior=',as.character(par.hetInflation_logprior),
 			'\nextra=',extra)
 	
 	phylo	<- read.tree( infile )	
