@@ -109,7 +109,7 @@ cr.hpc.submit.170803<- function()
 	}
 }
 
-cr.hpc.submit<- function()
+cr.hpc.submit.170917<- function()
 {
 	if(1)
 	{		
@@ -127,7 +127,7 @@ cr.hpc.submit<- function()
 }
 
 cr.hpc.submit.170914<- function()
-{
+{	
 	if(1)
 	{
 		indir						<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
@@ -238,6 +238,159 @@ cr.hpc.submit.170914<- function()
 			par.s						<- 1
 			par.mincladesize			<- 200
 			extra						<- '170913'			
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)							
+		}
+	}
+}
+
+cr.hpc.submit<- function()
+{	
+	if(1)
+	{
+		indir						<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
+		indir						<- '/work/or105/ATHENA_2016/master_examples'	
+		par.base.pattern			<- 'm3.RR5.n1250_seed123'
+		infiles				<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))	
+		infiles[, REP:= as.numeric(gsub('.*rep([0-9]+)\\.nwk','\\1',basename(F)))]
+		infiles				<- subset(infiles, REP<=30)
+		setkey(infiles, REP)
+		
+		hpc.q						<- 'pqeelab'
+		hpc.mem						<- '5600mb'
+		hpc.walltime				<- 71
+		formula.tr					<- '~TYPE'
+		formula.inf					<- '~TYPE'
+		#formula.inf					<- '~ETSI'
+		extra						<- '170919'
+		par.maxNodeDepth			<- Inf				
+		par.hetInflation_logprior	<- dnorm(x, mean=0, sd=10, log=TRUE)
+		par.noise					<- 0
+		par.bias					<- 1					
+		for(i in seq_len(nrow(infiles)))
+		{
+			infile						<- infiles[i,F]
+			par.s						<- 1
+			par.mincladesize			<- 100	
+			par.maxHeight				<- 25
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+			infile						<- infiles[i,F]
+			par.s						<- 1
+			par.mincladesize			<- 50	
+			par.maxHeight				<- 10
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+			
+			infile						<- infiles[i,F]
+			par.s						<- 1
+			par.mincladesize			<- 75
+			par.maxHeight				<- 10
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+			
+			par.s						<- 1
+			par.mincladesize			<- 100	
+			par.maxHeight				<- 10
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)
+			
+			par.s						<- 1
+			par.mincladesize			<- 150	
+			par.maxHeight				<- 10
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior, 
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)
+			
+			par.s						<- 1
+			par.mincladesize			<- 200	
+			par.maxHeight				<- 10
 			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
 					' -formula.tr=',formula.tr,
 					' -formula.inf=',formula.inf,
@@ -1200,6 +1353,46 @@ cr.master.ex3.runcoalreg.using.TYPE.BFGS2<- function(indir, par.base.pattern, pa
 				tmp		<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPE_BFGSargs2_s',par.s*100,'.rda'),basename(F)))
 				save( fit, fci, pci, file=tmp)
 			}, by='F']					
+}
+
+cr.png.compare.170914<- function()
+{
+	require(coalreg)
+	require(viridis)
+	indir				<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_results_5'
+	infiles	<- data.table(F=list.files(indir, pattern='rda$',full.names=TRUE))
+	infiles	<- subset(infiles, grepl('maxNodeDepth',F))
+	infiles	<- subset(infiles, !grepl('results\\.rda',F))	
+	#	parse results	
+	
+	res		<- infiles[, {
+				#F	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/png_results/PANGEA-AcuteHigh-InterventionNone-cov11.8-seed43_coalreg_using_TRM-FROM-RECENTtrf_ETSIaoi_BFGSargs3_maxNodeDepth3.rda'
+				load(F)
+				list(	FACTOR= names(fit$bestfit$par),
+						MLE= unname(fit$bestfit$par),
+						MLE_CONVERGED= fit$bestfit$convergence==0 )				
+			}, by='F']
+	res[, SEED:= as.integer(gsub('.*seed([0-9]+)_.*','\\1',F))]
+	res[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
+	res[, MAXNODE:=as.numeric(gsub('.*_maxNodeDepth([0-9A-Za-z]+).*','\\1',F))]
+	res[, MAXHEIGHT:=as.numeric(gsub('.*_maxHeight([0-9A-Za-z]+).*','\\1',F))]
+	res[, AOI_ETSI:= as.numeric(grepl('ETFIaoi',F))]
+	res[, SAMPLING:= as.numeric(gsub('.*_s([0-9]+).rda','\\1',basename(F)))]
+	#
+	res	<- subset(res, MLE_CONVERGED)
+	#
+	#	load(file.path(indir,'results.rda'))
+	dfm	<- dcast.data.table(res, SAMPLING+MAXNODE+MAXHEIGHT+REP~FACTOR, value.var='MLE')
+	set(res, NULL, 'SAMPLING', res[, paste0('sampling=',SAMPLING,'%')])
+	set(res, NULL, 'MAXNODE', res[, paste0('max node=',MAXNODE)])
+	set(res, NULL, 'MAXHEIGHT', res[, paste0('max height=',MAXHEIGHT)])
+	tmp	<- unique(subset(res, FACTOR=='b_TYPE', select=c('SAMPLING','MAXNODE','MAXHEIGHT','FACTOR')))
+	tmp[, TRUTH:=log(5)]	
+	ggplot(res, aes(x=MAXHEIGHT)) + 
+			geom_boxplot(aes(y=MLE)) +
+			geom_hline(data=tmp, aes(yintercept=TRUTH), colour='red') +
+			facet_grid(FACTOR~SAMPLING+MAXNODE, scales='free')
+	ggsave(file=file.path(indir,'boxplots_trTYPE_infETSI_sampling100_maxheight10_vary_maxcladesize.pdf'),w=10,h=10)	
 }
 
 cr.png.compare<- function()
@@ -3251,9 +3444,11 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 	{
 		indir				<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_examples'			
 		par.base.pattern	<- 'm3.RR5.n1250_seed123'	
-		par.maxNodeDepth	<- Inf
+		par.maxNodeDepth	<- 15
 		par.maxHeight		<- 10
-		par.s				<- 1
+		par.s				<- 0.5
+		par.lnHetInflation0	<- NA
+		outfile				<- paste0('~/Box Sync/OR_Work/2017/2017_coalregression/master_results_5/m3.RR5.n1250_rep1_trflasso_d',par.maxNodeDepth,'_h',par.maxHeight,'_s',par.s,'_h',par.lnHetInflation0,'.rda')
 	}
 	#
 	#	run coalreg	run using exact time to infection
@@ -3285,16 +3480,79 @@ cr.master.ex3.runcoalreg.using.TYPE.ETFI.vanilla.BFGS3<- function(indir, par.bas
 										maxHeight=par.maxHeight, 
 										lasso_threshold=5, 
 										method = 'BFGS', 
+										lnHetInflation0= par.lnHetInflation0,
 										lnr0 = -2, 
 										lnrLimits = c(-4, 2), 
 										scale=FALSE)	
 				fci 	<- fisher.ci(fit)	 
-				pci 	<- prof.ci(fit, fci  ) 
+				pci 	<- prof.ci(fit, fci  )
+				# save(fit, file=outfile)
 				#print(fit$bestfit$par )
 				#print( fci$ci )	
 				tmp		<- file.path(dirname(F), gsub('\\.nwk',paste0('_coalreg_using_TYPEtrf_ETFIaoi_BFGSargs3_maxNodeDepth',par.maxNodeDepth,'_maxHeight',par.maxHeight,'_s',par.s*100,'.rda'),basename(F)))
 				save( fit, fci, pci, file=tmp)
 			}, by='F']				
+}
+
+cr.master.ex3.dev.mcmc.with.hetinflation<- function()
+{
+	#	TODO try not do zero mean
+	require(coalreg)
+	require(viridis)
+	require(data.table)
+	require(ape)
+	require(coda)
+	infile						<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep1.nwk'	
+	par.maxNodeDepth			<- Inf
+	par.maxHeight				<- 25
+	par.hetInflation_logprior	<- NA #function(x) dnorm(x, mean=0, sd=10, log=TRUE)
+	par.mincladesize			<- 100
+	par.s						<- 1
+	formula.tr					<- ~TYPE
+	formula.inf					<- ~TYPE		
+	
+	phylo	<- read.tree( infile )	
+	if(par.s<1)
+		phylo 	<- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
+	#	create data.table with infection type
+	phi		<- data.table(	TAXA=phylo$tip.label, 
+							TYPE=sapply(strsplit(phylo$tip.label,'_',),'[[',2),
+							ETSI=as.numeric(sapply(strsplit(phylo$tip.label,'_',),'[[',3)))
+	set(phi, NULL, 'TYPE', phi[, as.numeric(as.character(factor(TYPE,levels=c('I1','I0'), labels=c('0','1'))))])
+	#	zero mean	
+	set(phi, NULL, 'ETSI', phi[,ETSI-mean(ETSI)])	
+	#	print
+	print(phylo)
+	print(phi)
+	#	init coreg
+	tmp				<- unique(c(unlist(strsplit(gsub(' ','',as.character(formula.tr))[2],'+',fixed=TRUE)),unlist(strsplit(gsub(' ','',as.character(formula.inf))[2],'+',fixed=TRUE))))	
+	X				<- data.matrix(phi[,tmp,with=FALSE])
+	rownames(X)		<- phi[, TAXA]
+	colnames(X)		<- tmp	
+	#	run coreg
+	fit		<- coreg.adaptiveMHwithinGibbs.or170919(
+			X, phylo,
+			transmission=formula.tr,
+			infection=formula.inf,
+			hetInflation_logprior=par.hetInflation_logprior,
+			adapt.batch=function(accn){  ifelse(accn<1e3, 20, 50) },
+			adapt.schedule=function(b){ 1+1*(1/b)^(1/3) }, 
+			mhsteps=5e3,													
+			maxHeight=par.maxHeight,
+			maxNodeDepth=par.maxNodeDepth,
+			mincladesize=par.mincladesize,
+			coef_logprior_sd=10, 			
+			verbose=TRUE
+			)	
+	fit.mcmc	<- mcmc(cbind(fit$trace, fit$trace_tr, fit$trace_inf))					
+	#pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(outfile))), w=10, h=7)
+	plot(fit.mcmc)
+	#dev.off()	
+	fit.mcmc.a	<- mcmc(fit$trace_qsd)
+	#pdf(file.path(dirname(outfile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(outfile))), w=5, h=10)
+	plot(fit.mcmc.a)
+	#dev.off()
+	
 }
 
 cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior,extra='')
@@ -3310,7 +3568,7 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 		infile						<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples/m3.RR5.n1250_seed123_rep2.nwk'
 		par.maxNodeDepth			<- Inf
 		par.maxHeight				<- 10
-		par.hetInflation_logprior	<- NA
+		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)
 		par.mincladesize			<- 100
 		par.s						<- 0.5
 		par.tsimb					<- 2
@@ -3361,12 +3619,14 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 	rownames(X)		<- phi[, TAXA]
 	colnames(X)		<- tmp	
 	#	run coreg
-	fit		<- coreg.adaptiveMHwithinGibbs.or170710(
+	#fit		<- coreg.adaptiveMHwithinGibbs.or170710(
+	fit		<- coreg.adaptiveMHwithinGibbs.or170919(
 								X, phylo,
 								transmission=formula.tr,
 								infection=formula.inf,
 								adapt.batch=function(accn){  ifelse(accn<1e3, 20, 50) },
-								adapt.schedule=function(b){ 1+1*(1/b)^(1/3) }, 
+								adapt.schedule=function(b){ 1+1*(1/b)^(1/3) },
+								hetInflation_logprior=par.hetInflation_logprior,
 								mhsteps=10e3,													
 								maxHeight=par.maxHeight,
 								maxNodeDepth=par.maxNodeDepth,
