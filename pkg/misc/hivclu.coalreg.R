@@ -3558,7 +3558,6 @@ cr.master.ex3.dev.mcmc.with.hetinflation<- function()
 cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior,extra='')
 {
 	require(coalreg)
-	require(viridis)
 	require(data.table)
 	require(ape)
 	require(coda)	
