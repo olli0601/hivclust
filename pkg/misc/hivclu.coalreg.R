@@ -666,8 +666,7 @@ cr.various.master.Bayes<- function()
 	}	
 	#	process args
 	par.tsimn	<- par.noise
-	par.tsimb	<- par.bias	
-	stopifnot(par.hetInflation_logprior==0)
+	par.tsimb	<- par.bias		
 	if(par.hetInflation_logprior==0)
 		par.hetInflation_logprior	<- NA
 	#	
@@ -3642,7 +3641,7 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 														'_inf',gsub(' ','',as.character(formula.inf)[2]),
 														'_mnd',par.maxNodeDepth,
 														'_mh',par.maxHeight,
-														'_hetinf',as.numeric(!is.na(par.hetInflation_logprior)),
+														'_hetinf',as.numeric(is.function(par.hetInflation_logprior)),
 														'_mcs',par.mincladesize,
 														'_s',par.s,														
 														'.rda'),basename(infile)))
