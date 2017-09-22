@@ -621,8 +621,8 @@ cr.hpc.submit.170810<- function()
 
 cr.various.master<- function()
 {
-	cr.various.master.MLE()
-	#cr.various.master.Bayes()
+	#cr.various.master.MLE()
+	cr.various.master.Bayes()
 }
 
 cr.various.master.Bayes<- function()
