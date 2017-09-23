@@ -3574,8 +3574,6 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 		formula.tr					<- ~TYPE
 		formula.inf					<- ~ETSI		
 	}
-	if(par.hetInflation_logprior>0)
-		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)
 	#
 	#	run coalreg	run using exact time to infection
 	#	with maxNodeDepth=2, extra args lnr0 = -2, lnrLimits = c(-4, 2), scale=F, lasso_threshold=5, method = 'BFGS'
@@ -3592,7 +3590,8 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 			'\npar.tsimn=',par.tsimn, 
 			'\npar.hetInflation_logprior=',as.character(par.hetInflation_logprior),
 			'\nextra=',extra)
-	
+	if(par.hetInflation_logprior>0)
+		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)	
 	phylo	<- read.tree( infile )	
 	if(par.s<1)
 		phylo 	<- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
