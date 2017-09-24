@@ -273,6 +273,179 @@ cr.hpc.submit<- function()
 		hpc.q						<- 'pqeelab'
 		hpc.mem						<- '5600mb'
 		hpc.walltime				<- 71
+		formula.tr					<- '~TYPE'		
+		formula.inf					<- '~ETSI'
+		extra						<- '170919'
+		par.maxNodeDepth			<- Inf				
+		par.hetInflation_logprior	<- 1 	# cannot pass function in cmd, define within
+		par.noise					<- 0
+		par.bias					<- 1	
+		par.infprior.mean			<- -2		
+		for(i in seq_len(nrow(infiles)))
+		{
+			infile						<- infiles[i,F]
+			par.s						<- 1
+			par.mincladesize			<- 75	
+			par.maxHeight				<- 10
+			par.infprior.sd				<- 1/5
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior,
+					' -par.infprior.mean=',par.infprior.mean,
+					' -par.infprior.sd=',par.infprior.sd,
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+			infile						<- infiles[i,F]
+			par.s						<- 0.5
+			par.mincladesize			<- 75	
+			par.maxHeight				<- 10
+			par.infprior.sd				<- 1/5
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior,
+					' -par.infprior.mean=',par.infprior.mean,
+					' -par.infprior.sd=',par.infprior.sd,					
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+			infile						<- infiles[i,F]
+			par.s						<- 1
+			par.mincladesize			<- 75	
+			par.maxHeight				<- 10
+			par.infprior.sd				<- 1/2
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior,
+					' -par.infprior.mean=',par.infprior.mean,
+					' -par.infprior.sd=',par.infprior.sd,
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+			infile						<- infiles[i,F]
+			par.s						<- 0.5
+			par.mincladesize			<- 75	
+			par.maxHeight				<- 10
+			par.infprior.sd				<- 1/2
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior,
+					' -par.infprior.mean=',par.infprior.mean,
+					' -par.infprior.sd=',par.infprior.sd,					
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+		
+			infile						<- infiles[i,F]
+			par.s						<- 1
+			par.mincladesize			<- 75	
+			par.maxHeight				<- 10
+			par.infprior.sd				<- 1
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior,
+					' -par.infprior.mean=',par.infprior.mean,
+					' -par.infprior.sd=',par.infprior.sd,
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+			infile						<- infiles[i,F]
+			par.s						<- 0.5
+			par.mincladesize			<- 75	
+			par.maxHeight				<- 10
+			par.infprior.sd				<- 1
+			cmd		<- paste0(CODE.HOME, '/misc/hivclu.startme.R -exe=VARIOUS -infile=',infile,
+					' -formula.tr=',formula.tr,
+					' -formula.inf=',formula.inf,
+					' -extra=',extra,
+					' -par.maxNodeDepth=',par.maxNodeDepth,
+					' -par.maxHeight=',par.maxHeight, 
+					' -par.hetInflation_logprior=',par.hetInflation_logprior,
+					' -par.infprior.mean=',par.infprior.mean,
+					' -par.infprior.sd=',par.infprior.sd,					
+					' -par.noise=', par.noise, 
+					' -par.bias=', par.bias, 
+					' -par.s=', par.s, 
+					' -par.mincladesize=', par.mincladesize)
+			cmd					<- hivc.cmd.hpcwrapper(cmd, hpc.nproc=1, hpc.q=hpc.q, hpc.walltime=hpc.walltime, hpc.mem=hpc.mem, hpc.load='module load intel-suite R/3.3.3')
+			cat(cmd)	
+			outdir		<- paste(DATA,"tmp",sep='/')
+			outfile		<- paste("cr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+			hivc.cmd.hpccaller(outdir, outfile, cmd)	
+			
+		}
+	}
+}
+
+cr.hpc.submit.170919<- function()
+{	
+	if(1)
+	{
+		indir						<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_examples'
+		indir						<- '/work/or105/ATHENA_2016/master_examples'	
+		par.base.pattern			<- 'm3.RR5.n1250_seed123'
+		infiles				<- data.table(F=list.files(indir, pattern=paste0(par.base.pattern,'_rep[0-9]+.nwk'),full.names=TRUE))	
+		infiles[, REP:= as.numeric(gsub('.*rep([0-9]+)\\.nwk','\\1',basename(F)))]
+		infiles				<- subset(infiles, REP<=30)
+		setkey(infiles, REP)
+		
+		hpc.q						<- 'pqeelab'
+		hpc.mem						<- '5600mb'
+		hpc.walltime				<- 71
 		formula.tr					<- '~TYPE'
 		formula.inf					<- '~TYPE'
 		#formula.inf					<- '~ETSI'
@@ -636,6 +809,8 @@ cr.various.master.Bayes<- function()
 	formula.tr					<- ~TYPE
 	formula.inf					<- ~ETSI
 	extra						<- ''
+	par.infprior.mean			<- NA
+	par.infprior.sd				<- NA
 	#
 	#	read args
 	#
@@ -662,7 +837,11 @@ cr.various.master.Bayes<- function()
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,6), par.s= return(substr(arg,8,nchar(arg))),NA)	}))
 		if(length(tmp)>0) par.s<- as.numeric(tmp[1])
 		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,17), par.mincladesize= return(substr(arg,19,nchar(arg))),NA)	}))
-		if(length(tmp)>0) par.mincladesize<- as.numeric(tmp[1])
+		if(length(tmp)>0) par.mincladesize<- as.numeric(tmp[1])		
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,18), par.infprior.mean= return(substr(arg,20,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.infprior.mean<- as.numeric(tmp[1])
+		tmp<- na.omit(sapply(argv,function(arg){	switch(substr(arg,2,16), par.infprior.sd= return(substr(arg,18,nchar(arg))),NA)	}))
+		if(length(tmp)>0) par.infprior.sd<- as.numeric(tmp[1])		
 	}	
 	#	process args
 	par.tsimn	<- par.noise
@@ -670,7 +849,7 @@ cr.various.master.Bayes<- function()
 	if(par.hetInflation_logprior==0)
 		par.hetInflation_logprior	<- NA
 	#	
-	cr.master.ex3.adMCMC(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior, extra)		
+	cr.master.ex3.adMCMC(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior, par.infprior.mean, par.infprior.sd, extra)		
 }
 
 
@@ -1743,6 +1922,11 @@ cr.master.ex3.adMCMC.evaluate.170803<- function()
 				tmp	<- data.table(variable=names(tmp), STAT='ESS',V=tmp)
 				dfm	<- rbind(dfm, tmp)
 				#
+				#fit.mcmc	<- as.data.table(fit.mcmc)
+				#fit.mcmc[, IT:= seq_len(nrow(fit.mcmc))]
+				#fit.mcmc	<- subset(fit.mcmc, IT%%20==1)
+				#ggplot(fit.mcmc, aes(y=trTYPE, x=infETSI)) + geom_point() + geom_hline(yintercept=log(5), colour='red')				
+				#
 				dfm[, REP:=infiles[i,REP]]
 				dfm[, FORMULA_INF:=infiles[i,FORMULA_INF]]
 				dfm[, FORMULA_TR:=infiles[i,FORMULA_TR]]
@@ -1942,6 +2126,86 @@ cr.master.ex3.adMCMC.evaluate.170914<- function()
 	ggsave(file=file.path(indir,'boxplots_trTYPE_infTYPE_sampling100_maxheight10_vary_maxcladesize.pdf'),w=10,h=10)
 }
 
+cr.master.ex3.adMCMC.evaluate.170924<- function()
+{
+	require(data.table)
+	require(coda)
+	require(ggplot2)
+	
+	indir	<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_results_6'
+	infiles	<- data.table(F=list.files(indir, pattern='^m3.*rda$',full.names=TRUE))
+	infiles[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
+	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z]+)_.*','\\1',basename(F))]
+	infiles[, FORMULA_TR:= gsub('.*_tr([A-Z]+)_.*','\\1',basename(F))]
+	infiles[, SAMPLING:= 100*as.numeric(gsub('.*_s([0-1]\\.?[0-9]*).*','\\1',basename(F)))]
+	infiles[, MAXHEIGHT:= as.numeric(gsub('.*_mh([0-9]+)_.*','\\1',basename(F)))]
+	infiles[, MAXCLADE:= as.numeric(gsub('.*_mcs([0-9]+)_.*','\\1',basename(F)))]
+	infiles[, HETINF:= as.numeric(gsub('.*_hetinf([0-9]+)_.*','\\1',basename(F)))]
+	
+	tmp		<- lapply(seq_len(nrow(infiles)), function(i)
+			{
+				infile	<- infiles[i,F]
+				cat(basename(infile),'\n')
+				#infile	<- '/Users/Oliver/Box Sync/OR_Work/2017/2017_coalregression/master_results_6/m3.RR5.n1250_seed123_rep1_aMCMC170919_trTYPE_infTYPE_mndInf_mh10_hetinf1_mcs100_s1.rda'
+				load(infile)	
+				fit.mcmc			<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
+				#fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
+				colnames(fit.mcmc)	<- paste0(c('','','tr','inf'),colnames(fit.mcmc))				
+				fit.mcmc			<- mcmc(fit.mcmc)
+				#	raw plots
+				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(infile))), w=10, h=7)
+				plot(fit.mcmc)
+				dev.off()
+				fit.mcmc.a	<- mcmc(fit$trace_qsd)
+				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(infile))), w=5, h=10)
+				plot(fit.mcmc.a)
+				dev.off()
+				#	rm burn in and thin
+				tmp <- seq.int(1e3,1e4,4*5)
+				dfm	<- melt(cbind(as.data.table(fit.mcmc[tmp,]), data.table(IT=tmp)), id.vars='IT')
+				dfm	<- dfm[, list(STAT=paste0('q',c(0.025,0.25,0.5,0.75,0.975)), V=quantile(value,p=c(0.025,0.25,0.5,0.75,0.975))), by=c('variable')]
+				#	add acceptance
+				tmp	<- 1-rejectionRate(window(fit.mcmc, start=1e3, end=1e4, thin=4))
+				tmp	<- data.table(variable=names(tmp), STAT='acceptance',V=tmp)
+				dfm	<- rbind(dfm, tmp)
+				#	add ESS
+				tmp	<- effectiveSize(window(fit.mcmc, start=1e3, end=1e4, thin=4))
+				tmp	<- data.table(variable=names(tmp), STAT='ESS',V=tmp)
+				dfm	<- rbind(dfm, tmp)
+				#
+				dfm[, REP:=infiles[i,REP]]
+				dfm[, FORMULA_INF:=infiles[i,FORMULA_INF]]
+				dfm[, FORMULA_TR:=infiles[i,FORMULA_TR]]
+				dfm[, SAMPLING:=infiles[i,SAMPLING]]
+				dfm[, MAXHEIGHT:=infiles[i,MAXHEIGHT]]
+				dfm[, MAXCLADE:=infiles[i,MAXCLADE]]
+				dfm[, HETINF:=infiles[i,HETINF]]
+				dfm
+			})
+	dfm	<- do.call('rbind',tmp)
+	save(dfm, file=file.path(indir,'results.rda'))
+	#	load(file.path(indir,'results.rda'))
+	dfm	<- dcast.data.table(dfm, SAMPLING+MAXCLADE+MAXHEIGHT+REP+variable+FORMULA_INF+HETINF~STAT, value.var='V')
+	set(dfm, NULL, 'SAMPLING', dfm[, paste0('sampling=',SAMPLING,'%')])
+	set(dfm, NULL, 'MAXCLADE', dfm[, paste0('max clade=',MAXCLADE)])
+	set(dfm, NULL, 'MAXHEIGHT', dfm[, paste0('max height=',MAXHEIGHT)])
+	tmp	<- unique(subset(dfm, FORMULA_INF=='TYPE' & variable=='trTYPE', select=c('SAMPLING','MAXCLADE','MAXHEIGHT','REP','variable')))
+	tmp[, TRUTH:=log(5)]	
+	ggplot(subset(dfm, FORMULA_INF=='TYPE'), aes(x=REP)) + 
+			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
+			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
+			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT, scales='free')
+	ggsave(file=file.path(indir,'boxplots_trTYPE_infTYPE_sampling100_maxheight10_hetinf1_vary_maxcladesize.pdf'),w=10,h=10)
+	
+	tmp	<- unique(subset(dfm, FORMULA_INF=='TYPE' & variable=='trTYPE' & MAXHEIGHT=='max height=10', select=c('SAMPLING','MAXCLADE','MAXHEIGHT','REP','variable')))
+	tmp[, TRUTH:=log(5)]	
+	ggplot(subset(dfm, FORMULA_INF=='TYPE' & MAXHEIGHT=='max height=10'), aes(x=REP)) + 
+			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
+			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
+			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT, scales='free')
+	ggsave(file=file.path(indir,'boxplots_trTYPE_infTYPE_sampling100_maxheight10_vary_maxcladesize.pdf'),w=10,h=10)
+}
+
 cr.master.ex3.adMCMC.evaluate<- function()
 {
 	require(data.table)
@@ -1955,7 +2219,7 @@ cr.master.ex3.adMCMC.evaluate<- function()
 			{
 				infile	<- infiles[i,F]
 				cat(basename(infile),'\n')
-				#infile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infTYPE_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
+				#infile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_coalregression/master_results/m3.RR5.n1250_seed123_rep1_aMCMC170710_170713_trTYPE_infETSI_mndInf_mh10_hetinf0_mcs100_s0.5.rda'
 				load(infile)	
 				fit.mcmc			<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
 				fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
@@ -3554,7 +3818,7 @@ cr.master.ex3.dev.mcmc.with.hetinflation<- function()
 	
 }
 
-cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior,extra='')
+cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior, par.infprior.mean, par.infprior.sd, extra='')
 {
 	require(coalreg)
 	require(data.table)
@@ -3572,7 +3836,9 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 		par.tsimb					<- 2
 		par.tsimn					<- 1
 		formula.tr					<- ~TYPE
-		formula.inf					<- ~ETSI		
+		formula.inf					<- ~ETSI	
+		par.infprior.mean			<- log(5)
+		par.infprior.sd				<- 1/5	
 	}
 	#
 	#	run coalreg	run using exact time to infection
@@ -3589,10 +3855,15 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 			'\npar.tsimb=',par.tsimb, 
 			'\npar.tsimn=',par.tsimn, 
 			'\npar.hetInflation_logprior=',as.character(par.hetInflation_logprior),
+			'\npar.infprior.mean=',par.infprior.mean,
+			'\npar.infprior.sd=',par.infprior.sd,			
 			'\nextra=',extra)
 	if(par.hetInflation_logprior>0)
-		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)	
-	phylo	<- read.tree( infile )	
+		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)		
+	infection_logpriors	<- list()
+	if(!is.na(par.infprior.mean) & !is.na(par.infprior.sd))
+		infection_logpriors<- list( ETSI=function(x) dnorm(x, par.infprior.mean, par.infprior.sd, log=TRUE) )
+	phylo	<- read.tree( infile )
 	if(par.s<1)
 		phylo 	<- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
 	#	create data.table with infection type
@@ -3625,6 +3896,7 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 								infection=formula.inf,
 								adapt.batch=function(accn){  ifelse(accn<1e3, 20, 50) },
 								adapt.schedule=function(b){ 1+1*(1/b)^(1/3) },
+								infection_logpriors=infection_logpriors,
 								hetInflation_logprior=par.hetInflation_logprior,
 								mhsteps=10e3,													
 								maxHeight=par.maxHeight,
@@ -3642,6 +3914,8 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 														'_mh',par.maxHeight,
 														'_hetinf',as.numeric(is.function(par.hetInflation_logprior)),
 														'_mcs',par.mincladesize,
+														ifelse(!is.na(par.infprior.mean), paste0('_infm',par.infprior.mean), ''),
+														ifelse(!is.na(par.infprior.sd), paste0('_infs',par.infprior.sd), ''),
 														'_s',par.s,														
 														'.rda'),basename(infile)))
 	cat('\noutfile=',outfile)
