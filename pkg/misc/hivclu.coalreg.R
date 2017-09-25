@@ -276,13 +276,14 @@ cr.hpc.submit<- function()
 		formula.tr					<- '~TYPE'	
 		formula.inf					<- '~TYPE'
 		#formula.inf					<- '~ETSI'
+		formula.inf					<- '~ETSI+TYPE'
 		extra						<- '170919'
 		par.maxNodeDepth			<- Inf				
 		par.hetInflation_logprior	<- 1 	# cannot pass function in cmd, define within
 		par.noise					<- 0
 		par.bias					<- 1	
-		#par.infprior.mean			<- -2
-		par.infprior.mean			<- log(5)
+		par.infprior.mean			<- -2
+		#par.infprior.mean			<- log(5)
 		for(i in seq_len(nrow(infiles)))
 		{
 			infile						<- infiles[i,F]
@@ -2286,11 +2287,11 @@ cr.master.ex3.adMCMC.evaluate.170925<- function()
 	
 	tmp	<- unique(subset(dfm, FORMULA_INF=='TYPE' & variable=='trTYPE' & MAXHEIGHT=='max height=10', select=c('SAMPLING','MAXCLADE','MAXHEIGHT','REP','variable')))
 	tmp[, TRUTH:=log(5)]	
-	ggplot(subset(dfm, FORMULA_INF=='TYPE' & MAXHEIGHT=='max height=10'), aes(x=REP)) + 
+	ggplot(subset(dfm, FORMULA_INF=='TYPE'), aes(x=REP)) + 
 			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
 			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
-			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT, scales='free')
-	ggsave(file=file.path(indir,'boxplots_trTYPE_infTYPE_sampling100_maxheight10_vary_maxcladesize.pdf'),w=10,h=10)
+			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT+INFPRIOR_S, scales='free')
+	ggsave(file=file.path(indir,'boxplots_trTYPE_infTYPE_maxheight10_hetinf1_vary_infpriorsd.pdf'),w=10,h=10)
 }
 
 cr.master.ex3.adMCMC.evaluate<- function()
@@ -3949,7 +3950,7 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)		
 	infection_logpriors	<- list()
 	if(!is.na(par.infprior.mean) & !is.na(par.infprior.sd))
-		infection_logpriors<- list( TYPE=function(x) dnorm(x, par.infprior.mean, par.infprior.sd, log=TRUE) )
+		infection_logpriors<- list( ETSI=function(x) dnorm(x, par.infprior.mean, par.infprior.sd, log=TRUE) )
 	phylo	<- read.tree( infile )
 	if(par.s<1)
 		phylo 	<- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
