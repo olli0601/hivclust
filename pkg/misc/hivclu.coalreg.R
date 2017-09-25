@@ -274,17 +274,17 @@ cr.hpc.submit<- function()
 		hpc.mem						<- '5600mb'
 		hpc.walltime				<- 71
 		formula.tr					<- '~TYPE'	
-		formula.inf					<- '~TYPE'
-		#formula.inf					<- '~ETSI'
+		#formula.inf					<- '~TYPE'
+		formula.inf					<- '~ETSI'
 		#formula.inf					<- '~ETSI+TYPE'
 		extra						<- '170919'
 		par.maxNodeDepth			<- Inf				
-		par.hetInflation_logprior	<- 1 	# cannot pass function in cmd, define within
+		#par.hetInflation_logprior	<- 1 	# cannot pass function in cmd, define within
 		par.hetInflation_logprior	<- 0 	
 		par.noise					<- 0
 		par.bias					<- 1	
-		#par.infprior.mean			<- -2
-		par.infprior.mean			<- log(5)
+		par.infprior.mean			<- -2
+		#par.infprior.mean			<- log(5)
 		for(i in seq_len(nrow(infiles)))
 		{
 			infile						<- infiles[i,F]
@@ -3960,7 +3960,7 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)	
 	infection_logpriors	<- list()
 	if(!is.na(par.infprior.mean) & !is.na(par.infprior.sd))
-		infection_logpriors<- list( TYPE=function(x) dnorm(x, par.infprior.mean, par.infprior.sd, log=TRUE) )
+		infection_logpriors<- list( ETSI=function(x) dnorm(x, par.infprior.mean, par.infprior.sd, log=TRUE) )
 	phylo	<- read.tree( infile )
 	if(par.s<1)
 		phylo 	<- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
