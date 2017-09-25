@@ -3960,7 +3960,7 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)	
 	infection_logpriors	<- list()
 	if(!is.na(par.infprior.mean) & !is.na(par.infprior.sd))
-		infection_logpriors<- list( ETSI=function(x) dnorm(x, par.infprior.mean, par.infprior.sd, log=TRUE) )
+		infection_logpriors<- list( TYPE=function(x) dnorm(x, par.infprior.mean, par.infprior.sd, log=TRUE) )
 	phylo	<- read.tree( infile )
 	if(par.s<1)
 		phylo 	<- multi2di(drop.tip(phylo, sample(phylo$tip.label, replace=FALSE, size=length(phylo$tip.label)*par.s)), random=FALSE)
