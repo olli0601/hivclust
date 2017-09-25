@@ -276,14 +276,15 @@ cr.hpc.submit<- function()
 		formula.tr					<- '~TYPE'	
 		formula.inf					<- '~TYPE'
 		#formula.inf					<- '~ETSI'
-		formula.inf					<- '~ETSI+TYPE'
+		#formula.inf					<- '~ETSI+TYPE'
 		extra						<- '170919'
 		par.maxNodeDepth			<- Inf				
 		par.hetInflation_logprior	<- 1 	# cannot pass function in cmd, define within
+		par.hetInflation_logprior	<- 0 	
 		par.noise					<- 0
 		par.bias					<- 1	
-		par.infprior.mean			<- -2
-		#par.infprior.mean			<- log(5)
+		#par.infprior.mean			<- -2
+		par.infprior.mean			<- log(5)
 		for(i in seq_len(nrow(infiles)))
 		{
 			infile						<- infiles[i,F]
@@ -2218,7 +2219,7 @@ cr.master.ex3.adMCMC.evaluate.170925<- function()
 	indir	<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_results_7'
 	infiles	<- data.table(F=list.files(indir, pattern='^m3.*rda$',full.names=TRUE))
 	infiles[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
-	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z]+)_.*','\\1',basename(F))]
+	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z\\+]+)_.*','\\1',basename(F))]
 	infiles[, FORMULA_TR:= gsub('.*_tr([A-Z]+)_.*','\\1',basename(F))]
 	infiles[, SAMPLING:= 100*as.numeric(gsub('.*_s([0-1]\\.?[0-9]*).*','\\1',basename(F)))]
 	infiles[, MAXHEIGHT:= as.numeric(gsub('.*_mh([0-9]+)_.*','\\1',basename(F)))]
@@ -2231,11 +2232,11 @@ cr.master.ex3.adMCMC.evaluate.170925<- function()
 			{
 				infile	<- infiles[i,F]
 				cat(basename(infile),'\n')
-				#infile	<- '/Users/Oliver/Box Sync/OR_Work/2017/2017_coalregression/master_results_6/m3.RR5.n1250_seed123_rep1_aMCMC170919_trTYPE_infTYPE_mndInf_mh10_hetinf1_mcs100_s1.rda'
-				load(infile)	
-				fit.mcmc			<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)				
-				#fit.mcmc			<- fit.mcmc[,-which(colnames(fit.mcmc)=='logHetInflation')]
-				colnames(fit.mcmc)	<- paste0(c('','','tr','inf'),colnames(fit.mcmc))				
+				#infile	<- '/Users/Oliver/Box Sync/OR_Work/2017/2017_coalregression/master_results_7/m3.RR5.n1250_seed123_rep9_aMCMC170919_trTYPE_infETSI+TYPE_mndInf_mh10_hetinf1_mcs75_infm-2_infs0.5_s0.5.rda'
+				load(infile)					
+				fit.mcmc			<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)
+				tmp					<- c(rep('',ncol(fit$trace)), rep('tr',ncol(fit$trace_tr)), rep('inf',ncol(fit$trace_inf)))
+				colnames(fit.mcmc)	<- paste0(tmp,colnames(fit.mcmc))				
 				fit.mcmc			<- mcmc(fit.mcmc)
 				#	raw plots
 				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(infile))), w=10, h=7)
@@ -2292,6 +2293,15 @@ cr.master.ex3.adMCMC.evaluate.170925<- function()
 			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
 			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT+INFPRIOR_S, scales='free')
 	ggsave(file=file.path(indir,'boxplots_trTYPE_infTYPE_maxheight10_hetinf1_vary_infpriorsd.pdf'),w=10,h=10)
+	
+	tmp	<- unique(subset(dfm, FORMULA_INF=='ETSI+TYPE' & variable=='trTYPE' & MAXHEIGHT=='max height=10', select=c('SAMPLING','MAXCLADE','MAXHEIGHT','REP','variable')))
+	tmp[, TRUTH:=log(5)]	
+	ggplot(subset(dfm, FORMULA_INF=='ETSI+TYPE'), aes(x=REP)) + 
+			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
+			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
+			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT+INFPRIOR_S, scales='free')
+	ggsave(file=file.path(indir,'boxplots_trTYPE_infETSI+TYPE_maxheight10_hetinf1_vary_infpriorsd.pdf'),w=10,h=10)
+	
 }
 
 cr.master.ex3.adMCMC.evaluate<- function()
