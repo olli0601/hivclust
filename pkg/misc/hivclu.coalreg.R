@@ -850,8 +850,6 @@ cr.various.master.Bayes<- function()
 	#	process args
 	par.tsimn	<- par.noise
 	par.tsimb	<- par.bias		
-	if(par.hetInflation_logprior==0)
-		par.hetInflation_logprior	<- NA
 	#	
 	cr.master.ex3.adMCMC(infile, formula.tr, formula.inf, par.s, par.maxNodeDepth, par.maxHeight, par.mincladesize, par.tsimb, par.tsimn, par.hetInflation_logprior, par.infprior.mean, par.infprior.sd, extra)		
 }
@@ -3956,8 +3954,10 @@ cr.master.ex3.adMCMC<- function(infile, formula.tr, formula.inf, par.s, par.maxN
 			'\npar.infprior.mean=',par.infprior.mean,
 			'\npar.infprior.sd=',par.infprior.sd,			
 			'\nextra=',extra)
-	if(par.hetInflation_logprior>0)
-		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)		
+	if(par.hetInflation_logprior==0)
+		par.hetInflation_logprior	<- NA
+	if(!is.na(par.hetInflation_logprior))
+		par.hetInflation_logprior	<- function(x) dnorm(x, mean=0, sd=10, log=TRUE)	
 	infection_logpriors	<- list()
 	if(!is.na(par.infprior.mean) & !is.na(par.infprior.sd))
 		infection_logpriors<- list( ETSI=function(x) dnorm(x, par.infprior.mean, par.infprior.sd, log=TRUE) )
