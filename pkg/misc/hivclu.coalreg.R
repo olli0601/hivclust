@@ -817,7 +817,7 @@ cr.various.master.ErikBayes<- function()
 		phi <- 1
 		MH <- 25
 		infile <- '/work/or105/ATHENA_2016/master_examples_2/m3.RR5.n1250.nwk'
-		infile.csv <- '/work/or105/ATHENA_2016/master_examples_2/master_results_9/m3.RR5.n1250_tipstates0.csv'
+		infile.csv <- '/work/or105/ATHENA_2016/master_examples_2/m3.RR5.n1250_tipstates0.csv'
 		tres <- read.tree( infile )
 		
 		tipstates <- read.csv( infile.csv, header=F)
