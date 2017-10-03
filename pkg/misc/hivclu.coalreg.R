@@ -799,7 +799,51 @@ cr.hpc.submit.170810<- function()
 cr.various.master<- function()
 {
 	#cr.various.master.MLE()
-	cr.various.master.Bayes()
+	#cr.various.master.Bayes()
+	cr.various.master.ErikBayes()
+}
+
+cr.various.master.ErikBayes<- function()
+{
+	require(coalreg)
+	require(ape)
+	require(coda)
+	require(data.table)
+	require(ggplot2)
+	
+	if(1)
+	{
+		set.seed(1111)
+		phi <- 1
+		MH <- 25
+		infile <- '/work/or105/ATHENA_2016/master_examples_2/m3.RR5.n1250.nwk'
+		infile.csv <- '/work/or105/ATHENA_2016/master_examples_2/master_results_9/m3.RR5.n1250_tipstates0.csv'
+		tres <- read.tree( infile )
+		
+		tipstates <- read.csv( infile.csv, header=F)
+		colnames(tipstates) <- c('tree', 'sid', 'I0True')
+				
+		trnum <- 1
+		outfile <- gsub('\\.nwk',paste0('_output_tree',trnum,'_fullsampling.rda'),infile)
+				
+		tr <- tres[[trnum]]
+		ts0 <- tipstates[ tipstates$tree == trnum , ]
+		X <- data.frame( I0 = ts0$I0True=='True')
+		rownames(X) <- ts0$sid
+		
+		f6 <-  coreg.adaptiveMHwithinGibbs.or170919(X, tr, ~I0, ~I0
+				, adapt.batch=function(accn){ ifelse(accn<1e3, 20, 50) }
+				, adapt.schedule=function(b){ 1+1*(1/b)^(1/3) },
+				, mhsteps=1e4, maxHeight=MH, maxNodeDepth=Inf, mincladesize=200
+				, infection_logpriors = list( I0TRUE = function(x) dnorm(x, log(5), 1/5, log = TRUE  ) )
+				, coef_logprior_sd=10  # weak prior
+				, verbose=T)
+		
+		#cf <- tail( f2$trace_tr, 4e3 )
+		#res <- c( mode=mlv( cf, method='shorth' )$M, mean=mean(cf), quantile( cf, prob = c(.5, .025, .975 )) )
+		save( f6,  file = outfile)
+	}
+	
 }
 
 cr.various.master.Bayes<- function()
@@ -2300,6 +2344,91 @@ cr.master.ex3.adMCMC.evaluate.170925<- function()
 			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT+INFPRIOR_S, scales='free')
 	ggsave(file=file.path(indir,'boxplots_trTYPE_infETSI+TYPE_maxheight10_hetinf1_vary_infpriorsd.pdf'),w=10,h=10)
 	
+}
+
+cr.master.ex3.adMCMC.evaluate.170925b<- function()
+{
+	require(data.table)
+	require(coda)
+	require(ggplot2)
+	
+	indir	<- '~/Box Sync/OR_Work/2017/2017_coalregression/master_results_8'
+	infiles	<- data.table(F=list.files(indir, pattern='^m3.*rda$',full.names=TRUE))
+	infiles[, REP:= as.numeric(gsub('.*_rep([0-9]+)_.*','\\1',basename(F)))]
+	infiles[, FORMULA_INF:= gsub('.*_inf([A-Z\\+]+)_.*','\\1',basename(F))]
+	infiles[, FORMULA_TR:= gsub('.*_tr([A-Z]+)_.*','\\1',basename(F))]
+	infiles[, SAMPLING:= 100*as.numeric(gsub('.*_s([0-1]\\.?[0-9]*).*','\\1',basename(F)))]
+	infiles[, MAXHEIGHT:= as.numeric(gsub('.*_mh([0-9]+)_.*','\\1',basename(F)))]
+	infiles[, MAXCLADE:= as.numeric(gsub('.*_mcs([0-9]+)_.*','\\1',basename(F)))]
+	infiles[, HETINF:= as.numeric(gsub('.*_hetinf([0-9]+)_.*','\\1',basename(F)))]	
+	infiles[, INFPRIOR_S:= as.numeric(gsub('.*_infs([0-1]\\.?[0-9]*)_.*','\\1',basename(F)))]
+	infiles[, INFPRIOR_M:= as.numeric(gsub('.*_infm(-?[0-1]?\\.?[0-9]*).*','\\1',basename(F)))]
+	
+	tmp		<- lapply(seq_len(nrow(infiles)), function(i)
+			{
+				infile	<- infiles[i,F]
+				cat(basename(infile),'\n')
+				#infile	<- '/Users/Oliver/Box Sync/OR_Work/2017/2017_coalregression/master_results_7/m3.RR5.n1250_seed123_rep9_aMCMC170919_trTYPE_infETSI+TYPE_mndInf_mh10_hetinf1_mcs75_infm-2_infs0.5_s0.5.rda'
+				load(infile)					
+				fit.mcmc			<- cbind(fit$trace, fit$trace_tr, fit$trace_inf)
+				tmp					<- c(rep('',ncol(fit$trace)), rep('tr',ncol(fit$trace_tr)), rep('inf',ncol(fit$trace_inf)))
+				colnames(fit.mcmc)	<- paste0(tmp,colnames(fit.mcmc))				
+				fit.mcmc			<- mcmc(fit.mcmc)
+				#	raw plots
+				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_coeff_trace.pdf'),basename(infile))), w=10, h=7)
+				plot(fit.mcmc)
+				dev.off()
+				fit.mcmc.a	<- mcmc(fit$trace_qsd)
+				pdf(file.path(dirname(infile), gsub('\\.rda',paste0('_sdadapt.pdf'),basename(infile))), w=5, h=10)
+				plot(fit.mcmc.a)
+				dev.off()
+				#	rm burn in and thin
+				tmp <- seq.int(1e3,1e4,4*5)
+				dfm	<- melt(cbind(as.data.table(fit.mcmc[tmp,]), data.table(IT=tmp)), id.vars='IT')
+				dfm	<- dfm[, list(STAT=paste0('q',c(0.025,0.25,0.5,0.75,0.975)), V=quantile(value,p=c(0.025,0.25,0.5,0.75,0.975))), by=c('variable')]
+				#	add acceptance
+				tmp	<- 1-rejectionRate(window(fit.mcmc, start=1e3, end=1e4, thin=4))
+				tmp	<- data.table(variable=names(tmp), STAT='acceptance',V=tmp)
+				dfm	<- rbind(dfm, tmp)
+				#	add ESS
+				tmp	<- effectiveSize(window(fit.mcmc, start=1e3, end=1e4, thin=4))
+				tmp	<- data.table(variable=names(tmp), STAT='ESS',V=tmp)
+				dfm	<- rbind(dfm, tmp)
+				#
+				dfm[, REP:=infiles[i,REP]]
+				dfm[, FORMULA_INF:=infiles[i,FORMULA_INF]]
+				dfm[, FORMULA_TR:=infiles[i,FORMULA_TR]]
+				dfm[, SAMPLING:=infiles[i,SAMPLING]]
+				dfm[, MAXHEIGHT:=infiles[i,MAXHEIGHT]]
+				dfm[, MAXCLADE:=infiles[i,MAXCLADE]]
+				dfm[, HETINF:=infiles[i,HETINF]]				
+				dfm[, INFPRIOR_M:=infiles[i,INFPRIOR_M]]
+				dfm[, INFPRIOR_S:=infiles[i,INFPRIOR_S]]
+				dfm
+			})
+	dfm	<- do.call('rbind',tmp)
+	save(dfm, file=file.path(indir,'results.rda'))
+	#	load(file.path(indir,'results.rda'))
+	dfm	<- dcast.data.table(dfm, SAMPLING+MAXCLADE+MAXHEIGHT+REP+variable+FORMULA_INF+HETINF+INFPRIOR_M+INFPRIOR_S~STAT, value.var='V')
+	set(dfm, NULL, 'SAMPLING', dfm[, paste0('sampling=',SAMPLING,'%')])
+	set(dfm, NULL, 'MAXCLADE', dfm[, paste0('max clade=',MAXCLADE)])
+	set(dfm, NULL, 'MAXHEIGHT', dfm[, paste0('max height=',MAXHEIGHT)])
+	set(dfm, NULL, 'INFPRIOR_S', dfm[, paste0('inf prior sd=',INFPRIOR_S)])
+	tmp	<- unique(subset(dfm, FORMULA_INF=='ETSI' & variable=='trTYPE', select=c('SAMPLING','MAXCLADE','MAXHEIGHT','REP','variable')))
+	tmp[, TRUTH:=log(5)]	
+	ggplot(subset(dfm, FORMULA_INF=='ETSI'), aes(x=REP)) + 
+			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
+			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
+			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT+INFPRIOR_S, scales='free')
+	ggsave(file=file.path(indir,'boxplots_trTYPE_infETSI_maxheight10_hetinf0_vary_infpriorsd.pdf'),w=10,h=10)
+	
+	tmp	<- unique(subset(dfm, FORMULA_INF=='TYPE' & variable=='trTYPE' & MAXHEIGHT=='max height=10', select=c('SAMPLING','MAXCLADE','MAXHEIGHT','REP','variable')))
+	tmp[, TRUTH:=log(5)]	
+	ggplot(subset(dfm, FORMULA_INF=='TYPE'), aes(x=REP)) + 
+			geom_boxplot(aes(middle=q0.5, lower=q0.25, upper=q0.75, ymin=q0.025, ymax=q0.975),stat = "identity") +
+			geom_line(data=tmp, aes(x=REP, y=TRUTH), colour='red') +
+			facet_grid(variable~SAMPLING+MAXCLADE+MAXHEIGHT+INFPRIOR_S, scales='free')
+	ggsave(file=file.path(indir,'boxplots_trTYPE_infTYPE_maxheight10_hetinf0_vary_infpriorsd.pdf'),w=10,h=10)		
 }
 
 cr.master.ex3.adMCMC.evaluate<- function()
