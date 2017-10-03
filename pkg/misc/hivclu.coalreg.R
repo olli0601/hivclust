@@ -811,7 +811,7 @@ cr.various.master.ErikBayes<- function()
 	require(data.table)
 	require(ggplot2)
 	
-	if(1)
+	if(0)
 	{
 		set.seed(1111)
 		phi <- 1
@@ -843,7 +843,38 @@ cr.various.master.ErikBayes<- function()
 		#res <- c( mode=mlv( cf, method='shorth' )$M, mean=mean(cf), quantile( cf, prob = c(.5, .025, .975 )) )
 		save( f6,  file = outfile)
 	}
-	
+	if(1)
+	{
+		set.seed(1111)
+		phi 		<- .5
+		MH 			<- 15
+		infile 		<- '/work/or105/ATHENA_2016/master_examples_2/m3.RR5.n1250.nwk'
+		infile.csv 	<- '/work/or105/ATHENA_2016/master_examples_2/m3.RR5.n1250_tipstates0.csv'
+		tres 		<- read.tree( infile )
+		
+		tipstates <- read.csv( infile.csv, header=F)
+		colnames(tipstates) <- c('tree', 'sid', 'I0True')
+		
+		for(trnum in 1:100)
+		{
+			#trnum <- 1
+			outfile 	<- gsub('\\.nwk',paste0('_output_f3_tree',trnum,'.rda'),infile)
+			tr 			<- tres[[trnum]]
+			ts0 		<- tipstates[ tipstates$tree == trnum , ]
+			X 			<- data.frame( I0 = ts0$I0True=='True')
+			rownames(X) <- ts0$sid			
+			ndrop 		<- floor( length( tr$tip.label ) * (1-phi ))
+			tr 			<- drop.tip( tr, sample( tr$tip.label, size = ndrop, replace=F))
+			f3 			<-  coreg.adaptiveMHwithinGibbs.or170919(X, tr, ~I0, ~I0
+								, adapt.batch=function(accn){ ifelse(accn<1e3, 20, 50) }
+								, adapt.schedule=function(b){ 1+1*(1/b)^(1/3) },
+								, mhsteps=1e4, maxHeight=MH, maxNodeDepth=Inf, mincladesize=200
+								, infection_logpriors = list( I0TRUE = function(x) dnorm(x, log(5), 1/5, log = TRUE  ) )
+								, coef_logprior_sd=10  # weak prior
+								, verbose=FALSE)		
+			save(f3, file = outfile)
+		}		
+	}
 }
 
 cr.various.master.Bayes<- function()
