@@ -91,8 +91,8 @@ EPS			<<- 1e-12
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
 #default.fun		<- "project.dual"
 #default.fun		<- 'project.examl.ATHENA1610.161102'
-default.fun			<- 'seattle.wrapper'
-#default.fun		<- "hivc.pipeline.various"
+#default.fun			<- 'seattle.wrapper'
+default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
