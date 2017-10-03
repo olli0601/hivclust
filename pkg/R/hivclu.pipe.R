@@ -1014,7 +1014,7 @@ hivc.pipeline.various<- function()
 		# RUN VARIOUS
 		cmd			<- hivc.cmd.various()
 		#cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=71, hpc.mem="95000mb")
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5800mb")
+		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=701, hpc.mem="5800mb", hpc.load='module load intel-suite R/3.3.3')
 		cat(cmd)		
 		outdir		<- paste(DATA,"tmp",sep='/')
 		outfile		<- paste("vrs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
