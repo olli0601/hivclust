@@ -1000,7 +1000,7 @@ hivc.pipeline.various<- function()
 	{
 		project.dualinfecions.phylotypes.evaluatereads.150119()
 	}	
-	if(0)
+	if(1)
 	{
 		project.Bezemer.VLIntros()
 	}
@@ -1009,7 +1009,7 @@ hivc.pipeline.various<- function()
 		#run coalreg
 		cr.hpc.submit()			
 	}
-	if(1)
+	if(0)
 	{
 		# RUN VARIOUS
 		cmd			<- hivc.cmd.various()

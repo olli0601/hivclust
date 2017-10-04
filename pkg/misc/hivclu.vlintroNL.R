@@ -2,8 +2,8 @@
 
 project.Bezemer.VLIntros<- function()
 {
-	vli.bez.LSD()
-	#vli.bez.FastTrees()
+	#vli.bez.LSD()
+	vli.bez.FastTrees()
 }
 
 vli.asr.get.tips.in.NL.subtrees<- function(ph, da, dm, id.regex, select.descendants.regex)
@@ -766,6 +766,40 @@ vli.bez.LSD<- function()
 }
 
 ######################################################################################
+
+vli.bez.addHXB2<- function()
+{
+	require(ape)
+	require(data.table)
+	outfile.hxb2	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/SequenceAlignments/hxb2.fasta'
+	load('~/git/hivclust/pkg/data/refseq_hiv1_hxb2.rda')
+	tmp				<- as.DNAbin(as.matrix(t(as.character(hxb2[2000:4000, HXB2.K03455]))))
+	rownames(tmp)	<- 'HXB2'
+	write.dna(tmp, file=outfile.hxb2, format='fa', colsep='', nbcol=-1)
+	
+	file.seq.m		<- '/Users/Oliver/Dropbox\\ \\(SPH\\ Imperial\\ College\\)/2017_NL_Introductions/SequenceAlignments/polB_SHM_LANL_reduced149_withD.fasta'
+	outfile			<- '/Users/Oliver/Dropbox\\ \\(SPH\\ Imperial\\ College\\)/2017_NL_Introductions/SequenceAlignments/polB_SHM_LANL_reduced149_withD_withHXB2.fasta'
+	outfile.hxb2	<- '/Users/Oliver/Dropbox\\ \\(SPH\\ Imperial\\ College\\)/2017_NL_Introductions/SequenceAlignments/hxb2.fasta'
+	cmd				<- paste('mafft --anysymbol --add ',outfile.hxb2,' --auto ',file.seq.m,' > ', outfile, '', sep='')
+	system(cmd)	
+}
+
+vli.bez.rmDRM<- function()
+{
+	require(ape)
+	require(data.table)
+	require(big.phylo)
+	file				<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/SequenceAlignments/polB_SHM_LANL_reduced149_withD_withHXB2_e.fasta'
+	outfile				<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/SequenceAlignments/polB_SHM_LANL_reduced149_withD_withHXB2_e_noDRM.fasta'
+	s					<- read.dna(file, format='fa')
+	tmp					<- which(grepl("HXB2",rownames(s)))
+	rownames(s)[tmp]	<- 'HXB2'
+	tmp					<- big.phylo:::seq.rm.drugresistance(s)
+	nodr.info			<- tmp$nodr.info
+	seq					<- tmp$nodr.seq
+	write.dna(seq, file= outfile, format='fasta', colsep='', nbcol=-1)
+	save(seq, nodr.info, file= gsub('fasta','rda',outfile))
+}
 
 vli.bez.FastTrees<- function()
 {	
