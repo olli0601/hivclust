@@ -3,7 +3,7 @@
 ##	CHANGE  as needed
 ##! /Library/Frameworks/R.framework/Versions/2.11/Resources/bin/Rscript
 ##! /Library/Frameworks/R.framework/Versions/2.15/Resources/bin/Rscript
-##! /apps/R/3.2.0/lib64/R/bin/Rscript
+##! /apps/R/3.3.3/lib64/R/bin/Rscript
 ##! /usr/bin/Rscript
 ##! /Library/Frameworks/R.framework/Versions/2.11/Resources/bin/Rscript
 ###############################################################################
@@ -112,6 +112,7 @@ function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$",
 							paste(CODE.HOME,"misc","hivclu.coalreg.R",sep='/'),
 							paste(CODE.HOME,"misc","hivclu.Londonprjcts.R",sep='/'),
 							paste(CODE.HOME,"misc","dualproject.R",sep='/'),
+							paste(CODE.HOME,"misc","hivclu.vlintroNL.R",sep='/'),
 							paste(CODE.HOME,"misc","gcproject2013.R",sep='/'))
 sapply(function.list,function(x){ print(x); source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE) })
 ###############################################################################	
@@ -420,7 +421,7 @@ if(length(args))
 	argv<<- args
 }
 ###############################################################################
-stop()
+#stop()
 if(HIVC.DEBUG)	options(error= my.dumpframes)	
 cat(paste("\nhivclu.startme.R: ",ifelse(HIVC.DEBUG,"debug",""),"call",default.fun,"\n"))
 do.call(default.fun,list()) 	
