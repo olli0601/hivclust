@@ -805,7 +805,7 @@ vli.bez.FastTrees<- function()
 {	
 	require(big.phylo)
 	#	run FastTree on HPC
-	if(1)
+	if(0)
 	{
 		#indir			<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle'
 		indir			<- '/work/or105/ATHENA_2016/vlintros/trees_ft'
@@ -828,12 +828,13 @@ vli.bez.FastTrees<- function()
 		}
 	}
 	#	re-root at random taxon with name 'subtree'
-	if(0)
+	if(1)
 	{
 		require(ape)
 		require(adephylo)
 		require(phytools)		
-		indir			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft'
+		#indir			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft'
+		indir			<- '/work/or105/ATHENA_2016/vlintros/trees_ft'
 		infiles			<- data.table(F=list.files(indir, pattern='newick$', recursive=TRUE, full.names=TRUE))
 		#infiles			<- subset(infiles, grepl('cpx06', F))
 		invisible(infiles[, {
