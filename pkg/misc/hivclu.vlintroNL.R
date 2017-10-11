@@ -2,8 +2,8 @@
 
 project.Bezemer.VLIntros<- function()
 {
-	#vli.bez.LSD()
-	vli.bez.FastTrees()
+	vli.bez.LSD()
+	#vli.bez.FastTrees()
 }
 
 vli.asr.get.tips.in.NL.subtrees<- function(ph, da, dm, id.regex, select.descendants.regex)
@@ -705,7 +705,7 @@ vli.bez.LSD<- function()
 	require(data.table)
 	require(big.phylo)
 	#
-	#	write the overall dates file
+	#	write the overall dates file for NON-B subtypes
 	#
 	if(0)
 	{
@@ -729,13 +729,40 @@ vli.bez.LSD<- function()
 							system(cmd)
 							NULL
 						}, by='F'])
+	}
+	#
+	#	write the overall dates file for subtype B
+	#
+	if(0)
+	{
+		infile.dates	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_plusB.csv'
+		df				<- as.data.table(read.csv(infile.dates))
+		df				<- subset(df, select=c(ID, subtype, SAMPLING_DATE))
+		setnames(df, c('ID','subtype','SAMPLING_DATE'), c('TAXA','SUBTYPE','DATE'))
+		tmp				<- copy(df)
+		set(tmp, NULL, 'TAXA', tmp[,gsub('[0-9]$','',paste0(TAXA,'_subtype',SUBTYPE))])
+		df				<- rbind(df, tmp)	
+		infile.dates	<- gsub('\\.csv','_lsddates.csv',infile.dates)
+		write.csv(df, row.names=FALSE, infile.dates)
+		#
+		#	write subtype specific dates files
+		#
+		indir.ft		<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft'
+		infiles			<- data.table(F=list.files(indir.ft, pattern='polB.*newick$', full.names=TRUE))
+		infiles[, DATES_FILE:= gsub('_ft_bs100\\.newick','_lsddates.csv',F)]
+		invisible(infiles[, {
+							cmd		<- cmd.lsd.dates(infile.dates, F, DATES_FILE, run.lsd=FALSE)
+							system(cmd)
+							NULL
+						}, by='F'])
 	}	
+	
 	#
 	#	run LSD 
 	#
-	#indir.ft		<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft'
-	#indir.dates		<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft'
-	#outdir			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft'
+	#indir.ft		<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_ft_rerooted'
+	#indir.dates		<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_lsd'
+	#outdir			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/trees_lsd'
 	
 	indir.ft		<- '/work/or105/ATHENA_2016/vlintros/trees_ft_rerooted'
 	indir.dates		<- '/work/or105/ATHENA_2016/vlintros/trees_lsd'
@@ -746,9 +773,9 @@ vli.bez.LSD<- function()
 	#	get files	
 	infiles	<- data.table(F=list.files(indir.ft, pattern='*newick$', full.names=TRUE, recursive=TRUE))
 	infiles	<- subset(infiles, !grepl('RAxML',F))
-	infiles[, SUBTYPE:= gsub('_.*','',basename(F))]
+	infiles[, SUBTYPE:= gsub('pol','',gsub('_.*','',basename(F)))]
 	tmp		<- data.table(FD=list.files(indir.dates, pattern='*_lsddates.csv$', full.names=TRUE, recursive=TRUE))
-	tmp[, SUBTYPE:= gsub('_.*','',basename(FD))]
+	tmp[, SUBTYPE:= gsub('pol','',gsub('_.*','',basename(FD)))]
 	infiles	<- merge(infiles, tmp, by='SUBTYPE')
 	infiles[, FL:= file.path(outdir,gsub('_rr\\.|_rr_','_lsd_',gsub('\\.newick','',basename(F))))]	
 	#	build LSD commands
