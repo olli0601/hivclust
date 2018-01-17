@@ -6,28 +6,14 @@ project.Bezemer.VLIntros<- function()
 	#vli.bez.FastTrees()
 }
 
-vli.asr.get.tips.in.NL.subtrees<- function(ph, da, dm, id.regex, select.descendants.regex)
-{
-	#	determine max parsimony state transitions into NL 
-	setnames(da, colnames(da), gsub('\\.','_',toupper(colnames(da))))
-	da	<- subset(da, HOSTS=='NL')
-	ans	<- da[, list(TAXA=ph$tip.label[ unlist(Descendants(ph, ROOT_NOS, type='tips')) ] ), by='UNIQUE_SPLITS']
-	ans[, ID:=gsub(id.regex,'\\1',TAXA)]
-	ans	<- subset(ans, grepl(select.descendants.regex,TAXA))
-	ans	<- merge(dm, ans, by='ID')	# we will need this below too
-	set(ans, NULL, 'TAXA', NULL)
-	setnames(ans, 'UNIQUE_SPLITS', 'SUBTREE_ID')
-	ans	
-}
-
-vli.estimate.proportion.introductions.overall <- function(ds, sampling.prob=0.43, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), seed=42, bs.len=1e3)
+vli.estimate.proportion.introductions.overall <- function(df, sampling.prob=0.43, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), seed=42, bs.len=1e3)
 {
 	set.seed(seed)	
-	dsa		<- subset(ds, select=c(SUBTREE_ID, SUBTREE_SIZE))
+	dsa		<- subset(df, select=c(SUBTREE_ID, SUBTREE_SIZE))
 	tmp		<- dsa[, list(BS=seq_len(bs.len), SUBTREE_UNOBS=rnbinom(bs.len, SUBTREE_SIZE, prob=sampling.prob)), by='SUBTREE_ID']
-	dsa		<- merge(dsa, tmp, by='SUBTREE_ID')
+	dsa		<- merge(dsa, tmp, by='SUBTREE_ID',allow.cartesian=TRUE)
 	ans		<- dsa[, list(DUMMY=1, STAT='within_NL', N=sum(SUBTREE_SIZE)+sum(SUBTREE_UNOBS)-1), by='BS']
-	tmp		<- ds[, list(DUMMY=1, N=length(SUBTREE_ID)), by='ANCESTRAL_STATE']
+	tmp		<- df[, list(DUMMY=1, N=length(SUBTREE_ID)), by='ANCESTRAL_STATE']
 	tmp		<- melt(tmp, measure.vars='ANCESTRAL_STATE', value.name='STAT')
 	tmp[, variable:=NULL]
 	tmp		<- merge(expand.grid(BS=seq_len(bs.len), DUMMY=1),tmp,by='DUMMY')
@@ -39,18 +25,22 @@ vli.estimate.proportion.introductions.overall <- function(ds, sampling.prob=0.43
 	ans	
 }
 
-vli.estimate.subtree.distribution.by.sexual.orientation <- function(dss, sampling.prob=0.43, resample.intro.n=3, resample.missing.n=3, sxo.select= c('MSM','hsx'), size.breaks=c(0,1,2,5,10,500), size.labels=c('1','2','3-5','6-10','>10'), intro.year=2000, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), seed=42)	
+vli.estimate.subtree.distribution.by.sexual.orientation <- function(df, sampling.prob=0.43, resample.intro.n=3, resample.missing.n=3, sxo.select= c('MSM','hsx'), size.breaks=c(0,1,2,5,10,500), size.labels=c('1','2','3-5','6-10','>10'), intro.year=2000, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), seed=42)	
 {
-	#sampling.prob=0.43; resample.intro.n=3; resample.missing.n=3; sxo.select= c('MSM','hsx'); intro.year=2000; ans.quantiles=c(0.025,0.25,0.5,0.75,0.975); seed=42
+	#	df<- copy(dpo); sampling.prob=0.43; resample.intro.n=3; resample.missing.n=3; sxo.select= c('MSM','hsx'); intro.year=2000; ans.quantiles=c(0.025,0.25,0.5,0.75,0.975); seed=42
+	#	df<- copy(dpb); sampling.prob=0.43; resample.intro.n=1; resample.missing.n=100; sxo.select= c('MSM','hsx'); intro.year=1995; ans.quantiles=c(0.025,0.25,0.5,0.75,0.975); seed=42
+	#	size.breaks=size.breaks, size.labels=size.labels, 
 	set.seed(seed)
-		
-	ans	<- subset(dss, select=c(ST, ASR_TYPE, REP, SUBTREE_ID, ANCESTRAL_STATE, MIN_SAMPLING_DATE, SUBTREE_SIZE))
+	df[, SUBTREE_ID2:= seq_len(nrow(df))]	
+	setnames(df, c('SUBTREE_ID','SUBTREE_ID2'), c('SUBTREE_ID2','SUBTREE_ID'))
+	
+	ans	<- subset(df, select=c(ST, ASR_TYPE, REP, SUBTREE_ID, ANCESTRAL_STATE, MIN_SAMPLING_DATE, SUBTREE_SIZE))
 	ans[, INTRO_SMPL:=1L]		
 	ans	<- subset(ans, floor(MIN_SAMPLING_DATE)>=intro.year)
 	tmp	<- ans[, list(MISSING_SMPL=seq_len(resample.missing.n), SUBTREE_UNOBS=rnbinom(resample.missing.n, SUBTREE_SIZE, prob=sampling.prob)), by=c('SUBTREE_ID','INTRO_SMPL')]
-	ans	<- merge(ans, tmp, by=c('SUBTREE_ID','INTRO_SMPL'))
+	ans	<- merge(ans, tmp, by=c('SUBTREE_ID','INTRO_SMPL'), allow.cartesian=TRUE)
 		
-	tmp	<- copy(dss)
+	tmp	<- copy(df)
 	tmp	<- melt(tmp, id.vars=c('SUBTREE_ID','SUBTREE_SIZE','REP'), measure.vars=colnames(tmp)[grepl('SUBTREE_SXO_',colnames(tmp))], variable.name='SXO')
 	set(tmp, NULL, 'SXO', tmp[, gsub('SUBTREE_SXO_','',SXO)])
 	tmp[, SXO_PROP:= value/SUBTREE_SIZE]
@@ -65,25 +55,80 @@ vli.estimate.subtree.distribution.by.sexual.orientation <- function(dss, samplin
 	ans	<- subset(ans, MISSING_SMPL==1)[, list(N=length(SUBTREE_ID)), by=c('SXO','MISSING_SMPL','INTRO_SMPL','REP','SUBTREE_SIZE')]
 	ans	<- rbind( melt(ans, measure.vars='SUBTREE_SIZE'), melt(tmp, measure.vars='NL_TRMS_SXO_RND') )
 	
-	ans[, VALUE_C:= ans[, cut(value, breaks=size.breaks, labels=size.labels)]]
+	ans[, VALUE_C:= ans[, cut(value, breaks=size.breaks, labels=size.labels, right=TRUE)]]
 	ans	<- ans[, list(N=sum(N)), by=c('SXO','MISSING_SMPL','INTRO_SMPL','REP','variable','VALUE_C')]
 	tmp	<- ans[, list(VALUE_C=VALUE_C, P=N/sum(N)), by=c('SXO','MISSING_SMPL','INTRO_SMPL','REP','variable')]
 	ans	<- merge(ans, tmp, by=c('SXO','MISSING_SMPL','INTRO_SMPL','REP','variable','VALUE_C'))
 		
 	tmp	<- subset(ans, variable=='SUBTREE_SIZE')
 	total.replicates	<- tmp[, length(unique(MISSING_SMPL))*length(unique(INTRO_SMPL))*length(unique(REP))]
+	tmp2<- tmp[, list(	N=length(N) ), by=c('SXO','variable','VALUE_C')]
+	stopifnot(all(tmp2$N==total.replicates))
+	#	this is weird, not sure why I would need total.replicates-length(N)??
 	tmp	<- tmp[, list(	P=ans.quantiles, 
 						QN=quantile(c(N, rep(0, total.replicates-length(N))), p=ans.quantiles),
 						QF=quantile(c(P, rep(0, total.replicates-length(P))), p=ans.quantiles)
 						), by=c('SXO','variable','VALUE_C')]
 	ans	<- subset(ans, variable=='NL_TRMS_SXO_RND')
 	total.replicates	<- ans[, length(unique(MISSING_SMPL))*length(unique(INTRO_SMPL))*length(unique(REP))]
+	tmp2<- ans[, list(	N=length(N) ), by=c('SXO','variable','VALUE_C')]
+	stopifnot(all(tmp2$N==total.replicates))
 	ans	<- ans[, list(	P=ans.quantiles, 
 						QN=quantile(c(N, rep(0, total.replicates-length(N))), p=ans.quantiles),
 						QF=quantile(c(P, rep(0, total.replicates-length(P))), p=ans.quantiles)
 						), by=c('SXO','variable','VALUE_C')]
+	ans	<- rbind(ans, tmp)	
+	ans
+}
+
+vli.estimate.patients.in.small.subtrees.by.sexual.orientation <- function(df, sampling.prob=0.43, resample.intro.n=3, resample.missing.n=3, sxo.select= c('MSM','hsx'), size.breaks=c(0,1,2,5,10,500), size.labels=c('1','2','3-5','6-10','>10'), intro.year=2000, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), seed=42)	
+{
+	#	df<- copy(dpo); sampling.prob=0.43; resample.intro.n=3; resample.missing.n=3; sxo.select= c('MSM','hsx'); intro.year=2000; ans.quantiles=c(0.025,0.25,0.5,0.75,0.975); seed=42
+	#	df<- copy(dpo); sampling.prob=0.43; resample.intro.n=1; resample.missing.n=3; sxo.select= c('MSM','hsx'); intro.year=2000; ans.quantiles=c(0.025,0.25,0.5,0.75,0.975); seed=42
+	#	size.breaks=size.breaks, size.labels=size.labels, 
+	set.seed(seed)
+	df[, SUBTREE_ID2:= seq_len(nrow(df))]	
+	setnames(df, c('SUBTREE_ID','SUBTREE_ID2'), c('SUBTREE_ID2','SUBTREE_ID'))
+	
+	ans	<- subset(df, select=c(ST, ASR_TYPE, REP, SUBTREE_ID, ANCESTRAL_STATE, MIN_SAMPLING_DATE, SUBTREE_SIZE))
+	ans[, INTRO_SMPL:=1L]		
+	ans	<- subset(ans, floor(MIN_SAMPLING_DATE)>=intro.year)
+	tmp	<- ans[, list(MISSING_SMPL=seq_len(resample.missing.n), SUBTREE_UNOBS=rnbinom(resample.missing.n, SUBTREE_SIZE, prob=sampling.prob)), by=c('SUBTREE_ID','INTRO_SMPL')]
+	ans	<- merge(ans, tmp, by=c('SUBTREE_ID','INTRO_SMPL'), allow.cartesian=TRUE)
+	
+	tmp	<- copy(df)
+	tmp	<- melt(tmp, id.vars=c('SUBTREE_ID','SUBTREE_SIZE','REP'), measure.vars=colnames(tmp)[grepl('SUBTREE_SXO_',colnames(tmp))], variable.name='SXO', value.name='SXO_N')
+	set(tmp, NULL, 'SXO', tmp[, gsub('SUBTREE_SXO_','',SXO)])
+	tmp[, SXO_PROP:= SXO_N/SUBTREE_SIZE]	
+	tmp	<- subset(tmp, select=c(SUBTREE_ID,REP,SXO,SXO_N,SXO_PROP))
+	tmp	<- subset(tmp, SXO%in%sxo.select & SXO_N>0)
+	
+	ans	<- merge(ans, tmp, by=c('SUBTREE_ID','REP'),allow.cartesian=TRUE)	
+	tmp	<- ans[, list(	SXO=SXO, 
+						NL_TRMS_SXO=SUBTREE_SIZE*SXO_PROP,
+						NL_TRMS_SXO_RND=SUBTREE_SIZE*SXO_PROP+as.vector(rmultinom(1, SUBTREE_UNOBS, SXO_PROP))), 
+				by=c('SUBTREE_ID','REP','INTRO_SMPL','MISSING_SMPL')]
+	ans	<- merge(ans, tmp, by=c('SUBTREE_ID','REP','INTRO_SMPL','MISSING_SMPL','SXO'))
+	tmp	<- ans[, list(NL_TRMS_RND=sum(NL_TRMS_SXO_RND)), by=c('SUBTREE_ID','INTRO_SMPL','MISSING_SMPL')]
+	ans	<- merge(ans, tmp, by=c('SUBTREE_ID','INTRO_SMPL','MISSING_SMPL'))	
+	tmp	<- melt(subset(ans, MISSING_SMPL==1), id.vars=c('SXO','MISSING_SMPL','INTRO_SMPL','REP','SUBTREE_ID','SUBTREE_SIZE','NL_TRMS_RND'), measure.vars='NL_TRMS_SXO')
+	ans	<- melt(ans, id.vars=c('SXO','MISSING_SMPL','INTRO_SMPL','REP','SUBTREE_ID','SUBTREE_SIZE','NL_TRMS_RND'), measure.vars='NL_TRMS_SXO_RND')
 	ans	<- rbind(ans, tmp)
 	
+	ans[, NETWORK_SIZE_C:= NA_character_]
+	tmp	<- ans[, which(variable=='NL_TRMS_SXO_RND')]
+	set(ans, tmp, 'NETWORK_SIZE_C', ans[tmp, as.character(cut(NL_TRMS_RND, breaks=size.breaks, labels=size.labels, right=TRUE))])
+	tmp	<- ans[, which(variable=='NL_TRMS_SXO')]
+	set(ans, tmp, 'NETWORK_SIZE_C', ans[tmp, as.character(cut(SUBTREE_SIZE, breaks=size.breaks, labels=size.labels, right=TRUE))])
+	
+	ans	<- ans[,list(IND_IN_SUBTREE=sum(value)), by=c('SXO','MISSING_SMPL','INTRO_SMPL','REP','NETWORK_SIZE_C','variable')]	
+	ans	<- ans[, list(NETWORK_SIZE_C=NETWORK_SIZE_C, N=IND_IN_SUBTREE, P=IND_IN_SUBTREE/sum(IND_IN_SUBTREE)), by=c('SXO','MISSING_SMPL','INTRO_SMPL','REP','variable')]
+	
+	ans	<- ans[, list(	P=ans.quantiles, 				
+						QN=round(quantile(N, p=ans.quantiles)),
+						QF=quantile(P, p=ans.quantiles)
+						), by=c('SXO','variable','NETWORK_SIZE_C')]	
+	setkey(ans, variable, SXO, NETWORK_SIZE_C, P)
 	ans
 }
 
@@ -121,12 +166,13 @@ vli.estimate.subtree.distribution.by.subtype <- function(dss, resample.intro.n=1
 
 vli.estimate.proportion.introductions.by.sexual.orientation <- function(df, sampling.prob=0.43, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), seed=42, bs.len=1e2)
 {
-	set.seed(seed)
-	df	<- subset(ds, ASR_TYPE=='inf')
-	
+	#	df<- copy(dpo); sampling.prob=0.43; resample.intro.n=1; resample.missing.n=100; sxo.select= c('MSM','hsx'); intro.year=2000; ans.quantiles=c(0.025,0.25,0.5,0.75,0.975); seed=42; bs.len=1e2
+	#	size.breaks=size.breaks, size.labels=size.labels, 
+	set.seed(seed)	
+	#df		<- subset(ds, ASR_TYPE=='inf')	
 	dsa		<- subset(df, select=c(SUBTREE_ID, SUBTREE_SIZE, ANCESTRAL_STATE, REP))
 	tmp		<- dsa[, list(BS=seq_len(bs.len), SUBTREE_UNOBS=rnbinom(bs.len, SUBTREE_SIZE, prob=sampling.prob)), by='SUBTREE_ID']
-	dsa		<- merge(dsa, tmp, by='SUBTREE_ID')	
+	dsa		<- merge(dsa, tmp, by='SUBTREE_ID',allow.cartesian=TRUE)	
 	tmp		<- melt(df, id.vars=c('SUBTREE_ID','SUBTREE_SIZE','REP'), measure.vars=colnames(df)[grepl('SUBTREE_SXO_',colnames(df))], variable.name='SXO')
 	set(tmp, NULL, 'SXO', tmp[, gsub('SUBTREE_SXO_','',SXO)])
 	tmp[, SXO_PROP:= value/SUBTREE_SIZE]
@@ -142,61 +188,196 @@ vli.estimate.proportion.introductions.by.sexual.orientation <- function(df, samp
 	ans	
 }
 
-vli.asr.summary<- function(ph, da, dm, id.regex, select.descendants.regex, is.dated.tree)
+vli.asr.get.tips.in.NL.subtrees<- function(ph, da, dm, id.regex, select.descendants.regex="^.*_infNL_.*$", deadend.descendants.regex=NA)
 {
 	#	determine max parsimony state transitions into NL 
 	setnames(da, colnames(da), gsub('\\.','_',toupper(colnames(da))))
-	da	<- subset(da, HOSTS=='NL')
+	#	find all descendants of interest that are in NL subtrees
+	#	these are in subtrees that are in NL state
+	#	plus potentially other taxa of individuals that were sampled in NL, but not infected in NL, and don t show up in the ancestral state reconstrution
+	if(is.na(deadend.descendants.regex))
+	{
+		subtrees.NL						<- subset(da, HOSTS=='NL')
+	}
+	if(!is.na(deadend.descendants.regex))
+	{
+		tmp								<- subset(da, HOSTS=='NL')[, ROOT_NOS]
+		descendants.in.NL.subtrees		<- sapply(Descendants(ph, tmp, type='tips'),function(x) ph$tip.label[x][grepl(select.descendants.regex, ph$tip.label[x])])
+		descendants.in.NL.subtrees		<- unlist(descendants.in.NL.subtrees)
+		descendants.in.NL.subtrees		<- match(descendants.in.NL.subtrees, ph$tip.label)
+		#	check if other subtrees contain any other descendants of interest
+		#	if yes, create new splits from these
+		tmp								<- subset(da, HOSTS!='NL')
+		tmp								<- tmp[, 	{
+					#ROOT_NOS<- 6441L
+					z<- unlist(Descendants(ph, ROOT_NOS, type='tips'))
+					z<- setdiff(z[grepl(deadend.descendants.regex, ph$tip.label[z])],descendants.in.NL.subtrees)
+					if(!length(z))
+						z<- NA_integer_
+					list(DESC_NOTIN_NLSUBTREES=z)
+				}, by='ROOT_NOS']									
+		subtrees.NL						<- subset(tmp, !is.na(DESC_NOTIN_NLSUBTREES))
+		#subtrees.NL[, TAXA:= ph$tip.label[DESC_NOTIN_NLSUBTREES]]		
+		#merge(subtrees.NL, z, by='TAXA', all.x=TRUE)
+		#
+		#	get depth from root_no to tip
+		subtrees.NL[, DEPTH:=NA_integer_]
+		if(nrow(subtrees.NL))
+			subtrees.NL					<- subtrees.NL[, {
+							z<- c(DESC_NOTIN_NLSUBTREES, Ancestors(ph, DESC_NOTIN_NLSUBTREES, type="all"))
+							z<- sapply(ROOT_NOS, function(x) which(z==x))
+							list(ROOT_NOS=ROOT_NOS, DEPTH=z-1L)
+						}, by='DESC_NOTIN_NLSUBTREES']
+		#	select parent subtree with min depth, which can be self		
+		subtrees.NL						<- subtrees.NL[, list(ROOT_NOS=ROOT_NOS[which.min(DEPTH)]), by='DESC_NOTIN_NLSUBTREES']
+		#
+		subtrees.NL[, SPLITS:= paste0('NL-DEADEND-SPLIT',seq_len(nrow(subtrees.NL)))]
+		tmp								<- subset(merge(da, unique(subset(subtrees.NL, select=ROOT_NOS)), by='ROOT_NOS'), select=c(ROOT_NOS, UNIQUE_SPLITS, HOSTS))
+		tmp[, PARENT_HOSTS:=HOSTS]
+		subtrees.NL						<- merge(subtrees.NL, tmp, by='ROOT_NOS')
+		setnames(subtrees.NL, c('ROOT_NOS','DESC_NOTIN_NLSUBTREES','SPLITS','UNIQUE_SPLITS'), c('PARENT_ROOT_NOS','ROOT_NOS','UNIQUE_SPLITS','PARENT_SPLITS'))
+		subtrees.NL[, LENGTHS:=NA_real_]
+		if(nrow(subtrees.NL))
+			set(subtrees.NL, NULL, 'LENGTHS', ph$edge.length[sapply(subtrees.NL$ROOT_NOS, function(x) which(ph$edge[, 2]==x))])
+		subtrees.NL[, PARENT_ROOT_NOS:=NULL]
+		subtrees.NL						<- rbind(subset(da, HOSTS=='NL'),subtrees.NL)    		
+	}
+	#	add depth of subtree MRCAs
+	tmp			<- subtrees.NL[, list(DEPTH=1L+length(Ancestors(ph, ROOT_NOS, type='all'))) , by='ROOT_NOS']
+	subtrees.NL	<- merge(subtrees.NL, tmp, by='ROOT_NOS')
+	#	get taxa
+	ans	<- subtrees.NL[, list(IDX=unlist(Descendants(ph, ROOT_NOS, type='tips'))), by=c('UNIQUE_SPLITS','ROOT_NOS','DEPTH')]
+	ans[, TAXA:= ph$tip.label[IDX]]
+	ans[, ID:=gsub(id.regex,'\\1',TAXA)]
+	ans	<- subset(ans, grepl(select.descendants.regex,TAXA) | (grepl('DEADEND',UNIQUE_SPLITS) & grepl(deadend.descendants.regex,TAXA)))	
+	ans	<- merge(dm, ans, by='ID')	# we will need this below too
+	#	make sure every taxon appears exactly once, keep the subtree with highest depth
+	#	the fundamental problem is that subtree are not specified fully by MRCA
+	#	so we could list for each subtree all inner nodes that constitute it, but that s not really needed for summarising the tips
+	tmp	<- ans[, list(ROOT_NOS=ROOT_NOS[which.max(DEPTH)]), by='IDX']
+	ans	<- merge(ans, tmp, by=c('ROOT_NOS','IDX'))
+	set(ans, NULL, c('TAXA','DEPTH','ROOT_NOS','IDX'), NULL)
+	setnames(ans, 'UNIQUE_SPLITS', 'SUBTREE_ID')
+	ans	
+}
+
+vli.asr.summary<- function(ph, da, dm, id.regex, select.descendants.regex="^.*_infNL_.*$", deadend.descendants.regex=NA, is.dated.tree=TRUE)
+{
+	#	determine max parsimony state transitions into NL 
+	setnames(da, colnames(da), gsub('\\.','_',toupper(colnames(da))))
+	#	find all descendants of interest that are in NL subtrees
+	#	these are in subtrees that are in NL state
+	#	plus potentially other taxa of individuals that were sampled in NL, but not infected in NL, and don t show up in the ancestral state reconstrution
+	if(is.na(deadend.descendants.regex))
+	{
+		subtrees.NL						<- subset(da, HOSTS=='NL')
+	}
+	if(!is.na(deadend.descendants.regex))
+	{
+		tmp								<- subset(da, HOSTS=='NL')[, ROOT_NOS]
+		descendants.in.NL.subtrees		<- sapply(Descendants(ph, tmp, type='tips'),function(x) ph$tip.label[x][grepl(select.descendants.regex, ph$tip.label[x])])
+		descendants.in.NL.subtrees		<- unlist(descendants.in.NL.subtrees)
+		descendants.in.NL.subtrees		<- match(descendants.in.NL.subtrees, ph$tip.label)
+		#	check if other subtrees contain any other descendants of interest
+		#	if yes, create new splits from these
+		tmp								<- subset(da, HOSTS!='NL')
+		tmp								<- tmp[, 	{
+					z<- unlist(Descendants(ph, ROOT_NOS, type='tips'))
+					z<- setdiff(z[grepl(deadend.descendants.regex, ph$tip.label[z])],descendants.in.NL.subtrees)
+					if(!length(z))
+						z<- NA_integer_					
+					list(DESC_NOTIN_NLSUBTREES=z)
+				}, by='ROOT_NOS']									
+		subtrees.NL						<- subset(tmp, !is.na(DESC_NOTIN_NLSUBTREES))
+		#	get depth from root_no to tip
+		subtrees.NL[, DEPTH:=NA_integer_]
+		if(nrow(subtrees.NL))
+			subtrees.NL					<- subtrees.NL[, {
+						z<- c(DESC_NOTIN_NLSUBTREES, Ancestors(ph, DESC_NOTIN_NLSUBTREES, type="all"))
+						z<- sapply(ROOT_NOS, function(x) which(z==x))
+						list(ROOT_NOS=ROOT_NOS, DEPTH=z-1L)
+					}, by='DESC_NOTIN_NLSUBTREES']
+		#	select parent subtree with min depth, which can be self		
+		subtrees.NL						<- subtrees.NL[, list(ROOT_NOS=ROOT_NOS[which.min(DEPTH)]), by='DESC_NOTIN_NLSUBTREES']
+		#
+		subtrees.NL[, SPLITS:= paste0('NL-DEADEND-SPLIT',seq_len(nrow(subtrees.NL)))]
+		tmp								<- subset(merge(da, unique(subset(subtrees.NL, select=ROOT_NOS)), by='ROOT_NOS'), select=c(ROOT_NOS, UNIQUE_SPLITS, HOSTS))		
+		tmp[, PARENT_HOSTS:=HOSTS]
+		subtrees.NL						<- merge(subtrees.NL, tmp, by='ROOT_NOS')
+		setnames(subtrees.NL, c('ROOT_NOS','DESC_NOTIN_NLSUBTREES','SPLITS','UNIQUE_SPLITS'), c('PARENT_ROOT_NOS','ROOT_NOS','UNIQUE_SPLITS','PARENT_SPLITS'))
+		subtrees.NL[, LENGTHS:=NA_real_]
+		if(nrow(subtrees.NL))
+			set(subtrees.NL, NULL, 'LENGTHS', ph$edge.length[sapply(subtrees.NL$ROOT_NOS, function(x) which(ph$edge[, 2]==x))])
+		subtrees.NL[, PARENT_ROOT_NOS:=NULL]
+		subtrees.NL						<- rbind(subset(da, HOSTS=='NL'),subtrees.NL)    		
+	}
+	
 	
 	#	determine time of nodes at either end of branch with state transition	
-	tmp	<- da[, list(EDGE_ID= which(ph$edge[,2]==ROOT_NOS) ), by='UNIQUE_SPLITS']
-	da	<- merge(da, tmp, by='UNIQUE_SPLITS')
-	da[, BRL:= ph$edge.length[ EDGE_ID] ]	#this should be same as LENGTHS
-	tmp	<- node.depth.edgelength(ph)
-	da[, ROOT_HEIGHT:= max(tmp) - tmp[ ROOT_NOS ]]	# this is the height between the inner node and the most recent tip
+	tmp			<- subtrees.NL[, list(EDGE_ID= which(ph$edge[,2]==ROOT_NOS) ), by='UNIQUE_SPLITS']
+	subtrees.NL	<- merge(subtrees.NL, tmp, by='UNIQUE_SPLITS')
+	subtrees.NL[, BRL:= ph$edge.length[ EDGE_ID] ]	#this should be same as LENGTHS
+	tmp			<- node.depth.edgelength(ph)
+	subtrees.NL[, ROOT_HEIGHT:= max(tmp) - tmp[ ROOT_NOS ]]	# this is the height between the inner node and the most recent tip
 	if(is.dated.tree)
 	{
 		tmp2	<- gsub(id.regex,'\\1',ph$tip.label[which.max(tmp)])	# this is the ID of the most recent tip
 		tmp2	<- subset(dm, ID==tmp2)[, SAMPLING_DATE]					# this is the corresponding sampling date
-		da[, ROOT_DATE:= tmp2-ROOT_HEIGHT]
-		da[, PARENT_ROOT_DATE:= ROOT_DATE-LENGTHS]
+		subtrees.NL[, ROOT_DATE:= tmp2-ROOT_HEIGHT]
+		subtrees.NL[, PARENT_ROOT_DATE:= ROOT_DATE-LENGTHS]
 	}
 	if(!is.dated.tree)
 	{
-		set(da, NULL, c('ROOT_DATE','PARENT_ROOT_DATE'), NA_real_)
+		set(subtrees.NL, NULL, c('ROOT_DATE','PARENT_ROOT_DATE'), NA_real_)
 	}
 	
-	#	determine number of tips per subtree
-	da[, SUBTREE_SIZE:=sapply(Descendants(ph, da[, ROOT_NOS], type='tips'),function(x) length(which(grepl(select.descendants.regex, ph$tip.label[x]))))]
+	#	determine TAXA that are in this particular tree, and not any other tree
+	#	add depth of subtree MRCAs
+	tmp			<- subtrees.NL[, list(DEPTH=1L+length(Ancestors(ph, ROOT_NOS, type='all'))) , by='ROOT_NOS']
+	subtrees.NL	<- merge(subtrees.NL, tmp, by='ROOT_NOS')
+	#	get taxa
+	ans	<- subtrees.NL[, list(IDX=unlist(Descendants(ph, ROOT_NOS, type='tips'))), by=c('UNIQUE_SPLITS','ROOT_NOS','DEPTH')]
+	ans[, TAXA:= ph$tip.label[IDX]]
+	ans[, ID:=gsub(id.regex,'\\1',TAXA)]
+	ans	<- subset(ans, grepl(select.descendants.regex,TAXA) | (grepl('DEADEND',UNIQUE_SPLITS) & grepl(deadend.descendants.regex,TAXA)))	
+	tmp	<- ans[, list(ROOT_NOS=ROOT_NOS[which.max(DEPTH)]), by='IDX']
+	ans	<- merge(ans, tmp, by=c('ROOT_NOS','IDX'))
 	
-	#	determine composition of subtrees by sexual orientation 
-	tmp	<- da[, list(TAXA=ph$tip.label[ unlist(Descendants(ph, ROOT_NOS, type='tips')) ] ), by='UNIQUE_SPLITS']
-	tmp[, ID:=gsub(id.regex,'\\1',TAXA)]
-	tmp	<- subset(tmp, grepl(select.descendants.regex,TAXA))	
-	tmp	<- merge(dm, tmp, by='ID')	# we will need this below too
+	
+	#	determine number of tips per subtree
+	ans			<- merge(ans, ans[, list(SUBTREE_SIZE=length(IDX)), by='ROOT_NOS'], by='ROOT_NOS')
+	#	determine composition of subtrees by sexual orientation
+	tmp			<- merge(dm, subset(ans, select=c(ID,UNIQUE_SPLITS)), by='ID')	# we will need this below too
 	setnames(tmp, 'SXO', 'L')
-	tmp2<- as.data.table(expand.grid(UNIQUE_SPLITS=unique(tmp$UNIQUE_SPLITS), L=unique(subset(dm, SXO!='LANL', SXO))[, SXO] ))	
-	tmp2<- merge(tmp2, tmp[, list(N=length(ID)), by=c('UNIQUE_SPLITS','L')], by=c('UNIQUE_SPLITS','L'), all.x=TRUE)
+	tmp2		<- as.data.table(expand.grid(UNIQUE_SPLITS=unique(tmp$UNIQUE_SPLITS), L=unique(subset(dm, SXO!='LANL', SXO))[, SXO] ))	
+	tmp2		<- merge(tmp2, tmp[, list(N=length(ID)), by=c('UNIQUE_SPLITS','L')], by=c('UNIQUE_SPLITS','L'), all.x=TRUE)
 	set(tmp2, tmp2[, which(is.na(N))],'N',0L)	
 	set(tmp2, NULL, 'L', tmp2[,paste0('SUBTREE_SXO_',L)])
-	tmp2<- dcast.data.table(tmp2, UNIQUE_SPLITS~L, value.var='N')
-	da	<- merge(da, tmp2, by='UNIQUE_SPLITS')
+	tmp2		<- dcast.data.table(tmp2, UNIQUE_SPLITS~L, value.var='N')
+	ans	<- merge(ans, tmp2, by='UNIQUE_SPLITS')
 	setnames(tmp, 'L', 'SXO')
+	
 	
 	#	determine composition of subtrees by birth location
 	setnames(tmp, 'BORN_LOC', 'L')
-	tmp2<- as.data.table(expand.grid(UNIQUE_SPLITS=unique(tmp$UNIQUE_SPLITS), L=unique(subset(dm, select=BORN_LOC))[, BORN_LOC] ))	
-	tmp2<- merge(tmp2, tmp[, list(N=length(ID)), by=c('UNIQUE_SPLITS','L')], by=c('UNIQUE_SPLITS','L'), all.x=TRUE)
+	tmp2		<- as.data.table(expand.grid(UNIQUE_SPLITS=unique(tmp$UNIQUE_SPLITS), L=unique(subset(dm, select=BORN_LOC))[, BORN_LOC] ))	
+	tmp2		<- merge(tmp2, tmp[, list(N=length(ID)), by=c('UNIQUE_SPLITS','L')], by=c('UNIQUE_SPLITS','L'), all.x=TRUE)
 	set(tmp2, tmp2[, which(is.na(N))],'N',0L)	
 	set(tmp2, NULL, 'L', tmp2[,paste0('BORN_LOC_',tolower(L))])
-	tmp2<- dcast.data.table(tmp2, UNIQUE_SPLITS~L, value.var='N')
-	da	<- merge(da, tmp2, by='UNIQUE_SPLITS')
+	tmp2		<- dcast.data.table(tmp2, UNIQUE_SPLITS~L, value.var='N')
+	ans			<- merge(ans, tmp2, by='UNIQUE_SPLITS')
 	setnames(tmp, 'L', 'BORN_LOC')
 	
+	#	remove individuals and keep summary
+	set(ans, NULL, c('ROOT_NOS','IDX','DEPTH','TAXA','ID'), NULL)
+	ans			<- unique(ans)
+	subtrees.NL	<- merge(subtrees.NL, ans, by='UNIQUE_SPLITS')
+	
 	#	clean up 
-	set(da, NULL, c('PARENT_SPLITS','HOSTS','BRL','LENGTHS','ROOT_HEIGHT','ROOT_NOS','EDGE_ID'), NULL)
-	setnames(da, c('UNIQUE_SPLITS','PARENT_HOSTS','ROOT_DATE','PARENT_ROOT_DATE'), c('SUBTREE_ID','ANCESTRAL_STATE','INTRO_LATEST','INTRO_EARLIEST')	)
-	da
+	set(subtrees.NL, NULL, c('PARENT_SPLITS','HOSTS','BRL','LENGTHS','ROOT_HEIGHT','ROOT_NOS','EDGE_ID','DEPTH'), NULL)
+	setnames(subtrees.NL, c('UNIQUE_SPLITS','PARENT_HOSTS','ROOT_DATE','PARENT_ROOT_DATE'), c('SUBTREE_ID','ANCESTRAL_STATE','INTRO_LATEST','INTRO_EARLIEST')	)
+	subtrees.NL[, DEAD_END:= as.integer(grepl('DEADEND',SUBTREE_ID))]
+	subtrees.NL
 }
 
 vli.bez.explore.ancestral.state.reconstruction.170828<- function()
@@ -293,7 +474,7 @@ vli.bez.explore.ancestral.state.reconstruction.170828<- function()
 	
 }
 
-vli.bez.explore.ancestral.state.reconstruction.170901<- function()
+vli.bez.explore.ancestral.state.reconstruction.170901.plot.distinct.networks<- function()
 {
 	require(data.table)
 	require(phangorn)
@@ -359,6 +540,551 @@ vli.bez.explore.ancestral.state.reconstruction.170901<- function()
 				theme(panel.spacing.y=unit(0.1, "lines"), strip.text.y=element_text(angle=0)) +
 				scale_x_continuous(breaks=seq(1990,2020,2)) +			
 				labs(x='', y='new in-country subtrees', colour='HIV-1 subtype') +
+				facet_grid(ANCESTRAL_STATE~., scales='free_y', space='free_y')
+		ggsave(file=paste0(outfile.base,asr.type,'_ALLST_newtrees_over_time_colour_subtype.pdf'),w=8,h=16)		
+	}
+}
+
+vli.bez.explore.ancestral.state.reconstruction.171113.origin.of.subtrees<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	
+	
+	asr.type		<- 'inf'; asr.label	<- 'subtrees by location of infection'
+	#asr.type	<- 'sam'; asr.label	<- 'subtrees by sampling location'	
+	#asr.type	<- 'bir'; asr.label	<- 'subtrees by location of birth'
+	
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_summaries.rda'
+	#
+	#	get subtrees subst/site, inf ancestral state reconstruction, non-bootstrap 
+	load(infile)	
+	dss				<- subset(ds, TREE_TYPE!='lsd' & ASR_TYPE==asr.type)
+	set(dss, NULL, 'SUBTREE_ID', dss[,paste0(ST,'-',REP,'-',SUBTREE_ID)])	
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_tips.rda'
+	load(infile)	
+	dti				<- subset(dti, TREE_TYPE!='lsd' & ASR_TYPE==asr.type)
+	set(dti, NULL, 'ST', dti[,gsub('pol','',ST)])
+	set(dti, NULL, 'SUBTREE_ID', dti[,paste0(ST,'-',REP,'-',SUBTREE_ID)])
+	dp				<- unique(subset(dss, select=c(SUBTREE_ID, ASR_TYPE, ST, REP, ANCESTRAL_STATE, SUBTREE_SIZE, SUBTREE_SXO_MSM, SUBTREE_SXO_U, SUBTREE_SXO_hsx, SUBTREE_SXO_other)))	
+	tmp				<- dti[, list(MIN_SAMPLING_DATE=min(SAMPLING_DATE), MAX_SAMPLING_DATE=max(SAMPLING_DATE)), by=c('SUBTREE_ID')]
+	dp				<- merge(dp, tmp, by='SUBTREE_ID')
+	dp				<- subset(dp, MIN_SAMPLING_DATE>1995)
+	dp[, MIN_SAMPLING_DATE_C:= cut(MIN_SAMPLING_DATE, breaks=c(1930,1950,1970,1990,seq(1992,2016,2)))]
+	dp[, STB:= as.character(factor(ST=='B', levels=c(TRUE,FALSE), labels=c('B','non-B')))]
+	#	fix for A1 trees
+	set.seed(42L)
+	tmp	<- subset(dp, ST=='A1')[, unique(REP)]
+	tmp	<- data.table(ST='A1', REP_NEW=setdiff(0:99, tmp), REP= sample(tmp, 100-length(tmp), replace=TRUE))
+	tmp	<- merge(dp, tmp, by=c('ST','REP'))
+	tmp[, REP:=NULL]
+	setnames(tmp, 'REP_NEW', 'REP')
+	dp	<- rbind(dp, tmp)
+	
+	dc	<- dp[, list(N_TREE=length(SUBTREE_ID), N_PATIENT=sum(SUBTREE_SIZE)), by=c('STB','REP','ANCESTRAL_STATE')]
+	dc	<- merge(as.data.table(expand.grid(STB=unique(dc$STB), REP=unique(dc$REP), ANCESTRAL_STATE=unique(dc$ANCESTRAL_STATE))), dc, by=c('STB','REP','ANCESTRAL_STATE'), all.x=TRUE)
+	set(dc, dc[, which(is.na(N_TREE))], 'N_TREE', 0L)
+	set(dc, dc[, which(is.na(N_PATIENT))], 'N_PATIENT', 0L)	
+	dc	<- merge(dc, dc[, list(ANCESTRAL_STATE=ANCESTRAL_STATE, P_TREE=N_TREE/sum(N_TREE), P_PATIENT=N_PATIENT/sum(N_PATIENT)), by=c('STB','REP')], by=c('STB','REP','ANCESTRAL_STATE'))
+	dc	<- melt(dc, id.vars=c('STB','REP','ANCESTRAL_STATE'))
+	dc	<- dc[, list(	P=paste0('p',c(0.025,0.25,0.5,0.75,0.975)),
+						Q=quantile(value, prob=c(0.025,0.25,0.5,0.75,0.975))
+						), by=c('STB','variable','ANCESTRAL_STATE')]
+	dc	<- dcast.data.table(dc, variable+STB+ANCESTRAL_STATE~P, value.var='Q')	
+	dc[, LABEL:= NA_character_]
+	tmp	<- dc[, which(substr(variable,1,1)=='P')]
+	set(dc, tmp, 'LABEL', dc[tmp, paste0(round(100*p0.5, d=1),'% [',round(100*p0.025, d=1),'%-',round(100*p0.975, d=1),'%]')])
+	tmp	<- dc[, which(substr(variable,1,1)=='N')]
+	set(dc, tmp, 'LABEL', dc[tmp, paste0(round(p0.5, d=1),' [',round(p0.025, d=1),'-',round(p0.975, d=1),']')])
+	set(dc, NULL, 'ANCESTRAL_STATE', dc[, factor(ANCESTRAL_STATE,	levels=c("SSA","EUC","EUO","EUW","LAT","OAP","ZAZ","NAM","USCAU","unsampled_region"),
+																	labels=c("Sub-Saharan Africa","East EU","Former USSR","West EU","Latin America","China, Japan, Korea","South and Southeast\nAsia","North Africa, Middle East","US, Canada","unresolved"))
+																	])
+	save(dc, file=paste0(outfile.base, asr.type, '_ALLST_origin.rda'))
+	write.csv(dc, row.names=FALSE, file=paste0(outfile.base, asr.type, '_ALLST_origin.csv'))
+	ggplot(subset(dc, variable=='P_TREE'), aes(x=ANCESTRAL_STATE, y=p0.5, fill=ANCESTRAL_STATE, ymin=p0.025, ymax=p0.975)) +
+			geom_bar(stat='identity', position=position_dodge(width=0.8)) +
+			geom_errorbar(position=position_dodge(width=0.8), width=0.5, colour="black")	+
+			theme_bw() + theme(legend.position='bottom') +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,0.66)) +
+			facet_grid(~STB) + coord_flip() +
+			labs(x='geographic origin\n',y='\nphylogenetically identified transmission chains', fill='geographic origin')
+	ggsave(file=paste0(outfile.base, asr.type, '_ALLST_origin.pdf'), w=10, h=6)
+	
+	tmp	<- subset(dc, variable=='N_TREE')[, list(p0.025=sum(p0.025), p0.975=sum(p0.975)), by='ANCESTRAL_STATE']
+	ggplot(subset(dc, variable=='N_TREE'), aes(x=ANCESTRAL_STATE)) +
+			geom_bar(aes(y=p0.5, fill=STB), stat='identity') +
+			geom_errorbar(data=tmp, aes(ymin=p0.025, ymax=p0.975), width=0.5, colour="black")	+
+			coord_flip() +			
+			theme_bw() +
+			labs(x='geographic origin\n',y='\nphylogenetically identified transmission chains', fill='subtype')
+	ggsave(file=paste0(outfile.base, asr.type, '_ALLST_origin2.pdf'), w=10, h=8)
+}
+
+vli.bez.explore.ancestral.state.reconstruction.171113.debug<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	
+	asr.type		<- 'inf'; asr.label	<- 'subtrees by location of infection'
+	#asr.type	<- 'sam'; asr.label	<- 'subtrees by sampling location'	
+	#asr.type	<- 'bir'; asr.label	<- 'subtrees by location of birth'
+	
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_'
+	
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_summaries.rda'
+	load(infile)	
+	subset(ds, ST=='AG' & SUBTREE_ID=='NL-SPLIT387' & REP==0)
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_tips.rda'
+	load(infile)	
+	subset(dti, ST=='AG' & SUBTREE_ID=='NL-SPLIT387' & REP==0)
+	subset(do, ST=='AG' & SUBTREE_ID=='NL-SPLIT387' & REP==0)
+	
+	infile.meta	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_plusB_OR.csv'
+	dm	<- as.data.table(read.csv(infile.meta))
+	set(dm, NULL, 'SXO', dm[, gsub('HTF|HTM','hsx',gsub('BL|CH|CHS|DU','other',as.character(GENDER_TRMGROUP)))])	
+	indir.asr	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results'
+	infiles		<- data.table(F=list.files(indir.asr, pattern='^workspace', full.names=TRUE, recursive=TRUE))
+	infiles[, ASR_TYPE:= gsub('.*_annotated_([a-z]+).*','\\1',basename(F))]
+	infiles[, REP:= as.integer(gsub('^.*_([0-9]+)_annotated.*$|^.*_rr([0-9]+)_annotated.*$','\\1',basename(F)))]
+	tmp			<- infiles[, which(is.na(REP))]
+	set(infiles, tmp, 'REP', infiles[tmp,as.integer(gsub('^.*_rr([0-9]+)_annotated.*$','\\1',basename(F)))])	
+	infiles[, ST:= gsub('pol','',gsub('^workspace_([^_]+)_.*','\\1',basename(F)))]
+	infiles[, TREE_TYPE:=gsub('^.*(lsd|rr).*$','\\1',basename(F))]
+	set(infiles, infiles[, which(TREE_TYPE!='lsd')],'TREE_TYPE','substsite')
+	infiles[, SELECT_DESC:= as.character(factor(ASR_TYPE, levels=c('bir','sam','inf'), labels=c('^.*_bornNL_.*$','^.*_sampNL_.*$','^.*_infNL_.*$')))]
+	infiles[, DEADEND_DESC:= NA_character_]
+	infiles[, IS_DATED_TREE:= TREE_TYPE=='lsd']
+	set(infiles, infiles[, which(ASR_TYPE=='inf')], 'DEADEND_DESC',  "^.*_sampNL_.*$|^.*_infNL_.*$")		
+	infiles		<- subset(infiles, !IS_DATED_TREE)
+	id.regex	<- '^([^_]*).*'
+	subset(infiles, REP==0 & ST=='AG')
+	
+	do<- copy(dti)
+	
+	load('/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results/AG/sam/workspace_AG_withD_rr000_annotated_sam.rda')
+	#	F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results/AG/sam/workspace_AG_withD_rr000_annotated_sam.rda'
+	select.descendants.regex	<- '^.*_sampNL_.*$'
+	is.dated.tree				<- 0	
+	deadend.descendants.regex	<- NA_character_						
+	cat('\nprocessing file ',F,'\n',select.descendants.regex,' ',deadend.descendants.regex,' ',is.dated.tree)
+	load(F)								
+	#	read variables from workspace
+	ph	<- all.tree.info$only.tree$tree
+	da	<- as.data.table(all.tree.info$only.tree$classification.results$collapsed)	
+	#	summarise introductions into NL
+	dti	<- vli.asr.get.tips.in.NL.subtrees(ph, da, dm, id.regex, select.descendants.regex=select.descendants.regex, deadend.descendants.regex=deadend.descendants.regex)				
+	subset(dti, SUBTREE_ID=='NL-SPLIT387')
+	
+	
+	ph$edge[ph$edge[,2]==which(grepl('M35476',ph$tip.label)),]
+	#8885 4409
+	ph$edge[ph$edge[,2]==8885,]
+	#8106 8107
+	attr(ph,"SUBGRAPH_MRCA")[8885]
+	attr(ph,"SUBGRAPH_MRCA")[8884]
+	attr(ph,"BRANCH_COLOURS")[8885]
+	attr(ph,"BRANCH_COLOURS")[8884]
+	
+	
+	
+	ph$edge[ph$edge[,2]==which(grepl('M10041',ph$tip.label)),]
+	#8877 4394
+	ph$edge[ph$edge[,2]==8877,]
+	#8876 8877
+	subset(da, ROOT_NOS==8877)
+	ph$tip.label[ unlist(Descendants(ph, 8877, type='tips')) ]	#correct: only 2 taxa
+	
+	any(Descendants(ph, 4481, type='all')==8877)	#8877 is a descendant
+	attr(ph,"BRANCH_COLOURS")[8876]
+	#	so within the subtree called 4481, there are subtrees of other colours
+	
+}
+
+vli.bez.explore.ancestral.state.reconstruction.171113.size.networks<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	
+	asr.type		<- 'inf'; asr.label	<- 'subtrees by location of infection'
+	#asr.type	<- 'sam'; asr.label	<- 'subtrees by sampling location'	
+	#asr.type	<- 'bir'; asr.label	<- 'subtrees by location of birth'
+	
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_summaries.rda'
+	#
+	#	get subtrees subst/site, inf ancestral state reconstruction, non-bootstrap 
+	load(infile)	
+	dss				<- subset(ds, TREE_TYPE!='lsd' & ASR_TYPE==asr.type)
+	set(dss, NULL, 'SUBTREE_ID', dss[,paste0(ST,'-',REP,'-',SUBTREE_ID)])	
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_tips.rda'
+	load(infile)	
+	dti				<- subset(dti, TREE_TYPE!='lsd' & ASR_TYPE==asr.type)
+	set(dti, NULL, 'ST', dti[,gsub('pol','',ST)])
+	set(dti, NULL, 'SUBTREE_ID', dti[,paste0(ST,'-',REP,'-',SUBTREE_ID)])		
+	#subset(dti, REP==0 & ST!='B')[, table(grepl('DEADEND',SUBTREE_ID))]	
+	dp				<- unique(subset(dss, select=c(SUBTREE_ID, ASR_TYPE, ST, REP, ANCESTRAL_STATE, SUBTREE_SIZE, SUBTREE_SXO_MSM, SUBTREE_SXO_U, SUBTREE_SXO_hsx, SUBTREE_SXO_other)))	
+	tmp				<- dti[, list(MIN_SAMPLING_DATE=min(SAMPLING_DATE), MAX_SAMPLING_DATE=max(SAMPLING_DATE)), by=c('SUBTREE_ID')]
+	dp				<- merge(dp, tmp, by='SUBTREE_ID')
+	dp				<- subset(dp, MIN_SAMPLING_DATE>1995)
+	dp[, MIN_SAMPLING_DATE_C:= cut(MIN_SAMPLING_DATE, breaks=c(1930,1950,1970,1990,seq(1992,2016,2)))]	
+	dpb			<- subset(dp, ST=='B')
+	dpo			<- subset(dp, ST!='B')
+	
+	#
+	#	subtrees of sizes <3, of subtrees introduced since 1995
+	#
+	size.breaks	<- c(0,2,50000); size.labels<- c('1-2','>2')
+	df			<- vli.estimate.subtree.distribution.by.sexual.orientation(dpo, sampling.prob=0.43, resample.intro.n=1, resample.missing.n=100, sxo.select= c('MSM','hsx'), intro.year=1995, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), size.breaks=size.breaks, size.labels=size.labels, seed=42)	
+	set(df, NULL, 'P', df[, paste0('p',P)])
+	df[, STB:='non-B']
+	ans			<- copy(df)	
+	df			<- vli.estimate.subtree.distribution.by.sexual.orientation(dpb, sampling.prob=0.43, resample.intro.n=1, resample.missing.n=100, sxo.select= c('MSM','hsx'), intro.year=1995, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), size.breaks=size.breaks, size.labels=size.labels, seed=42)	
+	set(df, NULL, 'P', df[, paste0('p',P)])
+	df[, STB:='B']
+	ans			<- rbind(ans, df)
+	setnames(ans, 'VALUE_C', 'NETWORK_SIZE_C')
+	setkey(ans, variable, STB, SXO, NETWORK_SIZE_C, P)
+	save(ans, file=paste0(outfile.base, asr.type, '_ALLST_subtreesize_distribution_breaks12.rda'))	
+	tmp			<- dcast.data.table(ans, STB+variable+SXO+NETWORK_SIZE_C~P, value.var='QF')
+	tmp[, LABEL:= paste0(round(100*p0.5, d=1),'% [',round(100*p0.025, d=1),'%-',round(100*p0.975, d=1),'%]')]
+	tmp			<- subset(tmp, select=c(STB, variable, SXO, NETWORK_SIZE_C, LABEL))
+	tmp			<- dcast.data.table(tmp, variable+STB+SXO~NETWORK_SIZE_C, value.var='LABEL')	
+	set(tmp, NULL, 'variable', tmp[, factor(variable, levels=c('NL_TRMS_SXO','NL_TRMS_SXO_RND'), labels=c(paste0('subtrees\nas observed in phylogeny'),paste0('subtrees\nadjusted for missing sequences')))])
+	write.csv(tmp, row.names=FALSE, file=paste0(outfile.base, asr.type, '_ALLST_subtreesize_distribution_breaks12.csv'))
+	
+	size.breaks	<- c(0,3,50000); size.labels<- c('1-3','>3')
+	df			<- vli.estimate.subtree.distribution.by.sexual.orientation(dpo, sampling.prob=0.43, resample.intro.n=1, resample.missing.n=100, sxo.select= c('MSM','hsx'), intro.year=1995, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), size.breaks=size.breaks, size.labels=size.labels, seed=42)	
+	set(df, NULL, 'P', df[, paste0('p',P)])
+	df[, STB:='non-B']
+	ans			<- copy(df)	
+	df			<- vli.estimate.subtree.distribution.by.sexual.orientation(dpb, sampling.prob=0.43, resample.intro.n=1, resample.missing.n=100, sxo.select= c('MSM','hsx'), intro.year=1995, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), size.breaks=size.breaks, size.labels=size.labels, seed=42)	
+	set(df, NULL, 'P', df[, paste0('p',P)])
+	df[, STB:='B']
+	ans			<- rbind(ans, df)
+	setnames(ans, 'VALUE_C', 'NETWORK_SIZE_C')
+	setkey(ans, variable, STB, SXO, NETWORK_SIZE_C, P)
+	save(ans, file=paste0(outfile.base, asr.type, '_ALLST_subtreesize_distribution_breaks12.rda'))	
+	tmp			<- dcast.data.table(ans, STB+variable+SXO+NETWORK_SIZE_C~P, value.var='QF')
+	tmp[, LABEL:= paste0(round(100*p0.5, d=1),'% [',round(100*p0.025, d=1),'%-',round(100*p0.975, d=1),'%]')]
+	tmp			<- subset(tmp, select=c(STB, variable, SXO, NETWORK_SIZE_C, LABEL))
+	tmp			<- dcast.data.table(tmp, variable+STB+SXO~NETWORK_SIZE_C, value.var='LABEL')	
+	set(tmp, NULL, 'variable', tmp[, factor(variable, levels=c('NL_TRMS_SXO','NL_TRMS_SXO_RND'), labels=c(paste0('subtrees\nas observed in phylogeny'),paste0('subtrees\nadjusted for missing sequences')))])
+	write.csv(tmp, row.names=FALSE, file=paste0(outfile.base, asr.type, '_ALLST_subtreesize_distribution_breaks13.csv'))
+}
+
+vli.bez.explore.ancestral.state.reconstruction.171113.patients.in.small.networks<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	
+	asr.type		<- 'inf'; asr.label	<- 'subtrees by location of infection'
+	#asr.type	<- 'sam'; asr.label	<- 'subtrees by sampling location'	
+	#asr.type	<- 'bir'; asr.label	<- 'subtrees by location of birth'
+	
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_summaries.rda'
+	#
+	#	get subtrees subst/site, inf ancestral state reconstruction, non-bootstrap 
+	load(infile)	
+	dss				<- subset(ds, TREE_TYPE!='lsd' & ASR_TYPE==asr.type)
+	set(dss, NULL, 'SUBTREE_ID', dss[,paste0(ST,'-',REP,'-',SUBTREE_ID)])	
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_tips.rda'
+	load(infile)	
+	dti				<- subset(dti, TREE_TYPE!='lsd' & ASR_TYPE==asr.type)
+	set(dti, NULL, 'ST', dti[,gsub('pol','',ST)])
+	set(dti, NULL, 'SUBTREE_ID', dti[,paste0(ST,'-',REP,'-',SUBTREE_ID)])	
+	dp				<- unique(subset(dss, select=c(SUBTREE_ID, ASR_TYPE, ST, REP, ANCESTRAL_STATE, SUBTREE_SIZE, SUBTREE_SXO_MSM, SUBTREE_SXO_U, SUBTREE_SXO_hsx, SUBTREE_SXO_other)))	
+	tmp				<- dti[, list(MIN_SAMPLING_DATE=min(SAMPLING_DATE), MAX_SAMPLING_DATE=max(SAMPLING_DATE)), by=c('SUBTREE_ID')]
+	dp				<- merge(dp, tmp, by='SUBTREE_ID')
+	dp				<- subset(dp, MIN_SAMPLING_DATE>1995)
+	dp[, MIN_SAMPLING_DATE_C:= cut(MIN_SAMPLING_DATE, breaks=c(1930,1950,1970,1990,seq(1992,2016,2)))]	
+	dpb			<- subset(dp, ST=='B')
+	dpo			<- subset(dp, ST!='B')
+	
+	#
+	#	subtrees of sizes <3, of subtrees introduced since 1995
+	#
+	size.breaks	<- c(0,2,5e4); size.labels<- c('1-2','>2')	
+	df			<- vli.estimate.patients.in.small.subtrees.by.sexual.orientation(dpo, sampling.prob=0.43, resample.intro.n=1, resample.missing.n=100, sxo.select= c('MSM','hsx'), intro.year=1995, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), size.breaks=size.breaks, size.labels=size.labels, seed=42)	
+	set(df, NULL, 'P', df[, paste0('p',P)])
+	df[, STB:='non-B']
+	ans			<- copy(df)
+	df			<- vli.estimate.patients.in.small.subtrees.by.sexual.orientation(dpb, sampling.prob=0.43, resample.intro.n=1, resample.missing.n=100, sxo.select= c('MSM','hsx'), intro.year=1995, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), size.breaks=size.breaks, size.labels=size.labels, seed=42)	
+	set(df, NULL, 'P', df[, paste0('p',P)])
+	df[, STB:='B']
+	ans			<- rbind(ans, df)
+	setkey(ans, variable, STB, SXO, NETWORK_SIZE_C, P)
+	save(ans, file=paste0(outfile.base, asr.type, '_ALLST_patientsinsmallnetworks_breaks12.rda'))	
+	tmp			<- dcast.data.table(ans, STB+variable+SXO+NETWORK_SIZE_C~P, value.var='QF')
+	set(tmp, NULL, 'NETWORK_SIZE_C', tmp[, paste0('subtree_size_',NETWORK_SIZE_C)])
+	tmp[, LABEL:= paste0(round(100*p0.5, d=1),'% [',round(100*p0.025, d=1),'%-',round(100*p0.975, d=1),'%]')]
+	tmp			<- subset(tmp, select=c(STB, variable, SXO, NETWORK_SIZE_C, LABEL))
+	tmp			<- dcast.data.table(tmp, variable+STB+SXO~NETWORK_SIZE_C, value.var='LABEL')	
+	set(tmp, NULL, 'variable', tmp[, factor(variable, levels=c('NL_TRMS_SXO','NL_TRMS_SXO_RND'), labels=c(paste0('patients\nas observed in phylogeny'),paste0('patients\nadjusted for missing sequences')))])
+	write.csv(tmp, row.names=FALSE, file=paste0(outfile.base, asr.type, '_ALLST_patientsinsmallnetworks_breaks12.csv'))
+	tmp			<- dcast.data.table(ans, STB+variable+SXO+NETWORK_SIZE_C~P, value.var='QN')
+	set(tmp, NULL, 'NETWORK_SIZE_C', tmp[, paste0('subtree_size_',NETWORK_SIZE_C)])
+	tmp[, LABEL:= paste0(round(p0.5, d=0),' [',round(p0.025, d=0),'-',round(p0.975, d=0),']')]
+	tmp			<- subset(tmp, select=c(STB, variable, SXO, NETWORK_SIZE_C, LABEL))
+	tmp			<- dcast.data.table(tmp, variable+STB+SXO~NETWORK_SIZE_C, value.var='LABEL')	
+	set(tmp, NULL, 'variable', tmp[, factor(variable, levels=c('NL_TRMS_SXO','NL_TRMS_SXO_RND'), labels=c(paste0('patients\nas observed in phylogeny'),paste0('patients\nadjusted for missing sequences')))])
+	write.csv(tmp, row.names=FALSE, file=paste0(outfile.base, asr.type, '_ALLST_patientsinsmallnetworks_breaks12_N.csv'))
+	
+	#
+	#	subtrees of sizes <=3, of subtrees introduced since 1995
+	#
+	size.breaks	<- c(0,3,5e4); size.labels<- c('1-3','>3')	
+	df			<- vli.estimate.patients.in.small.subtrees.by.sexual.orientation(dpo, sampling.prob=0.43, resample.intro.n=1, resample.missing.n=100, sxo.select= c('MSM','hsx'), intro.year=1995, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), size.breaks=size.breaks, size.labels=size.labels, seed=42)	
+	set(df, NULL, 'P', df[, paste0('p',P)])
+	df[, STB:='non-B']
+	ans			<- copy(df)
+	df			<- vli.estimate.patients.in.small.subtrees.by.sexual.orientation(dpb, sampling.prob=0.43, resample.intro.n=1, resample.missing.n=100, sxo.select= c('MSM','hsx'), intro.year=1995, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), size.breaks=size.breaks, size.labels=size.labels, seed=42)	
+	set(df, NULL, 'P', df[, paste0('p',P)])
+	df[, STB:='B']
+	ans			<- rbind(ans, df)
+	setkey(ans, variable, STB, SXO, NETWORK_SIZE_C, P)
+	save(ans, file=paste0(outfile.base, asr.type, '_ALLST_patientsinsmallnetworks_breaks13.rda'))	
+	tmp			<- dcast.data.table(ans, STB+variable+SXO+NETWORK_SIZE_C~P, value.var='QF')
+	set(tmp, NULL, 'NETWORK_SIZE_C', tmp[, paste0('subtree_size_',NETWORK_SIZE_C)])
+	tmp[, LABEL:= paste0(round(100*p0.5, d=1),'% [',round(100*p0.025, d=1),'%-',round(100*p0.975, d=1),'%]')]
+	tmp			<- subset(tmp, select=c(STB, variable, SXO, NETWORK_SIZE_C, LABEL))
+	tmp			<- dcast.data.table(tmp, variable+STB+SXO~NETWORK_SIZE_C, value.var='LABEL')	
+	set(tmp, NULL, 'variable', tmp[, factor(variable, levels=c('NL_TRMS_SXO','NL_TRMS_SXO_RND'), labels=c(paste0('patients\nas observed in phylogeny'),paste0('patients\nadjusted for missing sequences')))])
+	write.csv(tmp, row.names=FALSE, file=paste0(outfile.base, asr.type, '_ALLST_patientsinsmallnetworks_breaks13.csv'))
+	tmp			<- dcast.data.table(ans, STB+variable+SXO+NETWORK_SIZE_C~P, value.var='QN')
+	set(tmp, NULL, 'NETWORK_SIZE_C', tmp[, paste0('subtree_size_',NETWORK_SIZE_C)])
+	tmp[, LABEL:= paste0(round(p0.5, d=0),' [',round(p0.025, d=0),'-',round(p0.975, d=0),']')]
+	tmp			<- subset(tmp, select=c(STB, variable, SXO, NETWORK_SIZE_C, LABEL))
+	tmp			<- dcast.data.table(tmp, variable+STB+SXO~NETWORK_SIZE_C, value.var='LABEL')	
+	set(tmp, NULL, 'variable', tmp[, factor(variable, levels=c('NL_TRMS_SXO','NL_TRMS_SXO_RND'), labels=c(paste0('patients\nas observed in phylogeny'),paste0('patients\nadjusted for missing sequences')))])
+	write.csv(tmp, row.names=FALSE, file=paste0(outfile.base, asr.type, '_ALLST_patientsinsmallnetworks_breaks13_N.csv'))
+}
+
+vli.bez.explore.ancestral.state.reconstruction.171113.check.trees<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	
+	asr.type		<- 'inf'
+	#asr.type		<- 'sam'
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_summaries.rda'
+	#
+	#	get subtrees subst/site, inf ancestral state reconstruction, non-bootstrap 
+	load(infile)	
+	dss				<- subset(ds, TREE_TYPE!='lsd' & ASR_TYPE==asr.type)
+	set(dss, NULL, 'SUBTREE_ID', dss[,paste0(ST,'-',REP,'-',SUBTREE_ID)])	
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_tips.rda'
+	load(infile)	
+	dti				<- subset(dti, TREE_TYPE!='lsd' & ASR_TYPE==asr.type)
+	set(dti, NULL, 'ST', dti[,gsub('pol','',ST)])
+	set(dti, NULL, 'SUBTREE_ID', dti[,paste0(ST,'-',REP,'-',SUBTREE_ID)])
+	tmp				<- unique(subset(dss, select=c(SUBTREE_ID, ANCESTRAL_STATE, SUBTREE_SIZE)))
+	dp				<- merge(tmp, dti, by='SUBTREE_ID')
+	dp				<- merge(dp, dp[, list(MIN_SAMPLING_DATE=min(SAMPLING_DATE), MAX_SAMPLING_DATE=max(SAMPLING_DATE)), by='SUBTREE_ID'], by='SUBTREE_ID')
+	dp				<- subset(dp, MIN_SAMPLING_DATE>1995)
+	dp[, MIN_SAMPLING_DATE_C:= cut(MIN_SAMPLING_DATE, breaks=c(1930,1950,1970,1990,seq(1992,2016,2)))]	
+	dp[, STB:= as.character(factor(ST=='B', levels=c(TRUE,FALSE),labels=c('B','non-B')))]	
+	
+	#	fixup for A1
+	set.seed(42L)
+	tmp	<- subset(dp, ST=='A1')[, unique(REP)]
+	tmp	<- data.table(ST='A1', REP_NEW=setdiff(0:99, tmp), REP= sample(tmp, 100-length(tmp), replace=TRUE))
+	tmp	<- merge(dp, tmp, by=c('ST','REP'))
+	tmp[, REP:=NULL]
+	setnames(tmp, 'REP_NEW', 'REP')
+	dp	<- rbind(dp, tmp)
+	#
+	
+	subset(dp, ST=='AG')[, length(unique(REP))]
+	subset(dp, ST=='C')[, length(unique(REP))]
+	subset(dp, ST=='cpx06')[, length(unique(REP))]
+	subset(dp, ST=='D')[, length(unique(REP))]
+	subset(dp, ST=='B')[, length(unique(REP))]
+	subset(dp, ST=='F')[, length(unique(REP))]
+	subset(dp, ST=='G')[, length(unique(REP))]
+	
+	unique(dp, by=c('ST','REP'))[, table(ST)]
+	subset(dp, ST=='A1')[, unique(REP)]	
+	
+	dc	<- dp[, list(N=length(unique(SUBTREE_ID))), by=c('ST','REP')]			
+	ggplot(dc, aes(x=N)) + geom_histogram() + facet_wrap(~ST, scales='free')
+	
+	
+	dc	<- dp[, list(N=length(unique(SUBTREE_ID))), by=c('STB','REP')]			
+	ggplot(subset(dc, STB=='non-B'), aes(x=N)) + geom_histogram() 
+	
+	#subset(dp, REP==0 & ST!='B')[, table(grepl('DEADEND',SUBTREE_ID))]
+	tmp	<- dp[, list(NP=length(ID)), by=c('ST','REP')]
+	subset(tmp, ST=='A1')[, table(NP)]	#	ok
+	subset(tmp, ST=='AG')[, table(NP)]	#	many odd
+	subset(tmp, ST=='C')[, table(NP)]	# ok
+	subset(tmp, ST=='cpx06')[, table(NP)]	#ok
+	subset(tmp, ST=='D')[, table(NP)]	#	1 odd, REP is 53
+	subset(tmp, ST=='B')[, table(NP)]	#	each run different!!!
+	subset(tmp, ST=='F')[, table(NP)]	#	many odd
+	subset(tmp, ST=='G')[, table(NP)]	#	ok
+	
+	
+	ggplot( tmp, aes(x=NP)) + facet_wrap(~ST, scales='free') + geom_histogram(binwidth=10)
+}
+
+vli.bez.explore.ancestral.state.reconstruction.171113.number.networks<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	
+	asr.type		<- 'inf'
+	#asr.type		<- 'sam'
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_summaries.rda'
+	#
+	#	get subtrees subst/site, inf ancestral state reconstruction, non-bootstrap 
+	load(infile)	
+	dss				<- subset(ds, TREE_TYPE!='lsd' & ASR_TYPE==asr.type)
+	set(dss, NULL, 'SUBTREE_ID', dss[,paste0(ST,'-',REP,'-',SUBTREE_ID)])	
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_tips.rda'
+	load(infile)	
+	dti				<- subset(dti, TREE_TYPE!='lsd' & ASR_TYPE==asr.type)
+	set(dti, NULL, 'ST', dti[,gsub('pol','',ST)])
+	set(dti, NULL, 'SUBTREE_ID', dti[,paste0(ST,'-',REP,'-',SUBTREE_ID)])
+	tmp				<- unique(subset(dss, select=c(SUBTREE_ID, ANCESTRAL_STATE, SUBTREE_SIZE)))
+	dp				<- merge(tmp, dti, by='SUBTREE_ID')
+	dp				<- merge(dp, dp[, list(MIN_SAMPLING_DATE=min(SAMPLING_DATE), MAX_SAMPLING_DATE=max(SAMPLING_DATE)), by='SUBTREE_ID'], by='SUBTREE_ID')
+	dp				<- subset(dp, MIN_SAMPLING_DATE>1995)
+	dp[, MIN_SAMPLING_DATE_C:= cut(MIN_SAMPLING_DATE, breaks=c(1930,1950,1970,1990,seq(1992,2016,2)))]
+	dp[, STB:= as.character(factor(ST=='B', levels=c(TRUE,FALSE),labels=c('B','non-B')))]
+	#	fix for A1 trees
+	set.seed(42L)
+	tmp	<- subset(dp, ST=='A1')[, unique(REP)]
+	tmp	<- data.table(ST='A1', REP_NEW=setdiff(0:99, tmp), REP= sample(tmp, 100-length(tmp), replace=TRUE))
+	tmp	<- merge(dp, tmp, by=c('ST','REP'))
+	tmp[, REP:=NULL]
+	setnames(tmp, 'REP_NEW', 'REP')
+	dp	<- rbind(dp, tmp)
+	
+	
+	#	numbers overall for B and non-B		
+	dc	<- dp[, list(N=length(unique(SUBTREE_ID))), by=c('STB','REP')]		
+	tmp	<- dc[, list(QU=round(quantile(N, prob=c(0.025,0.25,0.5,0.75,0.975))), P=paste0('p',c(0.025,0.25,0.5,0.75,0.975))), by='STB']
+	write.csv(tmp, row.names=FALSE, file=paste0(outfile.base, asr.type, '_ALLST_statetransitions_counts_overall.csv'))
+	
+	#	numbers over time for B and non-B
+	dc	<- dp[, list(N=length(unique(SUBTREE_ID))), by=c('STB','REP','MIN_SAMPLING_DATE_C')]
+	dc	<- merge(as.data.table(expand.grid(STB=unique(dc$STB), REP=unique(dc$REP), MIN_SAMPLING_DATE_C=unique(dc$MIN_SAMPLING_DATE_C))), dc, by=c('STB','REP','MIN_SAMPLING_DATE_C'), all.x=TRUE)
+	set(dc, dc[, which(is.na(N))], c('N'), 0)	
+	tmp	<- dc[, list(QU=quantile(N, prob=c(0.025,0.25,0.5,0.75,0.975)), P=paste0('p',c(0.025,0.25,0.5,0.75,0.975))), by=c('STB','MIN_SAMPLING_DATE_C')]
+	tmp	<- dcast.data.table(tmp, STB+MIN_SAMPLING_DATE_C~P, value.var='QU')	
+	ggplot(tmp, aes(x=MIN_SAMPLING_DATE_C, y=p0.5, ymin=p0.025, ymax=p0.975)) +
+			geom_bar(stat='identity', colour='grey70') +
+			geom_errorbar(colour="black",width=0.5)	+
+			theme_bw() + theme(legend.position='bottom') +
+			scale_y_continuous() +
+			facet_grid(STB~., scales='free') +
+			labs(x='earliest date of diagnosis\n(of first subject with a sequence that is part of the subtree)',y='new in-country subtrees', fill='geographic origin')			
+	ggsave(file=paste0(outfile.base, asr.type, '_ALLST_statetransitions_counts_time.pdf'), w=6, h=5)
+	write.csv(tmp, file=paste0(outfile.base, asr.type, '_ALLST_statetransitions_counts_time.csv'))
+}
+
+vli.bez.explore.ancestral.state.reconstruction.171113.plot.distinct.networks<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	
+	asr.type		<- 'inf'
+	#asr.type		<- 'sam'
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_'
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_summaries.rda'
+	#
+	#	get subtrees subst/site, inf ancestral state reconstruction, non-bootstrap 
+	load(infile)	
+	ds				<- subset(ds, TREE_TYPE!='lsd' & ASR_TYPE==asr.type & REP==0)
+	set(ds, NULL, 'SUBTREE_ID', ds[,paste0(ST,'-',REP,'-',SUBTREE_ID)])	
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_tips.rda'
+	load(infile)	
+	dti				<- subset(dti, TREE_TYPE!='lsd' & ASR_TYPE==asr.type & REP==0)
+	set(dti, NULL, 'ST', dti[,gsub('pol','',ST)])
+	set(dti, NULL, 'SUBTREE_ID', dti[,paste0(ST,'-',REP,'-',SUBTREE_ID)])
+	
+	#
+	#	
+	tmp	<- unique(subset(ds, select=c(SUBTREE_ID, ANCESTRAL_STATE, INTRO_EARLIEST, INTRO_MID, INTRO_LATEST, SUBTREE_SIZE)))
+	dp	<- merge(tmp, dti, by='SUBTREE_ID')
+	dp	<- merge(dp, dp[, list(MIN_SAMPLING_DATE=min(SAMPLING_DATE), MAX_SAMPLING_DATE=max(SAMPLING_DATE)), by='SUBTREE_ID'], by='SUBTREE_ID')
+	dp	<- subset(dp, MIN_SAMPLING_DATE>1995)
+	set(dp, NULL, 'SXO', dp[, factor(SXO, levels=c('hsx','MSM','other','U'), labels=c('Heterosexual','MSM','Other','Unknown'))])
+	set(dp, NULL, 'ANCESTRAL_STATE', dp[, factor(ANCESTRAL_STATE,	levels=c("SSA","EUC","EUO","EUW","LAT","OAP","ZAZ","NAM","USCAU","unsampled_region"),
+																	labels=c("Sub-\nSaharan\nAfrica","East\nEU","Former\nUSSR","West\nEU","Latin\nAmerica","China\nJapan\nKorea","Sout and\nSoutheast\nAsia","North\nAfrica,\nMiddle East","US, Canada","unresolved"))
+											])
+	dpb	<- subset(dp, ST=='B')
+	dpo	<- subset(dp, ST!='B')
+	#		
+	#	order non-B and B subtrees
+	do	<- unique(subset(dpb, select=c(SUBTREE_ID, SUBTREE_SIZE, ST, ANCESTRAL_STATE, MIN_SAMPLING_DATE, MAX_SAMPLING_DATE)))
+	setkey(do, ANCESTRAL_STATE, MIN_SAMPLING_DATE)
+	dob	<- do[, list(SUBTREE_ID=SUBTREE_ID, SUBTREE_SIZE=SUBTREE_SIZE, MIN_SAMPLING_DATE=MIN_SAMPLING_DATE, MAX_SAMPLING_DATE=MAX_SAMPLING_DATE, ST=ST, SUBTREE_ORDER=seq_len(length(SUBTREE_ID))), by=c('ANCESTRAL_STATE')]
+	dpb	<- merge(dpb, subset(dob, select=c(SUBTREE_ID, SUBTREE_ORDER)), by=c('SUBTREE_ID'))
+	do	<- unique(subset(dpo, select=c(SUBTREE_ID, SUBTREE_SIZE, ST, ANCESTRAL_STATE, MIN_SAMPLING_DATE, MAX_SAMPLING_DATE)))
+	setkey(do, ANCESTRAL_STATE, MIN_SAMPLING_DATE)
+	doo	<- do[, list(SUBTREE_ID=SUBTREE_ID, SUBTREE_SIZE=SUBTREE_SIZE, MIN_SAMPLING_DATE=MIN_SAMPLING_DATE, MAX_SAMPLING_DATE=MAX_SAMPLING_DATE, ST=ST, SUBTREE_ORDER=seq_len(length(SUBTREE_ID))), by=c('ANCESTRAL_STATE')]
+	dpo	<- merge(dpo, subset(doo, select=c(SUBTREE_ID, SUBTREE_ORDER)), by=c('SUBTREE_ID'))	
+	
+	if(0)
+	{
+		ggplot(dp) +			
+				geom_point(aes(x=SAMPLING_DATE, y=SUBTREE_ORDER), colour='grey50') +
+				geom_scatterpie(data=subset(do,SUBTREE_SIZE>1), aes(x=MIN_SAMPLING_DATE, y=SUBTREE_ORDER, group=SUBTREE_ORDER, r=log(SUBTREE_SIZE)/5+0.2), cols=colnames(do)[grepl('SUBTREE_SXO_',colnames(do))]) +
+				#geom_point(data=tmp, aes(x=MIN_SAMPLING_DATE, y=SUBTREE_ORDER, colour=variable)) +			
+				theme_bw() +
+				scale_x_continuous(breaks=seq(1990,2020,2)) +
+				labs(x='\ndate of diagnosis\n(patients with sequence)', y='phylogenetically observed transmission networks\n') +
+				facet_grid(ANCESTRAL_STATE~., scales='free_y', space='free_y')
+		ggsave(file=paste0(outfile.base,asr.type,'_ALLST_newtrees_over_time.pdf'),w=8,h=30)
+		
+	}
+	if(1)	#non-B, colour = SXO
+	{
+		ggplot(dpo) +			
+				geom_segment(data=subset(doo, SUBTREE_SIZE>1), aes(x=MIN_SAMPLING_DATE, xend=MAX_SAMPLING_DATE, y=SUBTREE_ORDER, yend=SUBTREE_ORDER), colour='black', size=1) +
+				geom_point(aes(x=SAMPLING_DATE, y=SUBTREE_ORDER, colour=SXO)) +
+				theme_bw() +
+				theme(panel.spacing.y=unit(0.1, "lines"), strip.text.y=element_text(angle=0)) +
+				scale_x_continuous(breaks=seq(1990,2020,2)) +	
+				scale_y_continuous(expand=c(0,0)) +
+				labs(title='Phylogenetically identified transmission networks among non-B sequences\n', x='\ndate of diagnosis\n(patients with sequence)', y='', colour='Sexual orientation of HIV-infected individuals\nin the Netherlands') +
+				theme(legend.position='bottom') +
+				facet_grid(ANCESTRAL_STATE~., scales='free_y', space='free_y')
+		ggsave(file=paste0(outfile.base,asr.type,'_ALLST_newtrees_over_time_nonB.pdf'),w=8,h=20)
+		ggplot(dpb) +			
+				geom_segment(data=subset(dob, SUBTREE_SIZE>1), aes(x=MIN_SAMPLING_DATE, xend=MAX_SAMPLING_DATE, y=SUBTREE_ORDER, yend=SUBTREE_ORDER), colour='black', size=1) +
+				geom_point(aes(x=SAMPLING_DATE, y=SUBTREE_ORDER, colour=SXO)) +
+				theme_bw() +
+				theme(panel.spacing.y=unit(0.1, "lines"), strip.text.y=element_text(angle=0)) +
+				scale_x_continuous(breaks=seq(1990,2020,2)) +
+				scale_y_continuous(expand=c(0,0)) +
+				labs(title='Phylogenetically identified transmission networks among B sequences\n', x='\ndate of diagnosis\n(patients with sequence)', y='', colour='Sexual orientation of HIV-infected individuals\nin the Netherlands') +
+				theme(legend.position='bottom') +
+				facet_grid(ANCESTRAL_STATE~., scales='free_y', space='free_y')
+		ggsave(file=paste0(outfile.base,asr.type,'_ALLST_newtrees_over_time_B.pdf'),w=8,h=20)
+	}
+	if(0)
+	{
+		ggplot(dp) +			
+				geom_segment(data=subset(do, SUBTREE_SIZE>1), aes(x=MIN_SAMPLING_DATE, xend=MAX_SAMPLING_DATE, y=SUBTREE_ORDER, yend=SUBTREE_ORDER), colour='black', size=1) +
+				geom_point(aes(x=SAMPLING_DATE, y=SUBTREE_ORDER, colour=ST)) +
+				theme_bw() +
+				theme(panel.spacing.y=unit(0.1, "lines"), strip.text.y=element_text(angle=0)) +
+				scale_x_continuous(breaks=seq(1990,2020,2)) +
+				scale_y_continuous(expand=c(0,0)) +
+				labs(x='\ndate of diagnosis\n(patients with sequence)', y='phylogenetically observed transmission networks\n', colour='HIV-1 subtype') +				
 				facet_grid(ANCESTRAL_STATE~., scales='free_y', space='free_y')
 		ggsave(file=paste0(outfile.base,asr.type,'_ALLST_newtrees_over_time_colour_subtype.pdf'),w=8,h=16)		
 	}
@@ -593,75 +1319,108 @@ vli.bez.summarize.tip.data<- function()
 	require(phangorn)
 	require(ggplot2)
 	
-	outfile.save	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/170831_asr_tipdata.rda'
-	
-	infile.meta	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_OR.csv'
+	outfile.save	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_tips.rda'	
+	infile.meta	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_plusB_OR.csv'
 	dm	<- as.data.table(read.csv(infile.meta))
-	set(dm, NULL, 'SXO', dm[, gsub('HTF|HTM','hsx',gsub('BL|CH|CHS|DU','other',as.character(GENDER_TRMGROUP)))])
-	
+	set(dm, NULL, 'SXO', dm[, gsub('HTF|HTM','hsx',gsub('BL|CH|CHS|DU','other',as.character(GENDER_TRMGROUP)))])	
 	indir.asr	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results'
-	infiles		<- data.table(F=list.files(indir.asr, pattern='^workspace', full.names=TRUE))
+	infiles		<- data.table(F=list.files(indir.asr, pattern='^workspace', full.names=TRUE, recursive=TRUE))
 	infiles[, ASR_TYPE:= gsub('.*_annotated_([a-z]+).*','\\1',basename(F))]
-	infiles[, REP:= as.integer(gsub('.*_([0-9]+)_annotated.*','\\1',basename(F)))]
-	infiles[, ST:= gsub('^workspace_([^_]+)_.*','\\1',basename(F))]
-	
-	select.descendants.regex<- '.*_infNL_.*'
+	infiles[, REP:= as.integer(gsub('^.*_([0-9]+)_annotated.*$|^.*_rr([0-9]+)_annotated.*$','\\1',basename(F)))]
+	tmp			<- infiles[, which(is.na(REP))]
+	set(infiles, tmp, 'REP', infiles[tmp,as.integer(gsub('^.*_rr([0-9]+)_annotated.*$','\\1',basename(F)))])	
+	infiles[, ST:= gsub('pol','',gsub('^workspace_([^_]+)_.*','\\1',basename(F)))]
+	infiles[, TREE_TYPE:=gsub('^.*(lsd|rr).*$','\\1',basename(F))]
+	set(infiles, infiles[, which(TREE_TYPE!='lsd')],'TREE_TYPE','substsite')
+	infiles[, SELECT_DESC:= as.character(factor(ASR_TYPE, levels=c('bir','sam','inf'), labels=c('^.*_bornNL_.*$','^.*_sampNL_.*$','^.*_infNL_.*$')))]
+	infiles[, DEADEND_DESC:= NA_character_]
+	infiles[, IS_DATED_TREE:= TREE_TYPE=='lsd']
+	set(infiles, infiles[, which(ASR_TYPE=='inf')], 'DEADEND_DESC',  "^.*_sampNL_.*$|^.*_infNL_.*$")		
+	infiles		<- subset(infiles, !IS_DATED_TREE)
 	id.regex	<- '^([^_]*).*'
-	is.dated.tree	<- TRUE
+			
 	dti			<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results/workspace_A1_withC_lsd_000_annotated_bir.rda'
-				cat('\nprocessing file ',F)
-				load(F)
+				#	IS_DATED_TREE<- 1; DEADEND_DESC<- '^.*_sampNL_.*$|^.*_infNL_.*$'; SELECT_DESC<- '^.*_infNL_.*$'; F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results/B/sam/workspace_polB_SHM_LANL_reduced149_withD_withHXB2_e_noDRM_rr_095_annotated_sam.rda'
+				#	IS_DATED_TREE<- 0; DEADEND_DESC<- '^.*_sampNL_.*$|^.*_infNL_.*$'; SELECT_DESC<- '^.*_infNL_.*$'; F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results/A1/inf/workspace_A1_withC_rr000_annotated_inf.rda'
+				select.descendants.regex	<- SELECT_DESC
+				is.dated.tree				<- IS_DATED_TREE	
+				deadend.descendants.regex	<- DEADEND_DESC						
+				cat('\nprocessing file ',F,'\n',select.descendants.regex,' ',deadend.descendants.regex,' ',is.dated.tree)
+				load(F)								
 				#	read variables from workspace
 				ph	<- all.tree.info$only.tree$tree
 				da	<- as.data.table(all.tree.info$only.tree$classification.results$collapsed)	
 				#	summarise introductions into NL
-				dti	<- vli.asr.get.tips.in.NL.subtrees(ph, da, dm, id.regex, select.descendants.regex)
+				dti	<- vli.asr.get.tips.in.NL.subtrees(ph, da, dm, id.regex, select.descendants.regex=select.descendants.regex, deadend.descendants.regex=deadend.descendants.regex)				
 				dti
-			}, by=c('ST','ASR_TYPE','REP')]	
+			}, by=c('TREE_TYPE','ST','ASR_TYPE','REP')]	
 	save(dti, file=outfile.save)
+	write.csv(dti, row.names=FALSE, file=gsub('rda$','csv',outfile.save))
 }
 
-vli.bez.summarize.state.transitions<- function()
+vli.bez.evaluate.infection.loc.missing<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	infile			<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/Table1_infoyesno.csv'
+	df				<- as.data.table(read.csv(infile))
+	df				<- merge(df, df[, list(EQ=EQ, P=COUNT/sum(COUNT)), by=c('CAT', 'haveinfo')], by=c('CAT', 'haveinfo', 'EQ'))
+	dcast.data.table(df, CAT~haveinfo+EQ, value.var='P')
+	
+}
+
+vli.bez.summarize.state.transitions.v171019<- function()
 {
 	require(data.table)
 	require(phangorn)
 	require(ggplot2)
 	
-	outfile.save	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/170831_asr_summaries.rda'
-	
-	infile.meta	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_OR.csv'
+	outfile.save	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/171109_asr_summaries.rda'	
+	infile.meta	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_plusB_OR.csv'
 	dm	<- as.data.table(read.csv(infile.meta))
 	set(dm, NULL, 'SXO', dm[, gsub('HTF|HTM','hsx',gsub('BL|CH|CHS|DU','other',as.character(GENDER_TRMGROUP)))])
 	
 	indir.asr	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results'
-	infiles		<- data.table(F=list.files(indir.asr, pattern='^workspace', full.names=TRUE))
+	infiles		<- data.table(F=list.files(indir.asr, pattern='^workspace', full.names=TRUE, recursive=TRUE))
 	infiles[, ASR_TYPE:= gsub('.*_annotated_([a-z]+).*','\\1',basename(F))]
-	infiles[, REP:= as.integer(gsub('.*_([0-9]+)_annotated.*','\\1',basename(F)))]
-	infiles[, ST:= gsub('^workspace_([^_]+)_.*','\\1',basename(F))]
-	
-	select.descendants.regex<- '.*_infNL_.*'
+	infiles[, REP:= as.integer(gsub('^.*_([0-9]+)_annotated.*$|^.*_rr([0-9]+)_annotated.*$','\\1',basename(F)))]
+	tmp			<- infiles[, which(is.na(REP))]
+	set(infiles, tmp, 'REP', infiles[tmp,as.integer(gsub('^.*_rr([0-9]+)_annotated.*$','\\1',basename(F)))])
+	infiles[, ST:= gsub('pol','',gsub('^workspace_([^_]+)_.*','\\1',basename(F)))]
+	infiles[, TREE_TYPE:=gsub('.*_(lsd|rr)_.*','\\1',basename(F))]
+	set(infiles, infiles[, which(TREE_TYPE!='lsd')],'TREE_TYPE','substsite')
+	infiles[, SELECT_DESC:= as.character(factor(ASR_TYPE, levels=c('bir','sam','inf'), labels=c('^.*_bornNL_.*$','^.*_sampNL_.*$','^.*_infNL_.*$')))]
+	infiles[, DEADEND_DESC:= NA_character_]
+	infiles[, IS_DATED_TREE:= TREE_TYPE=='lsd']
+	set(infiles, infiles[, which(ASR_TYPE=='inf')], 'DEADEND_DESC',  "^.*_sampNL_.*$|^.*_infNL_.*$")		
+	infiles		<- subset(infiles, !IS_DATED_TREE)
 	id.regex	<- '^([^_]*).*'
-	is.dated.tree	<- TRUE
+	
 	ds			<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results/workspace_C_withD_lsd_000_annotated_inf.rda'
-				cat('\nprocessing file ',F)
-				load(F)
+				#	IS_DATED_TREE<- 0; DEADEND_DESC<- "^.*_sampNL_.*$|^.*_infNL_.*$"; SELECT_DESC<- '^.*_infNL_.*$'; F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results/B/inf/workspace_polB_SHM_LANL_reduced149_withD_withHXB2_e_noDRM_rr_015_annotated_inf.rda'				
+				select.descendants.regex	<- SELECT_DESC
+				is.dated.tree				<- IS_DATED_TREE	
+				deadend.descendants.regex	<- DEADEND_DESC						
+				cat('\nprocessing file ',F,'\n',select.descendants.regex,' ',deadend.descendants.regex,' ',is.dated.tree)
+				load(F)				
 				#	read variables from workspace
 				ph	<- all.tree.info$only.tree$tree
 				da	<- as.data.table(all.tree.info$only.tree$classification.results$collapsed)	
 				#	summarise introductions into NL
-				ds	<- vli.asr.summary(ph, da, dm, id.regex, select.descendants.regex, is.dated.tree)	
+				ds	<- vli.asr.summary(ph, da, dm, id.regex, select.descendants.regex=select.descendants.regex, deadend.descendants.regex=deadend.descendants.regex, is.dated.tree=is.dated.tree)	
 				ds[, INTRO_MID:= (INTRO_EARLIEST+INTRO_LATEST)/2]
 				setkey(ds, INTRO_MID)
 				ds
-			}, by=c('ST','ASR_TYPE','REP')]	
+			}, by=c('TREE_TYPE','ST','ASR_TYPE','REP')]	
 	save(ds, file=outfile.save)
+	write.csv(ds, row.names=FALSE, file=gsub('rda$','csv',outfile.save))
+	
 }
 
 ######################################################################################
 
-vli.bez.DataFile<- function()
+vli.bez.DataFile.170901<- function()
 {
 	require(data.table)
 	require(ggplot2)
@@ -676,6 +1435,49 @@ vli.bez.DataFile<- function()
 	set(df1, NULL, 'COMBIREGIONDIST_V1', df1[, gsub('_SHM|_LANL','',COMBIREGIONDIST_V1)])
 	setnames(df1, 	c('patient','sex','routesex','NL','subtype','date_LSD','SampleRegion_V1','COMBIREGIONDIST_V1','infectionregion_V1','country','country_infection','countryborn'), 
 			c('ID','GENDER','GENDER_TRMGROUP','DATA_FROM_SHM','SUBTYPE','SAMPLING_DATE','SAMPLING_LOC','BORN_LOC','INFECTED_LOC','SAMPLING_COUNTRY','INFECTED_COUNTRY','BORN_COUNTRY'))
+	#	write to file
+	#
+	write.csv(df1, row.names=FALSE, file=gsub('\\.csv','_OR.csv',infile))	
+	#
+	#	plot born_loc vs infected_loc	
+	tmp	<- df1[, list(N=length(ID)), by=c('BORN_LOC','INFECTED_LOC')]
+	ggplot(tmp, aes(x=BORN_LOC, y=INFECTED_LOC, size=N)) + geom_point()
+	ggsave(file=paste0(basename,'_plot_BORNLOC_vs_INFECTEDLOC.pdf'), h=6, w=6)
+	ggplot(subset(tmp, BORN_LOC=='NL'), aes(x=INFECTED_LOC, y=N)) + geom_bar(stat='identity')
+	ggsave(file=paste0(basename,'_plot_BORNNL_INFECTEDLOC_numbers.pdf'), h=5, w=8)
+	ggplot(subset(tmp, BORN_LOC=='NL'), aes(x=INFECTED_LOC, y= N/sum(N))) + geom_bar(stat='identity') + scale_y_continuous(labels = scales:::percent, breaks=seq(0,1,0.1)) 
+	ggsave(file=paste0(basename,'_plot_BORNNL_INFECTEDLOC_percent.pdf'), h=5, w=8)
+	#
+	#	plot sampling locations over time
+	tmp	<- copy(df1)
+	tmp[, SAMPLING_DATE2:= cut(SAMPLING_DATE, seq(1981,2016,5))]	
+	ggplot(tmp, aes(x=SAMPLING_DATE2, fill=SAMPLING_LOC)) + geom_bar() + scale_fill_brewer(palette='Set3')
+	ggsave(file=paste0(basename,'_plot_SAMPLINGDATE_by_SAMPLINGLOC_numbers.pdf'), h=5, w=8)
+	ggplot(tmp, aes(x=SAMPLING_DATE2, fill=SAMPLING_LOC)) + geom_bar(position='fill') + scale_fill_brewer(palette='Set3') + scale_y_continuous(labels = scales:::percent, breaks=seq(0,1,0.1))
+	ggsave(file=paste0(basename,'_plot_SAMPLINGDATE_by_SAMPLINGLOC_percent.pdf'), h=5, w=8)
+}
+
+######################################################################################
+
+vli.bez.DataFile.171019<- function()
+{
+	require(data.table)
+	require(ggplot2)
+	infile	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_plusB.csv'
+	indir	<- dirname(infile)
+	basename<- file.path(indir,gsub('\\.csv','',basename(infile)))
+	
+	df		<- as.data.table(read.csv(infile))
+	df1		<- subset(df, select=c(ID, GENDER, GENDER_TRMGROUP, DATA_FROM_SHM, subtype, SAMPLING_DATE, SAMPLING_LOC_V1, BORN_LOC_V1, INFECTED_LOC_V1, SAMPLING_COUNTRY, INFECTED_COUNTRY, BORN_COUNTRY))
+	setnames(df1, 	c('subtype','SAMPLING_LOC_V1','BORN_LOC_V1','INFECTED_LOC_V1'), 
+					c('SUBTYPE','SAMPLING_LOC','BORN_LOC','INFECTED_LOC'))
+	
+	stopifnot( 	df1[, !any(is.na(SAMPLING_LOC))], 
+				df1[, all(unique(SAMPLING_LOC)%in%c('EUC','EUO','EUW','LAT','NAM','NL','OAP','SSA','USCAU','ZAZ','XX'))] )
+	stopifnot( 	df1[, !any(is.na(BORN_LOC))], 
+				df1[, all(unique(BORN_LOC)%in%c('EUC','EUO','EUW','LAT','NAM','NL','OAP','SSA','USCAU','ZAZ','XX'))] )
+	stopifnot( 	df1[, !any(is.na(INFECTED_LOC))], 
+				df1[, all(unique(INFECTED_LOC)%in%c('EUC','EUO','EUW','LAT','NAM','NL','OAP','SSA','USCAU','ZAZ','XX'))] )
 	#	write to file
 	#
 	write.csv(df1, row.names=FALSE, file=gsub('\\.csv','_OR.csv',infile))	
