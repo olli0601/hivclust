@@ -574,14 +574,6 @@ vli.bez.explore.ancestral.state.reconstruction.171113.origin.of.subtrees<- funct
 	dp				<- subset(dp, MIN_SAMPLING_DATE>1995)
 	dp[, MIN_SAMPLING_DATE_C:= cut(MIN_SAMPLING_DATE, breaks=c(1930,1950,1970,1990,seq(1992,2016,2)))]
 	dp[, STB:= as.character(factor(ST=='B', levels=c(TRUE,FALSE), labels=c('B','non-B')))]
-	#	fix for A1 trees
-	set.seed(42L)
-	tmp	<- subset(dp, ST=='A1')[, unique(REP)]
-	tmp	<- data.table(ST='A1', REP_NEW=setdiff(0:99, tmp), REP= sample(tmp, 100-length(tmp), replace=TRUE))
-	tmp	<- merge(dp, tmp, by=c('ST','REP'))
-	tmp[, REP:=NULL]
-	setnames(tmp, 'REP_NEW', 'REP')
-	dp	<- rbind(dp, tmp)
 	
 	dc	<- dp[, list(N_TREE=length(SUBTREE_ID), N_PATIENT=sum(SUBTREE_SIZE)), by=c('STB','REP','ANCESTRAL_STATE')]
 	dc	<- merge(as.data.table(expand.grid(STB=unique(dc$STB), REP=unique(dc$REP), ANCESTRAL_STATE=unique(dc$ANCESTRAL_STATE))), dc, by=c('STB','REP','ANCESTRAL_STATE'), all.x=TRUE)
@@ -890,16 +882,7 @@ vli.bez.explore.ancestral.state.reconstruction.171113.check.trees<- function()
 	dp				<- merge(dp, dp[, list(MIN_SAMPLING_DATE=min(SAMPLING_DATE), MAX_SAMPLING_DATE=max(SAMPLING_DATE)), by='SUBTREE_ID'], by='SUBTREE_ID')
 	dp				<- subset(dp, MIN_SAMPLING_DATE>1995)
 	dp[, MIN_SAMPLING_DATE_C:= cut(MIN_SAMPLING_DATE, breaks=c(1930,1950,1970,1990,seq(1992,2016,2)))]	
-	dp[, STB:= as.character(factor(ST=='B', levels=c(TRUE,FALSE),labels=c('B','non-B')))]	
-	
-	#	fixup for A1
-	set.seed(42L)
-	tmp	<- subset(dp, ST=='A1')[, unique(REP)]
-	tmp	<- data.table(ST='A1', REP_NEW=setdiff(0:99, tmp), REP= sample(tmp, 100-length(tmp), replace=TRUE))
-	tmp	<- merge(dp, tmp, by=c('ST','REP'))
-	tmp[, REP:=NULL]
-	setnames(tmp, 'REP_NEW', 'REP')
-	dp	<- rbind(dp, tmp)
+	dp[, STB:= as.character(factor(ST=='B', levels=c(TRUE,FALSE),labels=c('B','non-B')))]		
 	#
 	
 	subset(dp, ST=='AG')[, length(unique(REP))]
@@ -961,14 +944,6 @@ vli.bez.explore.ancestral.state.reconstruction.171113.number.networks<- function
 	dp				<- subset(dp, MIN_SAMPLING_DATE>1995)
 	dp[, MIN_SAMPLING_DATE_C:= cut(MIN_SAMPLING_DATE, breaks=c(1930,1950,1970,1990,seq(1992,2016,2)))]
 	dp[, STB:= as.character(factor(ST=='B', levels=c(TRUE,FALSE),labels=c('B','non-B')))]
-	#	fix for A1 trees
-	set.seed(42L)
-	tmp	<- subset(dp, ST=='A1')[, unique(REP)]
-	tmp	<- data.table(ST='A1', REP_NEW=setdiff(0:99, tmp), REP= sample(tmp, 100-length(tmp), replace=TRUE))
-	tmp	<- merge(dp, tmp, by=c('ST','REP'))
-	tmp[, REP:=NULL]
-	setnames(tmp, 'REP_NEW', 'REP')
-	dp	<- rbind(dp, tmp)
 	
 	
 	#	numbers overall for B and non-B		
