@@ -2936,7 +2936,7 @@ CD4.161027<- function()
 	verbose			<- 1
 	
 	#	INPUT FILE NAMES	
-	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Immu.csv'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_latest/SHM_1602_161102_OR_ALL_Immu.csv'
 	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/preprocessed/ATHENA_1610_All_CD4.rda'
 	#
 	#	read CD4 csv data file and preprocess
@@ -4250,7 +4250,7 @@ Regimen.161027<- function()
 	#
 	#	INPUT FILE
 	#	
-	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_161102/SHM_1602_161102_OR_ALL_Regimens.xlsx'
+	file			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/original_latest/SHM_1602_161102_OR_ALL_Regimens.xlsx'
 	outfile			<- '~/Dropbox (SPH Imperial College)/2016_ATHENA_Oct_Update/processed_democlin/ATHENA_1610_All_ART.rda'
 	#file			<- paste(dir.name,"derived/ATHENA_2013_03_Regimens.csv",sep='/')
 	#file.viro		<- paste(dir.name,"derived/ATHENA_2013_03_Viro.R",sep='/')

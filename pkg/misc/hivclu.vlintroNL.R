@@ -1317,6 +1317,7 @@ vli.bez.summarize.tip.data<- function()
 	dti			<- infiles[, {
 				#	IS_DATED_TREE<- 1; DEADEND_DESC<- '^.*_sampNL_.*$|^.*_infNL_.*$'; SELECT_DESC<- '^.*_infNL_.*$'; F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results/B/sam/workspace_polB_SHM_LANL_reduced149_withD_withHXB2_e_noDRM_rr_095_annotated_sam.rda'
 				#	IS_DATED_TREE<- 0; DEADEND_DESC<- '^.*_sampNL_.*$|^.*_infNL_.*$'; SELECT_DESC<- '^.*_infNL_.*$'; F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results/A1/inf/workspace_A1_withC_rr000_annotated_inf.rda'
+				#	IS_DATED_TREE<- 1; DEADEND_DESC<- NA_character_; SELECT_DESC<- '^.*_saNL_.*$'; F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results/B/sam/workspace_polB_SHM_LANL_reduced149_withD_withHXB2_e_noDRM_rr_095_annotated_sam.rda'
 				select.descendants.regex	<- SELECT_DESC
 				is.dated.tree				<- IS_DATED_TREE	
 				deadend.descendants.regex	<- DEADEND_DESC						
@@ -1343,6 +1344,169 @@ vli.bez.evaluate.infection.loc.missing<- function()
 	df				<- merge(df, df[, list(EQ=EQ, P=COUNT/sum(COUNT)), by=c('CAT', 'haveinfo')], by=c('CAT', 'haveinfo', 'EQ'))
 	dcast.data.table(df, CAT~haveinfo+EQ, value.var='P')
 	
+}
+
+vli.bez.central.subgraphs.v190723<- function()
+{
+	require(data.table)
+	require(Gmedian)
+	require(pracma)
+	require(OjaNP)
+	
+	#	write to file
+	indir <- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis'
+	infile.subgraphs <- file.path(indir,'190801_subgraph_data.csv')
+	infile.subgraphtaxa <- file.path(indir,'190801_individuals_in_subgraph_data.csv')
+	
+	dsubgraphs <- as.data.table(read.csv(infile.subgraphs, stringsAsFactors=FALSE))
+	dsubgraphtaxa <- as.data.table(read.csv(infile.subgraphtaxa, stringsAsFactors=FALSE))
+	
+	#	count number of subgraphs by size
+	dsizes <- dsubgraphs[, list(SIZE_N= length(NAME)), by=c('ST','REP','TRM_GROUP','SIZE')]
+	tmp <- dsubgraphs[, list(MAX_SIZE=max(SIZE)), by=c('ST','TRM_GROUP')]
+	dsizes <- merge(dsizes, tmp, by=c('ST','TRM_GROUP'))
+	
+	#	for subtype and trm group, put into matrix
+	dsizes <- split(dsizes, by=c('ST','TRM_GROUP'))
+	dsmed <- lapply( seq_along(dsizes), function(i)
+			{
+				#i<- 1
+				print(i)
+				ds <- dsizes[[i]]
+				ans <- data.table(NAME= names(dsizes)[i], REP=0)
+				if(ds$MAX_SIZE[1]>1)
+				{
+					ds <- ds[, {
+								ss <- rep(0, MAX_SIZE[1])
+								ss[SIZE] <- SIZE_N
+								list(SIZE=seq_along(ss), SIZE_N=ss)
+							}, by='REP']
+					ds <- as.matrix(dcast.data.table(ds, REP~SIZE, value.var='SIZE_N'))[,-1]
+					dsmed <- Gmedian(ds)
+					dist.to.med <- apply( abs(ds - matrix(dsmed, nrow=nrow(ds), ncol=ncol(ds), byrow=TRUE)), 1, sum)
+					median.weiszfeld <- which.min(dist.to.med)
+					ans <- data.table(NAME= names(dsizes)[i], REP=median.weiszfeld-1L)	
+				}
+				ans
+			})
+	dsmed <- do.call('rbind',dsmed)
+	dsmed[, ST:= gsub('^([A-Za-z0-9]+)\\.([A-Za-z0-9]+)$','\\1', NAME)]
+	dsmed[, TRM_GROUP:= gsub('^([A-Za-z0-9]+)\\.([A-Za-z0-9]+)$','\\2', NAME)]
+	set(dsmed, NULL, 'NAME', NULL)
+	
+	#	write results of central subgraphs to file
+	dsubgraphs.central <- merge(dsubgraphs, dsmed, by=c('ST','TRM_GROUP','REP'))
+	dsubgraphtaxa.central <- merge(dsubgraphtaxa, dsmed, by=c('ST','TRM_GROUP','REP'))
+	
+	#	write to file
+	outfile.base <- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/190801_'
+	write.csv(dsubgraphs.central, row.names=FALSE, file=paste0(outfile.base,'centralsubgraph_data.csv'))
+	write.csv(dsubgraphtaxa.central, row.names=FALSE, file=paste0(outfile.base,'individuals_in_centralsubgraph_data.csv'))
+}
+
+vli.bez.summarize.state.transitions.v190723<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	require(reshape)
+	
+	#	working directory with phyloscanner output		
+	indir.phsc	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results_190723'
+	#	meta data
+	infile.meta	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_NLbyTrmGroup.csv'
+	#	file with individuals with identical sequence
+	infile.identical <- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/addtocluster_190801.txt'
+	
+	#
+	#	extract subgraphs
+	#	(only needs to be done once, skip thereafter)
+	#
+	infiles		<- data.table(F=list.files(indir.phsc, pattern='workspace.rda$', full.names=TRUE, recursive=TRUE))
+	#infiles[, SELECT_DESC_HSX:= 'NLHSX']
+	#infiles[, SELECT_DESC_MSM:= 'NLMSM']
+	infiles[, SELECT_DESC_IDU:= 'NLIDU']
+	infiles 	<- melt(infiles, measure.vars=c('SELECT_DESC_IDU'), value.name='SELECT', variable.name='SELECT_TYPE')
+	#infiles 	<- melt(infiles, measure.vars=c('SELECT_DESC_HSX','SELECT_DESC_MSM','SELECT_DESC_IDU'), value.name='SELECT', variable.name='SELECT_TYPE')
+	#infiles 	<- subset(infiles, grepl('^G', basename(F)))
+	for(i in seq_len(nrow(infiles)))
+	{
+		#i<- 1
+		cat('process', i,'\n')
+		infile <- infiles[i, F]
+		host <- infiles[i,SELECT]
+		load(infile)	
+		ph <- phyloscanner.trees[[1]][['tree']]		
+		mrcas <- which( attr(ph, 'SUBGRAPH_MRCA') )
+		mrcas <- mrcas[ attr(ph, 'INDIVIDUAL')[mrcas]==host ]	
+		# convert tree to class simmap
+		ph <- phyloscanner.to.simmap(ph)
+		# extract subgraphs
+		subgraphs <- lapply(mrcas, function(mrca) extract.subgraph(ph, mrca))
+		# save
+		outfile <- gsub('__workspace',paste0('__subgraphs_',host),infile)
+		save(subgraphs, file=outfile)
+	}
+	
+	#
+	#	get origin for all subgraphs 
+	#
+	infiles		<- data.table(F=list.files(indir.phsc, pattern='^.*_subgraphs_.*$', full.names=TRUE, recursive=TRUE))
+	infiles[, ST:= gsub('pol','',gsub('^([^_]+)_.*','\\1',basename(F)))]	
+	infiles[, REP:= as.integer(gsub('^.*([0-9]{3})_([a-z]+)__.*$','\\1',basename(F)))]
+	infiles[, TRM_GROUP:= gsub('^.*_subgraphs_([A-Z]+)\\.rda$','\\1',basename(F))]	
+	dsubgraphs <- infiles[, {
+				#i<- 1
+				#infile <- infiles[i, F]			
+				infile <- F
+				cat('Process',infile,'\n')
+				load(infile)				
+				subgraph.names <- sapply( subgraphs, function(subgraph)  subgraph$subgraph.name )
+				subgraph.parent.state <- sapply( subgraphs, function(subgraph)  subgraph$subgraph.parent.state )
+				subgraph.parent.state[is.na(subgraph.parent.state)] <- 'Unknown'
+				list(	NAME=subgraph.names, 						 
+						PARENT_STATE=subgraph.parent.state)				
+			}, by=c('ST','REP','TRM_GROUP')]
+	#set(dsubgraphs, which(dsubgraphs[, is.na(PARENT_STATE)]), 'PARENT_STATE', 'Unknown')
+	
+	#
+	#	get taxa for all subgraphs 
+	#
+	dsubgraphtaxa <- infiles[, {
+			#i<- 1
+			#infile <- infiles[i, F]			
+			infile <- F
+			cat('Process',infile,'\n')
+			load(infile)			
+			subgraph.names <- unlist(sapply( subgraphs, function(subgraph)  rep(subgraph$subgraph.name, length(subgraph$tip.label)) ))
+			subgraph.taxa <- unlist(sapply( subgraphs, function(subgraph)  subgraph$tip.label))
+			subgraph.taxa <- gsub('^([A-Za-z0-9]+)_.*$','\\1', subgraph.taxa)
+			list(	NAME=subgraph.names, 
+					ID= subgraph.taxa 
+					)				
+		}, by=c('ST','REP','TRM_GROUP')]	
+	#	add individuals with identical sequence that were left out from phylo analysis
+	tmp <- as.data.table(read.table(infile.identical, header=TRUE, stringsAsFactors=FALSE))
+	tmp <- rbind( tmp, data.table(In_cluster=tmp$In_cluster, Add_to_cluster=tmp$In_cluster) )
+	tmp <- unique(tmp)
+	setnames(tmp, c('In_cluster','Add_to_cluster'), c('ID','ID2'))
+	dsubgraphtaxa <- merge(dsubgraphtaxa, tmp, by='ID',all.x=TRUE,allow.cartesian=TRUE)
+	tmp <- which(is.na(dsubgraphtaxa[, ID2]))
+	set(dsubgraphtaxa, tmp, 'ID2', dsubgraphtaxa[tmp,ID])
+	set(dsubgraphtaxa, NULL, 'ID', NULL)
+	setnames(dsubgraphtaxa,'ID2','ID') 	
+	#	add meta data
+	dm	<- as.data.table(read.csv(infile.meta, stringsAsFactors=FALSE))
+	dsubgraphtaxa <- merge(dsubgraphtaxa, dm, by='ID')
+	
+	#	add first/last sampling date and size for each subgraph to 'dsubgraphs'
+	tmp <- dsubgraphtaxa[,  list(MIN_SAMPLING_DATE=min(SAMPLING_DATE), MAX_SAMPLING_DATE=max(SAMPLING_DATE), SIZE=length(ID)), by=c('ST','REP','TRM_GROUP','NAME')]
+	dsubgraphs <- merge(dsubgraphs,tmp,by=c('ST','REP','TRM_GROUP','NAME'))
+	
+	#	write to file
+	outfile.base <- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/190801_'
+	write.csv(dsubgraphs, row.names=FALSE, file=paste0(outfile.base,'subgraph_data.csv'))
+	write.csv(dsubgraphtaxa, row.names=FALSE, file=paste0(outfile.base,'individuals_in_subgraph_data.csv'))
 }
 
 vli.bez.summarize.state.transitions.v171019<- function()

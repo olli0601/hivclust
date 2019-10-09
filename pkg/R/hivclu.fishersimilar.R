@@ -2048,7 +2048,8 @@ project.athena.Fisheretal.select.denominator<- function(indir, infile, insignat,
 		#	cat(paste('\nWARNING: still using brl=',tmp))
 		#}		
 		argv			<<- hivc.cmd.clustering.msm(indir, infiletree, insignat, indircov, infilecov, opt.brl, tmp, thresh.bs, resume=1)
-		argv			<<- unlist(strsplit(argv,' '))		
+		argv			<<- unlist(strsplit(argv,' '))	
+		print(argv)
 		msm				<- hivc.prog.get.clustering.MSM(with.foreign=FALSE)
 		clumsm.info		<- msm$df.cluinfo
 		#	update clumsm.info with latest values from df.all
@@ -11217,6 +11218,7 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 		save(ri.PT.su, ri.allmsm.su, ri.allmsm.resolution, ri.allmsm.l2c, file=save.file)	
 	}	
 	#	stratify YX
+	YXu		<- copy(YX)
 	if(any(sapply(c('m2Awmx','m2Bwmx','m2Cwmx'), grepl, x=method.risk)))
 	{
 		save.file			<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YXm2_',method.PDT,'_',method,'.R',sep='')
@@ -11334,6 +11336,9 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 		gc()
 		stop()
 	}
+	#
+	#save.file	<- paste(outdir,'/',outfile, '_', gsub('/',':',insignat), '_', 'YX_',method,'_forAmaury','.R',sep='')
+	#save(predict.t2inf, t2inf.args, df.all, X.tables, YX.part1, YXu, YX, Y.rawbrl, Y.brl.bs, tperiod.info, file=save.file)
 	ans		<- list(predict.t2inf=predict.t2inf, t2inf.args=t2inf.args, df.all=df.all, YX=YX, Y.brl.bs=Y.brl.bs)
 	ans
 }
@@ -11341,9 +11346,9 @@ hivc.prog.props_univariate.precompute<- function(	indir, indircov, infile.cov.st
 hivc.prog.props_univariate<- function()
 {	
 	require(reshape2)
-	require(data.table)
-	
+	require(data.table)	
 	require(ape)
+	DATA<<- '/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013/data'
 	#stop()
 	indir					<- paste(DATA,"fisheretal_data",sep='/')		
 	indircov				<- paste(DATA,"fisheretal_data",sep='/')

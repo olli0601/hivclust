@@ -3,6 +3,481 @@ seattle.wrapper<- function()
 	seattle.170621.fastree()
 }
 
+seattle.190723.subgraph.empirics<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	require(reshape)
+	
+	#	working directory with phyloscanner output		
+	indir.phsc	<- '~/Box Sync/OR_Work/Seattle/phyloscanner_out_190723/KCHSX'
+	outdir <- '~/Box Sync/OR_Work/Seattle/analysis_190723/KCHSX'
+	
+	#
+	#	extract subgraph taxa	
+	#
+	infiles		<- data.table(F=list.files(indir.phsc, pattern='subgraphs_KCHSX.rda$', full.names=TRUE, recursive=TRUE))
+	infiles[, SELECT:= gsub('^(.*)_subgraphs_([A-Z]+)\\.rda','\\2',basename(F))]	
+	infiles[, ST:= gsub('^Subtype_(.*)_([0-9]+)_subgraphs_([A-Z]+)\\.rda','\\1',basename(F))]
+	infiles[, REP:= gsub('^Subtype_(.*)_([0-9]+)_subgraphs_([A-Z]+)\\.rda','\\2',basename(F))]
+	dsubgraphtaxa <- infiles[, {
+				#i<- 1
+				#infile <- infiles[i, F]			
+				infile <- F
+				cat('Process',infile,'\n')
+				load(infile)			
+				subgraph.names <- unlist(sapply( subgraphs, function(subgraph)  rep(subgraph$subgraph.name, length(subgraph$tip.label)) ))
+				subgraph.taxa <- unlist(sapply( subgraphs, function(subgraph)  subgraph$tip.label))				
+				list(	NAME=subgraph.names, 
+						TAXA= subgraph.taxa 
+				)				
+			}, by=c('ST','REP','SELECT')]	
+	#	add meta data from taxa names
+	dsubgraphtaxa[, ID:= as.numeric(gsub('^([A-Z]+)_+PR/RT-([0-9]+)-([0-9]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z_]+)-([0-9]+)$','\\3',TAXA))]
+	dsubgraphtaxa[, LOC:= gsub('^([A-Z]+)_+PR/RT-([0-9]+-[0-9]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z_]+)-([0-9]+)$','\\3',TAXA)]
+	dsubgraphtaxa[, ETH:= gsub('^([A-Z]+)_+PR/RT-([0-9]+-[0-9]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z_]+)-([0-9]+)$','\\4',TAXA)]
+	dsubgraphtaxa[, BORN:= gsub('^([A-Z]+)_+PR/RT-([0-9]+-[0-9]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z_]+)-([0-9]+)$','\\5',TAXA)]
+	dsubgraphtaxa[, SEX:= gsub('^([A-Z]+)_+PR/RT-([0-9]+-[0-9]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z_]+)-([0-9]+)$','\\6',TAXA)]
+	dsubgraphtaxa[, TRM:= gsub('_[M|F]','',gsub('^([A-Z]+)_+PR/RT-([0-9]+-[0-9]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z_]+)-([0-9]+)$','\\7',TAXA))]
+	dsubgraphtaxa[, POSDATE:= as.numeric(gsub('^([A-Z]+)_+PR/RT-([0-9]+-[0-9]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z]+)-([a-zA-Z_]+)-([0-9]+)$','\\8',TAXA))]
+	dsubgraphtaxa[, FULL_NAME:= paste0(ST,'_',REP,'_',SELECT,'_',NAME)]
+	#	add meta data from persons file
+	infile.meta <- '~/Box Sync/OR_Work/Seattle/PHSKC-2018-07-09/person.rds'
+	dmeta <- as.data.table(readRDS(infile.meta))
+	setnames(dmeta, c('newnum','b_yr','race','sex','gender'), c('ID','BIRTH_YEAR2','RACE2','SEX2','GENDER2'))
+	tmp <- subset(dmeta, select=c(ID,BIRTH_YEAR2,RACE2,SEX2,GENDER2))
+	set(tmp, NULL, 'BIRTH_YEAR2', tmp[, as.numeric(BIRTH_YEAR2)])
+	dsubgraphtaxa <- merge(dsubgraphtaxa,tmp,by='ID')
+	dsubgraphtaxa[, AGE2020:= cut(2020-BIRTH_YEAR2, breaks=c(-Inf,20,25,30,35,40,45,50,55,60,Inf))]
+	
+	# ethnicity
+	dsubgraphtaxa[, DUMMY:= ETH]
+	dcnt <- dsubgraphtaxa[, list(N= length(ID)), by=c('FULL_NAME','DUMMY')]
+	ggplot(dcnt, aes(x=FULL_NAME, y=N, fill=DUMMY)) +
+			geom_bar(stat='identity') + 
+			coord_flip() +
+			labs(y='#individuals',x='phylo subgraphs',fill='ethnicity')
+	ggsave(file=file.path(outdir, 'empirical_subgraph_composition_ethnicity.pdf'), h=15,w=6)
+	# birth place
+	dsubgraphtaxa[, DUMMY:= BORN]
+	dcnt <- dsubgraphtaxa[, list(N= length(ID)), by=c('FULL_NAME','DUMMY')]
+	ggplot(dcnt, aes(x=FULL_NAME, y=N, fill=DUMMY)) +
+			geom_bar(stat='identity') + 
+			coord_flip() +
+			labs(y='#individuals',x='phylo subgraphs',fill='birth place')
+	ggsave(file=file.path(outdir, 'empirical_subgraph_composition_birthplace.pdf'), h=15,w=6)
+	# sex
+	dsubgraphtaxa[, DUMMY:= SEX]
+	dcnt <- dsubgraphtaxa[, list(N= length(ID)), by=c('FULL_NAME','DUMMY')]
+	ggplot(dcnt, aes(x=FULL_NAME, y=N, fill=DUMMY)) +
+			geom_bar(stat='identity') + 
+			coord_flip() +
+			labs(y='#individuals',x='phylo subgraphs',fill='sex')
+	ggsave(file=file.path(outdir, 'empirical_subgraph_composition_sex.pdf'), h=15,w=6)
+	# age2020
+	dsubgraphtaxa[, DUMMY:= AGE2020]
+	dcnt <- dsubgraphtaxa[, list(N= length(ID)), by=c('FULL_NAME','DUMMY')]
+	ggplot(dcnt, aes(x=FULL_NAME, y=N, fill=DUMMY)) +
+			geom_bar(stat='identity') + 
+			coord_flip() +
+			labs(y='#individuals',x='phylo subgraphs',fill='age in 2020')
+	ggsave(file=file.path(outdir, 'empirical_subgraph_composition_age2020.pdf'), h=15,w=6)
+	
+}
+
+seattle.190723.test.simmap.casting <- function()
+{
+	require(data.table)
+	require(tidyverse)
+	require(ape)
+	require(phytools)
+	require(phangorn)
+	require(phyloscannerR)
+	
+	infile <- "/Users/Oliver/Box Sync/OR_Work/Seattle/analysis_190723/phyloscanner_HSX/Subtype_01_AE_0_workspace.rda"
+	load(infile)
+	ptree <- phyloscanner.trees[[1]]
+	tree <- ptree[['tree']]
+	ph <- phyloscanner.to.simmap(tree)	
+	attr(ph, "SPLIT") <- NULL
+	attr(ph, "INDIVIDUAL") <- NULL
+	attr(ph, "BRANCH_COLOURS") <- NULL
+	attr(ph, "SUBGRAPH_MRCA") <- NULL
+	ph <- simmap.to.phyloscanner(ph)
+	ph[["maps"]] <- ph[["mapped.edge"]] <- ph[["node.states"]] <- NULL
+	attr(ph, 'map.order') <- NULL
+	attr(ph, 'class') <- 'phylo'
+	
+	stopifnot(all( tree$tip.label == ph$tip.label ))
+	stopifnot(all( tree$edge == ph$edge ))
+	stopifnot(all( tree$edge.length == ph$edge.length ))
+	stopifnot(all( tree$Nnode == ph$Nnode ))
+	
+	tmp <- as.character(attr(tree,'SPLIT'))
+	tmp2 <- as.character(attr(ph,'SPLIT'))
+	tmp[is.na(tmp)] <- 'Unknown'
+	tmp2[is.na(tmp2)] <- 'Unknown'
+	stopifnot( all(tmp==tmp2) )
+	
+	tmp <- as.character(attr(tree,'INDIVIDUAL'))
+	tmp2 <- as.character(attr(ph,'INDIVIDUAL'))
+	tmp[is.na(tmp)] <- 'Unknown'
+	tmp2[is.na(tmp2)] <- 'Unknown'
+	stopifnot( all(tmp==tmp2) )
+	
+	tmp <- as.character(attr(tree,'BRANCH_COLOURS'))
+	tmp2 <- as.character(attr(ph,'BRANCH_COLOURS'))
+	tmp[is.na(tmp)] <- 'Unknown'
+	tmp2[is.na(tmp2)] <- 'Unknown'
+	stopifnot( all(tmp==tmp2) )
+		
+	tmp <- attr(tree,'SUBGRAPH_MRCA')
+	tmp2 <- attr(ph,'SUBGRAPH_MRCA')
+	stopifnot( all(tmp==tmp2) )
+	
+}
+
+seattle.190723.treedater <- function()
+{
+	require(data.table)
+	require(tidyverse)
+	require(ape)
+	require(phytools)
+	require(treedater)
+	
+	#infile.seqinfo <- '~/Box Sync/OR_Work/Seattle/PHSKC-2019_07_24/sequences_meta.rds'
+	#new file above not compatible with old data: cannot find sequence ids.
+	infile.seqinfo <- '~/Box Sync/OR_Work/Seattle/PHSKC-2018-07-09/sequences_meta.rds'	
+	indir.trees	<- '~/Box Sync/OR_Work/Seattle/analysis_190723/trees'	
+	infiles.trees <- data.table(F=list.files(indir.trees, pattern='rerooted\\.newick$', recursive=TRUE, full.names=TRUE))
+	indir.phsc	<- '~/Box Sync/OR_Work/Seattle/analysis_190723/phyloscanner_HSX'
+	infiles.phsc <- data.table(F=list.files(indir.phsc, pattern='workspace.rda$', full.names=TRUE, recursive=TRUE))	
+	alignment.length <- 1100
+	
+	#
+	# read Seattle sampling data 
+	#
+	
+	dseq <- readRDS(infile.seqinfo) 
+	dseq <- dseq %>% 
+			select(seqID, newnum, type, seqy, seqm) %>%
+			mutate( SEQ_DATE:= seqy + (seqm-1)/12 + 15/365,
+					SEQ_DATE_LOWER:= seqy + (seqm-1)/12,
+					SEQ_DATE_UPPER:= seqy + (seqm-1)/12 + 30/365
+					) %>%
+			select(-seqy, -seqm) %>%
+			rename(TAXA= seqID, PID= newnum, TYPE=type)
+	dseq <- as.data.table(dseq)
+	
+	#
+	#	for each tree: 
+	#	make data.table of sequence sampling times 
+	#	remove taxa without data on sampling times
+	#
+	for(i in seq_len(nrow(infiles.phsc)))
+	{
+		infile <- infiles.phsc[i,F]	
+		load(infile)
+		ph <- phyloscanner.trees[[1]][['tree']]
+		stopifnot( !any( ph$tip.label=='' ) )
+		
+		#
+		#	drop tips without sequence dates, 
+		#	while conserving the ancestral state reconstructions
+		#
+		
+		#	extract taxa names
+		dph <- data.table(	TAXA_LABEL=ph$tip.label,
+				TAXA= gsub('^(PR/RT-[0-9]+).*','\\1',gsub('^[^_]+___(.*)','\\1',ph$tip.label)),
+				TAXA_ID= seq_along(ph$tip.label))
+		#	add Seattle sequence dates
+		dph <- merge(dph, dseq, by='TAXA', all.x=TRUE)
+		#	extract GenBank sequence dates from taxa names where possible 
+		dph[, GENBANK_ID:= gsub('^([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)$','\\5',TAXA)]
+		dph[, GENBANK_SEQDATE:= gsub('^([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)$','\\3',TAXA)]
+		set(dph, dph[, which(GENBANK_SEQDATE=='-' | !is.na(SEQ_DATE))],'GENBANK_SEQDATE',NA_character_)	
+		set(dph, NULL, 'GENBANK_SEQDATE_LOWER', dph[, as.numeric(GENBANK_SEQDATE) ])
+		set(dph, NULL, 'GENBANK_SEQDATE_UPPER', dph[, as.numeric(GENBANK_SEQDATE) + 364/365 ])	
+		set(dph, NULL, 'GENBANK_SEQDATE', dph[, as.numeric(GENBANK_SEQDATE) + 1/2 ])
+		tmp <- dph[, which(is.na(SEQ_DATE))]
+		set(dph, tmp, 'SEQ_DATE', dph[tmp, GENBANK_SEQDATE])
+		set(dph, tmp, 'SEQ_DATE_LOWER', dph[tmp, GENBANK_SEQDATE_LOWER])
+		set(dph, tmp, 'SEQ_DATE_UPPER', dph[tmp, GENBANK_SEQDATE_UPPER])
+		set(dph, NULL, c('GENBANK_SEQDATE','GENBANK_SEQDATE_LOWER','GENBANK_SEQDATE_UPPER'), NULL)	
+		#	drop tips 
+		dph.old <- subset(dph, select=c(TAXA, SEQ_DATE, SEQ_DATE_LOWER, SEQ_DATE_UPPER))	
+		tmp <- subset(dph, is.na(SEQ_DATE))[, TAXA_ID]
+		cat('Dropping tips without sampling date from ', infile,' n=', length(tmp), 'of Ntips=', Ntip(ph), '\n')
+		ph <- phyloscanner.to.simmap(ph)	
+		ph <- phytools:::drop.tip.simmap(ph, ph$tip.label[tmp])
+		ph <- simmap.to.phyloscanner(ph)
+		
+		
+		#
+		#	date tree
+		#	
+		
+		#	make data.table of sequence sampling times
+		dph <- data.table(	TAXA_LABEL=ph$tip.label,
+				TAXA= gsub('^(PR/RT-[0-9]+).*','\\1',gsub('^[^_]+___(.*)','\\1',ph$tip.label)),
+				TAXA_ID= seq_along(ph$tip.label))
+		dph <- merge(dph, dph.old, by= 'TAXA')
+		stopifnot( !any(is.na(dph$SEQ_DATE)) )
+		dph <- dph[order(TAXA_ID),]
+		#	get into format needed for tree.dater	
+		#sampling.times <- dph$SEQ_DATE
+		#names(sampling.times) <- dph$TAXA_LABEL	
+		sampling.times.init <- dph$SEQ_DATE
+		names(sampling.times.init) <- dph$TAXA_LABEL
+		sampling.times.bounds <- as.data.frame(subset(dph, select=c(SEQ_DATE_LOWER, SEQ_DATE_UPPER)))
+		rownames(sampling.times.bounds) <- dph$TAXA_LABEL		
+		colnames(sampling.times.bounds) <- c('lower','upper')
+		#	date tree
+		#ph.dated <- dater(ph, sampling.times, alignment.length, numStartConditions=1)
+		ph.dated <- dater(ph, sampling.times.init, alignment.length, numStartConditions=1, estimateSampleTimes=sampling.times.bounds )
+		stopifnot( all(  ph.dated$tip.label == ph$tip.label ) )
+		stopifnot( all( ph.dated$edge == ph$edge ) )
+		#	since the tree topology is unchanged, we can copy
+		#	the branch lenghts in units of time onto the original tree
+		#	that has the ancestral state reconstructions
+		ph$edge.length <- ph.dated$edge.length
+		
+		#
+		#	plot dated tree to spot obvious errors
+		#
+		outfile <- gsub('workspace\\.rda','annotated_dated_tree.pdf',infile)
+		tmp <- vector('list')
+		tmp[['tree']] <- ph
+		tmp[['tree']][['node.states']] <- tmp[['tree']][['mapped.edge']] <- tmp[['tree']][['maps']] <- NULL
+		attr(tmp[['tree']],'map.order') <- NULL
+		attr(tmp[['tree']],'class') <- 'phylo'
+		tmp[['read.counts']] <- rep(1, Ntip(ph))	
+		write.annotated.tree(tmp, outfile, format="pdf", pdf.scale.bar.width = 0.01, pdf.w = 40, pdf.hm = 0.2, verbose = FALSE)
+		
+		#
+		#	save phyloscanner.tree
+		#
+		outfile <- gsub('workspace\\.rda','annotated_dated_tree.rda',infile)
+		save(ph, file=outfile)
+	}	
+}
+
+seattle.190723.get.newick.from.phsc<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	require(reshape)
+	require(phyloscannerR)
+	
+	#	working directory with phyloscanner output		
+	indir.phsc	<- '~/Box Sync/OR_Work/Seattle/analysis_190723/phyloscanner_HSX'
+	infiles		<- data.table(F=list.files(indir.phsc, pattern='workspace.rda$', full.names=TRUE, recursive=TRUE))
+	for(i in seq_len(nrow(infiles)))
+	{
+		#i<- 1
+		cat('process', i,'\n')
+		infile <- infiles[i, F]	
+		outfile <- gsub('_workspace\\.rda$', '.newick', infile)
+		load(infile)
+		ph <- phyloscanner.trees[[1]][['tree']]
+		write.tree(ph, file=outfile)
+	}
+}
+
+seattle.190723.get.subgraphs<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	require(reshape)
+	require(phyloscannerR)
+	#	working directory with phyloscanner output		
+	indir.phsc	<- '~/Box Sync/OR_Work/Seattle/analysis_190723/phyloscanner_HSX'
+	infiles		<- data.table(F=list.files(indir.phsc, pattern='workspace.rda$', full.names=TRUE, recursive=TRUE))
+	infiles[, SELECT:= 'KCHSX']	
+	
+	#
+	#	make pdf file
+	#
+	for(i in seq_len(nrow(infiles)))
+	{
+		#i<- 1
+		cat('process', i,'\n')
+		infile <- infiles[i, F]
+		load(infile)
+		outfile <- gsub('_workspace\\.rda','_annotated_tree.pdf',infile)
+		ptree <- phyloscanner.trees[[1]]
+		write.annotated.tree(ptree, outfile, format="pdf", pdf.scale.bar.width = 0.01, pdf.w = 40, pdf.hm = 0.2, verbose = FALSE)
+	}
+	
+	#
+	#	extract subgraphs of undated trees	
+	#
+	for(i in seq_len(nrow(infiles)))
+	{
+		#i<- 1
+		cat('process', i,'\n')
+		infile <- infiles[i, F]
+		host <- infiles[i,SELECT]
+		load(infile)	
+		ph <- phyloscanner.trees[[1]][['tree']]		
+		mrcas <- which( attr(ph, 'SUBGRAPH_MRCA') )
+		mrcas <- mrcas[ attr(ph, 'INDIVIDUAL')[mrcas]==host ]	
+		# convert tree to class simmap
+		ph <- phyloscanner.to.simmap(ph)
+		# extract subgraphs
+		subgraphs <- lapply(mrcas, function(mrca) extract.subgraph(ph, mrca))
+		# save
+		outfile <- gsub('_workspace',paste0('_subgraphs_',host),infile)
+		save(subgraphs, file=outfile)
+	}
+	
+	#
+	#	extract subgraphs of dated trees
+	#
+	infiles		<- data.table(F=list.files(indir.phsc, pattern='_annotated_dated_tree.rda$', full.names=TRUE, recursive=TRUE))
+	infiles[, SELECT:= 'KCHSX']	
+	for(i in seq_len(nrow(infiles)))
+	{
+		#i<- 1
+		cat('process', i,'\n')
+		infile <- infiles[i, F]
+		host <- infiles[i,SELECT]
+		load(infile)					
+		mrcas <- which( attr(ph, 'SUBGRAPH_MRCA') )
+		mrcas <- mrcas[ attr(ph, 'INDIVIDUAL')[mrcas]==host ]	
+		# check that tree is of class simmap
+		stopifnot( any(attr(ph,'class')=='simmap') )
+		# extract subgraphs
+		subgraphs <- lapply(mrcas, function(mrca) extract.subgraph(ph, mrca))
+		# save
+		outfile <- gsub('_annotated_dated_tree',paste0('_datedsubgraphs_',host),infile)
+		save(subgraphs, file=outfile)
+	}
+	
+}
+
+seattle.levu.180613<- function()
+{
+	#	https://github.com/slevu/tenbrit
+	require(tenbrit)
+	
+	# 	clean data and save to file
+	#	this has to be modified
+	#	TODO get UK data just for replication purposes
+	import_rawdata()
+	#	-- remove all UK seqs from LANL
+	
+	
+	#	https://github.com/slevu/garel
+	require(garel)
+	
+	#	- make BLAST database by subtype	
+	#	-- split LANL alignment into group of 200
+	#	-- for each group, remove DRMs	
+	pipeline_blastdb
+		
+	#	- find closest LANL sequences for target alignment
+	#	-- remove DRMs from target alignment	
+	#	-- BLAST against LANL seqs, save BLAST output
+	#	-- keep best hit for each target sequence
+	#	-- MAFFT to align target alignment with best hit LANL sequences (not codon aligned)
+	#	-- refer to this alignment as input alignment
+	pipeline_msa
+	
+	#	- create tree on input alignment with RaXML
+	#	-- to create UNIX scripts, use funr package https://cran.r-project.org/web/packages/funr/index.html
+	#	-- date with LSD 
+	pipeline_trees
+	
+	#	- creates bootstrap trees 
+	#	-- create bootstrap alignment from input alignment
+	#	-- run RAxML to create bootstrap trees
+	#	-- run LSD
+	pipeline_bstrees
+	
+	#	since subtype B trees are very large, we need to split into interesting 
+	#	subtrees
+	#	- create UK specific subtrees
+	#	-- option1: ancestral state reconstruction (Fitch algorithm)
+	#	-- option2: slice by date to obtain subtrees with 1000 tips and then prune non-UK tips
+	#	-- these subtrees can be small. TODO: Stephane to write avg, 50% IQR, min max.
+	extract_clades
+	
+	#	run Source Attribution for each subtype separately (for B: each clade)
+	#	requires phylodynR
+	#	
+	#	-- dated tree in ape format
+	#	-- MH max height 20 years
+	#	-- requires point estimates of PLWHIV and INCIDENCE. assumes constant numbers
+	#	-- needs PLWHIV; p is proportion of people with subtype specific infection
+	#	   p can be anything because the method uses the ratio NEWINF*p/ PLWIHIV*p
+	#	-- runs in seconds
+	#	-- output: list of donor, recip (tip index), ip (probability)
+	#	   for this bootstrap replicate
+	sa_by_clades
+
+	#	run on simulated data
+	#	https://github.com/mrc-ide/londonMSM_tree_simulator/blob/master/model1-simBaseline0.R
+	
+	#	process this output in many ways
+	#	
+}
+
+seattle.180423.make.subtype.alignments<- function()
+{	
+	require(ape)
+	
+	infile.fasta		<- '~/Box Sync/OR_Work/2017/2017_Seattle/20180423/PHSKC.HXB2.March2018.fasta'
+	sq					<- read.dna(infile.fasta, format='fa')
+	
+	#	get subtyping
+	infile.st			<- '~/Box Sync/OR_Work/2017/2017_Seattle/20180423/PHSKC.HXB2.March2018.subtype.txt'	
+	st					<- as.data.table(read.table(infile.st, skip=1, fill=TRUE, sep='\t'))
+	setnames(st, c('V1','V2','V3','V4','V5'), c('TAXA','RESULT','MAJ_ST','BS_MAJ_ST','ORDERED_LIST'))
+	st[, table(RESULT)]
+	st[, table(MAJ_ST)]
+	#	MAJ_ST
+  	#01_AE   02_AG  06_cpx   07_BC  09_cpx  11_cpx   12_BF  13_cpx  15_01B  16_A2D 22_01A1   24_BG   29_BF   44_BF  45_cpx      A1      A2       B       C       D      F1       G 
+    # 56      63       7       4       1       6       1       2       7       2       1       1       6       1       1      97       1    5636     230      17       7       5 
+    #  H 
+    #  2 
+	
+	outfile.base		<- '~/Box Sync/OR_Work/2017/2017_Seattle/20180423/PHSKC.HXB2.March2018'
+	#	B + H as outgroup
+	tmp					<- subset(st, MAJ_ST=='B' & !grepl('unassigned', RESULT))[, as.character(TAXA)]
+	tmp					<- c(tmp, subset(st, MAJ_ST=='H')[, as.character(TAXA)])
+	sqst				<- sq[tmp,]
+	write.dna(sqst, file=paste0(outfile.base,'_B.fasta'))
+	
+	#	A1 + H as outgroup + HXB2 for referencing
+	tmp					<- subset(st, MAJ_ST=='A1' & !grepl('unassigned', RESULT))[, as.character(TAXA)]
+	tmp					<- c(tmp, "HXB2", subset(st, MAJ_ST=='H')[, as.character(TAXA)])
+	sqst				<- sq[tmp,]
+	write.dna(sqst, file=paste0(outfile.base,'_A1.fasta'))
+	
+	#	C + H as outgroup + HXB2 for referencing
+	tmp					<- subset(st, MAJ_ST=='C' & !grepl('unassigned', RESULT))[, as.character(TAXA)]
+	tmp					<- c(tmp, "HXB2", subset(st, MAJ_ST=='H')[, as.character(TAXA)])
+	sqst				<- sq[tmp,]
+	write.dna(sqst, file=paste0(outfile.base,'_C.fasta'))
+	
+	#	02_AG + H as outgroup + HXB2 for referencing
+	tmp					<- subset(st, MAJ_ST=='02_AG')[, as.character(TAXA)]
+	tmp					<- c(tmp, "HXB2", subset(st, MAJ_ST=='H')[, as.character(TAXA)])
+	sqst				<- sq[tmp,]
+	write.dna(sqst, file=paste0(outfile.base,'_02AG.fasta'))
+	
+	#	01_AE + H as outgroup + HXB2 for referencing
+	tmp					<- subset(st, MAJ_ST=='01_AE')[, as.character(TAXA)]
+	tmp					<- c(tmp, "HXB2", subset(st, MAJ_ST=='H')[, as.character(TAXA)])
+	sqst				<- sq[tmp,]
+	write.dna(sqst, file=paste0(outfile.base,'_01AE.fasta'))
+}
+
+
 seattle.170601.rm.drug.resistance.mutations<- function()
 {
 	require(big.phylo)
