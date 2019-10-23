@@ -1,8 +1,10 @@
+## ---- rmd.chunk.seattle.wrapper ----
 seattle.wrapper<- function()
 {
 	seattle.170621.fastree()
 }
 
+## ---- rmd.chunk.seattle.190723.subgraph.empirics ----
 seattle.190723.subgraph.empirics<- function()
 {
 	require(data.table)
@@ -86,6 +88,7 @@ seattle.190723.subgraph.empirics<- function()
 	
 }
 
+## ---- rmd.chunk.seattle.190723.test.simmap.casting ----
 seattle.190723.test.simmap.casting <- function()
 {
 	require(data.table)
@@ -138,6 +141,155 @@ seattle.190723.test.simmap.casting <- function()
 	
 }
 
+## ---- rmd.chunk.seattle.190723.phydy ----
+seattle.190723.phydy <- function()
+{
+	require(data.table)
+	require(tidyverse)
+	require(ape)
+	require(phytools)
+	require(phangorn)
+	require(phyloscannerR)
+	
+	indir.phsc	<- '~/Box Sync/OR_Work/Seattle/analysis_190723/phyloscanner_HSX'
+	infiles.phsc <- data.table(F=list.files(indir.phsc, pattern='_annotated_dated_tree.rda$', full.names=TRUE, recursive=TRUE))
+	control	<- list( 	localstate.regex='^KCHSX.*', 
+						keep.n.nonlocal.tips=4,
+						remove.localstate.subtrees.of.size.1= 1
+						)
+	verbose <- 1
+	
+	localstate.regex <- control$localstate.regex
+	keep.n.nonlocal.tips <- control$keep.n.nonlocal.tips
+	remove.localstate.subtrees.of.size.1 <- control$remove.localstate.subtrees.of.size.1
+	
+	#	process all subtypes
+	phs <- list()
+	for( i in seq_len(nrow(infiles.phsc)))
+	{
+		#i<- 1
+		#	read dated tree
+		if(verbose)
+			cat('\nProcessing ',infiles.phsc[i,F])		
+		infile <- infiles.phsc[i,F]
+		load(infile)
+		if(verbose)
+			cat('\nIs binary ',is.binary(ph), ' has zero edge len ', any(ph$edge.length<1e-12))
+		
+		#	for each tip in local state, determine closest tips that are not in local state
+		#	option: either keep all of them, or those in subtrees of size >1
+		if(remove.localstate.subtrees.of.size.1==0)
+		{
+			localstate.tips.idx <- which(grepl(localstate.regex,ph$tip.label))	
+		}
+		if(remove.localstate.subtrees.of.size.1>0)
+		{
+			subtrees.of.tips <- data.table(	TIP=1:Ntip(ph), 
+					ST=as.character(attr(ph, "SPLIT")[1:Ntip(ph)])
+			)
+			subtrees.of.tips <- subset( subtrees.of.tips, grepl(localstate.regex,ST) )								
+			subtrees.of.tips <- merge(subtrees.of.tips, subtrees.of.tips[, list(N=length(TIP)),by='ST'], by='ST')
+			localstate.tips.idx <- subset(subtrees.of.tips, N>1)[, TIP]		
+		}
+		if(verbose) 
+			cat('\nFound tips in local state, n=',length(localstate.tips.idx))
+		
+		
+		#	get subtrees of grand-parent of MRCA. these should contain at least 
+		#	one tip in non-local state, often a few more
+		#	keep the n closest, which should contain "embedded" non-local tips
+		#	that may indicate implausible phylogeographic reconstructions
+		mrcas <- which(attr(ph,'SUBGRAPH_MRCA'))
+		subtrees.of.tips <- unique(as.character(attr(ph,'SPLIT')[localstate.tips.idx]))	
+		mrcas <- mrcas[ as.character(attr(ph, 'SPLIT')[mrcas])%in%subtrees.of.tips ]	
+		mrcas2 <- Ancestors(ph, Ancestors(ph, mrcas, type = "parent"), type = "parent")
+		subtrees <- lapply(mrcas2, function(x) extract.clade(ph, x))
+		nonlocal.tips <- lapply(subtrees, function(x){
+					subtree.dist <- as.data.table(melt(cophenetic.phylo(x)))
+					setnames(subtree.dist, c('Var1','Var2','value'), c('TAXA1','TAXA2','D'))
+					set(subtree.dist, NULL, 'TAXA1', as.character(subtree.dist$TAXA1))
+					set(subtree.dist, NULL, 'TAXA2', as.character(subtree.dist$TAXA2))
+					subtree.dist <- subset(subtree.dist, TAXA1!=TAXA2 & grepl(localstate.regex, TAXA1) & !grepl(localstate.regex, TAXA2))
+					subtree.dist <- subtree.dist[order(D),]
+					nonlocal.tips <- subtree.dist[1:min(nrow(subtree.dist),keep.n.nonlocal.tips),TAXA2]
+					nonlocal.tips
+				})
+		nonlocal.tips <- unique(unlist(nonlocal.tips))
+		#	ensure that "encompassing" non-local tips are also included
+		siblings <- Siblings(ph, mrcas, include.self=FALSE)
+		nonlocal.tips2 <- lapply(siblings, function(x){
+					if(x<=Ntip(ph))
+					{
+						nonlocal.tips2 <- ph$tip.label[x]
+					}
+					if(x>Ntip(ph))
+					{
+						tmp <- extract.clade(ph,x)
+						tmp <- data.table(TAXA=tmp$tip.label, DEPTH=node.depth.edgelength(tmp)[1:Ntip(tmp)])
+						tmp <- subset(tmp, !grepl(localstate.regex, TAXA))
+						tmp <- tmp[order(DEPTH),]
+						nonlocal.tips2 <- tmp[1:min(nrow(tmp), keep.n.nonlocal.tips), TAXA]		
+					}
+					nonlocal.tips2
+				})
+		nonlocal.tips <- unique(c(nonlocal.tips, unlist(nonlocal.tips2)))
+		
+		#	drop all other tips  	
+		tmp <- unique(c(ph$tip.label[localstate.tips.idx],nonlocal.tips))
+		drop.nonlocal.tips <- setdiff(ph$tip.label,tmp)
+		if(verbose)
+			cat('\nDropping non local tips from phylogeny, n=', length(drop.nonlocal.tips))
+		ph <- phyloscanner.to.simmap(ph)	
+		ph <- phytools:::drop.tip.simmap(ph, drop.nonlocal.tips)
+		ph <- simmap.to.phyloscanner(ph)
+		if(verbose)
+			cat('\nRetained tips from phylogeny, n=', Ntip(ph))
+		
+		if(verbose)
+			cat('\nIs binary ',is.binary(ph), ' has zero edge len ', any(ph$edge.length<1e-12))
+		
+		
+		# 	plot and save
+		outfile <- gsub('annotated_dated_tree\\.rda',paste0('annotated_dated_collapsed_tree_',gsub('[^A-Za-z0-9]','',paste(control, collapse='')),'.pdf'),infile)
+		tmp <- vector('list')
+		tmp[['tree']] <- ph
+		tmp[['tree']][['node.label']] <- NULL 
+		tmp[['tree']][['node.states']] <- tmp[['tree']][['mapped.edge']] <- tmp[['tree']][['maps']] <- NULL
+		attr(tmp[['tree']],'map.order') <- NULL
+		attr(tmp[['tree']],'class') <- 'phylo'
+		tmp[['read.counts']] <- rep(1, Ntip(ph))	
+		write.annotated.tree(tmp, outfile, format="pdf", pdf.scale.bar.width = 5, pdf.w = 40, pdf.hm = 0.4, verbose = FALSE)
+		outfile <- gsub('annotated_dated_tree\\.rda',paste0('annotated_dated_collapsed_tree_',gsub('[^A-Za-z0-9]','',paste(control, collapse='')),'.rda'),infile)
+		save(ph, file=outfile)
+		
+		phs[[i]] <- ph
+	}
+	
+	#	concatenate subtype trees and save
+	for(i in seq_along(phs))
+	{
+		ph <- phs[[i]]
+		ph$maps <- ph$mapped.edge <- ph$node.states<- ph$node.label <- NULL
+		attr(ph,'SPLIT') <- attr(ph,'INDIVIDUAL') <-  attr(ph,'SUBGRAPH_MRCA') <-  attr(ph,'map.order') <- NULL
+		attr(ph, "class") <- 'phylo'
+		phs[[i]] <- ph
+	}
+	#options(expressions=1e4)
+	ph <- eval(parse(text=paste('phs[[',seq_along(phs),']]', sep='',collapse='+')))
+	#options(expressions=5e3)
+	ph <- multi2di(ph, random=TRUE)
+	outfile <- file.path( dirname(infile), paste0('SubtypeALL_annotated_dated_collapsed_tree_',gsub('[^A-Za-z0-9]','',paste(control, collapse='')),'.newick') )
+	write.tree(ph, file=outfile)
+	
+	df <- data.table(TAXA=ph$tip.label)
+	df[, LOCAL_TIP:= grepl(localstate.regex, TAXA)]
+	df[, table(LOCAL_TIP)]
+	
+	
+	
+}
+
+## ---- rmd.chunk.seattle.190723.treedater ----
 seattle.190723.treedater <- function()
 {
 	require(data.table)
@@ -263,6 +415,285 @@ seattle.190723.treedater <- function()
 	}	
 }
 
+## ---- rmd.chunk.seattle.191017.sequence.labels ----	
+seattle.191017.sequence.labels<- function()
+{
+	require(data.table)
+	require(ape)
+	require(tidyverse)
+	
+	home <- '~/Box Sync/OR_Work/Seattle'
+	infile.indinfo <- file.path(home,'PHSKC-2018-07-09','person.rds')
+	infile.seqinfo <- file.path(home,'PHSKC-2018-07-09','sequences_meta.rds')	
+	infile.countryinfo <- file.path(home,'analysis_191017','misc/Country_db.rds')
+	infiles.lanl <- file.path(home,'analysis_191017','alignments',c('180709_LANL_Subtype01AE_mafft.fasta','180709_LANL_SubtypeA1_mafft.fasta','180709_LANL_SubtypeB_mafft.fasta','180709_LANL_SubtypeC_mafft.fasta'))
+	infile.subtype <- file.path(home,'analysis_191017','misc','180709_Subtype.csv')
+	outfile.base <- file.path(home,'analysis_191017','misc','180709_')
+	
+	#
+	# collect country codes
+	#
+	dco <- readRDS(infile.countryinfo)
+	dco <- lapply(seq_len(length(dco)), function(i) tibble(WRLD=names(dco)[i], CNTRY=dco[[i]]))
+	dco <- do.call('rbind',dco)
+	dco <- dco %>% mutate(WRLD=gsub('Unkno','Unknown',gsub('\\.|\\_','',WRLD)))	
+	tmp <- tibble(	CNTRY= c("BO", "SD", "EC", "AG", "DM", "GD", "GY", "VC", "SR", "LC", "UZ", "AZ", "GH", "HT", "LV", "BZ", "MN", "GF", "TJ"),
+					NAME= c("Bolivia","Sudan","Ecuador","Antigua","Dominica","Grenada","Guyana","Saint Vincent","Suriname","Saint Lucia","Uzbekistan","Azerbaijan","Ghana","Haiti","Latvia","Belize","Mongolia","French Guiana","Tajikistan"),
+					WRLD= c("SMAm","NorAf","SMAm","SMAm","SMAm","SMAm","SMAm","SMAm","SMAm","SMAm","Asia","Asia","SSA","SMAm","Europe","SMAm","Asia","SMAm","Asia")
+					)
+	dco <- tmp %>%	
+		select(WRLD, CNTRY) %>%			
+		rbind(dco) %>% 
+		mutate(WRLD:= case_when(CNTRY=='MX'~"SMAm",CNTRY=='CA'~'Canada',CNTRY=='GL'~'Canada',CNTRY!='GL'&CNTRY!='CA'&CNTRY!='MX'~WRLD)) %>%		
+		arrange(WRLD, CNTRY)
+	table(dco$WRLD, dco$CNTRY)	
+
+	#
+	# read Seattle indidivual data 
+	#	
+	dind <- readRDS(infile.indinfo) 
+	dind <- dind %>% 
+			select(newnum, race, birthCountry, gender, sex, sex_with_male_and_female, transm, rsh_county_name, rsa_county_name, cur_county_name) %>%
+			mutate( birthCountry2:= gsub('^\\(([A-Z0-9]+)\\).*$','\\1', birthCountry),
+					county:= case_when(	rsh_county_name!="KING CO."&rsa_county_name!="KING CO."&cur_county_name!="KING CO."~'other',
+										rsh_county_name=="KING CO."|rsa_county_name=="KING CO."|cur_county_name=="KING CO."~'king'),
+					Gender2:= case_when(gender=='FM'~'Trns',
+										gender=='MF'~'Trns',
+										gender=='F'&sex=='F'~'F',
+										gender=='F'&sex=='M'~'Trns',
+										gender=='M'&sex=='M'~'M',
+										gender=='M'&sex=='F'~'Trns'),
+					transm2:= case_when(grepl('MSM',transm)~'MSM',
+										grepl('HETERO',transm)~'HSX',
+										grepl('BLOOD|PERINAT|OTHER',transm)~'OTH',
+										grepl('UNKNOWN',transm)~'UNKNOWN'),
+					race2:= case_when( grepl('Black',race)~'Black',
+									grepl('White',race)~'White',
+									grepl('\\(1\\)Hispanic',race)~'Hispanic',
+									grepl('Hawaiian|Indian|Asian|Multi-race',race)~'Other',
+									grepl('Unknown',race)~'Unknown'
+									)) %>%
+			mutate( birthCountry2:= case_when(	birthCountry2==''~'Unknown',
+												birthCountry2=='X98'~'Unknown',
+												birthCountry2=='X99'~'Unknown',
+												birthCountry2!=''&birthCountry2!='X98'&birthCountry2!='X99'~birthCountry2
+												))
+	#	setdiff( dind$birthCountry2, dco$CNTRY )	
+	#	let s not resolve country of birth to world region for now..
+	for(x in colnames(dind))
+	 attr(dind[[x]], "label") <- NULL			
+	#			
+	#table(dind$Gender2, dind$transm2, dind$sex_with_male_and_female) # sex_with_male_and_female does not look very reliable
+
+	#
+	# read Seattle sequence data 
+	#	
+	dseq <- readRDS(infile.seqinfo)
+	dseq <- dseq %>% filter(type=='PR/RT') %>% select(seqID, newnum, seqy)
+	for(x in colnames(dseq))
+		attr(dseq[[x]], "label") <- NULL	
+	dseq <- dind %>% inner_join(dseq, by='newnum')	
+	dseq <- dseq %>% select(newnum, seqID, seqy, county, Gender2, transm2, race2, birthCountry2)	
+	tmp <- as_tibble(read.csv(infile.subtype, stringsAsFactors=FALSE)) %>%
+			rename(seqID:=name, ST:=subtype) %>%
+			select(seqID, ST) %>%
+			mutate(seqID= gsub('PRRT','PR/RT',seqID))
+	dseq <- dseq %>% left_join(tmp, by='seqID')
+	
+	#
+	#	collect LANL labels
+	#
+	dl <- sapply(seq_along(infiles.lanl), function(i) rownames(read.dna(infiles.lanl[i],format='fa')))
+	dl <- tibble(TAXA=unlist(dl)) %>% 
+			filter(!grepl('PR\\/RT',TAXA) & TAXA!='HXB2') %>% 
+			mutate(	ST:= sapply(strsplit(TAXA,'.',fixed=TRUE),'[[',1),
+					CNTRY:= sapply(strsplit(TAXA,'.',fixed=TRUE),'[[',2),
+					YEAR:= sapply(strsplit(TAXA,'.',fixed=TRUE),'[[',3),
+					GENBANK:= sapply(strsplit(TAXA,'.',fixed=TRUE),'[[',5)) %>% 
+			distinct()
+	dl <- dl %>%
+			filter(grepl('HXB2',TAXA)) %>%
+			mutate(TAXA:='HXB2') %>%
+			rbind(dl)	
+	#
+	outfile <- paste0(outfile.base,'sequence_labels.rda')
+	save(dseq, dind, dl, dco, file= outfile)
+	
+	#
+	#	make sequence labels for KCMSM
+	#
+	tmp <- dseq %>% rename(TAXA:= seqID) %>%
+			mutate(WRLD:= case_when(county=='king'&transm2=='MSM'~'KCMSM',
+										county=='king'&transm2!='MSM'~'KCnonMSM',
+										county!='king'~'WAState')) %>%
+			mutate(TAXA_NEW:= paste0(WRLD,'___',TAXA,'_',newnum,'_',county,'_',race2,'_',birthCountry2,'_',Gender2,'_',transm2,'_',seqy)) %>%
+			select(ST,WRLD,TAXA,TAXA_NEW)
+	tmp <- dl %>% left_join(dco, by='CNTRY') %>%
+			mutate(TAXA_NEW:= paste0(WRLD,'___',TAXA)) %>%
+			select(ST,WRLD,TAXA,TAXA_NEW) %>%
+			rbind(tmp) %>%
+			arrange(WRLD)
+	outfile <- paste0(outfile.base,'sequence_labels_KCMSM.csv')
+	write.csv(tmp, file=outfile)
+	#
+	#	make sequence labels for KCHSX
+	#
+	tmp <- dseq %>% rename(TAXA:= seqID) %>%
+			mutate(WRLD:= case_when(county=='king'&transm2=='HSX'~'KCHSX',
+							county=='king'&transm2!='HSX'~'KCnonHSX',
+							county!='king'~'WAState')) %>%
+			mutate(TAXA_NEW:= paste0(WRLD,'___',TAXA,'_',newnum,'_',county,'_',race2,'_',birthCountry2,'_',Gender2,'_',transm2,'_',seqy)) %>%
+			select(ST,WRLD,TAXA,TAXA_NEW)
+	tmp <- dl %>% left_join(dco, by='CNTRY') %>%
+			mutate(TAXA_NEW:= paste0(WRLD,'___',TAXA)) %>%
+			select(ST,WRLD,TAXA,TAXA_NEW) %>%
+			rbind(tmp) %>%
+			arrange(WRLD)
+	outfile <- paste0(outfile.base,'sequence_labels_KCHSX.csv')
+	write.csv(tmp, file=outfile)
+	#
+	#	make sequence labels for KC overall
+	#
+	tmp <- dseq %>% rename(TAXA:= seqID) %>%
+			mutate(WRLD:= case_when(county=='king'~'KC',							
+							county!='king'~'WAState')) %>%
+			mutate(TAXA_NEW:= paste0(WRLD,'___',TAXA,'_',newnum,'_',county,'_',race2,'_',birthCountry2,'_',Gender2,'_',transm2,'_',seqy)) %>%
+			select(ST,WRLD,TAXA,TAXA_NEW)
+	tmp <- dl %>% left_join(dco, by='CNTRY') %>%
+			mutate(TAXA_NEW:= paste0(WRLD,'___',TAXA)) %>%
+			select(ST,WRLD,TAXA,TAXA_NEW) %>%
+			rbind(tmp) %>%
+			arrange(WRLD)
+	outfile <- paste0(outfile.base,'sequence_labels_KC.csv')
+	write.csv(tmp, file=outfile)
+}
+
+## ---- rmd.chunk.seattle.191017.phyloscanner ----
+seattle.191017.phyloscanner <- function()
+{
+	require(data.table)
+	require(ape)
+	require(adephylo)
+	require(phytools)
+	
+	prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
+	plot.phylogenies <- 1
+	home <- '~/Box Sync/OR_Work/Seattle/analysis_191017'
+	#home <- '/rds/general/project/ratmann_seattle_data_analysis/live/olli_191017'
+	
+	indir.trees <- file.path(home,'fasttree')
+	infile.labels <- data.table(FLABEL= c( 	file.path(home,'misc','180709_sequence_labels_KC.csv'),
+										 	file.path(home,'misc','180709_sequence_labels_KCMSM.csv'),
+											file.path(home,'misc','180709_sequence_labels_KCHSX.csv'))
+								)
+	outdir <- file.path(home,'phyloscanner')
+	
+	
+	infiles <- data.table(FIN=list.files(indir.trees, pattern='\\.newick$',full.names=TRUE))
+	infiles[, DUMMY:= 1L]
+	infile.labels[, DUMMY:= 1L]
+	infiles <- merge(infiles, infile.labels, by='DUMMY', allow.cartesian=TRUE)
+	infiles[, DUMMY:= NULL]
+	infiles[, ST:= gsub('.*_Subtype([A-Z0-9]+)_.*','\\1',basename(FIN))]	
+	#infiles <- subset(infiles, ST=='B')
+	cmds <- vector('list',nrow(infiles))
+	for(i in seq_len(nrow(infiles)))
+	{
+		#i<- 1
+		cat('\nprocess ',infiles[i,FIN],'\nprocess ',infiles[i,FLABEL])
+		infile <- infiles[i,FIN]
+		ph <- read.tree(infile)
+		ph$node.label <- NULL
+		#	update tip labels: add world region to start of label
+		local.world.region <- gsub('^.*_labels_([A-Z]+)\\.csv$','\\1', basename(infiles[i,FLABEL]))
+		dl <- as.data.table(read.csv(infiles[i,FLABEL], stringsAsFactors=FALSE))
+		dl[, X:=NULL]	
+		stopifnot(!any(ph$tip.label==''))
+		dp <- data.table(IDX=1:Ntip(ph), TAXA=ph$tip.label)
+		dp <- merge(dp,dl,by='TAXA',all.x=TRUE)
+		stopifnot( nrow(dp[is.na(TAXA_NEW),])==0 )
+		stopifnot( !any(duplicated(ph$tip.label)) )
+		ph$tip.label <- dp[order(IDX),][, TAXA_NEW]
+		#	re-root
+		tmp <- dp[, list(NST=length(TAXA)), by='ST']
+		tmp <- tmp[order(-NST),][2,ST]
+		tmp <- subset(dp, ST==tmp,)[,TAXA_NEW]
+		root <- getMRCA(ph, tmp)
+		ph <- reroot(ph, root, ph$edge.length[which(ph$edge[,2]==root)]/2)
+		#	drop other subtypes
+		tmp <- dp[, list(NST=length(TAXA)), by='ST']
+		tmp <- tmp[order(-NST),][-1,ST]
+		tmp <- subset(dp, ST%in%tmp,)[,TAXA_NEW]
+		ph <- drop.tip(ph, tmp)
+		#	write to file
+		intree.phsc <- file.path(outdir,gsub('\\.newick',paste0('_rerooted_',local.world.region,'.newick'),basename(infile)))
+		write.tree(ph, file=intree.phsc)
+		if(plot.phylogenies)
+		{
+			pdf(file=gsub('newick','pdf',intree.phsc), w=20, h=10+Ntip(ph)/10)
+			plot(ph, show.node.label=TRUE, cex=0.3)
+			dev.off()			
+		}
+		# 	make phyloscanner UNIX command
+		infile <- intree.phsc
+		outputString <- paste0(gsub('\\.newick','_',intree.phsc))
+		tip.regex <- "^([A-Za-z]+)___.*$"
+		cmd <- paste("CWD=$(pwd)\n",sep='')
+		cmd <- paste(cmd,"echo $CWD\n",sep='')	
+		tmpdir.prefix <- paste('phsc_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
+		tmpdir <- paste("$CWD/",tmpdir.prefix,sep='')
+		tmp.in <- file.path(tmpdir, basename(infile))
+		cmd <- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
+		cmd <- paste(cmd,'cp "',infile,'" ',tmp.in,'\n', sep='')
+		cmd <- paste(cmd,'cd ', tmpdir,'\n', sep='')
+		cmd <- paste0(cmd,'Rscript ',prog.phyloscanner_analyse_trees,' ',basename(infile),' ',basename(outputString))	
+		cmd <- paste0(cmd,' s,0 -m 1e-5 -x "',tip.regex,'" -v 1 -ow -rda\n')
+		cmd <- paste0(cmd,'mv ',basename(outputString),'* ','"',dirname(outputString),'"','\n')	
+		cmd <- paste(cmd, "cd $CWD\n",sep='')
+		cmd <- paste(cmd, "rm ", tmpdir,'\n',sep='')
+		cmds[[i]] <- cmd
+	}
+	infiles[, CMD:= unlist(cmds)]	
+	
+	#	submit jobs like this one:
+	cat(infiles[1,CMD])
+	
+	#	run on HPC as array job
+	df <- copy(infiles)
+	df[, CASE_ID:= 1:nrow(df)]	
+	#	make PBS header
+	hpc.load	<- "module load anaconda3/personal"
+	hpc.select	<- 1						# number of nodes
+	hpc.nproc	<- 1						# number of processors on node
+	hpc.walltime<- 923						# walltime
+	hpc.q		<- "pqeelab"						# PBS queue
+	hpc.mem		<- "24gb" 					# RAM
+	hpc.array	<- length(unique(df$CASE_ID))	# number of runs for job array
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')		
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")			
+	#	make array job
+	cmd		<- df[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+	cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("phs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(outdir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))	
+}
+
+## ---- rmd.chunk.seattle.190723.get.newick.from.phsc ----
 seattle.190723.get.newick.from.phsc<- function()
 {
 	require(data.table)
@@ -286,6 +717,7 @@ seattle.190723.get.newick.from.phsc<- function()
 	}
 }
 
+## ---- rmd.chunk.seattle.190723.get.subgraphs ----
 seattle.190723.get.subgraphs<- function()
 {
 	require(data.table)
@@ -359,6 +791,305 @@ seattle.190723.get.subgraphs<- function()
 	
 }
 
+## ---- rmd.chunk.mueller.tree.height.test ----
+mueller.tree.height.test<- function()
+{
+	require(data.table)
+	#	esco takes about 8 hours, masco about 1.5 hours per 1M samples and 1M needed
+	#	need to run on HPC
+	
+	cmd.beast <- '"/Applications/BEAST 2.6.0/lib/launcher.jar"'
+	cmd.beast <- '"/Users/Oliver/git/The-Structured-Coalescent/jar/esco.jar"'
+	cmd.launcher <- paste0('java -Xmx16g -jar ',cmd.beast,' -threads 4')
+	
+	
+	indir <- '~/Box Sync/OR_Work/Seattle/Mueller/TreeHeightTest/xmls'
+	outdir <- '~/Box Sync/OR_Work/Seattle/Mueller/TreeHeightTest/out_191015'
+	infiles <- data.table(FIN=list.files(indir, pattern='xml$', full.names=TRUE))
+	
+	i<- 4
+	cmd <- paste0(cmd.launcher, ' "', infiles[i, FIN], '"')
+	cat(cmd)	
+}
+
+## ---- rmd.chunk.mueller.aiv ----
+mueller.aiv<- function()
+{
+	require(data.table)
+	#	masco takes about 50 hours for 1M iterations and 10M needed
+	#	need to run on HPC
+	
+	cmd.beast <- '"/Applications/BEAST 2.6.0/lib/launcher.jar"'
+	cmd.beast <- '"/Users/Oliver/git/The-Structured-Coalescent/jar/esco.jar"'
+	cmd.launcher <- paste0('java -Xmx16g -jar ',cmd.beast,' -threads 4')
+	
+	
+	indir <- '~/Box Sync/OR_Work/Seattle/Mueller/AIV/xmls'
+	outdir <- '~/Box Sync/OR_Work/Seattle/Mueller/AIV/out_191015'
+	infiles <- data.table(FIN=list.files(indir, pattern='xml$', full.names=TRUE))
+	
+	i<- 2
+	cmd <- paste0(cmd.launcher, ' "', infiles[i, FIN], '"')
+	cat(cmd)	
+}
+
+## ---- rmd.chunk.cmd.beast2 ----
+cmd.beast2<- function(infile.xml, control=list(beast.launcher='/Applications/BEAST 2.6.0/lib/launcher.jar', out.dir=dirname(infile.xml)))
+{			
+	stopifnot(is.character(control$beast.launcher))
+	stopifnot(is.character(control$out.dir))
+	stopifnot(grepl('\\.xml$',infile.xml))
+	if(!any(names(control)=='Xmx'))
+		control$Xmx <- '2g'
+	if(!any(names(control)=='threads'))
+		control$threads <- 1L
+	cmd				<- paste("CWD=$(pwd)\n",sep='')
+	cmd				<- paste(cmd,"echo $CWD\n",sep='')	
+	tmpdir.prefix	<- paste('ft_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
+	tmpdir			<- paste("$CWD/",tmpdir.prefix,sep='')
+	tmp.in			<- file.path(tmpdir, basename(infile.xml))
+	tmp.out			<- gsub('\\.xml','',basename(infile.xml))	
+	cmd				<- paste0(cmd,"mkdir -p ",tmpdir,'\n')
+	cmd				<- paste0(cmd,'cp "',infile.xml,'" ',tmp.in,'\n')
+	cmd				<- paste0(cmd,'cd ', tmpdir,'\n')
+	cmd				<- paste0(cmd, 'java -Xmx',control$Xmx,' -jar "', control$beast.launcher,'" -threads ',control$threads)
+	cmd				<- paste0(cmd,' ',basename(infile.xml),'\n')
+	cmd				<- paste0(cmd, 'mv ', tmp.out,'* "',control$out.dir,'"\n')
+	cmd				<- paste0(cmd,'cd $CWD\n')
+	cmd				<- paste(cmd, "rm -r ", tmpdir,'\n',sep='')	
+	cmd
+}
+
+## ---- rmd.chunk.siveroni.flu ----
+siveroni.flu<- function()
+{
+	require(data.table)
+	#	masco takes about 50 hours for 1M iterations and 10M needed
+	#	need to run on HPC
+	
+	if(0)
+	{
+		beast.launcher <- '/Applications/BEAST 2.6.0/lib/launcher.jar'
+		#beast.launcher <- '/Users/Oliver/git/The-Structured-Coalescent/jar/esco.jar'	
+		in.dir <- '~/Box Sync/OR_Work/Seattle/Siveroni/Flu/xmls'
+		out.dir <- '~/Box Sync/OR_Work/Seattle/Siveroni/Flu/out_191015'		
+	}
+	if(1)
+	{
+		beast.launcher <- '/rds/general/user/or105/home/libs/beast/lib/launcher.jar'
+		in.dir <- '/rds/general/project/ratmann_seattle_data_analysis/live/siveroni/flu/xmls'
+		out.dir <- '/rds/general/project/ratmann_seattle_data_analysis/live/siveroni/flu/out'		
+	}
+	
+	#	create BEAST2 run
+	infiles <- data.table(FIN=list.files(in.dir, pattern='xml$', full.names=TRUE))
+	control <- list(beast.launcher=beast.launcher,
+			threads= 1L,
+			Xmx= '6g',
+			out.dir= out.dir)	
+	i<- 1
+	cmd <- cmd.beast2(infiles[i, FIN], control=control)
+	cat(cmd)	
+	
+	#	submit to HPC
+	hpc.load	<- "module load java/jdk-8u66"
+	hpc.select	<- 1						# number of nodes
+	hpc.nproc	<- 1						# number of processors on node
+	hpc.walltime<- 923						# walltime
+	hpc.q		<- "pqeelab"				# PBS queue
+	hpc.mem		<- "6gb" 					# RAM		
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")			
+	cmd			<- paste(pbshead,cmd,sep='\n')
+	cat(cmd)	 								
+	outfile		<- gsub(':','',paste("pydy",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(out.dir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)		
+	cat(system(cmd, intern= TRUE))	
+	quit("no")		
+}
+
+## ---- rmd.chunk.seattle.191017.alignment.rm.drug.resistance.mutations ----
+seattle.191017.alignment.rm.drug.resistance.mutations <- function()
+{	
+	require(big.phylo)
+	home <- '~/Box Sync/OR_Work/Seattle/analysis_191017'
+	indir <- file.path('alignments')	
+	df <- data.table(F=list.files(indir, pattern='fasta$',full.names=TRUE))
+	df <- subset(df, !grepl('nodrm',F))
+	for(i in seq_len(nrow(df)))
+	{
+		infile.fasta <- df[i,F]
+		outfile <- gsub('\\.fasta','_ndrm.fasta',infile.fasta)
+		
+		cat('\nprocess ',infile.fasta)
+		sq					<- read.dna(infile.fasta, format='fa')	
+		tmp					<- which(grepl("HXB2",rownames(sq)))
+		rownames(sq)[tmp]	<- 'HXB2'
+		tmp					<- big.phylo:::seq.rm.drugresistance(sq)
+		sq					<- tmp$nodr.seq
+		cat('\nwrite to ',outfile)
+		write.dna(sq, file= outfile, format='fasta')
+	}	
+}
+
+## ---- rmd.chunk.seattle.191017.alignment.update ----
+seattle.191017.alignment.update <- function()
+{	
+	require(tidyverse)
+	
+	home <- '~/Box Sync/OR_Work/Seattle'
+	infile.seqinfo.current <- file.path(home,'PHSKC-2018-07-09/sequences_meta.rds')
+	infile.seq.current <- file.path(home,'PHSKC-2018-07-09/Sequences.fas')
+	infile.seqinfo.update <- file.path(home,'Seattle/PHSKC-2019_10_11/sequences_meta.rds')
+	infile.seq.update <- file.path(home,'PHSKC-2019_10_11/Sequences.fas')
+	
+	sc <- readRDS(infile.seqinfo.current) %>%
+			filter(type!='IN') %>%
+			select(seqID, newnum, seqy, seqm) %>%	
+			rename(cur.newnum=newnum, cur.seqy=seqy, cur.seqm=seqm)			
+	su <- readRDS(infile.seqinfo.update) %>%
+			filter(type!='IN') %>%
+			select(seqID, newnum, type, seqy, seqm) %>%
+			rename(upd.newnum=newnum, upd.seqy=seqy, upd.seqm=seqm)
+	ss <- sc %>% full_join(su, by='seqID')
+	which(is.na(ss$upd.newnum))
+	
+	#	! FAIL !
+	ss %>% filter(is.na(upd.newnum))
+	
+	#	ok
+	ss %>% 
+			filter(!is.na(upd.newnum) & !is.na(cur.newnum)) %>%			
+			filter(cur.newnum!=upd.newnum | cur.seqy!=upd.seqy | cur.seqm!=upd.seqm ) 
+
+	seq.ids <- ss %>% 
+			filter(!is.na(upd.newnum) & !is.na(cur.newnum)) %>%
+			pull(seqID)
+	seqc <- read.dna(infile.seq.current, format='fa')
+	sequ <- read.dna(infile.seq.update, format='fa')
+	test <- sapply(seq_along(seq.ids), function(i){
+				cur <- paste(unlist(as.character(seqc[ seq.ids[i] ])), collapse='')
+				upd <- paste(unlist(as.character(sequ[ seq.ids[i] ])), collapse='')
+				cur==upd
+			})
+	test <- tibble(seqID=seq.ids, identical=test)
+	test.fail <- test %>% filter(!identical)
+	test.fail
+	
+	seq.name <- test.fail[1, ] %>% pull(seqID )
+	paste(unlist(as.character(seqc[ seq.name ])), collapse='')
+	paste(unlist(as.character(sequ[ seq.name ])), collapse='')
+	
+		
+}
+
+## ---- rmd.chunk.seattle.191017.alignment.make.bootstraps ----
+seattle.191017.alignment.make.bootstraps <- function()
+{	
+	home <- '~/Box Sync/OR_Work/Seattle/analysis_191017'
+	indir <- file.path(home,'alignments')
+	outdir <- file.path(home,'alignments_bs')
+	bsn <- 10
+	seed <- 42L
+	#
+	df <- data.table(F=list.files(indir, pattern='fasta$',full.names=TRUE))
+	df <- subset(df, grepl('ndrm',F))
+	for(i in seq_len(nrow(df)))
+	{
+		infile.fasta <- df[i,F]
+		cat('\nprocess ',infile.fasta)
+		sq					<- read.dna(infile.fasta, format='fa')	
+		set.seed(seed)
+		for(b in 0:bsn)
+		{
+			outfile <- gsub('\\.fasta',paste0('_',sprintf("%03d",b),'.fasta'),infile.fasta)
+			outfile <- file.path(outdir,basename(outfile))
+			bs <- 1:ncol(sq)
+			if(b>0)
+			{
+				bs<- sample(1:ncol(sq), ncol(sq), replace=TRUE)	
+			}			
+			write.dna(sq[,bs], file=outfile, format='fa', colsep='', nbcol=-1)
+		}		
+	}	
+}
+
+## ---- rmd.chunk.seattle.191017.fastree ----
+seattle.191017.fastree<- function()
+{	
+	require(big.phylo)
+	require(data.table)
+	
+	home <- '~/Box Sync/OR_Work/Seattle/analysis_191017'
+	home <- '/rds/general/project/ratmann_seattle_data_analysis/live/olli_191017'
+	
+	indir <- file.path(home,'alignments_bs')
+	outdir <- file.path(home,'fasttree')
+	
+	#	get UNIX commands for all trees to be processed
+	df <- data.table(FIN=list.files(indir, pattern='fasta$',full.names=TRUE))
+	df <- subset(df, grepl('ndrm',FIN))
+	df[, ST:= gsub('.*_Subtype([A-Z0-9]+)_.*','\\1',basename(FIN))]
+	df[, FOUT:= file.path(outdir,gsub('\\.fasta','_ft.newick',basename(FIN)))]
+	cmds <- vector('list', nrow(df))
+	for(i in seq_len(nrow(df)))
+	{
+		infile.fasta <- df[i,FIN]
+		outfile <- df[i,FOUT]			
+		tmp <- cmd.fasttree(infile.fasta, outfile=outfile, pr.args='-nt -gtr -gamma', check.binary=TRUE)
+		cmds[[i]] <- tmp
+	}
+	df[, CMD:= unlist(cmds)]	
+	
+	#	submit jobs like this one:
+	cat(df[1,CMD])
+	
+	#	run on HPC as array job
+	df <- subset(df, ST=='B')
+	df[, CASE_ID:= 1:nrow(df)]
+	
+	#	make PBS header
+	hpc.load	<- "module load R/3.3.3"
+	hpc.select	<- 1						# number of nodes
+	hpc.nproc	<- 1						# number of processors on node
+	hpc.walltime<- 923						# walltime
+	hpc.q		<- "pqeelab"						# PBS queue
+	hpc.mem		<- "6gb" 					# RAM
+	hpc.array	<- length(unique(df$CASE_ID))	# number of runs for job array
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')		
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")			
+	#	make array job
+	cmd		<- df[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+	cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("trs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(outdir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))
+}
+
+## ---- rmd.chunk.seattle.levu.180613 ----
 seattle.levu.180613<- function()
 {
 	#	https://github.com/slevu/tenbrit
@@ -426,6 +1157,7 @@ seattle.levu.180613<- function()
 	#	
 }
 
+## ---- rmd.chunk.seattle.180423.make.subtype.alignments ----
 seattle.180423.make.subtype.alignments<- function()
 {	
 	require(ape)
@@ -508,6 +1240,7 @@ seattle.170607.rm.drug.resistance.mutations<- function()
 	write.dna(sq, file= outfile, format='fasta')
 }
 
+## ---- rmd.chunk.seattle.170601.fastree ----
 seattle.170601.fastree<- function()
 {	
 	require(big.phylo)
@@ -543,17 +1276,7 @@ seattle.170601.fastree<- function()
 	Sys.chmod(paste0(outfile,'.sh'), mode = "777")	
 }
 
-seattle.170607.fastree<- function()
-{	
-	require(big.phylo)
-	
-	infile.fasta	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.plus.LANL.USA.refse.ndrm.fasta'
-	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
-	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma', check.binary=TRUE)
-	#	run on command line
-	cat(tmp)	
-}
-
+## ---- rmd.chunk.seattle.170621.fastree ----
 seattle.170621.fastree<- function()
 {	
 	require(big.phylo)
@@ -575,6 +1298,7 @@ seattle.170621.fastree<- function()
 	cmd.hpccaller(indir, outfile.cmd, cmd)	
 }
 
+## ---- rmd.chunk.seattle.170814.metadata.regionorigin ----
 seattle.170814.metadata.regionorigin<- function()
 {
 	infile	<- '~/Dropbox (SPH Imperial College)/OR_Work/2017/2017_Seattle/Seattle.2017_08_04.metadata/sequences_meta.RData'
@@ -784,6 +1508,7 @@ seattle.170814.metadata.regionorigin<- function()
 	save(dp, file=outfile)
 }
 
+## ---- rmd.chunk.seattle.170814.LSD ----
 seattle.170814.LSD<- function()
 {	
 	require(data.table)
@@ -866,7 +1591,7 @@ seattle.170814.LSD<- function()
 	cmd.hpccaller(indir.ft, outfile, cmd)	
 }
 
-
+## ---- rmd.chunk.seattle.170601.clustering ----
 seattle.170601.clustering<- function()
 {	
 	require(big.phylo)
@@ -909,6 +1634,7 @@ seattle.170601.clustering<- function()
 	save(ph, clustering, dfc, file, file=outfile)	
 }
 
+## ---- rmd.chunk.seattle.170607.clustering ----
 seattle.170607.clustering<- function()
 {	
 	require(big.phylo)
@@ -951,6 +1677,7 @@ seattle.170607.clustering<- function()
 	save(ph, clustering, dfc, file, file=outfile)	
 }
 
+## ---- rmd.chunk.seattle.170601.clustering.plot ----
 seattle.170601.clustering.plot<- function()
 {
 	

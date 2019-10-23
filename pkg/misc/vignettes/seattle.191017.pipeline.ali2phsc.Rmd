@@ -1,0 +1,112 @@
+---
+title: "**analysis pipeline: from alignment to phyloscanner output**"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+```{r, include=TRUE, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+require(knitr)
+require(kableExtra)
+require(ggplot2)
+```
+```{r, include=FALSE, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+require(rmarkdown)
+setwd('~/git/hivclust/pkg/misc/vignettes') 
+rmarkdown::render('seattle.191017.pipeline.ali2phsc.Rmd')
+```
+```{r, include=TRUE, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+#source('~/git/hivclust/pkg/misc/hivclu.Seattle.R')
+read_chunk('~/git/hivclust/pkg/misc/hivclu.Seattle.R')		
+```
+
+## **Input data**
+The input data are sequence alignments that contain KC sequences and LANL
+sequences, for all subtypes.
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE}
+require(tidyverse)
+
+home <- '~/Box Sync/OR_Work/Seattle/analysis_191017'
+indir <- file.path(home,'alignments')	
+list.files(indir, pattern='mafft\\.fasta')
+```
+
+## **Step 1 (remove drug resistance mutations)**
+I first mask in the alignments codons that are listed as major drug resistance
+mutations in the Stanford DB, and a list of resistance mutations that I got from
+Tulio. 
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+<<rmd.chunk.seattle.191017.alignment.rm.drug.resistance.mutations>>
+```
+
+## **Step 2 (make bootstrap alignments)**
+After the codons that may be drug resistance mutations are gone, I make
+bootstrap alignments. For now, I only made 10 though we may want to increase
+this later to 1000. I would like to use the bootstrap trees to find all
+possible groups of closely related individuals, and I am bit concerned that we
+may miss them in just one trees due to uncertainty in tree reconstruction. 
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+<<rmd.chunk.seattle.191017.alignment.make.bootstraps>>
+```
+
+## **Step 3 (make phylogenetic trees)**
+Next, I reconstruct viral phylogenies, one for each bootstrap alignment. I have
+used Fasttree, primarily because I just want to find fairly large and distinct
+groups of viral lineages. I accept that some of the details, and in particular
+the branch lengths, may not be quite right. We have about 50,000 subtype B
+sequences, and for those Fasttree takes a couple of hours to return a viral
+phylogeny. For the other subtypes, the phylogenies are pretty much
+reconstructed instantly, and we could use RAxML without problems. 
+```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE}
+<<rmd.chunk.seattle.191017.fastree>>
+```
+
+## **Step 4 (make ancestral state reconstruction)**
+Next, I want to associate viral lineages to geographic locations, and then
+isolate distinct sub-trees that are geographically associated to King
+County/Seattle. We know the sampling location of all viral sequences, which
+is the only information needed for reconstructing phylogeographic ancestral
+states. Every Seattle sequence will be in one sub-tree, so all the sequence
+data will be kept in the analysis, in contrast to phylogenetic clustering
+approaches. 
+
+There are several phylogeographic models that we could use for
+phylogeographic reconstruction. Parsimony-based models are fast and
+directly applicable to the large subtype-B tree. Another option could be
+Lemey's discrete-state diffusion model, but we would have to cut large
+phylogenies into smaller pieces to make it computationally feasible. The
+parsimony-based models are more sensitive to sequence sampling bias so we need
+to include as many sequences from LANL as possible to get the parsimony-based
+reconstruction roughly right.
+
+There is one more twist to the analyses. From an epidemiologic perspective, I
+always consider spread among MSM and heterosexual individuals (HSX) as separate
+things. This can be easily accommodated in our phylogeographic analysis, because
+the tip states can be anything, they do not have to be sampling locations. So
+let us define the tip states in terms of sampling location and transmission
+group. Specifically, for the Seattle sequences, we consider KC-HSX and
+KC-non-HSX. For the LANL sequences, we consider larger world regions such as
+South America, Europe, sub-Saharan Africa, etc. Then, we repeat analysis using
+KC-MSM and KC-non-MSM. 
+
+First, I prepared the sampling locations for each viral sequence:
+```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE}
+<<rmd.chunk.seattle.191017.sequence.labels>>
+```
+
+Second, here is the code to setup the phylogeographic ancestral state
+reconstruction. For each subtype B tree, the maximum-parsimony analysis takes a
+few days. For the other subtypes, the results are pretty much instant.
+```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phyloscanner>>
+```
+
+
