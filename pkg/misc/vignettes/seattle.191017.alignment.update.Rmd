@@ -1,0 +1,94 @@
+---
+title: "**data update 180706 -> 191011**"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+```{r, include=TRUE, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+require(knitr)
+require(kableExtra)
+require(ggplot2)
+```
+```{r, include=FALSE, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+require(rmarkdown)
+setwd('~/git/hivclust/pkg/misc/vignettes') 
+rmarkdown::render('seattle.191017.alignment.update.Rmd')
+```
+
+## **Data checks: sequence meta data**
+Load two data sets: 
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=TRUE}
+require(tidyverse)
+
+home <- '~/Box Sync/OR_Work/Seattle'
+infile.seqinfo.current <- file.path(home,'PHSKC-2018-07-09/sequences_meta.rds')
+infile.seq.current <- file.path(home,'PHSKC-2018-07-09/Sequences.fas')
+infile.seqinfo.update <- file.path(home,'PHSKC-2019_10_11/sequences_meta.rds')
+infile.seq.update <- file.path(home,'PHSKC-2019_10_11/Sequences.fas')
+
+sc <- readRDS(infile.seqinfo.current) %>%
+		filter(type!='IN') %>%
+		select(seqID, newnum, seqy, seqm) %>%	
+		rename(cur.newnum=newnum, cur.seqy=seqy, cur.seqm=seqm)			
+su <- readRDS(infile.seqinfo.update) %>%
+		filter(type!='IN') %>%
+		select(seqID, newnum, type, seqy, seqm) %>%
+		rename(upd.newnum=newnum, upd.seqy=seqy, upd.seqm=seqm)
+ss <- sc %>% full_join(su, by='seqID')
+```
+
+## **Test 1 (fail)**
+I was expecting that every old seqID is part of the new data, but this
+does not appear to be true:
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=TRUE} 
+ss %>% filter(is.na(upd.newnum))
+```
+For example:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=TRUE} 
+ss %>% filter(cur.newnum==876)
+```
+
+## **Test 2 (ok)**
+I was expecting that the same seqIDs in the new and old data sets have the same
+meta-data, which is true. 
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=TRUE} 
+ss %>%
+		filter(!is.na(upd.newnum) & !is.na(cur.newnum)) %>%			
+		filter(cur.newnum!=upd.newnum | cur.seqy!=upd.seqy | cur.seqm!=upd.seqm ) 
+```
+
+## **Test 3 (fail)**
+I was expecting that the same seqIDs in the new and old data sets have the same
+sequence, which does not seem to be true.
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=TRUE} 
+seq.ids <- ss %>% 
+		filter(!is.na(upd.newnum) & !is.na(cur.newnum)) %>%
+		pull(seqID)
+seqc <- read.dna(infile.seq.current, format='fa')
+sequ <- read.dna(infile.seq.update, format='fa')
+test <- sapply(seq_along(seq.ids), function(i){
+			cur <- paste(unlist(as.character(seqc[ seq.ids[i] ])), collapse='')
+			upd <- paste(unlist(as.character(sequ[ seq.ids[i] ])), collapse='')
+			cur==upd
+		})
+test <- tibble(seqID=seq.ids, identical=test)
+test.fail <- test %>% filter(!identical)
+test.fail 
+```
+For example:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=TRUE} 
+seq.name <- test.fail[1, ] %>% pull(seqID )
+paste(unlist(as.character(seqc[ seq.name ])), collapse='')
+paste(unlist(as.character(sequ[ seq.name ])), collapse='')
+```
+

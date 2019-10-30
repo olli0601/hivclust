@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+
+<title>Phylodynamic analysis: transmission dynamics between US born and foreign born individuals in King County Seattle</title>
+
+
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#header {
+text-align: center;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore"><strong>Phylodynamic analysis: transmission dynamics between US born and foreign born individuals in King County Seattle</strong></h1>
+
+
+
+<div id="epidemiologic-model-local-population" class="section level2">
+<h2><strong>Epidemiologic model, local population</strong></h2>
+<p>The overall aim is to specify an epidemic model that captures transmission dynamics among heterosexuals by migrant-status. Consider the following states <span class="math display">\[
+(S^j_{gi}, I^j_{gi}, T^j_{gi})
+\]</span> where <span class="math inline">\(S\)</span>, <span class="math inline">\(I\)</span>, <span class="math inline">\(T\)</span> denote respectively groups of susceptible, infected and treated individuals and</p>
+<ul>
+<li><span class="math inline">\(j\)</span> denotes location, respectively <span class="math inline">\(l\)</span> (local, King County) or <span class="math inline">\(x\)</span> (external, world)</li>
+<li><span class="math inline">\(g\)</span> denotes gender, respectively <span class="math inline">\(m\)</span> (male) and <span class="math inline">\(j\)</span> (female)</li>
+<li><span class="math inline">\(i\)</span> denotes migration status. This can be ethnicity, respectively <span class="math inline">\(0\)</span> (white) and <span class="math inline">\(1\)</span> (non-white). Or alternatively location of birth, respectively <span class="math inline">\(0\)</span> (US-born) and <span class="math inline">\(1\)</span> (foreign-born).</li>
+</ul>
+<p>Our basic ODE equations for the transmission dynamics involving the local susceptible population are <span class="math display">\[
+\begin{align}
+    \dot{S}^l_{f0} &amp;= - (\beta_{00} I^l_{m0}+\beta_{10} I^l_{m1} ) S^l_{f0} /N^l + \mu (S^l_{f0}/S^l) - \mu S^l_{f0} \\
+    \dot{S}^l_{f1} &amp;= - (\beta_{01} I^l_{m0}+\beta_{11} I^l_{m1} ) S^l_{f1} /N^l + \mu (S^l_{f1}/S^l) - \mu S^l_{f1}\\
+    \dot{S}^l_{m0} &amp;= - (\beta_{00} I^l_{f0}+\beta_{10} I^l_{f1} ) S^l_{m0} /N^l + \mu (S^l_{m0}/S^l) - \mu S^l_{m0} \\
+    \dot{S}^l_{m1} &amp;= - (\beta_{01} I^l_{f0}+\beta_{11} I^l_{f1} ) S^l_{m1} /N^l + \mu (S^l_{m1}/S^l) - \mu S^l_{m1}\\ 
+\end{align}
+\]</span> where</p>
+<ul>
+<li><span class="math inline">\(\mu\)</span> is the birth/death rate</li>
+<li><span class="math inline">\(S^l = S^l_{f0} + S^l_{f1} + S^l_{m0} + S^l_{m1}\)</span></li>
+<li><span class="math inline">\(N^l\)</span> is the sum of all compartments involving the local population</li>
+<li><span class="math inline">\(\beta_{ij}\)</span> is the transmission rate from individuals with migration status <span class="math inline">\(i\)</span> to migration status <span class="math inline">\(j\)</span>. We are primarily interested in the relative differences between these rates, and so we write <span class="math inline">\(\beta_{ij}= \beta * b_{ij}\)</span> and constrain <span class="math inline">\(\sum_{i,j} b_{ij} = 0\)</span>.</li>
+</ul>
+<p>The remaining model equations involving the local population are<br />
+<span class="math display">\[
+\begin{align}
+    \dot{I}^l_{f0} &amp;= (\beta_{00} I^l_{m0}+\beta_{10} I^l_{m1} ) S^l_{f0} /N^l - \gamma I^l_{f0} - \mu I^l_{f0} \\
+    \dot{I}^l_{f1} &amp;= (\beta_{01} I^l_{m0}+\beta_{11} I^l_{m1} ) S^l_{f1} /N^l - \gamma I^l_{f1} - \mu I^l_{f1}\\
+    \dot{I}^l_{m0} &amp;= (\beta_{00} I^l_{f0}+\beta_{10} I^l_{f1} ) S^l_{m0} /N^l - \gamma I^l_{m0} - \mu I^l_{m0} \\
+    \dot{I}^l_{m1} &amp;= (\beta_{01} I^l_{f0}+\beta_{11} I^l_{f1} ) S^l_{m1} /N^l - \gamma I^l_{m1} - \mu I^l_{m1}\\
+    \dot{T}^l_{f0} &amp;= \gamma I^l_{f0} - \mu T^l_{f0} \\
+    \dot{T}^l_{f1} &amp;= \gamma I^l_{f1} - \mu T^l_{f1}\\
+    \dot{T}^l_{m0} &amp;= \gamma I^l_{m0} - \mu T^l_{m0} \\
+    \dot{T}^l_{m1} &amp;= \gamma I^l_{m1} - \mu T^l_{m1}\\ 
+\end{align}
+\]</span> where</p>
+<ul>
+<li><span class="math inline">\(\gamma\)</span> is the rate at which infected individuals become virally suppressed due to antiretrovirals. We assume that infected individuals that reached viral suppression remain suppressed until death.</li>
+</ul>
+</div>
+<div id="epidemiologic-model-connection-with-external-world" class="section level2">
+<h2><strong>Epidemiologic model, connection with external world</strong></h2>
+<p>Considering that the local transmission dynamics do not occur in isolation of the rest of the world, we make the following assumptions</p>
+<ul>
+<li>Local individuals with migration status <span class="math inline">\(0\)</span> can acquire infections from external infecteds at rate <span class="math inline">\(\beta_{20}\)</span>.</li>
+<li>Local individuals with migration status <span class="math inline">\(1\)</span> can acquire infections from external infecteds at rate <span class="math inline">\(\beta_{21}\)</span>.<br />
+</li>
+<li>External individuals can in-migrate to the group with migration status <span class="math inline">\(1\)</span> at rate <span class="math inline">\(\nu\)</span>.</li>
+<li>Local individuals do not out-migrate, and neither do they infect external susceptibles. This is to keep the model simple, and also reflects our data (sequence samling fraction of Seattle epidemic much larger than sequence samling fraction of external epidemic)</li>
+</ul>
+<p>The ODE equations involving the external population are <span class="math display">\[
+\begin{align}   
+    \dot{S}^x_{f} &amp;= - \xi I^x_{m} S^x_{f} /N^x + \mu (S^x_{f}/S^x) - \mu S^x_{f} -\nu S^x_{f}\\
+    \dot{S}^x_{m} &amp;= - \xi I^x_{f} S^x_{m} /N^x + \mu (S^x_{m}/S^x) - \mu S^x_{m} -\nu S^x_{m}\\
+    \dot{I}^x_{f} &amp;= \xi I^x_{m} S^x_{f} /N^x - \zeta I^x_{f} - \mu I^x_{f} - \nu I^x_{f}\\
+    \dot{I}^x_{m} &amp;= \xi I^x_{f} S^x_{m} /N^x - \zeta I^x_{m} - \mu I^x_{m} - \nu I^x_{m}\\
+    \dot{T}^x_{f} &amp;= \zeta I^x_{f} - \mu T^x_{f} - \nu T^x_{f}\\
+    \dot{T}^x_{m} &amp;= \zeta I^x_{m} - \mu T^x_{m} - \nu T^x_{m}, 
+\end{align}
+\]</span> with a separate transmission rate <span class="math inline">\(\xi\)</span>, a separate suppression rate <span class="math inline">\(\zeta\)</span> and the same birth/death rate <span class="math inline">\(\mu\)</span>. The updated ODE equations involving the local population are <span class="math display">\[
+\begin{align}
+    \dot{S}^l_{f0} &amp;= - (\beta_{00} I^l_{m0}+\beta_{10} I^l_{m1}\color{red}{+\beta_{20}I_m^x}) S^l_{f0} /N^l + \mu (S^l_{f0}/S^l) - \mu S^l_{f0} \\
+    \dot{S}^l_{f1} &amp;= - (\beta_{01} I^l_{m0}+\beta_{11} I^l_{m1}\color{red}{+\beta_{21}I_m^x}) S^l_{f1} /N^l + \mu (S^l_{f1}/S^l) - \mu S^l_{f1} \color{red}{+\nu S^x_{f}}\\
+    \dot{S}^l_{m0} &amp;= - (\beta_{00} I^l_{f0}+\beta_{10} I^l_{f1}\color{red}{+\beta_{20}I_f^x}) S^l_{m0} /N^l + \mu (S^l_{m0}/S^l) - \mu S^l_{m0} \\
+    \dot{S}^l_{m1} &amp;= - (\beta_{01} I^l_{f0}+\beta_{11} I^l_{f1}\color{red}{+\beta_{21}I_f^x}) S^l_{m1} /N^l + \mu (S^l_{m1}/S^l) - \mu S^l_{m1} \color{red}{+\nu S^x_{m}}\\
+    \dot{I}^l_{f0} &amp;= (\beta_{00} I^l_{m0}+\beta_{10} I^l_{m1}\color{red}{+\beta_{20}I_m^x} ) S^l_{f0} /N^l - \gamma I^l_{f0} - \mu I^l_{f0} \\
+    \dot{I}^l_{f1} &amp;= (\beta_{01} I^l_{m0}+\beta_{11} I^l_{m1}\color{red}{+\beta_{21}I_m^x} ) S^l_{f1} /N^l - \gamma I^l_{f1} - \mu I^l_{f1} \color{red}{+\nu I^x_{f}}\\
+    \dot{I}^l_{m0} &amp;= (\beta_{00} I^l_{f0}+\beta_{10} I^l_{f1}\color{red}{+\beta_{20}I_f^x} ) S^l_{m0} /N^l - \gamma I^l_{m0} - \mu I^l_{m0} \\
+    \dot{I}^l_{m1} &amp;= (\beta_{01} I^l_{f0}+\beta_{11} I^l_{f1}\color{red}{+\beta_{21}I_f^x} ) S^l_{m1} /N^l - \gamma I^l_{m1} - \mu I^l_{m1} \color{red}{+\nu I^x_{m}}\\
+    \dot{T}^l_{f0} &amp;= \gamma I^l_{f0} - \mu T^l_{f0} \\
+    \dot{T}^l_{f1} &amp;= \gamma I^l_{f1} - \mu T^l_{f1} \color{red}{+\nu T^x_{f}}\\
+    \dot{T}^l_{m0} &amp;= \gamma I^l_{m0} - \mu T^l_{m0} \\
+    \dot{T}^l_{m1} &amp;= \gamma I^l_{m1} - \mu T^l_{m1} \color{red}{+\nu T^x_{m}}\\ 
+\end{align}
+\]</span></p>
+<p>The ODE model has <span class="math inline">\(6\)</span> states for the external population and <span class="math inline">\(12\)</span> states for the local population.</p>
+<p>The ODE model has <span class="math inline">\(12\)</span> parameters, <span class="math display">\[
+(\beta, b_{00}, b_{01}, b_{10}, b_{11}, b_{20}, b_{21}, \xi, \gamma, \zeta, \mu, \nu),
+\]</span> of which <span class="math inline">\(1\)</span> is specified by the constraint <span class="math inline">\(b_{00}+b_{01}+b_{10}+b_{11}+b_{20}+b_{21}=0\)</span>, say <span class="math inline">\(b_{11}=-(b_{01}+b_{10}+b_{11}+b_{20}+b_{21})\)</span>. We can further fix <span class="math inline">\(\mu=1/60\)</span> years<span class="math inline">\(^{-1}\)</span>, <span class="math inline">\(\gamma=1/2\)</span> years<span class="math inline">\(^{-1}\)</span>. With this, our ODE model has <span class="math inline">\(9\)</span> free parameters, <span class="math display">\[
+(\beta, b_{00}, b_{01}, b_{10}, b_{20}, b_{21}, \xi, \zeta, \nu).
+\]</span></p>
+<p><span style="     color: red !important;">Discussion points:</span></p>
+<ul>
+<li>the population size in the local pop is not constant</li>
+</ul>
+</div>
+<div id="phylodynamic-model" class="section level2">
+<h2><strong>Phylodynamic model</strong></h2>
+<p>For a phylodynamic analysis, we further reduce the number of states of the above ODE model. We assume that</p>
+<ul>
+<li>the external population is at endemic equilibrium, with HIV prevalence of <span class="math inline">\(0.1\%\)</span> and of those <span class="math inline">\(60\%\)</span> are on treatment. We further assume that half the population is male. This fixes <span class="math display">\[
+\begin{align}
+  S^x_{f} &amp;= 0.999 * 0.5 * N^x =: c^x_{Sf} N^x\\ 
+  S^x_{m} &amp;= 0.999 * 0.5 * N^x =: c^x_{Sm} N^x\\
+  I^x_{f} &amp;= 0.001 * 0.5* 0.4 * N^x =: c^x_{If} N^x\\ 
+  I^x_{m} &amp;= 0.001 * 0.5* 0.4 * N^x =: c^x_{Im} N^x\\ 
+  T^x_{f} &amp;= 0.001 * 0.5* 0.6 * N^x =: c^x_{Tf} N^x\\ 
+  T^x_{m} &amp;= 0.001 * 0.5* 0.6 * N^x =: c^x_{Tm} N^x\\
+\end{align},
+\]</span> and this should also fix the rates <span class="math inline">\(\xi\)</span>, <span class="math inline">\(\zeta\)</span> to some value. The population size <span class="math inline">\(N^x\)</span> is still allowed to vary over time.</li>
+<li>all individuals have a sequence sampled before ART start. The viral lineages can thus be in the states <span class="math display">\[
+(I^l_{f0}, I^l_{f1}, I^l_{m0}, I^l_{m1}, I^x_{f}, I^x_{m}).
+\]</span></li>
+<li>Gender is strongly informative to rule out transmission between two close females, and so we aim to keep gender in the model for the local population. However tracking lineages in the external population is expensive and I don t see how this could change estimates of <span class="math inline">\(b_{00}\)</span>, <span class="math inline">\(b_{01}\)</span>, <span class="math inline">\(b_{10}\)</span>. We thus sum <span class="math inline">\(I^x=I^x_{f} + I^x_{m}\)</span> and reduce the state space of viral lineages to<br />
+<span class="math display">\[
+(I^l_{f0}, I^l_{f1}, I^l_{m0}, I^l_{m1}, I^x),
+\]</span> and order the <span class="math inline">\(5\)</span>-dimensional state space in this manner, i.e. the first dimension corresponds to <span class="math inline">\(I^l_{f0}\)</span> etc.</li>
+</ul>
+<p>Using standard notation, we define the populatin sizes in these <span class="math inline">\(m=5\)</span> demes backwards in time by <span class="math display">\[
+\boldsymbol{Y}(t)= \big(  I^l_{f0}(t), I^l_{f1}(t), I^l_{m0}(t), I^l_{m1}(t), I^x(t) \big).
+\]</span> The population sizes in the demes are further influenced by the dynamic variables <span class="math display">\[
+\boldsymbol{Y}^\prime(t)= \big(  S^l_{f0}(t), S^l_{f1}(t), S^l_{m0}(t), S^l_{m1}(t), S^x(t) \big).
+\]</span> The birth matrix corresponding to the ODE model above is <span class="math display">\[
+\boldsymbol{F}(t,\boldsymbol{Y}, \boldsymbol{Y}^\prime)= 
+\left[\begin{array}
+{rrrrr}
+0 &amp; 0 &amp; \beta_{00}I^l_{m0}S^l_{f0}/N^l &amp; \beta_{10}I^l_{m1}S^l_{f0}/N^l &amp; \beta_{20} (I^x/2) S^l_{f0}/N^l  \\
+0 &amp; 0 &amp; \beta_{01}I^l_{m0}S^l_{f1}/N^l &amp; \beta_{11}I^l_{m1}S^l_{f1}/N^l &amp; \beta_{20} (I^x/2) S^l_{f1}/N^l\\
+\beta_{00}I^l_{f0}S^l_{m0}/N^l &amp; \beta_{10}I^l_{f1}S^l_{m0}/N^l &amp; 0 &amp; 0 &amp; \beta_{20} (I^x/2) S^l_{m0}/N^l\\
+\beta_{01}I^l_{f0}S^l_{m1}/N^l &amp; \beta_{11}I^l_{f1}S^l_{m1}/N^l &amp; 0 &amp; 0 &amp; \beta_{20} (I^x/2) S^l_{m1}/N^l\\
+0 &amp; 0 &amp; 0 &amp; 0 &amp; \xi I^xS^x/N^x\\
+\end{array}\right],
+\]</span> where we ommitted dependencies on time on the right hand side. The entry <span class="math inline">\(F_{ij}(t)\)</span> describes the rate at which individuals in deme <span class="math inline">\(i\)</span> are generated by individuals in deme <span class="math inline">\(j\)</span>. The migration matrix corresponding to the ODE model above is <span class="math display">\[
+\boldsymbol{G}(t,\boldsymbol{Y}, \boldsymbol{Y}^\prime)= 
+\left[\begin{array}
+{rrrrr}
+0 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\
+0 &amp; 0 &amp; 0 &amp; 0 &amp; \nu (I^x/2)\\
+0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\
+0 &amp; 0 &amp; 0 &amp; 0 &amp; \nu (I^x/2)\\
+0 &amp; 0 &amp; 0 &amp; 0 &amp; 0\\
+\end{array}\right].
+\]</span> The entry <span class="math inline">\(G_{ij}(t)\)</span> describes the rate at which individuals in deme <span class="math inline">\(i\)</span> migrate from individuals in deme <span class="math inline">\(j\)</span>. The death vector corresponding to the ODE model above is <span class="math display">\[
+\boldsymbol{\mu}(t,\boldsymbol{Y}, \boldsymbol{Y}^\prime)= 
+\left[\begin{array}
+{r}
+\gamma I^l_{f0} \\
+\gamma I^l_{f1} \\
+\gamma I^l_{m0} \\
+\gamma I^l_{m1} \\
+\zeta I^x \\
+\end{array}\right].
+\]</span> With the above functions, the dynamics of <span class="math inline">\(\boldsymbol{Y}\)</span> can be computed by solving the ODE system <span class="math display">\[
+\dot{Y}_j(t) = -\mu_k(t) + \sum_{i=1}^m ( F_{ij}(t) + G_{ij}(t) - G_{ji}(t) ).
+\]</span></p>
+<p>The phylodynamic model has 1 state for the external population (<span class="math inline">\(N^x\)</span>) and 9 states for the local population (<span class="math inline">\(S^l_{f0}, S^l_{f1}, S^l_{m0}, S^l_{m1}\)</span>, <span class="math inline">\(I^l_{f0}, I^l_{f1}, I^l_{m0}, I^l_{m1}\)</span>, <span class="math inline">\(N^l\)</span>). The phylodynamic model has parameters <span class="math display">\[
+(\beta, b_{00}, b_{01}, b_{10}, b_{11}, b_{20}, b_{21}, \xi, \gamma, \zeta, \nu),
+\]</span> of which <span class="math inline">\(1\)</span> is specified by the constraint <span class="math inline">\(b_{00}+b_{01}+b_{10}+b_{11}+b_{20}+b_{21}=0\)</span>, say <span class="math inline">\(b_{11}=-(b_{01}+b_{10}+b_{11}+b_{20}+b_{21})\)</span>. We further fix <span class="math inline">\(\gamma=1/2\)</span> years<span class="math inline">\(^{-1}\)</span>, and <span class="math inline">\(\xi\)</span>, <span class="math inline">\(\zeta\)</span> to some value to obtain the pre-specified endemic equilibrium in the external population. With this, our phylodynamic model has <span class="math inline">\(7\)</span> free parameters, <span class="math display">\[
+(\beta, b_{00}, b_{01}, b_{10}, b_{20}, b_{21}, \nu).
+\]</span></p>
+<p><span style="     color: red !important;">Discussion points:</span></p>
+<ul>
+<li>I am not clear on how to fix <span class="math inline">\(\xi\)</span>, <span class="math inline">\(\zeta\)</span>, given the pre-specified constraints and the migration dynamics.</li>
+<li>To solve the phylodynamic ODE of <span class="math inline">\(\boldsymbol{Y}\)</span>, we need to know <span class="math inline">\(\boldsymbol{Y}^\prime\)</span> at time <span class="math inline">\(t\)</span>. I don t understand how this is calculated, it seems to require other elements than the migration, birth and death functions, and other parameters such as <span class="math inline">\(\mu\)</span> above.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

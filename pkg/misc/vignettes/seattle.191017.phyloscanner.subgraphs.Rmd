@@ -1,0 +1,214 @@
+---
+title: "**results: King County subgraphs**"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+```{r, include=TRUE, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+require(knitr)
+require(kableExtra)
+require(ggplot2)
+```
+```{r, include=FALSE, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+require(rmarkdown)
+setwd('~/git/hivclust/pkg/misc/vignettes') 
+rmarkdown::render('seattle.191017.phyloscanner.subgraphs.Rmd')
+```
+```{r, include=TRUE, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+#source('~/git/hivclust/pkg/misc/hivclu.Seattle.R')
+read_chunk('~/git/hivclust/pkg/misc/hivclu.Seattle.R')		
+```
+
+## **Reading phylogenetic subgraphs **
+I first read the taxa that are part of King County phylogenetic subgraphs: 
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE} 
+require(data.table)
+require(phangorn)
+require(ggplot2)
+require(reshape)
+
+#	working directory with phyloscanner output		
+home <- '~/Box Sync/OR_Work/Seattle'
+indir.phsc	<- file.path(home,'analysis_191017','phyloscanner')
+
+#	extract subgraph taxa	
+infiles <- data.table(F=list.files(indir.phsc, pattern='rda$', full.names=TRUE, recursive=TRUE))	
+infiles <- subset(infiles, grepl('datedsubgraphs',F))
+#	SELECT defines if KC, KCHSX, KCMSM
+infiles[, SELECT:= gsub('^(.*)subgraphs_([A-Z]+)\\.rda','\\2',basename(F))]
+#	for subtype B, I ran separate analyses based on very large subtrees for comp efficiency
+#	ST stores the subtype, and ST_CLADE the large subtree
+infiles[, ST:= gsub('^.*Subtype([^_]+)_.*\\.rda','\\1',basename(F))]
+infiles[, ST_CLADE:= as.integer(gsub('[^c]*c([0-9]+)','\\1',ST))]
+infiles[, ST:= gsub('([^c]*)c([0-9]+)','\\1',ST)]
+#	ID of bootstrap replicate, 000 for analysis on real alignment
+infiles[, REP:= gsub('^.*ndrm_([0-9]+)_.*\\.rda','\\1',basename(F))]
+dsubgraphtaxa <- infiles[, {
+			#i<- 1
+			#infile <- infiles[i, F]			
+			infile <- F
+			cat('Process',infile,'\n')
+			load(infile)			
+			subgraph.names <- unlist(sapply( subgraphs, function(subgraph)  rep(subgraph$subgraph.name, length(subgraph$tip.label)) ))
+			subgraph.taxa <- unlist(sapply( subgraphs, function(subgraph)  subgraph$tip.label))				
+			list(	NAME=subgraph.names, 
+					TAXA= subgraph.taxa 
+			)				
+		}, by=c('ST','ST_CLADE','REP','SELECT')]	
+#	add meta data from taxa names
+regex.tip.label <- '^([A-Z]+)_+PR/RT-([0-9]+)_([0-9]+)_([a-zA-Z]+)_([a-zA-Z]+)_([a-zA-Z]+)_([a-zA-Z]+)_([a-zA-Z_]+)_([0-9]+)$'
+dsubgraphtaxa[, ID:= as.numeric(gsub(regex.tip.label,'\\3',TAXA))]	
+dsubgraphtaxa[, SEQ_YEAR:= as.numeric(gsub(regex.tip.label,'\\9',TAXA))]
+dsubgraphtaxa[, FULL_NAME:= paste0(ST,'_',REP,'_',SELECT,'_',NAME)]
+```
+
+## **Adding meta-data **
+Next, I add meta-data on the individuals:
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE}
+infile.meta <- file.path(home,'analysis_191017','misc','180709_sequence_labels.rda')
+
+#	add meta data from pre-processed persons file	
+load(infile.meta)
+dind <- as.data.table(dind)	
+setnames(dind, c('newnum','b_yr','birthCountry2','county','race2','transm2','Gender2'), c('ID','BIRTH_YEAR2','BIRTH_COUNTRY2','COUNTY','RACE2','TRANSM2','GENDER2'))
+tmp <- subset(dind, select=c(ID,BIRTH_YEAR2,BIRTH_COUNTRY2,COUNTY,RACE2,TRANSM2,GENDER2))
+set(tmp, NULL, 'BIRTH_YEAR2', tmp[, as.numeric(BIRTH_YEAR2)])
+dsubgraphtaxa <- merge(dsubgraphtaxa,tmp,by='ID')
+dsubgraphtaxa[, AGE2020:= cut(2020-BIRTH_YEAR2, breaks=c(-Inf,20,25,30,35,40,45,50,55,60,Inf))]
+```
+
+
+## **Distribution of subgraph sizes**
+Let us first have a look on the distribution of subgraph sizes, that is how
+many individuals there are in partially observed, separate transmission chains.
+(The transmission chains are partially observed because we do not have
+sequence data from everyone).
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 4), fig.align="center"}
+dsubgraphsize <- dsubgraphtaxa[, list(SIZE=length(ID)), by=c('ST','REP','SELECT','NAME')]
+dsubgraphsize[, SINGLETON:= as.character(factor(SIZE==1, levels=c(TRUE,FALSE), labels=c('subgraph size 1','subgraph size >1')))]
+ggplot(subset(dsubgraphsize, SELECT!='KC'), aes(x=SIZE, fill=ST)) + 
+		geom_bar() + 
+		facet_grid(SELECT~.) +
+		labs(x='\nsize of phylogenetic subgraphs attributed to King County/Seattle')
+```
+
+## **Sample size for phylodynamic analysis of HIV spread in Seattle **
+Next, let us have a look at how individuals are in subtrees are of size 1 and
+size >1. The number of individuals in subgraphs of size > 1 can be informative
+about transmission dynamics within Seattle. 
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 4), fig.align="center"} 
+#	number of individuals in subgraphs of size == 1 or size > 1 
+dsubgraphind <- dsubgraphsize[, list(N_INDIVIDUALS=sum(SIZE)), by=c('ST','REP','SELECT','SINGLETON')]
+dsubgraphind <- dcast.data.table(dsubgraphind, ST+REP+SINGLETON~SELECT,value.var='N_INDIVIDUALS') 
+dsubgraphind
+```
+	
+There are a little more than 350 individuals in HSX subgraphs of size > 1. That
+s not too bad! There are more than 4000 individuals in MSM subgraphs of size >
+1. That s a lot and I am not sure how to run a phylodynamic model on this sample
+   size.
+
+## **Empirical analysis on group-mixing within subgraphs **
+	
+Next, I was interested to quantify the extent of mixing across certain
+population groups, based on the subgraphs of size > 1. So let us select just
+those:
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE} 
+#	number of individuals in subgraphs of size == 1 or size > 1 
+tmp <- subset(dsubgraphsize, SIZE>1, c(ST, REP, SELECT, NAME))
+dsubgraphtaxa2 <- merge(dsubgraphtaxa, tmp, by=c('ST','REP','SELECT','NAME'))
+```
+
+### **Ethnicity **
+First, I considered ethnicity.
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 6), fig.align="center"} 
+dsubgraphtaxa2[, DUMMY:= RACE2]
+dcnt <- dsubgraphtaxa2[, list(N= length(ID)), by=c('FULL_NAME','SELECT','ST','DUMMY')]
+tmp <- dsubgraphtaxa2[, list(TOTAL= length(ID)), by=c('FULL_NAME','SELECT','ST')]
+dcnt <- merge(dcnt, tmp, by=c('FULL_NAME','SELECT','ST'))
+ggplot(subset(dcnt, SELECT!='KC'), aes(x=FULL_NAME, y=N, fill=DUMMY)) +
+		geom_bar(stat='identity') + 
+		labs(y='#individuals',x='phylo subgraphs',fill='ethnicity') +
+		theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+		facet_grid(SELECT~ST, scale='free_x', space='free_x')
+```
+We previously found for non-B subtypes that the subgraphs were homogeneous by ethnicity.
+However, the large majority of patients are subtype B, and it now seems that there is considerable mixing
+by ethnicity. 
+
+Let us quantify this. As a measure of mixing, I quantified average homogeneity
+of each subgraph [as described here](https://stats.stackexchange.com/questions/221332/variance-of-a-distribution-of-multi-level-categorical-data), as well as the average of the largest
+frequency of any strata: 
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE} 
+tmp <- dcnt[, list(R= sum( (N/TOTAL)^2), PMAX= max(N/TOTAL) ), by=c('FULL_NAME','SELECT','ST')]
+tmp[, list(R_AVG=mean(R), PMAX_AVG=mean(PMAX)), by=c('SELECT')]
+```
+ 
+The results suggest that
+
+* there are a large number of separate transmission chains in King County 
+* they are typically small for heterosexuals
+* each of them typically contains individuals of more than one ethnic group.
+  On average, individuals of white ethnicity make up around 65% of individuals
+  in a transmission chain, both for MSM and HSX spread.
+   
+### **Place of birth **
+Second, I considered place of birth.
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 6), fig.align="center"} 
+dsubgraphtaxa2[, DUMMY:= as.character(factor(BIRTH_COUNTRY2=='USA',levels=c(TRUE,FALSE),labels=c('US-born','other')))]
+dcnt <- dsubgraphtaxa2[, list(N= length(ID)), by=c('FULL_NAME','SELECT','ST','DUMMY')]
+tmp <- dsubgraphtaxa2[, list(TOTAL= length(ID)), by=c('FULL_NAME','SELECT','ST')]
+dcnt <- merge(dcnt, tmp, by=c('FULL_NAME','SELECT','ST'))
+ggplot(subset(dcnt, SELECT!='KC'), aes(x=FULL_NAME, y=N, fill=DUMMY)) +
+		geom_bar(stat='identity') + 
+		labs(y='#individuals',x='phylo subgraphs',fill='birth place') +
+		theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+		facet_grid(SELECT~ST, scale='free_x', space='free_x')
+```
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE} 
+tmp <- dcnt[, list(R= sum( (N/TOTAL)^2), PMAX= max(N/TOTAL) ), by=c('FULL_NAME','SELECT','ST')]
+tmp[, list(R_AVG=mean(R), PMAX_AVG=mean(PMAX)), by=c('SELECT')]
+```
+ 
+The results suggest that
+
+* mixing is more pronounced in terms of ethnicity compared to place of birth.
+
+### **Age group **
+Third, I considered age brackets for comparison.
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 6), fig.align="center"} 
+dsubgraphtaxa2[, DUMMY:= AGE2020]
+dcnt <- dsubgraphtaxa2[, list(N= length(ID)), by=c('FULL_NAME','SELECT','ST','DUMMY')]
+tmp <- dsubgraphtaxa2[, list(TOTAL= length(ID)), by=c('FULL_NAME','SELECT','ST')]
+dcnt <- merge(dcnt, tmp, by=c('FULL_NAME','SELECT','ST'))
+ggplot(subset(dcnt, SELECT!='KC'), aes(x=FULL_NAME, y=N, fill=DUMMY)) +
+		geom_bar(stat='identity') + 
+		labs(y='#individuals',x='phylo subgraphs',fill='age in 2020') +
+		theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+		facet_grid(SELECT~ST, scale='free_x', space='free_x')
+```
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE} 
+tmp <- dcnt[, list(R= sum( (N/TOTAL)^2), PMAX= max(N/TOTAL) ), by=c('FULL_NAME','SELECT','ST')]
+tmp[, list(R_AVG=mean(R), PMAX_AVG=mean(PMAX)), by=c('SELECT')]
+```
+ 
+I am not clear how to interpret the results in comparison to ethnicity or place
+of birth, because there are many more age groups.

@@ -1,5 +1,5 @@
 ---
-title: "**analysis pipeline: from alignment to phyloscanner output**"
+title: "**analysis pipeline: from alignment to dated phyloscanner output**"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
@@ -109,4 +109,49 @@ few days. For the other subtypes, the results are pretty much instant.
 <<rmd.chunk.seattle.191017.phyloscanner>>
 ```
 
+## **Step 5 (date trees with ancestral state reconstruction)**
+Most phylodynamic analyses use as input a dated phylogeny, so we also have to
+date the trees obtained in step 4. Again, there are several available programs
+to do this, and I opted for [tree.dater](https://github.com/emvolz/treedater). 
+
+I chose to date the tree after ancestral states are reconstructed. This is
+because the sampling locations of the LANL sequences provide information on the
+ancestral states, but we don t have sampling dates for all LANL sequences, and
+we need sampling dates for dating the tree. To exercise caution, I therefore
+reconstruct ancestral states first. Then, I drop LANL sequences without
+sampling dates from the tree, which does not change the states that are
+attributed to the remaining viral lineages. I found several instances in which
+the actual parental clade of a King County subgraph was lost due to missing
+sampling dates, so I believe doing things this way round is a bit more
+accurate. The final step involves dating the pruned tree with tree.dater:
+```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
+<<rmd.chunk.seattle.191017.treedater.run>>
+```
+
+Tree.dater does not change tree topologies, so we can easily superimpose the
+dated branch lengths onto the tree with ancestral state reconstructions, and
+plot the result:
+```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
+<<rmd.chunk.seattle.191017.treedater.postprocess>>
+```
+
+## **Step 6 (extract phylogenetic subgraphs associated with viral spread in King County)**
+Finally, I extract the phylogenetic subgraphs that are associated with viral
+spread in King County/Seattle. My interpretation is that each subgraph
+corresponds to a distinct transmission chain in King County/Seattle, which may
+be partially observed due to incomplete sequence sampling. 
+```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
+<<rmd.chunk.seattle.191017.get.dated.subgraphs>>
+```
+
+If we process the subgraphs, we observe that a large fraction of the subgraphs
+consist of just one sequence. These subgraphs don t contain information into
+viral spread within Seattle because no one else of the corresponding
+transmission chain was sampled, and so we can ignore them in a phylodynamic
+analysis. This reduces sample size, and makes the analysis more tractable.
+
+On the other hand, the subgraphs of size 1 also provide useful information into
+the reproductive number, because they indicate stuttering viral spread, and a
+reproduction number below 1. So we don t want to exclude them when estimating
+reproductive numbers. 
 

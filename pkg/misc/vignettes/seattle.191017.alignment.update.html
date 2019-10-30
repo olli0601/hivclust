@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+
+<title>data update 180706 -&gt; 191011</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css" data-origin="pandoc">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#header {
+text-align: center;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore"><strong>data update 180706 -&gt; 191011</strong></h1>
+
+
+
+<div id="data-checks-sequence-meta-data" class="section level2">
+<h2><strong>Data checks: sequence meta data</strong></h2>
+<p>Load two data sets:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">require</span>(tidyverse)</a>
+<a class="sourceLine" id="cb1-2" title="2"></a>
+<a class="sourceLine" id="cb1-3" title="3">home &lt;-<span class="st"> &quot;~/Box Sync/OR_Work/Seattle&quot;</span></a>
+<a class="sourceLine" id="cb1-4" title="4">infile.seqinfo.current &lt;-<span class="st"> </span><span class="kw">file.path</span>(home, <span class="st">&quot;PHSKC-2018-07-09/sequences_meta.rds&quot;</span>)</a>
+<a class="sourceLine" id="cb1-5" title="5">infile.seq.current &lt;-<span class="st"> </span><span class="kw">file.path</span>(home, <span class="st">&quot;PHSKC-2018-07-09/Sequences.fas&quot;</span>)</a>
+<a class="sourceLine" id="cb1-6" title="6">infile.seqinfo.update &lt;-<span class="st"> </span><span class="kw">file.path</span>(home, <span class="st">&quot;PHSKC-2019_10_11/sequences_meta.rds&quot;</span>)</a>
+<a class="sourceLine" id="cb1-7" title="7">infile.seq.update &lt;-<span class="st"> </span><span class="kw">file.path</span>(home, <span class="st">&quot;PHSKC-2019_10_11/Sequences.fas&quot;</span>)</a>
+<a class="sourceLine" id="cb1-8" title="8"></a>
+<a class="sourceLine" id="cb1-9" title="9">sc &lt;-<span class="st"> </span><span class="kw">readRDS</span>(infile.seqinfo.current) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(type <span class="op">!=</span><span class="st"> &quot;IN&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(seqID, </a>
+<a class="sourceLine" id="cb1-10" title="10">    newnum, seqy, seqm) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">rename</span>(<span class="dt">cur.newnum =</span> newnum, <span class="dt">cur.seqy =</span> seqy, <span class="dt">cur.seqm =</span> seqm)</a>
+<a class="sourceLine" id="cb1-11" title="11">su &lt;-<span class="st"> </span><span class="kw">readRDS</span>(infile.seqinfo.update) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(type <span class="op">!=</span><span class="st"> &quot;IN&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(seqID, </a>
+<a class="sourceLine" id="cb1-12" title="12">    newnum, type, seqy, seqm) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">rename</span>(<span class="dt">upd.newnum =</span> newnum, <span class="dt">upd.seqy =</span> seqy, </a>
+<a class="sourceLine" id="cb1-13" title="13">    <span class="dt">upd.seqm =</span> seqm)</a>
+<a class="sourceLine" id="cb1-14" title="14">ss &lt;-<span class="st"> </span>sc <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">full_join</span>(su, <span class="dt">by =</span> <span class="st">&quot;seqID&quot;</span>)</a></code></pre></div>
+</div>
+<div id="test-1-fail" class="section level2">
+<h2><strong>Test 1 (fail)</strong></h2>
+<p>I was expecting that every old seqID is part of the new data, but this does not appear to be true:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">ss <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(<span class="kw">is.na</span>(upd.newnum))</a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="co">#&gt; # A tibble: 3,283 x 8</span></a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="co">#&gt;    seqID    cur.newnum cur.seqy cur.seqm upd.newnum type  upd.seqy upd.seqm</span></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="co">#&gt;    &lt;chr&gt;         &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;    &lt;dbl&gt;    &lt;dbl&gt;</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="co">#&gt;  1 PR/RT-0…        876     2017        3         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="co">#&gt;  2 PR/RT-0…       1467     2017        2         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="co">#&gt;  3 PR/RT-0…       1549     2017        3         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb2-8" title="8"><span class="co">#&gt;  4 PR/RT-0…       1577     2017        3         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb2-9" title="9"><span class="co">#&gt;  5 PR/RT-0…       3970     2017        4         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb2-10" title="10"><span class="co">#&gt;  6 PR/RT-0…       9638     2017        3         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb2-11" title="11"><span class="co">#&gt;  7 PR/RT-0…       9638     2017        4         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb2-12" title="12"><span class="co">#&gt;  8 PR/RT-0…       9728     2017        3         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb2-13" title="13"><span class="co">#&gt;  9 PR/RT-0…       9801     2017        3         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb2-14" title="14"><span class="co">#&gt; 10 PR/RT-0…      11244     2017        3         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb2-15" title="15"><span class="co">#&gt; # … with 3,273 more rows</span></a></code></pre></div>
+<p>For example:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1">ss <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(cur.newnum <span class="op">==</span><span class="st"> </span><span class="dv">876</span>)</a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="co">#&gt; # A tibble: 7 x 8</span></a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="co">#&gt;   seqID     cur.newnum cur.seqy cur.seqm upd.newnum type  upd.seqy upd.seqm</span></a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="co">#&gt;   &lt;chr&gt;          &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;    &lt;dbl&gt;    &lt;dbl&gt;</span></a>
+<a class="sourceLine" id="cb3-5" title="5"><span class="co">#&gt; 1 PR/RT-00…        876     2017        3         NA &lt;NA&gt;        NA       NA</span></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="co">#&gt; 2 PR/RT-00…        876     2014        3        876 PR/RT     2014        3</span></a>
+<a class="sourceLine" id="cb3-7" title="7"><span class="co">#&gt; 3 PR/RT-00…        876     2012       11        876 PR/RT     2012       11</span></a>
+<a class="sourceLine" id="cb3-8" title="8"><span class="co">#&gt; 4 PR/RT-00…        876     2000        8        876 PR/RT     2000        8</span></a>
+<a class="sourceLine" id="cb3-9" title="9"><span class="co">#&gt; 5 PR/RT-00…        876     2003        2        876 PR/RT     2003        2</span></a>
+<a class="sourceLine" id="cb3-10" title="10"><span class="co">#&gt; 6 PR/RT-01…        876     2002       11        876 PR/RT     2002       11</span></a>
+<a class="sourceLine" id="cb3-11" title="11"><span class="co">#&gt; 7 PR/RT-01…        876     2015        6        876 PR/RT     2015        6</span></a></code></pre></div>
+</div>
+<div id="test-2-ok" class="section level2">
+<h2><strong>Test 2 (ok)</strong></h2>
+<p>I was expecting that the same seqIDs in the new and old data sets have the same meta-data, which is true.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">ss <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(upd.newnum) <span class="op">&amp;</span><span class="st"> </span><span class="op">!</span><span class="kw">is.na</span>(cur.newnum)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(cur.newnum <span class="op">!=</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="st">    </span>upd.newnum <span class="op">|</span><span class="st"> </span>cur.seqy <span class="op">!=</span><span class="st"> </span>upd.seqy <span class="op">|</span><span class="st"> </span>cur.seqm <span class="op">!=</span><span class="st"> </span>upd.seqm)</a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="co">#&gt; # A tibble: 0 x 8</span></a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="co">#&gt; # … with 8 variables: seqID &lt;chr&gt;, cur.newnum &lt;dbl&gt;, cur.seqy &lt;dbl&gt;,</span></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="co">#&gt; #   cur.seqm &lt;dbl&gt;, upd.newnum &lt;dbl&gt;, type &lt;chr&gt;, upd.seqy &lt;dbl&gt;,</span></a>
+<a class="sourceLine" id="cb4-6" title="6"><span class="co">#&gt; #   upd.seqm &lt;dbl&gt;</span></a></code></pre></div>
+</div>
+<div id="test-3-fail" class="section level2">
+<h2><strong>Test 3 (fail)</strong></h2>
+<p>I was expecting that the same seqIDs in the new and old data sets have the same sequence, which does not seem to be true.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1">seq.ids &lt;-<span class="st"> </span>ss <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(upd.newnum) <span class="op">&amp;</span><span class="st"> </span><span class="op">!</span><span class="kw">is.na</span>(cur.newnum)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(seqID)</a>
+<a class="sourceLine" id="cb5-2" title="2">seqc &lt;-<span class="st"> </span><span class="kw">read.dna</span>(infile.seq.current, <span class="dt">format =</span> <span class="st">&quot;fa&quot;</span>)</a>
+<a class="sourceLine" id="cb5-3" title="3">sequ &lt;-<span class="st"> </span><span class="kw">read.dna</span>(infile.seq.update, <span class="dt">format =</span> <span class="st">&quot;fa&quot;</span>)</a>
+<a class="sourceLine" id="cb5-4" title="4">test &lt;-<span class="st"> </span><span class="kw">sapply</span>(<span class="kw">seq_along</span>(seq.ids), <span class="cf">function</span>(i) {</a>
+<a class="sourceLine" id="cb5-5" title="5">    cur &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="kw">unlist</span>(<span class="kw">as.character</span>(seqc[seq.ids[i]])), <span class="dt">collapse =</span> <span class="st">&quot;&quot;</span>)</a>
+<a class="sourceLine" id="cb5-6" title="6">    upd &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="kw">unlist</span>(<span class="kw">as.character</span>(sequ[seq.ids[i]])), <span class="dt">collapse =</span> <span class="st">&quot;&quot;</span>)</a>
+<a class="sourceLine" id="cb5-7" title="7">    cur <span class="op">==</span><span class="st"> </span>upd</a>
+<a class="sourceLine" id="cb5-8" title="8">})</a>
+<a class="sourceLine" id="cb5-9" title="9">test &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">seqID =</span> seq.ids, <span class="dt">identical =</span> test)</a>
+<a class="sourceLine" id="cb5-10" title="10">test.fail &lt;-<span class="st"> </span>test <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(<span class="op">!</span>identical)</a>
+<a class="sourceLine" id="cb5-11" title="11">test.fail</a>
+<a class="sourceLine" id="cb5-12" title="12"><span class="co">#&gt; # A tibble: 6,659 x 2</span></a>
+<a class="sourceLine" id="cb5-13" title="13"><span class="co">#&gt;    seqID        identical</span></a>
+<a class="sourceLine" id="cb5-14" title="14"><span class="co">#&gt;    &lt;chr&gt;        &lt;lgl&gt;    </span></a>
+<a class="sourceLine" id="cb5-15" title="15"><span class="co">#&gt;  1 PR/RT-000076 FALSE    </span></a>
+<a class="sourceLine" id="cb5-16" title="16"><span class="co">#&gt;  2 PR/RT-000077 FALSE    </span></a>
+<a class="sourceLine" id="cb5-17" title="17"><span class="co">#&gt;  3 PR/RT-000079 FALSE    </span></a>
+<a class="sourceLine" id="cb5-18" title="18"><span class="co">#&gt;  4 PR/RT-000080 FALSE    </span></a>
+<a class="sourceLine" id="cb5-19" title="19"><span class="co">#&gt;  5 PR/RT-000082 FALSE    </span></a>
+<a class="sourceLine" id="cb5-20" title="20"><span class="co">#&gt;  6 PR/RT-000084 FALSE    </span></a>
+<a class="sourceLine" id="cb5-21" title="21"><span class="co">#&gt;  7 PR/RT-000085 FALSE    </span></a>
+<a class="sourceLine" id="cb5-22" title="22"><span class="co">#&gt;  8 PR/RT-000086 FALSE    </span></a>
+<a class="sourceLine" id="cb5-23" title="23"><span class="co">#&gt;  9 PR/RT-000087 FALSE    </span></a>
+<a class="sourceLine" id="cb5-24" title="24"><span class="co">#&gt; 10 PR/RT-000089 FALSE    </span></a>
+<a class="sourceLine" id="cb5-25" title="25"><span class="co">#&gt; # … with 6,649 more rows</span></a></code></pre></div>
+<p>For example:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">seq.name &lt;-<span class="st"> </span>test.fail[<span class="dv">1</span>, ] <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(seqID)</a>
+<a class="sourceLine" id="cb6-2" title="2"><span class="kw">paste</span>(<span class="kw">unlist</span>(<span class="kw">as.character</span>(seqc[seq.name])), <span class="dt">collapse =</span> <span class="st">&quot;&quot;</span>)</a>
+<a class="sourceLine" id="cb6-3" title="3"><span class="co">#&gt; [1] &quot;caaatcactctttggcaacgacccctcgtcagaataaagataggggggcagataaaggaagctttattagatacaggagcagatgatacagtattagaagaaatggagttgccaggaagatggaaaccaaaaatgatagggggaattgggggttttatcaaggttagacaatatgatcaagtacccatagaaatctgtggacataaagctataggtacagtgttagtaggacctacacctgttaacataattggaagaaacctgttaactcagattggttgcactttaaattttcccattagtcctattgaaactgtaccagtaaaattaaagccaggaatggatggcccaaaagttaaacaatggccattgacagaagaaaaaataaaggcattagtagaaatttgtacagagatggaaaaggaagggaaaattacaaaaattgggcctgaaaatccatataatactccaatatttgccataaagaaaaaagacagtactaaatggagaaaattagtagattttagagaacttaataagagaactcaagacttctgggaagttcaattaggaataccacatcccgcagggttaaaaaagaaaaaatcagtaacagtattggatgtgggtgatgcatatttctcagttcccttagatgaagactttaggaagtacactgcattcaccatacctagtacaaacaatgagacaccagggattagatatcagtacaatgtgcttccacagggatggaaaggatcaccagcaatattccaaagtagcatgacaaaaatcttagagccttttagaaagcaaaatccagacatagttatctatcaatacatggatgatttatatgtaggatctgatttagaaataggagaacacagagcaaaaatagaagaactgagacaacatttgttaaggtggggatttaccacaccagacaagaaacatcagaaagaacctccattcctttggatgggttatgaactccatcctgataaatggacagtacagccta&quot;</span></a>
+<a class="sourceLine" id="cb6-4" title="4"><span class="kw">paste</span>(<span class="kw">unlist</span>(<span class="kw">as.character</span>(sequ[seq.name])), <span class="dt">collapse =</span> <span class="st">&quot;&quot;</span>)</a>
+<a class="sourceLine" id="cb6-5" title="5"><span class="co">#&gt; [1] &quot;caaatcactctttggcaacgacccctcgtcagaataaagataggggggcagataaaggaagctttattagatacaggagcagatgatacagtattagaagaaatggagttgccaggaagatggaaaccaaaaatgatagggggaattgggggttttatcaaggttagacaatatgatcaagtacccatagaaatctgtggacataaagctataggtacagtgttagtaggacctacacctgttaacataattggaagaaacctgttaactcagattggttgcactttaaattttcccattagtcctattgaaactgtaccagtaaaattaaagccaggaatggatggcccaaaagttaaacaatggccattgacagaagaaaaaataaaggcattagtagaaatttgtacagagatggaaaaggaagggaaaattacaaaaattgggcctgaaaatccatataatactccaatatttgccataaagaaaaaagacagtactaaatggagaaaattagtagattttagagaacttaataagagaactcaagacttctgggaagttcaattaggaataccacatcccgcagggttaaaaaagaaaaaatcagtaacagtattggatgtgggtgatgcatatttctcagttcccttagatgaagactttaggaagtacactgcattcaccatacctagtacaaacaatgagacaccagggattagatatcagtacaatgtgcttccacagggatggaaaggatcaccagcaatattccaaagtagcatgacaaaaatcttagagccttttagaaagcaaaatccagacatagttatctatcaatacatggatgatttatatgtaggatctgatttagaaataggagaacacagagcaaaaatagaagaactgagacaacatttgttaaggtggggatttaccacaccagacaagaaacatcagaaagaacctccattcctttggatgggttatgaactccatcctgataaatggacagtacagcctatagacctgccagaaaaagacagctggactgtca&quot;</span></a></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
