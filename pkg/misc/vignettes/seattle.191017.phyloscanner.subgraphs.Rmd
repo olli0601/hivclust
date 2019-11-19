@@ -24,13 +24,34 @@ setwd('~/git/hivclust/pkg/misc/vignettes')
 rmarkdown::render('seattle.191017.phyloscanner.subgraphs.Rmd')
 ```
 ```{r, include=TRUE, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
-#source('~/git/hivclust/pkg/misc/hivclu.Seattle.R')
 read_chunk('~/git/hivclust/pkg/misc/hivclu.Seattle.R')		
 ```
 
+## **Extracting phylogenetic subgraphs associated with viral spread in King County)**
+I begin by extracting the phylogenetic subgraphs that are associated with viral
+spread in King County/Seattle. My interpretation is that each subgraph
+corresponds to a distinct transmission chain in King County/Seattle, which may
+be partially observed due to incomplete sequence sampling. 
+```{r,include=TRUE, eval=FALSE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
+<<rmd.chunk.seattle.191017.get.dated.subgraphs>>
+```
+
+Just a few notes: if we process the subgraphs, we observe that a large fraction
+of the subgraphs consist of just one sequence. These subgraphs don t contain
+information into viral spread within Seattle because no one else of the
+corresponding transmission chain was sampled, and so we can ignore them in a
+phylodynamic analysis. This reduces sample size, and makes the analysis more
+tractable.
+
+On the other hand, the subgraphs of size 1 also provide useful information into
+the reproductive number, because they indicate stuttering viral spread, and a
+reproduction number below 1. So we don t want to exclude them when estimating
+reproductive numbers. 
+
 ## **Reading phylogenetic subgraphs **
-I first read the taxa that are part of King County phylogenetic subgraphs: 
-```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE} 
+Now, let me read the taxa that are part of King County phylogenetic subgraphs
+into R: 
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
 require(data.table)
 require(phangorn)
 require(ggplot2)

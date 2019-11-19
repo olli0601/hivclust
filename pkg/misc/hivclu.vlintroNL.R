@@ -1357,6 +1357,8 @@ vli.bez.central.subgraphs.v190723<- function()
 	indir <- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis'
 	infile.subgraphs <- file.path(indir,'190801_subgraph_data.csv')
 	infile.subgraphtaxa <- file.path(indir,'190801_individuals_in_subgraph_data.csv')
+	infile.subgraphs <- file.path(indir,'190801_subgraph_data_national.csv')
+	infile.subgraphtaxa <- file.path(indir,'190801_individuals_in_subgraph_data_national.csv')
 	
 	dsubgraphs <- as.data.table(read.csv(infile.subgraphs, stringsAsFactors=FALSE))
 	dsubgraphtaxa <- as.data.table(read.csv(infile.subgraphtaxa, stringsAsFactors=FALSE))
@@ -1400,8 +1402,8 @@ vli.bez.central.subgraphs.v190723<- function()
 	
 	#	write to file
 	outfile.base <- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/190801_'
-	write.csv(dsubgraphs.central, row.names=FALSE, file=paste0(outfile.base,'centralsubgraph_data.csv'))
-	write.csv(dsubgraphtaxa.central, row.names=FALSE, file=paste0(outfile.base,'individuals_in_centralsubgraph_data.csv'))
+	write.csv(dsubgraphs.central, row.names=FALSE, file=paste0(outfile.base,'centralsubgraph_data_national.csv'))
+	write.csv(dsubgraphtaxa.central, row.names=FALSE, file=paste0(outfile.base,'individuals_in_centralsubgraph_data_national.csv'))
 }
 
 vli.bez.summarize.state.transitions.v190723<- function()
@@ -1410,9 +1412,11 @@ vli.bez.summarize.state.transitions.v190723<- function()
 	require(phangorn)
 	require(ggplot2)
 	require(reshape)
+	require(phyloscannerR)
 	
 	#	working directory with phyloscanner output		
-	indir.phsc	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results_190723'
+	indir.phsc	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results_190723_bytrmgroup'
+	indir.phsc	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/phyloscanner_results_190723_national'
 	#	meta data
 	infile.meta	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_NLbyTrmGroup.csv'
 	#	file with individuals with identical sequence
@@ -1425,8 +1429,9 @@ vli.bez.summarize.state.transitions.v190723<- function()
 	infiles		<- data.table(F=list.files(indir.phsc, pattern='workspace.rda$', full.names=TRUE, recursive=TRUE))
 	#infiles[, SELECT_DESC_HSX:= 'NLHSX']
 	#infiles[, SELECT_DESC_MSM:= 'NLMSM']
-	infiles[, SELECT_DESC_IDU:= 'NLIDU']
-	infiles 	<- melt(infiles, measure.vars=c('SELECT_DESC_IDU'), value.name='SELECT', variable.name='SELECT_TYPE')
+	#infiles[, SELECT_DESC_IDU:= 'NLIDU']
+	infiles[, SELECT_DESC_ALL:= 'NL']
+	infiles 	<- melt(infiles, measure.vars=c('SELECT_DESC_ALL'), value.name='SELECT', variable.name='SELECT_TYPE')
 	#infiles 	<- melt(infiles, measure.vars=c('SELECT_DESC_HSX','SELECT_DESC_MSM','SELECT_DESC_IDU'), value.name='SELECT', variable.name='SELECT_TYPE')
 	#infiles 	<- subset(infiles, grepl('^G', basename(F)))
 	for(i in seq_len(nrow(infiles)))
@@ -1497,6 +1502,9 @@ vli.bez.summarize.state.transitions.v190723<- function()
 	setnames(dsubgraphtaxa,'ID2','ID') 	
 	#	add meta data
 	dm	<- as.data.table(read.csv(infile.meta, stringsAsFactors=FALSE))
+	set(dm, dm[, which(grepl('^NL',SAMPLING_LOC))], 'SAMPLING_LOC', 'NL')
+	set(dm, dm[, which(grepl('^NL',INFECTED_LOC))], 'INFECTED_LOC', 'NL')
+	set(dm, dm[, which(grepl('^NL',BORN_LOC))], 'BORN_LOC', 'NL')
 	dsubgraphtaxa <- merge(dsubgraphtaxa, dm, by='ID')
 	
 	#	add first/last sampling date and size for each subgraph to 'dsubgraphs'
@@ -1505,8 +1513,8 @@ vli.bez.summarize.state.transitions.v190723<- function()
 	
 	#	write to file
 	outfile.base <- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/analysis/190801_'
-	write.csv(dsubgraphs, row.names=FALSE, file=paste0(outfile.base,'subgraph_data.csv'))
-	write.csv(dsubgraphtaxa, row.names=FALSE, file=paste0(outfile.base,'individuals_in_subgraph_data.csv'))
+	write.csv(dsubgraphs, row.names=FALSE, file=paste0(outfile.base,'subgraph_data_national.csv'))
+	write.csv(dsubgraphtaxa, row.names=FALSE, file=paste0(outfile.base,'individuals_in_subgraph_data_national.csv'))
 }
 
 vli.bez.summarize.state.transitions.v171019<- function()

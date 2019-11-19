@@ -17,6 +17,92 @@
 
 
 
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css" data-origin="pandoc">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
 
 
 
@@ -374,6 +460,213 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <li>I am not clear on how to fix <span class="math inline">\(\xi\)</span>, <span class="math inline">\(\zeta\)</span>, given the pre-specified constraints and the migration dynamics.</li>
 <li>To solve the phylodynamic ODE of <span class="math inline">\(\boldsymbol{Y}\)</span>, we need to know <span class="math inline">\(\boldsymbol{Y}^\prime\)</span> at time <span class="math inline">\(t\)</span>. I don t understand how this is calculated, it seems to require other elements than the migration, birth and death functions, and other parameters such as <span class="math inline">\(\mu\)</span> above.</li>
 </ul>
+</div>
+<div id="input-tree-heterosexuals" class="section level2">
+<h2><strong>Input tree, heterosexuals</strong></h2>
+<p>As next step, I collected the phylogenetic input data for the phylodynamic analysis on heterosexual individuals from King County. In this step, I extracted from the dated phylogenies subgraphs of two or more heterosexual individuals plus a few background sequences, and then concatenated them all into a bifurcating dated tree.</p>
+<p>Here is the code:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1">seattle.<span class="fl">191017.</span>phydy.select.taxa &lt;-<span class="st"> </span><span class="cf">function</span>()</a>
+<a class="sourceLine" id="cb1-2" title="2">{</a>
+<a class="sourceLine" id="cb1-3" title="3">    <span class="kw">require</span>(data.table)</a>
+<a class="sourceLine" id="cb1-4" title="4">    <span class="kw">require</span>(tidyverse)</a>
+<a class="sourceLine" id="cb1-5" title="5">    <span class="kw">require</span>(ape)</a>
+<a class="sourceLine" id="cb1-6" title="6">    <span class="kw">require</span>(phytools)</a>
+<a class="sourceLine" id="cb1-7" title="7">    <span class="kw">require</span>(phangorn)</a>
+<a class="sourceLine" id="cb1-8" title="8">    <span class="kw">require</span>(phyloscannerR)</a>
+<a class="sourceLine" id="cb1-9" title="9">    </a>
+<a class="sourceLine" id="cb1-10" title="10">    home &lt;-<span class="st"> &#39;~/Box Sync/OR_Work/Seattle/analysis_191017&#39;</span></a>
+<a class="sourceLine" id="cb1-11" title="11">    indir.phsc  &lt;-<span class="st"> </span><span class="kw">file.path</span>(home,<span class="st">&#39;phyloscanner_dated&#39;</span>)</a>
+<a class="sourceLine" id="cb1-12" title="12">    outdir &lt;-<span class="st"> </span><span class="kw">file.path</span>(home,<span class="st">&#39;phydy&#39;</span>)</a>
+<a class="sourceLine" id="cb1-13" title="13">    infiles.phsc &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">F=</span><span class="kw">list.files</span>(indir.phsc, <span class="dt">pattern=</span><span class="st">&#39;_annotated_dated_tree.rda$&#39;</span>, <span class="dt">full.names=</span><span class="ot">TRUE</span>, <span class="dt">recursive=</span><span class="ot">TRUE</span>))</a>
+<a class="sourceLine" id="cb1-14" title="14">    infiles.phsc[, REP<span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">gsub</span>(<span class="st">&#39;^.*_ndrm_([0-9]+)_ft_.*$&#39;</span>,<span class="st">&#39;</span><span class="ch">\\</span><span class="st">1&#39;</span>,<span class="kw">basename</span>(F)))]</a>
+<a class="sourceLine" id="cb1-15" title="15">    infiles.phsc[, ST<span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">gsub</span>(<span class="st">&#39;^.*_Subtype([0-9A-Za-z]+)_.*$&#39;</span>,<span class="st">&#39;</span><span class="ch">\\</span><span class="st">1&#39;</span>,<span class="kw">basename</span>(F))]</a>
+<a class="sourceLine" id="cb1-16" title="16">    infiles.phsc[, LOCAL_STATE<span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">gsub</span>(<span class="st">&#39;^.*_rerooted_([A-Za-z]+)_.*$&#39;</span>,<span class="st">&#39;</span><span class="ch">\\</span><span class="st">1&#39;</span>,<span class="kw">basename</span>(F))]</a>
+<a class="sourceLine" id="cb1-17" title="17">    </a>
+<a class="sourceLine" id="cb1-18" title="18">    control &lt;-<span class="st"> </span><span class="kw">list</span>(    <span class="dt">localstate.regex=</span><span class="st">&#39;^KCMSM.*&#39;</span>,</a>
+<a class="sourceLine" id="cb1-19" title="19">                        <span class="co">#localstate.regex=&#39;^KCHSX.*&#39;,</span></a>
+<a class="sourceLine" id="cb1-20" title="20">                        <span class="dt">bs.replicate=</span><span class="dv">0</span>,</a>
+<a class="sourceLine" id="cb1-21" title="21">                        <span class="dt">keep.n.nonlocal.tips=</span><span class="dv">2</span>,</a>
+<a class="sourceLine" id="cb1-22" title="22">                        <span class="dt">remove.localstate.subtrees.of.size.1=</span> <span class="dv">1</span></a>
+<a class="sourceLine" id="cb1-23" title="23">                        )</a>
+<a class="sourceLine" id="cb1-24" title="24">    verbose &lt;-<span class="st"> </span><span class="dv">1</span></a>
+<a class="sourceLine" id="cb1-25" title="25">    </a>
+<a class="sourceLine" id="cb1-26" title="26">    localstate.regex &lt;-<span class="st"> </span>control<span class="op">$</span>localstate.regex</a>
+<a class="sourceLine" id="cb1-27" title="27">    localstate &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&#39;[^A-Za-z]&#39;</span>,<span class="st">&#39;&#39;</span>,localstate.regex)</a>
+<a class="sourceLine" id="cb1-28" title="28">    keep.n.nonlocal.tips &lt;-<span class="st"> </span>control<span class="op">$</span>keep.n.nonlocal.tips</a>
+<a class="sourceLine" id="cb1-29" title="29">    remove.localstate.subtrees.of.size<span class="fl">.1</span> &lt;-<span class="st"> </span>control<span class="op">$</span>remove.localstate.subtrees.of.size<span class="fl">.1</span></a>
+<a class="sourceLine" id="cb1-30" title="30">    bs.replicate &lt;-<span class="st"> </span>control<span class="op">$</span>bs.replicate</a>
+<a class="sourceLine" id="cb1-31" title="31">    infiles.phsc.idx &lt;-<span class="st"> </span>infiles.phsc[, <span class="kw">which</span>(REP<span class="op">==</span>bs.replicate <span class="op">&amp;</span><span class="st"> </span>LOCAL_STATE<span class="op">==</span>localstate)]</a>
+<a class="sourceLine" id="cb1-32" title="32">    <span class="co">#   process all subtypes</span></a>
+<a class="sourceLine" id="cb1-33" title="33">    phs &lt;-<span class="st"> </span><span class="kw">list</span>()</a>
+<a class="sourceLine" id="cb1-34" title="34">    <span class="cf">while</span>(<span class="kw">length</span>(infiles.phsc.idx))</a>
+<a class="sourceLine" id="cb1-35" title="35">    {</a>
+<a class="sourceLine" id="cb1-36" title="36">        <span class="co">#i&lt;- 197</span></a>
+<a class="sourceLine" id="cb1-37" title="37">        i &lt;-<span class="st"> </span>infiles.phsc.idx[<span class="dv">1</span>]</a>
+<a class="sourceLine" id="cb1-38" title="38">        <span class="co">#   read dated tree</span></a>
+<a class="sourceLine" id="cb1-39" title="39">        <span class="cf">if</span>(verbose)</a>
+<a class="sourceLine" id="cb1-40" title="40">            <span class="kw">cat</span>(<span class="st">&#39;</span><span class="ch">\n</span><span class="st">Processing &#39;</span>,infiles.phsc[i,F])      </a>
+<a class="sourceLine" id="cb1-41" title="41">        infile &lt;-<span class="st"> </span>infiles.phsc[i,F]</a>
+<a class="sourceLine" id="cb1-42" title="42">        <span class="kw">load</span>(infile)</a>
+<a class="sourceLine" id="cb1-43" title="43">        <span class="cf">if</span>(verbose)</a>
+<a class="sourceLine" id="cb1-44" title="44">            <span class="kw">cat</span>(<span class="st">&#39;</span><span class="ch">\n</span><span class="st">Is binary &#39;</span>,<span class="kw">is.binary</span>(ph), <span class="st">&#39; has zero edge len &#39;</span>, <span class="kw">any</span>(ph<span class="op">$</span>edge.length<span class="op">&lt;</span><span class="fl">1e-12</span>))</a>
+<a class="sourceLine" id="cb1-45" title="45">        </a>
+<a class="sourceLine" id="cb1-46" title="46">        <span class="co">#   for each tip in local state, determine closest tips that are not in local state</span></a>
+<a class="sourceLine" id="cb1-47" title="47">        <span class="co">#   option: either keep all of them, or those in subtrees of size &gt;1</span></a>
+<a class="sourceLine" id="cb1-48" title="48">        <span class="cf">if</span>(remove.localstate.subtrees.of.size<span class="fl">.1</span><span class="op">==</span><span class="dv">0</span>)</a>
+<a class="sourceLine" id="cb1-49" title="49">        {</a>
+<a class="sourceLine" id="cb1-50" title="50">            localstate.tips.idx &lt;-<span class="st"> </span><span class="kw">which</span>(<span class="kw">grepl</span>(localstate.regex,ph<span class="op">$</span>tip.label))  </a>
+<a class="sourceLine" id="cb1-51" title="51">        }</a>
+<a class="sourceLine" id="cb1-52" title="52">        <span class="cf">if</span>(remove.localstate.subtrees.of.size<span class="fl">.1</span><span class="op">&gt;</span><span class="dv">0</span>)</a>
+<a class="sourceLine" id="cb1-53" title="53">        {</a>
+<a class="sourceLine" id="cb1-54" title="54">            subtrees.of.tips &lt;-<span class="st"> </span><span class="kw">data.table</span>( <span class="dt">TIP=</span><span class="dv">1</span><span class="op">:</span><span class="kw">Ntip</span>(ph), </a>
+<a class="sourceLine" id="cb1-55" title="55">                    <span class="dt">ST=</span><span class="kw">as.character</span>(<span class="kw">attr</span>(ph, <span class="st">&quot;SPLIT&quot;</span>)[<span class="dv">1</span><span class="op">:</span><span class="kw">Ntip</span>(ph)])</a>
+<a class="sourceLine" id="cb1-56" title="56">            )</a>
+<a class="sourceLine" id="cb1-57" title="57">            subtrees.of.tips &lt;-<span class="st"> </span><span class="kw">subset</span>( subtrees.of.tips, <span class="kw">grepl</span>(localstate.regex,ST) )                              </a>
+<a class="sourceLine" id="cb1-58" title="58">            subtrees.of.tips &lt;-<span class="st"> </span><span class="kw">merge</span>(subtrees.of.tips, subtrees.of.tips[, <span class="kw">list</span>(<span class="dt">N=</span><span class="kw">length</span>(TIP)),<span class="dt">by=</span><span class="st">&#39;ST&#39;</span>], <span class="dt">by=</span><span class="st">&#39;ST&#39;</span>)</a>
+<a class="sourceLine" id="cb1-59" title="59">            localstate.tips.idx &lt;-<span class="st"> </span><span class="kw">subset</span>(subtrees.of.tips, N<span class="op">&gt;</span><span class="dv">1</span>)[, TIP]     </a>
+<a class="sourceLine" id="cb1-60" title="60">        }</a>
+<a class="sourceLine" id="cb1-61" title="61">        <span class="cf">if</span>(verbose) </a>
+<a class="sourceLine" id="cb1-62" title="62">            <span class="kw">cat</span>(<span class="st">&#39;</span><span class="ch">\n</span><span class="st">Found tips in local state, n=&#39;</span>,<span class="kw">length</span>(localstate.tips.idx))</a>
+<a class="sourceLine" id="cb1-63" title="63">        </a>
+<a class="sourceLine" id="cb1-64" title="64">        <span class="cf">if</span>(<span class="kw">length</span>(localstate.tips.idx)<span class="op">&gt;</span><span class="dv">0</span>)</a>
+<a class="sourceLine" id="cb1-65" title="65">        {</a>
+<a class="sourceLine" id="cb1-66" title="66">            <span class="co">#   get subtrees of grand-parent of MRCA. these should contain at least </span></a>
+<a class="sourceLine" id="cb1-67" title="67">            <span class="co">#   one tip in non-local state, often a few more</span></a>
+<a class="sourceLine" id="cb1-68" title="68">            <span class="co">#   keep the n closest, which should contain &quot;embedded&quot; non-local tips</span></a>
+<a class="sourceLine" id="cb1-69" title="69">            <span class="co">#   that may indicate implausible phylogeographic reconstructions</span></a>
+<a class="sourceLine" id="cb1-70" title="70">            mrcas &lt;-<span class="st"> </span><span class="kw">which</span>(<span class="kw">attr</span>(ph,<span class="st">&#39;SUBGRAPH_MRCA&#39;</span>))</a>
+<a class="sourceLine" id="cb1-71" title="71">            subtrees.of.tips &lt;-<span class="st"> </span><span class="kw">unique</span>(<span class="kw">as.character</span>(<span class="kw">attr</span>(ph,<span class="st">&#39;SPLIT&#39;</span>)[localstate.tips.idx])) </a>
+<a class="sourceLine" id="cb1-72" title="72">            mrcas &lt;-<span class="st"> </span>mrcas[ <span class="kw">as.character</span>(<span class="kw">attr</span>(ph, <span class="st">&#39;SPLIT&#39;</span>)[mrcas])<span class="op">%in%</span>subtrees.of.tips ]</a>
+<a class="sourceLine" id="cb1-73" title="73">            mrcas2 &lt;-<span class="st"> </span><span class="kw">sapply</span>(mrcas, <span class="cf">function</span>(mrca){</a>
+<a class="sourceLine" id="cb1-74" title="74">                        z &lt;-<span class="st"> </span><span class="kw">Ancestors</span>(ph, mrca)</a>
+<a class="sourceLine" id="cb1-75" title="75">                        z[<span class="kw">min</span>(<span class="dv">2</span>,<span class="kw">length</span>(z))]</a>
+<a class="sourceLine" id="cb1-76" title="76">                    })</a>
+<a class="sourceLine" id="cb1-77" title="77">            subtrees &lt;-<span class="st"> </span><span class="kw">lapply</span>(mrcas2, <span class="cf">function</span>(x) <span class="kw">extract.clade</span>(ph, x))</a>
+<a class="sourceLine" id="cb1-78" title="78">            nonlocal.tips &lt;-<span class="st"> </span><span class="kw">lapply</span>(subtrees, <span class="cf">function</span>(x){</a>
+<a class="sourceLine" id="cb1-79" title="79">                        subtree.dist &lt;-<span class="st"> </span><span class="kw">as.data.table</span>(<span class="kw">melt</span>(<span class="kw">cophenetic.phylo</span>(x)))</a>
+<a class="sourceLine" id="cb1-80" title="80">                        <span class="kw">setnames</span>(subtree.dist, <span class="kw">c</span>(<span class="st">&#39;Var1&#39;</span>,<span class="st">&#39;Var2&#39;</span>,<span class="st">&#39;value&#39;</span>), <span class="kw">c</span>(<span class="st">&#39;TAXA1&#39;</span>,<span class="st">&#39;TAXA2&#39;</span>,<span class="st">&#39;D&#39;</span>))</a>
+<a class="sourceLine" id="cb1-81" title="81">                        <span class="kw">set</span>(subtree.dist, <span class="ot">NULL</span>, <span class="st">&#39;TAXA1&#39;</span>, <span class="kw">as.character</span>(subtree.dist<span class="op">$</span>TAXA1))</a>
+<a class="sourceLine" id="cb1-82" title="82">                        <span class="kw">set</span>(subtree.dist, <span class="ot">NULL</span>, <span class="st">&#39;TAXA2&#39;</span>, <span class="kw">as.character</span>(subtree.dist<span class="op">$</span>TAXA2))</a>
+<a class="sourceLine" id="cb1-83" title="83">                        subtree.dist &lt;-<span class="st"> </span><span class="kw">subset</span>(subtree.dist, TAXA1<span class="op">!=</span>TAXA2 <span class="op">&amp;</span><span class="st"> </span><span class="kw">grepl</span>(localstate.regex, TAXA1) <span class="op">&amp;</span><span class="st"> </span><span class="op">!</span><span class="kw">grepl</span>(localstate.regex, TAXA2))</a>
+<a class="sourceLine" id="cb1-84" title="84">                        subtree.dist &lt;-<span class="st"> </span>subtree.dist[<span class="kw">order</span>(D),]</a>
+<a class="sourceLine" id="cb1-85" title="85">                        nonlocal.tips &lt;-<span class="st"> </span>subtree.dist[<span class="dv">1</span><span class="op">:</span><span class="kw">min</span>(<span class="kw">nrow</span>(subtree.dist),keep.n.nonlocal.tips),TAXA2]</a>
+<a class="sourceLine" id="cb1-86" title="86">                        nonlocal.tips</a>
+<a class="sourceLine" id="cb1-87" title="87">                    })</a>
+<a class="sourceLine" id="cb1-88" title="88">            nonlocal.tips &lt;-<span class="st"> </span><span class="kw">unique</span>(<span class="kw">unlist</span>(nonlocal.tips))</a>
+<a class="sourceLine" id="cb1-89" title="89">            <span class="co">#   ensure that &quot;encompassing&quot; non-local tips are also included</span></a>
+<a class="sourceLine" id="cb1-90" title="90">            siblings &lt;-<span class="st"> </span><span class="kw">Siblings</span>(ph, mrcas, <span class="dt">include.self=</span><span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb1-91" title="91">            nonlocal.tips2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(siblings, <span class="cf">function</span>(x){</a>
+<a class="sourceLine" id="cb1-92" title="92">                        <span class="cf">if</span>(x<span class="op">&lt;=</span><span class="kw">Ntip</span>(ph))</a>
+<a class="sourceLine" id="cb1-93" title="93">                        {</a>
+<a class="sourceLine" id="cb1-94" title="94">                            nonlocal.tips2 &lt;-<span class="st"> </span>ph<span class="op">$</span>tip.label[x]</a>
+<a class="sourceLine" id="cb1-95" title="95">                        }</a>
+<a class="sourceLine" id="cb1-96" title="96">                        <span class="cf">if</span>(x<span class="op">&gt;</span><span class="kw">Ntip</span>(ph))</a>
+<a class="sourceLine" id="cb1-97" title="97">                        {</a>
+<a class="sourceLine" id="cb1-98" title="98">                            tmp &lt;-<span class="st"> </span><span class="kw">extract.clade</span>(ph,x)</a>
+<a class="sourceLine" id="cb1-99" title="99">                            tmp &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">TAXA=</span>tmp<span class="op">$</span>tip.label, <span class="dt">DEPTH=</span><span class="kw">node.depth.edgelength</span>(tmp)[<span class="dv">1</span><span class="op">:</span><span class="kw">Ntip</span>(tmp)])</a>
+<a class="sourceLine" id="cb1-100" title="100">                            tmp &lt;-<span class="st"> </span><span class="kw">subset</span>(tmp, <span class="op">!</span><span class="kw">grepl</span>(localstate.regex, TAXA))</a>
+<a class="sourceLine" id="cb1-101" title="101">                            tmp &lt;-<span class="st"> </span>tmp[<span class="kw">order</span>(DEPTH),]</a>
+<a class="sourceLine" id="cb1-102" title="102">                            nonlocal.tips2 &lt;-<span class="st"> </span>tmp[<span class="dv">1</span><span class="op">:</span><span class="kw">min</span>(<span class="kw">nrow</span>(tmp), keep.n.nonlocal.tips), TAXA]     </a>
+<a class="sourceLine" id="cb1-103" title="103">                        }</a>
+<a class="sourceLine" id="cb1-104" title="104">                        nonlocal.tips2</a>
+<a class="sourceLine" id="cb1-105" title="105">                    })</a>
+<a class="sourceLine" id="cb1-106" title="106">            nonlocal.tips &lt;-<span class="st"> </span><span class="kw">unique</span>(<span class="kw">c</span>(nonlocal.tips, <span class="kw">unlist</span>(nonlocal.tips2)))</a>
+<a class="sourceLine" id="cb1-107" title="107">            </a>
+<a class="sourceLine" id="cb1-108" title="108">            <span class="co">#   drop all other tips     </span></a>
+<a class="sourceLine" id="cb1-109" title="109">            tmp &lt;-<span class="st"> </span><span class="kw">unique</span>(<span class="kw">c</span>(ph<span class="op">$</span>tip.label[localstate.tips.idx],nonlocal.tips))</a>
+<a class="sourceLine" id="cb1-110" title="110">            drop.nonlocal.tips &lt;-<span class="st"> </span><span class="kw">setdiff</span>(ph<span class="op">$</span>tip.label,tmp)</a>
+<a class="sourceLine" id="cb1-111" title="111">            <span class="cf">if</span>(verbose)</a>
+<a class="sourceLine" id="cb1-112" title="112">                <span class="kw">cat</span>(<span class="st">&#39;</span><span class="ch">\n</span><span class="st">Dropping non local tips from phylogeny, n=&#39;</span>, <span class="kw">length</span>(drop.nonlocal.tips))</a>
+<a class="sourceLine" id="cb1-113" title="113">            ph &lt;-<span class="st"> </span><span class="kw">phyloscanner.to.simmap</span>(ph)    </a>
+<a class="sourceLine" id="cb1-114" title="114">            ph &lt;-<span class="st"> </span>phytools<span class="op">:::</span><span class="kw">drop.tip.simmap</span>(ph, drop.nonlocal.tips)</a>
+<a class="sourceLine" id="cb1-115" title="115">            ph &lt;-<span class="st"> </span><span class="kw">simmap.to.phyloscanner</span>(ph)</a>
+<a class="sourceLine" id="cb1-116" title="116">            <span class="cf">if</span>(verbose)</a>
+<a class="sourceLine" id="cb1-117" title="117">                <span class="kw">cat</span>(<span class="st">&#39;</span><span class="ch">\n</span><span class="st">Retained tips from phylogeny, n=&#39;</span>, <span class="kw">Ntip</span>(ph))</a>
+<a class="sourceLine" id="cb1-118" title="118">            </a>
+<a class="sourceLine" id="cb1-119" title="119">            <span class="cf">if</span>(verbose)</a>
+<a class="sourceLine" id="cb1-120" title="120">                <span class="kw">cat</span>(<span class="st">&#39;</span><span class="ch">\n</span><span class="st">Is binary &#39;</span>,<span class="kw">is.binary</span>(ph), <span class="st">&#39; has zero edge len &#39;</span>, <span class="kw">any</span>(ph<span class="op">$</span>edge.length<span class="op">&lt;</span><span class="fl">1e-12</span>))</a>
+<a class="sourceLine" id="cb1-121" title="121">                        </a>
+<a class="sourceLine" id="cb1-122" title="122">            <span class="co">#   plot and save</span></a>
+<a class="sourceLine" id="cb1-123" title="123">            outfile &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&#39;annotated_dated_tree</span><span class="ch">\\</span><span class="st">.rda&#39;</span>,<span class="kw">paste0</span>(<span class="st">&#39;annotated_dated_collapsed_tree_&#39;</span>,<span class="kw">gsub</span>(<span class="st">&#39;[^A-Za-z0-9]&#39;</span>,<span class="st">&#39;&#39;</span>,<span class="kw">paste</span>(control, <span class="dt">collapse=</span><span class="st">&#39;&#39;</span>)),<span class="st">&#39;.pdf&#39;</span>),<span class="kw">basename</span>(infile))</a>
+<a class="sourceLine" id="cb1-124" title="124">            outfile &lt;-<span class="st"> </span><span class="kw">file.path</span>(outdir,outfile)</a>
+<a class="sourceLine" id="cb1-125" title="125">            tmp &lt;-<span class="st"> </span><span class="kw">vector</span>(<span class="st">&#39;list&#39;</span>)</a>
+<a class="sourceLine" id="cb1-126" title="126">            tmp[[<span class="st">&#39;tree&#39;</span>]] &lt;-<span class="st"> </span>ph</a>
+<a class="sourceLine" id="cb1-127" title="127">            tmp[[<span class="st">&#39;tree&#39;</span>]][[<span class="st">&#39;node.label&#39;</span>]] &lt;-<span class="st"> </span><span class="ot">NULL</span> </a>
+<a class="sourceLine" id="cb1-128" title="128">            tmp[[<span class="st">&#39;tree&#39;</span>]][[<span class="st">&#39;node.states&#39;</span>]] &lt;-<span class="st"> </span>tmp[[<span class="st">&#39;tree&#39;</span>]][[<span class="st">&#39;mapped.edge&#39;</span>]] &lt;-<span class="st"> </span>tmp[[<span class="st">&#39;tree&#39;</span>]][[<span class="st">&#39;maps&#39;</span>]] &lt;-<span class="st"> </span><span class="ot">NULL</span></a>
+<a class="sourceLine" id="cb1-129" title="129">            <span class="kw">attr</span>(tmp[[<span class="st">&#39;tree&#39;</span>]],<span class="st">&#39;map.order&#39;</span>) &lt;-<span class="st"> </span><span class="ot">NULL</span></a>
+<a class="sourceLine" id="cb1-130" title="130">            <span class="kw">attr</span>(tmp[[<span class="st">&#39;tree&#39;</span>]],<span class="st">&#39;class&#39;</span>) &lt;-<span class="st"> &#39;phylo&#39;</span></a>
+<a class="sourceLine" id="cb1-131" title="131">            tmp[[<span class="st">&#39;read.counts&#39;</span>]] &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">1</span>, <span class="kw">Ntip</span>(ph))    </a>
+<a class="sourceLine" id="cb1-132" title="132">            <span class="kw">write.annotated.tree</span>(tmp, outfile, <span class="dt">format=</span><span class="st">&quot;pdf&quot;</span>, <span class="dt">pdf.scale.bar.width =</span> <span class="dv">5</span>, <span class="dt">pdf.w =</span> <span class="dv">40</span>, <span class="dt">pdf.hm =</span> <span class="fl">0.4</span>, <span class="dt">verbose =</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb1-133" title="133">            outfile &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&#39;annotated_dated_tree</span><span class="ch">\\</span><span class="st">.rda&#39;</span>,<span class="kw">paste0</span>(<span class="st">&#39;annotated_dated_collapsed_tree_&#39;</span>,<span class="kw">gsub</span>(<span class="st">&#39;[^A-Za-z0-9]&#39;</span>,<span class="st">&#39;&#39;</span>,<span class="kw">paste</span>(control, <span class="dt">collapse=</span><span class="st">&#39;&#39;</span>)),<span class="st">&#39;.rda&#39;</span>),<span class="kw">basename</span>(infile))</a>
+<a class="sourceLine" id="cb1-134" title="134">            outfile &lt;-<span class="st"> </span><span class="kw">file.path</span>(outdir,outfile)</a>
+<a class="sourceLine" id="cb1-135" title="135">            <span class="kw">save</span>(ph, <span class="dt">file=</span>outfile)</a>
+<a class="sourceLine" id="cb1-136" title="136">            </a>
+<a class="sourceLine" id="cb1-137" title="137">            phs[[<span class="kw">length</span>(phs)<span class="op">+</span>1L]] &lt;-<span class="st"> </span>ph</a>
+<a class="sourceLine" id="cb1-138" title="138">        }</a>
+<a class="sourceLine" id="cb1-139" title="139">        infiles.phsc.idx &lt;-<span class="st"> </span>infiles.phsc.idx[<span class="op">-</span><span class="dv">1</span>]        </a>
+<a class="sourceLine" id="cb1-140" title="140">    }</a>
+<a class="sourceLine" id="cb1-141" title="141">    </a>
+<a class="sourceLine" id="cb1-142" title="142">    <span class="co">#   collect node depths to root</span></a>
+<a class="sourceLine" id="cb1-143" title="143">    node.depths &lt;-<span class="st"> </span><span class="kw">sapply</span>(<span class="kw">seq_along</span>(phs), <span class="cf">function</span>(i) <span class="kw">max</span>(<span class="kw">node.depth.edgelength</span>(phs[[i]])[<span class="dv">1</span><span class="op">:</span><span class="kw">Ntip</span>(phs[[i]])]) )</a>
+<a class="sourceLine" id="cb1-144" title="144">    node.depths.max &lt;-<span class="st"> </span><span class="kw">max</span>(node.depths)</a>
+<a class="sourceLine" id="cb1-145" title="145">        </a>
+<a class="sourceLine" id="cb1-146" title="146">    <span class="co">#   strip attributes and add root edge to preserve dating </span></a>
+<a class="sourceLine" id="cb1-147" title="147">    <span class="cf">for</span>(i <span class="cf">in</span> <span class="kw">seq_along</span>(phs))</a>
+<a class="sourceLine" id="cb1-148" title="148">    {</a>
+<a class="sourceLine" id="cb1-149" title="149">        ph &lt;-<span class="st"> </span>phs[[i]]</a>
+<a class="sourceLine" id="cb1-150" title="150">        ph<span class="op">$</span>maps &lt;-<span class="st"> </span>ph<span class="op">$</span>mapped.edge &lt;-<span class="st"> </span>ph<span class="op">$</span>node.states&lt;-<span class="st"> </span>ph<span class="op">$</span>node.label &lt;-<span class="st"> </span><span class="ot">NULL</span></a>
+<a class="sourceLine" id="cb1-151" title="151">        <span class="kw">attr</span>(ph,<span class="st">&#39;SPLIT&#39;</span>) &lt;-<span class="st"> </span><span class="kw">attr</span>(ph,<span class="st">&#39;INDIVIDUAL&#39;</span>) &lt;-<span class="st">  </span><span class="kw">attr</span>(ph,<span class="st">&#39;SUBGRAPH_MRCA&#39;</span>) &lt;-<span class="st">  </span><span class="kw">attr</span>(ph,<span class="st">&#39;map.order&#39;</span>) &lt;-<span class="st"> </span><span class="ot">NULL</span></a>
+<a class="sourceLine" id="cb1-152" title="152">        <span class="kw">attr</span>(ph, <span class="st">&quot;class&quot;</span>) &lt;-<span class="st"> &#39;phylo&#39;</span></a>
+<a class="sourceLine" id="cb1-153" title="153">        ph<span class="op">$</span>root.edge &lt;-<span class="st"> </span>node.depths.max <span class="op">-</span><span class="st"> </span>node.depths[i] <span class="op">+</span><span class="st"> </span><span class="dv">1</span></a>
+<a class="sourceLine" id="cb1-154" title="154">        phs[[i]] &lt;-<span class="st"> </span>ph</a>
+<a class="sourceLine" id="cb1-155" title="155">    }</a>
+<a class="sourceLine" id="cb1-156" title="156">    </a>
+<a class="sourceLine" id="cb1-157" title="157">    <span class="co"># concatenate trees as binary tree</span></a>
+<a class="sourceLine" id="cb1-158" title="158">    <span class="co">#options(expressions=1e4)</span></a>
+<a class="sourceLine" id="cb1-159" title="159">    ph &lt;-<span class="st"> </span><span class="kw">eval</span>(<span class="kw">parse</span>(<span class="dt">text=</span><span class="kw">paste</span>(<span class="st">&#39;phs[[&#39;</span>,<span class="kw">seq_along</span>(phs),<span class="st">&#39;]]&#39;</span>, <span class="dt">sep=</span><span class="st">&#39;&#39;</span>,<span class="dt">collapse=</span><span class="st">&#39;+&#39;</span>)))</a>
+<a class="sourceLine" id="cb1-160" title="160">    <span class="co">#options(expressions=5e3)</span></a>
+<a class="sourceLine" id="cb1-161" title="161">    ph &lt;-<span class="st"> </span><span class="kw">multi2di</span>(ph, <span class="dt">random=</span><span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb1-162" title="162">    outfile &lt;-<span class="st"> </span><span class="kw">file.path</span>( outdir, <span class="kw">paste0</span>(<span class="st">&#39;SubtypeALL_annotated_dated_collapsed_tree_&#39;</span>,<span class="kw">gsub</span>(<span class="st">&#39;[^A-Za-z0-9]&#39;</span>,<span class="st">&#39;&#39;</span>,<span class="kw">paste</span>(control, <span class="dt">collapse=</span><span class="st">&#39;&#39;</span>)),<span class="st">&#39;.newick&#39;</span>) )</a>
+<a class="sourceLine" id="cb1-163" title="163">    <span class="kw">write.tree</span>(ph, <span class="dt">file=</span>outfile)    </a>
+<a class="sourceLine" id="cb1-164" title="164">}</a></code></pre></div>
+<p>Let us have a look at the phylogenetic input data:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1"><span class="kw">require</span>(data.table)</a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="kw">require</span>(ape)</a>
+<a class="sourceLine" id="cb2-3" title="3">home &lt;-<span class="st"> &#39;~/Box Sync/OR_Work/Seattle/analysis_191017&#39;</span></a>
+<a class="sourceLine" id="cb2-4" title="4">indir &lt;-<span class="st"> </span><span class="kw">file.path</span>(home,<span class="st">&#39;phydy&#39;</span>)    </a>
+<a class="sourceLine" id="cb2-5" title="5">outdir &lt;-<span class="st"> </span><span class="kw">file.path</span>(home,<span class="st">&#39;phydy&#39;</span>)</a>
+<a class="sourceLine" id="cb2-6" title="6">infiles &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">F=</span><span class="kw">list.files</span>(indir, <span class="dt">pattern=</span><span class="st">&#39;^SubtypeALL_.*newick&#39;</span>, <span class="dt">full.names=</span><span class="ot">TRUE</span>, <span class="dt">recursive=</span><span class="ot">TRUE</span>))</a>
+<a class="sourceLine" id="cb2-7" title="7">infiles[, OPT<span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">gsub</span>(<span class="st">&#39;^.*_([A-Za-z0-9]+).newick$&#39;</span>,<span class="st">&#39;</span><span class="ch">\\</span><span class="st">1&#39;</span>,<span class="kw">basename</span>(F))]</a>
+<a class="sourceLine" id="cb2-8" title="8">localstate.regex &lt;-<span class="st"> &#39;^KCHSX.*&#39;</span></a>
+<a class="sourceLine" id="cb2-9" title="9"><span class="co">#   select KCHSX analysis and load</span></a>
+<a class="sourceLine" id="cb2-10" title="10">localstate &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&#39;[^A-Za-z]&#39;</span>,<span class="st">&#39;&#39;</span>,localstate.regex)</a>
+<a class="sourceLine" id="cb2-11" title="11">infile &lt;-<span class="st"> </span><span class="kw">subset</span>(infiles, <span class="kw">grepl</span>(localstate,OPT))[,F]</a>
+<a class="sourceLine" id="cb2-12" title="12">ph &lt;-<span class="st"> </span><span class="kw">read.tree</span>(infile)</a>
+<a class="sourceLine" id="cb2-13" title="13">ph</a>
+<a class="sourceLine" id="cb2-14" title="14"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb2-15" title="15"><span class="co">#&gt; Phylogenetic tree with 196 tips and 195 internal nodes.</span></a>
+<a class="sourceLine" id="cb2-16" title="16"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb2-17" title="17"><span class="co">#&gt; Tip labels:</span></a>
+<a class="sourceLine" id="cb2-18" title="18"><span class="co">#&gt;  NA___PR/RT-001341_437_king_Black_USA_M_NA_2001, KCHSX___PR/RT-001233_6811_king_Black_USA_F_HSX_2012, KCHSX___PR/RT-018011_2479_king_Black_USA_F_HSX_2008, Unknown___B.-.2002.02_131279.EU608853.-, KCHSX___PR/RT-004339_4676_king_Black_SLE_M_HSX_2014, KCHSX___PR/RT-009328_4291_king_Black_USA_F_HSX_2008, ...</span></a>
+<a class="sourceLine" id="cb2-19" title="19"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb2-20" title="20"><span class="co">#&gt; Rooted; includes branch lengths.</span></a></code></pre></div>
+<p>The number of “local” and “external” sequences is:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1">df &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">TAXA=</span>ph<span class="op">$</span>tip.label)</a>
+<a class="sourceLine" id="cb3-2" title="2">df[, LOCAL_TIP<span class="op">:</span><span class="er">=</span><span class="st"> </span><span class="kw">grepl</span>(localstate.regex, TAXA)]</a>
+<a class="sourceLine" id="cb3-3" title="3">df[, <span class="kw">table</span>(LOCAL_TIP)]</a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="co">#&gt; LOCAL_TIP</span></a>
+<a class="sourceLine" id="cb3-5" title="5"><span class="co">#&gt; FALSE  TRUE </span></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="co">#&gt;    96   100</span></a></code></pre></div>
+<p>The phylogeny is:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">tip.col &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="st">&#39;blue&#39;</span>,<span class="kw">Ntip</span>(ph)) </a>
+<a class="sourceLine" id="cb4-2" title="2">tip.col[ <span class="kw">grepl</span>(localstate.regex, ph<span class="op">$</span>tip.label) ] &lt;-<span class="st"> &#39;red&#39;</span></a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="kw">pdf</span>(<span class="dt">file=</span>outfile, <span class="dt">w=</span><span class="dv">6</span>, <span class="dt">h=</span><span class="dv">12</span>)</a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="kw">plot</span>(ph, <span class="dt">show.tip.label=</span><span class="ot">TRUE</span>, <span class="dt">tip.col=</span>tip.col, <span class="dt">cex=</span><span class="fl">0.25</span>)</a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="kw">axisPhylo</span>()</a>
+<a class="sourceLine" id="cb4-6" title="6"><span class="kw">dev.off</span>()   </a>
+<a class="sourceLine" id="cb4-7" title="7"><span class="co">#&gt; quartz </span></a>
+<a class="sourceLine" id="cb4-8" title="8"><span class="co">#&gt;      2</span></a></code></pre></div>
+<embed src="data:application/pdf;base64,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bWxhdXQgL29nb25layAvY2Fyb24gL3NwYWNlXQo+PgplbmRvYmoKMTAgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9OYW1lIC9GMiAvQmFzZUZvbnQgL0hlbHZldGljYQovRW5jb2RpbmcgOSAwIFIgPj4KZW5kb2JqCjExIDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvTmFtZSAvRjQgL0Jhc2VGb250IC9IZWx2ZXRpY2EtT2JsaXF1ZQovRW5jb2RpbmcgOSAwIFIgPj4KZW5kb2JqCnhyZWYKMCAxMgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMjEgMDAwMDAgbiAKMDAwMDAwMDE2MyAwMDAwMCBuIAowMDAwMDEwMzQ4IDAwMDAwIG4gCjAwMDAwMTA0MzEgMDAwMDAgbiAKMDAwMDAxMDU1NCAwMDAwMCBuIAowMDAwMDEwNTg3IDAwMDAwIG4gCjAwMDAwMDAyMTIgMDAwMDAgbiAKMDAwMDAwMDI5MiAwMDAwMCBuIAowMDAwMDEzMjgyIDAwMDAwIG4gCjAwMDAwMTM1MzkgMDAwMDAgbiAKMDAwMDAxMzYzNiAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDEyIC9JbmZvIDEgMCBSIC9Sb290IDIgMCBSID4+CnN0YXJ0eHJlZgoxMzc0MQolJUVPRgo=" width="100%" height="900" style="display: block; margin: auto;" type="application/pdf"></embed>
 </div>
 
 

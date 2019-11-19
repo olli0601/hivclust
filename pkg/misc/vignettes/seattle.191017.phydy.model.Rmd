@@ -24,7 +24,6 @@ setwd('~/git/hivclust/pkg/misc/vignettes')
 rmarkdown::render('seattle.191017.phydy.model.Rmd')
 ```
 ```{r, include=TRUE, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
-#source('~/git/hivclust/pkg/misc/hivclu.Seattle.R')
 read_chunk('~/git/hivclust/pkg/misc/hivclu.Seattle.R')		
 ```
 
@@ -251,3 +250,53 @@ $$
 * To solve the phylodynamic ODE of $\boldsymbol{Y}$, we need to know $\boldsymbol{Y}^\prime$ at time $t$. I don t understand how this is calculated, it seems to require other 
 elements than the migration, birth and death functions, and other parameters such as $\mu$ above. 
  
+ 
+## **Input tree, heterosexuals**
+As next step, I collected the phylogenetic input data for the phylodynamic
+analysis on heterosexual individuals from King County. In this step, I extracted
+from the dated phylogenies subgraphs of two or more heterosexual
+individuals plus a few background sequences, and then concatenated them all
+into a bifurcating dated tree.  
+
+Here is the code:
+```{r,include=TRUE, eval=FALSE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phydy.select.taxa>>
+```
+
+Let us have a look at the phylogenetic input data:
+```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
+require(data.table)
+require(ape)
+home <- '~/Box Sync/OR_Work/Seattle/analysis_191017'
+indir <- file.path(home,'phydy')	
+outdir <- file.path(home,'phydy')
+infiles <- data.table(F=list.files(indir, pattern='^SubtypeALL_.*newick', full.names=TRUE, recursive=TRUE))
+infiles[, OPT:= gsub('^.*_([A-Za-z0-9]+).newick$','\\1',basename(F))]
+localstate.regex <- '^KCHSX.*'
+#	select KCHSX analysis and load
+localstate <- gsub('[^A-Za-z]','',localstate.regex)
+infile <- subset(infiles, grepl(localstate,OPT))[,F]
+ph <- read.tree(infile)
+ph
+```
+
+The number of "local" and "external" sequences is:
+```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
+df <- data.table(TAXA=ph$tip.label)
+df[, LOCAL_TIP:= grepl(localstate.regex, TAXA)]
+df[, table(LOCAL_TIP)]
+```
+
+The phylogeny is:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(6, 15), fig.align="center", dpi=300} 
+tip.col <- rep('blue',Ntip(ph))	
+tip.col[ grepl(localstate.regex, ph$tip.label) ] <- 'red'
+pdf(file=outfile, w=6, h=12)
+plot(ph, show.tip.label=TRUE, tip.col=tip.col, cex=0.25)
+axisPhylo()
+dev.off()	
+```
+ 
+```{r, out.width="100%", out.height="900", include=TRUE, fig.align="center", echo=FALSE}
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/analysis_191017/phydy/SubtypeALL_annotated_dated_collapsed_tree_KCHSX021.pdf")
+``` 

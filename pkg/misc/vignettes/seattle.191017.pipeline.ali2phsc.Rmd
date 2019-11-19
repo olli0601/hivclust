@@ -103,11 +103,22 @@ First, I prepared the sampling locations for each viral sequence:
 ```
 
 Second, here is the code to setup the phylogeographic ancestral state
-reconstruction. For each subtype B tree, the maximum-parsimony analysis takes a
-few days. For the other subtypes, the results are pretty much instant.
+reconstruction for the non-B subtypes. For the subtype B tree, the
+maximum-parsimony analysis takes long, and for this reason I first extract 
+viral subtrees with deep splits in the phylogeny, and call them subtype B
+clade 1, 2, 3, etc. Then I run the phylogeographic analysis on each of these
+clades.
+
+Here is the code for non-B:
 ```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
-<<rmd.chunk.seattle.191017.phyloscanner>>
+<<rmd.chunk.seattle.191017.phyloscanner.nonB>>
 ```
+
+Here is the code for B: 
+```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phyloscanner.B>>
+```
+
 
 ## **Step 5 (date trees with ancestral state reconstruction)**
 Most phylodynamic analyses use as input a dated phylogeny, so we also have to
@@ -134,24 +145,4 @@ plot the result:
 ```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
 <<rmd.chunk.seattle.191017.treedater.postprocess>>
 ```
-
-## **Step 6 (extract phylogenetic subgraphs associated with viral spread in King County)**
-Finally, I extract the phylogenetic subgraphs that are associated with viral
-spread in King County/Seattle. My interpretation is that each subgraph
-corresponds to a distinct transmission chain in King County/Seattle, which may
-be partially observed due to incomplete sequence sampling. 
-```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
-<<rmd.chunk.seattle.191017.get.dated.subgraphs>>
-```
-
-If we process the subgraphs, we observe that a large fraction of the subgraphs
-consist of just one sequence. These subgraphs don t contain information into
-viral spread within Seattle because no one else of the corresponding
-transmission chain was sampled, and so we can ignore them in a phylodynamic
-analysis. This reduces sample size, and makes the analysis more tractable.
-
-On the other hand, the subgraphs of size 1 also provide useful information into
-the reproductive number, because they indicate stuttering viral spread, and a
-reproduction number below 1. So we don t want to exclude them when estimating
-reproductive numbers. 
 
