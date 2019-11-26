@@ -453,6 +453,7 @@ seattle.191017.phydy.kchsx <- function()
 ## ---- rmd.chunk.seattle.191017.phydyn.volz.acuteHIV.mle ----
 seattle.191017.phydyn.volz.msmUK.mle <- function()
 {
+	require(methods)
 	require(inline)
 	require(phydynR)
 			
