@@ -14,7 +14,7 @@ require(ggplot2)
 #CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 #CODE.HOME	<<- "/Users/Stephane/Phylogenetics/github/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
-CODE.HOME	<<- "/rds/general/user/or105/home/libs/hivclust"
+CODE.HOME	<<- "/rds/general/user/or105/home/libs/hivclust/pkg"
 
 #HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
 #HOME		<<- "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"	#! quotes switch off tilde expansion
