@@ -1,7 +1,7 @@
 ## ---- rmd.chunk.seattle.wrapper ----
 seattle.start.HPC<- function()
 {
-	CODE.HOME	<<- "/rds/general/user/or105/home/libs/hivclust"
+	CODE.HOME	<<- "/rds/general/user/or105/home/libs/hivclust/pkg"
 	HOME		<<- '/rds/general/user/or105/home'
 	
 	#seattle.170621.fastree()
