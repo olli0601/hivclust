@@ -459,8 +459,8 @@ seattle.191017.phydyn.volz.msmUK.mle <- function()
 			
 	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
-	likelihood.approx <- 'QL'
-	#likelihood.approx <- 'PL2'	
+	#likelihood.approx <- 'QL'
+	likelihood.approx <- 'PL2'	
 	simdir <- file.path(home,'phydyn_vignettes','volz_acuteHIV_mle_sim')
 	outdir <- file.path(home,'phydyn_vignettes',paste0('volz_acuteHIV_mle_',likelihood.approx))	
 	tree.id <- 1
