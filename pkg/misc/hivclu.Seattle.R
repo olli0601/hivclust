@@ -1,8 +1,85 @@
 ## ---- rmd.chunk.seattle.wrapper ----
-seattle.wrapper<- function()
+seattle.start.HPC<- function()
 {
-	seattle.170621.fastree()
+	CODE.HOME	<<- "/rds/general/user/or105/home/libs/hivclust"
+	HOME		<<- '/rds/general/user/or105/home'
+	
+	#seattle.170621.fastree()
+	
+	#	various   
+	if(0) 
+	{				
+		#hpc.load	<- "module load anaconda3/personal"		
+		hpc.load	<- "module load R/3.3.3"
+		hpc.select	<- 1						# number of nodes
+		hpc.nproc	<- 1						# number of processors on node
+		hpc.walltime<- 123						# walltime
+		hpc.q		<- "pqeelab"				# PBS queue
+		hpc.mem		<- "6gb" 					# RAM		
+		pbshead		<- "#!/bin/sh"
+		tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+		pbshead		<- paste(pbshead, tmp, sep = "\n")
+		tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+		pbshead 	<- paste(pbshead, tmp, sep = "\n")
+		pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+		if(!is.na(hpc.q)) 
+			pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+		pbshead 	<- paste(pbshead, hpc.load, sep = "\n")			
+		tmp			<- paste('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', '\n', sep='')
+		cmd			<- paste(pbshead,tmp,sep='\n')
+		cat(cmd)	 								
+		outfile		<- gsub(':','',paste("pv",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+		outfile		<- file.path(HOME, outfile)
+		cat(cmd, file=outfile)
+		cmd 		<- paste("qsub", outfile)		
+		cat(system(cmd, intern= TRUE))	
+		quit("no")	
+	}	
+	#	various job array
+	if(1) 
+	{		
+		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:200, '\n')
+						
+		#	make PBS header
+		hpc.load	<- "module load anaconda3/personal"
+		hpc.load	<- "module load R/3.3.3"
+		hpc.select	<- 1						# number of nodes
+		hpc.nproc	<- 1						# number of processors on node
+		hpc.walltime<- 123						# walltime
+		hpc.q		<- "pqeelab"				# PBS queue
+		hpc.mem		<- "6gb" 					# RAM
+		hpc.array	<- length(cmds)	# number of runs for job array
+		pbshead		<- "#!/bin/sh"
+		tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+		pbshead		<- paste(pbshead, tmp, sep = "\n")
+		tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+		pbshead 	<- paste(pbshead, tmp, sep = "\n")
+		pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+		if(!is.na(hpc.array))
+			pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')		
+		if(!is.na(hpc.q)) 
+			pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+		pbshead 	<- paste(pbshead, hpc.load, sep = "\n")			
+		#	make array job
+		cmd <- sapply(seq_along(cmds), function(i) paste0(i,')\n',cmds[i],';;\n'))
+		cmd <- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmd, collapse=''),'esac')
+		cmd		<- paste(pbshead,cmd,sep='\n')	
+		#	submit job
+		outfile		<- gsub(':','',paste("phy",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+		outfile		<- file.path(HOME, outfile)
+		cat(cmd, file=outfile)
+		cmd 		<- paste("qsub", outfile)
+		cat(cmd)
+		cat(system(cmd, intern= TRUE))
+	}
 }
+
+## ---- rmd.chunk.seattle.various ----
+seattle.various<- function()
+{
+	seattle.191017.phydyn.volz.msmUK.mle()
+}
+
 
 ## ---- rmd.chunk.seattle.191017.phyloscanner.subgraph.empirics ----
 seattle.191017.phyloscanner.subgraph.empirics<- function()
@@ -371,6 +448,494 @@ seattle.191017.phydy.kchsx <- function()
 	plot(ph, show.tip.label=TRUE, tip.col=tip.col, cex=0.25)
 	axisPhylo()
 	dev.off()
+}
+
+## ---- rmd.chunk.seattle.191017.phydyn.volz.acuteHIV.mle ----
+seattle.191017.phydyn.volz.msmUK.mle <- function()
+{
+	require(phydynR)
+			
+	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
+	likelihood.approx <- 'QL'
+	#likelihood.approx <- 'PL2'	
+	simdir <- file.path(home,'phydyn_vignettes','volz_acuteHIV_mle_sim')
+	outdir <- file.path(home,'phydyn_vignettes',paste0('volz_acuteHIV_mle_',likelihood.approx))	
+	tree.id <- 1
+	
+	#	read tree id
+	tmp <- na.omit(sapply(args,function(arg)
+					{
+						switch(substr(arg,2,6),
+								input= return(substr(arg,8,nchar(arg))),
+								NA)
+					}))
+	if(length(tmp)!=0)	
+		tree.id<- as.integer(tmp[1])
+	
+	## parms
+	## to estimate: wrisk2, wacute, beta, init_acute, assortprob
+	parms0 <- list( 
+			mu = 1/40		# natural mortality rate
+			, gamma0 = 1	# rate per year of progressing from 1st stage to 2nd stage of infection
+			, gamma1 = 1/9	# rate per year of death in 2nd stage
+			, beta = 1/4	# transmission rate
+			, wrisk2 = 5	# transmission risk ratio for high risk group
+			, wacute = 5	# transmission risk ratio for early stage of infection
+			, init_acute = 1	# initial conditions
+			, S0 = 5e3			# initial susceptible size 
+			, prisk2 = .30		# expected proportion in high risk group
+			, assortprob = 0.80 # proportion of transmissions reserved for within-group
+			, agerate = 1/5.	# rate of 'aging' out of high risk group to low risk group
+	)
+	demes <- c('acute', 'chron', 'acute2', 'chron2')
+	m <- 4
+	
+	## the model 
+	#~ f = (beta * (acute + acute2 + chron + chron2) * S / (S+acute+chron+acute2+chron2))
+	#~ W = (wacute * acute + wacute * wrisk2 *acute2 + chron + wrisk2*chron2)
+	B <- matrix( '0.', nrow=m, ncol=m)
+	rownames(B) = colnames(B) <- demes
+	B['acute', 'acute'] <- '(beta * (acute + acute2 + chron + chron2) * S / (S+acute+chron+acute2+chron2)) * 
+			(wacute * acute / (wacute * acute + wacute * wrisk2 *acute2 + chron + wrisk2*chron2)	) * 
+			(assortprob + (1-assortprob) * (1-prisk2))'
+	B['acute', 'acute2'] <- '(beta * (acute + acute2 + chron + chron2) * S / (S+acute+chron+acute2+chron2)) * (wacute * acute / (wacute * acute + wacute * wrisk2 *acute2 + chron + wrisk2*chron2)	) * 
+			( (1-assortprob) * (prisk2))'
+	B['chron', 'acute'] <- '(beta * (acute + acute2 + chron + chron2) * S / (S+acute+chron+acute2+chron2)) * (chron / (wacute * acute + wacute * wrisk2 *acute2 + chron + wrisk2*chron2)	) *
+			(assortprob + (1-assortprob) * (1-prisk2))'
+	B['chron', 'acute2'] <- '(beta * (acute + acute2 + chron + chron2) * S / (S+acute+chron+acute2+chron2)) * (chron / (wacute * acute + wacute * wrisk2 *acute2 + chron + wrisk2*chron2)	) * 
+			( (1-assortprob) * (prisk2))'
+	
+	B['acute2', 'acute'] <- '(beta * (acute + acute2 + chron + chron2) * S / (S+acute+chron+acute2+chron2)) * (wacute *wrisk2 * acute2 / (wacute * acute + wacute * wrisk2 *acute2 + chron + wrisk2*chron2)	) * 
+			( (1-assortprob) * (1-prisk2))'
+	B['acute2', 'acute2'] <- '(beta * (acute + acute2 + chron + chron2) * S / (S+acute+chron+acute2+chron2)) * (wacute*wrisk2 * acute2 / (wacute * acute + wacute * wrisk2 *acute2 + chron + wrisk2*chron2)	) * 
+			(assortprob + (1-assortprob) * prisk2)'
+	B['chron2', 'acute'] <- '(beta * (acute + acute2 + chron + chron2) * S / (S+acute+chron+acute2+chron2)) * (chron2 *wrisk2/ (wacute * acute + wacute * wrisk2 *acute2 + chron + wrisk2*chron2)	) *
+			( (1-assortprob) * (1-prisk2))'
+	B['chron2', 'acute2'] <- '(beta * (acute + acute2 + chron + chron2) * S / (S+acute+chron+acute2+chron2)) * (chron2 *wrisk2/ (wacute * acute + wacute * wrisk2 *acute2 + chron + wrisk2*chron2)	) *
+			(assortprob + (1-assortprob) * prisk2)'	
+	M <- matrix( '0.', nrow=m, ncol=m)
+	rownames(M) = colnames(M) <- demes
+	M['acute', 'chron'] <- 'gamma0 * acute'
+	M['acute2', 'chron2'] <- 'gamma0 * acute2'
+	M['acute2','acute'] <- 'agerate * acute2'
+	M['chron2', 'chron'] <- 'agerate * chron2'	
+	D <- setNames(rep('0.', m), demes)
+	D['acute'] <- 'mu * acute'
+	D['chron'] <- 'mu * chron + gamma1*chron'
+	D['acute2'] <- 'mu * acute2'
+	D['chron2'] <- 'mu * chron2 + gamma1 * chron2'	
+	NDD <- c( S = '-(beta * (acute + acute2 + chron + chron2) * S / (S+acute+chron+acute2+chron2)) + mu * S0 - mu *S' )	
+	dm <- build.demographic.process ( B, migrations=M, death=D, nonDeme=NDD, parameter=names(parms0) , rcpp=TRUE)
+		
+	
+	## initial paramaters
+	x0 <- c( acute = 4, chron = 0.001, acute2= 0.001, chron2=.001, S=parms0$S0)
+	theta0 <- log( c( wrisk2 = 5, wacute = 5, beta = .25, init_acute=3, assortprob = .75/(1-.75) ))
+	
+	#use QL approximation or PL2 approximation
+	obj.fun <- function(theta, bdt=NULL, dm=NULL, likelihood.approx=NULL, parms0=NULL, x0=NULL){
+		parms1 <- parms0
+		parms1$wrisk2 = unname( exp( theta['wrisk2'] ))
+		parms1$wacute = unname( exp( theta['wacute'] ))
+		parms1$beta = unname( exp( theta['beta'] ))
+		ap <- theta['assortprob'] 
+		parms1$assortprob = unname( exp(ap) / (1 + exp(ap))  )
+		x1 <- x0 
+		x1['acute'] <- unname( exp( theta['init_acute'] ))
+		print( unlist( parms1 ))
+		-phydynR:::colik( bdt, theta=parms1, dm, 
+				x0=x1, 
+				t0=0, 
+				res=200, 
+				forgiveAgtY = 1, 
+				AgtY_penalty = 1, 
+				step_size_res=10,
+				likelihood=likelihood.approx
+		)
+	}
+	#system.time( print( obj.fun( theta0, bdt )))
+	#system.time( {o <- dm( parms0, x0, 0, 250)} )
+	
+	# not used
+	sim.dm <- function( theta )
+	{
+		parms1 <- parms0
+		parms1$wrisk2 = unname( exp( theta['wrisk2'] ))
+		parms1$wacute = unname( exp( theta['wacute'] ))
+		parms1$beta = unname( exp( theta['beta'] ))
+		ap <- theta['assortprob'] 
+		parms1$assortprob = unname( exp(ap) / (1 + exp(ap))  )
+		x1 <- x0 
+		x1['acute'] <- unname( exp( theta['init_acute'] ))
+		print( unlist( parms1 ))
+		dm(  parms1,  x0 = x1, t0=0, t1 = 100, res =50)
+	}
+	#~ x <- sim.dm( theta0 )
+	
+	trefns <- list.files( path=simdir, pattern = '[0-9]+.nwk' , full.names=TRUE)
+	treefn <- trefns[tree.id]
+	#for(i in seq_len(length(trefns)))
+	#{
+	#	treefn <- trefns[1]
+		cat('\nprocess ',treefn)
+		cat('\nusing ',likelihood.approx)
+		#paste0(simdir, cargs[1])
+		tr <- read.tree( treefn)
+		n <- length(tr$tip.label)
+		ssts <- matrix(0, nrow = n, ncol = m)
+		colnames(ssts) <- demes
+		rownames(ssts) <- tr$tip.label
+		annots <- sapply( strsplit( tr$tip.label, '_' ), '[[', 2 )
+		ssts[ cbind( tr$tip.label, annots) ] <- 1
+		sts <- setNames( node.depth.edgelength( tr )[1:n], tr$tip.label)
+		bdt <- DatedTree( tr,sts,  sampleStates = ssts )		
+		fit <- optim(par= theta0, fn=obj.fun,  control=list(abstol=1e-4, trace=6), hessian=FALSE, 
+				bdt=bdt, dm=dm, likelihood.approx=likelihood.approx, parms0=parms0, x0=x0 )
+		outfile <- file.path(outdir, gsub('\\.nwk',paste0('_',likelihood.approx, '.rds'),basename(treefn)))
+		saveRDS(fit, file=outfile)		
+	#}	
+}
+
+## ---- rmd.chunk.seattle.191017.phydyn.volz.acuteHIV.mle ----
+seattle.191017.phydyn.volz.acuteHIV.mle <- function()
+{
+	#	install.packages("rcolgem", repos="http://R-Forge.R-project.org")
+	library(ape) 
+	library(akima) 	 	
+	library(treedater)	
+	library(rcolgem)
+	library(bbmle)
+	#library(phydynR)
+	
+	parms_truth <- list(gamma0 = 1, gamma1 = 1/7, gamma2 = 1/2, mu = 1/30, b=.036, 
+			beta0 = 12./10, beta1=3./100, beta2=9./100, 
+			S_0=3000, I0_0=1, I1_0=0.01, I2_0=0.01, 
+			m=3, mm=1)
+	INFECTEDNAMES <- c('I0','I1','I2')
+	births <- rbind(c('parms$beta0 * S * I0/(S+I0+I1+I2)','0','0'),
+			c('parms$beta1 * S * I1/(S+I0+I1+I2)','0','0'),
+			c('parms$beta2 * S * I2/(S+I0+I1+I2)','0','0')
+	)
+	rownames(births) <- colnames(births) <- INFECTEDNAMES
+	migrations <- rbind(c('0', 'parms$gamma0 * I0', '0'),
+			c('0', '0', 'parms$gamma1 * I1'),
+			c('0', '0', '0')
+	)
+	rownames(migrations) <- colnames(migrations) <- INFECTEDNAMES
+	deaths <- c('parms$mu*I0', 'parms$mu*I1', 'parms$mu*I2 + parms$gamma2 * I2')
+	names(deaths) <- INFECTEDNAMES
+	nonDemeDynamics <- c( S = '-parms$mu*S + parms$mu*(S + I0 + I1 + I2) - S * (parms$beta0*I0+parms$beta1*I1+parms$beta2*I2) / (S + I0 + I1 + I2)')
+	
+	# read the tree
+	tree <- read.tree(system.file('extdata/hivSimulation.nwk', package='rcolgem'))
+	# ~ the sample times are the same, because it is a homochronous sample at 50 years
+	sampleTimes <- rep(50, length(tree$tip.label))
+	names(sampleTimes) <- tree$tip.label
+	# create a tree with dated tips and internal nodes,
+	# will infer the sample states from tip labels
+	bdt <- binaryDatedTree(tree, sampleTimes, sampleStatesAnnotations=INFECTEDNAMES)
+	print(system.time(print(
+			coalescent.log.likelihood( bdt, births,  deaths, nonDemeDynamics, 
+							t0=0, 
+							x0=c(I0=1, I1=.01, I2=.01, S = parms_truth$S_0), 
+							migrations = migrations, 
+							parms=parms_truth, 
+							fgyResolution=1000, 
+							integrationMethod='euler'
+							)
+			)))
+
+	obj_fun <- function(lnbeta0, lnbeta1, lnbeta2, t0)
+	{
+		parms <- parms_truth
+		parms$beta0 <- exp(lnbeta0)
+		parms$beta1 <- exp(lnbeta1)
+		parms$beta2 <- exp(lnbeta2)
+		mll <- -coalescent.log.likelihood( bdt, births, deaths, nonDemeDynamics, 
+											t0 = t0, 
+											x0=c(I0=1, I1=.01, I2=.01, S = parms$S_0), 
+											migrations = migrations, 
+											parms=parms, 
+											fgyResolution = 1000, 
+											integrationMethod ='rk4')
+		# track progress:
+		print(c(mll, exp(c(lnbeta0, lnbeta1, lnbeta2) ), t0) )
+		mll
+	}
+	fit <- mle2(obj_fun, start=list(lnbeta0=log(.6), lnbeta1=log(.2), lnbeta2=log(.05), t0=0), 
+			method='Nelder-Mead', 
+			optimizer='optim',  
+			control=list(trace=6, reltol=1e-8))
+	AIC(fit)
+	logLik(fit)
+	coef(fit)
+	exp(coef(fit))
+	profbeta <- profile(fit, which=1, alpha=.05, std.err=.5, trace=TRUE, tol.newmin=1 )
+	c( exp( confint( profbeta ) ), TrueVal=parms_truth$beta0 )
+	plot(profbeta)
+	abline( v = log( parms_truth$beta0) , col='red')	
+}
+
+## ---- rmd.chunk.seattle.191017.phydyn.volz.acuteHIV.simulate.tree ----
+seattle.191017.phydyn.volz.acuteHIV.simulate.tree <- function()
+{
+	#	install.packages("rcolgem", repos="http://R-Forge.R-project.org")
+	library(ape) 
+	library(akima) 	 	
+	library(treedater)	
+	library(rcolgem)
+	#library(phydynR)
+	
+	#	phylody model structure
+	INFECTEDNAMES <- c('I0', 'I1', 'I2')
+	births <- rbind(c('beta0 * S * I0/(S+I0+I1+I2)','0','0'),
+		c('beta1 * S * I1/(S+I0+I1+I2)','0','0'),
+		c('beta2 * S * I2/(S+I0+I1+I2)','0','0')
+		)
+	rownames(births) <- colnames(births) <- INFECTEDNAMES
+	migrations <- rbind(c('0', 'gamma0 * I0', '0'),
+		c('0', '0', 'gamma1 * I1'),
+		c('0', '0', '0')
+		)
+	rownames(migrations) <- colnames(migrations) <- INFECTEDNAMES
+	deaths <- c('mu*I0', 'mu*I1', 'mu*I2 + gamma2 * I2')
+	names(deaths) <- INFECTEDNAMES
+	nonDemeDynamics <- c( S = '-mu*S + mu*(S + I0 + I1 + I2) - S * (beta0*I0+beta1*I1+beta2*I2) / (S + I0 + I1 + I2)')
+	
+	#	build demographic process
+	demo.model <- build.demographic.process(
+			births
+			, nonDemeDynamics
+			, migrations=migrations
+			, deaths=deaths
+			, parameterNames = c('beta0'
+				, 'beta1'
+				, 'beta2'
+				, 'gamma0'
+				, 'gamma1'
+				, 'gamma2'
+				, 'mu')
+			, rcpp = TRUE
+			, sde=TRUE
+			)
+
+	#	parameters			
+	theta <- c( gamma0 = 1, gamma1=1/7, gamma2=1/2, mu=1/30, beta0 = 12./10, beta1=3./100, beta2=9./100 )
+	t0 <- 0; t1 <- 50; x0 <- c(S = 999, I0 = 1, I1 =.1, I2 = .1)	
+	show.demographic.process(demo.model, theta, x0, t0, t1)
+	
+	#	simulate dated tree from model 
+	n <- 100
+	sampleTimes <- seq( 15, 25, length.out = n)
+	sampleStates <- t(rmultinom( n, size = 1, prob = c(.025, .9, .075) ))
+	head(sampleStates)
+	tree <- sim.co.tree(theta, demo.model, x0, t0, sampleTimes, sampleStates, res = 1e3)
+	tree
+	
+	plot.phylo(tree)
+	ltt.plot(tree)
+}
+
+## ---- rmd.chunk.seattle.191017.phydyn.nascimento.senegal ----
+seattle.191017.phydyn.nascimento.senegal <- function()
+{
+	#install.packages("remotes")
+	#remotes::install_github("thednainus/senegalHIVmodel")
+	library(ape) 
+	library(akima) 
+	library(BayesianTools) 
+	library(phydynR)
+	library(treedater)
+	
+	
+	#	demes and non-demes
+	demes <- c("gpm", "gpf", "msm", "src")
+	nondemes <- c()
+	m <- length(demes)
+	mm <- length(nondemes)
+	#	basic structure of objects needed for likelihood	
+	births <- matrix("0.", nrow = m, ncol = m)
+	migs <- matrix("0.", nrow = m, ncol = m)
+	rownames(births) = rownames(migs) = colnames(births) = colnames(migs) <- demes
+	deaths <- setNames(rep("0.", m), demes)
+	nonDemeDynamics <- setNames(rep("0.", mm), nondemes)
+	# 	model parameters
+	T0 <- 1978		
+	T1 <- 2014		
+	GAMMA <- 1/10
+	theta.gpspline <-  function(t, parms)
+		{
+			if (t < T0) 
+				return(parms$gpsp0)
+			if (t > T1) 
+				return (parms$gpsp2) 
+			with(parms, aspline(x = c(T0, gpsploc, T1), y=c(gpsp0, gpsp1, gpsp2), xout = t)$y)		
+		}
+	theta.msmspline <- function(t, parms)
+		{
+			if (t < T0) 
+				return(parms$msmsp0)
+			if (t > T1) 
+				return (parms$msmsp2) 
+			with(parms, aspline(x = c(T0, msmsploc, T1), y=c(msmsp0, msmsp1, msmsp2), xout = t)$y)
+		}	
+	THETA <- list(	gpsp0 = 6/10, # par incidence spline GP
+			gpsp1 = 4/10, 	# par incidence spline GP
+			gpsp2 = 1/10,	# par incidence spline GP
+			gpsploc = 1987,
+			msmsp0 = 4/10,	# par incidence spline MSM
+			msmsp1 = 4/10,	# par incidence spline MSM
+			msmsp2 = 2/10,	# par incidence spline MSM
+			msmsploc = 1995,
+			maleX = 2.0,
+			import = 1/20,
+			srcNe = 1/10,
+			gpspline = theta.gpspline,
+			msmspline = theta.msmspline,
+			pmsm2msm = 0.85,
+			pgpf2gpm = 0.85,
+			initmsm = 1,
+			initgp = 1)
+	SRCSIZE <<- 1e5
+	X0 <- c(gpm = unname(THETA$initgp/2),
+			gpf = unname(THETA$initgp/2), 
+			msm = unname(THETA$initmsm), 
+			src = SRCSIZE)
+	#	model specfication: birth matrix
+	births['msm', 'msm'] <- "parms$msmspline(t, parms) * msm * parms$pmsm2msm"
+	births['msm', 'gpf'] <- "parms$msmspline(t, parms) * msm * (1-parms$pmsm2msm)"
+	births['gpm', 'gpf'] <- "parms$gpspline(t, parms) * gpm * parms$maleX"
+	births['gpf', 'gpm'] <- "parms$gpspline(t, parms) * gpf * parms$pgpf2gpm"
+	births['gpf', 'msm'] <- "parms$gpspline(t, parms) * gpf * (1-parms$pgpf2gpm)"	
+	births['src', 'src'] <- "0.5 * SRCSIZE^2 / parms$srcNe"
+	#	model specfication: migration matrix
+	migs['src', 'gpm'] <- "parms$import * gpm"
+	migs['src', 'gpf'] <- "parms$import * gpf"
+	migs['src', 'msm'] <- "parms$import * msm"
+	migs['gpm', 'src'] <- "parms$import * gpm"
+	migs['gpf', 'src'] <- "parms$import * gpf"
+	migs['msm', 'src'] <- "parms$import * msm"
+	#	model specfication: death vector
+	deaths['msm'] <- "GAMMA * msm"
+	deaths['gpf'] <- "GAMMA * gpf"
+	deaths['gpm'] <- "GAMMA * gpm"
+	deaths['src'] <- "0.5 * SRCSIZE^2 / parms$srcNe"
+	
+	#	build demographic model
+	dm <- phydynR:::build.demographic.process(births = births, 
+			deaths = deaths,
+			migrations = migs, 
+			parameterNames = names(THETA), 
+			rcpp = FALSE,
+			sde = FALSE)
+
+	#	load data, 512 taxa in total	
+	tree.all <- read.tree( system.file("data/bindTree_CGR_GTR+Gp12+3_droppedTip.tre", package = "senegalHIVmodel"))
+	#	data= subtype, risk group, location, sampling year
+	all.data.cgr <- read.csv(system.file("data/HIV_subtypes_summary_CGR.csv", package = "senegalHIVmodel"))
+	all.data.SN <- read.csv( system.file("data/HIV_subtypes_summary_SENEGAL_noDups.csv", package = "senegalHIVmodel"))
+	all_data <- senegalHIVmodel::organize_metadata(all.data.cgr, all.data.SN)
+	#	read estimated sampling times (real value, from treedater)
+	times <- readRDS( system.file("data/bindTree_CGR_GTR+Gp12+3_droppedTip_sts.RDS", package = "senegalHIVmodel"))
+	#	make tip states matrix
+	gpm <- gpf <- msm <- src <- rep(0, length(tree.all$tip.label))	
+	gpm[all_data$States == "gpm"] <- 1 
+	gpf[all_data$States == "gpf"] <- 1 
+	msm[all_data$States == "msm"] <- 1 
+	src[all_data$States == "src"] <- 1
+	sampleStates <- cbind(gpm, gpf, msm, src) 
+	rownames(sampleStates) <- all_data$tip.name
+	#	make DatedTree object
+	dated.tree <- phydynR::DatedTree(phylo = tree.all, 
+			sampleTimes = times,
+			sampleStates = sampleStates, 
+			minEdgeLength = 2/52,
+			tol = 0.1)
+	
+	obj_fun <- function(parameters){
+		# we use unname here because "parameters" can be a vector or matrix, and 
+		# sometimes it comes with column names, which I chose to remove these nam 
+		# in here.
+		parameters <- unname(parameters)
+		# add the values of THETA to a new variable named THETA.new
+		THETA.new <- THETA
+		# change the values in THETA.new to the new proposals that will be evalua
+		THETA.new$gpsp0 <- parameters[1] 
+		THETA.new$gpsp1 <- parameters[2] 
+		THETA.new$gpsp2 <- parameters[3] 
+		THETA.new$gpsploc <- parameters[4] 
+		THETA.new$msmsp0 <- parameters[5] 
+		THETA.new$msmsp1 <- parameters[6] 
+		THETA.new$msmsp2 <- parameters[7] 
+		THETA.new$msmsploc <- parameters[8] 
+		THETA.new$import <- parameters[9] 
+		THETA.new$srcNe <- parameters[10] 
+		THETA.new$pmsm2msm <- parameters[11] 
+		THETA.new$pgpf2gpm <- parameters[12]
+		mll <- phydynR::colik(tree = dated.tree, 
+				theta = THETA.new,
+				demographic.process.model = dm,
+				x0 = X0,
+				t0 = 1978,
+				res = 1e3,
+				timeOfOriginBoundaryCondition = FALSE,
+				AgtY_penalty = 1,
+				maxHeight = 41)
+		return(mll) 
+	}
+	densities <- function(par)
+	{
+		# d1 to d3 and d5 to d7 I am using a gamma distribution with
+		#    mean = R0 = 1.1 and sigma = 1
+		# d4, d8 uniform distribution between the start time and
+		# the final time of our simualtions (t0 = 1978, and t1 = 2014)
+		# d9 exponential distribution with mean around 1/30
+		# d10 exponential distribution with mean around 1/20
+		d1 = dgamma(par[1], shape = 3, rate = 3/1.1, log= TRUE) #gsp0
+		d2 = dgamma(par[2], shape = 3, rate = 3/1.1, log= TRUE) #gsp1
+		d3 = dgamma(par[3], shape = 3, rate = 3/1.1, log= TRUE) #gsp2
+		d4 = dunif(par[4], min = 1978, max = 2014, log= TRUE)	#gsploc
+		d5 = dgamma(par[5], shape = 3, rate = 3/1.1, log= TRUE) #msm0
+		d6 = dgamma(par[6], shape = 3, rate = 3/1.1, log= TRUE) #msm1
+		d7 = dgamma(par[7], shape = 3, rate = 3/1.1, log= TRUE) #msm2
+		d8 = dunif(par[8], min = 1978, max = 2014, log= TRUE)	#msmloc
+		d9 = dexp(par[9], rate = 30, log = TRUE) #import
+		d10 = dexp(par[10], rate = 20, log = TRUE) #srcNe
+		d11 = dbeta(par[11], shape1 = 16, shape2 = 4, log = TRUE) #pmsm2msm
+		d12 = dbeta(par[12], shape1 = 16, shape2 = 4, log = TRUE) #pgpf2gpm
+		return(d1 + d2 + d3 + d4 + d5 + d6 + d7 + d8 + d9 + d10 + d11 + d12)
+	}
+	# Create sampling, this is optional.
+	#The MCMCs can automatically generate starting # conditions if a sampler is provided
+	sampler <- function(n=1)
+	{
+		d1 = rgamma(n, shape = 3, rate = 3/1.1) #gpsp0 
+		d2 = rgamma(n, shape = 3, rate = 3/1.1) #gpsp1 
+		d3 = rgamma(n, shape = 3, rate = 3/1.1) #gpsp2 
+		d4 = runif(n, min = 1978, max = 2014) #gpsploc 
+		d5 = rgamma(n, shape = 3, rate = 3/1.1) #msmsp0 
+		d6 = rgamma(n, shape = 3, rate = 3/1.1) #msmsp1 
+		d7 = rgamma(n, shape = 3, rate = 3/1.1) #msmsp2 
+		d8 = runif(n, min = 1978, max = 2014) #msmsploc 
+		d9 = rexp(n, rate = 30) #import
+		d10 = rexp(n, rate = 20) #srcNe
+		d11 = rbeta(n, shape1 = 16, shape2 = 4) #pmsm2msm 
+		d12 = rbeta(n, shape1 = 16, shape2 = 4) #pgpf2gpm
+		return(cbind(d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12)) 
+	}
+	# Create prior (necessary for the BayesianTools package)
+	prior <- createPrior(
+			density = densities, 
+			sampler = sampler,
+			lower = c(0.01, 0.01, 0.01, 1978, 0.01, 0.01, 0.01, 1978, 0, 0.0001, 0.3, 0.3), 
+			upper = c(3, 3, 3,2014, 3, 3, 3, 2014, 0.15, 0.15, 1, 1)
+			)
+	bayesianSetup <- createBayesianSetup(likelihood=obj_fun , prior = prior)
+	settings = list(iterations = 18000, nrChains = 1, thin = 1) 
+	out <- runMCMC(bayesianSetup = bayesianSetup,
+			sampler = "DEzs",
+			settings = settings)
 }
 
 ## ---- rmd.chunk.seattle.191017.treedater.run ----

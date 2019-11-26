@@ -1,32 +1,3 @@
-#! /Library/Frameworks/R.framework/Versions/3.1/Resources/bin/Rscript
-##	first line in shell script starts with #! and start Rscript
-##	CHANGE  as needed
-##! /Library/Frameworks/R.framework/Versions/2.11/Resources/bin/Rscript
-##! /Library/Frameworks/R.framework/Versions/2.15/Resources/bin/Rscript
-##! /apps/R/3.3.3/lib64/R/bin/Rscript
-##! /usr/bin/Rscript
-##! /Library/Frameworks/R.framework/Versions/2.11/Resources/bin/Rscript
-###############################################################################
-#
-#
-# Author: oliver ratmann
-# file: hivclu.startme.R
-#
-# usage from R:
-#> setwd("/Users/Oliver/git/hivclust/pkg"); source("misc/hivclu.startme.R")
-# usage from bash:
-#> cd /Users/Oliver/git/hivclust/pkg
-#> misc/hivclu.startme.R --help
-#
-#
-# Installation instructions:
-#	1 make sure the first line in this file points to your Rscript
-#	2.1	create a directory CODE.HOME and set the CODE.HOME variable below to this path
-#	2.2	create CODE.HOME/src_tipclust and copy all the R files into this directory
-#	2.3 create a directory HOME and set the HOME variable below to this path
-#
-#
-###############################################################################
 args <- commandArgs()
 if(!any(args=='--args'))
 	args<- vector("numeric",0)
@@ -40,17 +11,14 @@ require(ggplot2)
 #require(hivclust)
 
 
-CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
+#CODE.HOME	<<- "/Users/Oliver/git/hivclust/pkg"
 #CODE.HOME	<<- "/Users/Stephane/Phylogenetics/github/hivclust/pkg"
 #CODE.HOME	<<- "/work/or105/libs/hivclust/pkg"
-HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
+CODE.HOME	<<- "/rds/general/user/or105/home/libs/hivclust"
+
+#HOME		<<- "/Users/Oliver/duke/2013_HIV_NL/ATHENA_2013"
 #HOME		<<- "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"	#! quotes switch off tilde expansion
-#HOME        <<- "/work/or105/ACpolext"
-#HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
-#HOME		<<- "/work/or105/UKCA_1309"
-#HOME		<<- "/Users/Stephane/Desktop/CASCADE_phylo/hivclust"
-#HOME		<<- "/home/koelle/or7/phylody"
-#HOME		<<- "/work/or105/ATHENA_2013"
+HOME		<<- '/rds/general/user/or105/home/'
 DATA		<<- paste(HOME,"data",sep='/')
 HIVC.DEBUG	<<- 0
 LIB.LOC		<<- NULL
@@ -91,8 +59,8 @@ EPS			<<- 1e-12
 #default.fun		<- "project.athena.Fisheretal.exact.repro"
 #default.fun		<- "project.dual"
 #default.fun		<- 'project.examl.ATHENA1610.161102'
-#default.fun			<- 'seattle.wrapper'
-default.fun		<- "hivc.pipeline.various"
+default.fun			<- 'seattle.start.HPC'
+#default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 #if(length(args) && !is.loaded("tipc_tabulate_after_sample"))
 #{
@@ -408,7 +376,7 @@ if(length(args))
 					PROPS.ESTIMATE			= "hivc.prog.props_univariate",
 					AGE.ESTIMATE			= "age.props_univariate",
 					BETAREG.NUMBERS			= "project.athena.Fisheretal.numbers",
-					VARIOUS					= "project.Bezemer.VLIntros"
+					VARIOUS					= "seattle.various"
 					)
 	}
 	tmp<- na.omit(sapply(args,function(arg)
