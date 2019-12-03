@@ -7,7 +7,7 @@ seattle.start.HPC<- function()
 	#seattle.170621.fastree()
 	
 	#	various   
-	if(0) 
+	if(1) 
 	{				
 		#hpc.load	<- "module load anaconda3/personal"		
 		hpc.load	<- "module load R/3.3.3"
@@ -36,7 +36,7 @@ seattle.start.HPC<- function()
 		quit("no")	
 	}	
 	#	various job array
-	if(1) 
+	if(0) 
 	{		
 		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:240, '\n')
 						
@@ -78,8 +78,8 @@ seattle.start.HPC<- function()
 seattle.various<- function()
 {
 	#seattle.191017.phydyn.volz.msmUK.mle()
-	#seattle.191017.phydyn.olli.SITmf01.sim()
-	seattle.191017.phydyn.olli.SITmf01.mle()
+	seattle.191017.phydyn.olli.SITmf01.sim()
+	#seattle.191017.phydyn.olli.SITmf01.mle()
 }
 
 
@@ -501,7 +501,7 @@ seattle.191017.phydyn.volz.msmUK.mle.post <- function()
 }
 
 
-## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf.sim ----
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01.sim ----
 seattle.191017.phydyn.olli.SITmf01.sim <- function()
 {
 	require(methods)
@@ -551,7 +551,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	#
 	model.par.names <- c('beta','beta00','beta01','beta10','beta11','gamma','mu')
 	#	build stochastic model	
-	dm <- phydynR:::build.demographic.process(bir, migrations=mig, death=death, nonDeme=ndd, parameter=model.par.names , rcpp=TRUE, sde=TRUE)
+	dm <- phydynR:::build.demographic.process(bir, migrations=mig, death=death, nonDeme=ndd, parameter=model.par.names , rcpp=TRUE, sde=FALSE)
 	
 	
 	#
@@ -674,6 +674,8 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		}
 		dsim <- do.call('rbind',dsim)
 		dbir <- do.call('rbind',dbir)
+		dsim <- subset(dsim, RUN==1)
+		dbir <- subset(dbir, RUN==1)
 		#dsim[, N:=  If0+If1+Im0+Im1+Sf0+Sf1+Sm0+Sm1+Tf0+Tf1+Tm0+Tm1 ]
 		
 		
@@ -785,7 +787,111 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	}
 }
 
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01.mle ----
+seattle.191017.phydyn.olli.SITmf01.assess <- function()
+{
+	require(methods)
+	require(inline)
+	require(phydynR)
+	require(data.table)
+	require(ggplot2)
+	
+	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	indir <- file.path(home,'phydyn_olli','olli_SITmf01_mle')
+	infiles <- data.table(FIN=list.files(indir, pattern='rds$', full.names=TRUE))
+	infiles[, SIM_ID:= as.integer(gsub('^sim([0-9]+)_tree_sample([0-9]+)_([0-9]+)_res.rds$','\\1',basename(FIN)))]
+	infiles[, SAMPLE_SIZE:= as.integer(gsub('^sim([0-9]+)_tree_sample([0-9]+)_([0-9]+)_res.rds$','\\2',basename(FIN)))]
+	infiles[, REP_ID:= as.integer(gsub('^sim([0-9]+)_tree_sample([0-9]+)_([0-9]+)_res.rds$','\\3',basename(FIN)))]
+	
+	df <- infiles[, {
+				#infile <- infiles[1,FIN]
+				infile <- FIN
+				fit <- readRDS(infile)
+				ans <- fit$tree$all.pars
+				names(ans) <- paste0(gsub('_','.',names(ans)),'_true')
+				tmp <- fit$par
+				names(tmp) <- paste0(names(tmp),'_est')
+				as.list( c(ans, tmp, convergence=fit$convergence, ll= fit$value ) )
+			}, by=c('SIM_ID','SAMPLE_SIZE','REP_ID')]
+	
+	#	rescale all beta values so that beta=1
+	setnames(df, colnames(df), gsub('\\.init','',colnames(df)))
+	df[, beta00_est:= 1]
+	df[, beta_est:= r0_est*(gamma_true+mu_true)]
+	df[, beta00_est:= beta00_est/beta_est]
+	df[, beta10_est:= beta10_est/beta_est]
+	df[, beta01_est:= beta01_est/beta_est]
+	df[, beta11_est:= beta11_est/beta_est]
+	df[, beta_est:= 1]
+	df[, beta00_true:= beta00_true/beta_true]
+	df[, beta10_true:= beta10_true/beta_true]
+	df[, beta01_true:= beta01_true/beta_true]
+	df[, beta11_true:= beta11_true/beta_true]
+	df[, beta_true:= 1]
+	df <- subset(df, select=c(SIM_ID, SAMPLE_SIZE, REP_ID, 
+					beta00_true, beta01_true, beta10_true, beta11_true,
+					beta00_est, beta01_est, beta10_est, beta11_est, 
+					convergence, ll
+					))
+	df[, SAMPLE_SIZE:= factor(SAMPLE_SIZE)]
+	df[, SIM_ID:= paste0('simulation ',SIM_ID)]
+	df[, convergence:= factor(convergence, levels=c(1,0), labels=c('yes','no'))]
+	
+	#	how many estimations have converged?
+	ggplot(df, aes(x=SAMPLE_SIZE, fill=convergence)) + geom_bar() +
+			theme_bw() +
+			facet_grid(~SIM_ID, scales='free_y') 
+	ggsave(file= file.path(indir,'runs_convergence.pdf'), w=10, h=5)
+	
+	#	overall results
+	df2 <- melt(df, id.vars=c('SIM_ID','SAMPLE_SIZE','REP_ID','convergence','ll'))
+	df2[, TYPE:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\2',variable)]
+	df2[, VAR:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\1',variable)]	
+	dft <- subset(df2, TYPE=='true' & REP_ID==1 & SAMPLE_SIZE==100)
+	dfe <- subset(df2, TYPE=='est' & convergence=='yes')
+	ggplot() + 
+			#geom_boxplot(data=dfe, aes(x=SAMPLE_SIZE, y=value, colour=SAMPLE_SIZE), outlier.shape = NA) +
+			geom_point(data=dfe, aes(x=SAMPLE_SIZE, y=value, colour=SAMPLE_SIZE, shape=convergence)) +
+			facet_grid(SIM_ID~VAR, scales='free_y') +
+			coord_cartesian(ylim=c(-10,10)) +
+			theme_bw() +
+			geom_hline(data=dft, aes(yintercept=value)) +
+			labs(x='', y='parameter value\n', colour='number tips in phylo', shape='ML optim converged') +
+			theme(legend.position='top')
+	ggsave(file= file.path(indir,'accuracy_marginals.pdf'), w=10, h=15)
+	
+	#	compare
+	#	1 no spread between 0 and 1
+	#	2 homogeneous spread
+	df3 <- subset(df, SIM_ID%in%paste0('simulation ',1:2) )
+	df3[, SIM_ID:= gsub('simulation 1','no spread betw 0 and 1', SIM_ID)]
+	df3[, SIM_ID:= gsub('simulation 2','homogeneous spread', SIM_ID)]
+	#	identify runs with crazy estimates 
+	tmp <- subset(df3, beta00_est>10 | beta00_est< -10 | beta10_est>10 | beta10_est< -10 | beta01_est>10 | beta01_est< -10 | beta11_est>10 | beta11_est< -10)
+	tmp <- unique(subset(tmp, select=c(SIM_ID, SAMPLE_SIZE, REP_ID)))
+	tmp[, CRAZY:= 'yes']
+	df3 <- merge(df3, tmp, by=c('SIM_ID','SAMPLE_SIZE','REP_ID'), all.x=TRUE)
+	set(df3, df3[, which(is.na(CRAZY))], 'CRAZY', 'no')
+	df3 <- melt(df3, id.vars=c('SIM_ID','SAMPLE_SIZE','REP_ID','CRAZY','ll','convergence'))
+	df3[, TYPE:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\2',variable)]
+	df3[, VAR:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\1',variable)]	
+	dft <- subset(df3, TYPE=='true' & REP_ID==1)
+	dfe <- subset(df3, TYPE=='est' & convergence=='yes' & CRAZY=='no')
+	
+	ggplot() + 
+			geom_boxplot(data=dfe, aes(x=VAR, y=value, colour=SIM_ID), outlier.shape = NA) +
+			geom_point(data=dfe, aes(x=VAR, y=value, colour=SIM_ID, shape=convergence)) +
+			facet_grid(SAMPLE_SIZE~SIM_ID) +
+			coord_cartesian(ylim=c(-10,10)) +			
+			theme_bw() +
+			geom_point(data=dft, aes(x=VAR, y=value), pch=4) +
+			labs(x='', y='parameter value\n', colour='number tips in phylo', shape='ML optim converged') +
+			theme(legend.position='top') +
+			theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+	ggsave(file= file.path(indir,'accuracy_sim1_vs_sim2.pdf'), w=10, h=10)	
+}
 
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01.mle ----
 seattle.191017.phydyn.olli.SITmf01.mle <- function()
 {
 	require(methods)
