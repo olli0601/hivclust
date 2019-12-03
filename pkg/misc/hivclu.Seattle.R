@@ -867,7 +867,7 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 		t0 <- unname(fixed.pars['t0'])
 		maxheight <- unname(fixed.pars['colik.maxheight'])
 		r0 <- unname(est.pars['r0'])
-		beta00 <- unname(est.pars['beta00'])
+		beta00 <- unname(fixed.pars['beta00'])
 		beta01 <- unname(est.pars['beta01'])
 		beta10 <- unname(est.pars['beta10'])
 		beta11 <- unname(est.pars['beta11'])
@@ -886,7 +886,7 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 				maxHeight= maxheight
 				)
 		# track progress:
-		print(c(mll=mll, r0=beta/(gamma+mu), beta=beta, beta00=beta00, beta01=beta01, beta10=beta10, beta11=beta11) )
+		print(c(mll=mll, r0=beta/(gamma+mu), beta=beta, beta01=beta01, beta10=beta10, beta11=beta11) )
 		mll
 	}
 	
@@ -898,14 +898,14 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 		simfile <- simfiles[i,FIN]
 		load(simfile)	
 		all.pars.truth <- tree$all.pars			
-		fixed.pars <- all.pars.truth[c('gamma','mu',
+		fixed.pars <- all.pars.truth[c('beta00','gamma','mu',
 						'Sf0_init','Sf1_init','Sm0_init','Sm1_init',
 						'If0_init','If1_init','Im0_init','Im1_init',
 						'Tf0_init','Tf1_init','Tm0_init','Tm1_init')]	
 		fixed.pars['t0'] <- 0
 		fixed.pars['t1'] <- 50	
 		fixed.pars['colik.maxheight'] <- floor( tree$maxHeight-1 ) 	
-		est.pars.init <- c(r0=2, beta00=1, beta01=1, beta10=1, beta11=1)
+		est.pars.init <- c(r0=2, beta01=1, beta10=1, beta11=1)
 		fit <- optim(par=est.pars.init, fn=obj.fun,  
 				tree=tree, dm=dm, fixed.pars=fixed.pars, 
 				control=list(fnscale=-1, reltol=1e-8, trace=6),
