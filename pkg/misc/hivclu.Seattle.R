@@ -794,8 +794,8 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 	require(data.table)
 	require(ggplot2)
 	
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
-	#home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
+	#home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SITmf01_sim')
 	outdir <- file.path(home,'phydyn_olli','olli_SITmf01_mle')
 	simfiles <- data.table(FIN=list.files(simdir, pattern='rda$', full.names=TRUE))
