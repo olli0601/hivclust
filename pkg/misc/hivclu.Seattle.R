@@ -78,8 +78,8 @@ seattle.start.HPC<- function()
 seattle.various<- function()
 {
 	#seattle.191017.phydyn.volz.msmUK.mle()
-	seattle.191017.phydyn.olli.SIT01.sim()
-	#seattle.191017.phydyn.olli.SITmf01.sim()
+	#seattle.191017.phydyn.olli.SIT01.sim()
+	seattle.191017.phydyn.olli.SITmf01.sim()
 	#seattle.191017.phydyn.olli.SITmf01.mle()
 }
 
@@ -512,10 +512,10 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	require(ggplot2)
 	
 	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
-	#home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
+	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SITmf01_sim')		
 	
-	
+	 
 	#		
 	#	setup model equations
 	demes <- c('If0','If1','Im0','Im1')
@@ -630,14 +630,11 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		pI0 <- (beta11-beta10)/(beta00+beta11-beta01-beta10)
 		pIf0 <- pI0*pIf; pIf1 <- (1-pI0)*pIf
 		pIm0 <- pI0*pIm; pIm1 <- (1-pI0)*pIm
-		beta <- mu/2*(1-pS)/(pS*pI) * ( beta00+beta11-beta01-beta10 )/( beta00*(beta11-beta10)+beta10*(beta00-beta01) )
-		gamma <- mu*( (1-pS)/pI/4 - 1)
+		beta <- mu*2*(1-pS)/(pS*pI) * ( beta00+beta11-beta01-beta10 )/( beta00*(beta11-beta10)+beta10*(beta00-beta01) )
+		gamma <- mu*(1-pS-pI)/pI 
 		pS0 <- pI0
 		pSf0 <- pS0*pSf; pSf1 <- (1-pS0)*pSf
 		pSm0 <- pS0*pSm; pSm1 <- (1-pS0)*pSm
-		pT0 <- pI0
-		pTf0 <- pT0*pTf; pTf1 <- (1-pT0)*pTf
-		pTm0 <- pT0*pTm; pTm1 <- (1-pT0)*pTm
 		
 		all.pars <- c(beta=beta, beta00=beta00,beta01=beta01,beta10=beta10,beta11=beta11,
 				gamma=gamma, mu=mu, 
@@ -646,9 +643,9 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 				Sf1_init= round(pSf1*popN), Sm1_init= round(pSm1*popN),
 				If0_init= round(pIf0*popN), Im0_init= round(pIm0*popN),
 				If1_init= round(pIf1*popN), Im1_init= round(pIm1*popN),
-				Tf0_init= round(pTf0*popN), Tm0_init= round(pTm0*popN),
-				Tf1_init= round(pTf1*popN), Tm1_init= round(pTm1*popN)
-			)
+				Tf0_init= round(pI0*(1-pS-pI)*popN/2), Tm0_init= round(pI0*(1-pS-pI)*popN/2),
+				Tf1_init= round((1-pI0)*(1-pS-pI)*popN/2), Tm1_init= round((1-pI0)*(1-pS-pI)*popN/2)
+				)
 		all.pars['N_init'] <- sum(all.pars[c('Sf0_init','Sf1_init','Sm0_init','Sm1_init','If0_init','If1_init','Im0_init','Im1_init','Tf0_init','Tf1_init','Tm0_init','Tm1_init')])
 		
 		
@@ -671,9 +668,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 				theme_bw() +
 				scale_y_log10()
 		outfile <- file.path(simdir,paste0('sim',kk,'_trajectories_det.pdf'))
-		ggsave(file=outfile, w=8, h=6)
-		
-		dsim[, N:= If0+If1+Im0+Im1+Sf0+Sf1+Sm0+Sm1+Tf0+Tf1+Tm0+Tm1]
+		ggsave(file=outfile, w=8, h=6)		
 		
 		#	simulate trajectories from stochastic model
 		dsim <- list()
@@ -776,7 +771,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		#
 		#	simulate dated trees from stochastic model 
 		sampleNs <- c(1e2,5e2,1e3)
-		simR <- 10
+		simR <- 100
 		for(sampleN in sampleNs)
 		{
 			dprev <- melt(subset(dsim, time==t1), id.vars=c('RUN','time'))		
