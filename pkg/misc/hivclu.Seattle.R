@@ -898,9 +898,9 @@ seattle.191017.phydyn.olli.SIT01.sim <- function()
 		waifm <- waifms[[kk]]
 		beta00<- waifm['0','0']; beta01<- waifm['0','1']; beta10<-  waifm['1','0']; beta11 <-  waifm['1','1']
 		pI0 <- (beta11-beta10)/(beta00+beta11-beta01-beta10)
-		beta <- mu*(1-pS)/pI * ( beta00+beta11-beta01-beta10 )/( beta00*(beta11-beta10)+beta10*(beta00-beta01) )
+		beta <- mu*(1-pS)/(pS*pI) * ( beta00+beta11-beta01-beta10 )/( beta00*(beta11-beta10)+beta10*(beta00-beta01) )
 		gamma <- mu*(1-pS-pI)/pI
-		pS0 <- (beta11-beta10)/(beta00+beta11-beta01-beta10)/pS		
+		pS0 <- (beta11-beta10)/(beta00+beta11-beta01-beta10)		
 		popN <- 1e6	
 		all.pars <- c(beta=beta, beta00=beta00,beta01=beta01,beta10=beta10,beta11=beta11,
 				gamma=gamma, mu=mu, 
