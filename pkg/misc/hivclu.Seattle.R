@@ -619,9 +619,9 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	{
 		#	find equilibrium parameters
 		propf <- 0.5
-		pSm <- (1-propf)*0.99; pSf <- propf*0.99
-		pIm<- (1-pSm-pSf)*0.2*(1-propf); pIf<- (1-pSm-pSf)*0.2*propf  
-		pTm <- (1-pSm-pSf-pIm-pIf)/2; pTf <- (1-pSm-pSf-pIm-pIf)/2
+		pS <- 0.99; pI<- (1-pS)*0.2
+		pSm <- (1-propf)*pS; pSf <- propf*pS
+		pIm<- (1-propf)*pI; pIf<- propf*pI  		
 		mu<- 1/40
 		popN <- 1e6
 		
