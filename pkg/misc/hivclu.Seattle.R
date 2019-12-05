@@ -512,7 +512,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	require(ggplot2)
 	
 	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
-	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
+	#home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SITmf01_sim')		
 	
 	
@@ -552,8 +552,8 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	#
 	model.par.names <- c('beta','beta00','beta01','beta10','beta11','gamma','mu')
 	#	build stochastic model	
-	dm <- phydynR:::build.demographic.process(bir, migrations=mig, death=death, nonDeme=ndd, parameter=model.par.names , rcpp=TRUE, sde=FALSE)
-	
+	dmd <- phydynR:::build.demographic.process(bir, migrations=mig, death=death, nonDeme=ndd, parameter=model.par.names , rcpp=TRUE, sde=FALSE)
+	dms <- phydynR:::build.demographic.process(bir, migrations=mig, death=death, nonDeme=ndd, parameter=model.par.names , rcpp=TRUE, sde=TRUE)
 	
 	#
 	#	set up distinct simulations that we want to tell apart
@@ -567,10 +567,10 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	waifms[[1]] <- waifm
 	#	homogeneous spread 
 	waifm <- matrix(0, 2, 2, dimnames=list(c(0,1),c(0,1)))
-	waifm['0','0'] <- 0.5
-	waifm['0','1'] <- 0.5
-	waifm['1','0'] <- 0.5
-	waifm['1','1'] <- 0.5
+	waifm['0','0'] <- 0.55
+	waifm['0','1'] <- 0.45
+	waifm['1','0'] <- 0.45
+	waifm['1','1'] <- 0.55
 	waifms[[2]] <- waifm
 	#	symmetric 0->1 25%
 	waifm <- matrix(0, 2, 2, dimnames=list(c(0,1),c(0,1)))
@@ -590,13 +590,13 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	waifm <- matrix(0, 2, 2, dimnames=list(c(0,1),c(0,1)))
 	waifm['0','0'] <- 0.75
 	waifm['0','1'] <- 0.25
-	waifm['1','0'] <- 0.5
-	waifm['1','1'] <- 0.5	
+	waifm['1','0'] <- 0.45
+	waifm['1','1'] <- 0.55	
 	waifms[[5]] <- waifm
 	#	asymmetric 0->1 50% 1->0 25%
 	waifm <- matrix(0, 2, 2, dimnames=list(c(0,1),c(0,1)))
-	waifm['0','0'] <- 0.5
-	waifm['0','1'] <- 0.5
+	waifm['0','0'] <- 0.55
+	waifm['0','1'] <- 0.45
 	waifm['1','0'] <- 0.25
 	waifm['1','1'] <- 0.75			
 	waifms[[6]] <- waifm	
@@ -619,28 +619,26 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	{
 		#	find equilibrium parameters
 		propf <- 0.5
-		pSm <- (1-propf)*0.99; pSf <- propf*0.99; pIm<- (1-pSm-pSf)*0.2*(1-propf); pIf<- (1-pSm-pSf)*0.2*propf; mu<- 1/40; 
+		pSm <- (1-propf)*0.99; pSf <- propf*0.99
+		pIm<- (1-pSm-pSf)*0.2*(1-propf); pIf<- (1-pSm-pSf)*0.2*propf  
 		pTm <- (1-pSm-pSf-pIm-pIf)/2; pTf <- (1-pSm-pSf-pIm-pIf)/2
-		gamma <- mu*(1-(pSf+pIf+pSm+pIm))/pIm
-		beta <- (gamma+mu)*pIm/pIf/pSm
+		mu<- 1/40
+		popN <- 1e6
 		
-		prop0 <- 0.3
-		pSf0 <- prop0*pSf; pSf1 <- (1-prop0)*pSf
-		pSm0 <- prop0*pSm; pSm1 <- (1-prop0)*pSm
-		pIf0 <- prop0*pIf; pIf1 <- (1-prop0)*pIf
-		pIm0 <- prop0*pIm; pIm1 <- (1-prop0)*pIm
-		pTf0 <- prop0*pTf; pTf1 <- (1-prop0)*pTf
-		pTm0 <- prop0*pTm; pTm1 <- (1-prop0)*pTm
+		waifm <- waifms[[kk]]		
+		beta00<- waifm['0','0']; beta01<- waifm['0','1']; beta10<-  waifm['1','0']; beta11 <-  waifm['1','1']			
+		pI0 <- (beta11-beta10)/(beta00+beta11-beta01-beta10)
+		pIf0 <- pI0*pIf; pIf1 <- (1-pI0)*pIf
+		pIm0 <- pI0*pIm; pIm1 <- (1-pI0)*pIm
+		beta <- mu/2*(1-pS)/(pS*pI) * ( beta00+beta11-beta01-beta10 )/( beta00*(beta11-beta10)+beta10*(beta00-beta01) )
+		gamma <- mu*( (1-pS)/pI/4 - 1)
+		pS0 <- pI0
+		pSf0 <- pS0*pSf; pSf1 <- (1-pS0)*pSf
+		pSm0 <- pS0*pSm; pSm1 <- (1-pS0)*pSm
+		pT0 <- pI0
+		pTf0 <- pT0*pTf; pTf1 <- (1-pT0)*pTf
+		pTm0 <- pT0*pTm; pTm1 <- (1-pT0)*pTm
 		
-		waifm <- waifms[[kk]]
-		#	calibrate waifm so that transmission intensity averages to beta
-		beta00<- waifm['0','0']; beta01<- waifm['0','1']; beta10<-  waifm['1','0']; beta11 <-  waifm['1','1']	
-		tmp <- beta*beta00*pSf0*pIm0 + beta*beta01*pSf1*pIm0 + beta*beta10*pSf0*pIm1 + beta*beta11*pSf1*pIm1 + beta*beta00*pSm0*pIf0 + beta*beta01*pSm1*pIf0 + beta*beta10*pSm0*pIf1 + beta*beta11*pSm1*pIf1
-		beta.avg <- beta*(pSf0*pIm0 + pSf1*pIm0 + pSf0*pIm1 + pSf1*pIm1 + pSm0*pIf0 + pSm1*pIf0 + pSm0*pIf1 + pSm1*pIf1 )	
-		waifm <- waifm*beta.avg/tmp
-		beta00<- waifm['0','0']; beta01<- waifm['0','1']; beta10<-  waifm['1','0']; beta11 <-  waifm['1','1']
-		
-		popN <- 1e6	
 		all.pars <- c(beta=beta, beta00=beta00,beta01=beta01,beta10=beta10,beta11=beta11,
 				gamma=gamma, mu=mu, 
 				popN=popN,
@@ -650,7 +648,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 				If1_init= round(pIf1*popN), Im1_init= round(pIm1*popN),
 				Tf0_init= round(pTf0*popN), Tm0_init= round(pTm0*popN),
 				Tf1_init= round(pTf1*popN), Tm1_init= round(pTm1*popN)
-		)
+			)
 		all.pars['N_init'] <- sum(all.pars[c('Sf0_init','Sf1_init','Sm0_init','Sm1_init','If0_init','If1_init','Im0_init','Im1_init','Tf0_init','Tf1_init','Tm0_init','Tm1_init')])
 		
 		
@@ -660,11 +658,29 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		t0 <- 0; t1 <- 50; 
 		x0 <- all.pars[c('Sf0_init','Sf1_init','Sm0_init','Sm1_init','If0_init','If1_init','Im0_init','Im1_init','Tf0_init','Tf1_init','Tm0_init','Tm1_init')]
 		names(x0) <- gsub('_init','',names(x0))
+		tfgy <- dmd(theta, x0, t0, t1, res = 1000, integrationMethod='adams')
+		dbir <- as.data.table( t( sapply(tfgy[['births']], function(x){ as.numeric(x) }) ) )
+		tmp <- as.vector(t(sapply( demes, function(x) paste(x,'->',demes))))
+		setnames(dbir, colnames(dbir), tmp)			
+		dbir[, time:= tfgy[['times']] ]		
+		dsim <- as.data.table( tfgy[[5]] )
+		#	plot trajectories
+		tmp <- melt(dsim, id.vars=c('time'))
+		ggplot(tmp, aes(x=time, colour=variable, y=value)) + 
+				geom_line() + 
+				theme_bw() +
+				scale_y_log10()
+		outfile <- file.path(simdir,paste0('sim',kk,'_trajectories_det.pdf'))
+		ggsave(file=outfile, w=8, h=6)
+		
+		dsim[, N:= If0+If1+Im0+Im1+Sf0+Sf1+Sm0+Sm1+Tf0+Tf1+Tm0+Tm1]
+		
+		#	simulate trajectories from stochastic model
 		dsim <- list()
 		dbir <- list()
 		for(i in 1:5)
 		{
-			tfgy <- dm(theta, x0, t0, t1, res = 1000, integrationMethod='adams')
+			tfgy <- dms(theta, x0, t0, t1, res = 1000, integrationMethod='adams')
 			dbir[[i]] <- as.data.table( t( sapply(tfgy[['births']], function(x){ as.numeric(x) }) ) )
 			tmp <- as.vector(t(sapply( demes, function(x) paste(x,'->',demes))))
 			setnames(dbir[[i]], colnames(dbir[[i]]), tmp)			
@@ -677,9 +693,6 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		dbir <- do.call('rbind',dbir)
 		dsim <- subset(dsim, RUN==1)
 		dbir <- subset(dbir, RUN==1)
-		#dsim[, N:=  If0+If1+Im0+Im1+Sf0+Sf1+Sm0+Sm1+Tf0+Tf1+Tm0+Tm1 ]
-		
-		
 		#	plot trajectories
 		tmp <- melt(dsim, id.vars=c('RUN','time'))
 		ggplot(tmp, aes(x=time, colour=variable, y=value, linetype=as.factor(RUN))) + 
@@ -688,6 +701,8 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 				scale_y_log10()
 		outfile <- file.path(simdir,paste0('sim',kk,'_trajectories.pdf'))
 		ggsave(file=outfile, w=8, h=6)
+		
+		
 		
 		#	plot births
 		tmp <- dbir[, lapply(.SD, function(x) any(x!=0) ), .SDcols=setdiff(colnames(dbir),c('RUN','time'))]
@@ -775,7 +790,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 				sampleTimes <- seq( t1-10, t1, length.out=sampleN)
 				sampleStates <- t(rmultinom(sampleN, size = 1, prob=state.prob ))
 				colnames(sampleStates) <- demes
-				tree <- sim.co.tree(theta, dm, x0, t0, sampleTimes, sampleStates, res=1e3)
+				tree <- sim.co.tree(theta, dms, x0, t0, sampleTimes, sampleStates, res=1e3)
 				tree$all.pars <- all.pars
 				save(tree, file=file.path(simdir,paste0('sim',kk,'_tree_sample',sampleN,'_',i,'.rda')))
 				
@@ -1033,7 +1048,7 @@ seattle.191017.phydyn.olli.SIT01.sim <- function()
 		
 		
 		outfile <- file.path(simdir,paste0('sim',kk,'.rda'))
-		save(dsim, dbir, dprop, donw, dwaifm, dm, all.pars, file=outfile)
+		save(dsim, dbir, dprop, donw, dwaifm, dms, dmd, all.pars, file=outfile)
 		
 		#
 		#	simulate dated trees from stochastic model 
