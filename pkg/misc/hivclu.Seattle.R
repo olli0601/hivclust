@@ -651,11 +651,10 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		
 		#	simulate trajectories from stochastic model
 		model.pars <- all.pars[c('beta','beta00','beta01','beta10','beta11','gamma','mu')]
-		theta <- model.pars
 		t0 <- 0; t1 <- 50; 
 		x0 <- all.pars[c('Sf0_init','Sf1_init','Sm0_init','Sm1_init','If0_init','If1_init','Im0_init','Im1_init','Tf0_init','Tf1_init','Tm0_init','Tm1_init')]
 		names(x0) <- gsub('_init','',names(x0))
-		tfgy <- dmd(theta, x0, t0, t1, res = 1000, integrationMethod='adams')
+		tfgy <- dmd(model.pars, x0, t0, t1, res = 1000, integrationMethod='adams')
 		dbir <- as.data.table( t( sapply(tfgy[['births']], function(x){ as.numeric(x) }) ) )
 		tmp <- as.vector(t(sapply( demes, function(x) paste(x,'->',demes))))
 		setnames(dbir, colnames(dbir), tmp)			
@@ -675,7 +674,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		dbir <- list()
 		for(i in 1:5)
 		{
-			tfgy <- dms(theta, x0, t0, t1, res = 1000, integrationMethod='adams')
+			tfgy <- dms(model.pars, x0, t0, t1, res = 1000, integrationMethod='adams')
 			dbir[[i]] <- as.data.table( t( sapply(tfgy[['births']], function(x){ as.numeric(x) }) ) )
 			tmp <- as.vector(t(sapply( demes, function(x) paste(x,'->',demes))))
 			setnames(dbir[[i]], colnames(dbir[[i]]), tmp)			
@@ -785,7 +784,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 				sampleTimes <- seq( t1-10, t1, length.out=sampleN)
 				sampleStates <- t(rmultinom(sampleN, size = 1, prob=state.prob ))
 				colnames(sampleStates) <- demes
-				tree <- sim.co.tree(theta, dms, x0, t0, sampleTimes, sampleStates, res=1e3)
+				tree <- sim.co.tree(model.pars, dms, x0, t0, sampleTimes, sampleStates, res=1e3)
 				tree$all.pars <- all.pars
 				save(tree, file=file.path(simdir,paste0('sim',kk,'_tree_sample',sampleN,'_',i,'.rda')))
 				
@@ -948,10 +947,6 @@ seattle.191017.phydyn.olli.SIT01.sim <- function()
 		ggsave(file=outfile, w=8, h=6)
 		
 		#	simulate trajectories from stochastic model
-		model.pars <- all.pars[c('beta','beta00','beta01','beta10','beta11','gamma','mu')]		
-		t0 <- 0; t1 <- 50; 
-		x0 <- all.pars[c('S0_init','S1_init','I0_init','I1_init','T0_init','T1_init')]
-		names(x0) <- gsub('_init','',names(x0))
 		dsim <- list()
 		dbir <- list()
 		for(i in 1:5)
@@ -1062,7 +1057,7 @@ seattle.191017.phydyn.olli.SIT01.sim <- function()
 				sampleTimes <- seq( t1-10, t1, length.out=sampleN)
 				sampleStates <- t(rmultinom(sampleN, size = 1, prob=state.prob ))
 				colnames(sampleStates) <- demes
-				tree <- sim.co.tree(theta, dms, x0, t0, sampleTimes, sampleStates, res=1e3)
+				tree <- sim.co.tree(model.pars, dms, x0, t0, sampleTimes, sampleStates, res=1e3)
 				tree$all.pars <- all.pars
 				save(tree, file=file.path(simdir,paste0('sim',kk,'_tree_sample',sampleN,'_',i,'.rda')))
 				
