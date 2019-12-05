@@ -756,7 +756,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		
 		
 		outfile <- file.path(simdir,paste0('sim',kk,'.rda'))
-		save(dsim, dbir, dprop, donw, dwaifm, dm, all.pars, file=outfile)
+		save(dsim, dbir, dprop, donw, dwaifm, dms, dmd, all.pars, file=outfile)
 		
 		#
 		#	simulate dated trees from stochastic model 
