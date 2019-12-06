@@ -7,13 +7,13 @@ seattle.start.HPC<- function()
 	#seattle.170621.fastree()
 	
 	#	various   
-	if(1) 
+	if(0) 
 	{				
 		#hpc.load	<- "module load anaconda3/personal"		
 		hpc.load	<- "module load R/3.3.3"
 		hpc.select	<- 1						# number of nodes
 		hpc.nproc	<- 1						# number of processors on node
-		hpc.walltime<- 123						# walltime
+		hpc.walltime<- 123						# walltime 
 		hpc.q		<- "pqeelab"				# PBS queue
 		hpc.mem		<- "6gb" 					# RAM		
 		pbshead		<- "#!/bin/sh"
@@ -36,18 +36,18 @@ seattle.start.HPC<- function()
 		quit("no")	
 	}	
 	#	various job array
-	if(0) 
+	if(1) 
 	{		
-		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:240, '\n')
+		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:2400, '\n')
 						
 		#	make PBS header
 		hpc.load	<- "module load anaconda3/personal"
 		hpc.load	<- "module load R/3.3.3"
 		hpc.select	<- 1						# number of nodes
 		hpc.nproc	<- 1						# number of processors on node
-		hpc.walltime<- 123						# walltime
-		hpc.q		<- "pqeelab"				# PBS queue
-		hpc.mem		<- "6gb" 					# RAM
+		hpc.walltime<- 23						# walltime
+		hpc.q		<- NA #"pqeelab"				# PBS queue
+		hpc.mem		<- "2gb" 					# RAM
 		hpc.array	<- length(cmds)	# number of runs for job array
 		pbshead		<- "#!/bin/sh"
 		tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
@@ -79,8 +79,8 @@ seattle.various<- function()
 {
 	#seattle.191017.phydyn.volz.msmUK.mle()
 	#seattle.191017.phydyn.olli.SIT01.sim()
-	seattle.191017.phydyn.olli.SITmf01.sim()
-	#seattle.191017.phydyn.olli.SITmf01.mle()
+	#seattle.191017.phydyn.olli.SITmf01.sim()
+	seattle.191017.phydyn.olli.SITmf01.mle()	
 }
 
 
@@ -1183,7 +1183,7 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 	require(data.table)
 	require(ggplot2)
 	
-	#home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SITmf01_sim')
 	outdir <- file.path(home,'phydyn_olli','olli_SITmf01_mle')
@@ -1255,11 +1255,11 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 		mu <- unname(fixed.pars['mu'])
 		t0 <- unname(fixed.pars['t0'])
 		maxheight <- unname(fixed.pars['colik.maxheight'])
-		r0 <- unname(est.pars['r0'])
-		beta00 <- unname(fixed.pars['beta00'])
-		beta01 <- unname(est.pars['beta01'])
-		beta10 <- unname(est.pars['beta10'])
-		beta11 <- unname(est.pars['beta11'])
+		r0 <- unname(exp(est.pars['log_r0']))
+		beta00 <- unname(exp(fixed.pars['log_beta00']))
+		beta01 <- unname(exp(est.pars['log_beta01']))
+		beta10 <- unname(exp(est.pars['log_beta10']))
+		beta11 <- unname(exp(est.pars['log_beta11']))
 		beta <- r0*(gamma+mu)
 		model.pars <- c(beta=beta, beta00=beta00, beta01=beta01, beta10=beta10, beta11=beta11, gamma=gamma, mu=mu)
 		mll <- phydynR:::colik( tree, 
@@ -1290,11 +1290,12 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 		fixed.pars <- all.pars.truth[c('beta00','gamma','mu',
 						'Sf0_init','Sf1_init','Sm0_init','Sm1_init',
 						'If0_init','If1_init','Im0_init','Im1_init',
-						'Tf0_init','Tf1_init','Tm0_init','Tm1_init')]	
+						'Tf0_init','Tf1_init','Tm0_init','Tm1_init')]
+		fixed.pars['log_beta00'] <- log(fixed.pars['beta00'])
 		fixed.pars['t0'] <- 0
 		fixed.pars['t1'] <- 50	
 		fixed.pars['colik.maxheight'] <- floor( tree$maxHeight-1 ) 	
-		est.pars.init <- c(r0=2, beta01=1, beta10=1, beta11=1)
+		est.pars.init <- c(log_r0=log(2), log_beta01=0, log_beta10=0, log_beta11=0)
 		fit <- optim(par=est.pars.init, fn=obj.fun,  
 				tree=tree, dm=dm, fixed.pars=fixed.pars, 
 				control=list(fnscale=-1, reltol=1e-8, trace=6),

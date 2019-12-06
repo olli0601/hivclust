@@ -163,64 +163,58 @@ with all other parameters set to the true values in simulations.
  
 ## **Simulations**
 The following table describes the parameter values and initial values that we
-use in simulations:
+fixed throughout in simulations:
 $$
 \begin{align}
 N^l(0)= & 10^6 & \text{population size Seattle}\\
 p_F= & 0.5 & \text{proportion female}\\
-p_0= & 0.3 & \text{proportion class 0}\\
-S^l_{f0}(0)= & N^l(0)*0.99*p_F*p_0 & \text{female susceptibles class 0}\\
-S^l_{f1}(0)= & N^l(0)*0.99*p_F*(1-p_0) & \text{female susceptibles class 1}\\
-I^l_{f0}(0)= & N^l(0)*0.01*0.2*p_F*p_0 & \text{female infectious class 0}\\
-I^l_{f1}(0)= & N^l(0)*0.01*0.2*p_F*(1-p_0) & \text{female infectious class 1}\\
-T^l_{f0}(0)= & N^l(0)*0.01*0.8*p_F*p_0 & \text{female treated class 0}\\
-T^l_{f1}(0)= & N^l(0)*0.01*0.8*p_F*(1-p_0) & \text{female treated class 1}\\
-\mu= & 1/40 & \text{birth-death rate}  
-\end{align} 
-$$
-I then used endemic equilibrium conditions to set:
-$$
-\begin{align}
-\gamma= & \mu*\frac{T^l_{f0}(0)+T^l_{f1}(0)+T^l_{m0}(0)+T^l_{m1}(0)}{ I^l_{m0}(0)+I^l_{m1}(0) }\\
-\beta= & (\gamma+\mu)*\frac{I^l_{m0}(0)+I^l_{m1}(0)}{I^l_{f0}(0)+I^l_{f1}(0)}*\frac{1}{(S^l_{m0}(0)+S^l_{m1}(0))/N^l}
+s^l= & S^l(0) / N^l(0)= 0.99 & \text{proportion susceptibles}\\
+i^l= & I^l(0) / N^l(0)= 0.01*0.2 & \text{proportion infectious}\\
+\mu= & 1/40 & \text{birth-death rate}
 \end{align} 
 $$
 The simulations varied in terms of the WAIFM matrix
 $$
-\boldsymbol{\omega}= 
-\left[\begin{array}
-{rrrrr}
-\omega_{00} & \omega_{01} \\
-\omega_{10} & \omega_{11}\\
-\end{array}\right]
-$$
-in which rows sum to $1$. To calibrate the WAIFM matrix to the above initial
-population sizes, I calculated the average transmission rate under
-$\beta_{ij}=1$,
-$$
-\bar{\beta}= \beta*(\frac{S^l_{f0}*I^l_{m0}}{(N^l)^2} + \frac{S^l_{f1}*I^l_{m0}}{(N^l)^2} + \cdots + \frac{S^l_{m1}*I^l_{f1}}{(N^l)^2} ),
-$$
-and the average transmission rate under the WAIFM matrix,
-$$
-\tilde{\beta}= \beta*(\omega_{00}\frac{S^l_{f0}*I^l_{m0}}{(N^l)^2} + \omega_{01}\frac{S^l_{f1}*I^l_{m0}}{(N^l)^2} + \cdots + \omega_{11}\frac{S^l_{m1}*I^l_{f1}}{(N^l)^2} ),
-$$
-and then specified
-$$
+\boldsymbol{B}= 
 \left[\begin{array}
 {rrrrr}
 \beta_{00} & \beta_{01} \\
 \beta_{10} & \beta_{11}\\
-\end{array}\right]= 
-\left[\begin{array}
-{rrrrr}
-\omega_{00} & \omega_{01} \\
-\omega_{10} & \omega_{11}\\
-\end{array}\right]*\frac{\bar{\beta}}{\tilde{\beta}}.
+\end{array}\right]
+$$
+in which rows sum to $1$. This means we can interpret $\beta_{ij}$ as the
+conditional probability that given an infected class $i$ individual, he
+transmits to a susceptible in class $j$ rather than any of the other classes. I
+then used endemic equilibrium conditions to determine the model parameters:
+$$
+\begin{align}
+\beta= & 2*\mu*\frac{1-s^l}{i^l s^l}\frac{ \beta_{00}+\beta_{11}-\beta_{01}- \beta_{10} }{ \beta_{00}*(\beta_{11}-\beta_{10})+\beta_{10}*(\beta_{00}-\beta_{01}) }\\
+\gamma= & \mu*(1-s^l-i^l)/i^l\\
+\end{align} 
+$$
+and initial conditions:
+$$
+\begin{align}
+p_0= & \frac{\beta_{11}-\beta_{10}}{\beta_{00}+\beta_{11}-\beta_{01}-\beta_{10}} & \text{proportion in class 0}\\
+S^l_{f0}= & p_0*p_F*s^l*N^l(0) & \text{number female susceptibles in class 0}\\
+S^l_{f1}= & (1-p_0)*p_F*s^l*N^l(0) & \text{number female susceptibles in class 1}\\
+S^l_{m0}= & p_0*(1-p_F)*s^l*N^l(0) & \text{number male susceptibles in class 0}\\
+S^l_{m1}= & (1-p_0)*(1-p_F)*s^l*N^l(0) & \text{number male susceptibles in class 1}\\
+I^l_{f0}= & p_0*p_F*i^l*N^l(0) & \text{number female infectious in class 0}\\
+I^l_{f1}= & (1-p_0)*p_F*i^l*N^l(0) & \text{number female infectious in class
+1}\\ 
+I^l_{m0}= & p_0*(1-p_F)*i^l*N^l(0) & \text{number male infectious in class 0}\\ 
+I^l_{m1}= & (1-p_0)*(1-p_F)*i^l*N^l(0) & \text{number male infectious in class 1}\\
+T^l_{f0}= & p_0*p_F*(1-s^l-i^l)*N^l(0) & \text{number female treated in class 0}\\
+T^l_{f1}= & (1-p_0)*p_F*(1-s^l-i^l)*N^l(0) & \text{number female treated in class 1}\\ 
+T^l_{m0}= & p_0*(1-p_F)*(1-s^l-i^l)*N^l(0) & \text{number male treated in class 0}\\ 
+T^l_{m1}= & (1-p_0)*(1-p_F)*(1-s^l-i^l)*N^l(0) & \text{number male treated in class 1}\\
+\end{align} 
 $$
 
 ## **Simulation scenarios 1 and 2**
 I first wanted to see if no spread between class $0$ and $1$ can be
-distinguished from homogeneous spread between classes $0$ and $1$, with 
+distinguished from (almost) homogeneous spread between classes $0$ and $1$, with 
 $100$, $500$, $1000$ samples from the population obtained in the last $10$
 years of an epidemic simulation.
 
@@ -234,53 +228,73 @@ $$
 \end{array}\right]
 $$
 
-```{r, out.width="100%", out.height="900", include=TRUE, fig.align="center", echo=FALSE}
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/analysis_191017/phydy/SubtypeALL_annotated_dated_collapsed_tree_KCHSX021.pdf")
+The simulated trajectories of the demes and non-demes are at equilibrium as
+specified:
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+#knitr::include_graphics(c("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf","/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf"))
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf")
 ```
 
-As next step, I collected the phylogenetic input data for the phylodynamic
-analysis on heterosexual individuals from King County. In this step, I extracted
-from the dated phylogenies subgraphs of two or more heterosexual
-individuals plus a few background sequences, and then concatenated them all
-into a bifurcating dated tree.  
-
-Here is the code:
-```{r,include=TRUE, eval=FALSE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
-<<rmd.chunk.seattle.191017.phydy.select.taxa>>
+... and the transmissions occur within class $0$ and within class $1$:
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_births.pdf")
 ```
 
-Let us have a look at the phylogenetic input data:
-```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
-require(data.table)
-require(ape)
-home <- '~/Box Sync/OR_Work/Seattle/analysis_191017'
-indir <- file.path(home,'phydy')	
-outdir <- file.path(home,'phydy')
-infiles <- data.table(F=list.files(indir, pattern='^SubtypeALL_.*newick', full.names=TRUE, recursive=TRUE))
-infiles[, OPT:= gsub('^.*_([A-Za-z0-9]+).newick$','\\1',basename(F))]
-localstate.regex <- '^KCHSX.*'
-#	select KCHSX analysis and load
-localstate <- gsub('[^A-Za-z]','',localstate.regex)
-infile <- subset(infiles, grepl(localstate,OPT))[,F]
-ph <- read.tree(infile)
-ph
+... and the simulated $\boldsymbol{B}$ matrix has entries as specified:
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_waifm.pdf")
 ```
 
-The number of "local" and "external" sequences is:
-```{r,include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
-df <- data.table(TAXA=ph$tip.label)
-df[, LOCAL_TIP:= grepl(localstate.regex, TAXA)]
-df[, table(LOCAL_TIP)]
+From these simulations, I created $100$ trees of $100$ sampled individuals,
+$100$ trees of $500$ sampled individuals, and $100$ trees of $1000$ sampled
+individuals. Here is one of them:
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_tree_sample100_1.pdf")
 ```
 
-The phylogeny is:
-```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(6, 15), fig.align="center", dpi=300} 
-tip.col <- rep('blue',Ntip(ph))	
-tip.col[ grepl(localstate.regex, ph$tip.label) ] <- 'red'
-pdf(file=outfile, w=6, h=12)
-plot(ph, show.tip.label=TRUE, tip.col=tip.col, cex=0.25)
-axisPhylo()
-dev.off()	
+
+
+The aim is to compare phylodynamic inference under the scenario of no
+spread to that of almost homogeneous between class $0$ and $1$:
+$$
+\boldsymbol{\omega}= 
+\left[\begin{array}
+{rrrrr}
+0.55 & 0.45 \\
+0.45 & 0.55\\
+\end{array}\right]
+$$
+while keeping all else equal. In other words, we have exactly the same epidemic
+trajectories at endemic equilibrium for each of the demes and non-demes, but
+the flow dynamics are different. Under the above WAIFM matrix, the simulated
+trajectories of the demes and non-demes are at equilibrium as specified: 
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+#knitr::include_graphics(c("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf","/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf"))
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_trajectories.pdf")
 ```
- 
- 
+
+... and the transmissions occur within and between the classes: 
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_births.pdf")
+```
+
+... and the simulated $\boldsymbol{B}$ matrix has entries that hover around
+50%: 
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_waifm.pdf")
+```
+
+From these simulations, I created again the same number of trees. Here is one of
+them: 
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_tree_sample100_1.pdf")
+```
+
+
+The code to generate the simulations and make phylodynamic inference was:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phydyn.olli.SITmf01.sim>>
+```
+
+
+
