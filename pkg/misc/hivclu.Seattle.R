@@ -7,7 +7,7 @@ seattle.start.HPC<- function()
 	#seattle.170621.fastree()
 	
 	#	various   
-	if(0) 
+	if(1) 
 	{				
 		#hpc.load	<- "module load anaconda3/personal"		
 		hpc.load	<- "module load R/3.3.3"
@@ -36,7 +36,7 @@ seattle.start.HPC<- function()
 		quit("no")	
 	}	
 	#	various job array
-	if(1) 
+	if(0) 
 	{		
 		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:2400, '\n')
 						
@@ -79,8 +79,8 @@ seattle.various<- function()
 {
 	#seattle.191017.phydyn.volz.msmUK.mle()
 	#seattle.191017.phydyn.olli.SIT01.sim()
-	#seattle.191017.phydyn.olli.SITmf01.sim()
-	seattle.191017.phydyn.olli.SITmf01.mle()	
+	seattle.191017.phydyn.olli.SITmf01.sim()
+	#seattle.191017.phydyn.olli.SITmf01.mle()	
 }
 
 
@@ -687,6 +687,8 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		dbir <- do.call('rbind',dbir)
 		dsim <- subset(dsim, RUN==1)
 		dbir <- subset(dbir, RUN==1)
+		
+		if(0){
 		#	plot trajectories
 		tmp <- melt(dsim, id.vars=c('RUN','time'))
 		ggplot(tmp, aes(x=time, colour=variable, y=value, linetype=as.factor(RUN))) + 
@@ -766,7 +768,34 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		
 		outfile <- file.path(simdir,paste0('sim',kk,'.rda'))
 		save(dsim, dbir, dprop, donw, dwaifm, dms, dmd, all.pars, file=outfile)
-		
+		}
+		#
+		#	simulate dated trees from deterministic model 
+		sampleNs <- c(1e2,5e2,1e3)
+		simR <- 100
+		for(sampleN in sampleNs)
+		{
+			dprev <- melt(subset(dsim, time==t1), id.vars=c('RUN','time'))		
+			dprev <- subset(dprev, substr(variable,1,1)=='I')
+			dprev <- dprev[, list(variable=variable, value=value/sum(value)), by=c('RUN')]
+			dprev <- dprev[, list(value=mean(value)), by='variable']
+			state.prob <- setNames(vector('double', m), demes)
+			state.prob[dprev$variable] <- dprev$value		
+			for(i in 1:simR)
+			{
+				sampleTimes <- seq( t1-10, t1, length.out=sampleN)
+				sampleStates <- t(rmultinom(sampleN, size = 1, prob=state.prob ))
+				colnames(sampleStates) <- demes
+				tree <- sim.co.tree(model.pars, dmd, x0, t0, sampleTimes, sampleStates, res=1e3)
+				tree$all.pars <- all.pars
+				save(tree, file=file.path(simdir,paste0('sim',kk,'_tree_sample',sampleN,'_',i,'.rda')))				
+				pdf(file=file.path(simdir,paste0('sim',kk,'_dettree_sample',sampleN,'_',i,'.pdf')), w=8, h=0.15*sampleN)
+				plot.phylo(tree)
+				dev.off()
+				#ltt.plot(tree)					
+			}				
+		}	
+		if(0){
 		#
 		#	simulate dated trees from stochastic model 
 		sampleNs <- c(1e2,5e2,1e3)
@@ -786,14 +815,14 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 				colnames(sampleStates) <- demes
 				tree <- sim.co.tree(model.pars, dms, x0, t0, sampleTimes, sampleStates, res=1e3)
 				tree$all.pars <- all.pars
-				save(tree, file=file.path(simdir,paste0('sim',kk,'_tree_sample',sampleN,'_',i,'.rda')))
-				
+				save(tree, file=file.path(simdir,paste0('sim',kk,'_tree_sample',sampleN,'_',i,'.rda')))				
 				pdf(file=file.path(simdir,paste0('sim',kk,'_tree_sample',sampleN,'_',i,'.pdf')), w=8, h=0.15*sampleN)
 				plot.phylo(tree)
 				dev.off()
 				#ltt.plot(tree)					
 			}				
-		}		
+		}	
+		}
 	}
 }
 
@@ -1100,11 +1129,11 @@ seattle.191017.phydyn.olli.SITmf01.assess <- function()
 	#	rescale all beta values so that beta=1
 	setnames(df, colnames(df), gsub('\\.init','',colnames(df)))
 	df[, beta00_est:= 1]
-	df[, beta_est:= r0_est*(gamma_true+mu_true)]
-	df[, beta00_est:= beta00_est/beta_est]
-	df[, beta10_est:= beta10_est/beta_est]
-	df[, beta01_est:= beta01_est/beta_est]
-	df[, beta11_est:= beta11_est/beta_est]
+	df[, beta_est:= exp(log_r0_est)*(gamma_true+mu_true)]
+	df[, beta00_est:= beta00_true/beta_est]
+	df[, beta10_est:= exp(log_beta10_est)/beta_est]
+	df[, beta01_est:= exp(log_beta01_est)/beta_est]
+	df[, beta11_est:= exp(log_beta11_est)/beta_est]
 	df[, beta_est:= 1]
 	df[, beta00_true:= beta00_true/beta_true]
 	df[, beta10_true:= beta10_true/beta_true]
@@ -1159,8 +1188,7 @@ seattle.191017.phydyn.olli.SITmf01.assess <- function()
 	df3[, TYPE:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\2',variable)]
 	df3[, VAR:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\1',variable)]	
 	dft <- subset(df3, TYPE=='true' & REP_ID==1)
-	dfe <- subset(df3, TYPE=='est' & convergence=='yes' & CRAZY=='no')
-	
+	dfe <- subset(df3, TYPE=='est' & convergence=='yes' & CRAZY=='no')	
 	ggplot() + 
 			geom_boxplot(data=dfe, aes(x=VAR, y=value, colour=SIM_ID), outlier.shape = NA) +
 			geom_point(data=dfe, aes(x=VAR, y=value, colour=SIM_ID, shape=convergence)) +
@@ -1171,7 +1199,22 @@ seattle.191017.phydyn.olli.SITmf01.assess <- function()
 			labs(x='', y='parameter value\n', colour='number tips in phylo', shape='ML optim converged') +
 			theme(legend.position='top') +
 			theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-	ggsave(file= file.path(indir,'accuracy_sim1_vs_sim2.pdf'), w=10, h=10)	
+	ggsave(file= file.path(indir,'accuracy_sim1_vs_sim2.pdf'), w=10, h=10)
+	
+	dft <- subset(df3, TYPE=='true' & REP_ID==1)
+	dfe <- subset(df3, TYPE=='est' & convergence=='yes')
+	dfe <- subset(df3, TYPE=='est')
+	ggplot() + 
+			geom_boxplot(data=dfe, aes(x=VAR, y=value, colour=SIM_ID), outlier.shape = NA) +
+			geom_point(data=dfe, aes(x=VAR, y=value, colour=SIM_ID, shape=convergence)) +
+			facet_grid(SAMPLE_SIZE~SIM_ID) +
+			coord_cartesian(ylim=c(-10,10)) +			
+			theme_bw() +
+			geom_point(data=dft, aes(x=VAR, y=value), pch=4) +
+			labs(x='', y='parameter value\n', colour='number tips in phylo', shape='ML optim converged') +
+			theme(legend.position='top') +
+			theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+	ggsave(file= file.path(indir,'accuracy_sim1_vs_sim2_withCrazy_withNoConv.pdf'), w=10, h=10)
 }
 
 ## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01.mle ----
@@ -1311,6 +1354,7 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 	
 }
 
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf.mle ----
 seattle.191017.phydyn.olli.SITmf.mle <- function()
 {
 	require(methods)

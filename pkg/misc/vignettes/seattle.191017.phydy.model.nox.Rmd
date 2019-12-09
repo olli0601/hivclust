@@ -212,7 +212,7 @@ T^l_{m1}= & (1-p_0)*(1-p_F)*(1-s^l-i^l)*N^l(0) & \text{number male treated in cl
 \end{align} 
 $$
 
-## **Simulation scenarios 1 and 2**
+### **Simulation scenarios 1 and 2**
 I first wanted to see if no spread between class $0$ and $1$ can be
 distinguished from (almost) homogeneous spread between classes $0$ and $1$, with 
 $100$, $500$, $1000$ samples from the population obtained in the last $10$
@@ -290,11 +290,38 @@ them:
 knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_tree_sample100_1.pdf")
 ```
 
+I then re-estimated the parameters
+$$
+\beta, \beta_{10}, \beta_{01}, \beta_{11}
+$$
+from the simulated trees under a deterministic demographic process model via
+maximum likelihood. I fixed $\beta_{00}=1$ to avoid parameter collinearity and
+kept all other parameters at their true values. In the optimisation routine, I
+optimised the log of the above parameters to ensure that the estimated
+parameters are non-negative on their natural scale.
+
+Here are the results for the inferred $\beta_{ij}/\beta$ (in colours) and their
+true counterparts (black crosses):
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_mle/accuracy_sim1_vs_sim2_withCrazy_withNoConv.pdf")
+```
+
+I noted that more than half of the ML estimates did not reach convergence, xor
+returned very high estimates $>10$. Excluding those gives the following results:
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
+knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_mle/accuracy_sim1_vs_sim2.pdf")
+```
+
+## **Code**
 
 The code to generate the simulations and make phylodynamic inference was:
 ```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
 <<rmd.chunk.seattle.191017.phydyn.olli.SITmf01.sim>>
 ```
 
+The code for phylodynamic inference was:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phydyn.olli.SITmf01.mle>>
+```
 
 
