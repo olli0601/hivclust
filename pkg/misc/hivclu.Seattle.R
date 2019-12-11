@@ -79,8 +79,8 @@ seattle.various<- function()
 {
 	#seattle.191017.phydyn.volz.msmUK.mle()
 	#seattle.191017.phydyn.olli.SIT01.sim()
-	#seattle.191017.phydyn.olli.SITmf01.sim()
-	seattle.191017.phydyn.olli.SITmf01.add.true.ll()
+	seattle.191017.phydyn.olli.SITmf01.sim()
+	#seattle.191017.phydyn.olli.SITmf01.add.true.ll()
 	#seattle.191017.phydyn.olli.SITmf01.mle()	
 }
 
@@ -689,7 +689,6 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		dsim <- subset(dsim, RUN==1)
 		dbir <- subset(dbir, RUN==1)
 		
-		if(0){
 		#	plot trajectories
 		tmp <- melt(dsim, id.vars=c('RUN','time'))
 		ggplot(tmp, aes(x=time, colour=variable, y=value, linetype=as.factor(RUN))) + 
@@ -769,7 +768,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		
 		outfile <- file.path(simdir,paste0('sim',kk,'.rda'))
 		save(dsim, dbir, dprop, donw, dwaifm, dms, dmd, all.pars, file=outfile)
-		}
+
 		#
 		#	simulate dated trees from deterministic model 
 		sampleNs <- c(1e2,5e2,1e3)
@@ -788,15 +787,26 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 				sampleStates <- t(rmultinom(sampleN, size = 1, prob=state.prob ))
 				colnames(sampleStates) <- demes
 				tree <- sim.co.tree(model.pars, dmd, x0, t0, sampleTimes, sampleStates, res=1e3)
-				tree$all.pars <- all.pars
-				save(tree, file=file.path(simdir,paste0('sim',kk,'_tree_sample',sampleN,'_',i,'.rda')))				
+				tree$all.pars <- all.pars								
+				tree$ll <- phydynR:::colik( tree, 
+						theta=model.pars, 
+						dmd, 
+						x0=x0, 
+						t0=0, 
+						res=200, 
+						forgiveAgtY = 0, 
+						AgtY_penalty = Inf, 
+						step_size_res =10,
+						likelihood='PL2',
+						maxHeight= floor( tree$maxHeight-1 )
+						)								
+				save(tree, file=file.path(simdir,paste0('sim',kk,'_dettree_sample',sampleN,'_',i,'.rda')))				
 				pdf(file=file.path(simdir,paste0('sim',kk,'_dettree_sample',sampleN,'_',i,'.pdf')), w=8, h=0.15*sampleN)
 				plot.phylo(tree)
 				dev.off()
 				#ltt.plot(tree)					
 			}				
 		}	
-		if(0){
 		#
 		#	simulate dated trees from stochastic model 
 		sampleNs <- c(1e2,5e2,1e3)
@@ -816,14 +826,25 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 				colnames(sampleStates) <- demes
 				tree <- sim.co.tree(model.pars, dms, x0, t0, sampleTimes, sampleStates, res=1e3)
 				tree$all.pars <- all.pars
-				save(tree, file=file.path(simdir,paste0('sim',kk,'_tree_sample',sampleN,'_',i,'.rda')))				
-				pdf(file=file.path(simdir,paste0('sim',kk,'_tree_sample',sampleN,'_',i,'.pdf')), w=8, h=0.15*sampleN)
+				tree$ll <- phydynR:::colik( tree, 
+						theta=model.pars, 
+						dms, 
+						x0=x0, 
+						t0=0, 
+						res=200, 
+						forgiveAgtY = 0, 
+						AgtY_penalty = Inf, 
+						step_size_res =10,
+						likelihood='PL2',
+						maxHeight= floor( tree$maxHeight-1 )
+						)
+				save(tree, file=file.path(simdir,paste0('sim',kk,'_stotree_sample',sampleN,'_',i,'.rda')))				
+				pdf(file=file.path(simdir,paste0('sim',kk,'_stotree_sample',sampleN,'_',i,'.pdf')), w=8, h=0.15*sampleN)
 				plot.phylo(tree)
 				dev.off()
 				#ltt.plot(tree)					
 			}				
 		}	
-		}
 	}
 }
 
