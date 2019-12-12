@@ -1350,6 +1350,7 @@ seattle.191017.phydyn.olli.SITmf01.longsim <- function()
 		setnames(dbir, colnames(dbir), tmp)			
 		dbir[, time:= tfgy[['times']] ]		
 		dsim <- as.data.table( tfgy[[5]] )
+		dsim[, RUN:= 1]
 		#	plot trajectories
 		tmp <- melt(dsim, id.vars=c('time'))
 		ggplot(tmp, aes(x=time, colour=variable, y=value)) + 
