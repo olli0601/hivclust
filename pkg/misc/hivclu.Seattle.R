@@ -2,7 +2,7 @@
 seattle.start.HPC<- function()
 {
 	CODE.HOME	<<- "/rds/general/user/or105/home/libs/hivclust/pkg"
-	HOME		<<- '/rds/general/user/or105/home'
+	HOME		<<- '/rds/general/user/or105/home' 
 	
 	#	various   
 	if(1) 
