@@ -69,7 +69,7 @@ seattle.start.HPC<- function()
 		cmd 		<- paste("qsub", outfile)
 		cat(cmd)
 		cat(system(cmd, intern= TRUE))
-	}
+	} 
 }
 
 ## ---- rmd.chunk.seattle.various ----
@@ -1203,8 +1203,14 @@ seattle.191017.phydyn.olli.SITmf01.longsim <- function()
 	
 	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
-	simdir <- file.path(home,'phydyn_olli','olli_SITmf01long_sim')		
+	simdir <- file.path(home,'phydyn_olli','olli_SITmf01long_sim')
 	
+	#	check for files already processed
+	simfiles <- data.table(FSIM=list.files(simdir, pattern='rda$', full.name=TRUE))
+	simfiles <- subset(simfiles, grepl('tree',FSIM))
+	simfiles[, SIM:= as.integer(gsub('^sim([0-9]+)_[a-z]+_sample([0-9]+)_([0-9]+)\\.rda$', '\\1', basename(FSIM)))]
+	simfiles[, SAMPLE:= as.integer(gsub('^sim([0-9]+)_[a-z]+_sample([0-9]+)_([0-9]+)\\.rda$', '\\2', basename(FSIM)))]
+	simfiles[, REP:= as.integer(gsub('^sim([0-9]+)_[a-z]+_sample([0-9]+)_([0-9]+)\\.rda$', '\\3', basename(FSIM)))]
 	
 	#		
 	#	setup model equations
@@ -1375,7 +1381,9 @@ seattle.191017.phydyn.olli.SITmf01.longsim <- function()
 			dprev <- dprev[, list(value=mean(value)), by='variable']
 			state.prob <- setNames(vector('double', m), demes)
 			state.prob[dprev$variable] <- dprev$value		
-			for(i in 1:simR)
+			tmp <- subset(simfiles, SIM==kk & SAMPLE==sampleN)[, sort(REP)]
+			sim.todo <- setdiff(1:simR, tmp)			
+			for(i in sim.todo)
 			{
 				sampleTimes <- seq( t1-10, t1, length.out=sampleN)
 				sampleStates <- t(rmultinom(sampleN, size = 1, prob=state.prob ))
