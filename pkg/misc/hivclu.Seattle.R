@@ -5,7 +5,7 @@ seattle.start.HPC<- function()
 	HOME		<<- '/rds/general/user/or105/home' 
 	
 	#	various   
-	if(1) 
+	if(0) 
 	{				
 		#hpc.load	<- "module load anaconda3/personal"		
 		hpc.load	<- "module load R/3.3.3"
@@ -34,9 +34,9 @@ seattle.start.HPC<- function()
 		quit("no")	
 	}	
 	#	various job array
-	if(0) 
+	if(1) 
 	{		
-		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:2400, '\n')
+		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:1200, '\n')
 						
 		#	make PBS header
 		hpc.load	<- "module load anaconda3/personal"
@@ -77,10 +77,10 @@ seattle.various<- function()
 {
 	#seattle.191017.phydyn.volz.msmUK.mle()
 	#seattle.191017.phydyn.olli.SIT01.sim()
-	seattle.191017.phydyn.olli.SITmf01.sim()
+	#seattle.191017.phydyn.olli.SITmf01.sim()
 	#seattle.191017.phydyn.olli.SITmf01.longsim()
 	#seattle.191017.phydyn.olli.SITmf01.add.true.ll()
-	#seattle.191017.phydyn.olli.SITmf01.mle()	
+	seattle.191017.phydyn.olli.SITmf01.mle()	
 }
 
 
@@ -1680,10 +1680,21 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 	
 	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
-	simdir <- file.path(home,'phydyn_olli','olli_SITmf01_sim')
-	outdir <- file.path(home,'phydyn_olli','olli_SITmf01_mle')
+	if(1)
+	{
+		simdir <- file.path(home,'phydyn_olli','olli_SITmf01_sim')
+		outdir <- file.path(home,'phydyn_olli','olli_SITmf01_mle')
+		t1 <- 50		
+	}
+	if(0)
+	{
+		simdir <- file.path(home,'phydyn_olli','olli_SITmf01long_sim')
+		outdir <- file.path(home,'phydyn_olli','olli_SITmf01long_mle')
+		t1 <- 2e4		
+	}
+	
 	simfiles <- data.table(FIN=list.files(simdir, pattern='rda$', full.names=TRUE))
-	simfiles <- subset(simfiles, grepl('_tree_',basename(FIN)))
+	simfiles <- subset(simfiles, grepl('sim1|sim2',basename(FIN)) & grepl('_dettree_|_stotree_',basename(FIN)))
 	
 	#	read tree id and select subset of input files to process
 	tree.id <- NA_integer_
@@ -1788,7 +1799,7 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 						'Tf0_init','Tf1_init','Tm0_init','Tm1_init')]
 		fixed.pars['log_beta00'] <- log(fixed.pars['beta00'])
 		fixed.pars['t0'] <- 0
-		fixed.pars['t1'] <- 50	
+		fixed.pars['t1'] <- t1	
 		fixed.pars['colik.maxheight'] <- floor( tree$maxHeight-1 ) 	
 		est.pars.init <- c(log_r0=log(2), log_beta01=0, log_beta10=0, log_beta11=0)
 		fit <- optim(par=est.pars.init, fn=obj.fun,  
