@@ -36,7 +36,7 @@ seattle.start.HPC<- function()
 	#	various job array
 	if(1) 
 	{		
-		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:1200, '\n')
+		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:600, '\n')
 						
 		#	make PBS header
 		hpc.load	<- "module load anaconda3/personal"
@@ -1680,19 +1680,19 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 	
 	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
-	if(1)
+	if(0)
 	{
 		simdir <- file.path(home,'phydyn_olli','olli_SITmf01_sim')
 		outdir <- file.path(home,'phydyn_olli','olli_SITmf01_mle')
 		t1 <- 50		
 	}
-	if(0)
+	if(1)
 	{
 		simdir <- file.path(home,'phydyn_olli','olli_SITmf01long_sim')
 		outdir <- file.path(home,'phydyn_olli','olli_SITmf01long_mle')
 		t1 <- 2e4		
 	}
-	
+	 
 	simfiles <- data.table(FIN=list.files(simdir, pattern='rda$', full.names=TRUE))
 	simfiles <- subset(simfiles, grepl('sim1|sim2',basename(FIN)) & grepl('_dettree_|_stotree_',basename(FIN)))
 	
@@ -1801,7 +1801,17 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 		fixed.pars['t0'] <- 0
 		fixed.pars['t1'] <- t1	
 		fixed.pars['colik.maxheight'] <- floor( tree$maxHeight-1 ) 	
-		est.pars.init <- c(log_r0=log(2), log_beta01=0, log_beta10=0, log_beta11=0)
+		#	find init values with non-zero likelihood
+		for( r0 in seq(1,8,0.25))
+		{
+			est.pars.init <- c(log_r0=log(r0), log_beta01=log(0.5), log_beta10=log(0.5), log_beta11=log(0.5))
+			ll <- obj.fun(est.pars.init, tree, dm, fixed.pars)
+			print(ll)
+			if(is.finite(ll))
+				break
+		}
+		if(!is.finite(ll))
+			stop('Could not find initial values')
 		fit <- optim(par=est.pars.init, fn=obj.fun,  
 				tree=tree, dm=dm, fixed.pars=fixed.pars, 
 				control=list(fnscale=-1, reltol=1e-8, trace=6),
