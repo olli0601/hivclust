@@ -231,25 +231,25 @@ $$
 The simulated trajectories of the demes and non-demes are at equilibrium as
 specified:
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
-#knitr::include_graphics(c("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf","/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf"))
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf")
+#knitr::include_graphics(c("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf","/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf"))
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf")
 ```
 
 ... and the transmissions occur within class $0$ and within class $1$:
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_births.pdf")
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_births.pdf")
 ```
 
 ... and the simulated $\boldsymbol{B}$ matrix has entries as specified:
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_waifm.pdf")
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_waifm.pdf")
 ```
 
 From these simulations, I created $100$ trees of $100$ sampled individuals,
 $100$ trees of $500$ sampled individuals, and $100$ trees of $1000$ sampled
 individuals. Here is one of them:
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_tree_sample100_1.pdf")
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_dettree_sample100_1.pdf")
 ```
 
 
@@ -269,25 +269,25 @@ trajectories at endemic equilibrium for each of the demes and non-demes, but
 the flow dynamics are different. Under the above WAIFM matrix, the simulated
 trajectories of the demes and non-demes are at equilibrium as specified: 
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
-#knitr::include_graphics(c("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf","/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf"))
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_trajectories.pdf")
+#knitr::include_graphics(c("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf","/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf"))
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_trajectories.pdf")
 ```
 
 ... and the transmissions occur within and between the classes: 
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_births.pdf")
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_births.pdf")
 ```
 
 ... and the simulated $\boldsymbol{B}$ matrix has entries that hover around
 50%: 
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_waifm.pdf")
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_waifm.pdf")
 ```
 
 From these simulations, I created again the same number of trees. Here is one of
 them: 
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_tree_sample100_1.pdf")
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_dettree_sample100_1.pdf")
 ```
 
 I then re-estimated the parameters
@@ -303,13 +303,13 @@ parameters are non-negative on their natural scale.
 Here are the results for the inferred $\beta_{ij}/\beta$ (in colours) and their
 true counterparts (black crosses):
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_mle/accuracy_sim1_vs_sim2_withCrazy_withNoConv.pdf")
+#knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_mle/accuracy_sim1_vs_sim2_withCrazy_withNoConv.pdf")
 ```
 
 I noted that more than half of the ML estimates did not reach convergence, xor
 returned very high estimates $>10$. Excluding those gives the following results:
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
-knitr::include_graphics("/Users/Oliver/Box Sync/OR_Work/Seattle/phydyn_olli/olli_SITmf01_mle/accuracy_sim1_vs_sim2.pdf")
+#knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_mle/accuracy_sim1_vs_sim2.pdf")
 ```
 
 ## **Code**

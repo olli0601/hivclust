@@ -1007,6 +1007,26 @@ Sequences.addcloseLANL.161027<- function(dir.name= DATA)
 	write.dna(seq.other.lanl, file=outfile.O, format='fasta', colsep='', nbcol=-1)
 }
 ######################################################################################
+Sequences.LANL.preprocess.200217 <- function()
+{
+	require(ape)
+	infile <- '~/Downloads/data_200205_LANL.fasta'
+	outfile <- '~/Downloads/data_200205_LANL_maxlen.fasta'
+	ds <- read.dna(infile, format='fa')
+	ds <- as.character(ds)
+	ds.len <- max(sapply(ds, length))
+	
+	for(i in 1:2e3)
+	{
+		if(i %% 1e3 == 0)
+			print(paste0('done: ', i))
+		z <- ds[[i]]
+		z <- paste0( c(z, rep('-', ds.len - length(z) ) ), collapse='' ) 
+		cat('>',names(ds)[i],'\n',z,'\n', file=outfile, append=TRUE)	
+	}
+}
+
+######################################################################################
 Sequences.161027<- function(dir.name= DATA)
 {
 	#	read SEQUENCE csv data file and preprocess
