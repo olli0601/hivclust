@@ -5,7 +5,7 @@ seattle.start.HPC<- function()
 	HOME		<<- '/rds/general/user/or105/home' 
 	
 	#	various   
-	if(0) 
+	if(1) 
 	{				
 		#hpc.load	<- "module load anaconda3/personal"		
 		hpc.load	<- "module load R/3.3.3"
@@ -34,7 +34,7 @@ seattle.start.HPC<- function()
 		quit("no")	
 	}	
 	#	various job array
-	if(1) 
+	if(0) 
 	{		
 		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:600, '\n')
 						
@@ -80,7 +80,8 @@ seattle.various<- function()
 	#seattle.191017.phydyn.olli.SITmf01.sim()
 	#seattle.191017.phydyn.olli.SITmf01.longsim()
 	#seattle.191017.phydyn.olli.SITmf01.add.true.ll()
-	seattle.191017.phydyn.olli.SITmf01.mle()	
+	#seattle.191017.phydyn.olli.SITmf01.mle()	
+	seattle.191017.phydyn.olli.SITmf01yrsXX.sim()
 }
 
 
@@ -211,7 +212,7 @@ seattle.190723.test.simmap.casting <- function()
 	require(phangorn)
 	require(phyloscannerR)
 	
-	infile <- "/Users/Oliver/Box Sync/OR_Work/Seattle/analysis_190723/phyloscanner_HSX/Subtype_01_AE_0_workspace.rda"
+	infile <- "/Users/or105/Box/OR_Work/Seattle/analysis_190723/phyloscanner_HSX/Subtype_01_AE_0_workspace.rda"
 	load(infile)
 	ptree <- phyloscanner.trees[[1]]
 	tree <- ptree[['tree']]
@@ -459,7 +460,7 @@ seattle.191017.phydyn.volz.msmUK.mle.post <- function()
 	require(data.table)
 	require(ggplot2)	
 	
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/Users/or105/Box/OR_Work/Seattle'
 	simdir <- file.path(home,'phydyn_vignettes','volz_acuteHIV_mle_sim')
 	simfiles <- list.files(simdir, pattern='parms.csv', full.names=TRUE)
 	outfile.base<- file.path(home,'phydyn_vignettes','volz_acuteHIV_')
@@ -510,7 +511,7 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	require(data.table)
 	require(ggplot2)
 	
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/Users/or105/Box/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SITmf01_sim')		
 	
@@ -621,7 +622,8 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	waifm['1','1'] <- 0.75			
 	waifms[[8]] <- waifm
 	
-	for(kk in seq_along(waifms))
+	#for(kk in seq_along(waifms))
+	for(kk in 1:2)
 	{
 		#	find equilibrium parameters
 		propf <- 0.5
@@ -776,7 +778,8 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		
 		#
 		#	simulate dated trees from deterministic model 
-		sampleNs <- c(1e2,5e2,1e3)
+		#sampleNs <- c(1e2,5e2,1e3)
+		sampleNs <- c(2e3,3e3)
 		simR <- 100
 		for(sampleN in sampleNs)
 		{
@@ -816,7 +819,8 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 		}	
 		#
 		#	simulate dated trees from stochastic model 
-		sampleNs <- c(1e2,5e2,1e3)
+		#sampleNs <- c(1e2,5e2,1e3)
+		sampleNs <- c()
 		simR <- 100
 		for(sampleN in sampleNs)
 		{
@@ -857,8 +861,8 @@ seattle.191017.phydyn.olli.SITmf01.sim <- function()
 	}
 }
 
-## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01.longsim ----
-seattle.191017.phydyn.olli.SITmf01.longsim <- function()
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXX.sim ----
+seattle.191017.phydyn.olli.SITmf01yrsXX.sim <- function()
 {
 	require(methods)
 	require(inline)
@@ -866,7 +870,293 @@ seattle.191017.phydyn.olli.SITmf01.longsim <- function()
 	require(data.table)
 	require(ggplot2)
 	
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/Users/or105/Box/OR_Work/Seattle'
+	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
+	simdir <- file.path(home,'phydyn_olli','olli_SITmf01yrsXX_sim')		
+	
+	#	check for files already processed
+	simfiles <- data.table(FSIM=list.files(simdir, pattern='rda$', full.name=TRUE))
+	simfiles <- subset(simfiles, grepl('tree',FSIM))
+	simfiles[, SIM:= as.integer(gsub('^sim([0-9]+)_[a-z]+_sample([0-9]+)_([0-9]+)\\.rda$', '\\1', basename(FSIM)))]
+	simfiles[, SAMPLE:= as.integer(gsub('^sim([0-9]+)_[a-z]+_sample([0-9]+)_([0-9]+)\\.rda$', '\\2', basename(FSIM)))]
+	simfiles[, REP:= as.integer(gsub('^sim([0-9]+)_[a-z]+_sample([0-9]+)_([0-9]+)\\.rda$', '\\3', basename(FSIM)))]
+	
+	
+	#		
+	#	setup model equations
+	demes <- c('If0','If1','Im0','Im1')
+	m <- length(demes)
+	bir <- matrix( '0.', nrow=m, ncol=m, dimnames=list(demes,demes))
+	bir['Im0', 'If0'] <- 'beta*beta00*Sf0*Im0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['Im0', 'If1'] <- 'beta*beta01*Sf1*Im0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['Im1', 'If0'] <- 'beta*beta10*Sf0*Im1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'	
+	bir['Im1', 'If1'] <- 'beta*beta11*Sf1*Im1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['If0', 'Im0'] <- 'beta*beta00*Sm0*If0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['If0', 'Im1'] <- 'beta*beta01*Sm1*If0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['If1', 'Im0'] <- 'beta*beta10*Sm0*If1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['If1', 'Im1'] <- 'beta*beta11*Sm1*If1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	#	non deme dynamics
+	nondemes <- c('Sf0','Sf1','Sm0','Sm1','Tf0','Tf1','Tm0','Tm1')
+	mm <- length(nondemes)
+	ndd <- setNames(rep('0.', mm), nondemes) 
+	ndd['Sf0'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sf0/(Sf0+Sf1+Sm0+Sm1) -mu*Sf0 - beta*(beta00*Sf0*Im0+beta10*Sf0*Im1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	ndd['Sf1'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sf1/(Sf0+Sf1+Sm0+Sm1) -mu*Sf1 - beta*(beta01*Sf1*Im0+beta11*Sf1*Im1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'	
+	ndd['Sm0'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sm0/(Sf0+Sf1+Sm0+Sm1) -mu*Sm0 - beta*(beta00*Sm0*If0+beta10*Sm0*If1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	ndd['Sm1'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sm1/(Sf0+Sf1+Sm0+Sm1) -mu*Sm1 - beta*(beta01*Sm1*If0+beta11*Sm1*If1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	ndd['Tf0'] <- 'gamma*If0 - mu*Tf0'
+	ndd['Tf1'] <- 'gamma*If1 - mu*Tf1'
+	ndd['Tm0'] <- 'gamma*Im0 - mu*Tm0'
+	ndd['Tm1'] <- 'gamma*Im1 - mu*Tm1'
+	#	no changes in ethnicity / foreign-born status
+	mig <- matrix('0.', nrow=m, ncol=m, dimnames=list(demes,demes))	
+	#	deaths
+	death <- setNames(rep('0.', m), demes)
+	death['If0'] <- '(gamma+mu)*If0'
+	death['If1'] <- '(gamma+mu)*If1'
+	death['Im0'] <- '(gamma+mu)*Im0'
+	death['Im1'] <- '(gamma+mu)*Im1'
+	#
+	model.par.names <- c('beta','beta00','beta01','beta10','beta11','gamma','mu')
+	#	build stochastic model	
+	dmd <- phydynR:::build.demographic.process(bir, migrations=mig, death=death, nonDeme=ndd, parameter=model.par.names , rcpp=TRUE, sde=FALSE)
+	dms <- phydynR:::build.demographic.process(bir, migrations=mig, death=death, nonDeme=ndd, parameter=model.par.names , rcpp=TRUE, sde=TRUE)
+	
+	#
+	#	set up distinct simulations that we want to tell apart
+	waifms <- list()
+	#	no spread between 0 and 1
+	waifm <- matrix(0, 2, 2, dimnames=list(c(0,1),c(0,1)))
+	waifm['0','0'] <- 1
+	waifm['0','1'] <- 0
+	waifm['1','0'] <- 0
+	waifm['1','1'] <- 1			
+	waifms[[1]] <- waifm
+	#	homogeneous spread 
+	waifm <- matrix(0, 2, 2, dimnames=list(c(0,1),c(0,1)))
+	waifm['0','0'] <- 0.55
+	waifm['0','1'] <- 0.45
+	waifm['1','0'] <- 0.45
+	waifm['1','1'] <- 0.55
+	waifms[[2]] <- waifm
+	
+	t1s <- c(50,100,200,400)
+	for(t1 in t1s)
+	{
+		for(kk in seq_along(waifms))	
+		{
+			t0 <- 0; t1 <- 200; 
+			
+			#	find equilibrium parameters
+			propf <- 0.5
+			pS <- 0.99; pI<- (1-pS)*0.2
+			pSm <- (1-propf)*pS; pSf <- propf*pS
+			pIm<- (1-propf)*pI; pIf<- propf*pI  		
+			mu<- 1/40
+			popN <- 1e6
+			
+			waifm <- waifms[[kk]]		
+			beta00<- waifm['0','0']; beta01<- waifm['0','1']; beta10<-  waifm['1','0']; beta11 <-  waifm['1','1']			
+			pI0 <- (beta11-beta10)/(beta00+beta11-beta01-beta10)
+			pIf0 <- pI0*pIf; pIf1 <- (1-pI0)*pIf
+			pIm0 <- pI0*pIm; pIm1 <- (1-pI0)*pIm
+			beta <- mu*2*(1-pS)/(pS*pI) * ( beta00+beta11-beta01-beta10 )/( beta00*(beta11-beta10)+beta10*(beta00-beta01) )
+			gamma <- mu*(1-pS-pI)/pI 
+			pS0 <- pI0
+			pSf0 <- pS0*pSf; pSf1 <- (1-pS0)*pSf
+			pSm0 <- pS0*pSm; pSm1 <- (1-pS0)*pSm
+			
+			all.pars <- c(beta=beta, beta00=beta00,beta01=beta01,beta10=beta10,beta11=beta11,
+					gamma=gamma, mu=mu, 
+					popN=popN,
+					t1=t1,
+					Sf0_init= round(pSf0*popN), Sm0_init= round(pSm0*popN),
+					Sf1_init= round(pSf1*popN), Sm1_init= round(pSm1*popN),
+					If0_init= round(pIf0*popN), Im0_init= round(pIm0*popN),
+					If1_init= round(pIf1*popN), Im1_init= round(pIm1*popN),
+					Tf0_init= round(pI0*(1-pS-pI)*popN/2), Tm0_init= round(pI0*(1-pS-pI)*popN/2),
+					Tf1_init= round((1-pI0)*(1-pS-pI)*popN/2), Tm1_init= round((1-pI0)*(1-pS-pI)*popN/2)
+			)
+			all.pars['N_init'] <- sum(all.pars[c('Sf0_init','Sf1_init','Sm0_init','Sm1_init','If0_init','If1_init','Im0_init','Im1_init','Tf0_init','Tf1_init','Tm0_init','Tm1_init')])
+			
+			
+			#	simulate trajectories from stochastic model
+			model.pars <- all.pars[c('beta','beta00','beta01','beta10','beta11','gamma','mu')]		
+			x0 <- all.pars[c('Sf0_init','Sf1_init','Sm0_init','Sm1_init','If0_init','If1_init','Im0_init','Im1_init','Tf0_init','Tf1_init','Tm0_init','Tm1_init')]
+			names(x0) <- gsub('_init','',names(x0))
+			tfgy <- dmd(model.pars, x0, t0, t1, res = 1000, integrationMethod='adams')
+			dbir <- as.data.table( t( sapply(tfgy[['births']], function(x){ as.numeric(x) }) ) )
+			tmp <- as.vector(t(sapply( demes, function(x) paste(x,'->',demes))))
+			setnames(dbir, colnames(dbir), tmp)			
+			dbir[, time:= tfgy[['times']] ]		
+			dsim <- as.data.table( tfgy[[5]] )
+			#	plot trajectories
+			tmp <- melt(dsim, id.vars=c('time'))
+			ggplot(tmp, aes(x=time, colour=variable, y=value)) + 
+					geom_line() + 
+					theme_bw() +
+					scale_y_log10()
+			outfile <- file.path(simdir,paste0('sim',kk,'_t1',t1,'_trajectories_det.pdf'))
+			ggsave(file=outfile, w=8, h=6)		
+			
+			#	simulate trajectories from stochastic model
+			dsim <- list()
+			dbir <- list()
+			for(i in 1:5)
+			{
+				tfgy <- dms(model.pars, x0, t0, t1, res = 1000, integrationMethod='adams')
+				dbir[[i]] <- as.data.table( t( sapply(tfgy[['births']], function(x){ as.numeric(x) }) ) )
+				tmp <- as.vector(t(sapply( demes, function(x) paste(x,'->',demes))))
+				setnames(dbir[[i]], colnames(dbir[[i]]), tmp)			
+				dbir[[i]][, time:= tfgy[['times']] ]
+				dbir[[i]][, RUN:= i]
+				dsim[[i]] <- as.data.table( tfgy[[5]] )
+				dsim[[i]][, RUN:= i]
+			}
+			dsim <- do.call('rbind',dsim)
+			dbir <- do.call('rbind',dbir)
+			dsim <- subset(dsim, RUN==1)
+			dbir <- subset(dbir, RUN==1)
+			
+			#	plot trajectories
+			tmp <- melt(dsim, id.vars=c('RUN','time'))
+			ggplot(tmp, aes(x=time, colour=variable, y=value, linetype=as.factor(RUN))) + 
+					geom_line() + 
+					theme_bw() +
+					scale_y_log10()
+			outfile <- file.path(simdir,paste0('sim',kk,'_t1',t1,'_trajectories.pdf'))
+			ggsave(file=outfile, w=8, h=6)
+			
+			
+			
+			#	plot births
+			tmp <- dbir[, lapply(.SD, function(x) any(x!=0) ), .SDcols=setdiff(colnames(dbir),c('RUN','time'))]
+			cols.nnzero <- subset(melt(tmp, id.vars=NULL, measure.vars=names(tmp)), value)[, as.character(variable)]
+			tmp <- melt(dbir, id.vars=c('RUN','time'), measure.vars=cols.nnzero)
+			ggplot(tmp, aes(x=time, colour=variable, y=value, linetype=as.factor(RUN))) + 
+					geom_line() + 
+					theme_bw() +
+					scale_y_log10()
+			outfile <- file.path(simdir,paste0('sim',kk,'_t1',t1,'_births.pdf'))
+			ggsave(file=outfile, w=8, h=6)
+			
+			#	plot flows
+			dprop <- melt(dbir, id.vars=c('RUN','time'))
+			dprop <- dprop[, list(variable=variable, value=value/sum(value)), by=c('RUN','time')]
+			dprop <- dcast.data.table(dprop, RUN+time~variable)
+			tmp <- melt(dprop, id.vars=c('RUN','time'), measure.vars=cols.nnzero)
+			ggplot(tmp, aes(x=time, colour=variable, y=value, linetype=as.factor(RUN))) + 
+					geom_line() + 
+					theme_bw() +
+					scale_y_continuous(labels=scales:::percent, breaks=seq(0,1,0.1))
+			outfile <- file.path(simdir,paste0('sim',kk,'_t1',t1,'_flows.pdf'))
+			ggsave(file=outfile, w=8, h=6)
+			
+			
+			#	plot onward transmissions
+			donw <- melt(dbir, id.vars=c('RUN','time'))
+			donw[, recipient:= gsub('^([A-Za-z0-9]+) -> ([A-Za-z0-9]+)','\\1',variable)]
+			donw[, source:= gsub('^([A-Za-z0-9]+) -> ([A-Za-z0-9]+)','\\2',variable)]
+			donw <- donw[, list(recipient=recipient, value=value/sum(value)),  by=c('RUN','time','source')]
+			donw[, variable:= paste0(source,' -> ',recipient)]
+			set(donw, NULL, c('source','recipient'), NULL)
+			donw <- dcast.data.table(donw, RUN+time~variable)
+			tmp <- melt(donw, id.vars=c('RUN','time'), measure.vars=cols.nnzero)
+			ggplot(tmp, aes(x=time, colour=variable, y=value, linetype=as.factor(RUN))) + 
+					geom_line() + 
+					theme_bw() +
+					scale_y_continuous(labels=scales:::percent, breaks=seq(0,1,0.1))		
+			outfile <- file.path(simdir,paste0('sim',kk,'_t1',t1,'_onwardtransmissions.pdf'))
+			ggsave(file=outfile, w=8, h=6)
+			
+			
+			#	plot simulated waifm
+			dwaifm <- melt(dbir, id.vars=c('RUN','time'))		
+			dwaifm[, source:= gsub('^([A-Za-z0-9]+) -> ([A-Za-z0-9]+)','\\1',variable)]
+			dwaifm[, recipient:= gsub('^([A-Za-z0-9]+) -> ([A-Za-z0-9]+)','\\2',variable)]
+			tmp <- melt(dsim, id.vars=c('RUN','time'))		
+			tmp <- subset(tmp, substr(variable,1,1)=='S')
+			tmp[, gender:= gsub('S([m|f])[0-9]','\\1',variable)]
+			tmp <- tmp[, list(variable=variable, value=value/sum(value)), by=c('RUN','time','gender')]
+			set(tmp, NULL, 'variable', tmp[, gsub('^S','I', variable)])
+			setnames(tmp, c('variable','value'), c('recipient','susceptible.prop'))
+			dwaifm <- merge(dwaifm, tmp, by=c('RUN','time','recipient'))
+			set(dwaifm, NULL, 'value', dwaifm[, value/susceptible.prop])		
+			dwaifm <- dwaifm[, list(recipient=recipient, value=value/sum(value)),  by=c('RUN','time','source')]
+			dwaifm[, variable:= paste0(source,' -> ',recipient)]
+			set(dwaifm, NULL, c('source','recipient'), NULL)
+			dwaifm <- dcast.data.table(dwaifm, RUN+time~variable)
+			tmp <- melt(dwaifm, id.vars=c('RUN','time'), measure.vars=cols.nnzero)
+			ggplot(tmp, aes(x=time, colour=variable, y=value, linetype=as.factor(RUN))) + 
+					geom_line() + 
+					theme_bw() +
+					scale_y_continuous(labels=scales:::percent, breaks=seq(0,1,0.1))		
+			outfile <- file.path(simdir,paste0('sim',kk,'_t1',t1,'_waifm.pdf'))
+			ggsave(file=outfile, w=8, h=6)
+			
+			
+			outfile <- file.path(simdir,paste0('sim',kk,'_t1',t1,'.rda'))
+			save(dsim, dbir, dprop, donw, dwaifm, dms, dmd, all.pars, file=outfile)
+			
+			#
+			#	simulate dated trees from deterministic model 
+			sampleNs <- c(5e2,1e3,2e3)	
+			sampleNs <- c(1e3)	
+			yrss <- c(20,40,60)
+			simR <- 100
+			for(yrs in yrss)
+			{
+				for(sampleN in sampleNs)
+				{
+					dprev <- melt(subset(dsim, time==t1), id.vars=c('RUN','time'))		
+					dprev <- subset(dprev, substr(variable,1,1)=='I')
+					dprev <- dprev[, list(variable=variable, value=value/sum(value)), by=c('RUN')]
+					dprev <- dprev[, list(value=mean(value)), by='variable']
+					state.prob <- setNames(vector('double', m), demes)
+					state.prob[dprev$variable] <- dprev$value
+					tmp <- subset(simfiles, SIM==kk & SAMPLE==sampleN)[, sort(REP)]
+					sim.todo <- setdiff(1:simR, tmp)			
+					for(i in sim.todo)
+					{
+						sampleTimes <- seq( t1-yrs/100*t1, t1, length.out=sampleN)
+						sampleStates <- t(rmultinom(sampleN, size = 1, prob=state.prob ))
+						colnames(sampleStates) <- demes
+						tree <- sim.co.tree(model.pars, dmd, x0, t0, sampleTimes, sampleStates, res=1e3)
+						tree$all.pars <- all.pars								
+						tree$ll <- phydynR:::colik( tree, 
+								theta=model.pars, 
+								dmd, 
+								x0=x0, 
+								t0=0, 
+								res=1e3, 
+								forgiveAgtY = 0, 
+								AgtY_penalty = Inf, 
+								step_size_res =10,
+								likelihood='PL2',
+								maxHeight= floor( tree$maxHeight-1 )
+						)								
+						save(tree, file=file.path(simdir,paste0('sim',kk,'_t1',t1,'_yrs',yrs,'_dettree_sample',sampleN,'_',i,'.rda')))				
+						pdf(file=file.path(simdir,paste0('sim',kk,'_t1',t1,'_yrs',yrs,'_dettree_sample',sampleN,'_',i,'.pdf')), w=8, h=0.15*sampleN)
+						plot.phylo(tree)
+						dev.off()
+						#ltt.plot(tree)					
+					}				
+				}		
+			}			
+		}
+	}
+}
+
+
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01.longsim ----
+seattle.191017.phydyn.olli.SITmf01long.sim <- function()
+{
+	require(methods)
+	require(inline)
+	require(phydynR)
+	require(data.table)
+	require(ggplot2)
+	
+	home <- '/Users/or105/Box/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SITmf01long_sim')
 	
@@ -1086,7 +1376,7 @@ seattle.191017.phydyn.olli.SIT01.sim <- function()
 	require(data.table)
 	require(ggplot2)
 	
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/Users/or105/Box/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SIT01_sim')		
 	
@@ -1359,7 +1649,7 @@ seattle.191017.phydyn.olli.SITmf01.add.true.ll <- function()
 	require(data.table)
 	require(ggplot2)
 	
-	#home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	#home <- '/Users/or105/Box/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SITmf01_sim')
 	simfiles <- data.table(FSIMTREE=list.files(simdir, pattern='rda$', full.names=TRUE))	
@@ -1435,16 +1725,17 @@ seattle.191017.phydyn.olli.SITmf01.add.true.ll <- function()
 	}
 }
 
-## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01.mle ----
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01.assess ----
 seattle.191017.phydyn.olli.SITmf01.assess <- function()
 {
+	library(RcppArmadillo)
 	require(methods)
 	require(inline)
 	require(phydynR)
 	require(data.table)
 	require(ggplot2)
 	
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/Users/or105/Box/OR_Work/Seattle'
 	simdir <- file.path(home,'phydyn_olli','olli_SITmf01_sim')
 	simfiles <- data.table(FSIM=list.files(simdir, pattern='rda$', full.names=TRUE))
 	simfiles[, SIM_ID:= as.integer(gsub('^sim([0-9]+).*.rda$','\\1',basename(FSIM)))]
@@ -1452,131 +1743,31 @@ seattle.191017.phydyn.olli.SITmf01.assess <- function()
 	simfiles <- subset(simfiles, grepl('tree',basename(FSIM)))
 	setnames(simfiles, 'FSIM', 'FSIMTREE')
 	simfiles <- merge(tmp, simfiles, by='SIM_ID')
-	simfiles[, SAMPLE_SIZE:= as.integer(gsub('^sim([0-9]+)_tree_sample([0-9]+)_([0-9]+).rda$','\\2',basename(FSIMTREE)))]
-	simfiles[, REP_ID:= as.integer(gsub('^sim([0-9]+)_tree_sample([0-9]+)_([0-9]+).rda$','\\3',basename(FSIMTREE)))]	
+	simfiles[, SAMPLE_SIZE:= as.integer(gsub('^sim([0-9]+)_[a-z]*tree_sample([0-9]+)_([0-9]+).rda$','\\2',basename(FSIMTREE)))]
+	simfiles[, REP_ID:= as.integer(gsub('^sim([0-9]+)_[a-z]*tree_sample([0-9]+)_([0-9]+).rda$','\\3',basename(FSIMTREE)))]
+	simfiles[, SIM_ARGS:= gsub('^sim([0-9]+)_([a-z]*tree)_sample([0-9]+)_([0-9]+).rda$','\\2',basename(FSIMTREE))]
 	indir <- file.path(home,'phydyn_olli','olli_SITmf01_mle')	
 	infiles <- data.table(FIN=list.files(indir, pattern='rds$', full.names=TRUE))
-	infiles[, SIM_ID:= as.integer(gsub('^sim([0-9]+)_tree_sample([0-9]+)_([0-9]+)_res.rds$','\\1',basename(FIN)))]
-	infiles[, SAMPLE_SIZE:= as.integer(gsub('^sim([0-9]+)_tree_sample([0-9]+)_([0-9]+)_res.rds$','\\2',basename(FIN)))]
-	infiles[, REP_ID:= as.integer(gsub('^sim([0-9]+)_tree_sample([0-9]+)_([0-9]+)_res.rds$','\\3',basename(FIN)))]
-	infiles <- merge(infiles, simfiles, by=c('SIM_ID','SAMPLE_SIZE','REP_ID'))
+	infiles[, SIM_ID:= as.integer(gsub('^sim([0-9]+)_[a-z]*tree_sample([0-9]+)_([0-9]+)_res.rds$','\\1',basename(FIN)))]
+	infiles[, SIM_ARGS:= gsub('^sim([0-9]+)_([a-z]*tree)_sample([0-9]+)_([0-9]+)_res.rds$','\\2',basename(FIN))]
+	infiles[, SAMPLE_SIZE:= as.integer(gsub('^sim([0-9]+)_[a-z]*tree_sample([0-9]+)_([0-9]+)_res.rds$','\\2',basename(FIN)))]
+	infiles[, REP_ID:= as.integer(gsub('^sim([0-9]+)_[a-z]*tree_sample([0-9]+)_([0-9]+)_res.rds$','\\3',basename(FIN)))]
+	infiles <- merge(infiles, simfiles, by=c('SIM_ID','SIM_ARGS','SAMPLE_SIZE','REP_ID'))
 	#	read estimates
 	df <- infiles[, {
 				#infile <- infiles[1,FIN]
+				#print(FIN)
 				infile <- FIN
 				fit <- readRDS(infile)
 				ans <- fit$tree$all.pars
 				names(ans) <- paste0(gsub('_','.',names(ans)),'_true')
 				tmp <- fit$par
 				names(tmp) <- paste0(names(tmp),'_est')
-				as.list( c(ans, tmp, convergence=fit$convergence, ll= fit$value ) )
-			}, by=c('SIM_ID','SAMPLE_SIZE','REP_ID')]
-	#	create true likelihood values
-	#	(need to re-build model)	
-	#	setup model equations
-	demes <- c('If0','If1','Im0','Im1')
-	m <- length(demes)
-	bir <- matrix( '0.', nrow=m, ncol=m, dimnames=list(demes,demes))
-	bir['Im0', 'If0'] <- 'beta*beta00*Sf0*Im0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
-	bir['Im0', 'If1'] <- 'beta*beta01*Sf1*Im0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
-	bir['Im1', 'If0'] <- 'beta*beta10*Sf0*Im1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'	
-	bir['Im1', 'If1'] <- 'beta*beta11*Sf1*Im1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
-	bir['If0', 'Im0'] <- 'beta*beta00*Sm0*If0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
-	bir['If0', 'Im1'] <- 'beta*beta01*Sm1*If0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
-	bir['If1', 'Im0'] <- 'beta*beta10*Sm0*If1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
-	bir['If1', 'Im1'] <- 'beta*beta11*Sm1*If1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
-	#	non deme dynamics
-	nondemes <- c('Sf0','Sf1','Sm0','Sm1','Tf0','Tf1','Tm0','Tm1')
-	mm <- length(nondemes)
-	ndd <- setNames(rep('0.', mm), nondemes) 
-	ndd['Sf0'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sf0/(Sf0+Sf1+Sm0+Sm1) -mu*Sf0 - beta*(beta00*Sf0*Im0+beta10*Sf0*Im1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
-	ndd['Sf1'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sf1/(Sf0+Sf1+Sm0+Sm1) -mu*Sf1 - beta*(beta01*Sf1*Im0+beta11*Sf1*Im1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'	
-	ndd['Sm0'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sm0/(Sf0+Sf1+Sm0+Sm1) -mu*Sm0 - beta*(beta00*Sm0*If0+beta10*Sm0*If1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
-	ndd['Sm1'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sm1/(Sf0+Sf1+Sm0+Sm1) -mu*Sm1 - beta*(beta01*Sm1*If0+beta11*Sm1*If1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
-	ndd['Tf0'] <- 'gamma*If0 - mu*Tf0'
-	ndd['Tf1'] <- 'gamma*If1 - mu*Tf1'
-	ndd['Tm0'] <- 'gamma*Im0 - mu*Tm0'
-	ndd['Tm1'] <- 'gamma*Im1 - mu*Tm1'
-	#	no changes in ethnicity / foreign-born status
-	mig <- matrix('0.', nrow=m, ncol=m, dimnames=list(demes,demes))	
-	#	deaths
-	death <- setNames(rep('0.', m), demes)
-	death['If0'] <- '(gamma+mu)*If0'
-	death['If1'] <- '(gamma+mu)*If1'
-	death['Im0'] <- '(gamma+mu)*Im0'
-	death['Im1'] <- '(gamma+mu)*Im1'
-	#
-	model.par.names <- c('beta','beta00','beta01','beta10','beta11','gamma','mu')
-	#	build deterministic model	
-	dm <- phydynR:::build.demographic.process(bir, migrations=mig, death=death, nonDeme=ndd, parameter=model.par.names , rcpp=TRUE, sde=FALSE)
-	
-	tmp <- infiles[, {
-				#simtree <- infiles[1,FSIMTREE]
-				simtree <- FSIMTREE
-				load(simtree)
-				x0 <- tree$all.pars[c('Sf0_init','Sf1_init','Sm0_init','Sm1_init',
-								'If0_init','If1_init','Im0_init','Im1_init',
-								'Tf0_init','Tf1_init','Tm0_init','Tm1_init')]
-				names(x0) <- gsub('_init','',names(x0))		 
-				model.pars <- tree$all.pars[c('beta','beta00','beta01','beta10','beta11','gamma','mu')]
-				maxheight <- floor( tree$maxHeight-1 )
-				ll <- phydynR:::colik( tree, 
-						theta=model.pars, 
-						dm, 
-						x0=x0, 
-						t0=0, 
-						res=200, 
-						forgiveAgtY = 0, 
-						AgtY_penalty = Inf, 
-						step_size_res =10,
-						likelihood='PL2',
-						maxHeight= maxheight
-						)
-				list(ll_true=ll)
-			}, by=c('SIM_ID','SAMPLE_SIZE','REP_ID')]
-	
-	
-	
-	
-	#	
-	#	define objective function	
-	obj.fun <- function(est.pars, tree, dm, fixed.pars)
-	{				
-		x0 <- fixed.pars[c('Sf0_init','Sf1_init','Sm0_init','Sm1_init',
-						'If0_init','If1_init','Im0_init','Im1_init',
-						'Tf0_init','Tf1_init','Tm0_init','Tm1_init')]
-		names(x0) <- gsub('_init','',names(x0))		 
-		gamma <- unname(fixed.pars['gamma'])
-		mu <- unname(fixed.pars['mu'])
-		t0 <- unname(fixed.pars['t0'])
-		maxheight <- unname(fixed.pars['colik.maxheight'])
-		r0 <- unname(exp(est.pars['log_r0']))
-		beta00 <- unname(exp(fixed.pars['log_beta00']))
-		beta01 <- unname(exp(est.pars['log_beta01']))
-		beta10 <- unname(exp(est.pars['log_beta10']))
-		beta11 <- unname(exp(est.pars['log_beta11']))
-		beta <- r0*(gamma+mu)
-		model.pars <- c(beta=beta, beta00=beta00, beta01=beta01, beta10=beta10, beta11=beta11, gamma=gamma, mu=mu)
-		mll <- phydynR:::colik( tree, 
-				theta=model.pars, 
-				dm, 
-				x0=x0, 
-				t0=t0, 
-				res=200, 
-				forgiveAgtY = 0, 
-				AgtY_penalty = Inf, 
-				step_size_res =10,
-				likelihood='PL2',
-				maxHeight= maxheight
-		)
-		# track progress:
-		print(c(mll=mll, r0=beta/(gamma+mu), beta=beta, beta01=beta01, beta10=beta10, beta11=beta11) )
-		mll
-	}
-	
-	
-	
-	
+				as.list( c(ans, tmp, 
+							convergence=fit$convergence, 
+							ll_fit= fit$value,
+							ll_sim= fit$tree$ll) )
+			}, by=c('SIM_ID','SIM_ARGS','SAMPLE_SIZE','REP_ID')]
 	
 	#	rescale all beta values so that beta=1
 	setnames(df, colnames(df), gsub('\\.init','',colnames(df)))
@@ -1592,30 +1783,185 @@ seattle.191017.phydyn.olli.SITmf01.assess <- function()
 	df[, beta01_true:= beta01_true/beta_true]
 	df[, beta11_true:= beta11_true/beta_true]
 	df[, beta_true:= 1]
-	df <- subset(df, select=c(SIM_ID, SAMPLE_SIZE, REP_ID, 
+	
+	#	keep only some columns for analysis
+	df <- subset(df, select=c(SIM_ID, SIM_ARGS, SAMPLE_SIZE, REP_ID, 
 					beta00_true, beta01_true, beta10_true, beta11_true,
 					beta00_est, beta01_est, beta10_est, beta11_est, 
-					convergence, ll
+					convergence, ll_fit, ll_sim
 					))
 	df[, SAMPLE_SIZE:= factor(SAMPLE_SIZE)]
 	df[, SIM_ID:= paste0('simulation ',SIM_ID)]
 	df[, convergence:= factor(convergence, levels=c(1,0), labels=c('yes','no'))]
-	
+	df[, MAE_PARS:= (abs(beta00_true-beta00_est) + 
+					abs(beta01_true-beta01_est) +
+					abs(beta10_true-beta10_est) +
+					abs(beta11_true-beta11_est))/4]	
+	df[, MRAE_LL:= abs((ll_sim-ll_fit)/ll_sim)]
 	#	how many estimations have converged?
 	ggplot(df, aes(x=SAMPLE_SIZE, fill=convergence)) + geom_bar() +
 			theme_bw() +
 			facet_grid(~SIM_ID, scales='free_y') 
 	ggsave(file= file.path(indir,'runs_convergence.pdf'), w=10, h=5)
 	
+	#	is the log likelihood under the MLE estimates close to the value for the simulated tree?
+	ggplot(df, aes(x=SAMPLE_SIZE, fill=convergence, y=abs((ll_fit-ll_sim)/ll_sim) )) +
+			geom_boxplot() +
+			theme_bw() +
+			facet_grid(SIM_ARGS~SIM_ID, scales='free_y')
+	ggsave(file= file.path(indir,'runs_convergence_lldifference.pdf'), w=9, h=9)
+	#	while most runs have not converged, there is actually
+	#	no difference between the runs that have/have not converged
+	#	in how close the best fit MLEs are to the true MLEs 
+	
+	
+	ggplot(df, aes(x=MRAE_LL, y=MAE_PARS, colour=SIM_ARGS)) + geom_point() +
+		theme_bw() +
+		scale_y_log10() +
+		scale_x_continuous(label=scales:::percent) +
+		facet_grid(SAMPLE_SIZE~SIM_ID, scales='free_y') +
+		labs(x='(ll_sim-ll_MLE_fit)/ll_sim', y='MAE of parameters')
+	ggsave(file= file.path(indir,'runs_MAE.pdf'), w=9, h=9)
+	#	for SAMPLE_SIZE=500, we obtain very good results for sim1
+	#	however for sim2, the LL under the MLEs are all close to the true MLEs, but fit can be very different
+
+	ggplot(df, aes(x=ll_fit, y=ll_sim, colour= as.factor(MAE_PARS<1))) +
+			geom_abline(intercept=0, slope=1) +
+			geom_point() +
+			facet_wrap(~SIM_ID+SIM_ARGS+SAMPLE_SIZE, scales='free', ncol=3) 
+	ggsave(file= file.path(indir,'runs_llsim_vs_llfit.pdf'), w=9, h=12)
+	
 	#	overall results
-	df2 <- melt(df, id.vars=c('SIM_ID','SAMPLE_SIZE','REP_ID','convergence','ll'))
+	df2 <- melt(df, id.vars=c('SIM_ID','SIM_ARGS','SAMPLE_SIZE','REP_ID','convergence','ll_sim','ll_fit'))
 	df2[, TYPE:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\2',variable)]
-	df2[, VAR:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\1',variable)]	
-	dft <- subset(df2, TYPE=='true' & REP_ID==1 & SAMPLE_SIZE==100)
+	df2[, VAR:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\1',variable)]
+	
+	dft <- df2[, list(REP_ID=min(REP_ID)), by=c('SIM_ID','SIM_ARGS','SAMPLE_SIZE','TYPE')]
+	dft <- merge(dft, df2, by=c('SIM_ID','SIM_ARGS','SAMPLE_SIZE','TYPE','REP_ID'))	
+	dft <- subset(dft, TYPE=='true' & SAMPLE_SIZE==100)
+	#dfe <- subset(df2, TYPE=='est' & convergence=='yes')
+	dfe <- subset(df2, TYPE=='est')
+	ggplot() + 			
+			geom_jitter(data=dfe, aes(x=SAMPLE_SIZE, y=value, colour=SAMPLE_SIZE, shape=convergence), width=0.25, height=0) +
+			geom_boxplot(data=dfe, aes(x=SAMPLE_SIZE, y=value, group=SAMPLE_SIZE), fill='transparent', outlier.shape = NA) +
+			facet_grid(SIM_ID+SIM_ARGS~VAR, scales='free_y') +
+			coord_cartesian(ylim=c(-10,10)) +
+			theme_bw() +
+			geom_hline(data=dft, aes(yintercept=value)) +
+			labs(x='', y='parameter value\n', colour='number tips in phylo', shape='ML optim converged') +
+			theme(legend.position='top')
+	ggsave(file= file.path(indir,'accuracy_marginals.pdf'), w=10, h=15)
+}
+
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01.longassess ----
+seattle.191017.phydyn.olli.SITmf01long.assess <- function()
+{
+	library(RcppArmadillo)
+	require(methods)
+	require(inline)
+	require(phydynR)
+	require(data.table)
+	require(ggplot2)
+	
+	home <- '/Users/or105/Box/OR_Work/Seattle'
+	indir <- file.path(home,'phydyn_olli','olli_SITmf01long_mle')	
+	infiles <- data.table(FIN=list.files(indir, pattern='rds$', full.names=TRUE))
+	infiles[, SIM_ID:= as.integer(gsub('^sim([0-9]+)_[a-z]*tree_sample([0-9]+)_([0-9]+)_res.rds$','\\1',basename(FIN)))]
+	infiles[, SIM_ARGS:= gsub('^sim([0-9]+)_([a-z]*tree)_sample([0-9]+)_([0-9]+)_res.rds$','\\2',basename(FIN))]
+	infiles[, SAMPLE_SIZE:= as.integer(gsub('^sim([0-9]+)_[a-z]*tree_sample([0-9]+)_([0-9]+)_res.rds$','\\2',basename(FIN)))]
+	infiles[, REP_ID:= as.integer(gsub('^sim([0-9]+)_[a-z]*tree_sample([0-9]+)_([0-9]+)_res.rds$','\\3',basename(FIN)))]
+	
+	#	read estimates
+	df <- infiles[, {
+				#infile <- infiles[1,FIN]
+				#print(FIN)
+				infile <- FIN
+				fit <- readRDS(infile)
+				ans <- fit$tree$all.pars
+				names(ans) <- paste0(gsub('_','.',names(ans)),'_true')
+				tmp <- fit$par
+				names(tmp) <- paste0(names(tmp),'_est')
+				as.list( c(ans, tmp, 
+								convergence=fit$convergence, 
+								ll_fit= fit$value,
+								ll_sim= fit$tree$ll) )
+			}, by=c('SIM_ID','SIM_ARGS','SAMPLE_SIZE','REP_ID')]
+	
+	#	rescale all beta values so that beta=1
+	setnames(df, colnames(df), gsub('\\.init','',colnames(df)))
+	df[, beta00_est:= 1]
+	df[, beta_est:= exp(log_r0_est)*(gamma_true+mu_true)]
+	df[, beta00_est:= beta00_true/beta_est]
+	df[, beta10_est:= exp(log_beta10_est)/beta_est]
+	df[, beta01_est:= exp(log_beta01_est)/beta_est]
+	df[, beta11_est:= exp(log_beta11_est)/beta_est]
+	df[, beta_est:= 1]
+	df[, beta00_true:= beta00_true/beta_true]
+	df[, beta10_true:= beta10_true/beta_true]
+	df[, beta01_true:= beta01_true/beta_true]
+	df[, beta11_true:= beta11_true/beta_true]
+	df[, beta_true:= 1]
+	
+	#	keep only some columns for analysis
+	df <- subset(df, select=c(SIM_ID, SAMPLE_SIZE, REP_ID, 
+					beta00_true, beta01_true, beta10_true, beta11_true,
+					beta00_est, beta01_est, beta10_est, beta11_est, 
+					convergence, ll_fit, ll_sim
+			))
+	df[, SAMPLE_SIZE:= factor(SAMPLE_SIZE)]
+	df[, SIM_ID:= paste0('simulation ',SIM_ID)]
+	df[, convergence:= factor(convergence, levels=c(1,0), labels=c('yes','no'))]
+	df[, MAE_PARS:= (abs(beta00_true-beta00_est) + 
+						abs(beta01_true-beta01_est) +
+						abs(beta10_true-beta10_est) +
+						abs(beta11_true-beta11_est))/4]	
+	df[, MRAE_LL:= abs((ll_sim-ll_fit)/ll_sim)]
+	#	how many estimations have converged?
+	ggplot(df, aes(x=SAMPLE_SIZE, fill=convergence)) + geom_bar() +
+			theme_bw() +
+			facet_grid(~SIM_ID, scales='free_y') 
+	ggsave(file= file.path(indir,'runs_convergence.pdf'), w=10, h=5)
+	
+	#	is the log likelihood under the MLE estimates close to the value for the simulated tree?
+	ggplot(df, aes(x=SAMPLE_SIZE, fill=convergence, y=abs((ll_fit-ll_sim)/ll_sim) )) +
+			geom_boxplot() +
+			theme_bw() +
+			facet_grid(~SIM_ID, scales='free_y')
+	ggsave(file= file.path(indir,'runs_convergence_lldifference.pdf'), w=10, h=5)
+	#	while most runs have not converged, there is actually
+	#	no difference between the runs that have/have not converged
+	#	in how close the best fit MLEs are to the true MLEs 
+	
+	
+	ggplot(df, aes(x=MRAE_LL, y=MAE_PARS)) + geom_point() +
+			theme_bw() +
+			scale_y_log10() +
+			scale_x_continuous(label=scales:::percent) +
+			facet_grid(SAMPLE_SIZE~SIM_ID, scales='free_y') +
+			labs(x='(ll_sim-ll_MLE_fit)/ll_sim', y='MAE of parameters')
+	ggsave(file= file.path(indir,'runs_MAE.pdf'), w=9, h=9)
+	#	for SAMPLE_SIZE=500, we obtain very good results for sim1
+	#	however for sim2, the LL under the MLEs are all close to the true MLEs, but fit can be very different
+	
+	ggplot(df, aes(x=ll_fit, y=ll_sim, colour= as.factor(MAE_PARS<1))) +
+			geom_abline(intercept=0, slope=1) +
+			geom_point() +
+			facet_wrap(SAMPLE_SIZE~SIM_ID, scales='free', ncol=3) 
+	ggsave(file= file.path(indir,'runs_llsim_vs_llfit.pdf'), w=9, h=9)
+	
+	#	overall results
+	df2 <- melt(df, id.vars=c('SIM_ID','SAMPLE_SIZE','REP_ID','convergence','ll_sim','ll_fit'))
+	df2[, TYPE:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\2',variable)]
+	df2[, VAR:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\1',variable)]
+	
+	dft <- df2[, list(REP_ID=min(REP_ID)), by=c('SIM_ID','SAMPLE_SIZE','TYPE')]
+	dft <- merge(dft, df2, by=c('SIM_ID','SAMPLE_SIZE','TYPE','REP_ID'))	
+	dft <- subset(dft, TYPE=='true' & SAMPLE_SIZE==100)
 	dfe <- subset(df2, TYPE=='est' & convergence=='yes')
-	ggplot() + 
-			#geom_boxplot(data=dfe, aes(x=SAMPLE_SIZE, y=value, colour=SAMPLE_SIZE), outlier.shape = NA) +
-			geom_point(data=dfe, aes(x=SAMPLE_SIZE, y=value, colour=SAMPLE_SIZE, shape=convergence)) +
+	dfe <- subset(df2, TYPE=='est')
+	ggplot() + 			
+			geom_jitter(data=dfe, aes(x=SAMPLE_SIZE, y=value, colour=SAMPLE_SIZE, shape=convergence), width=0.25, height=0) +
+			geom_boxplot(data=dfe, aes(x=SAMPLE_SIZE, y=value, group=SAMPLE_SIZE), fill='transparent', outlier.shape = NA) +
 			facet_grid(SIM_ID~VAR, scales='free_y') +
 			coord_cartesian(ylim=c(-10,10)) +
 			theme_bw() +
@@ -1623,50 +1969,6 @@ seattle.191017.phydyn.olli.SITmf01.assess <- function()
 			labs(x='', y='parameter value\n', colour='number tips in phylo', shape='ML optim converged') +
 			theme(legend.position='top')
 	ggsave(file= file.path(indir,'accuracy_marginals.pdf'), w=10, h=15)
-	
-	#	compare
-	#	1 no spread between 0 and 1
-	#	2 homogeneous spread
-	df3 <- subset(df, SIM_ID%in%paste0('simulation ',1:2) )
-	df3[, SIM_ID:= gsub('simulation 1','no spread betw 0 and 1', SIM_ID)]
-	df3[, SIM_ID:= gsub('simulation 2','homogeneous spread', SIM_ID)]
-	#	identify runs with crazy estimates 
-	tmp <- subset(df3, beta00_est>10 | beta00_est< -10 | beta10_est>10 | beta10_est< -10 | beta01_est>10 | beta01_est< -10 | beta11_est>10 | beta11_est< -10)
-	tmp <- unique(subset(tmp, select=c(SIM_ID, SAMPLE_SIZE, REP_ID)))
-	tmp[, CRAZY:= 'yes']
-	df3 <- merge(df3, tmp, by=c('SIM_ID','SAMPLE_SIZE','REP_ID'), all.x=TRUE)
-	set(df3, df3[, which(is.na(CRAZY))], 'CRAZY', 'no')
-	df3 <- melt(df3, id.vars=c('SIM_ID','SAMPLE_SIZE','REP_ID','CRAZY','ll','convergence'))
-	df3[, TYPE:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\2',variable)]
-	df3[, VAR:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\1',variable)]	
-	dft <- subset(df3, TYPE=='true' & REP_ID==1)
-	dfe <- subset(df3, TYPE=='est' & convergence=='yes' & CRAZY=='no')	
-	ggplot() + 
-			geom_boxplot(data=dfe, aes(x=VAR, y=value, colour=SIM_ID), outlier.shape = NA) +
-			geom_point(data=dfe, aes(x=VAR, y=value, colour=SIM_ID, shape=convergence)) +
-			facet_grid(SAMPLE_SIZE~SIM_ID) +
-			coord_cartesian(ylim=c(-10,10)) +			
-			theme_bw() +
-			geom_point(data=dft, aes(x=VAR, y=value), pch=4) +
-			labs(x='', y='parameter value\n', colour='number tips in phylo', shape='ML optim converged') +
-			theme(legend.position='top') +
-			theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-	ggsave(file= file.path(indir,'accuracy_sim1_vs_sim2.pdf'), w=10, h=10)
-	
-	dft <- subset(df3, TYPE=='true' & REP_ID==1)
-	dfe <- subset(df3, TYPE=='est' & convergence=='yes')
-	dfe <- subset(df3, TYPE=='est')
-	ggplot() + 
-			geom_boxplot(data=dfe, aes(x=VAR, y=value, colour=SIM_ID), outlier.shape = NA) +
-			geom_point(data=dfe, aes(x=VAR, y=value, colour=SIM_ID, shape=convergence)) +
-			facet_grid(SAMPLE_SIZE~SIM_ID) +
-			coord_cartesian(ylim=c(-10,10)) +			
-			theme_bw() +
-			geom_point(data=dft, aes(x=VAR, y=value), pch=4) +
-			labs(x='', y='parameter value\n', colour='number tips in phylo', shape='ML optim converged') +
-			theme(legend.position='top') +
-			theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-	ggsave(file= file.path(indir,'accuracy_sim1_vs_sim2_withCrazy_withNoConv.pdf'), w=10, h=10)
 }
 
 ## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01.mle ----
@@ -1678,7 +1980,7 @@ seattle.191017.phydyn.olli.SITmf01.mle <- function()
 	require(data.table)
 	require(ggplot2)
 	
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/Users/or105/Box/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	if(0)
 	{
@@ -1836,7 +2138,7 @@ seattle.191017.phydyn.olli.SITmf.mle <- function()
 	require(data.table)
 	require(ggplot2)
 	
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/Users/or105/Box/OR_Work/Seattle'
 	#home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SITmf_sim')
 	outdir <- file.path(home,'phydyn_olli','olli_SITmf_mle')
@@ -1979,8 +2281,8 @@ seattle.191017.phydyn.olli.SITmf.sim <- function()
 	require(data.table)
 	require(ggplot2)
 	
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
-	#home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
+	home <- '/Users/or105/Box/OR_Work/Seattle'
+	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SITmf_sim')		
 	
 	#	
@@ -2079,7 +2381,7 @@ seattle.191017.phydyn.olli.SIT.sim <- function()
 	require(data.table)
 	require(ggplot2)
 	
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/Users/or105/Box/OR_Work/Seattle'
 	#home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	simdir <- file.path(home,'phydyn_olli','olli_SIT_sim')		
 	
@@ -2137,7 +2439,7 @@ seattle.191017.phydyn.volz.msmUK.mle <- function()
 	require(inline)
 	require(phydynR)
 			
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle'
+	home <- '/Users/or105/Box/OR_Work/Seattle'
 	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'
 	#likelihood.approx <- 'QL'
 	likelihood.approx <- 'PL2'	
@@ -3093,7 +3395,7 @@ seattle.191017.phyloscanner.nonB <- function()
 	if(1)
 	{
 		prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'
-		home <- '/Users/Oliver/Box Sync/OR_Work/Seattle/analysis_191017'	
+		home <- '/Users/or105/Box/OR_Work/Seattle/analysis_191017'	
 	}
 	
 	
@@ -3234,7 +3536,7 @@ seattle.191017.phyloscanner.B <- function()
 	if(1)
 	{
 		prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'
-		home <- '/Users/Oliver/Box Sync/OR_Work/Seattle/analysis_191017'	
+		home <- '/Users/or105/Box/OR_Work/Seattle/analysis_191017'	
 	}
 	if(0)
 	{
@@ -3457,7 +3759,7 @@ seattle.191017.phyloscanner.make.pdf<- function()
 	require(reshape)
 	require(phyloscannerR)
 	#	working directory with phyloscanner output		
-	indir.phsc	<- '/Users/Oliver/Box Sync/OR_Work/Seattle/analysis_191017/phyloscanner'
+	indir.phsc	<- '/Users/or105/Box/OR_Work/Seattle/analysis_191017/phyloscanner'
 	infiles		<- data.table(F=list.files(indir.phsc, pattern='workspace.rda$', full.names=TRUE, recursive=TRUE))
 	infiles[, SELECT:= 'KCHSX']	
 	
@@ -3485,7 +3787,7 @@ seattle.191017.phyloscanner.get.undated.subgraphs<- function()
 	require(reshape)
 	require(phyloscannerR)
 	#	working directory with phyloscanner output		
-	indir.phsc	<- '/Users/Oliver/Box Sync/OR_Work/Seattle/analysis_191017/phyloscanner'
+	indir.phsc	<- '/Users/or105/Box/OR_Work/Seattle/analysis_191017/phyloscanner'
 	infiles		<- data.table(F=list.files(indir.phsc, pattern='workspace.rda$', full.names=TRUE, recursive=TRUE))
 	infiles[, SELECT:= 'KCHSX']	
 	
@@ -3522,7 +3824,7 @@ seattle.191017.phyloscanner.get.dated.subgraphs<- function()
 	require(phyloscannerR)
 	
 	#	working directory with phyloscanner output
-	home <- '/Users/Oliver/Box Sync/OR_Work/Seattle/analysis_191017'
+	home <- '/Users/or105/Box/OR_Work/Seattle/analysis_191017'
 	indir.phsc	<- file.path(home,'phyloscanner_dated')
 	outdir <- file.path(home,'subgraphs_dated')
 	infiles		<- data.table(F=list.files(indir.phsc, pattern='_annotated_dated_tree.rda$', full.names=TRUE, recursive=TRUE))	
