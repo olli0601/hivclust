@@ -939,12 +939,13 @@ seattle.191017.phydyn.olli.SITmf01yrsXX.sim <- function()
 	waifm['1','1'] <- 0.55
 	waifms[[2]] <- waifm
 	
-	t1s <- c(50,100,200,400)
+	t1s <- c(100,200,400)
 	for(t1 in t1s)
 	{
 		for(kk in seq_along(waifms))	
 		{
-			t0 <- 0; t1 <- 200; 
+			t0 <- 0; 
+			#t1 <- 200; 
 			
 			#	find equilibrium parameters
 			propf <- 0.5
