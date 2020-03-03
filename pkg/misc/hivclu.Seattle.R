@@ -39,8 +39,8 @@ seattle.start.HPC<- function()
 		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:4999, '\n')
 						
 		#	make PBS header
-		hpc.load	<- "module load anaconda3/personal"
-		hpc.load	<- "module load R/3.3.3"
+		hpc.load	<- "module load anaconda3/personal\nsource activate base_backup2"
+		#hpc.load	<- "module load R/3.3.3"
 		hpc.select	<- 1						# number of nodes
 		hpc.nproc	<- 1						# number of processors on node
 		hpc.walltime<- 23						# walltime
