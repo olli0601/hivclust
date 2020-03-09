@@ -5,7 +5,7 @@ seattle.start.HPC<- function()
 	HOME		<<- '/rds/general/user/or105/home' 
 	
 	#	various   
-	if(1) 
+	if(0) 
 	{								
 		#hpc.load	<- "module load R/3.3.3"
 		hpc.load	<- "module load anaconda3/personal\nsource activate base_backup2"
@@ -34,7 +34,7 @@ seattle.start.HPC<- function()
 		quit("no")	
 	}	
 	#	various job array
-	if(0) 
+	if(1) 
 	{		
 		cmds		<- paste0('Rscript ',file.path(CODE.HOME, "misc/hivclu.startme.R"), ' -exe=VARIOUS', ' -input=', 1:4999, '\n')
 						
@@ -83,7 +83,8 @@ seattle.various<- function()
 	#seattle.191017.phydyn.olli.SITmf01.mle()	
 	#seattle.191017.phydyn.olli.SITmf01yrsXX.sim()
 	#seattle.191017.phydyn.olli.SITmf01yrsXX.mle()
-	seattle.191017.phydyn.olli.SITmf01yrsXXv2.sim()
+	#seattle.191017.phydyn.olli.SITmf01yrsXXv2.sim()
+	seattle.191017.phydyn.olli.SITmf01yrsXXv2.mle()
 }
 
 
@@ -1452,7 +1453,191 @@ seattle.191017.phydyn.olli.SITmf01yrsXX.sim <- function()
 	}
 }
 
-## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXX.sim ----
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXXv2.mle ----
+seattle.191017.phydyn.olli.SITmf01yrsXXv2.mle <- function()
+{
+	require(methods)
+	require(inline)
+	require(phydynR)
+	require(data.table)
+	require(ggplot2)
+	
+	home <- '/Users/or105/Box/OR_Work/Seattle'
+	home <- '/rds/general/project/ratmann_seattle_data_analysis/live'	
+	simdir <- file.path(home,'phydyn_olli','olli_SITmf01yrsXXv2_sim')
+	outdir <- file.path(home,'phydyn_olli','olli_SITmf01yrsXXv2_mle')
+	simfiles <- data.table(FIN=list.files(simdir, pattern='rda$', full.names=TRUE))
+	simfiles <- subset(simfiles, grepl('sim1|sim2',basename(FIN)) & grepl('_dettree_|_stotree_',basename(FIN)))
+	tmp <- 'sim([0-9])_t1([0-9]+)_yrs([0-9]+)_([a-z]+)_sample([0-9]+)_([0-9]+).(rda|rds)'
+	simfiles[, SIM_ID:= as.integer(gsub(tmp,'\\1', basename(FIN)))]
+	simfiles[, SIM_T1:= as.integer(gsub(tmp,'\\2', basename(FIN)))]
+	simfiles[, SIM_YRS:= as.integer(gsub(tmp,'\\3', basename(FIN)))]
+	simfiles[, SIM_TREE:= gsub(tmp,'\\4', basename(FIN))]
+	simfiles[, SIM_SAMPLE:= as.integer(gsub(tmp,'\\5', basename(FIN)))]
+	simfiles[, SIM_REP:= as.integer(gsub(tmp,'\\6', basename(FIN)))]
+	#	setup simulations
+	tmp <- as.data.table(expand.grid(DUMMY=1,SIM_RES=c(200,1000), SIM_STEP_SIZE_RES=c(10)))
+	simfiles[, DUMMY:= 1]
+	simfiles <- merge(simfiles, tmp, by='DUMMY',allow.cartesian=TRUE)
+	#	check what is done and remove
+	tmp <- 'sim([0-9])_t1([0-9]+)_yrs([0-9]+)_([a-z]+)_sample([0-9]+)_res([0-9]+)_stepsizeres([0-9]+)_([0-9]+)_result.rds'
+	outfiles <- data.table(FO=list.files(outdir, pattern='rds$', full.names=TRUE))
+	outfiles[, SIM_ID:= as.integer(gsub(tmp,'\\1', basename(FO)))]
+	outfiles[, SIM_T1:= as.integer(gsub(tmp,'\\2', basename(FO)))]
+	outfiles[, SIM_YRS:= as.integer(gsub(tmp,'\\3', basename(FO)))]
+	outfiles[, SIM_TREE:= gsub(tmp,'\\4', basename(FO))]
+	outfiles[, SIM_SAMPLE:= as.integer(gsub(tmp,'\\5', basename(FO)))]
+	outfiles[, SIM_RES:= as.integer(gsub(tmp,'\\6', basename(FO)))]
+	outfiles[, SIM_STEP_SIZE_RES:= as.integer(gsub(tmp,'\\7', basename(FO)))]
+	outfiles[, SIM_REP:= as.integer(gsub(tmp,'\\8', basename(FO)))]
+	simfiles <- merge(simfiles, outfiles, by=c('SIM_ID','SIM_T1','SIM_YRS','SIM_TREE','SIM_SAMPLE','SIM_RES','SIM_STEP_SIZE_RES','SIM_REP'), all=TRUE)
+	simfiles <- subset(simfiles, is.na(FO))
+	
+	#	read tree id and select subset of input files to process
+	tree.id <- NA_integer_
+	tmp <- na.omit(sapply(args,function(arg)
+					{
+						switch(substr(arg,2,6),
+								input= return(substr(arg,8,nchar(arg))),
+								NA)
+					}))
+	if(length(tmp)!=0)	
+		tree.id<- as.integer(tmp[1])
+	if(!is.na(tree.id) & tree.id>nrow(simfiles))
+		stop('Found tree.id outside number of simfiles', tree.id)
+	if(!is.na(tree.id))
+		simfiles <- simfiles[tree.id,]
+	
+	
+	#		
+	#	setup model equations
+	demes <- c('If0','If1','Im0','Im1')
+	m <- length(demes)
+	bir <- matrix( '0.', nrow=m, ncol=m, dimnames=list(demes,demes))
+	bir['Im0', 'If0'] <- 'beta*beta00*Sf0*Im0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['Im0', 'If1'] <- 'beta*beta01*Sf1*Im0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['Im1', 'If0'] <- 'beta*beta10*Sf0*Im1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'	
+	bir['Im1', 'If1'] <- 'beta*beta11*Sf1*Im1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['If0', 'Im0'] <- 'beta*beta00*Sm0*If0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['If0', 'Im1'] <- 'beta*beta01*Sm1*If0/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['If1', 'Im0'] <- 'beta*beta10*Sm0*If1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	bir['If1', 'Im1'] <- 'beta*beta11*Sm1*If1/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	#	non deme dynamics
+	nondemes <- c('Sf0','Sf1','Sm0','Sm1','Tf0','Tf1','Tm0','Tm1')
+	mm <- length(nondemes)
+	ndd <- setNames(rep('0.', mm), nondemes) 
+	ndd['Sf0'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sf0/(Sf0+Sf1+Sm0+Sm1) -mu*Sf0 - beta*(beta00*Sf0*Im0+beta10*Sf0*Im1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	ndd['Sf1'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sf1/(Sf0+Sf1+Sm0+Sm1) -mu*Sf1 - beta*(beta01*Sf1*Im0+beta11*Sf1*Im1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'	
+	ndd['Sm0'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sm0/(Sf0+Sf1+Sm0+Sm1) -mu*Sm0 - beta*(beta00*Sm0*If0+beta10*Sm0*If1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	ndd['Sm1'] <- 'mu*(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)*Sm1/(Sf0+Sf1+Sm0+Sm1) -mu*Sm1 - beta*(beta01*Sm1*If0+beta11*Sm1*If1)/(Sm0+Im0+Tm0+Sf0+If0+Tf0+Sm1+Im1+Tm1+Sf1+If1+Tf1)'
+	ndd['Tf0'] <- 'gamma*If0 - mu*Tf0'
+	ndd['Tf1'] <- 'gamma*If1 - mu*Tf1'
+	ndd['Tm0'] <- 'gamma*Im0 - mu*Tm0'
+	ndd['Tm1'] <- 'gamma*Im1 - mu*Tm1'
+	#	no changes in ethnicity / foreign-born status
+	mig <- matrix('0.', nrow=m, ncol=m, dimnames=list(demes,demes))	
+	#	deaths
+	death <- setNames(rep('0.', m), demes)
+	death['If0'] <- '(gamma+mu)*If0'
+	death['If1'] <- '(gamma+mu)*If1'
+	death['Im0'] <- '(gamma+mu)*Im0'
+	death['Im1'] <- '(gamma+mu)*Im1'
+	#
+	model.par.names <- c('beta','beta00','beta01','beta10','beta11','gamma','mu')
+	#	build deterministic model	
+	dmd <- phydynR:::build.demographic.process(bir, migrations=mig, death=death, nonDeme=ndd, parameter=model.par.names , rcpp=TRUE, sde=FALSE)
+	dms <- phydynR:::build.demographic.process(bir, migrations=mig, death=death, nonDeme=ndd, parameter=model.par.names , rcpp=TRUE, sde=TRUE)
+	
+	#	
+	#	define objective function	
+	obj.fun <- function(est.pars, tree, dm, fixed.pars)
+	{				
+		x0 <- fixed.pars[c('Sf0_init','Sf1_init','Sm0_init','Sm1_init',
+						'If0_init','If1_init','Im0_init','Im1_init',
+						'Tf0_init','Tf1_init','Tm0_init','Tm1_init')]
+		names(x0) <- gsub('_init','',names(x0))		 
+		gamma <- unname(fixed.pars['gamma'])
+		mu <- unname(fixed.pars['mu'])
+		t0 <- unname(fixed.pars['t0'])
+		res <- unname(fixed.pars['res'])
+		step_size_res <- unname(fixed.pars['step_size_res'])
+		maxheight <- unname(fixed.pars['colik.maxheight'])
+		r0 <- unname(exp(est.pars['log_r0']))
+		beta00 <- unname(exp(fixed.pars['log_beta00']))
+		beta01 <- unname(exp(est.pars['log_beta01']))
+		beta10 <- unname(exp(est.pars['log_beta10']))
+		beta11 <- unname(exp(est.pars['log_beta11']))
+		beta <- r0*(gamma+mu)
+		model.pars <- c(beta=beta, beta00=beta00, beta01=beta01, beta10=beta10, beta11=beta11, gamma=gamma, mu=mu)
+		mll <- phydynR:::colik( tree, 
+				theta=model.pars, 
+				dm, 
+				x0=x0, 
+				t0=t0, 
+				res=res, 
+				forgiveAgtY = 0, 
+				AgtY_penalty = Inf, 
+				step_size_res =step_size_res,
+				likelihood='PL2',
+				maxHeight= maxheight
+		)
+		# track progress:
+		print(c(mll=mll, r0=beta/(gamma+mu), beta=beta, beta01=beta01, beta10=beta10, beta11=beta11) )
+		mll
+	}
+	
+	
+	for(i in seq_len(nrow(simfiles)))
+	{
+		#	load dated tree
+		#i <- 1
+		simfile <- simfiles[i,FIN]
+		load(simfile)	
+		all.pars.truth <- tree$all.pars			
+		fixed.pars <- all.pars.truth[c('beta00','gamma','mu',
+						'Sf0_init','Sf1_init','Sm0_init','Sm1_init',
+						'If0_init','If1_init','Im0_init','Im1_init',
+						'Tf0_init','Tf1_init','Tm0_init','Tm1_init')]
+		fixed.pars['log_beta00'] <- log(fixed.pars['beta00'])
+		fixed.pars['t0'] <- 0
+		fixed.pars['t1'] <- simfiles[i,SIM_T1]
+		fixed.pars['colik.maxheight'] <- floor( tree$maxHeight-1 )
+		fixed.pars['res'] <- simfiles[i,SIM_RES]
+		fixed.pars['step_size_res'] <- simfiles[i,SIM_STEP_SIZE_RES]
+		dm <- NULL
+		if(simfiles[i,SIM_TREE]=='dettree')
+			dm <- dmd
+		if(simfiles[i,SIM_TREE]=='stotree')
+			dm <- dms
+		
+		#	find init values with non-zero likelihood
+		for( r0 in seq(1,8,0.25))
+		{
+			est.pars.init <- c(log_r0=log(r0), log_beta01=log(0.5), log_beta10=log(0.5), log_beta11=log(0.5))
+			ll <- obj.fun(est.pars.init, tree, dm, fixed.pars)
+			print(ll)
+			if(is.finite(ll))
+				break
+		}
+		if(!is.finite(ll))
+			stop('Could not find initial values')
+		fit <- optim(par=est.pars.init, fn=obj.fun,  
+				tree=tree, dm=dm, fixed.pars=fixed.pars, 
+				control=list(fnscale=-1, reltol=1e-5, trace=6),
+				method= 'Nelder-Mead'				
+		)
+		
+		fit$tree <- tree
+		fit$fixed.pars <- fixed.pars
+		fit$est.pars.init <- est.pars.init
+		
+		outfile <- simfiles[i, paste0('sim',SIM_ID,'_t1',SIM_T1,'_yrs',SIM_YRS,'_',SIM_TREE,'_sample',SIM_SAMPLE,'_res',SIM_RES,'_stepsizeres',SIM_STEP_SIZE_RES,'_',SIM_REP,'_result.rds')]
+		outfile <- file.path(outdir, outfile)
+		saveRDS(fit, file=outfile)	
+	}	
+}
+
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXXv2.sim ----
 seattle.191017.phydyn.olli.SITmf01yrsXXv2.sim <- function()
 {
 	require(methods)
