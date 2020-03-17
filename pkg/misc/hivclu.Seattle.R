@@ -1751,6 +1751,123 @@ seattle.191017.phydyn.olli.SITmf01yrsXXv2.mle <- function()
 }
 
 
+## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXXv3.assess ----
+seattle.191017.phydyn.olli.SITmf01yrsXXv3.assess <- function()
+{
+	require(ggplot2)
+	require(data.table)
+	home <- '/Users/or105/Box/OR_Work/Seattle'
+	simdir <- file.path(home,'phydyn_olli','olli_SITmf01yrsXXv3_sim')
+	indir <- file.path(home,'phydyn_olli','olli_SITmf01yrsXXv3_mle')
+	tmp <- 'sim([0-9])_t1([0-9]+)_yrs([0-9]+)_([a-z]+)_sample([0-9]+)_res([0-9]+)_stepsizeres([0-9]+)_([0-9]+)_result.rds'
+	infiles <- data.table(FO=list.files(indir, pattern='rds$', full.names=TRUE))
+	infiles[, SIM_ID:= as.integer(gsub(tmp,'\\1', basename(FO)))]
+	infiles[, SIM_T1:= as.integer(gsub(tmp,'\\2', basename(FO)))]
+	infiles[, SIM_YRS:= as.integer(gsub(tmp,'\\3', basename(FO)))]
+	infiles[, SIM_TREE:= gsub(tmp,'\\4', basename(FO))]
+	infiles[, SIM_SAMPLE:= as.integer(gsub(tmp,'\\5', basename(FO)))]
+	infiles[, SIM_RES:= as.integer(gsub(tmp,'\\6', basename(FO)))]
+	infiles[, SIM_STEP_SIZE_RES:= as.integer(gsub(tmp,'\\7', basename(FO)))]
+	infiles[, SIM_REP:= as.integer(gsub(tmp,'\\8', basename(FO)))]
+	tmp <- infiles[, 
+			list(IS_READABLE= !inherits(try(readRDS(FO), silent=TRUE), "try-error")),				
+			by=c('SIM_ID','SIM_T1','SIM_YRS','SIM_TREE','SIM_SAMPLE','SIM_RES','SIM_STEP_SIZE_RES','SIM_REP')
+	]
+	infiles <- merge(infiles, tmp, by=c('SIM_ID','SIM_T1','SIM_YRS','SIM_TREE','SIM_SAMPLE','SIM_RES','SIM_STEP_SIZE_RES','SIM_REP'))
+	infiles <- subset(infiles, IS_READABLE)
+	#	read estimates
+	df <- infiles[, {
+				#infile <- infiles[1,FO]
+				#print(FO)
+				infile <- FO
+				fit <- readRDS(infile)
+				ans <- fit$tree$all.pars
+				names(ans) <- paste0(gsub('_','.',names(ans)),'_true')
+				tmp <- fit$par
+				names(tmp) <- paste0(names(tmp),'_est')
+				as.list( c(ans, tmp, 
+								convergence=fit$convergence, 
+								ll_fit= fit$value,
+								ll_sim= fit$tree$ll) )
+			}, by=c('SIM_ID','SIM_T1','SIM_YRS','SIM_TREE','SIM_SAMPLE','SIM_RES','SIM_STEP_SIZE_RES','SIM_REP')]	
+	save(df, file=file.path(indir,'resulds.rda'))
+	
+	#	rescale all beta values so that beta=1
+	setnames(df, colnames(df), gsub('\\.init','',colnames(df)))
+	df[, beta00_est:= 1]
+	df[, beta_est:= exp(log_r0_est)*(gamma_true+mu_true)]
+	df[, beta00_est:= beta00_true/beta_est]
+	df[, beta10_est:= exp(log_beta10_est)/beta_est]
+	df[, beta01_est:= exp(log_beta01_est)/beta_est]
+	df[, beta11_est:= exp(log_beta11_est)/beta_est]
+	df[, beta_est:= 1]
+	df[, beta00_true:= beta00_true/beta_true]
+	df[, beta10_true:= beta10_true/beta_true]
+	df[, beta01_true:= beta01_true/beta_true]
+	df[, beta11_true:= beta11_true/beta_true]
+	df[, beta_true:= 1]
+	
+	#	keep only some columns for analysis
+	df <- subset(df, select=c(SIM_ID, SIM_T1, SIM_YRS, SIM_TREE, SIM_SAMPLE, SIM_RES, SIM_STEP_SIZE_RES, SIM_REP, 
+					beta00_true, beta01_true, beta10_true, beta11_true,
+					beta00_est, beta01_est, beta10_est, beta11_est, 
+					convergence, ll_fit, ll_sim
+			))
+	
+	df[, SIM_ID:= paste0('simulation ',SIM_ID)]
+	df[, SIM_T1:= factor(SIM_T1, levels=c(50,100,200,400), labels=paste0('length of epidemic ',c(50,100,200,400),' yrs'))]
+	df[, SIM_SAMPLE:= factor(SIM_SAMPLE)]	
+	df[, SIM_YRS:= factor(paste0(SIM_YRS,'%'))]
+	df[, SIM_RES:= factor(SIM_RES)]
+	df[, convergence:= factor(convergence==0, levels=c(TRUE,FALSE), labels=c('yes','no'))]
+	df[, MAE_PARS:= (abs(beta00_true-beta00_est) + 
+						abs(beta01_true-beta01_est) +
+						abs(beta10_true-beta10_est) +
+						abs(beta11_true-beta11_est))/4]	
+	df[, MRAE_LL:= abs((ll_sim-ll_fit)/ll_sim)]
+	#	how many estimations have converged?
+	df[, table(convergence)]
+	
+	#	is the log likelihood under the MLE estimates close to the value for the simulated tree?
+	ggplot(df, aes(x=SIM_YRS, fill=interaction(SIM_RES,SIM_TREE), y=abs((ll_fit-ll_sim)/ll_sim) )) +
+			geom_boxplot() +
+			theme_bw() +
+			facet_grid(SIM_T1~SIM_ID, scales='free_y') +
+			labs(fill='colik res.\ncolik sto or det', x='proportion of epidemic sampled at end')
+	ggsave(file= file.path(indir,'runs_convergence_lldifference.pdf'), w=9, h=9)
+	
+	ggplot(df, aes(x=MRAE_LL, y=MAE_PARS, colour=interaction(SIM_RES,SIM_TREE))) + geom_point() +
+			theme_bw() +
+			scale_y_log10() +
+			scale_x_continuous(label=scales:::percent) +
+			facet_grid(SIM_T1+SIM_YRS~SIM_ID, scales='free_y') +
+			labs(x='(ll_sim-ll_MLE_fit)/ll_sim', y='MAE of parameters', colour='colik res.\ncolik step_size_res')
+	ggsave(file= file.path(indir,'runs_MAE.pdf'), w=9, h=15)
+	
+	
+	#	overall results
+	df2 <- melt(df, id.vars=c('SIM_ID','SIM_T1','SIM_YRS','SIM_TREE','SIM_SAMPLE','SIM_RES','SIM_STEP_SIZE_RES','SIM_REP','convergence','ll_sim','ll_fit','MAE_PARS','MRAE_LL'))
+	df2[, TYPE:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\2',variable)]
+	df2[, VAR:= gsub('^([a-z0-9]+)_([a-z0-9]+)$','\\1',variable)]
+	
+	dft <- df2[, list(SIM_REP=min(SIM_REP)), by=c('SIM_ID','SIM_T1','SIM_YRS','SIM_TREE','SIM_SAMPLE','SIM_RES','SIM_STEP_SIZE_RES','TYPE')]
+	dft <- merge(dft, df2, by=c('SIM_ID','SIM_T1','SIM_YRS','SIM_TREE','SIM_SAMPLE','SIM_RES','SIM_STEP_SIZE_RES','TYPE','SIM_REP'))	
+	dft <- subset(dft, TYPE=='true' & SIM_SAMPLE==1000)
+	#dfe <- subset(df2, TYPE=='est' & convergence=='yes')
+	dfe <- subset(df2, TYPE=='est')
+	ggplot() + 			
+			geom_jitter(data=subset(dfe, SIM_YRS=='40%'), aes(x=SIM_T1, y=value, colour=SIM_T1, shape=convergence), width=1/(4+1), height=0) +
+			geom_boxplot(data=subset(dfe, SIM_YRS=='40%'), aes(x=SIM_T1, y=value, group=SIM_T1), fill='transparent', outlier.shape = NA) +
+			facet_grid(SIM_ID+SIM_TREE+SIM_RES~VAR, scales='free_y') +
+			coord_cartesian(ylim=c(-10,10)) +
+			theme_bw() +
+			geom_hline(data=subset(dft, SIM_YRS=='40%'), aes(yintercept=value)) +
+			labs(x='colik res', y='parameter value\n', colour='length of epidemic simulation', shape='ML optim converged') +
+			theme(legend.position='top', 
+					axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+	ggsave(file= file.path(indir,'accuracy_marginals_simyrs40.pdf'), w=10, h=15)
+}
+
 ## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXXv3.mle ----
 seattle.191017.phydyn.olli.SITmf01yrsXXv3.mle <- function()
 {
