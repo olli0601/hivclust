@@ -102,6 +102,7 @@ amsterdam.200312.sequence.labels<- function()
   require(tidyverse)
   
   home <- '/Users/alexb/Documents/Roadmap/Data/SHM_1902_ROADMAP_191223'
+  home <- '/rds/general/project/ratmann_roadmap_data_analysis/live'
   infile.indinfo <- file.path(home,'data_191223_Amsterdam','SHM_1902_ROADMAP_191223_tblBAS.csv')
   infile.nlinfo <- file.path(home,'data_200316_Netherlands','SHM_1902_ROADMAP_200316_tblBAS.csv')
   infile.subtypes <- file.path(home,'misc','ROADMAP_200319_All_Taxa_withsubtype.rda')

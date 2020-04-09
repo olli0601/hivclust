@@ -1834,7 +1834,7 @@ seattle.191017.phydyn.olli.SITmf01yrsXXv3.assess <- function()
 			theme_bw() +
 			facet_grid(SIM_T1~SIM_ID, scales='free_y') +
 			labs(fill='colik res.\ncolik sto or det', x='proportion of epidemic sampled at end')
-	ggsave(file= file.path(indir,'runs_convergence_lldifference.pdf'), w=9, h=9)
+	ggsave(file= file.path(indir,'runs_convergence_lldifference.pdf'), w=18, h=9)
 	
 	ggplot(df, aes(x=MRAE_LL, y=MAE_PARS, colour=interaction(SIM_RES,SIM_TREE))) + geom_point() +
 			theme_bw() +
@@ -1842,7 +1842,7 @@ seattle.191017.phydyn.olli.SITmf01yrsXXv3.assess <- function()
 			scale_x_continuous(label=scales:::percent) +
 			facet_grid(SIM_T1+SIM_YRS~SIM_ID, scales='free_y') +
 			labs(x='(ll_sim-ll_MLE_fit)/ll_sim', y='MAE of parameters', colour='colik res.\ncolik step_size_res')
-	ggsave(file= file.path(indir,'runs_MAE.pdf'), w=9, h=15)
+	ggsave(file= file.path(indir,'runs_MAE.pdf'), w=18, h=15)
 	
 	
 	#	overall results
@@ -1855,17 +1855,21 @@ seattle.191017.phydyn.olli.SITmf01yrsXXv3.assess <- function()
 	dft <- subset(dft, TYPE=='true' & SIM_SAMPLE==1000)
 	#dfe <- subset(df2, TYPE=='est' & convergence=='yes')
 	dfe <- subset(df2, TYPE=='est')
-	ggplot() + 			
-			geom_jitter(data=subset(dfe, SIM_YRS=='40%'), aes(x=SIM_T1, y=value, colour=SIM_T1, shape=convergence), width=1/(4+1), height=0) +
-			geom_boxplot(data=subset(dfe, SIM_YRS=='40%'), aes(x=SIM_T1, y=value, group=SIM_T1), fill='transparent', outlier.shape = NA) +
-			facet_grid(SIM_ID+SIM_TREE+SIM_RES~VAR, scales='free_y') +
-			coord_cartesian(ylim=c(-10,10)) +
-			theme_bw() +
-			geom_hline(data=subset(dft, SIM_YRS=='40%'), aes(yintercept=value)) +
-			labs(x='colik res', y='parameter value\n', colour='length of epidemic simulation', shape='ML optim converged') +
-			theme(legend.position='top', 
-					axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-	ggsave(file= file.path(indir,'accuracy_marginals_simyrs40.pdf'), w=10, h=15)
+	for(i in 1:8)
+	{
+		ggplot() + 			
+				geom_jitter(data=subset(dfe, SIM_ID==paste0('simulation ',i) & SIM_YRS=='40%'), aes(x=SIM_T1, y=value, colour=SIM_T1, shape=convergence), width=1/(4+1), height=0) +
+				geom_boxplot(data=subset(dfe, SIM_ID==paste0('simulation ',i) & SIM_YRS=='40%'), aes(x=SIM_T1, y=value, group=SIM_T1), fill='transparent', outlier.shape = NA) +
+				facet_grid(SIM_ID+SIM_TREE+SIM_RES~VAR, scales='free_y') +
+				coord_cartesian(ylim=c(-10,10)) +
+				theme_bw() +
+				geom_hline(data=subset(dft, SIM_ID==paste0('simulation ',i) & SIM_YRS=='40%'), aes(yintercept=value)) +
+				labs(x='colik res', y='parameter value\n', colour='length of epidemic simulation', shape='ML optim converged') +
+				theme(legend.position='top', 
+						axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+		ggsave(file= file.path(indir,paste0('accuracy_marginals_simid',i,'_simyrs40.pdf')), w=10, h=15)	
+	}
+	
 }
 
 ## ---- rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXXv3.mle ----

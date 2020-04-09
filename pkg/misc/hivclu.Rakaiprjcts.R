@@ -938,6 +938,48 @@ RakaiCirc.epi.get.info.170208<- function()
 	list(rd=rd, rh=rh, ra=ra, rn=rn)
 }
 
+
+Rakai.Batsi.extract.subtrees <- function()
+{
+	require(phangorn)
+	require(treeio)
+	require(phyloscannerR) # need ordev2 branch from github, https://github.com/BDI-pathogens/phyloscanner
+	require(data.table)
+	
+	indir <- '~/Box/OR_Work/2019/2019_PANGEA_Batsi/200408/Cluster_55Extended_rates_prior'
+	infile <- file.path(indir, 'cluster_55Extended_BEAST_rate_prior_MCC.tre')
+	
+	
+	ph <- treeio:::read.beast(infile)
+	ph <- treeio.to.phyloscanner(ph)
+	
+	#	plot phyloscanner tree, please make sure this agrees with the annotated mcc tree
+	tmp <- vector('list')
+	tmp[['tree']] <- ph
+	attr(tmp[['tree']],'class') <- 'phylo'
+	tmp[['read.counts']] <- rep(1, Ntip(ph))		
+	write.annotated.tree(tmp, file.path(indir,'cluster_55Extended_BEAST_rate_prior_MCC_phsc.pdf'), format="pdf", pdf.scale.bar.width = 0.01, pdf.w = 15, pdf.hm = 0.2, verbose = FALSE)
+	
+	
+	
+	ph <- phyloscanner.to.simmap(ph, delete.phyloscanner.structures=FALSE)
+	
+	host <- 'RCCS'
+	mrcas <- which( attr(ph, 'SUBGRAPH_MRCA') )
+	#	some of the tips states are "unknown" and this clashes internally with the NA state, so we need to take some extra care
+	#	this is not a problem because the "unknown" and NA state mean the same thing
+	attr(ph, 'INDIVIDUAL') <- as.character(attr(ph, 'INDIVIDUAL'))
+	attr(ph, 'INDIVIDUAL')[is.na(attr(ph, 'INDIVIDUAL'))] <- 'Unknown'
+	mrcas <- mrcas[ attr(ph, 'INDIVIDUAL')[mrcas]==host ]
+	stopifnot( !any(is.na(mrcas)) )			
+	# extract subgraphs
+	subgraphs <- lapply(mrcas, function(mrca) extract.subgraph(ph, mrca))
+	# save
+	outfile <- file.path(indir,'cluster_55Extended_BEAST_rate_prior_MCC_subgraphs.rda')
+	save(subgraphs, file=outfile)
+	
+}
+
 RakaiCirc.seq.get.info<- function()
 {
 	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"	
