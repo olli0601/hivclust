@@ -1,6 +1,8 @@
 ---
 title: "**Phylodynamic analysis: transmission dynamics between US born and foreign born individuals in King County Seattle**"
-output: rmarkdown::html_vignette
+output: 
+  html_document:
+    code_folding: hide
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}
@@ -212,13 +214,10 @@ T^l_{m1}= & (1-p_0)*(1-p_F)*(1-s^l-i^l)*N^l(0) & \text{number male treated in cl
 \end{align} 
 $$
 
-### **Simulation scenarios 1 and 2**
-I first wanted to see if no spread between class $0$ and $1$ can be
-distinguished from (almost) homogeneous spread between classes $0$ and $1$, with 
-$100$, $500$, $1000$ samples from the population obtained in the last $10$
-years of an epidemic simulation.
+## **Simulation scenarios 1 and 2**
+I first wanted to see if the following two scenarios can be distinguished: 
 
-No spread between class $0$ and $1$:
+* Scenario 1: no spread between class $0$ and $1$, i.e. 
 $$
 \boldsymbol{\omega}= 
 \left[\begin{array}
@@ -228,34 +227,8 @@ $$
 \end{array}\right]
 $$
 
-The simulated trajectories of the demes and non-demes are at equilibrium as
-specified:
-```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
-#knitr::include_graphics(c("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf","/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf"))
-knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf")
-```
 
-... and the transmissions occur within class $0$ and within class $1$:
-```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
-knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_births.pdf")
-```
-
-... and the simulated $\boldsymbol{B}$ matrix has entries as specified:
-```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
-knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_waifm.pdf")
-```
-
-From these simulations, I created $100$ trees of $100$ sampled individuals,
-$100$ trees of $500$ sampled individuals, and $100$ trees of $1000$ sampled
-individuals. Here is one of them:
-```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
-knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_dettree_sample100_1.pdf")
-```
-
-
-
-The aim is to compare phylodynamic inference under the scenario of no
-spread to that of almost homogeneous between class $0$ and $1$:
+* Scenario 2: (almost) homogeneous spread between classes $0$ and $1$, i.e. 
 $$
 \boldsymbol{\omega}= 
 \left[\begin{array}
@@ -266,62 +239,243 @@ $$
 $$
 while keeping all else equal. In other words, we have exactly the same epidemic
 trajectories at endemic equilibrium for each of the demes and non-demes, but
-the flow dynamics are different. Under the above WAIFM matrix, the simulated
-trajectories of the demes and non-demes are at equilibrium as specified: 
+the flow dynamics are different.
+
+
+## **Inference log book 2019-12-19 **
+
+I simulated tree data using
+
+* an epidemic running for 50 years, `t0=0` and `t1=50`;
+* simulating trees both under a deterministic and stochastic process model at `res=1000`;
+* taking $100$, $500$, $1000$ samples from the population obtained in the last $10$
+years of an epidemic simulation run.
+
+The code to generate the simulations was:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phydyn.olli.SITmf01.sim>>
+```
+
+### Scenario 1 simulated data {.tabset}
+
+#### Simulated epidemic trajectories
+
+The simulated trajectories of the demes and non-demes are at equilibrium as specified, and the same as in scenerio 2. Here are the simulations under the stochastic process model.
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+#knitr::include_graphics(c("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf","/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf"))
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf")
+```
+
+#### Simulated onward spread by class ($\omega$ matrix)
+
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_waifm.pdf")
+```
+
+#### Simulated trees
+
+From these simulations, I created 
+
+* $100$ each trees for $100$, $500$, $1000$ sampled individuals;
+* under deterministic and stochastic process models at `res=1e3`;
+
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_dettree_sample100_1.pdf")
+```
+
+### Scenario 2 simulated data {.tabset}
+
+#### Simulated epidemic trajectories
+
+The simulated trajectories of the demes and non-demes are at equilibrium as specified, and the same as in scenerio 1. Here are the simulations under the stochastic process model.
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
 #knitr::include_graphics(c("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf","/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim1_trajectories.pdf"))
 knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_trajectories.pdf")
 ```
 
-... and the transmissions occur within and between the classes: 
-```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
-knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_births.pdf")
-```
+#### Simulated onward spread by class ($\omega$ matrix)
 
-... and the simulated $\boldsymbol{B}$ matrix has entries that hover around
-50%: 
+Hovering around 50%: 
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
 knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_waifm.pdf")
 ```
 
-From these simulations, I created again the same number of trees. Here is one of
-them: 
+#### Simulated trees
+
+From these simulations, I created $100$ trees of $100$ sampled individuals,
+$100$ trees of $500$ sampled individuals, and $100$ trees of $1000$ sampled
+individuals. Tree with $100$ taxa:
+
 ```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
 knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_sim/sim2_dettree_sample100_1.pdf")
 ```
 
+### Phylodynamic inference
+
 I then re-estimated the parameters
 $$
-\beta, \beta_{10}, \beta_{01}, \beta_{11}
+\beta, \beta_{10}, \beta_{01}, \beta_{11}.
 $$
-from the simulated trees under a deterministic demographic process model via
-maximum likelihood. I fixed $\beta_{00}=1$ to avoid parameter collinearity and
-kept all other parameters at their true values. In the optimisation routine, I
-optimised the log of the above parameters to ensure that the estimated
+I fixed $\beta_{00}=1$ to avoid parameter collinearity and kept all other parameters at their true values. I optimised the log of the parameters to ensure that the estimated
 parameters are non-negative on their natural scale.
 
-Here are the results for the inferred $\beta_{ij}/\beta$ (in colours) and their
-true counterparts (black crosses):
-```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
-#knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_mle/accuracy_sim1_vs_sim2_withCrazy_withNoConv.pdf")
-```
+Inferences was done using:
 
-I noted that more than half of the ML estimates did not reach convergence, xor
-returned very high estimates $>10$. Excluding those gives the following results:
-```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
-#knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_mle/accuracy_sim1_vs_sim2.pdf")
-```
-
-## **Code**
-
-The code to generate the simulations and make phylodynamic inference was:
-```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
-<<rmd.chunk.seattle.191017.phydyn.olli.SITmf01.sim>>
-```
+* deterministic demographic process model with `res=200`, `forgiveAgtY = 0`, `AgtY_penalty = Inf`, `step_size_res =10`,`likelihood='PL2'` (for both deterministic and stochastic simulations)
+* setting `maxheight` to 1 year above the root to cut out the large polytomy in the simulations, that corresponds to $>1$ initial cases.
 
 The code for phylodynamic inference was:
 ```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
 <<rmd.chunk.seattle.191017.phydyn.olli.SITmf01.mle>>
 ```
 
+I first plotted the relative difference between the likelihood of the simulated tree under true parameters (ll\_sim) and the likelihood of the simulated tree under ML parameters (ll\_MLE) versus mean absolute error MAE. 
 
+* The relative difference in the likelihoods was large for 100 samples, suggesting that we need to consider more data.
+* The MAE was good in scenario 1 but not good in scenario 2. This was interesting!
+* The MAE was similar on deterministic and stochastic simulations.
+
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01_mle/runs_MAE.pdf")
+```
+
+I talked to Erik, he wrote
+
+* It's a bit odd to be doing this using a small portion of the tree (since the coalescent sim is far from reaching the root). I'm really not sure how much error that can introduce; there isn't good theory  for it. I use the maxheight option on a regular basis, but this usually only excludes a small number of coalescent events; in your case it looks like more than half 
+Why don't you run the simulation for longer so you don't have to truncate the tree so much? More coalescent events -> more power
+* Is MLE error associated with `res` parameter in the SDE simulations? Try increasing `res` 
+* Finally, I don't think this is a great model for studying migration since there's not a persistent flow from the global reservoir; it's a bit as though a migrant population was dumped into 'local' at t=0 and then they act as an independent risk group. But maybe you are getting around to adding those details in. 
+
+
+## **Inference log book 2020-02-25 **
+
+I simulated tree data using
+
+* an epidemic running for 2e4 years, `t0=0` and `t1=20000`;
+* however there were severe simulation errors under the deterministic process model at this time scale, and I don t show results at this time scale.
+
+The code to generate the simulations was:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phydyn.olli.SITmf01.longsim>>
+```
+
+### Simulated data {.tabset}
+
+#### Scenario 1, simulated epidemic trajectories
+
+Simulations under the deterministic process model.
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01long_sim/sim1_trajectories_det.pdf")
+```
+
+#### Scenario 2, simulated epidemic trajectories
+
+Simulations under the deterministic process model.
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE}
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01long_sim/sim2_trajectories_det.pdf")
+```
+
+
+## **Inference log book 2020-02-27 **
+
+I simulated tree data using
+
+* an epidemic running for 100, 200, 400 years;
+* simulating trees under a deterministic process model at `res=1000`;
+* taking $1000$ samples from the population obtained in the last 60\%, 40\%, 20% of the epi simulation.
+
+These deterministic simulations were at equilibrium.
+
+The code to generate the simulations was:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXX.sim>>
+```
+
+I then re-estimated the parameters
+$$
+\beta, \beta_{10}, \beta_{01}, \beta_{11}.
+$$
+I fixed $\beta_{00}=1$ to avoid parameter collinearity and kept all other parameters at their true values. I optimised the log of the parameters to ensure that the estimated
+parameters are non-negative on their natural scale.
+
+Inferences was done using:
+
+* deterministic demographic process model with increasing `res=200`, `res=400`, `res=600`, `res=1000`, and increasing `step_size_res=10`, `step_size_res=100`. The other parameters were `forgiveAgtY = 0`, `AgtY_penalty = Inf`, `likelihood='PL2'`.
+* setting `maxheight` to 1 year above the root to cut out the large polytomy in the simulations, that corresponds to $>1$ initial cases.
+
+The code for phylodynamic inference was:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXX.mle>>
+```
+
+I first plotted the relative difference between the likelihood of the simulated tree under true parameters (ll\_sim) and the likelihood of the simulated tree under ML parameters (ll\_MLE) versus mean absolute error MAE. 
+
+* For scenario 1 (which was good before), I found that with increasing epidemic length, there was increasing relative difference in the likelihood values.
+* For scenario 1, this increase in relative difference in the likelihood values was associated with larger MAE.
+* For scenario 1, MAE was only good for epidemics of length up to 100 years, and this was not different when samples were taken over different time scales, nor using different `res` or `step_size_res` parameters.
+* For scenario 2 (which was not good before), there was no such increasing relative difference in the likelihood values.
+* For scenario 2, the MAE was still all over the place
+
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01yrsXX_mle/runs_MAE.pdf")
+```
+
+
+## **Inference log book 2020-03-17 **
+
+I simulated tree data using
+
+* an epidemic running for 50, 100 years;
+* simulating trees under a stochastic and deterministic process model at `res=1000`;
+* taking $1000$ samples from the population obtained in the last 40\%, 20% of the epi simulation.
+
+These deterministic simulations were at equilibrium.
+
+The code to generate the simulations was:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXXv3.sim>>
+```
+
+I then re-estimated the parameters
+$$
+\beta, \beta_{10}, \beta_{01}, \beta_{11}.
+$$
+I fixed $\beta_{00}=1$ to avoid parameter collinearity and kept all other parameters at their true values. I optimised the log of the parameters to ensure that the estimated
+parameters are non-negative on their natural scale.
+
+Inferences was done using:
+
+* a deterministic demographic process model with increasing `res=200`, `res=1000`, fitted to the deterministic epidemics. The other parameters were `forgiveAgtY = 0`, `AgtY_penalty = Inf`, `step_size_res=10`, `likelihood='PL2'`. A stochastic demographic process model with increasing `res=200`, `res=1000`, fitted to the stochastic epidemics. 
+* setting `maxheight` to 1 year above the root to cut out the large polytomy in the simulations, that corresponds to $>1$ initial cases.
+
+The code for phylodynamic inference was:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+<<rmd.chunk.seattle.191017.phydyn.olli.SITmf01yrsXXv3.mle>>
+```
+
+I first plotted the relative difference between the likelihood of the simulated tree under true parameters (ll\_sim) and the likelihood of the simulated tree under ML parameters (ll\_MLE) versus mean absolute error MAE. 
+
+* For scenario 1, the inferences using a stochastic model on stochastic epidemics are always associated with relative difference in the likelihood values.
+* For scenario 2, this is not the case.
+
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01yrsXXv3_mle/runs_MAE_sc12.pdf")
+```
+
+I then plotted the estimated MLEs for each of the four parameters (colour and boxplot) against the true values (horizontal bars) in scenario 1. 
+The xaxis shows epidemic lengths 50 and 100 years. The row panels show inferences using a stochastic model on stochastic epidemics, and a deterministic model on deterministic epidemics, for different `res` parameters.
+
+* For scenario 1, using a deterministic model on deterministic epidemics gave good inferences.
+* For scenario 1, using a stochastic model on stochastic epidemics did not give good inferences.
+
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01yrsXXv3_mle/accuracy_marginals_simid1_simyrs40.pdf")
+```
+
+I then plotted the same results for scenario 2. 
+
+* For scenario 2, I obtained good inferences using either a deterministic model on deterministic epidemics or a stochastic model on stochastic epidemics.
+
+```{r, include=TRUE, out.width="90%", out.height="500", fig.show='hold', fig.align='centre', echo=FALSE} 
+knitr::include_graphics("/Users/or105/Box/OR_Work/Seattle/phydyn_olli/olli_SITmf01yrsXXv3_mle/accuracy_marginals_simid2_simyrs40.pdf")
+```

@@ -1836,6 +1836,14 @@ seattle.191017.phydyn.olli.SITmf01yrsXXv3.assess <- function()
 			labs(fill='colik res.\ncolik sto or det', x='proportion of epidemic sampled at end')
 	ggsave(file= file.path(indir,'runs_convergence_lldifference.pdf'), w=18, h=9)
 	
+	ggplot(subset(df, grepl('1|2',SIM_ID)), aes(x=MRAE_LL, y=MAE_PARS, colour=interaction(SIM_RES,SIM_TREE))) + geom_point() +
+			theme_bw() +
+			scale_y_log10() +
+			scale_x_continuous(label=scales:::percent) +
+			facet_grid(SIM_T1+SIM_YRS~SIM_ID, scales='free_y') +
+			labs(x='(ll_sim-ll_MLE_fit)/ll_sim', y='MAE of parameters', colour='colik res.\ncolik step_size_res')
+	ggsave(file= file.path(indir,'runs_MAE_sc12.pdf'), w=10, h=15)
+	
 	ggplot(df, aes(x=MRAE_LL, y=MAE_PARS, colour=interaction(SIM_RES,SIM_TREE))) + geom_point() +
 			theme_bw() +
 			scale_y_log10() +
