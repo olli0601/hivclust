@@ -265,6 +265,267 @@ amsterdam.200312.sequence.labels<- function()
 }
 
 
+roadmap.200203.estimate.transmissions.from.external.branchingprocess <- function()
+{
+	require(rstan)
+	require(bayesplot)
+	require(hexbin)
+	
+	args <- list()
+	args$size.inf.pop <- 5e3
+	args$size.inf.pop.sampled <- 3e3
+	args$upper.bound.multiplier <- 10
+	args$indir <- '~/Box/OR_Work/AIDSFonds/analysis_200407/subgraphs'
+	args$infile.subgraph.sizes <- '200512_subgraphsizes_hsx.csv'
+	args$outdir <- '~/Box/OR_Work/AIDSFonds/analysis_200407/subgraphs'
+	
+	stan.code <- "
+data{
+	int<lower=1> N_cs_obs;							// max obs chain size
+	int<lower=1> N_cs_actual;						// max size of actual chain
+	row_vector<lower=0>[N_cs_obs] cs_obs;			// index i holds number of observed chains of size i
+	real<lower=0> sampling_n;						// sampling total
+	real<lower=0,upper=sampling_n> sampling_k;		// sampling success	
+}
+
+transformed data{
+	//	get Binomial sampling successes 0,...,N_cs_obs.
+	vector[N_cs_obs+1] bin_successes;	
+	bin_successes[1] = 0;
+	for(i in 1:N_cs_obs)
+	{
+		bin_successes[i+1] = bin_successes[i]+1; 
+	}
+}
+
+parameters{
+	real<lower=1e-10, upper=1> r0;	// R0
+	real<lower=0> vmr_minus_one;	// variance to mean ratio of NegBin offspring distribution minus one, 1+R0/kappa-1= R0/kappa
+	real<lower=0, upper=1> rho;		// sampling probability					
+}
+
+transformed parameters{
+	real<lower=0> kappa;
+	real log_rho;
+	real log_one_minus_rho;	
+	real log_r0_div_kappa;
+	real log_vmr;	
+	matrix[N_cs_actual, 5] tmp;
+	vector[5] ones;
+	vector[N_cs_actual] cs_actual_lpmf;
+	vector[N_cs_obs+1] cs_obs_lpmf;	
+	matrix[N_cs_obs+1, N_cs_actual+1] bin_lpmf;	
+
+	// define transformed parameters
+	kappa = r0/vmr_minus_one;
+	log_one_minus_rho = log( 1 - rho );
+	log_rho = log( rho );	
+	log_r0_div_kappa = log( vmr_minus_one );
+	log_vmr = log( 1+vmr_minus_one );
+
+	// calculate lpmf of actual chain sizes given R0 and kappa
+	// TODO I am not clear if Prob( size of actual chain=0 ) is well defined. 
+	//		Code below is assuming this is zero.
+	ones = rep_vector(1., 5);
+	for(i in 1:N_cs_actual)
+	{
+		tmp[i, 1]= kappa*i + i -1;
+		tmp[i, 2]= kappa*i;
+		tmp[i, 3]= i+1;
+		tmp[i, 4]= i-1;
+		tmp[i, 5]= kappa*i + i -1;
+	}
+	tmp[,1] = lgamma( tmp[,1] );
+	tmp[,2] = -lgamma( tmp[,2] );
+	tmp[,3] = -lgamma( tmp[,3] );
+	tmp[,4] *= log_r0_div_kappa;
+	tmp[,5] *= -log_vmr;
+	cs_actual_lpmf = tmp * ones;		
+	
+	// calculate lpmf of sampling probabilities given rho
+	{
+		int tmp_int;	// must declare index integer inside block
+		for(j in 1:(N_cs_actual+1))
+		{		
+			tmp_int= min(j, N_cs_obs+1);
+			bin_lpmf[1:tmp_int,j] = bin_successes[1:tmp_int] * log_rho;
+			bin_lpmf[1:tmp_int,j] += ( (rep_vector(j-1, tmp_int) - bin_successes[1:tmp_int]) * log_one_minus_rho );
+			for(i in 1:tmp_int)
+			{
+				bin_lpmf[i,j] += lchoose( 1.*(j-1), bin_successes[i] );
+			} 
+			if(tmp_int<(N_cs_obs+1))
+			{
+				bin_lpmf[ (tmp_int+1):(N_cs_obs+1), j ] = rep_vector( negative_infinity(), N_cs_obs+1-tmp_int);
+			}
+		}
+	}
+
+	//	calculate lpmf of observed chain sizes given R0 and kappa
+	for(i in 1:(N_cs_obs+1))
+	{
+		cs_obs_lpmf[i] = log_sum_exp( cs_actual_lpmf[i:N_cs_actual] + (bin_lpmf[i, (i+1):(N_cs_actual+1)])' );
+	}
+
+	//	renormalise conditional on 1 - prob nothing sampled
+	cs_obs_lpmf[ 2:(N_cs_obs+1) ] -= log( 1-exp(cs_obs_lpmf[1]) );		
+}
+
+model{
+	// priors
+	target+= beta_lpdf(r0 | 2, 2);
+	target+= exponential_lpdf(vmr_minus_one | 1);
+	target+= beta_lpdf(rho | sampling_k+0.5, sampling_n-sampling_k+0.5); 
+	// likelihood
+	target+= cs_obs * cs_obs_lpmf[ 2:(N_cs_obs+1) ];
+}
+
+generated quantities{
+}
+"	
+	
+	stan.code.samplefromprior <- "
+data{
+	int<lower=1> N_cs_obs;							// max obs chain size
+	int<lower=1> N_cs_actual;						// max size of actual chain
+	row_vector<lower=0>[N_cs_obs] cs_obs;			// index i holds number of observed chains of size i
+	real<lower=0> sampling_n;						// sampling total
+	real<lower=0,upper=sampling_n> sampling_k;		// sampling success	
+}
+
+parameters{
+	real<lower=1e-10, upper=1> r0;	// R0
+	real<lower=0> vmr_minus_one;	// variance to mean ratio of NegBin offspring distribution minus one, 1+R0/kappa-1= R0/kappa
+	real<lower=0, upper=1> rho;		// sampling probability					
+}
+
+model{
+	// priors
+	target+= beta_lpdf(r0 | 2, 2);
+	target+= exponential_lpdf(vmr_minus_one | 1);
+	target+= beta_lpdf(rho | sampling_k+0.5, sampling_n-sampling_k+0.5); 	
+}
+"
+	stan.model <- stan_model(model_name= 'Blumberg2013', model_code = gsub('\t',' ',stan.code))
+	stan.model.prior <- stan_model(model_name= 'Blumberg2013_prior', model_code = gsub('\t',' ',stan.code.samplefromprior ))
+	
+	
+	infile.subgraph.sizes <- file.path(args$indir, args$infile.subgraph.sizes)
+	outdir <- args$outdir
+	
+	
+	stan.data <- list()
+	tmp <- read.csv( infile.subgraph.sizes )
+	stan.data$cs_obs <- tmp$N
+	stan.data$N_cs_obs <- length(stan.data$cs_obs)
+	stan.data$N_cs_actual <- ceiling(stan.data$N_cs_obs / (args$size.inf.pop.sampled/args$size.inf.pop) * args$upper.bound.multiplier)	#	set upper bound for infinite sum approximation 
+	stan.data$sampling_n <- args$size.inf.pop				# replace with actual number infected HSX Amsterdam
+	stan.data$sampling_k <- args$size.inf.pop.sampled 		# replace with actual number sequenced infected HSX Amsterdam
+	
+	fit <- rstan::sampling(stan.model, data=stan.data, iter=1e3, warmup=5e2, 
+								chains=3, control = list(max_treedepth= 15, adapt_delta= 0.999),
+								init= list(list(r0=0.5, vmr_minus_one=0.05, rho=0.5), list(r0=0.25, vmr_minus_one=0.05, rho=0.5), list(r0=0.75, vmr_minus_one=0.05, rho=0.5)))
+	save(fit, file=file.path(outdir, "200528_Blumberg2013_stanfit.rda"))
+	#	runs in 2 minutes
+	
+
+	#	examine neff and rhat
+	fit.target.pars <- c('r0','vmr_minus_one','rho','kappa')
+	rstan::monitor(rstan::extract(fit, pars=fit.target.pars, permuted = FALSE, inc_warmup = TRUE))
+	#	neff too low, should ideally be 2e3
+	
+	#	traces	
+	color_scheme_set("mix-blue-red")
+	p <- rstan::traceplot(fit, pars=fit.target.pars, inc_warmup=TRUE, ncol = 1)
+	pdf(file=file.path(outdir, "200528_Blumberg2013_mcmc_traces.pdf"), w=10, h=8)
+	print(p)
+	dev.off()
+	
+	#	keep only what we need to avoid memory meltdown
+	fit.po <- rstan::extract(fit, permuted=TRUE, inc_warmup=FALSE)	
+	for(x in c('log_rho','bin_lpmf','log_one_minus_rho','log_r0_div_kappa','log_vmr','tmp','ones'))
+		fit.po[[x]] <- NULL
+	gc()
+	
+	fit.plot <- matrix(NA, nrow= length(fit.po[[1]]), ncol= length(fit.target.pars))
+	colnames(fit.plot) <- fit.target.pars
+	for(x in fit.target.pars)
+	{
+		fit.plot[,x] <- fit.po[[x]]
+	}
+	
+	
+	#	pair plots	
+	p <- mcmc_pairs(rstan::extract(fit, pars=fit.target.pars, permuted=FALSE, inc_warmup=FALSE), diag_fun = "dens", off_diag_fun = "hex")
+	pdf(file=file.path(outdir, "200528_Blumberg2013_mcmc_pairs.pdf"), w=10, h=10)
+	print(p)
+	dev.off()
+	
+	# generate posterior predictive samples of actual chain sizes until we reach sampling_n individuals
+	cs_actual_cdf <- exp(fit.po$cs_actual_lpmf)
+	cs_actual_cdf <- t(apply( cs_actual_cdf, 1, cumsum))	
+	samples.n <- 5e3
+	cs_actual_postpred <- lapply( seq_len(nrow(cs_actual_cdf)), function(i){
+				tmp <- runif(samples.n)				
+				cs_actual_postpred <- sapply(tmp, function(x){  head( which( x < cs_actual_cdf[i,] ), 1 )  })
+				tmp2 <- which( args$size.inf.pop <= cumsum(cs_actual_postpred) )[1] 
+				cs_actual_postpred[1:tmp2]				
+			})
+	
+	
+	# posterior estimate of transmissions originating from outside Amsterdam
+	sources_external <- sapply(cs_actual_postpred, function(x) length(x)/sum(x) )
+	quantile(sources_external, p=c(0.5, 0.025, 0.975)) 
+	#	50% 	  2.5%      97.5% 
+	#	0.2601837 0.2322827 0.2869928 
+}
+
+roadmap.200203.phyloscanner.get.dated.subgraphs<- function()
+{
+	require(data.table)
+	require(phangorn)
+	require(ggplot2)
+	require(reshape)
+	require(phyloscannerR)
+	
+	# working directory with phyloscanner output
+	home <- '/rds/general/project/ratmann_roadmap_data_analysis/live/analysis_200407'
+	home <- '~/Box/OR_Work/AIDSFonds/analysis_200407'
+	indir.phsc  <- file.path(home,'phyloscanner_dated')
+	outdir <- file.path(home,'subgraphs_dated')
+	infiles  <- data.table(F=list.files(indir.phsc, pattern='_annotated_dated_tree.rda$', full.names=TRUE, recursive=TRUE))
+	infiles[, SELECT:= gsub('^.*_rerooted_([A-Za-z0-9]+)_.*$','\\1',basename(F))]
+	infiles <- subset(infiles, grepl('subtype_B',F))
+	
+	# extract subgraphs of dated trees
+	for(i in seq_len(nrow(infiles)))
+	{
+		#i <- 3
+		cat('process', i,'\n')
+		infile <- infiles[i, F]
+		host <- infiles[i,SELECT]
+		load(infile)
+		mrcas <- which( attr(ph, 'SUBGRAPH_MRCA') )
+		# some of the tips states are "unknown" and this clashes internally with the NA state, so we need to take some extra care
+		# this is not a problem because the "unknown" and NA state mean the same thing
+		attr(ph, 'INDIVIDUAL') <- as.character(attr(ph, 'INDIVIDUAL'))
+		attr(ph, 'INDIVIDUAL')[is.na(attr(ph, 'INDIVIDUAL'))] <- 'Unknown'
+		mrcas <- mrcas[ attr(ph, 'INDIVIDUAL')[mrcas]==host ]
+		
+		stopifnot( !any(is.na(mrcas)) )
+		# check that tree is of class simmap
+		stopifnot( any(attr(ph,'class')=='simmap') )
+		
+		# extract subgraphs
+		subgraphs <- lapply(mrcas, function(mrca) extract.subgraph(ph, mrca))
+		# save
+		outfile <- gsub('_annotated_dated_tree',paste0('_datedsubgraphs_',host),basename(infile))
+		outfile <- file.path(outdir,outfile)
+		save(subgraphs, file=outfile)
+	} 
+}
+
+
 Amsterdam.200317.phyloscanner.B <- function()
 {
   require(dplyr)

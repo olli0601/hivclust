@@ -949,8 +949,13 @@ Rakai.Batsi.extract.subtrees <- function()
 	indir <- '~/Box/OR_Work/2019/2019_PANGEA_Batsi/200408/Cluster_55Extended_rates_prior'
 	infile <- file.path(indir, 'cluster_55Extended_BEAST_rate_prior_MCC.tre')
 	
+	indir <- '~/Box/OR_Work/2019/2019_PANGEA_Batsi/200408/Cluster_169'
+	infile <- file.path(indir, 'cluster_169_BEAST_MCC.tre')
+	
+	
 	
 	ph <- treeio:::read.beast(infile)
+	#	ph@data$location <- gsub('EX+RCCS','RCCS',ph@data$location)
 	ph <- treeio.to.phyloscanner(ph)
 	
 	#	plot phyloscanner tree, please make sure this agrees with the annotated mcc tree
@@ -958,7 +963,7 @@ Rakai.Batsi.extract.subtrees <- function()
 	tmp[['tree']] <- ph
 	attr(tmp[['tree']],'class') <- 'phylo'
 	tmp[['read.counts']] <- rep(1, Ntip(ph))		
-	write.annotated.tree(tmp, file.path(indir,'cluster_55Extended_BEAST_rate_prior_MCC_phsc.pdf'), format="pdf", pdf.scale.bar.width = 0.01, pdf.w = 15, pdf.hm = 0.2, verbose = FALSE)
+	write.annotated.tree(tmp, gsub('\\.tre$','_phsc.pdf',infile), format="pdf", pdf.scale.bar.width = 0.01, pdf.w = 15, pdf.hm = 0.2, verbose = FALSE)
 	
 	
 	
