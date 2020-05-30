@@ -362,9 +362,10 @@ transformed parameters{
 	}
 
 	//	calculate lpmf of observed chain sizes given R0 and kappa
-	for(i in 1:(N_cs_obs+1))
+	cs_obs_lpmf[1] = log_sum_exp( cs_actual_lpmf[1:N_cs_actual] + (bin_lpmf[1, 2:(N_cs_actual+1)])' );
+	for(i in 1:N_cs_obs)
 	{
-		cs_obs_lpmf[i] = log_sum_exp( cs_actual_lpmf[i:N_cs_actual] + (bin_lpmf[i, (i+1):(N_cs_actual+1)])' );
+		cs_obs_lpmf[i+1] = log_sum_exp( cs_actual_lpmf[i:N_cs_actual] + (bin_lpmf[i+1, (i+1):(N_cs_actual+1)])' );
 	}
 
 	//	renormalise conditional on 1 - prob nothing sampled
@@ -407,12 +408,26 @@ model{
 }
 "
 	stan.model <- stan_model(model_name= 'Blumberg2013', model_code = gsub('\t',' ',stan.code))
-	stan.model.prior <- stan_model(model_name= 'Blumberg2013_prior', model_code = gsub('\t',' ',stan.code.samplefromprior ))
+	#stan.model.prior <- stan_model(model_name= 'Blumberg2013_prior', model_code = gsub('\t',' ',stan.code.samplefromprior ))
 	
 	
 	infile.subgraph.sizes <- file.path(args$indir, args$infile.subgraph.sizes)
 	outdir <- args$outdir
 	
+	#	debugging
+	if(0)
+	{
+		stan.data <- list()		
+		stan.data$cs_obs <- c(4,2,0,1)
+		stan.data$N_cs_obs <- length(stan.data$cs_obs)
+		stan.data$N_cs_actual <- 10 
+		stan.data$sampling_n <- 100
+		stan.data$sampling_k <- 80
+		fit <- rstan::sampling(stan.model, data=stan.data, iter=10, warmup=5, 
+				chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999),
+				init= list(list(r0=0.5, vmr_minus_one=0.05, rho=0.5)))
+		
+	}
 	
 	stan.data <- list()
 	tmp <- read.csv( infile.subgraph.sizes )
@@ -420,11 +435,11 @@ model{
 	stan.data$N_cs_obs <- length(stan.data$cs_obs)
 	stan.data$N_cs_actual <- ceiling(stan.data$N_cs_obs / (args$size.inf.pop.sampled/args$size.inf.pop) * args$upper.bound.multiplier)	#	set upper bound for infinite sum approximation 
 	stan.data$sampling_n <- args$size.inf.pop				# replace with actual number infected HSX Amsterdam
-	stan.data$sampling_k <- args$size.inf.pop.sampled 		# replace with actual number sequenced infected HSX Amsterdam
-	
+	stan.data$sampling_k <- args$size.inf.pop.sampled 		# replace with actual number sequenced infected HSX Amsterdam	
 	fit <- rstan::sampling(stan.model, data=stan.data, iter=1e3, warmup=5e2, 
-								chains=3, control = list(max_treedepth= 15, adapt_delta= 0.999),
-								init= list(list(r0=0.5, vmr_minus_one=0.05, rho=0.5), list(r0=0.25, vmr_minus_one=0.05, rho=0.5), list(r0=0.75, vmr_minus_one=0.05, rho=0.5)))
+			chains=3, control = list(max_treedepth= 15, adapt_delta= 0.999),
+			init= list(list(r0=0.5, vmr_minus_one=0.05, rho=0.5), list(r0=0.25, vmr_minus_one=0.05, rho=0.5), list(r0=0.75, vmr_minus_one=0.05, rho=0.5)))
+	
 	save(fit, file=file.path(outdir, "200528_Blumberg2013_stanfit.rda"))
 	#	runs in 2 minutes
 	
