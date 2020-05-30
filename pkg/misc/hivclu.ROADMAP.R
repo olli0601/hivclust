@@ -306,45 +306,45 @@ parameters{
 
 transformed parameters{
 	real<lower=0> kappa;
-	real log_rho;
-	real log_one_minus_rho;	
-	real log_r0_div_kappa;
-	real log_vmr;	
-	matrix[N_cs_actual, 5] tmp;
-	vector[5] ones;
 	vector[N_cs_actual] cs_actual_lpmf;
 	vector[N_cs_obs+1] cs_obs_lpmf;	
-	matrix[N_cs_obs+1, N_cs_actual+1] bin_lpmf;	
 
-	// define transformed parameters
-	kappa = r0/vmr_minus_one;
-	log_one_minus_rho = log( 1 - rho );
-	log_rho = log( rho );	
-	log_r0_div_kappa = log( vmr_minus_one );
-	log_vmr = log( 1+vmr_minus_one );
-
-	// calculate lpmf of actual chain sizes given R0 and kappa
-	// TODO I am not clear if Prob( size of actual chain=0 ) is well defined. 
-	//		Code below is assuming this is zero.
-	ones = rep_vector(1., 5);
-	for(i in 1:N_cs_actual)
-	{
-		tmp[i, 1]= kappa*i + i -1;
-		tmp[i, 2]= kappa*i;
-		tmp[i, 3]= i+1;
-		tmp[i, 4]= i-1;
-		tmp[i, 5]= kappa*i + i -1;
-	}
-	tmp[,1] = lgamma( tmp[,1] );
-	tmp[,2] = -lgamma( tmp[,2] );
-	tmp[,3] = -lgamma( tmp[,3] );
-	tmp[,4] *= log_r0_div_kappa;
-	tmp[,5] *= -log_vmr;
-	cs_actual_lpmf = tmp * ones;		
-	
-	// calculate lpmf of sampling probabilities given rho
-	{
+	// use local scoping to declare variables that don t need to be tracked
+	{	
+		real log_rho;
+		real log_one_minus_rho;	
+		real log_r0_div_kappa;
+		real log_vmr;	
+		matrix[N_cs_actual, 5] tmp;
+		vector[5] ones;
+		matrix[N_cs_obs+1, N_cs_actual+1] bin_lpmf;	
 		int tmp_int;	// must declare index integer inside block
+
+		// define transformed parameters
+		kappa = r0/vmr_minus_one;
+		log_one_minus_rho = log( 1 - rho );
+		log_rho = log( rho );	
+		log_r0_div_kappa = log( vmr_minus_one );
+		log_vmr = log( 1+vmr_minus_one );
+
+		// calculate lpmf of actual chain sizes given R0 and kappa
+		ones = rep_vector(1., 5);
+		for(i in 1:N_cs_actual)
+		{
+			tmp[i, 1]= kappa*i + i -1;
+			tmp[i, 2]= kappa*i;
+			tmp[i, 3]= i+1;
+			tmp[i, 4]= i-1;
+			tmp[i, 5]= kappa*i + i -1;
+		}
+		tmp[,1] = lgamma( tmp[,1] );
+		tmp[,2] = -lgamma( tmp[,2] );
+		tmp[,3] = -lgamma( tmp[,3] );
+		tmp[,4] *= log_r0_div_kappa;
+		tmp[,5] *= -log_vmr;
+		cs_actual_lpmf = tmp * ones;		
+	
+		// calculate lpmf of sampling probabilities given rho		
 		for(j in 1:(N_cs_actual+1))
 		{		
 			tmp_int= min(j, N_cs_obs+1);
@@ -359,17 +359,17 @@ transformed parameters{
 				bin_lpmf[ (tmp_int+1):(N_cs_obs+1), j ] = rep_vector( negative_infinity(), N_cs_obs+1-tmp_int);
 			}
 		}
-	}
 
-	//	calculate lpmf of observed chain sizes given R0 and kappa
-	cs_obs_lpmf[1] = log_sum_exp( cs_actual_lpmf[1:N_cs_actual] + (bin_lpmf[1, 2:(N_cs_actual+1)])' );
-	for(i in 1:N_cs_obs)
-	{
-		cs_obs_lpmf[i+1] = log_sum_exp( cs_actual_lpmf[i:N_cs_actual] + (bin_lpmf[i+1, (i+1):(N_cs_actual+1)])' );
-	}
+		//	calculate lpmf of observed chain sizes given R0 and kappa
+		cs_obs_lpmf[1] = log_sum_exp( cs_actual_lpmf[1:N_cs_actual] + (bin_lpmf[1, 2:(N_cs_actual+1)])' );
+		for(i in 1:N_cs_obs)
+		{
+			cs_obs_lpmf[i+1] = log_sum_exp( cs_actual_lpmf[i:N_cs_actual] + (bin_lpmf[i+1, (i+1):(N_cs_actual+1)])' );
+		}
 
-	//	renormalise conditional on 1 - prob nothing sampled
-	cs_obs_lpmf[ 2:(N_cs_obs+1) ] -= log( 1-exp(cs_obs_lpmf[1]) );		
+		//	renormalise conditional on 1 - prob nothing sampled
+		cs_obs_lpmf[ 2:(N_cs_obs+1) ] -= log( 1-exp(cs_obs_lpmf[1]) );
+	}		
 }
 
 model{
@@ -380,36 +380,9 @@ model{
 	// likelihood
 	target+= cs_obs * cs_obs_lpmf[ 2:(N_cs_obs+1) ];
 }
-
-generated quantities{
-}
 "	
 	
-	stan.code.samplefromprior <- "
-data{
-	int<lower=1> N_cs_obs;							// max obs chain size
-	int<lower=1> N_cs_actual;						// max size of actual chain
-	row_vector<lower=0>[N_cs_obs] cs_obs;			// index i holds number of observed chains of size i
-	real<lower=0> sampling_n;						// sampling total
-	real<lower=0,upper=sampling_n> sampling_k;		// sampling success	
-}
-
-parameters{
-	real<lower=1e-10, upper=1> r0;	// R0
-	real<lower=0> vmr_minus_one;	// variance to mean ratio of NegBin offspring distribution minus one, 1+R0/kappa-1= R0/kappa
-	real<lower=0, upper=1> rho;		// sampling probability					
-}
-
-model{
-	// priors
-	target+= beta_lpdf(r0 | 2, 2);
-	target+= exponential_lpdf(vmr_minus_one | 1);
-	target+= beta_lpdf(rho | sampling_k+0.5, sampling_n-sampling_k+0.5); 	
-}
-"
 	stan.model <- stan_model(model_name= 'Blumberg2013', model_code = gsub('\t',' ',stan.code))
-	#stan.model.prior <- stan_model(model_name= 'Blumberg2013_prior', model_code = gsub('\t',' ',stan.code.samplefromprior ))
-	
 	
 	infile.subgraph.sizes <- file.path(args$indir, args$infile.subgraph.sizes)
 	outdir <- args$outdir
@@ -436,7 +409,7 @@ model{
 	stan.data$N_cs_actual <- ceiling(stan.data$N_cs_obs / (args$size.inf.pop.sampled/args$size.inf.pop) * args$upper.bound.multiplier)	#	set upper bound for infinite sum approximation 
 	stan.data$sampling_n <- args$size.inf.pop				# replace with actual number infected HSX Amsterdam
 	stan.data$sampling_k <- args$size.inf.pop.sampled 		# replace with actual number sequenced infected HSX Amsterdam	
-	fit <- rstan::sampling(stan.model, data=stan.data, iter=1e3, warmup=5e2, 
+	fit <- rstan::sampling(stan.model, data=stan.data, iter=2e3, warmup=5e2, 
 			chains=3, control = list(max_treedepth= 15, adapt_delta= 0.999),
 			init= list(list(r0=0.5, vmr_minus_one=0.05, rho=0.5), list(r0=0.25, vmr_minus_one=0.05, rho=0.5), list(r0=0.75, vmr_minus_one=0.05, rho=0.5)))
 	
@@ -458,10 +431,6 @@ model{
 	
 	#	keep only what we need to avoid memory meltdown
 	fit.po <- rstan::extract(fit, permuted=TRUE, inc_warmup=FALSE)	
-	for(x in c('log_rho','bin_lpmf','log_one_minus_rho','log_r0_div_kappa','log_vmr','tmp','ones'))
-		fit.po[[x]] <- NULL
-	gc()
-	
 	fit.plot <- matrix(NA, nrow= length(fit.po[[1]]), ncol= length(fit.target.pars))
 	colnames(fit.plot) <- fit.target.pars
 	for(x in fit.target.pars)
