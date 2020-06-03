@@ -1,0 +1,313 @@
+---
+title: "**results: Amsterdam subgraphs**"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+```{r, include=TRUE, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+require(knitr)
+require(kableExtra)
+require(ggplot2)
+require(ggpubr)
+require(gridExtra)
+require(tidyr)
+```
+```{r, include=FALSE, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+require(rmarkdown)
+setwd('~/Documents/GitHub/hivclust/pkg/misc/vignettes') 
+rmarkdown::render('roadmap.200203.phyloscanner.subgraphs.Rmd')
+```
+```{r, include=TRUE, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+read_chunk('~/Documents/GitHub/hivclust/pkg/misc/hivclu.ROADMAP.R')		
+```
+
+## **Extracting phylogenetic subgraphs associated with viral spread in Amsterdam**
+We start by extracting the phylogenetic subgraphs that are associated with viral
+spread in Amsterdam. If we interpret each subgraph
+as a distinct transmission chain in Amsterdam, (which may
+be partially observed due to incomplete sequence sampling), 
+we can explore patterns within transmission chains. 
+```{r,include=TRUE, eval=FALSE, echo=TRUE, warning=FALSE,message=FALSE, tidy=FALSE} 
+<<rmd.chunk.roadmap.200203.get.dated.subgraphs>>
+```
+
+Just a few notes: a large fraction of the subgraphs consist of just one sequence. 
+These subgraphs don't contain information into viral spread within Amsterdam 
+because no one else of the corresponding transmission chain was sampled, 
+and so we can ignore them in a phylodynamic analysis. This reduces sample size, 
+and makes the analysis more tractable.
+
+On the other hand, the subgraphs of size 1 also provide useful information into
+the reproductive number, because they indicate stuttering viral spread, and a
+reproduction number below 1. So we don't want to exclude them when estimating
+reproductive numbers. 
+
+## **Reading phylogenetic subgraphs **
+First we read in the taxa that are part of Amsterdam phylogenetic subgraphs
+into R: 
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE,tidy=FALSE} 
+require(data.table)
+require(phangorn)
+require(ggplot2)
+require(reshape)
+
+#	working directory with the dated subgraphs		
+#home <- '~/Documents/Roadmap/Data/SHM_1902_ROADMAP_191223'
+home <- '~/Box Sync/Roadmap/analysis_200407'
+indir.phsc	<- file.path(home,'subgraphs_dated')
+
+#	extract subgraph taxa	
+infiles <- data.table(F=list.files(indir.phsc, pattern='rda$', full.names=TRUE, recursive=TRUE))	
+infiles <- subset(infiles, grepl('datedsubgraphs',F))
+infiles <- subset(infiles, grepl('datedsubgraphs',F))
+#	SELECT defines if Ams, AmsHSX, AmsMSM
+infiles[, SELECT:= gsub('^(.*)subgraphs_([A-Za-z]+).rda','\\2',basename(F))]
+#	for subtype B, I ran separate analyses based on very large subtrees for comp efficiency
+#	ST stores the subtype, and ST_CLADE the large subtree
+infiles[, ST:= gsub('^.*subtype_([^_]+)_.*\\.rda','\\1',basename(F))]
+# For B only
+infiles[, ST_CLADE:= as.integer(gsub('[^c]*c([0-9]+)','\\1',ST))]
+infiles[, ST:= gsub('([^c]*)c([0-9]+)','\\1',ST)]
+#	ID of bootstrap replicate, 000 for analysis on real alignment
+infiles[, REP:= gsub('^.*wOutgroup_([0-9]+)_.*\\.rda','\\1',basename(F))]
+dsubgraphtaxa <- infiles[, {
+  #i<- 1
+  #infile <- infiles[i, F]			
+  infile <- F
+  cat('Process',infile,'\n')
+  load(infile)			
+    if(length(subgraphs)==1){
+        subgraph.names <- rep(subgraphs[[1]]$subgraph.name, length(subgraphs[[1]]$tip.label))
+        subgraph.taxa <- subgraphs[[1]]$tip.label			
+  }  else{
+    subgraph.names <- unlist(sapply( subgraphs, function(subgraph)  rep(subgraph$subgraph.name, length(subgraph$tip.label)) ))
+    subgraph.taxa <- unlist(sapply( subgraphs, function(subgraph)  subgraph$tip.label))
+  }
+  list(NAME=subgraph.names, 
+      TAXA= subgraph.taxa 
+  )				
+}, by=c('ST','ST_CLADE','REP','SELECT')]	
+#	add meta data from taxa names
+regex.tip.label <- '^([A-Za-z]+)_+([0-9]+)_([0-9]+)_([a-zA-Z]+)_([a-zA-Z]+)_([a-zA-Z]+)-([a-zA-Z]+)_([a-zA-Z_]+)_([0-9]+)-([0-9-]+)-([0-9-]+)_([0-9]+)$'
+dsubgraphtaxa[, ID:= as.numeric(gsub(regex.tip.label,'\\3',TAXA))]	
+dsubgraphtaxa[, SEQ_YEAR:= as.numeric(gsub(regex.tip.label,'\\9',TAXA))]
+dsubgraphtaxa[, FULL_NAME:= paste0(ST,'_',REP,'_',SELECT,'_',NAME)]
+```
+
+## **Adding meta-data **
+Next, I add meta-data on the individuals:
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE}
+infile.meta <- file.path(home,'misc','200327_sequence_labels.rda')
+
+#	add meta data from pre-processed baseline data	
+load(infile.meta)
+dind <- as.data.table(dind)	
+setnames(dind, c('PATIENT','BIRTH_Y','BIRTH_CNTRY'), c('ID','BIRTH_YEAR','BIRTH_COUNTRY'))
+tmp <- subset(dind, select=c(ID,BIRTH_YEAR,BIRTH_COUNTRY,LOC_BIRTH,CITY,TRANSM,GENDER))
+set(tmp, NULL, 'BIRTH_YEAR', tmp[, as.numeric(BIRTH_YEAR)])
+dsubgraphtaxa <- merge(dsubgraphtaxa,tmp,by='ID')
+dsubgraphtaxa[, AGE2020:= cut(2020-BIRTH_YEAR, breaks=c(-Inf,20,25,30,35,40,45,50,55,60,Inf))]
+```
+
+
+## **Distribution of subgraph sizes**
+Let us first have a look on the distribution of subgraph sizes, that is how
+many individuals there are in partially observed, separate transmission chains.
+(The transmission chains are partially observed because we do not have
+sequence data from everyone).
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 4), fig.align="center"}
+dsubgraphsize <- dsubgraphtaxa[, list(SIZE=length(ID)), by=c('ST','REP','SELECT','NAME')]
+dsubgraphsize[, SINGLETON:= as.character(factor(SIZE==1, levels=c(TRUE,FALSE), labels=c('subgraph size 1','subgraph size >1')))]
+ggplot(subset(dsubgraphsize, SELECT!='Ams'), aes(x=SIZE, fill=ST)) + 
+		geom_bar() + 
+		facet_grid(SELECT~.) +
+		labs(x='\nsize of phylogenetic subgraphs attributed to Amsterdam')
+
+```
+
+## **Sample size for phylodynamic analysis of HIV spread in Amsterdam **
+Next, let us have a look at how individuals are in subtrees are of size 1 and
+size >1.
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 4), fig.align="center"} 
+#	number of individuals in subgraphs of size == 1 or size > 1 
+dsubgraphind <- dsubgraphsize[, list(N_INDIVIDUALS=sum(SIZE)), by=c('REP','ST','SELECT','SINGLETON')]
+dsubgraphind <- dcast.data.table(dsubgraphind, REP+ST+SINGLETON~SELECT,value.var='N_INDIVIDUALS') 
+dsubgraphind[1:14]
+```
+	
+The number of subgraphs of size >1 differ by subtype according to the trasnsmission group (HSX/MSM).
+ For example, subtypes 02_AG and C have the most subgraphs of size >1 amongst HSX, but 
+ subtype 01_AE has many more subgraphs of size >1 amongst MSM.
+
+## **Empirical analysis on group-mixing within subgraphs **
+	
+To quantify the extent of mixing across certain population groups, 
+we first select just those subgraphs of size >1:
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE} 
+#	number of individuals in subgraphs of size == 1 or size > 1 
+tmp <- subset(dsubgraphsize, SIZE>1, c(ST, REP, SELECT, NAME))
+dsubgraphtaxa2 <- merge(dsubgraphtaxa, tmp, by=c('ST','REP','SELECT','NAME'))
+```
+   
+### **Place of birth **
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 6), fig.align="center"} 
+dsubgraphtaxa2[, DUMMY:= as.character(factor(BIRTH_COUNTRY=='Netherlands',levels=c(TRUE,FALSE),labels=c('Dutch-born','other')))]
+dcnt <- dsubgraphtaxa2[, list(N= length(ID)), by=c('FULL_NAME','SELECT','ST','DUMMY')]
+tmp <- dsubgraphtaxa2[, list(TOTAL= length(ID)), by=c('FULL_NAME','SELECT','ST')]
+dcnt <- merge(dcnt, tmp, by=c('FULL_NAME','SELECT','ST'))
+ggplot(subset(dcnt, SELECT!='Ams'), aes(x=FULL_NAME, y=N, fill=DUMMY)) +
+  geom_bar(stat='identity') + 
+  labs(y='#individuals',x='phylo subgraphs',fill='birth place') +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  facet_grid(SELECT~ST, scale='free_x', space='free_x')
+```
+
+To make things a bit clearer we can also plot the number of subgraphs which are composed of >=75% Dutch-born individuals, >=75% of individuals born outside of the Netherlands and otherwise mixed:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 6), fig.align="center"} 
+dcnt <- dsubgraphtaxa2[, list(N= length(ID)), by=c('FULL_NAME','REP','SELECT','ST','DUMMY')]
+tmp <- dsubgraphtaxa2[, list(TOTAL= length(ID)), by=c('FULL_NAME','REP','SELECT','ST')]
+dcnt <- merge(dcnt, tmp, by=c('FULL_NAME','REP','SELECT','ST'))
+dcnt$PROP <- dcnt$N/dcnt$TOTAL
+bp <- dcnt[, list(N75= length(FULL_NAME[PROP>=0.75])), by=c('SELECT','REP','ST','DUMMY')]
+nsubgraphs <- dsubgraphtaxa2[, list(SIZE=length(unique(NAME))), by=c('REP','ST','SELECT')]
+bp <- merge(bp,nsubgraphs, by=c('REP','ST','SELECT'))
+mixed <- bp[, list(Mixed= SIZE-sum(N75)), by=c('REP','ST','SELECT')]
+bp <- spread(bp, DUMMY, N75)
+bp <- merge(bp,mixed,by=c('REP','ST','SELECT'))
+bp <- unique(bp)
+bp <- melt(bp, id.vars=c('REP', 'ST', 'SELECT', 'SIZE'))
+bp$bpp <- factor(bp$variable, levels=c('Dutch-born','other','Mixed'),labels=c(">75% NL", ">75% MW-MB", "Mixed"))
+nonbl <- ggplot(subset(bp, SELECT!='Ams' & ST!='B'), aes(x=ST, y=value, fill=bpp)) +
+  geom_bar(stat='identity') + 
+  labs(y='#subgraphs',x='subtype',fill='birth place') +
+  theme(axis.ticks.x=element_blank()) +
+  facet_grid(SELECT~., scale='free_x', space='free_x')
+legend <- get_legend(nonbl)
+nonb <- ggplot(subset(bp, SELECT!='Ams' & ST!='B'), aes(x=ST, y=value, fill=bpp)) +
+  geom_bar(stat='identity') + 
+  labs(y='#subgraphs',x='subtype',fill='birth place') +
+  theme(axis.ticks.x=element_blank(),legend.position="none") +
+  facet_grid(SELECT~., scale='free_x', space='free_x')
+b <- ggplot(subset(bp, SELECT!='Ams' & ST=='B'), aes(x=ST, y=value, fill=bpp)) +
+  geom_bar(stat='identity') + 
+  labs(y='',x='subtype',fill='birth place') +
+  theme(axis.ticks.x=element_blank(),legend.position="none") +
+  facet_grid(SELECT~., scale='free_x', space='free_x')
+grid.arrange(nonb, b,
+                      legend,
+                      ncol = 3, widths=c(3.5, 1.5, 1.5)) 
+```
+
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE} 
+tmp <- dcnt[, list(R= sum( (N/TOTAL)^2), PMAX= max(N/TOTAL) ), by=c('FULL_NAME','SELECT','ST')]
+tmp[, list(R_AVG=mean(R), PMAX_AVG=mean(PMAX)), by=c('SELECT')]
+```
+ 
+The results suggest that
+
+* Amongst HSX, there appear to be more indivuduals born outside of the NL than Dutch-born, with not much mixing, and subgraphs are generally quite small (many of size 2). There appears to be more mixing of groups for subtypes C and D, but subgraphs are still small (size 2/3)
+* There are many more Dutch-born individuals in the subgraphs for MSM than foreign-born individuals, with some mixing
+
+### **Place of birth, geographic region **
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 6), fig.align="center"} 
+dsubgraphtaxa2$LOC_BIRTH[dsubgraphtaxa2$BIRTH_COUNTRY=='Netherlands'] <- dsubgraphtaxa2$BIRTH_COUNTRY[dsubgraphtaxa2$BIRTH_COUNTRY=='Netherlands']
+dsubgraphtaxa2[, DUMMY:= factor(LOC_BIRTH, levels=c('Netherlands','WEurope','EEurope','Africa','Asia','LaAmCarr','NorthAm','Oceania','Unknown'),labels=c('Netherlands','WEurope','EEurope','Africa','Asia','LaAmCarr','NorthAm','Oceania','Unknown'))]
+dcnt <- dsubgraphtaxa2[, list(N= length(ID)), by=c('FULL_NAME','SELECT','ST','DUMMY')]
+tmp <- dsubgraphtaxa2[, list(TOTAL= length(ID)), by=c('FULL_NAME','SELECT','ST')]
+dcnt <- merge(dcnt, tmp, by=c('FULL_NAME','SELECT','ST'))
+ggplot(subset(dcnt, SELECT!='Ams'), aes(x=FULL_NAME, y=N, fill=DUMMY)) +
+  geom_bar(stat='identity') + 
+  labs(y='#individuals',x='phylo subgraphs',fill='birth place') +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  facet_grid(SELECT~ST, scale='free_x', space='free_x')
+
+dcnt <- dsubgraphtaxa2[, list(N= length(ID)), by=c('FULL_NAME','REP','SELECT','ST','DUMMY')]
+tmp <- dsubgraphtaxa2[, list(TOTAL= length(ID)), by=c('FULL_NAME','REP','SELECT','ST')]
+dcnt <- merge(dcnt, tmp, by=c('FULL_NAME','REP','SELECT','ST'))
+dcnt$PROP <- dcnt$N/dcnt$TOTAL
+bp <- dcnt[, list(N75= length(FULL_NAME[PROP>=0.75])), by=c('SELECT','REP','ST','DUMMY')]
+nsubgraphs <- dsubgraphtaxa2[, list(SIZE=length(unique(NAME))), by=c('REP','ST','SELECT')]
+bp <- merge(bp,nsubgraphs, by=c('REP','ST','SELECT'))
+mixed <- bp[, list(Mixed= SIZE-sum(N75)), by=c('REP','ST','SELECT')]
+bp <- spread(bp, DUMMY, N75)
+bp <- merge(bp,mixed,by=c('REP','ST','SELECT'))
+bp <- unique(bp)
+bp <- melt(bp, id.vars=c('REP', 'ST', 'SELECT', 'SIZE'))
+
+bp$bpp <- factor(bp$variable, levels=c('Netherlands','WEurope','EEurope','Africa','Asia','LaAmCarr','NorthAm','Oceania','Unknown','Mixed'),labels=c('>75% Netherlands','>75% WEurope','>75% EEurope','>75% Africa','>75% Asia','>75% LaAmCarr','>75% NorthAm','>75% Oceania','>75% Unknown','Mixed'))
+bp$bpc <- bp$variable
+levels(bp$bpc) <- c(levels(bp$bpc),"Netherlands+FormerCurrTerritories")
+bp$bpc[bp$variable=="Netherlands" | bp$variable=="FormerCurrDutchColonies"] <- 'Netherlands+FormerCurrTerritories'
+
+nonbl <-  ggplot(subset(bp, SELECT!='Ams' & ST!='B'), aes(x=ST, y=value, fill=bpp)) +
+  geom_bar(stat='identity') + 
+  labs(y='#subgraphs',x='subtype',fill='birth place') +
+  theme(axis.ticks.x=element_blank()) +
+  facet_grid(SELECT~., scale='free_x', space='free_x')
+legend <- get_legend(nonbl)
+nonb <- ggplot(subset(bp, SELECT!='Ams' & ST!='B'), aes(x=ST, y=value, fill=bpp)) +
+  geom_bar(stat='identity') + 
+  labs(y='#subgraphs',x='subtype',fill='birth place') +
+  theme(axis.ticks.x=element_blank(),legend.position="none") +
+  facet_grid(SELECT~., scale='free_x', space='free_x')
+b <-   ggplot(subset(bp, SELECT!='Ams' & ST=='B'), aes(x=ST, y=value, fill=bpp)) +
+  geom_bar(stat='identity') + 
+  labs(y='',x='subtype',fill='birth place') +
+  theme(axis.ticks.x=element_blank(),legend.position="none") +
+  facet_grid(SELECT~., scale='free_x', space='free_x')
+grid.arrange(nonb, b,
+                           legend,
+                           ncol = 3, widths=c(3.5, 1.5, 1.5)) 
+```
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE} 
+tmp <- dcnt[, list(R= sum( (N/TOTAL)^2), PMAX= max(N/TOTAL) ), by=c('FULL_NAME','SELECT','ST')]
+tmp[, list(R_AVG=mean(R), PMAX_AVG=mean(PMAX)), by=c('SELECT')]
+```
+
+
+* There appears to be much more evidence of mixing of birth regions amongst MSM than HSX, and subgraphs are generally larger for
+subtypes 01_AE, 01_AG, A1
+* There don't appear to be many subgraphs predominantly composed of individuals from Morroco or Turkey, suggesting dissatortative mixing within chains including these sequences
+
+### **Age group **
+Next, we consider age brackets for comparison:
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE, fig.dim = c(8, 6), fig.align="center"} 
+dsubgraphtaxa2[, DUMMY:= AGE2020]
+dcnt <- dsubgraphtaxa2[, list(N= length(ID)), by=c('FULL_NAME','SELECT','ST','DUMMY')]
+tmp <- dsubgraphtaxa2[, list(TOTAL= length(ID)), by=c('FULL_NAME','SELECT','ST')]
+dcnt <- merge(dcnt, tmp, by=c('FULL_NAME','SELECT','ST'))
+ggplot(subset(dcnt, SELECT!='Ams'), aes(x=FULL_NAME, y=N, fill=DUMMY)) +
+  geom_bar(stat='identity') + 
+  labs(y='#individuals',x='phylo subgraphs',fill='age in 2020') +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  facet_grid(SELECT~ST, scale='free_x', space='free_x')
+```
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE, tidy=FALSE} 
+tmp <- dcnt[, list(R= sum( (N/TOTAL)^2), PMAX= max(N/TOTAL) ), by=c('FULL_NAME','SELECT','ST')]
+tmp[, list(R_AVG=mean(R), PMAX_AVG=mean(PMAX)), by=c('SELECT')]
+```
+ 
+There are a lot more groups to compare, but some things I noticed:
+
+* The degree of mixing, and the size of the subgraphs does seem to differ by subtype.
+For example, subtype 01_AE suggests some mixing between age groups of MSM, but amongst HSX 
+the subgraphs are small (mostly size 2) and there is less mixing. Also, subtypes D and 
+06_cpx do not have any subgraphs > size 1
