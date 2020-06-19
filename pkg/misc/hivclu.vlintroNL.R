@@ -81,6 +81,320 @@ vli.estimate.subtree.distribution.by.sexual.orientation <- function(df, sampling
 	ans
 }
 
+vli.estimate.branchingprocess.incountryacquisition.200606 <- function()
+{
+	require(gglot2)
+	require(data.table)
+	
+	indir <- '~/Box/OR_Work/2017/2017_NL_Introductions/analysis'
+	fname_origins <- '190801_subgraph_origins_N.csv'
+	fnames <- c('190801_hsx_nonB_stananalysis.rda','190801_hsx_B_stananalysis.rda','190801_msm_nonB_stananalysis.rda','190801_msm_B_stananalysis.rda')
+	fnames <- data.table(F= fnames)
+	fnames[, ST:= gsub('^[0-9]+_([a-z]+)_([a-zA-Z]+)_.*$','\\2',F)]
+	fnames[, RISK:= gsub('^[0-9]+_([a-z]+)_([a-zA-Z]+)_.*$','\\1',F)]
+	fnames[, TRM_GROUP_SUB:= paste0(gsub('non','N',ST),'_NL',toupper(RISK))]
+	
+	do <- as.data.table( read.csv( file.path(indir, fname_origins), stringsAsFactor=FALSE) )
+	do <- subset(do, PARENT_STATE!='Unknown')
+	do[, PARENT_STATE2:= as.character(factor(grepl('^NL',PARENT_STATE), levels=c(TRUE,FALSE), labels=c('NL','EXT')))]
+	do <- do[, list(N=sum(N)), by=c('TRM_GROUP_SUB','PARENT_STATE2')]
+	do <- merge(do, do[, list(TOTAL=sum(N)), by='TRM_GROUP_SUB'], by='TRM_GROUP_SUB')
+	
+	ans<- list()	
+	for(i in seq_len(nrow(fnames)))
+	{
+		fname <- fnames[i,F]
+		load( file.path(indir,fname) )		
+		tmp <- subset(do, TRM_GROUP_SUB==fnames$TRM_GROUP_SUB[i])
+		tmp <- rbeta( length(sources_external), tmp$N[tmp$PARENT_STATE2=='EXT']+0.5, tmp$N[tmp$PARENT_STATE2=='NL']+0.5)		
+		ans[[ i ]] <- data.table(	TRM_GROUP_SUB= fnames$TRM_GROUP_SUB[i],
+									P_INTROS= sources_external, 
+									P_NOINTROS= 1-sources_external, 
+									P_EXT_ORIGIN= tmp,
+									P_EXT_INTROS= sources_external * tmp,
+									P_INCOUNTRY_ACQU= 1-sources_external * tmp) 
+	}
+	ans <- do.call('rbind',ans)
+	ans <- melt(ans, id.vars='TRM_GROUP_SUB')
+	ans <- ans[, list(V=quantile(value, p=c(0.025,0.5,0.975)), STAT=c('CL','M','CU')), by=c('TRM_GROUP_SUB','variable')]
+	ans <- dcast.data.table(ans, TRM_GROUP_SUB+variable~STAT, value.var='V')
+	ans[, L:= paste0( round(M*100, d=1), '% [',  round(CL*100, d=1),'-', round(CU*100, d=1),'%]')]
+	ans[, XLAB:= factor(TRM_GROUP_SUB, levels=c('NB_NLHSX','NB_NLMSM','B_NLHSX','B_NLMSM'), c('heterosexuals\nnon-B subtypes','MSM\nnon-B subtypes','heterosexuals\nsubtype B','MSM\nsubtype B'))]
+	ggplot(subset(ans, variable=='P_INCOUNTRY_ACQU'), aes(x=XLAB)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU), width=0.5) +
+			geom_point(aes(y=M)) +			
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), breaks=seq(0,1,0.2), minor_breaks=seq(0,1,0.05)) +
+			coord_cartesian(ylim=c(0,1)) +
+			theme_bw() +
+			labs(y='in-country HIV acquisitions\n(posterior median and 95% credibility intervals)\n', x='')
+	ggsave(file=file.path(indir,'190801_incountryacquisitions.pdf'), w=6, h=6)
+}
+
+vli.estimate.branchingprocess.transmissionchains.200606 <- function()
+{
+	require(rstan)
+	require(bayesplot)
+	require(hexbin)
+	
+	args <- list()
+	args$indir <- '~/Box/OR_Work/2017/2017_NL_Introductions/analysis'	
+	args$outdir <- '~/Box/OR_Work/2017/2017_NL_Introductions/analysis'	
+	args$infile.subgraphs <- file.path(args$indir, '190801_subgraph_data.csv')
+	#	Dutch HSX non-B
+	if(0)
+	{
+		ds <- as.data.table(read.csv(args$infile.subgraphs))
+		ds <- subset(ds, REP==0 & TRM_GROUP=='NLHSX' & ST!='B')
+		ds <- ds[, list(N=length(NAME)), by='SIZE']
+		tmp <- vector('numeric', max(ds$SIZE))
+		tmp[ds$SIZE] <- ds$N
+		args$infile.subgraph.sizes <- '190801_subgraphsizes_hsx_nonB.csv'
+		args$outfile.base <- '190801_hsx_nonB_'
+		write.csv(tmp, file=file.path(args$indir,args$infile.subgraph.sizes))		
+		args$size.inf.pop <- round( 6983*1402/(1402+1064), d=0 )
+		args$size.inf.pop.sampled <- 1402					
+	}
+	#	Dutch HSX B
+	if(0)
+	{
+		ds <- as.data.table(read.csv(args$infile.subgraphs))
+		ds <- subset(ds, REP==0 & TRM_GROUP=='NLHSX' & ST=='B')
+		ds <- ds[, list(N=length(NAME)), by='SIZE']
+		ds <- ds[1:11,]
+		tmp <- vector('numeric', max(ds$SIZE))
+		tmp[ds$SIZE] <- ds$N
+		args$infile.subgraph.sizes <- '190801_subgraphsizes_hsx_B.csv'
+		args$outfile.base <- '190801_hsx_B_'
+		write.csv(tmp, file=file.path(args$indir,args$infile.subgraph.sizes))		
+		args$size.inf.pop <- round( 6983*1064/(1402+1064), d=0 )
+		args$size.inf.pop.sampled <- 1064					
+	}
+	#	Dutch MSM B
+	if(1)
+	{
+		ds <- as.data.table(read.csv(args$infile.subgraphs))
+		ds <- subset(ds, REP==0 & TRM_GROUP=='NLMSM' & ST=='B')
+		ds <- ds[, list(N=length(NAME)), by='SIZE']
+		tmp <- vector('numeric', max(ds$SIZE))
+		tmp[ds$SIZE] <- ds$N
+		args$infile.subgraph.sizes <- '190801_subgraphsizes_msm_B.csv'
+		args$outfile.base <- '190801_msm_B_'
+		write.csv(tmp, file=file.path(args$indir,args$infile.subgraph.sizes))		
+		args$size.inf.pop <- round( 13340*5113/(328+5113), d=0 )
+		args$size.inf.pop.sampled <- 5113					
+	}
+	#	Dutch MSM non-B
+	if(0)
+	{
+		ds <- as.data.table(read.csv(args$infile.subgraphs))
+		ds <- subset(ds, REP==0 & TRM_GROUP=='NLMSM' & ST!='B')
+		ds <- ds[, list(N=length(NAME)), by='SIZE']
+		tmp <- vector('numeric', max(ds$SIZE))
+		tmp[ds$SIZE] <- ds$N
+		args$infile.subgraph.sizes <- '190801_subgraphsizes_msm_nonB.csv'
+		args$outfile.base <- '190801_msm_nonB_'
+		write.csv(tmp, file=file.path(args$indir,args$infile.subgraph.sizes))		
+		args$size.inf.pop <- round( 13340*328/(328+5113), d=0 )
+		args$size.inf.pop.sampled <- 328			
+	}	
+	args$upper.bound.multiplier <- 10
+	
+	stan.code <- "
+			data{
+			int<lower=1> N_cs_obs;							// max obs chain size
+			int<lower=1> N_cs_actual;						// max size of actual chain
+			row_vector<lower=0>[N_cs_obs] cs_obs;			// index i holds number of observed chains of size i
+			real<lower=0> sampling_n;						// sampling total
+			real<lower=0,upper=sampling_n> sampling_k;		// sampling success	
+			}
+			
+			transformed data{
+			//	get Binomial sampling successes 0,...,N_cs_obs.
+			vector[N_cs_obs+1] bin_successes;	
+			bin_successes[1] = 0;
+			for(i in 1:N_cs_obs)
+			{
+			bin_successes[i+1] = bin_successes[i]+1; 
+			}
+			}
+			
+			parameters{
+			real<lower=1e-10, upper=1> r0;	// R0
+			real<lower=0> vmr_minus_one;	// variance to mean ratio of NegBin offspring distribution minus one, 1+R0/kappa-1= R0/kappa
+			real<lower=0, upper=1> rho;		// sampling probability					
+			}
+			
+			transformed parameters{
+			real<lower=0> kappa;
+			vector[N_cs_actual] cs_actual_lpmf;
+			vector[N_cs_obs+1] cs_obs_lpmf;	
+			
+			// use local scoping to declare variables that don t need to be tracked
+			{	
+			real log_rho;
+			real log_one_minus_rho;	
+			real log_r0_div_kappa;
+			real log_vmr;	
+			matrix[N_cs_actual, 5] tmp;
+			vector[5] ones;
+			matrix[N_cs_obs+1, N_cs_actual+1] bin_lpmf;	
+			int tmp_int;	// must declare index integer inside block
+			
+			// define transformed parameters
+			kappa = r0/vmr_minus_one;
+			log_one_minus_rho = log( 1 - rho );
+			log_rho = log( rho );	
+			log_r0_div_kappa = log( vmr_minus_one );
+			log_vmr = log( 1+vmr_minus_one );
+			
+			// calculate lpmf of actual chain sizes given R0 and kappa
+			ones = rep_vector(1., 5);
+			for(i in 1:N_cs_actual)
+			{
+			tmp[i, 1]= kappa*i + i -1;
+			tmp[i, 2]= kappa*i;
+			tmp[i, 3]= i+1;
+			tmp[i, 4]= i-1;
+			tmp[i, 5]= kappa*i + i -1;
+			}
+			tmp[,1] = lgamma( tmp[,1] );
+			tmp[,2] = -lgamma( tmp[,2] );
+			tmp[,3] = -lgamma( tmp[,3] );
+			tmp[,4] *= log_r0_div_kappa;
+			tmp[,5] *= -log_vmr;
+			cs_actual_lpmf = tmp * ones;		
+			
+			// calculate lpmf of sampling probabilities given rho		
+			for(j in 1:(N_cs_actual+1))
+			{		
+			tmp_int= min(j, N_cs_obs+1);
+			bin_lpmf[1:tmp_int,j] = bin_successes[1:tmp_int] * log_rho;
+			bin_lpmf[1:tmp_int,j] += ( (rep_vector(j-1, tmp_int) - bin_successes[1:tmp_int]) * log_one_minus_rho );
+			for(i in 1:tmp_int)
+			{
+			bin_lpmf[i,j] += lchoose( 1.*(j-1), bin_successes[i] );
+			} 
+			if(tmp_int<(N_cs_obs+1))
+			{
+			bin_lpmf[ (tmp_int+1):(N_cs_obs+1), j ] = rep_vector( negative_infinity(), N_cs_obs+1-tmp_int);
+			}
+			}
+			
+			//	calculate lpmf of observed chain sizes given R0 and kappa
+			cs_obs_lpmf[1] = log_sum_exp( cs_actual_lpmf[1:N_cs_actual] + (bin_lpmf[1, 2:(N_cs_actual+1)])' );
+			for(i in 1:N_cs_obs)
+			{
+			cs_obs_lpmf[i+1] = log_sum_exp( cs_actual_lpmf[i:N_cs_actual] + (bin_lpmf[i+1, (i+1):(N_cs_actual+1)])' );
+			}
+			
+			//	renormalise conditional on 1 - prob nothing sampled
+			cs_obs_lpmf[ 2:(N_cs_obs+1) ] -= log( 1-exp(cs_obs_lpmf[1]) );
+			}		
+			}
+			
+			model{
+			// priors
+			target+= beta_lpdf(r0 | 2, 2);
+			target+= exponential_lpdf(vmr_minus_one | 1);
+			target+= beta_lpdf(rho | sampling_k+0.5, sampling_n-sampling_k+0.5); 
+			// likelihood
+			target+= cs_obs * cs_obs_lpmf[ 2:(N_cs_obs+1) ];
+			}
+			"	
+	
+	stan.model <- stan_model(model_name= 'Blumberg2013', model_code = gsub('\t',' ',stan.code))
+	
+	infile.subgraph.sizes <- file.path(args$indir, args$infile.subgraph.sizes)
+	outdir <- args$outdir
+	
+	#	debugging
+	if(0)
+	{
+		stan.data <- list()		
+		stan.data$cs_obs <- c(4,2,0,1)
+		stan.data$N_cs_obs <- length(stan.data$cs_obs)
+		stan.data$N_cs_actual <- 10 
+		stan.data$sampling_n <- 100
+		stan.data$sampling_k <- 80
+		fit <- rstan::sampling(stan.model, data=stan.data, iter=10, warmup=5, 
+				chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999),
+				init= list(list(r0=0.5, vmr_minus_one=0.05, rho=0.5)))
+		
+	}
+	
+	stan.data <- list()
+	tmp <- read.csv( infile.subgraph.sizes )
+	colnames(tmp) <- c('SIZE','N')
+	stan.data$cs_obs <- tmp$N
+	stan.data$N_cs_obs <- length(stan.data$cs_obs)
+	stan.data$N_cs_actual <- min(500,ceiling(stan.data$N_cs_obs / (args$size.inf.pop.sampled/args$size.inf.pop) * args$upper.bound.multiplier))	#	set upper bound for infinite sum approximation 
+	stan.data$sampling_n <- args$size.inf.pop				# replace with actual number infected HSX Amsterdam
+	stan.data$sampling_k <- args$size.inf.pop.sampled 		# replace with actual number sequenced infected HSX Amsterdam	
+	fit <- rstan::sampling(stan.model, data=stan.data, iter=5e3, warmup=5e2, 
+			chains=3, control = list(max_treedepth= 15, adapt_delta= 0.999),
+			init= list(list(r0=0.5, vmr_minus_one=0.05, rho=0.5), list(r0=0.25, vmr_minus_one=0.05, rho=0.5), list(r0=0.75, vmr_minus_one=0.05, rho=0.5)))
+	
+	
+	save(fit, file=file.path(outdir, paste0( args$outfile.base,'stanfit.rda' )))
+	#	runs in 2 minutes
+	
+	
+	#	examine neff and rhat
+	fit.target.pars <- c('r0','vmr_minus_one','rho','kappa')
+	rstan::monitor(rstan::extract(fit, pars=fit.target.pars, permuted = FALSE, inc_warmup = TRUE))
+	#	neff too low, should ideally be 2e3
+	
+	#	traces	
+	color_scheme_set("mix-blue-red")
+	p <- rstan::traceplot(fit, pars=fit.target.pars, inc_warmup=TRUE, ncol = 1)
+	pdf(file=file.path(outdir, paste0( args$outfile.base,'mcmc_traces.pdf' )), w=10, h=8)
+	print(p)
+	dev.off()
+	
+	#	keep only what we need to avoid memory meltdown
+	fit.po <- rstan::extract(fit, permuted=TRUE, inc_warmup=FALSE)			
+	
+	#	pair plots	
+	p <- mcmc_pairs(rstan::extract(fit, pars=fit.target.pars, permuted=FALSE, inc_warmup=FALSE), diag_fun = "dens", off_diag_fun = "hex")
+	pdf(file=file.path(outdir, paste0( args$outfile.base,'mcmc_pairs.pdf' )), w=10, h=10)
+	print(p)
+	dev.off()
+	
+	# generate posterior predictive samples of actual chain sizes until we reach sampling_n individuals
+	cs_actual_cdf <- exp(fit.po$cs_actual_lpmf)
+	cs_actual_cdf <- t(apply( cs_actual_cdf, 1, cumsum))	
+	samples.n <- 5e3
+	cs_actual_postpred <- lapply( seq_len(nrow(cs_actual_cdf)), function(i){
+				IDX <<- i
+				tmp <- runif(samples.n)
+				TMP <<- tmp
+				cs_actual_postpred <- sapply(tmp, function(x){  head( which( x < c(cs_actual_cdf[i,],1) ), 1 )  })
+				tmp2 <- which( args$size.inf.pop <= cumsum(cs_actual_postpred) )[1] 
+				cs_actual_postpred[1:tmp2] 								
+			})
+		
+	# posterior estimate of transmissions originating from outside Amsterdam
+	sources_external <- sapply(cs_actual_postpred, function(x) length(x)/sum(x) )
+	quantile(sources_external, p=c(0.5, 0.025, 0.975))
+	save(sources_external, cs_actual_postpred, cs_actual_cdf, file=file.path(outdir, paste0( args$outfile.base,'stananalysis.rda' )))
+	
+	#	for non-B HSX:
+	#	50%       2.5%      97.5% 
+	#	0.5821159 0.5378998 0.6269218 
+
+	#	for B HSX:
+	#	      50%      2.5%     97.5% 
+	#	0.5267176 0.4640007 0.5887040  
+
+	#	for non-B MSM
+	#	50%       2.5%      97.5%
+	#	0.4054726 0.2311924 0.5581683 
+
+	#	for B MSM
+	#	50%       2.5%      97.5%
+	#	0.2156988 0.1775749 0.2538293
+}
+
 vli.estimate.patients.in.small.subtrees.by.sexual.orientation <- function(df, sampling.prob=0.43, resample.intro.n=3, resample.missing.n=3, sxo.select= c('MSM','hsx'), size.breaks=c(0,1,2,5,10,500), size.labels=c('1','2','3-5','6-10','>10'), intro.year=2000, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), seed=42)	
 {
 	#	df<- copy(dpo); sampling.prob=0.43; resample.intro.n=3; resample.missing.n=3; sxo.select= c('MSM','hsx'); intro.year=2000; ans.quantiles=c(0.025,0.25,0.5,0.75,0.975); seed=42
