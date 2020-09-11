@@ -1862,8 +1862,8 @@ roadmap.200203.estimate.branchingprocess.origins.200606 <- function(){
 	ggsave(file=file.path(indir,'20081_incityacquisitions.pdf'), w=6, h=6)
 }
 
-## ---- rmd.chunk.roadmap.200203.estimate.transmissions.from.external.branchingprocess.dev ----
-roadmap.200203.estimate.transmissions.from.external.branchingprocess.dev <- function()
+## ---- rmd.chunk.roadmap.200203.estimate.transmissions.from.external.branchingprocess.gqs ----
+roadmap.200203.estimate.transmissions.from.external.branchingprocess.gqs <- function()
 {
 	require(rstan)
 	require(bayesplot)
