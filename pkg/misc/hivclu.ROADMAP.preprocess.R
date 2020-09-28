@@ -8,7 +8,7 @@ Sequences.200205<- function(dir.name= DATA)
   `%notin%` <- Negate(`%in%`)
   
   #	read sequence csv data file and preprocess
-  dir.name		<- '~/Box Sync/Roadmap/Data/200821_sequence_update'
+  dir.name		<- '~/Box Sync/Roadmap/Data/data_200821'
   #dir.name		<- '/rdsgpfs/general/project/ratmann_roadmap_data_analysis/live/data_200821'
   #file			<- file.path(dir.name,"SHM_1902_ROADMAP_191223_tblLAB_RES.csv")
   #outfile			<- file.path(dir.name,"SHM_1902_ROADMAP_191223_tblLAB_seq.rda")
@@ -104,7 +104,7 @@ Sequences.200205<- function(dir.name= DATA)
 
 
 # align using virulign
-#virulign '/Users/alexb/Box Sync/Roadmap/Data/K03455-pol.fasta' '/Users/alexb/Box Sync/Roadmap/Data/200821_sequence_update/SHM_2002_ROADMAP_200901_tblLAB_seq.fasta'   --exportKind GlobalAlignment   --exportAlphabet Nucleotides --exportReferenceSequence yes --nt-debug Failed > '/Users/alexb/Box Sync/Roadmap/Data/200821_sequence_update/SHM_2002_ROADMAP_200901_tblLAB_seq_aligned.fasta'
+#virulign '/Users/alexb/Box Sync/Roadmap/Data/K03455-pol.fasta' '/Users/alexb/Box Sync/Roadmap/Data/data_200821/SHM_2002_ROADMAP_200901_tblLAB_seq.fasta'   --exportKind GlobalAlignment   --exportAlphabet Nucleotides --exportReferenceSequence yes --nt-debug Failed > '/Users/alexb/Box Sync/Roadmap/Data/data_200821/SHM_2002_ROADMAP_200901_tblLAB_seq_aligned.fasta'
 #####################################################################################
 
 Add.failed.sequences.to.alignment.200205<- function(dir.name= DATA) {
@@ -113,7 +113,7 @@ require(gdata)
 require(data.table)
 require(plyr)
 
-dir.name		<- '/Users/alexb/Box Sync/Roadmap/Data/200821_sequence_update'
+dir.name		<- '/Users/alexb/Box Sync/Roadmap/Data/data_200821'
 file			<- file.path(dir.name,"SHM_1902_ROADMAP_200821_tblLAB_seq_aligned_trimmed.fasta")
 fileall			<- file.path(dir.name,"SHM_1902_ROADMAP_200821_tblLAB_seq.fasta")
 outfile			<- file.path(dir.name,"SHM_1902_ROADMAP_200821_tblLAB_seq_aligned_trimmed_complete.fasta")
@@ -126,13 +126,13 @@ failed <- allseqs[names(allseqs) %notin% ids]
 write.dna(failed, file=file.path(dir.name,"SHM_1902_ROADMAP_200821_tblLAB_seq_failed.fasta"), format='fasta', colsep='', nbcol=-1)
 
 `%notin%` <- Negate(`%in%`)
-#mafft '/Users/alexb/Box Sync/Roadmap/Data/200821_sequence_update/SHM_1902_ROADMAP_200821_tblLAB_seq_HXB2.fasta' > '/Users/alexb/Box Sync/Roadmap/Data/200821_sequence_update/SHM_1902_ROADMAP_200821_tblLAB_seq_HXB2_aligned_mafft.fasta'  
+#mafft '/Users/alexb/Box Sync/Roadmap/Data/data_200821/SHM_1902_ROADMAP_200821_tblLAB_seq_HXB2.fasta' > '/Users/alexb/Box Sync/Roadmap/Data/data_200821/SHM_1902_ROADMAP_200821_tblLAB_seq_HXB2_aligned_mafft.fasta'  
 
 failed <- list.files("/Users/alexb/Documents/Roadmap/Data/SHM_1902_ROADMAP_191223/Failed",pattern="fasta")
 files <- length(failed)
 
 # load mafft alignments
-mafftalign <- read.dna("~/Box Sync/Roadmap/Data/200821_sequence_update/SHM_1902_ROADMAP_200821_tblLAB_seq_HXB2_aligned_mafft.fasta",format="fasta")
+mafftalign <- read.dna("~/Box Sync/Roadmap/Data/data_200821/SHM_1902_ROADMAP_200821_tblLAB_seq_HXB2_aligned_mafft.fasta",format="fasta")
 
 # just keep the ones which failed
 seqs_mafft <- copy(mafftalign)
@@ -150,7 +150,7 @@ Sequences.removeDRMs.200221<- function(dir.name= DATA)
 {
   require(ape)
   require(big.phylo)
-  dir.name		<- '~/Box Sync/Roadmap/Data/200821_sequence_update/'
+  dir.name		<- '~/Box Sync/Roadmap/Data/data_200821/'
   dir.name <- '/rds/general/project/ratmann_roadmap_data_analysis/live/analysis_200827/alignments'
   file <- file.path(dir.name,'SHM_1902_ROADMAP_200821_tblLAB_alignment_200908.fasta')
   outfile	<- file.path(dir.name,'SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM.fasta')
@@ -167,7 +167,7 @@ Sequences.removeDRMs.200221<- function(dir.name= DATA)
 
 ######################################################################################
 Sequences.no.gap.blast.200219 <- function(dir.name= DATA){
-  dir.name <- '~/Box Sync/Roadmap/Data/200821_sequence_update'
+  dir.name <- '~/Box Sync/Roadmap/Data/data_200821'
   dir.name <- '/rds/general/project/ratmann_roadmap_data_analysis/live/analysis_200827/alignments'
   infile <- file.path(dir.name,'SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM.fasta')
   outfile <- file.path(dir.name,'SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM_nogaps.fasta')
@@ -183,9 +183,9 @@ Sequences.subtype.classification.200218 <- function(dir.name= DATA)
   require(plyr)
   
   # Classify aligned and trimmed sequences using Comet
-  # comet_osx -bs 1000 < '/Users/alexb/Box Sync/Roadmap/Data/200821_sequence_update/SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM.fasta' > '/Users/alexb/Box Sync/Roadmap/Data/200821_sequence_update/SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM_COMET.csv'
+  # comet_osx -bs 1000 < '/Users/alexb/Box Sync/Roadmap/Data/data_200821/SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM.fasta' > '/Users/alexb/Box Sync/Roadmap/Data/data_200821/SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM_COMET.csv'
   
-  dir.name		<- '~/Box Sync/Roadmap/Data/200821_sequence_update'
+  dir.name		<- '~/Box Sync/Roadmap/Data/data_200821'
   file.c			<- file.path(dir.name,"SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM_COMET.csv")
   file <- file.path(dir.name,"SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM.fasta")
   outfile     <- file.path(dir.name,"sequences_to_reclassify.fasta")
@@ -470,7 +470,7 @@ Sequences.addcloseLANL.200218<- function(dir.name= DATA)
   require(ape)
   require(data.table)
   
-  dir.name		<- '~/Box Sync/Roadmap/Data/200821_sequence_update'
+  dir.name		<- '~/Box Sync/Roadmap/Data/data_200821'
   file.c			<- file.path(dir.name,"SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM_COMET.csv")
   file <- file.path(dir.name,"SHM_1902_ROADMAP_200821_tblLAB_alignment_200908_noDRM.fasta")
   
@@ -480,18 +480,18 @@ Sequences.addcloseLANL.200218<- function(dir.name= DATA)
   # Run blast query
   #blastn -query /Users/alexb/Documents/Roadmap/Data/SHM_1902_ROADMAP_191223/SHM_1902_ROADMAP_200821_tblLAB_alignment_200821_noDRM_nogaps.fasta -db /Users/alexb/Documents/Roadmap/Data/blast_db/LANL_polany_n82000_strippedn.db -out /Users/alexb/Documents/Roadmap/Data/SHM_1902_ROADMAP_191223/SHM_1902_ROADMAP_200821_tblLAB_alignment_200821_LANL_BLAST_20.txt -max_target_seqs 20 -outfmt 6
   
-  dir.name		<- '~/Box Sync/Roadmap/Data/200821_sequence_update'
+  dir.name		<- '~/Box Sync/Roadmap/Data/data_200821'
   bfile <- file.path(dir.name,'SHM_1902_ROADMAP_200821_tblLAB_alignment_200821_LANL_BLAST_20.txt')
   lfile <- file.path(dir.name,'data_200305_LANL_alignment_noDRM.fasta')
   afile <- file.path(dir.name,'SHM_1902_ROADMAP_200821_tblLAB_alignment_200821_noDRM.fasta')
-  sfile <- file.path(dir.name,'Complete_subtype_classifications.rdata')
+  sfile <- file.path(dir.name,'Complete_subtype_classifications.rds')
   infile.seqinfo			<- file.path(dir.name,"SHM_1902_ROADMAP_200821_tblLAB_seq.rda")
   infile.indinfo <- file.path(dir.name,'SHM_1902_ROADMAP_191223_tblBAS.csv')
   outfile.matches      <- file.path(dir.name,'ROADMAP_200821_All_Taxa_withsubtype.rda')
   outfile.seqs <- file.path(dir.name,'ROADMAP_200821_All_Sequences.fasta')
   outfile.trimseqs <- file.path(dir.name,'ROADMAP_200821_All_Sequences_LANL_aligned.fasta')
 
-  load(sfile)
+  st <- readRDS(sfile)
   dl <- read.dna(lfile,format='fa')
   db		<- as.data.table(read.delim(bfile, sep='\t',stringsAsFactors=FALSE, header=FALSE))		
   setnames(db, paste('V',1:12,sep=''),c('FASTASampleCode','TAXA_L','pident','length','mismatch','gapopen','qstart','qend','sstart','send','evalue','bitscore'))
@@ -559,36 +559,61 @@ Sequences.addcloseLANL.200218<- function(dir.name= DATA)
   write.dna(seqs.all,file=outfile.trimseqs, format='fasta', colsep='', nbcol=-1) 
   
   # Read back in
-  #sfile <- file.path(dir.name,'ROADMAP_200821_All_Sequences_LANL_aligned.fasta')
-  #seqs.all <- read.dna(outfile.trimseqs,format='fa')
-  #outfile.matches <- file.path(dir.name,'misc','ROADMAP_200821_All_Taxa_withsubtype.rda')
-  #load(outfile.matches)
+  sfile <- file.path(dir.name,'ROADMAP_200821_All_Sequences_LANL_aligned.fasta')
+  seqs.all <- read.dna(outfile.trimseqs,format='fa')
+  outfile.matches <- file.path(dir.name,'ROADMAP_200821_All_Taxa_withsubtype.rda')
+  load(outfile.matches)
     
   # Amend subtypes and remove singletons (after checking trees)
-  ds$SUBTYPE[grepl('812467',ds$FASTASampleCode)] <- 'A1'
-  ds$SUBTYPE[grepl('807480',ds$FASTASampleCode)] <- 'A1-G'
-  ds$SUBTYPE[grepl('813363',ds$FASTASampleCode)] <- 'Other'
-  ds$SUBTYPE[grepl('807930',ds$FASTASampleCode)] <- 'Other'
-  ds$SUBTYPE[grepl('800090',ds$FASTASampleCode)] <- 'Other'
-  ds$SUBTYPE[grepl('811607',ds$FASTASampleCode)] <- 'Other'
-  ds$SUBTYPE[grepl('800090',ds$FASTASampleCode)] <- 'Other'
-  ds$SUBTYPE[grepl('812290',ds$FASTASampleCode)] <- 'Other'
-  ds$SUBTYPE[grepl('814967',ds$FASTASampleCode)] <- 'Other'
-  ds$SUBTYPE[grepl('803309',ds$FASTASampleCode)] <- 'Other'
-  
+  ds$SUBTYPE[grepl('T918426',ds$FASTASampleCode)] <- 'B'
+  ds$SUBTYPE[grepl('T911666',ds$FASTASampleCode)] <- 'B'
+  ds$SUBTYPE[grepl('T916398',ds$FASTASampleCode)] <- 'B'
+  ds$SUBTYPE[grepl('T913532',ds$FASTASampleCode)] <- 'A1'
+  ds$SUBTYPE[grepl('T915679',ds$FASTASampleCode)] <- 'A1'
+
   # Remove singletons and very short sequences
-  toremove <- c(grep('813926',ds$FASTASampleCode),
-                grep('800116',ds$FASTASampleCode),
-                grep('806936',ds$FASTASampleCode),
-                grep('807930',ds$FASTASampleCode),
-                grep('809329',ds$FASTASampleCode),
-                grep('813690',ds$FASTASampleCode),
-                grep('801189',ds$FASTASampleCode),
-                grep('802744',ds$FASTASampleCode),
-                grep('804405',ds$FASTASampleCode),
-                grep('800749',ds$FASTASampleCode),
-                grep('803309',ds$FASTASampleCode),
-                grep('809833',ds$FASTASampleCode)
+  toremove <- c(grep('T903249',ds$FASTASampleCode),
+                grep('T916414',ds$FASTASampleCode),
+                grep('T914092',ds$FASTASampleCode),
+                grep('T906497',ds$FASTASampleCode),
+                grep('T913532',ds$FASTASampleCode),
+                grep('T903905',ds$FASTASampleCode),
+                grep('T909672',ds$FASTASampleCode),
+                grep('T910607',ds$FASTASampleCode),
+                grep('T908807',ds$FASTASampleCode),
+                grep('T917675',ds$FASTASampleCode),
+                grep('T906592',ds$FASTASampleCode),
+                grep('T904645',ds$FASTASampleCode),
+                grep('T911474',ds$FASTASampleCode), 
+                grep('T901380',ds$FASTASampleCode),
+                grep('T910960',ds$FASTASampleCode), 
+                grep('T917498',ds$FASTASampleCode), 
+                grep('T911584',ds$FASTASampleCode), 
+                grep('T908935',ds$FASTASampleCode),
+                grep('T913532',ds$FASTASampleCode),
+                grep('T913532',ds$FASTASampleCode),
+                grep('T908935',ds$FASTASampleCode),
+                grep('T903129',ds$FASTASampleCode), 
+                grep('T900231',ds$FASTASampleCode), 
+                grep('T906229',ds$FASTASampleCode), 
+                grep('T914194',ds$FASTASampleCode), 
+                grep('T911467',ds$FASTASampleCode), 
+                grep('T916729',ds$FASTASampleCode), 
+                grep('T911420',ds$FASTASampleCode), 
+                grep('T915351',ds$FASTASampleCode), 
+                grep('T902465',ds$FASTASampleCode),
+                grep('T902465',ds$FASTASampleCode), 
+                grep('T914141',ds$FASTASampleCode), 
+                grep('T902715',ds$FASTASampleCode), 
+                grep('T902715',ds$FASTASampleCode), 
+                grep('T916952',ds$FASTASampleCode), 
+                grep('T901305',ds$FASTASampleCode), 
+                grep('T900106',ds$FASTASampleCode), 
+                grep('T912844',ds$FASTASampleCode), 
+                grep('T915281',ds$FASTASampleCode), 
+                grep('T901677',ds$FASTASampleCode), 
+                grep('T906205',ds$FASTASampleCode), 
+                grep('T903675',ds$FASTASampleCode) 
   )
   ds <- ds[!toremove,]
   
