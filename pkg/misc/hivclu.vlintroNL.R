@@ -83,7 +83,7 @@ vli.estimate.subtree.distribution.by.sexual.orientation <- function(df, sampling
 
 vli.estimate.branchingprocess.incountryacquisition.200606 <- function()
 {
-	require(gglot2)
+	require(ggplot2)
 	require(data.table)
 	
 	indir <- '~/Box/OR_Work/2017/2017_NL_Introductions/analysis'
@@ -170,7 +170,7 @@ vli.estimate.branchingprocess.transmissionchains.200606 <- function()
 		args$size.inf.pop.sampled <- 1064					
 	}
 	#	Dutch MSM B
-	if(1)
+	if(0)
 	{
 		ds <- as.data.table(read.csv(args$infile.subgraphs))
 		ds <- subset(ds, REP==0 & TRM_GROUP=='NLMSM' & ST=='B')
@@ -184,7 +184,7 @@ vli.estimate.branchingprocess.transmissionchains.200606 <- function()
 		args$size.inf.pop.sampled <- 5113					
 	}
 	#	Dutch MSM non-B
-	if(0)
+	if(1)
 	{
 		ds <- as.data.table(read.csv(args$infile.subgraphs))
 		ds <- subset(ds, REP==0 & TRM_GROUP=='NLMSM' & ST!='B')
@@ -365,9 +365,9 @@ vli.estimate.branchingprocess.transmissionchains.200606 <- function()
 	cs_actual_cdf <- t(apply( cs_actual_cdf, 1, cumsum))	
 	samples.n <- 5e3
 	cs_actual_postpred <- lapply( seq_len(nrow(cs_actual_cdf)), function(i){
-				IDX <<- i
+				#IDX <<- i
 				tmp <- runif(samples.n)
-				TMP <<- tmp
+				#TMP <<- tmp
 				cs_actual_postpred <- sapply(tmp, function(x){  head( which( x < c(cs_actual_cdf[i,],1) ), 1 )  })
 				tmp2 <- which( args$size.inf.pop <= cumsum(cs_actual_postpred) )[1] 
 				cs_actual_postpred[1:tmp2] 								
@@ -1599,6 +1599,80 @@ vli.bez.explore.ancestral.state.reconstruction.170831<- function()
 			scale_y_continuous(expand=c(0,0)) +
 			labs(x='subtree ID', y='diagnosed cases\ndescendant from new in-country HIV acquisition',fill='sexual orientation')
 	ggsave(file=paste0(outfile.base, asr.type,'_ALLST_subtree_composition_by_sxo.pdf'), w=12, h=6)
+	
+}
+
+vli.bez.figure.for.Daniela <- function()
+{
+	infile <- '~/Box/OR_Work/2019/2019_Daniela_paper/Fig2_amase_OR_1.csv'
+	di <- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
+	
+	#	data type
+	tmp <- di[, which(grepl('ancestral state', data.set))]
+	set(di, tmp, 'data_type', 'phylogenetic estimate, empirical')
+	tmp <- di[, which(grepl('incomplete', data.set))]
+	set(di, tmp, 'data_type', 'phylogenetic estimate, adjusted for partial sequence sampling')
+	tmp <- di[, which(grepl('aMASE', data.set))]
+	set(di, tmp, 'data_type', 'clinic survey, aMASE')
+	tmp <- di[, which(grepl('Self-reported', data.set))]
+	set(di, tmp, 'data_type', 'patient data, self-reported likely location of infection')
+	
+	#	sample population
+	tmp <- di[, which(grepl('non-B', subtype))]
+	set(di, tmp, 'sample_pop', 'patients in ATHENA cohort,\nsequenced,\nnon-B subtype')
+	tmp <- di[, which(grepl('^B', subtype))]
+	set(di, tmp, 'sample_pop', 'patients in ATHENA cohort,\nsequenced,\nsubtype B')
+	tmp <- di[, which(grepl('Sub-Saharan', subtype))]
+	set(di, tmp, 'sample_pop', 'aMASE\nsurvey participants, born in Sub-Saharan Africa')
+	tmp <- di[, which(grepl('foreign born', subtype))]
+	set(di, tmp, 'sample_pop', 'aMASE\nsurvey participants, foreign-born')
+	
+	#	facet_label
+	di[, facet_label:=paste0(risk.group,'\n',paste0('foreign-born',gsub(', born in Sub-Saharan Africa|, foreign-born','',sample_pop)))]
+	di[, facet_label:=gsub(', born in Sub-Saharan Africa|, foreign-born','',sample_pop)]
+	tmp <- unique(subset(di, select=facet_label))
+	tmp[, facet_label_2:= c(2,3,1)]	
+	setkey(tmp, facet_label_2)
+	tmp[, facet_label_2:= factor(facet_label_2, levels=facet_label_2, labels=facet_label)]
+	di <- merge(di, tmp, by='facet_label')
+	
+	#	x label
+	tmp <- di[, which(grepl('ancestral state', data.set))]
+	set(di, tmp, 'x_label', 'phylogenetic estimate,\nempirical')
+	set(di, tmp, 'x_label_idx', 1L)
+	tmp <- di[, which(grepl('incomplete', data.set))]
+	set(di, tmp, 'x_label', 'phylogenetic estimate,\nadjusted for partial sequence sampling')
+	set(di, tmp, 'x_label_idx', 2L)
+	tmp <- di[, which(grepl('aMASE', data.set) & grepl('foreign-born', sample_pop))]
+	set(di, tmp, 'x_label', 'all participants')
+	set(di, tmp, 'x_label_idx', 4L)
+	tmp <- di[, which(grepl('aMASE', data.set) & grepl('Sub-Saharan', sample_pop))]
+	set(di, tmp, 'x_label', 'born in Sub-Saharan Africa')
+	set(di, tmp, 'x_label_idx', 5L)
+	tmp <- di[, which(grepl('Self-reported', data.set))]
+	set(di, tmp, 'x_label', 'self-reported patient data')
+	set(di, tmp, 'x_label_idx', 3L)
+	tmp <- unique(subset(di, select=c(x_label,x_label_idx)))
+	setkey(tmp, x_label_idx)
+	set(tmp, NULL, 'x_label_2', tmp[, factor(x_label_idx, levels=x_label_idx, labels=x_label)])
+	di <- merge(di, tmp, by=c('x_label_idx','x_label'))
+	
+	set(di, NULL, 'mid.point', di[, mid.point/100])
+	set(di, NULL, 'lower', di[, lower/100])
+	set(di, NULL, 'upper', di[, upper/100])
+	
+	ggplot(di) +
+			geom_bar(aes(x=x_label_2, y= mid.point, fill= x_label), stat='identity') +
+			geom_errorbar(aes(x=x_label_2, ymin=lower, ymax=upper), width=0.5) +
+			scale_y_continuous(label=scales::percent, limits=c(0,1), expand=c(0,0)) +
+			scale_fill_brewer(palette='Set2') +
+			theme_bw() +		
+			theme(legend.position = "none",
+					panel.spacing = unit(1, "lines"),
+					axis.text.x=element_text(angle=45, vjust=1, hjust=1)) +
+			facet_grid(risk.group~facet_label_2, scales='free_x', space = "free") +
+			labs(fill='sample population', y='HIV acquisitions originating in the Netherlands', x='')
+	ggsave(file='~/Box/OR_Work/2019/2019_Daniela_paper/Fig2_amase_OR_1.pdf', w=6, h=7)
 	
 }
 
