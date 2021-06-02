@@ -86,9 +86,20 @@ vli.estimate.branchingprocess.incountryacquisition.200606 <- function()
 	require(ggplot2)
 	require(data.table)
 	
-	indir <- '~/Box/OR_Work/2017/2017_NL_Introductions/analysis'
-	fname_origins <- '190801_subgraph_origins_N.csv'
-	fnames <- c('190801_hsx_nonB_stananalysis.rda','190801_hsx_B_stananalysis.rda','190801_msm_nonB_stananalysis.rda','190801_msm_B_stananalysis.rda')
+	indir <- '~/Box Sync/Athena/subgraph_data_210511/'	
+	infile.subgraphs <- file.path(indir, 'subgraph_data_210511.csv')
+	ds <- as.data.table(read.csv(infile.subgraphs))
+	ds <- subset(ds, REP==0)
+	ds[is.na(PARENT_STATE),PARENT_STATE:='Unknown']
+	ds[, TRM_GROUP_SUB:=paste0(ST,'_',toupper(TRM_GROUP))]
+	ds[ST!='B', TRM_GROUP_SUB:=paste0('NB','_',TRM_GROUP)]
+	ds <- ds[, list(N=length(NAME)), by=c('TRM_GROUP_SUB','REP','PARENT_STATE')]
+	fname_origins <- '210511_subgraph_origins_N.csv'
+	write.csv(ds, file=file.path(indir,fname_origins))		
+	
+	indir <- '~/Box Sync/Athena/subgraph_data_210511/'	
+	fname_origins <- '210511_subgraph_origins_N.csv'
+	fnames <- c('210115_hsx_nonB_stananalysis.rda','190801_hsx_B_stananalysis.rda','190801_msm_nonB_stananalysis.rda','190801_msm_B_stananalysis.rda')
 	fnames <- data.table(F= fnames)
 	fnames[, ST:= gsub('^[0-9]+_([a-z]+)_([a-zA-Z]+)_.*$','\\2',F)]
 	fnames[, RISK:= gsub('^[0-9]+_([a-z]+)_([a-zA-Z]+)_.*$','\\1',F)]
@@ -135,11 +146,12 @@ vli.estimate.branchingprocess.transmissionchains.200606 <- function()
 	require(rstan)
 	require(bayesplot)
 	require(hexbin)
+	require(data.table)
 	
 	args <- list()
-	args$indir <- '~/Box/OR_Work/2017/2017_NL_Introductions/analysis'	
-	args$outdir <- '~/Box/OR_Work/2017/2017_NL_Introductions/analysis'	
-	args$infile.subgraphs <- file.path(args$indir, '190801_subgraph_data.csv')
+	args$indir <- '~/Box Sync/Athena/subgraph_data_210511'	
+	args$outdir <- '~/Box Sync/Athena/subgraph_data_210511'	
+	args$infile.subgraphs <- file.path(args$indir, 'subgraph_data_210511.csv')
 	#	Dutch HSX non-B
 	if(0)
 	{
@@ -148,11 +160,11 @@ vli.estimate.branchingprocess.transmissionchains.200606 <- function()
 		ds <- ds[, list(N=length(NAME)), by='SIZE']
 		tmp <- vector('numeric', max(ds$SIZE))
 		tmp[ds$SIZE] <- ds$N
-		args$infile.subgraph.sizes <- '190801_subgraphsizes_hsx_nonB.csv'
-		args$outfile.base <- '190801_hsx_nonB_'
+		args$infile.subgraph.sizes <- '210115_subgraphsizes_hsx_nonB.csv'
+		args$outfile.base <- '210115_hsx_nonB_'
 		write.csv(tmp, file=file.path(args$indir,args$infile.subgraph.sizes))		
-		args$size.inf.pop <- round( 6983*1402/(1402+1064), d=0 )
-		args$size.inf.pop.sampled <- 1402					
+		args$size.inf.pop <- round( 7608*1588/(1588+1344), d=0 )
+		args$size.inf.pop.sampled <- 1588					
 	}
 	#	Dutch HSX B
 	if(0)
@@ -163,11 +175,11 @@ vli.estimate.branchingprocess.transmissionchains.200606 <- function()
 		ds <- ds[1:11,]
 		tmp <- vector('numeric', max(ds$SIZE))
 		tmp[ds$SIZE] <- ds$N
-		args$infile.subgraph.sizes <- '190801_subgraphsizes_hsx_B.csv'
-		args$outfile.base <- '190801_hsx_B_'
+		args$infile.subgraph.sizes <- '210115_subgraphsizes_hsx_B.csv'
+		args$outfile.base <- '210115_hsx_B_'
 		write.csv(tmp, file=file.path(args$indir,args$infile.subgraph.sizes))		
-		args$size.inf.pop <- round( 6983*1064/(1402+1064), d=0 )
-		args$size.inf.pop.sampled <- 1064					
+		args$size.inf.pop <- round( 7608*1344/(1588+1344), d=0 )
+		args$size.inf.pop.sampled <- 1344					
 	}
 	#	Dutch MSM B
 	if(0)
@@ -177,11 +189,11 @@ vli.estimate.branchingprocess.transmissionchains.200606 <- function()
 		ds <- ds[, list(N=length(NAME)), by='SIZE']
 		tmp <- vector('numeric', max(ds$SIZE))
 		tmp[ds$SIZE] <- ds$N
-		args$infile.subgraph.sizes <- '190801_subgraphsizes_msm_B.csv'
-		args$outfile.base <- '190801_msm_B_'
+		args$infile.subgraph.sizes <- '210115_subgraphsizes_msm_B.csv'
+		args$outfile.base <- '210115_msm_B_'
 		write.csv(tmp, file=file.path(args$indir,args$infile.subgraph.sizes))		
-		args$size.inf.pop <- round( 13340*5113/(328+5113), d=0 )
-		args$size.inf.pop.sampled <- 5113					
+		args$size.inf.pop <- round( 15882*6413/(536+6413), d=0 )
+		args$size.inf.pop.sampled <- 6413					
 	}
 	#	Dutch MSM non-B
 	if(1)
@@ -191,11 +203,11 @@ vli.estimate.branchingprocess.transmissionchains.200606 <- function()
 		ds <- ds[, list(N=length(NAME)), by='SIZE']
 		tmp <- vector('numeric', max(ds$SIZE))
 		tmp[ds$SIZE] <- ds$N
-		args$infile.subgraph.sizes <- '190801_subgraphsizes_msm_nonB.csv'
-		args$outfile.base <- '190801_msm_nonB_'
+		args$infile.subgraph.sizes <- '210115_subgraphsizes_msm_nonB.csv'
+		args$outfile.base <- '210115_msm_nonB_'
 		write.csv(tmp, file=file.path(args$indir,args$infile.subgraph.sizes))		
-		args$size.inf.pop <- round( 13340*328/(328+5113), d=0 )
-		args$size.inf.pop.sampled <- 328			
+		args$size.inf.pop <- round( 15882*536/(536+6413), d=0 )
+		args$size.inf.pop.sampled <- 536			
 	}	
 	args$upper.bound.multiplier <- 10
 	
@@ -341,7 +353,8 @@ vli.estimate.branchingprocess.transmissionchains.200606 <- function()
 	
 	#	examine neff and rhat
 	fit.target.pars <- c('r0','vmr_minus_one','rho','kappa')
-	rstan::monitor(rstan::extract(fit, pars=fit.target.pars, permuted = FALSE, inc_warmup = TRUE))
+	summary <- rstan::monitor(rstan::extract(fit, pars=fit.target.pars, permuted = FALSE, inc_warmup = TRUE))
+	print(summary,probs = c(0.025, 0.25, 0.5, 0.75, 0.975))
 	#	neff too low, should ideally be 2e3
 	
 	#	traces	
@@ -393,6 +406,92 @@ vli.estimate.branchingprocess.transmissionchains.200606 <- function()
 	#	for B MSM
 	#	50%       2.5%      97.5%
 	#	0.2156988 0.1775749 0.2538293
+}
+
+vli.transmission.chain.sizes.210511 <- function()
+{
+	require(data.table)
+	
+	args <- list()
+	args$indir <- '~/Box Sync/Athena/subgraph_data_210511'	
+	args$outdir <- '~/Box Sync/Athena/subgraph_data_210511'	
+	if(1) args$file <- '210115_msm_B_stananalysis.rda'
+	if(0) args$file <- '210115_msm_nonB_stananalysis.rda'
+	if(0) args$file <- '210115_hsx_B_stananalysis.rda'
+	if(0) args$file <- '210115_hsx_nonB_stananalysis.rda'
+	
+	ans.quantiles=c(0.025,0.5,0.975)
+	
+	load(file.path(args$indir,args$file))	
+
+  cs_mat <- t(sapply(cs_actual_postpred, '[', seq(max(sapply(cs_actual_postpred, length)))))
+  cs_actual <- as.data.table( reshape2::melt( cs_mat ) )
+  setnames(cs_actual, 1:3, c('iteration','subgraph','SIZE'))
+  cs_actual <- subset(cs_actual,!is.na(SIZE))
+  cs_actual <- cs_actual %>%  mutate(sizeg:= case_when(SIZE %in% c(1)~'1',
+  																										 SIZE %in% c(2,3,4,5) ~ '2-5',
+  																										 SIZE %in% c(6,7,8,9) ~ '6-9',
+  																										 SIZE>=10 ~ '10+'))
+  # number of subgraphs
+  N <- cs_actual[, list(N=length(subgraph)),by=c('iteration')]
+  quantile(N$N, p=c(0.5, 0.025, 0.975))
+  
+  # number of individuals in subgraphs
+  ind	<- cs_actual[, list(freq=length(subgraph)), by=c('iteration','SIZE','sizeg')]
+  ind[, N:=SIZE*freq]
+
+  # total number of individuals
+  all_N	<- ind[, list(N=sum(N)), by=c('iteration')]
+  quantile(all_N$N, p=c(0.5, 0.025, 0.975))
+  
+  # summarise # individuals in each subgraph size
+  tmp	<- ind[, list(SIZE=SIZE,sizeg=sizeg, P=N/sum(N)), by=c('iteration')]
+  ind	<- merge(ind, tmp, by=c('iteration','SIZE','sizeg'),all=T)
+  ind <- ind[, list(N=sum(N), P=sum(P)),by=c('iteration','sizeg')]
+  total.replicates	<- ind[, length(unique(iteration))]
+  ans	<- ind[, list(P=ans.quantiles, 
+  									QN=quantile(c(N, rep(0, total.replicates-length(N))), p=ans.quantiles),
+  									QF=quantile(c(P, rep(0, total.replicates-length(P))), p=ans.quantiles)
+  ), by=c('sizeg')]
+  
+  ans$sizeg <- factor(ans$sizeg,levels=c('1','2-5','6-9','10+'))
+  ans$QF <- round(ans$QF,2)
+  tmp			<- dcast.data.table(ans, sizeg~P, value.var='QN')
+  tmp
+  tmp			<- dcast.data.table(ans, sizeg~P, value.var='QF')
+  tmp
+  
+  # summarise # subgraphs of each size
+  ans	<- cs_actual[, list(freq=length(subgraph)), by=c('iteration','sizeg')]
+  tmp	<- ans[, list(sizeg=sizeg, P=freq/sum(freq)), by=c('iteration')]
+  ans	<- merge(ans, tmp, by=c('iteration','sizeg'))
+  sgs <- copy(ans)
+  total.replicates	<- ans[, length(unique(iteration))]
+  ans	<- ans[, list(P=ans.quantiles, 
+  									QN=quantile(c(freq, rep(0, total.replicates-length(freq))), p=ans.quantiles),
+  									QF=quantile(c(P, rep(0, total.replicates-length(P))), p=ans.quantiles)
+  ), by=c('sizeg')]
+  
+  ans$sizeg <- factor(ans$sizeg,levels=c('1','2-5','6-9','10+'))
+  ans$QF <- round(ans$QF,2)
+  tmp			<- dcast.data.table(ans, sizeg~P, value.var='QN')
+  tmp
+  tmp			<- dcast.data.table(ans, sizeg~P, value.var='QF')
+  tmp
+  
+  # proportion of secondary infections
+  dat <- merge(ind,sgs,by=c('iteration','sizeg'),all=T)
+  setnames(N,'N','N_c')
+  setnames(all_N,'N','N_a')
+  dat <- merge(dat,N,by='iteration')
+  dat <- merge(dat,all_N,by='iteration')
+  
+  dat[, st:= (N-freq)/(N_a-N_c)]
+  tmp	<- dat[, list(P=ans.quantiles, 
+  									QN=quantile(c(st, rep(0, total.replicates-length(st))), p=ans.quantiles)
+  ), by=c('sizeg')]
+  tmp			<- dcast.data.table(tmp, sizeg~P, value.var='QN')
+  tmp
 }
 
 vli.estimate.patients.in.small.subtrees.by.sexual.orientation <- function(df, sampling.prob=0.43, resample.intro.n=3, resample.missing.n=3, sxo.select= c('MSM','hsx'), size.breaks=c(0,1,2,5,10,500), size.labels=c('1','2','3-5','6-10','>10'), intro.year=2000, ans.quantiles=c(0.025,0.25,0.5,0.75,0.975), seed=42)	
@@ -1604,7 +1703,7 @@ vli.bez.explore.ancestral.state.reconstruction.170831<- function()
 
 vli.bez.figure.for.Daniela <- function()
 {
-	infile <- '~/Box/OR_Work/2019/2019_Daniela_paper/Fig2_amase_OR_1.csv'
+	infile <- '~/Box Sync/Athena/manuscript/Fig2_amase_OR_100bs.csv'
 	di <- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
 	
 	#	data type
@@ -1672,7 +1771,7 @@ vli.bez.figure.for.Daniela <- function()
 					axis.text.x=element_text(angle=45, vjust=1, hjust=1)) +
 			facet_grid(risk.group~facet_label_2, scales='free_x', space = "free") +
 			labs(fill='sample population', y='HIV acquisitions originating in the Netherlands', x='')
-	ggsave(file='~/Box/OR_Work/2019/2019_Daniela_paper/Fig2_amase_OR_1.pdf', w=6, h=7)
+	ggsave(file='~/Box Sync/Athena/manuscript/Fig2_amase_OR_100bs.pdf', w=6, h=7)
 	
 }
 
